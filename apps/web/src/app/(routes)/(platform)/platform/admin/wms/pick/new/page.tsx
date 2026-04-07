@@ -9,17 +9,13 @@ import {
   IconPlus,
   IconRefresh,
   IconSearch,
-  IconSquare,
-  IconSquareCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import Button from '@/app/_ui/components/Button/Button';
-import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -201,29 +197,48 @@ const NewPickListPage = () => {
 
   const isLoading = activeTab === 'sales' ? isLoadingZoho : isLoadingPco;
 
+  // Compute total selected cases for the action bar
+  const selectedCaseCount = useMemo(() => {
+    if (activeTab === 'sales' && filteredZohoOrders) {
+      return filteredZohoOrders
+        .filter((o) => selectedOrderIds.has(o.id))
+        .reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0);
+    }
+    if (activeTab === 'private' && filteredPcoOrders) {
+      return filteredPcoOrders
+        .filter((o) => selectedOrderIds.has(o.id))
+        .reduce((sum, o) => sum + (o.caseCount ?? 0), 0);
+    }
+    return 0;
+  }, [activeTab, filteredZohoOrders, filteredPcoOrders, selectedOrderIds]);
+
+  // Select All helpers
+  const currentOrders = activeTab === 'sales' ? filteredZohoOrders : filteredPcoOrders;
+  const allSelected = currentOrders && currentOrders.length > 0 && currentOrders.every((o) => selectedOrderIds.has(o.id));
+  const toggleSelectAll = () => {
+    if (!currentOrders) return;
+    const allIds = currentOrders.map((o) => o.id);
+    setSelectedOrderIds(allSelected ? new Set() : new Set(allIds));
+  };
+
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-8">
+    <div className="container mx-auto max-w-2xl px-4 py-3 pb-28 sm:px-6 sm:py-6 sm:pb-8">
       <div className="space-y-3">
-        {/* Header */}
-        <div className="flex items-center gap-3">
+        {/* Header row — back, title, sync */}
+        <div className="flex items-center gap-2">
           <Link
             href="/platform/admin/wms/pick"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary"
           >
-            <IconArrowLeft className="h-6 w-6" />
+            <IconArrowLeft className="h-5 w-5" />
           </Link>
-          <div className="flex-1">
-            <Typography variant="headingMd">New Pick List</Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Select orders to release for picking
-            </Typography>
-          </div>
+          <h1 className="flex-1 text-lg font-bold">New Pick List</h1>
           {activeTab === 'sales' && (
             <button
               type="button"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary disabled:opacity-50"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary disabled:opacity-50"
             >
               {syncMutation.isPending ? (
                 <IconLoader2 className="h-5 w-5 animate-spin" />
@@ -234,45 +249,43 @@ const NewPickListPage = () => {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 rounded-lg bg-fill-secondary p-1">
-          <button
-            type="button"
-            onClick={() => handleTabChange('sales')}
-            className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === 'sales'
-                ? 'bg-fill-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            Sales Orders{filteredZohoOrders ? ` (${filteredZohoOrders.length})` : ''}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange('private')}
-            className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === 'private'
-                ? 'bg-fill-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            Private Orders{filteredPcoOrders ? ` (${filteredPcoOrders.length})` : ''}
-          </button>
+        {/* Tabs + Search row */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 gap-1 rounded-lg bg-fill-secondary p-0.5">
+            <button
+              type="button"
+              onClick={() => handleTabChange('sales')}
+              className={`flex-1 rounded-md px-2 py-2 text-[13px] font-semibold transition-colors ${
+                activeTab === 'sales'
+                  ? 'bg-fill-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Sales{filteredZohoOrders ? ` (${filteredZohoOrders.length})` : ''}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('private')}
+              className={`flex-1 rounded-md px-2 py-2 text-[13px] font-semibold transition-colors ${
+                activeTab === 'private'
+                  ? 'bg-fill-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Private{filteredPcoOrders ? ` (${filteredPcoOrders.length})` : ''}
+            </button>
+          </div>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Icon
-            icon={IconSearch}
-            size="sm"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-          />
+          <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders..."
-            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
 
@@ -286,6 +299,26 @@ const NewPickListPage = () => {
               size="lg"
             />
           </div>
+        )}
+
+        {/* Select All bar */}
+        {!isLoading && currentOrders && currentOrders.length > 1 && (
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary"
+          >
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded ${
+                allSelected
+                  ? 'bg-brand-500 text-white'
+                  : 'border-2 border-text-muted/40'
+              }`}
+            >
+              {allSelected && <IconCheck className="h-3.5 w-3.5" />}
+            </div>
+            {allSelected ? 'Deselect All' : `Select All (${currentOrders.length})`}
+          </button>
         )}
 
         {/* Sales Orders List (Zoho) */}
@@ -303,130 +336,108 @@ const NewPickListPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              <>
-                {/* Select All */}
-                {filteredZohoOrders && filteredZohoOrders.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allIds = filteredZohoOrders.map((o) => o.id);
-                      const allSelected = allIds.every((id) =>
-                        selectedOrderIds.has(id),
-                      );
-                      setSelectedOrderIds(
-                        allSelected ? new Set() : new Set(allIds),
-                      );
-                    }}
-                    className="mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
-                  >
-                    <Icon
-                      icon={
-                        filteredZohoOrders.every((o) =>
-                          selectedOrderIds.has(o.id),
-                        )
-                          ? IconSquareCheck
-                          : IconSquare
-                      }
-                      size="sm"
-                    />
-                    Select All ({filteredZohoOrders.length})
-                  </button>
-                )}
-                <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-primary">
-                  {filteredZohoOrders?.map((order) => {
-                    const isSelected = selectedOrderIds.has(order.id);
-                    const isExpanded = expandedOrderId === order.id;
-                    return (
-                      <div
-                        key={order.id}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-brand-50'
-                            : 'bg-fill-primary hover:bg-surface-secondary/50'
-                        }`}
-                        onClick={() => toggleOrder(order.id)}
-                      >
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          <div
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded ${
-                              isSelected
-                                ? 'bg-brand-500 text-white'
-                                : 'border-2 border-border-primary'
-                            }`}
-                          >
-                            {isSelected && (
-                              <Icon icon={IconCheck} size="xs" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-[15px] font-bold">
-                                {order.invoiceNumber ?? order.salesOrderNumber}
-                              </span>
-                              {order.invoiceNumber && (
-                                <span className="text-xs text-text-muted">
-                                  {order.salesOrderNumber}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-[13px] text-text-muted">
-                              <span className="truncate">{order.customerName ?? 'Unknown'}</span>
-                              <span className="text-border-primary">&middot;</span>
-                              <span className="shrink-0 font-medium">{order.itemCount} items</span>
-                              <span className="text-border-primary">&middot;</span>
-                              <span className="shrink-0 font-medium">{order.totalQuantity} cs</span>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => toggleExpand(e, order.id)}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
-                          >
-                            <Icon
-                              icon={isExpanded ? IconChevronUp : IconChevronDown}
-                              size="sm"
-                            />
-                          </button>
+              <div className="overflow-hidden rounded-xl border border-border-primary">
+                {filteredZohoOrders?.map((order, index) => {
+                  const isSelected = selectedOrderIds.has(order.id);
+                  const isExpanded = expandedOrderId === order.id;
+                  return (
+                    <div
+                      key={order.id}
+                      className={`cursor-pointer transition-colors ${
+                        index > 0 ? 'border-t border-border-muted' : ''
+                      } ${
+                        isSelected
+                          ? 'bg-emerald-50'
+                          : 'bg-fill-primary hover:bg-surface-secondary/50'
+                      }`}
+                      onClick={() => toggleOrder(order.id)}
+                    >
+                      <div className="flex items-center gap-3 px-3 py-2.5">
+                        {/* Checkbox */}
+                        <div
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
+                            isSelected
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'border-2 border-text-muted/30'
+                          }`}
+                        >
+                          {isSelected && <IconCheck className="h-4 w-4" />}
                         </div>
-                        {/* Expanded items */}
-                        {isExpanded && (
-                          <div className="border-t border-border-muted bg-fill-secondary px-4 py-2.5">
-                            {isLoadingZohoItems ? (
-                              <div className="flex items-center justify-center py-2">
-                                <Icon
-                                  icon={IconLoader2}
-                                  size="xs"
-                                  className="animate-spin text-text-muted"
-                                />
-                              </div>
-                            ) : expandedZohoOrder?.items.length ? (
-                              <div className="space-y-1">
-                                {expandedZohoOrder.items.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="flex items-center justify-between text-[13px]"
-                                  >
-                                    <span className="truncate text-text-primary">
-                                      {item.name}
-                                    </span>
-                                    <span className="ml-2 shrink-0 font-medium tabular-nums text-text-muted">
-                                      x{item.quantity}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="py-1 text-center text-[13px] text-text-muted">
-                                No items
-                              </p>
+
+                        {/* Order info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-[15px] font-bold leading-tight">
+                              {order.invoiceNumber ?? order.salesOrderNumber}
+                            </span>
+                            {order.invoiceNumber && (
+                              <span className="text-[11px] text-text-muted">
+                                {order.salesOrderNumber}
+                              </span>
                             )}
                           </div>
-                        )}
+                          <p className="truncate text-[13px] leading-tight text-text-muted">
+                            {order.customerName ?? 'Unknown'}
+                          </p>
+                        </div>
+
+                        {/* Case count — prominent */}
+                        <div className="shrink-0 text-right">
+                          <span className="text-[17px] font-bold tabular-nums leading-tight">
+                            {order.totalQuantity}
+                          </span>
+                          <p className="text-[11px] leading-tight text-text-muted">
+                            {order.totalQuantity === 1 ? 'case' : 'cases'}
+                          </p>
+                        </div>
+
+                        {/* Expand chevron */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleExpand(e, order.id)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted/60 hover:bg-black/5 hover:text-text-muted"
+                        >
+                          <Icon
+                            icon={isExpanded ? IconChevronUp : IconChevronDown}
+                            size="sm"
+                          />
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              </>
+
+                      {/* Expanded items */}
+                      {isExpanded && (
+                        <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
+                          {isLoadingZohoItems ? (
+                            <div className="flex items-center justify-center py-2">
+                              <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
+                            </div>
+                          ) : expandedZohoOrder?.items.length ? (
+                            <div className="space-y-0.5">
+                              {expandedZohoOrder.items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between py-0.5 text-[13px]"
+                                >
+                                  <span className="truncate text-text-primary">
+                                    {item.name}
+                                  </span>
+                                  <span className="ml-2 shrink-0 font-semibold tabular-nums text-text-muted">
+                                    x{item.quantity}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="py-1 text-center text-[13px] text-text-muted">
+                              No items
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -446,158 +457,134 @@ const NewPickListPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              <>
-                {/* Select All */}
-                {filteredPcoOrders && filteredPcoOrders.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allIds = filteredPcoOrders.map((o) => o.id);
-                      const allSelected = allIds.every((id) =>
-                        selectedOrderIds.has(id),
-                      );
-                      setSelectedOrderIds(
-                        allSelected ? new Set() : new Set(allIds),
-                      );
-                    }}
-                    className="mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
-                  >
-                    <Icon
-                      icon={
-                        filteredPcoOrders.every((o) =>
-                          selectedOrderIds.has(o.id),
-                        )
-                          ? IconSquareCheck
-                          : IconSquare
-                      }
-                      size="sm"
-                    />
-                    Select All ({filteredPcoOrders.length})
-                  </button>
-                )}
-                <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-primary">
-                  {filteredPcoOrders?.map((order) => {
-                    const isSelected = selectedOrderIds.has(order.id);
-                    const isExpanded = expandedOrderId === order.id;
-                    return (
-                      <div
-                        key={order.id}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-brand-50'
-                            : 'bg-fill-primary hover:bg-surface-secondary/50'
-                        }`}
-                        onClick={() => toggleOrder(order.id)}
-                      >
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          <div
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded ${
-                              isSelected
-                                ? 'bg-brand-500 text-white'
-                                : 'border-2 border-border-primary'
-                            }`}
-                          >
-                            {isSelected && (
-                              <Icon icon={IconCheck} size="xs" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[15px] font-bold">
-                              {order.orderNumber}
-                            </span>
-                            <div className="flex items-center gap-2 text-[13px] text-text-muted">
-                              <span className="truncate">{order.clientName ?? 'Unknown'}</span>
-                              <span className="text-border-primary">&middot;</span>
-                              <span className="shrink-0 font-medium">{order.itemCount ?? 0} items</span>
-                              <span className="text-border-primary">&middot;</span>
-                              <span className="shrink-0 font-medium">{order.caseCount ?? 0} cs</span>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => toggleExpand(e, order.id)}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
-                          >
-                            <Icon
-                              icon={isExpanded ? IconChevronUp : IconChevronDown}
-                              size="sm"
-                            />
-                          </button>
+              <div className="overflow-hidden rounded-xl border border-border-primary">
+                {filteredPcoOrders?.map((order, index) => {
+                  const isSelected = selectedOrderIds.has(order.id);
+                  const isExpanded = expandedOrderId === order.id;
+                  return (
+                    <div
+                      key={order.id}
+                      className={`cursor-pointer transition-colors ${
+                        index > 0 ? 'border-t border-border-muted' : ''
+                      } ${
+                        isSelected
+                          ? 'bg-emerald-50'
+                          : 'bg-fill-primary hover:bg-surface-secondary/50'
+                      }`}
+                      onClick={() => toggleOrder(order.id)}
+                    >
+                      <div className="flex items-center gap-3 px-3 py-2.5">
+                        {/* Checkbox */}
+                        <div
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
+                            isSelected
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'border-2 border-text-muted/30'
+                          }`}
+                        >
+                          {isSelected && <IconCheck className="h-4 w-4" />}
                         </div>
-                        {/* Expanded items */}
-                        {isExpanded && (
-                          <div className="border-t border-border-muted bg-fill-secondary px-4 py-2.5">
-                            {isLoadingPcoItems ? (
-                              <div className="flex items-center justify-center py-2">
-                                <Icon
-                                  icon={IconLoader2}
-                                  size="xs"
-                                  className="animate-spin text-text-muted"
-                                />
-                              </div>
-                            ) : expandedPcoOrder?.items.length ? (
-                              <div className="space-y-1">
-                                {expandedPcoOrder.items.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="flex items-center justify-between text-[13px]"
-                                  >
-                                    <span className="truncate text-text-primary">
-                                      {item.productName}
-                                      {item.producer || item.vintage
-                                        ? ` (${[item.producer, item.vintage].filter(Boolean).join(', ')})`
-                                        : ''}
-                                    </span>
-                                    <span className="ml-2 shrink-0 font-medium tabular-nums text-text-muted">
-                                      x{item.quantity}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="py-1 text-center text-[13px] text-text-muted">
-                                No items
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
-        {/* Create Button */}
-        {selectedOrderIds.size > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 border-t border-border-primary bg-fill-primary p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0">
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={handleCreate}
-              disabled={isCreating}
-            >
-              <ButtonContent
-                iconLeft={isCreating ? IconLoader2 : IconPlus}
-              >
-                {isCreating
-                  ? 'Releasing...'
-                  : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} to Pick`}
-              </ButtonContent>
-            </Button>
-            {createError && (
-              <Typography
-                variant="bodyXs"
-                className="mt-2 text-center text-red-600"
-              >
-                {createError}
-              </Typography>
+                        {/* Order info */}
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[15px] font-bold leading-tight">
+                            {order.orderNumber}
+                          </span>
+                          <p className="truncate text-[13px] leading-tight text-text-muted">
+                            {order.clientName ?? 'Unknown'}
+                          </p>
+                        </div>
+
+                        {/* Case count — prominent */}
+                        <div className="shrink-0 text-right">
+                          <span className="text-[17px] font-bold tabular-nums leading-tight">
+                            {order.caseCount ?? 0}
+                          </span>
+                          <p className="text-[11px] leading-tight text-text-muted">
+                            {(order.caseCount ?? 0) === 1 ? 'case' : 'cases'}
+                          </p>
+                        </div>
+
+                        {/* Expand chevron */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleExpand(e, order.id)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted/60 hover:bg-black/5 hover:text-text-muted"
+                        >
+                          <Icon
+                            icon={isExpanded ? IconChevronUp : IconChevronDown}
+                            size="sm"
+                          />
+                        </button>
+                      </div>
+
+                      {/* Expanded items */}
+                      {isExpanded && (
+                        <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
+                          {isLoadingPcoItems ? (
+                            <div className="flex items-center justify-center py-2">
+                              <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
+                            </div>
+                          ) : expandedPcoOrder?.items.length ? (
+                            <div className="space-y-0.5">
+                              {expandedPcoOrder.items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between py-0.5 text-[13px]"
+                                >
+                                  <span className="truncate text-text-primary">
+                                    {item.productName}
+                                    {item.producer || item.vintage
+                                      ? ` (${[item.producer, item.vintage].filter(Boolean).join(', ')})`
+                                      : ''}
+                                  </span>
+                                  <span className="ml-2 shrink-0 font-semibold tabular-nums text-text-muted">
+                                    x{item.quantity}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="py-1 text-center text-[13px] text-text-muted">
+                              No items
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Sticky bottom action bar */}
+      {selectedOrderIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border-primary bg-fill-primary px-4 py-3 shadow-lg sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={isCreating}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[15px] font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-60"
+          >
+            {isCreating ? (
+              <IconLoader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <IconPlus className="h-5 w-5" />
+            )}
+            {isCreating
+              ? 'Releasing...'
+              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} (${selectedCaseCount} cases)`}
+          </button>
+          {createError && (
+            <p className="mt-2 text-center text-[13px] text-red-600">
+              {createError}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
