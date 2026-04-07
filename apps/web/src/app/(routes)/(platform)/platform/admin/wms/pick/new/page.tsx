@@ -202,8 +202,8 @@ const NewPickListPage = () => {
   const isLoading = activeTab === 'sales' ? isLoadingZoho : isLoadingPco;
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-2xl px-4 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-8">
+      <div className="space-y-3">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Link
@@ -239,7 +239,7 @@ const NewPickListPage = () => {
           <button
             type="button"
             onClick={() => handleTabChange('sales')}
-            className={`flex-1 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'sales'
                 ? 'bg-fill-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
@@ -250,7 +250,7 @@ const NewPickListPage = () => {
           <button
             type="button"
             onClick={() => handleTabChange('private')}
-            className={`flex-1 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'private'
                 ? 'bg-fill-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
@@ -272,7 +272,7 @@ const NewPickListPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders..."
-            className="w-full rounded-lg border border-border-primary bg-fill-primary py-3 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
 
@@ -290,7 +290,7 @@ const NewPickListPage = () => {
 
         {/* Sales Orders List (Zoho) */}
         {activeTab === 'sales' && !isLoadingZoho && (
-          <div className="space-y-2">
+          <div>
             {filteredZohoOrders?.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -317,7 +317,7 @@ const NewPickListPage = () => {
                         allSelected ? new Set() : new Set(allIds),
                       );
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                    className="mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
                   >
                     <Icon
                       icon={
@@ -332,72 +332,65 @@ const NewPickListPage = () => {
                     Select All ({filteredZohoOrders.length})
                   </button>
                 )}
-                {filteredZohoOrders?.map((order) => {
-                  const isExpanded = expandedOrderId === order.id;
-                  return (
-                    <Card
-                      key={order.id}
-                      className={`cursor-pointer transition-all ${
-                        selectedOrderIds.has(order.id)
-                          ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                          : 'hover:border-border-brand'
-                      }`}
-                      onClick={() => toggleOrder(order.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Typography
-                              variant="bodySm"
-                              className="font-semibold"
-                            >
-                              {order.invoiceNumber ?? order.salesOrderNumber}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {order.customerName ?? 'Unknown customer'}
-                            </Typography>
-                            {order.invoiceNumber && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {order.salesOrderNumber}
-                              </Typography>
-                            )}
-                            <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                              <span>{order.itemCount} items</span>
-                              <span>{order.totalQuantity} cases</span>
-                              <span>
-                                {new Date(
-                                  order.createdAt,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
+                <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-primary">
+                  {filteredZohoOrders?.map((order) => {
+                    const isSelected = selectedOrderIds.has(order.id);
+                    const isExpanded = expandedOrderId === order.id;
+                    return (
+                      <div
+                        key={order.id}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-brand-50'
+                            : 'bg-fill-primary hover:bg-surface-secondary/50'
+                        }`}
+                        onClick={() => toggleOrder(order.id)}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3">
                           <div
-                            className={`flex h-6 w-6 items-center justify-center rounded ${
-                              selectedOrderIds.has(order.id)
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded ${
+                              isSelected
                                 ? 'bg-brand-500 text-white'
                                 : 'border-2 border-border-primary'
                             }`}
                           >
-                            {selectedOrderIds.has(order.id) && (
+                            {isSelected && (
                               <Icon icon={IconCheck} size="xs" />
                             )}
                           </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-[15px] font-bold">
+                                {order.invoiceNumber ?? order.salesOrderNumber}
+                              </span>
+                              {order.invoiceNumber && (
+                                <span className="text-xs text-text-muted">
+                                  {order.salesOrderNumber}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[13px] text-text-muted">
+                              <span className="truncate">{order.customerName ?? 'Unknown'}</span>
+                              <span className="text-border-primary">&middot;</span>
+                              <span className="shrink-0 font-medium">{order.itemCount} items</span>
+                              <span className="text-border-primary">&middot;</span>
+                              <span className="shrink-0 font-medium">{order.totalQuantity} cs</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => toggleExpand(e, order.id)}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
+                          >
+                            <Icon
+                              icon={isExpanded ? IconChevronUp : IconChevronDown}
+                              size="sm"
+                            />
+                          </button>
                         </div>
-                        {/* View Items toggle */}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleExpand(e, order.id)}
-                          className="mt-2 flex w-full items-center gap-1 py-2 text-sm font-medium text-brand-500 hover:text-brand-600"
-                        >
-                          <Icon
-                            icon={isExpanded ? IconChevronUp : IconChevronDown}
-                            size="xs"
-                          />
-                          {isExpanded ? 'Hide Items' : 'View Items'}
-                        </button>
                         {/* Expanded items */}
                         {isExpanded && (
-                          <div className="mt-2 rounded-md bg-fill-secondary p-3">
+                          <div className="border-t border-border-muted bg-fill-secondary px-4 py-2.5">
                             {isLoadingZohoItems ? (
                               <div className="flex items-center justify-center py-2">
                                 <Icon
@@ -407,36 +400,32 @@ const NewPickListPage = () => {
                                 />
                               </div>
                             ) : expandedZohoOrder?.items.length ? (
-                              <div className="space-y-1.5">
+                              <div className="space-y-1">
                                 {expandedZohoOrder.items.map((item) => (
                                   <div
                                     key={item.id}
-                                    className="flex items-center justify-between text-xs"
+                                    className="flex items-center justify-between text-[13px]"
                                   >
                                     <span className="truncate text-text-primary">
                                       {item.name}
                                     </span>
-                                    <span className="ml-2 shrink-0 text-text-muted">
+                                    <span className="ml-2 shrink-0 font-medium tabular-nums text-text-muted">
                                       x{item.quantity}
                                     </span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <Typography
-                                variant="bodyXs"
-                                colorRole="muted"
-                                className="text-center"
-                              >
+                              <p className="py-1 text-center text-[13px] text-text-muted">
                                 No items
-                              </Typography>
+                              </p>
                             )}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             )}
           </div>
@@ -444,7 +433,7 @@ const NewPickListPage = () => {
 
         {/* Private Orders List (PCO) */}
         {activeTab === 'private' && !isLoadingPco && (
-          <div className="space-y-2">
+          <div>
             {filteredPcoOrders?.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -471,7 +460,7 @@ const NewPickListPage = () => {
                         allSelected ? new Set() : new Set(allIds),
                       );
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                    className="mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
                   >
                     <Icon
                       icon={
@@ -486,67 +475,58 @@ const NewPickListPage = () => {
                     Select All ({filteredPcoOrders.length})
                   </button>
                 )}
-                {filteredPcoOrders?.map((order) => {
-                  const isExpanded = expandedOrderId === order.id;
-                  return (
-                    <Card
-                      key={order.id}
-                      className={`cursor-pointer transition-all ${
-                        selectedOrderIds.has(order.id)
-                          ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                          : 'hover:border-border-brand'
-                      }`}
-                      onClick={() => toggleOrder(order.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Typography
-                              variant="bodySm"
-                              className="font-semibold"
-                            >
-                              {order.orderNumber}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {order.clientName ?? 'Unknown client'}
-                            </Typography>
-                            <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                              <span>{order.itemCount ?? 0} items</span>
-                              <span>{order.caseCount ?? 0} cases</span>
-                              <span>
-                                {new Date(
-                                  order.createdAt,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
+                <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-primary">
+                  {filteredPcoOrders?.map((order) => {
+                    const isSelected = selectedOrderIds.has(order.id);
+                    const isExpanded = expandedOrderId === order.id;
+                    return (
+                      <div
+                        key={order.id}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-brand-50'
+                            : 'bg-fill-primary hover:bg-surface-secondary/50'
+                        }`}
+                        onClick={() => toggleOrder(order.id)}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3">
                           <div
-                            className={`flex h-6 w-6 items-center justify-center rounded ${
-                              selectedOrderIds.has(order.id)
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded ${
+                              isSelected
                                 ? 'bg-brand-500 text-white'
                                 : 'border-2 border-border-primary'
                             }`}
                           >
-                            {selectedOrderIds.has(order.id) && (
+                            {isSelected && (
                               <Icon icon={IconCheck} size="xs" />
                             )}
                           </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[15px] font-bold">
+                              {order.orderNumber}
+                            </span>
+                            <div className="flex items-center gap-2 text-[13px] text-text-muted">
+                              <span className="truncate">{order.clientName ?? 'Unknown'}</span>
+                              <span className="text-border-primary">&middot;</span>
+                              <span className="shrink-0 font-medium">{order.itemCount ?? 0} items</span>
+                              <span className="text-border-primary">&middot;</span>
+                              <span className="shrink-0 font-medium">{order.caseCount ?? 0} cs</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => toggleExpand(e, order.id)}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
+                          >
+                            <Icon
+                              icon={isExpanded ? IconChevronUp : IconChevronDown}
+                              size="sm"
+                            />
+                          </button>
                         </div>
-                        {/* View Items toggle */}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleExpand(e, order.id)}
-                          className="mt-2 flex w-full items-center gap-1 py-2 text-sm font-medium text-brand-500 hover:text-brand-600"
-                        >
-                          <Icon
-                            icon={isExpanded ? IconChevronUp : IconChevronDown}
-                            size="xs"
-                          />
-                          {isExpanded ? 'Hide Items' : 'View Items'}
-                        </button>
                         {/* Expanded items */}
                         {isExpanded && (
-                          <div className="mt-2 rounded-md bg-fill-secondary p-3">
+                          <div className="border-t border-border-muted bg-fill-secondary px-4 py-2.5">
                             {isLoadingPcoItems ? (
                               <div className="flex items-center justify-center py-2">
                                 <Icon
@@ -556,11 +536,11 @@ const NewPickListPage = () => {
                                 />
                               </div>
                             ) : expandedPcoOrder?.items.length ? (
-                              <div className="space-y-1.5">
+                              <div className="space-y-1">
                                 {expandedPcoOrder.items.map((item) => (
                                   <div
                                     key={item.id}
-                                    className="flex items-center justify-between text-xs"
+                                    className="flex items-center justify-between text-[13px]"
                                   >
                                     <span className="truncate text-text-primary">
                                       {item.productName}
@@ -568,27 +548,23 @@ const NewPickListPage = () => {
                                         ? ` (${[item.producer, item.vintage].filter(Boolean).join(', ')})`
                                         : ''}
                                     </span>
-                                    <span className="ml-2 shrink-0 text-text-muted">
+                                    <span className="ml-2 shrink-0 font-medium tabular-nums text-text-muted">
                                       x{item.quantity}
                                     </span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <Typography
-                                variant="bodyXs"
-                                colorRole="muted"
-                                className="text-center"
-                              >
+                              <p className="py-1 text-center text-[13px] text-text-muted">
                                 No items
-                              </Typography>
+                              </p>
                             )}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             )}
           </div>
