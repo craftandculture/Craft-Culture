@@ -68,17 +68,55 @@ export const zohoSalesOrderSyncJob = schedules.task({
             .limit(1);
 
           if (existing) {
-            // Already synced, check if we need to update
-            // Don't update if we've started processing (picking, etc.)
+            // Already synced — update header and re-sync line items if still in synced status
             if (existing.status === 'synced') {
+              const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
+
               await triggerDb
                 .update(zohoSalesOrders)
                 .set({
                   zohoStatus: zohoOrder.status,
                   zohoLastModifiedTime: new Date(zohoOrder.last_modified_time),
+                  total: fullOrder.total,
+                  subTotal: fullOrder.sub_total,
                   lastSyncAt: new Date(),
                 })
                 .where(eq(zohoSalesOrders.id, existing.id));
+
+              // Upsert line items — add new ones that don't exist yet
+              if (fullOrder.line_items && fullOrder.line_items.length > 0) {
+                const existingItems = await triggerDb
+                  .select({ id: zohoSalesOrderItems.id, zohoLineItemId: zohoSalesOrderItems.zohoLineItemId })
+                  .from(zohoSalesOrderItems)
+                  .where(eq(zohoSalesOrderItems.salesOrderId, existing.id));
+
+                const existingLineItemIds = new Set(existingItems.map((i) => i.zohoLineItemId));
+
+                const newItems = fullOrder.line_items.filter(
+                  (item) => !existingLineItemIds.has(item.line_item_id),
+                );
+
+                if (newItems.length > 0) {
+                  await triggerDb.insert(zohoSalesOrderItems).values(
+                    newItems.map((item) => ({
+                      salesOrderId: existing.id,
+                      zohoLineItemId: item.line_item_id,
+                      zohoItemId: item.item_id,
+                      sku: item.sku,
+                      name: item.name,
+                      description: item.description,
+                      rate: item.rate,
+                      quantity: item.quantity,
+                      unit: item.unit,
+                      discount: item.discount,
+                      itemTotal: item.item_total,
+                    })),
+                  );
+
+                  logger.info(`Added ${newItems.length} new line items to ${zohoOrder.salesorder_number}`);
+                }
+              }
+
               results.updated++;
             }
 
