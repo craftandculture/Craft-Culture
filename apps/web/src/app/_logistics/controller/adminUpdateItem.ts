@@ -20,6 +20,8 @@ const updateItemSchema = z.object({
   bottlesPerCase: z.number().int().min(1).nullable().optional(),
   bottleSizeMl: z.number().int().min(1).nullable().optional(),
   productCostPerBottle: z.number().nullable().optional(),
+  overrideOwnerId: z.string().uuid().nullable().optional(),
+  overrideOwnerName: z.string().nullable().optional(),
 });
 
 /**
@@ -52,6 +54,7 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
   const fieldMap = [
     'productName', 'lwin', 'supplierSku', 'hsCode', 'countryOfOrigin',
     'producer', 'vintage', 'region', 'bottlesPerCase', 'bottleSizeMl', 'cases', 'productCostPerBottle',
+    'overrideOwnerId', 'overrideOwnerName',
   ] as const;
 
   for (const key of fieldMap) {

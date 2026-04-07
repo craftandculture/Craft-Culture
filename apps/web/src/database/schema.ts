@@ -2886,6 +2886,10 @@ export const logisticsShipmentItems = pgTable(
     marginPerBottle: doublePrecision('margin_per_bottle'),
     marginPercent: doublePrecision('margin_percent'),
 
+    // Owner override (for consolidated shipments with mixed owners)
+    overrideOwnerId: uuid('override_owner_id').references(() => partners.id, { onDelete: 'set null' }),
+    overrideOwnerName: text('override_owner_name'),
+
     // Notes
     notes: text('notes'),
 
