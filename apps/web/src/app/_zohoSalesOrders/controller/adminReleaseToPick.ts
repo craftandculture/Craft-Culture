@@ -7,7 +7,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, ilike, or } from 'drizzle-orm';
+import { and, eq, gt, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -127,8 +127,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           .orderBy(wmsStock.availableCases);
       }
 
-      // Strategy 2: Match by SKU (stored in lwin18 field)
+      // Strategy 2: Match by SKU (normalize to dashed format for comparison)
       if (availableStock.length === 0 && item.sku) {
+        const normalizedSku = normalizeLwin18(item.sku);
         availableStock = await db
           .select({
             stockId: wmsStock.id,
@@ -140,11 +141,11 @@ const adminReleaseToPick = wmsOperatorProcedure
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(and(eq(wmsStock.lwin18, item.sku), gt(wmsStock.availableCases, 0)))
+          .where(and(eq(wmsStock.lwin18, normalizedSku), gt(wmsStock.availableCases, 0)))
           .orderBy(wmsStock.availableCases);
       }
 
-      // Strategy 3: Match by product name (case-insensitive partial match)
+      // Strategy 3: Match by product name (case-insensitive, ALL terms must match)
       if (availableStock.length === 0 && item.name) {
         // Extract key words from product name for matching
         const searchTerms = item.name
@@ -153,7 +154,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           .slice(0, 3); // Use first 3 significant words
 
         if (searchTerms.length > 0) {
-          // Build OR conditions for partial matching
+          // Build AND conditions — all terms must appear in product name
           const conditions = searchTerms.map((term) =>
             ilike(wmsStock.productName, `%${term}%`),
           );
@@ -169,7 +170,7 @@ const adminReleaseToPick = wmsOperatorProcedure
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-            .where(and(or(...conditions), gt(wmsStock.availableCases, 0)))
+            .where(and(...conditions, gt(wmsStock.availableCases, 0)))
             .orderBy(wmsStock.availableCases);
         }
       }
