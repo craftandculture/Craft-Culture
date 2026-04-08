@@ -21,8 +21,8 @@ const adminGetCaseByBarcode = wmsOperatorProcedure
   .query(async ({ input }) => {
     const { barcode } = input;
 
-    // Find the case label
-    const [caseLabel] = await db
+    // Find the case label — try exact barcode match first, then LWIN18 fallback
+    let [caseLabel] = await db
       .select({
         id: wmsCaseLabels.id,
         barcode: wmsCaseLabels.barcode,
@@ -35,6 +35,24 @@ const adminGetCaseByBarcode = wmsOperatorProcedure
       })
       .from(wmsCaseLabels)
       .where(eq(wmsCaseLabels.barcode, barcode));
+
+    // Fallback: barcode might be an LWIN18 from a stock label
+    if (!caseLabel) {
+      [caseLabel] = await db
+        .select({
+          id: wmsCaseLabels.id,
+          barcode: wmsCaseLabels.barcode,
+          lwin18: wmsCaseLabels.lwin18,
+          productName: wmsCaseLabels.productName,
+          lotNumber: wmsCaseLabels.lotNumber,
+          shipmentId: wmsCaseLabels.shipmentId,
+          currentLocationId: wmsCaseLabels.currentLocationId,
+          isActive: wmsCaseLabels.isActive,
+        })
+        .from(wmsCaseLabels)
+        .where(eq(wmsCaseLabels.lwin18, barcode))
+        .limit(1);
+    }
 
     if (!caseLabel) {
       throw new TRPCError({
