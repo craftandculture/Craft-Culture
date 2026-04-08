@@ -19,6 +19,7 @@ export const getStockByProductSchema = z.object({
     .optional(),
   vintageFrom: z.number().min(1900).max(2100).optional(),
   vintageTo: z.number().min(1900).max(2100).optional(),
+  includeZeroQty: z.boolean().optional(),
   sortBy: z
     .enum(['productName', 'totalCases', 'vintage', 'receivedAt'])
     .default('totalCases'),
