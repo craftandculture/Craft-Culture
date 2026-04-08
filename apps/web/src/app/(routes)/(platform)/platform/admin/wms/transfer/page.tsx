@@ -29,6 +29,7 @@ import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
 
@@ -187,10 +188,10 @@ const WMSTransferPage = () => {
         setError('Invalid case barcode format');
         return;
       }
-      lwin18 = match[1];
+      lwin18 = normalizeLwin18(match[1]);
     } else {
       // Stock label barcode is the raw LWIN18 (e.g. 2909015-2019-06-00750)
-      lwin18 = barcode;
+      lwin18 = normalizeLwin18(barcode);
     }
 
     const matched = stockAtSource.find((s) => s.lwin18 === lwin18);
