@@ -54,6 +54,8 @@ const WMSPickListDetailPage = () => {
   const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
   const [duplicateScanError, setDuplicateScanError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLookingUpLocation, setIsLookingUpLocation] = useState(false);
 
   const scanInputRef = useRef<ScanInputHandle>(null);
 
@@ -75,8 +77,14 @@ const WMSPickListDetailPage = () => {
     onSuccess: () => {
       invalidatePickQueries();
       setPickingItem(null);
+      setPickedLocationId(null);
       setPickedLocationCode('');
       setPickedQuantity(0);
+      setCaseVerified(false);
+      setScanStep('location');
+      setScannedBarcodes(new Set());
+      setDuplicateScanError(null);
+      setLocationError(null);
       // Reset to first unpicked item (list re-sorts after invalidation)
       setCurrentItemIndex(0);
     },
@@ -126,9 +134,6 @@ const WMSPickListDetailPage = () => {
       return () => clearTimeout(timer);
     }
   }, [pickingItem, data]);
-
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLookingUpLocation, setIsLookingUpLocation] = useState(false);
 
   // Handle location barcode scan
   const handleLocationScan = useCallback(async (barcode: string) => {
