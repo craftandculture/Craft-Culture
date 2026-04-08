@@ -36,6 +36,7 @@ import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type CheckMode = 'bay' | 'product';
@@ -505,9 +506,9 @@ const StockCheckPage = () => {
           }
         }
 
-        const lwin18 = extractLwin18FromBarcode(barcode);
-        if (lwin18) {
-          setSearchedLwin18(lwin18);
+        const rawLwin18 = extractLwin18FromBarcode(barcode);
+        if (rawLwin18) {
+          setSearchedLwin18(normalizeLwin18(rawLwin18));
         } else {
           setScanError('Could not extract product code from barcode');
         }
