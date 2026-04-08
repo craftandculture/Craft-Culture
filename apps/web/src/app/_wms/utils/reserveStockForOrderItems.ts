@@ -3,6 +3,8 @@ import { and, desc, eq, gt, like, sql } from 'drizzle-orm';
 import type { wmsStock as wmsStockTable } from '@/database/schema';
 import { wmsStock, wmsStockReservations } from '@/database/schema';
 
+import normalizeLwin18 from './normalizeLwin18';
+
 interface ReservationItem {
   orderItemId: string;
   lwin18: string;
@@ -63,6 +65,9 @@ const reserveStockForOrderItems = async ({
   const short: ShortResult[] = [];
 
   for (const item of items) {
+    // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
+    const normalizedLwin = normalizeLwin18(item.lwin18);
+
     // Skip if already reserved (idempotent)
     const existingReservations = await db
       .select({ id: wmsStockReservations.id })
@@ -81,23 +86,23 @@ const reserveStockForOrderItems = async ({
     let remaining = item.quantityCases;
     let totalReserved = 0;
 
-    // Strategy 1: Exact LWIN18 match
+    // Strategy 1: Exact LWIN18 match (using normalized format)
     const stockRecords: Array<typeof wmsStockTable.$inferSelect> = await db
       .select()
       .from(wmsStock)
       .where(
-        and(eq(wmsStock.lwin18, item.lwin18), gt(wmsStock.availableCases, 0)),
+        and(eq(wmsStock.lwin18, normalizedLwin), gt(wmsStock.availableCases, 0)),
       )
       .orderBy(desc(wmsStock.availableCases));
 
     // Strategy 2: Prefix match (for short LWINs like LWIN7/LWIN11)
-    if (stockRecords.length === 0 && item.lwin18.length < 18) {
+    if (stockRecords.length === 0 && normalizedLwin.length < 18) {
       const prefixMatches: Array<typeof wmsStockTable.$inferSelect> = await db
         .select()
         .from(wmsStock)
         .where(
           and(
-            like(wmsStock.lwin18, `${item.lwin18}%`),
+            like(wmsStock.lwin18, `${normalizedLwin}%`),
             gt(wmsStock.availableCases, 0),
           ),
         )

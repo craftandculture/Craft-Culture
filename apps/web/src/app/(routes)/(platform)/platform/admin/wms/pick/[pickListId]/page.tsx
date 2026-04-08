@@ -3,8 +3,9 @@
 import {
   IconArrowLeft,
   IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
   IconLoader2,
-  IconMapPin,
   IconPackage,
   IconTrash,
 } from '@tabler/icons-react';
@@ -254,7 +255,7 @@ const WMSPickListDetailPage = () => {
 
   if (!data) {
     return (
-      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
+      <div className="px-4 py-6">
         <Typography variant="headingMd">Pick list not found</Typography>
       </div>
     );
@@ -263,265 +264,286 @@ const WMSPickListDetailPage = () => {
   const isComplete = data.status === 'completed';
   const allPicked = unpickedItems.length === 0;
 
-  return (
-    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/platform/admin/wms/pick">
-            <Button variant="ghost" className="h-12 w-12">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <Typography variant="headingSm">{data.pickListNumber}</Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              {data.invoiceNumber ?? data.orderNumber}
-            </Typography>
-            {data.invoiceNumber && data.orderNumber && (
-              <Typography variant="bodyXs" colorRole="muted" className="opacity-60">
-                {data.orderNumber}
-              </Typography>
-            )}
-          </div>
-          {!isComplete && (
-            <Button
-              variant="ghost"
-              className="h-12 w-12 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              <Icon icon={deleteMutation.isPending ? IconLoader2 : IconTrash} size="sm" />
-            </Button>
-          )}
-        </div>
+  // Format case config badge text
+  const formatCaseConfig = (item: { caseConfig: number | null; bottleSize: string | null }) => {
+    if (!item.caseConfig) return null;
+    return `${item.caseConfig}x${item.bottleSize ?? '75cl'}`;
+  };
 
-        {/* Progress */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <Typography variant="bodySm">Progress</Typography>
-              <Typography variant="bodySm" className="font-semibold">
-                {data.progress.percent}%
-              </Typography>
-            </div>
-            <div className="h-2 rounded-full bg-fill-secondary">
+  return (
+    <div className="mx-auto max-w-lg px-3 py-4 md:max-w-3xl md:px-4 lg:max-w-5xl">
+      {/* Compact Header */}
+      <div className="mb-3 flex items-center gap-3">
+        <Link href="/platform/admin/wms/pick">
+          <Button variant="ghost" className="h-10 w-10">
+            <Icon icon={IconArrowLeft} size="sm" />
+          </Button>
+        </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Typography variant="headingSm" className="truncate">
+              {data.pickListNumber}
+            </Typography>
+            <span className="shrink-0 rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
+              {data.invoiceNumber ?? data.orderNumber}
+            </span>
+          </div>
+          {/* Progress bar inline */}
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-1.5 flex-1 rounded-full bg-fill-secondary">
               <div
-                className="h-2 rounded-full bg-brand-600 transition-all"
+                className="h-1.5 rounded-full bg-brand-600 transition-all"
                 style={{ width: `${data.progress.percent}%` }}
               />
             </div>
-            <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-              {data.progress.pickedItems} of {data.progress.totalItems} items |{' '}
-              {data.progress.pickedCases} of {data.progress.totalCases} cases
+            <span className="shrink-0 text-[11px] font-medium text-text-muted">
+              {data.progress.pickedCases}/{data.progress.totalCases}
+            </span>
+          </div>
+        </div>
+        {!isComplete && (
+          <Button
+            variant="ghost"
+            className="h-10 w-10 shrink-0 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+          >
+            <Icon icon={deleteMutation.isPending ? IconLoader2 : IconTrash} size="sm" />
+          </Button>
+        )}
+      </div>
+
+      {/* Completed State */}
+      {isComplete && (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+            </div>
+            <Typography variant="headingSm" className="mb-1">
+              Pick List Complete
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              All items have been picked.
             </Typography>
           </CardContent>
         </Card>
+      )}
 
-        {/* Completed State */}
-        {isComplete && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                <Icon icon={IconCheck} size="xl" className="text-emerald-600" />
-              </div>
-              <Typography variant="headingSm" className="mb-2">
-                Pick List Complete
-              </Typography>
-              <Typography variant="bodySm" colorRole="muted">
-                All items have been picked and the pick list is complete.
-              </Typography>
-            </CardContent>
-          </Card>
-        )}
+      {/* All Picked - Ready to Complete */}
+      {allPicked && !isComplete && (
+        <Card>
+          <CardContent className="p-5 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+            </div>
+            <Typography variant="headingSm" className="mb-1">
+              All Items Picked
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+              Ready to complete the pick list
+            </Typography>
+            <Button
+              variant="default"
+              className="h-12 w-full"
+              onClick={handleComplete}
+              disabled={completeMutation.isPending}
+            >
+              <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
+                {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
+              </ButtonContent>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* All Picked - Ready to Complete */}
-        {allPicked && !isComplete && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                <Icon icon={IconCheck} size="xl" className="text-emerald-600" />
-              </div>
-              <Typography variant="headingSm" className="mb-2">
-                All Items Picked
-              </Typography>
-              <Typography variant="bodySm" colorRole="muted" className="mb-4">
-                Ready to complete the pick list
-              </Typography>
-              <Button
-                variant="default"
-                className="w-full"
-                onClick={handleComplete}
-                disabled={completeMutation.isPending}
-              >
-                <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
-                  {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
-                </ButtonContent>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Picking Interface */}
-        {!isComplete && !allPicked && !pickingItem && currentItem && (
-          <div className="space-y-4">
-            {/* Current Item Card */}
-            <Card className="border-2 border-brand-500">
-              <CardContent className="p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <Typography variant="bodyXs" className="font-medium text-brand-600">
-                    ITEM {currentItemIndex + 1} OF {unpickedItems.length}
-                  </Typography>
-                  {currentItem.suggestedLocationCode && (
-                    <LocationBadge locationCode={currentItem.suggestedLocationCode} size="sm" />
+      {/* ── Pre-Pick: Current Item Card ── */}
+      {!isComplete && !allPicked && !pickingItem && currentItem && (
+        <div className="space-y-3">
+          <Card className="border-2 border-brand-500">
+            <CardContent className="p-0">
+              {/* Item counter + location row */}
+              <div className="flex items-center justify-between border-b border-border-primary px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-brand-600">
+                    {currentItemIndex + 1}/{unpickedItems.length}
+                  </span>
+                  {formatCaseConfig(currentItem) && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      {formatCaseConfig(currentItem)}
+                    </span>
                   )}
                 </div>
-                <Typography variant="headingSm" className="mb-1">
+                {currentItem.suggestedLocationCode && (
+                  <LocationBadge locationCode={currentItem.suggestedLocationCode} size="sm" />
+                )}
+              </div>
+
+              {/* Product name */}
+              <div className="px-4 pt-3 pb-2">
+                <Typography variant="bodySm" className="font-semibold leading-tight">
                   {currentItem.productName}
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mb-4 font-mono">
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 font-mono text-[11px]">
                   {currentItem.lwin18}
                 </Typography>
+              </div>
 
-                <div className="rounded-lg bg-fill-secondary p-4 text-center">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Quantity to pick
-                  </Typography>
-                  <Typography variant="headingLg" className="text-brand-600">
+              {/* Quantity + Location — side by side */}
+              <div className="grid grid-cols-2 gap-px bg-border-primary">
+                <div className="bg-fill-secondary px-4 py-3 text-center">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    Pick Qty
+                  </span>
+                  <div className="text-3xl font-bold text-brand-600">
                     {currentItem.quantityCases}
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    cases
-                  </Typography>
-                </div>
-
-                {currentItem.suggestedLocationCode && (
-                  <div className="mt-4 flex items-center gap-2 text-text-muted">
-                    <Icon icon={IconMapPin} size="sm" />
-                    <Typography variant="bodyXs">
-                      Go to: <span className="font-semibold">{currentItem.suggestedLocationCode}</span>
-                    </Typography>
                   </div>
+                  <span className="text-[10px] text-text-muted">
+                    {currentItem.caseConfig ? `cases of ${currentItem.caseConfig}` : 'cases'}
+                  </span>
+                </div>
+                <div className="bg-fill-secondary px-4 py-3 text-center">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    Bay
+                  </span>
+                  <div className="font-mono text-2xl font-bold text-text-primary">
+                    {currentItem.suggestedLocationCode ?? '—'}
+                  </div>
+                  <span className="text-[10px] text-text-muted">
+                    go to location
+                  </span>
+                </div>
+              </div>
+
+              {/* Start picking — embedded in card */}
+              <div className="p-3">
+                <Button variant="default" className="h-12 w-full text-base" onClick={startPicking}>
+                  <ButtonContent iconLeft={IconPackage}>Start Picking</ButtonContent>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Prev / Skip navigation */}
+          {unpickedItems.length > 1 && (
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10"
+                onClick={() => setCurrentItemIndex((prev) => prev - 1)}
+                disabled={currentItemIndex === 0}
+              >
+                <Icon icon={IconChevronLeft} size="sm" />
+                <span className="ml-1">Prev</span>
+              </Button>
+              <span className="text-xs text-text-muted">
+                {currentItemIndex + 1} of {unpickedItems.length} remaining
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10"
+                onClick={() => setCurrentItemIndex((prev) => prev + 1)}
+                disabled={currentItemIndex >= unpickedItems.length - 1}
+              >
+                <span className="mr-1">Skip</span>
+                <Icon icon={IconChevronRight} size="sm" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Active Picking Flow ── */}
+      {pickingItem && (
+        <div className="space-y-3">
+          {/* Picking header bar — product + qty + location */}
+          <div className="flex items-start gap-3 rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Picking</span>
+                {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null }) && (
+                  <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                    {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null })}
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Start Picking Button */}
-            <Button variant="default" className="w-full py-4" onClick={startPicking}>
-              <ButtonContent iconLeft={IconPackage}>Start Picking</ButtonContent>
-            </Button>
-
-            {/* Skip / Next buttons */}
-            <div className="flex gap-3">
-              {currentItemIndex > 0 && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="flex-1"
-                  onClick={() => setCurrentItemIndex((prev) => prev - 1)}
-                >
-                  Previous
-                </Button>
-              )}
-              {currentItemIndex < unpickedItems.length - 1 && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="flex-1"
-                  onClick={() => setCurrentItemIndex((prev) => prev + 1)}
-                >
-                  Skip
-                </Button>
-              )}
+              </div>
+              <Typography variant="bodySm" className="mt-0.5 font-semibold leading-tight">
+                {pickingItem.productName}
+              </Typography>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="text-2xl font-bold text-brand-600">{pickingItem.quantityNeeded}</div>
+              <span className="text-[10px] text-text-muted">cases</span>
             </div>
           </div>
-        )}
 
-        {/* Picking Item - Location-First Flow */}
-        {pickingItem && (
-          <div className="space-y-4">
-            {/* Product Info */}
-            <Card>
-              <CardContent className="p-4">
-                <Typography variant="bodyXs" className="mb-2 font-medium text-brand-600">
-                  PICKING
-                </Typography>
-                <Typography variant="bodySm" className="font-semibold">
-                  {pickingItem.productName}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="font-mono">
-                  {pickingItem.lwin18}
-                </Typography>
-              </CardContent>
-            </Card>
+          {/* GO TO LOCATION — prominent only during location step */}
+          {currentItem?.suggestedLocationCode && scanStep === 'location' && (
+            <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-4 text-center dark:bg-amber-900/20">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                Go to Bay
+              </span>
+              <div className="font-mono text-3xl font-bold text-amber-700 dark:text-amber-300">
+                {currentItem.suggestedLocationCode}
+              </div>
+            </div>
+          )}
 
-            {/* GO TO LOCATION - Prominent Display */}
-            {currentItem?.suggestedLocationCode && scanStep === 'location' && (
-              <Card className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20">
-                <CardContent className="p-6 text-center">
-                  <Typography variant="bodyXs" className="mb-1 font-medium text-amber-700 dark:text-amber-300">
-                    GO TO BAY
-                  </Typography>
-                  <Typography variant="headingLg" className="font-mono text-2xl text-amber-700 dark:text-amber-300">
-                    {currentItem.suggestedLocationCode}
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-                    Pick {pickingItem.quantityNeeded} cases
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
+          {/* No suggested location warning */}
+          {!currentItem?.suggestedLocationCode && scanStep === 'location' && (
+            <div className="rounded-lg border-2 border-red-400 bg-red-50 px-4 py-3 text-center dark:bg-red-900/20">
+              <Typography variant="bodySm" className="font-semibold text-red-700 dark:text-red-300">
+                No location found in system
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                Scan any bay where you find this product
+              </Typography>
+            </div>
+          )}
 
-            {/* No suggested location warning */}
-            {!currentItem?.suggestedLocationCode && scanStep === 'location' && (
-              <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-900/20">
-                <CardContent className="p-4 text-center">
-                  <Typography variant="bodySm" className="font-semibold text-red-700 dark:text-red-300">
-                    No location found in system
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                    Scan any bay where you find this product
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
+          {/* Quantity adjuster */}
+          <div className="flex items-center justify-between rounded-lg bg-fill-secondary px-4 py-2">
+            <span className="text-xs font-medium text-text-muted">Qty</span>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                className="h-10 w-10 text-lg"
+                onClick={() => setPickedQuantity((prev) => Math.max(1, prev - 1))}
+                disabled={pickedQuantity <= 1}
+              >
+                -
+              </Button>
+              <span className="w-10 text-center text-xl font-bold">{pickedQuantity}</span>
+              <Button
+                variant="outline"
+                className="h-10 w-10 text-lg"
+                onClick={() => setPickedQuantity((prev) => prev + 1)}
+              >
+                +
+              </Button>
+            </div>
+          </div>
 
-            {/* Quantity Input */}
-            <Card>
-              <CardContent className="p-4">
-                <label className="mb-2 block text-sm font-medium">Quantity to Pick</label>
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-12 w-12 text-lg"
-                    onClick={() => setPickedQuantity((prev) => Math.max(1, prev - 1))}
-                    disabled={pickedQuantity <= 1}
-                  >
-                    -
-                  </Button>
-                  <Typography variant="headingLg" className="w-20 text-center">
-                    {pickedQuantity}
-                  </Typography>
-                  <Button
-                    variant="outline"
-                    className="h-12 w-12 text-lg"
-                    onClick={() => setPickedQuantity((prev) => prev + 1)}
-                  >
-                    +
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Step 1: Confirm Location */}
-            <Card className={scanStep === 'location' ? 'border-2 border-brand-500' : ''}>
-              <CardContent className="p-4">
+          {/* Scan Steps — single card with two sections */}
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              {/* Step 1: Location */}
+              <div className={`p-3 ${scanStep === 'location' ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="block text-sm font-medium">
-                    Step 1: Scan Bay Barcode to Confirm
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                      pickedLocationCode
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                    }`}>
+                      {pickedLocationCode ? <Icon icon={IconCheck} size="xs" /> : '1'}
+                    </span>
+                    <span className="text-xs font-medium">Scan Bay</span>
+                  </div>
                   {pickedLocationCode && (
-                    <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
+                    <span className="text-xs font-semibold text-emerald-600">{pickedLocationCode}</span>
                   )}
                 </div>
                 {scanStep === 'location' ? (
@@ -533,26 +555,33 @@ const WMSPickListDetailPage = () => {
                     error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
                     autoFocus
                   />
-                ) : (
-                  <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
-                    <Icon icon={IconMapPin} size="sm" className="text-emerald-600" />
-                    <Typography variant="bodySm" className="font-semibold text-emerald-700 dark:text-emerald-400">
-                      {pickedLocationCode}
-                    </Typography>
+                ) : !pickedLocationCode ? (
+                  <div className="rounded bg-fill-secondary px-3 py-2 text-center text-xs text-text-muted">
+                    Scan location first
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                ) : null}
+              </div>
 
-            {/* Step 2: Scan Case Barcode */}
-            <Card className={scanStep === 'case' ? 'border-2 border-brand-500' : 'opacity-60'}>
-              <CardContent className="p-4">
+              {/* Divider */}
+              <div className="border-t border-border-primary" />
+
+              {/* Step 2: Case */}
+              <div className={`p-3 ${scanStep === 'case' ? 'bg-brand-50/50 dark:bg-brand-900/10' : !pickedLocationCode ? 'opacity-40' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="block text-sm font-medium">
-                    Step 2: Scan Case Barcode
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                      caseVerified
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : scanStep === 'case'
+                          ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                          : 'bg-fill-secondary text-text-muted'
+                    }`}>
+                      {caseVerified ? <Icon icon={IconCheck} size="xs" /> : '2'}
+                    </span>
+                    <span className="text-xs font-medium">Scan Case</span>
+                  </div>
                   {caseVerified && (
-                    <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
+                    <span className="text-xs font-semibold text-emerald-600">Verified</span>
                   )}
                 </div>
                 {scanStep === 'case' && !caseVerified ? (
@@ -562,158 +591,159 @@ const WMSPickListDetailPage = () => {
                     error={duplicateScanError && scanStep === 'case' ? duplicateScanError : undefined}
                     autoFocus
                   />
-                ) : caseVerified ? (
-                  <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
-                    <Icon icon={IconPackage} size="sm" className="text-emerald-600" />
-                    <Typography variant="bodySm" className="font-semibold text-emerald-700 dark:text-emerald-400">
-                      Case verified
-                    </Typography>
-                  </div>
-                ) : (
-                  <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Scan location first
-                    </Typography>
+                ) : caseVerified ? null : (
+                  <div className="rounded bg-fill-secondary px-3 py-2 text-center text-xs text-text-muted">
+                    Complete step 1 first
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Confirm / Cancel */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                size="lg"
-                className="flex-1"
-                onClick={() => {
-                  setPickingItem(null);
-                  setPickedLocationId(null);
-                  setPickedLocationCode('');
-                  setPickedQuantity(0);
-                  setCaseVerified(false);
-                  setScanStep('location');
-                  setScannedBarcodes(new Set());
-                  setDuplicateScanError(null);
-                  setLocationError(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                size="lg"
-                className="flex-1"
-                onClick={confirmPick}
-                disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
-              >
-                <ButtonContent iconLeft={pickItemMutation.isPending ? IconLoader2 : IconCheck}>
-                  {pickItemMutation.isPending ? 'Saving...' : 'Confirm Pick'}
-                </ButtonContent>
-              </Button>
-            </div>
-
-            {pickItemMutation.isError && (
-              <Typography variant="bodyXs" className="text-center text-red-600">
-                {pickItemMutation.error?.message}
-              </Typography>
-            )}
-
-            {/* Next bay hint */}
-            {nextLocationHint && (
-              <Card className="border-dashed border-blue-300 bg-blue-50/50 dark:bg-blue-900/10">
-                <CardContent className="p-3 text-center">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Next: {nextItem?.productName?.substring(0, 30)}...
-                  </Typography>
-                  <Typography variant="bodySm" className="font-medium text-blue-600">
-                    Bay {nextLocationHint}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
+          {/* Confirm / Cancel */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="h-12 flex-1"
+              onClick={() => {
+                setPickingItem(null);
+                setPickedLocationId(null);
+                setPickedLocationCode('');
+                setPickedQuantity(0);
+                setCaseVerified(false);
+                setScanStep('location');
+                setScannedBarcodes(new Set());
+                setDuplicateScanError(null);
+                setLocationError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              className="h-12 flex-[2]"
+              onClick={confirmPick}
+              disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
+            >
+              <ButtonContent iconLeft={pickItemMutation.isPending ? IconLoader2 : IconCheck}>
+                {pickItemMutation.isPending ? 'Saving...' : 'Confirm Pick'}
+              </ButtonContent>
+            </Button>
           </div>
-        )}
 
-        {/* Items List */}
-        {!pickingItem && (
-          <div className="space-y-2">
-            <Typography variant="bodySm" className="font-medium">
-              All Items
+          {pickItemMutation.isError && (
+            <Typography variant="bodyXs" className="text-center text-red-600">
+              {pickItemMutation.error?.message}
             </Typography>
-            {data.items.map((item, idx) => (
-              <Card
-                key={item.id}
-                className={item.isPicked ? 'opacity-60' : ''}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        item.isPicked
-                          ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                          : 'bg-fill-secondary'
-                      }`}
-                    >
-                      {item.isPicked ? (
-                        <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
-                      ) : (
-                        <Typography variant="bodyXs">{idx + 1}</Typography>
+          )}
+
+          {/* Next bay hint */}
+          {nextLocationHint && (
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 px-3 py-2 dark:bg-blue-900/10">
+              <Typography variant="bodyXs" colorRole="muted">
+                Next:
+              </Typography>
+              <Typography variant="bodyXs" className="font-semibold text-blue-600">
+                {nextLocationHint}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                {nextItem?.productName?.substring(0, 25)}
+              </Typography>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Items List ── */}
+      {!pickingItem && data.items.length > 0 && (
+        <div className="mt-4">
+          <Typography variant="bodyXs" className="mb-2 font-semibold uppercase tracking-wider text-text-muted">
+            All Items ({data.progress.pickedItems}/{data.progress.totalItems})
+          </Typography>
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              {data.items.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 ${
+                    idx > 0 ? 'border-t border-border-primary' : ''
+                  } ${item.isPicked ? 'bg-emerald-50/50 dark:bg-emerald-900/5' : ''}`}
+                >
+                  {/* Status indicator */}
+                  <div
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      item.isPicked
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30'
+                        : 'bg-fill-secondary text-text-muted'
+                    }`}
+                  >
+                    {item.isPicked ? (
+                      <Icon icon={IconCheck} size="xs" className="text-emerald-600" />
+                    ) : (
+                      idx + 1
+                    )}
+                  </div>
+                  {/* Product info */}
+                  <div className="min-w-0 flex-1">
+                    <Typography variant="bodyXs" className={`truncate font-medium ${item.isPicked ? 'line-through opacity-60' : ''}`}>
+                      {item.productName}
+                    </Typography>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-text-muted">
+                        {item.quantityCases}cs
+                      </span>
+                      {formatCaseConfig(item) && (
+                        <span className="rounded bg-amber-100 px-1 py-px text-[9px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          {formatCaseConfig(item)}
+                        </span>
+                      )}
+                      {item.suggestedLocationCode && (
+                        <span className="rounded bg-fill-secondary px-1 py-px text-[10px] font-mono font-medium text-text-muted">
+                          {item.suggestedLocationCode}
+                        </span>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <Typography variant="bodyXs" className="font-medium">
-                        {item.productName}
-                      </Typography>
-                      <div className="flex items-center gap-2">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {item.quantityCases} cases
-                        </Typography>
-                        {item.suggestedLocationCode && (
-                          <LocationBadge locationCode={item.suggestedLocationCode} size="sm" />
-                        )}
-                      </div>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <>
-            <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowDeleteModal(false)} />
-            <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2">
-              <Card>
-                <CardContent className="p-6">
-                  <Typography variant="headingSm" className="mb-2">
-                    Delete Pick List?
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted" className="mb-6">
-                    The order will be reset so you can release it again.
-                  </Typography>
-                  <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      colorRole="danger"
-                      className="flex-1"
-                      onClick={confirmDelete}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <ButtonContent iconLeft={deleteMutation.isPending ? IconLoader2 : IconTrash}>
-                        Delete
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowDeleteModal(false)} />
+          <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2">
+            <Card>
+              <CardContent className="p-5">
+                <Typography variant="headingSm" className="mb-2">
+                  Delete Pick List?
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  The order will be reset so you can release it again.
+                </Typography>
+                <div className="flex gap-3">
+                  <Button variant="outline" className="h-12 flex-1" onClick={() => setShowDeleteModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    colorRole="danger"
+                    className="h-12 flex-1"
+                    onClick={confirmDelete}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <ButtonContent iconLeft={deleteMutation.isPending ? IconLoader2 : IconTrash}>
+                      Delete
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };
