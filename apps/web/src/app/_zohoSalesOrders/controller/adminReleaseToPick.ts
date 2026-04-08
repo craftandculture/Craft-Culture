@@ -11,6 +11,7 @@ import { and, eq, gt, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
 import {
   wmsLocations,
@@ -96,6 +97,9 @@ const adminReleaseToPick = wmsOperatorProcedure
     const pickListItems = [];
 
     for (const item of orderItems) {
+      // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
+      const itemLwin18 = item.lwin18 ? normalizeLwin18(item.lwin18) : null;
+
       // Try multiple matching strategies to find stock
       let availableStock: {
         stockId: string;
@@ -107,7 +111,7 @@ const adminReleaseToPick = wmsOperatorProcedure
       }[] = [];
 
       // Strategy 1: Match by LWIN18 (if populated)
-      if (item.lwin18) {
+      if (itemLwin18) {
         availableStock = await db
           .select({
             stockId: wmsStock.id,
@@ -119,7 +123,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(and(eq(wmsStock.lwin18, item.lwin18), gt(wmsStock.availableCases, 0)))
+          .where(and(eq(wmsStock.lwin18, itemLwin18), gt(wmsStock.availableCases, 0)))
           .orderBy(wmsStock.availableCases);
       }
 
@@ -179,8 +183,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          // Use matched stock's LWIN if available, otherwise fall back to order item data
-          lwin18: suggestedStock?.lwin18 ?? item.lwin18 ?? item.sku ?? '',
+          // Use matched stock's LWIN if available, otherwise fall back to normalized order item data
+          lwin18: suggestedStock?.lwin18 ?? itemLwin18 ?? item.sku ?? '',
           productName: item.name,
           quantityCases: item.quantity,
           suggestedLocationId: suggestedStock?.locationId ?? null,

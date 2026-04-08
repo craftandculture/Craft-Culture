@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { users, wmsLocations, wmsPickListItems, wmsPickLists, zohoInvoices } from '@/database/schema';
+import { users, wmsLocations, wmsPickListItems, wmsPickLists, wmsStock, zohoInvoices } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListSchema } from '../schemas/pickListSchema';
@@ -47,7 +47,7 @@ const adminGetPickList = wmsOperatorProcedure
       });
     }
 
-    // Get pick list items with location details
+    // Get pick list items with location and stock details (case config for picking)
     const items = await db
       .select({
         id: wmsPickListItems.id,
@@ -62,9 +62,12 @@ const adminGetPickList = wmsOperatorProcedure
         pickedBy: wmsPickListItems.pickedBy,
         isPicked: wmsPickListItems.isPicked,
         notes: wmsPickListItems.notes,
+        caseConfig: wmsStock.caseConfig,
+        bottleSize: wmsStock.bottleSize,
       })
       .from(wmsPickListItems)
       .leftJoin(wmsLocations, eq(wmsPickListItems.suggestedLocationId, wmsLocations.id))
+      .leftJoin(wmsStock, eq(wmsPickListItems.suggestedStockId, wmsStock.id))
       .where(eq(wmsPickListItems.pickListId, pickListId));
 
     // Look up invoice number
