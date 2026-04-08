@@ -125,16 +125,22 @@ const NewPickListPage = () => {
     setCreateError(null);
 
     const ids = Array.from(selectedOrderIds);
-    const results = await Promise.allSettled(
-      ids.map((id) =>
-        activeTab === 'sales'
-          ? releaseToPickMutation.mutateAsync({ salesOrderId: id })
-          : createPcoMutation.mutateAsync({ orderId: id }),
-      ),
-    );
+    let succeeded = 0;
+    let failed = 0;
 
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    // Process sequentially to avoid pick list number race condition
+    for (const id of ids) {
+      try {
+        if (activeTab === 'sales') {
+          await releaseToPickMutation.mutateAsync({ salesOrderId: id });
+        } else {
+          await createPcoMutation.mutateAsync({ orderId: id });
+        }
+        succeeded++;
+      } catch {
+        failed++;
+      }
+    }
 
     setIsCreating(false);
     void queryClient.invalidateQueries();
