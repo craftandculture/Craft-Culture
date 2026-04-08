@@ -1411,6 +1411,7 @@ const StockExplorerPage = () => {
   const [vintageFrom, setVintageFrom] = useState('');
   const [vintageTo, setVintageTo] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [showZeroQty, setShowZeroQty] = useState(false);
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [sortBy, setSortBy] = useState<SortField>('totalCases');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -1437,7 +1438,7 @@ const StockExplorerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter, category]);
+  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter, category, showZeroQty]);
 
   // Persist preferences
   useEffect(() => {
@@ -1469,6 +1470,7 @@ const StockExplorerPage = () => {
       search: debouncedSearch || undefined,
       ownerId: ownerId || undefined,
       category: category || undefined,
+      includeZeroQty: showZeroQty || undefined,
       quickFilter: quickFilter !== 'all' && quickFilter !== 'inbound' ? quickFilter : undefined,
       vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
       vintageTo: vintageTo ? Number(vintageTo) : undefined,
@@ -1676,6 +1678,7 @@ const StockExplorerPage = () => {
     setVintageFrom('');
     setVintageTo('');
     setQuickFilter('all');
+    setShowZeroQty(false);
     setSortBy('totalCases');
     setSortOrder('desc');
     setPage(0);
@@ -1738,7 +1741,7 @@ const StockExplorerPage = () => {
     [print],
   );
 
-  const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo || quickFilter !== 'all';
+  const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo || quickFilter !== 'all' || showZeroQty;
 
   // Find the selected owner name for filter chips
   const selectedOwnerName = useMemo(() => {
@@ -2067,6 +2070,21 @@ const StockExplorerPage = () => {
               {qf.label}
             </button>
           ))}
+
+          {/* Divider */}
+          <div className="mx-1 h-4 w-px bg-border-muted" />
+
+          {/* Zero qty toggle */}
+          <button
+            onClick={() => setShowZeroQty((v) => !v)}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              showZeroQty
+                ? 'bg-amber-600 text-white'
+                : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+            }`}
+          >
+            Show 0 Qty
+          </button>
         </div>
 
         {/* Active Filter Chips */}

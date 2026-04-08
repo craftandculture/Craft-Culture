@@ -27,6 +27,7 @@ const adminGetStockByProduct = wmsOperatorProcedure
       category,
       hasExpiry,
       quickFilter,
+      includeZeroQty,
       vintageFrom,
       vintageTo,
       sortBy,
@@ -35,8 +36,10 @@ const adminGetStockByProduct = wmsOperatorProcedure
       offset,
     } = input;
 
-    // Always exclude zero-quantity stock records (leftover from transfers/adjustments)
-    const conditions = [gt(wmsStock.quantityCases, 0)];
+    // Exclude zero-quantity stock records unless explicitly requested
+    const conditions = includeZeroQty
+      ? []
+      : [gt(wmsStock.quantityCases, 0)];
 
     if (search) {
       conditions.push(
@@ -175,10 +178,12 @@ const adminGetStockByProduct = wmsOperatorProcedure
     // For each product, get location breakdown
     const productsWithLocations = await Promise.all(
       products.map(async (product) => {
-        const locationConditions = [
-          eq(wmsStock.lwin18, product.lwin18),
-          gt(wmsStock.quantityCases, 0),
-        ];
+        const locationConditions = includeZeroQty
+          ? [eq(wmsStock.lwin18, product.lwin18)]
+          : [
+              eq(wmsStock.lwin18, product.lwin18),
+              gt(wmsStock.quantityCases, 0),
+            ];
         if (product.caseConfig !== null) {
           locationConditions.push(eq(wmsStock.caseConfig, product.caseConfig));
         }
