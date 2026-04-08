@@ -151,7 +151,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         const searchTerms = item.name
           .split(/[\s,\-]+/)
           .filter((word) => word.length > 2)
-          .slice(0, 3); // Use first 3 significant words
+          .slice(0, 8); // Use up to 8 significant words for better disambiguation
 
         if (searchTerms.length > 0) {
           // Build AND conditions — all terms must appear in product name
