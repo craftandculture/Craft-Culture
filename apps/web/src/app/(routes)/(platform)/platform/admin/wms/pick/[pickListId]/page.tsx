@@ -62,11 +62,18 @@ const WMSPickListDetailPage = () => {
     ...wmsApi.pickListQueryOptions(pickListId),
   });
 
+  // Invalidate both cloud tRPC and local NUC pick queries
+  const invalidatePickQueries = () => {
+    void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'picking']] });
+    void queryClient.invalidateQueries({ queryKey: ['wms', 'pickList'] });
+    void queryClient.invalidateQueries({ queryKey: ['wms', 'pickLists'] });
+  };
+
   // Pick item mutation — routes through local NUC when available
   const pickItemMutation = useMutation({
     ...wmsApi.pickItemMutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'picking']] });
+      invalidatePickQueries();
       setPickingItem(null);
       setPickedLocationCode('');
       setPickedQuantity(0);
@@ -79,7 +86,7 @@ const WMSPickListDetailPage = () => {
   const completeMutation = useMutation({
     ...wmsApi.pickCompleteMutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'picking']] });
+      invalidatePickQueries();
       router.push('/platform/admin/wms/pick');
     },
   });
