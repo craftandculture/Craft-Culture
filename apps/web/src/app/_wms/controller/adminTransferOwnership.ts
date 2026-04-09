@@ -76,7 +76,7 @@ const adminTransferOwnership = wmsOperatorProcedure
           .update(wmsStock)
           .set({
             ownerId: newOwnerId,
-            ownerName: newOwner.name,
+            ownerName: newOwner.businessName,
             salesArrangement: salesArrangement ?? sourceStock.salesArrangement,
             consignmentCommissionPercent:
               consignmentCommissionPercent ?? sourceStock.consignmentCommissionPercent,
@@ -120,7 +120,7 @@ const adminTransferOwnership = wmsOperatorProcedure
           await tx.insert(wmsStock).values({
             locationId: sourceStock.locationId,
             ownerId: newOwnerId,
-            ownerName: newOwner.name,
+            ownerName: newOwner.businessName,
             lwin18: sourceStock.lwin18,
             productName: sourceStock.productName,
             producer: sourceStock.producer,
@@ -168,7 +168,7 @@ const adminTransferOwnership = wmsOperatorProcedure
     return {
       success: true,
       movement: result,
-      message: `Transferred ${quantityCases} cases from ${sourceStock.ownerName} to ${newOwner.name}`,
+      message: `Transferred ${quantityCases} cases from ${sourceStock.ownerName} to ${newOwner.businessName}`,
     };
   });
 
