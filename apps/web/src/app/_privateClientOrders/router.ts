@@ -8,6 +8,7 @@ import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
+import adminMarkPayment from './controller/adminMarkPayment';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
@@ -103,6 +104,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
   adminMarkPartnerPaid,
+  adminMarkPayment,
   itemsUpdateStockStatus,
   itemsBulkUpdateStockStatus,
   checkLocalStock,
