@@ -4,15 +4,18 @@ import {
   IconCheck,
   IconCircleDashed,
   IconClock,
+  IconCurrencyDollar,
   IconLoader2,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
@@ -41,6 +44,7 @@ interface PaymentTrackerProps {
     | 'partnerPaidAt'
     | 'partnerPaymentReference'
   >;
+  isAdmin?: boolean;
   canVerifyPayments?: boolean;
   onPaymentConfirmed?: () => void;
 }
@@ -143,12 +147,15 @@ const statusConfig: Record<
  */
 const PaymentTracker = ({
   order,
+  isAdmin = false,
   canVerifyPayments = false,
   onPaymentConfirmed,
 }: PaymentTrackerProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const payments = buildPaymentInfo(order);
+  const [expandedStage, setExpandedStage] = useState<PaymentStage | null>(null);
+  const [paymentRef, setPaymentRef] = useState('');
 
   const verifyPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -163,6 +170,37 @@ const PaymentTracker = ({
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to verify payment');
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async ({ stage, reference }: { stage: PaymentStage; reference?: string }) => {
+      if (stage === 'partner') {
+        return trpcClient.privateClientOrders.adminMarkPartnerPaid.mutate({
+          orderId: order.id,
+          reference,
+        });
+      }
+      return trpcClient.privateClientOrders.adminMarkPayment.mutate({
+        orderId: order.id,
+        paymentStage: stage,
+        reference,
+      });
+    },
+    onSuccess: (_data, variables) => {
+      const labels: Record<PaymentStage, string> = {
+        client: 'Client payment',
+        distributor: 'Distributor payment',
+        partner: 'Partner payment',
+      };
+      toast.success(`${labels[variables.stage]} confirmed`);
+      setExpandedStage(null);
+      setPaymentRef('');
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+      onPaymentConfirmed?.();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to confirm payment');
     },
   });
 
@@ -262,6 +300,63 @@ const PaymentTracker = ({
                         )}
                         Verify Payment & Schedule Delivery
                       </Button>
+                    </div>
+                  )}
+
+                  {/* Admin mark paid button */}
+                  {isAdmin && !payment.paidAt && (
+                    <div className="mt-2">
+                      {expandedStage === payment.stage ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Reference (optional)"
+                            value={paymentRef}
+                            onChange={(e) => setPaymentRef(e.target.value)}
+                            className="w-[160px] text-xs"
+                          />
+                          <Button
+                            size="sm"
+                            colorRole="success"
+                            onClick={() =>
+                              markPaidMutation.mutate({
+                                stage: payment.stage,
+                                reference: paymentRef || undefined,
+                              })
+                            }
+                            isDisabled={markPaidMutation.isPending}
+                          >
+                            {markPaidMutation.isPending ? (
+                              <Icon icon={IconLoader2} size="xs" className="animate-spin" />
+                            ) : (
+                              <Icon icon={IconCheck} size="xs" />
+                            )}
+                            Confirm
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setExpandedStage(null);
+                              setPaymentRef('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedStage(payment.stage);
+                            setPaymentRef('');
+                          }}
+                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
+                        >
+                          <IconCurrencyDollar size={14} />
+                          Mark Paid
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
