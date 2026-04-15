@@ -177,8 +177,8 @@ const adminReceiveShipment = wmsOperatorProcedure
         // Use per-item location if provided, otherwise fall back to global receivingLocationId
         const itemLocationId = receivedItem.locationId ?? receivingLocationId;
 
-        // Check if stock already exists for this product at this location from this shipment
-        // This prevents duplicate stock records if receiving is retried after an error
+        // Check for existing stock at this location with same LWIN18 and owner
+        const resolvedOwnerId = shipmentItem.overrideOwnerId ?? partner.id;
         const [existingStock] = await tx
           .select()
           .from(wmsStock)
@@ -186,23 +186,37 @@ const adminReceiveShipment = wmsOperatorProcedure
             and(
               eq(wmsStock.lwin18, lwin18),
               eq(wmsStock.locationId, itemLocationId),
-              eq(wmsStock.shipmentId, shipmentId),
+              eq(wmsStock.ownerId, resolvedOwnerId),
             ),
           );
 
         let stock: typeof wmsStock.$inferSelect;
 
-        if (existingStock) {
-          // Stock already exists - this is a retry, skip creation
-          // Use the existing stock record
+        // Check if this exact shipment was already received (idempotency for retries)
+        const isRetry = existingStock?.shipmentId === shipmentId;
+
+        if (existingStock && isRetry) {
+          // Exact retry — use existing record without incrementing
           stock = existingStock;
+        } else if (existingStock) {
+          // Same product/location/owner from a different source — increment qty
+          const [updatedStock] = await tx
+            .update(wmsStock)
+            .set({
+              quantityCases: sql`${wmsStock.quantityCases} + ${receivedItem.receivedCases}`,
+              availableCases: sql`${wmsStock.availableCases} + ${receivedItem.receivedCases}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(wmsStock.id, existingStock.id))
+            .returning();
+          stock = updatedStock;
         } else {
           // Create new stock record
           const [newStock] = await tx
             .insert(wmsStock)
             .values({
               locationId: itemLocationId,
-              ownerId: shipmentItem.overrideOwnerId ?? partner.id,
+              ownerId: resolvedOwnerId,
               ownerName: shipmentItem.overrideOwnerName ?? partner.businessName,
               lwin18,
               supplierSku,
@@ -287,8 +301,8 @@ const adminReceiveShipment = wmsOperatorProcedure
           }
         }
 
-        // Only create movement record if we created new stock (not a retry)
-        if (!existingStock) {
+        // Create movement record (skip only for exact retries)
+        if (!isRetry) {
           const movementNumber = await generateMovementNumber();
           await tx.insert(wmsStockMovements).values({
             movementNumber,
