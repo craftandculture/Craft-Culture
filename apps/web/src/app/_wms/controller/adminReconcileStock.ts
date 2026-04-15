@@ -68,8 +68,8 @@ const adminReconcileStock = wmsOperatorProcedure.query(async () => {
       sql`NOT EXISTS (
         SELECT 1 FROM ${wmsStockMovements} m
         WHERE m.lwin18 = ${wmsStock.lwin18}
-        AND m.movement_type IN ('receive', 'repack_in')
-        AND (m.shipment_id = ${wmsStock.shipmentId} OR (m.shipment_id IS NULL AND ${wmsStock.shipmentId} IS NULL))
+        AND m.movement_type IN ('receive', 'repack_in', 'count')
+        AND (m.shipment_id = ${wmsStock.shipmentId} OR m.shipment_id IS NULL OR ${wmsStock.shipmentId} IS NULL)
       )`,
     );
 
