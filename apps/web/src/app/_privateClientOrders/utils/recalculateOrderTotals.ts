@@ -28,6 +28,12 @@ import logger from '@/utils/logger';
  */
 const recalculateOrderTotals = async (orderId: string) => {
   try {
+    // Get the order to resolve partnerId
+    const order = await db.query.privateClientOrders.findFirst({
+      where: { id: orderId },
+      columns: { partnerId: true },
+    });
+
     // Get global PCO variables (from database or defaults)
     const globalVariables = await getPCOVariables();
 
@@ -36,8 +42,8 @@ const recalculateOrderTotals = async (orderId: string) => {
       throw new Error('Failed to load pricing configuration');
     }
 
-    // Get effective variables for this order (applies bespoke overrides if set)
-    const effectiveVariables = await getOrderPCOVariables(orderId, globalVariables);
+    // Get effective variables: order override → partner override → global defaults
+    const effectiveVariables = await getOrderPCOVariables(orderId, order?.partnerId ?? null, globalVariables);
 
     if (!effectiveVariables) {
       logger.error('Failed to load effective pricing variables for order', { orderId });

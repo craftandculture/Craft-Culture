@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getPartnerPricingOverrides from '@/app/_pricing/data/getPartnerPricingOverrides';
 import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
 import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import db from '@/database/client';
@@ -153,9 +154,24 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
     .returning();
 
   // Snapshot pricing variables onto the order so future config changes don't affect it
-  const effectivePricing = pricingType === 'bespoke' && bespokePricing
-    ? bespokePricing
-    : await getPCOVariables();
+  // Resolution: bespoke (manual) → partner override → global defaults
+  let effectivePricing;
+  if (pricingType === 'bespoke' && bespokePricing) {
+    effectivePricing = bespokePricing;
+  } else {
+    const globalVars = await getPCOVariables();
+    const partnerOverride = order.partnerId
+      ? await getPartnerPricingOverrides(order.partnerId)
+      : null;
+
+    effectivePricing = {
+      ccMarginPercent: partnerOverride?.ccMarginPercent ?? globalVars.ccMarginPercent,
+      importDutyPercent: partnerOverride?.importDutyPercent ?? globalVars.importDutyPercent,
+      transferCostPercent: partnerOverride?.transferCostPercent ?? globalVars.transferCostPercent,
+      distributorMarginPercent: partnerOverride?.distributorMarginPercent ?? globalVars.distributorMarginPercent,
+      vatPercent: partnerOverride?.vatPercent ?? globalVars.vatPercent,
+    };
+  }
 
   const existingOverride = await db.query.orderPricingOverrides.findFirst({
     where: { orderId },
