@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
 import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import db from '@/database/client';
 import {
@@ -151,28 +152,31 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
     .where(eq(privateClientOrders.id, orderId))
     .returning();
 
-  // Save bespoke pricing if selected
-  if (pricingType === 'bespoke' && bespokePricing) {
-    // Check if override already exists
-    const existingOverride = await db.query.orderPricingOverrides.findFirst({
-      where: { orderId },
-    });
+  // Snapshot pricing variables onto the order so future config changes don't affect it
+  const effectivePricing = pricingType === 'bespoke' && bespokePricing
+    ? bespokePricing
+    : await getPCOVariables();
 
-    if (existingOverride) {
-      await db
-        .update(orderPricingOverrides)
-        .set({
-          ...bespokePricing,
-        })
-        .where(eq(orderPricingOverrides.id, existingOverride.id));
-    } else {
-      await db.insert(orderPricingOverrides).values({
-        orderId,
-        ...bespokePricing,
-        createdBy: user.id,
-        notes: `Bespoke pricing set during approval`,
-      });
-    }
+  const existingOverride = await db.query.orderPricingOverrides.findFirst({
+    where: { orderId },
+  });
+
+  if (existingOverride) {
+    await db
+      .update(orderPricingOverrides)
+      .set({
+        ...effectivePricing,
+      })
+      .where(eq(orderPricingOverrides.id, existingOverride.id));
+  } else {
+    await db.insert(orderPricingOverrides).values({
+      orderId,
+      ...effectivePricing,
+      createdBy: user.id,
+      notes: pricingType === 'bespoke'
+        ? 'Bespoke pricing set during approval'
+        : 'Standard pricing snapshot at approval',
+    });
   }
 
   // Log the activity
