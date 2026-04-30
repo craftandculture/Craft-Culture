@@ -1145,6 +1145,14 @@ const AdminPrivateOrderDetailPage = () => {
                 const afterDistributor = totalUsd - vatUsd;
                 const distributorMargin = afterDistributor - dutyPaidLanded;
 
+                // Derive actual percentages from values
+                const ccMarginPct = lineItemsTotal > 0 ? ((1 - lineItemsTotal / landedDutyFree) * 100) : 2.5;
+                const dutyPct = landedDutyFree > 0 ? ((dutyUsd / landedDutyFree) * 100) : 20;
+                const transferPct = landedDutyFree > 0 ? ((transferUsd / landedDutyFree) * 100) : 0.75;
+                const distPct = afterDistributor > 0 ? ((1 - dutyPaidLanded / afterDistributor) * 100) : 7.5;
+                const vatPct = afterDistributor > 0 ? ((vatUsd / afterDistributor) * 100) : 5;
+                const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+
                 return (
                   <div className="space-y-1 text-xs">
                     {/* Line Items */}
@@ -1153,7 +1161,7 @@ const AdminPrivateOrderDetailPage = () => {
                       <span>{formatCurrencyValue(getAmount(lineItemsTotal), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ C&C Margin (2.5%)</span>
+                      <span className="pl-2">+ C&C Margin ({fmtPct(ccMarginPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(ccMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1165,11 +1173,11 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Duties & Transfer */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Import Duty (20%)</span>
+                      <span className="pl-2">+ Import Duty ({fmtPct(dutyPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(dutyUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Transfer (0.75%)</span>
+                      <span className="pl-2">+ Transfer ({fmtPct(transferPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(transferUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1181,7 +1189,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Distributor Margin */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Distributor (7.5%)</span>
+                      <span className="pl-2">+ Distributor ({fmtPct(distPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(distributorMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1193,7 +1201,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* VAT & Total */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ VAT (5%)</span>
+                      <span className="pl-2">+ VAT ({fmtPct(vatPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(vatUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-sm pt-1">
