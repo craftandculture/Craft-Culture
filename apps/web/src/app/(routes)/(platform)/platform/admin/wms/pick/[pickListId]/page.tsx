@@ -5,6 +5,7 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconHandStop,
   IconLoader2,
   IconPackage,
   IconTrash,
@@ -559,14 +560,30 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'location' ? (
-                  <ScanInput
-                    ref={scanInputRef}
-                    onScan={handleLocationScan}
-                    isLoading={isLookingUpLocation}
-                    placeholder="Scan bay barcode..."
-                    error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
-                    autoFocus
-                  />
+                  <div className="space-y-2">
+                    <ScanInput
+                      ref={scanInputRef}
+                      onScan={handleLocationScan}
+                      isLoading={isLookingUpLocation}
+                      placeholder="Scan bay barcode..."
+                      error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
+                      autoFocus
+                    />
+                    {currentItem?.suggestedLocationId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPickedLocationId(currentItem.suggestedLocationId);
+                          setPickedLocationCode(currentItem.suggestedLocationCode ?? 'Manual');
+                          setScanStep('case');
+                        }}
+                        className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                      >
+                        <Icon icon={IconHandStop} size="xs" className="mr-1 inline-block" />
+                        Skip Scan — Use {currentItem.suggestedLocationCode}
+                      </button>
+                    )}
+                  </div>
                 ) : !pickedLocationCode ? (
                   <div className="rounded bg-fill-secondary px-3 py-2 text-center text-xs text-text-muted">
                     Scan location first
@@ -597,12 +614,22 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'case' && !caseVerified ? (
-                  <ScanInput
-                    onScan={handleCaseScan}
-                    placeholder="Scan case barcode..."
-                    error={duplicateScanError && scanStep === 'case' ? duplicateScanError : undefined}
-                    autoFocus
-                  />
+                  <div className="space-y-2">
+                    <ScanInput
+                      onScan={handleCaseScan}
+                      placeholder="Scan case barcode..."
+                      error={duplicateScanError && scanStep === 'case' ? duplicateScanError : undefined}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCaseVerified(true)}
+                      className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                    >
+                      <Icon icon={IconHandStop} size="xs" className="mr-1 inline-block" />
+                      Skip Scan — Confirm Manually
+                    </button>
+                  </div>
                 ) : caseVerified ? null : (
                   <div className="rounded bg-fill-secondary px-3 py-2 text-center text-xs text-text-muted">
                     Complete step 1 first
