@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { logger, schedules, task } from '@trigger.dev/sdk';
+import { logger, task } from '@trigger.dev/sdk';
 import { generateObject } from 'ai';
 import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -336,22 +336,6 @@ Generate:
  */
 export const conciergeRunTask = task({
   id: 'concierge-run',
-  async run() {
-    return runConciergeAnalysis();
-  },
-});
-
-/**
- * The Concierge — Daily client outreach agent (scheduled)
- *
- * Runs daily at 06:15 GST (after Scout).
- */
-export const conciergeDailyJob = schedules.task({
-  id: 'concierge-daily',
-  cron: {
-    pattern: '15 6 * * *',
-    timezone: 'Asia/Dubai',
-  },
   async run() {
     return runConciergeAnalysis();
   },

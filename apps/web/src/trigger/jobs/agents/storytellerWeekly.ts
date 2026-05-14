@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { logger, schedules, task } from '@trigger.dev/sdk';
+import { logger, task } from '@trigger.dev/sdk';
 import { generateObject } from 'ai';
 import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -259,22 +259,6 @@ Generate:
  */
 export const storytellerRunTask = task({
   id: 'storyteller-run',
-  async run() {
-    return runStorytellerGeneration();
-  },
-});
-
-/**
- * Socials — Weekly marketing content agent (scheduled)
- *
- * Runs weekly on Monday at 06:05 GST.
- */
-export const storytellerWeeklyJob = schedules.task({
-  id: 'storyteller-weekly',
-  cron: {
-    pattern: '5 6 * * 1',
-    timezone: 'Asia/Dubai',
-  },
   async run() {
     return runStorytellerGeneration();
   },
