@@ -195,7 +195,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written.`,
       ];
 
       const result = await generateObject({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         schema: extractedInvoiceSchema,
         system: systemPrompt,
         messages,
@@ -234,7 +234,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written. Extract ALL
       ];
 
       const result = await generateObject({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         schema: extractedInvoiceSchema,
         system: systemPrompt,
         messages,
@@ -289,7 +289,7 @@ ${spreadsheetContent}`,
       ];
 
       const result = await generateObject({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         schema: extractedInvoiceSchema,
         system: systemPrompt,
         messages,

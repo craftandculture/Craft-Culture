@@ -343,7 +343,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       ];
 
       const result = await generateObject({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         maxTokens: 16384,
@@ -372,9 +372,9 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       }
 
       // If we got meaningful text, use text-based extraction
-      if (pdfText && pdfText.trim().length >= 50) {
+      if (pdfText && pdfText.trim().length >= 500) {
         const result = await generateObject({
-          model: anthropic('claude-sonnet-4-20250514'),
+          model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
@@ -411,7 +411,7 @@ ${pdfText}
         ];
 
         const result = await generateObject({
-          model: anthropic('claude-sonnet-4-20250514'),
+          model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
