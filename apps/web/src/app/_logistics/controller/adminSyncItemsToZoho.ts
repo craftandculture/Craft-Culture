@@ -59,7 +59,7 @@ const adminSyncItemsToZoho = adminProcedure
       itemId: string;
       productName: string;
       sku: string | null;
-      status: 'created' | 'exists' | 'skipped' | 'error';
+      status: 'created' | 'updated' | 'exists' | 'skipped' | 'error';
       error?: string;
     }> = [];
 
@@ -77,7 +77,11 @@ const adminSyncItemsToZoho = adminProcedure
       }
 
       try {
-        const { item: zohoItem, created } = await findOrCreateWineItem({
+        const {
+          item: zohoItem,
+          created,
+          updated,
+        } = await findOrCreateWineItem({
           lwin18: item.lwin,
           productName: item.productName,
           producer: item.producer,
@@ -88,11 +92,13 @@ const adminSyncItemsToZoho = adminProcedure
           bottleSizeMl: item.bottleSizeMl ?? 750,
         });
 
+        const status = created ? 'created' : updated ? 'updated' : 'exists';
+
         results.push({
           itemId: item.id,
           productName: item.productName,
           sku: item.lwin,
-          status: created ? 'created' : 'exists',
+          status,
         });
 
         logger.info('[SyncItemsToZoho] Synced item:', {
@@ -101,6 +107,7 @@ const adminSyncItemsToZoho = adminProcedure
           sku: item.lwin,
           zohoItemId: zohoItem.item_id,
           created,
+          updated,
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -121,6 +128,7 @@ const adminSyncItemsToZoho = adminProcedure
     }
 
     const created = results.filter((r) => r.status === 'created').length;
+    const updated = results.filter((r) => r.status === 'updated').length;
     const exists = results.filter((r) => r.status === 'exists').length;
     const skipped = results.filter((r) => r.status === 'skipped').length;
     const errors = results.filter((r) => r.status === 'error').length;
@@ -130,6 +138,7 @@ const adminSyncItemsToZoho = adminProcedure
       summary: {
         total: items.length,
         created,
+        updated,
         exists,
         skipped,
         errors,
