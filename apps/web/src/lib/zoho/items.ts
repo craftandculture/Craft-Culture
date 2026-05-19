@@ -224,14 +224,32 @@ const createWineItem = async (data: WineItemData) => {
 };
 
 /**
- * Find or create a wine item in Zoho by SKU (lwin18)
+ * Update an existing item
+ */
+const updateItem = async (itemId: string, item: Partial<ZohoCreateItemRequest>) => {
+  const response = await zohoFetch<{ code: number; message: string; item: ZohoItem }>(
+    `/items/${itemId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(item),
+    },
+  );
+  return response.item;
+};
+
+/**
+ * Find, create, or update a wine item in Zoho by SKU (lwin18)
  *
  * Searches for existing item with matching SKU using multiple strategies:
  * 1. Exact SKU match
  * 2. LWIN-11 prefix match (first 11 digits = wine ID without vintage/pack)
  * 3. Product name search as fallback
  *
- * @returns The existing or newly created Zoho item
+ * If found, compares name/manufacturer/brand against desired values and
+ * pushes an update to Zoho when any of them have changed. This means
+ * renames in the source application propagate to Zoho on next sync.
+ *
+ * @returns The existing, updated, or newly created Zoho item
  */
 const findOrCreateWineItem = async (data: WineItemData) => {
   // Strategy 1: Search by full LWIN-18 SKU
@@ -263,26 +281,40 @@ const findOrCreateWineItem = async (data: WineItemData) => {
   }
 
   if (existingItem) {
-    return { item: existingItem, created: false };
+    // Build the desired item shape (same logic as createWineItem so name format stays consistent)
+    const hasVintageInName =
+      data.vintage && data.productName.includes(String(data.vintage));
+    const desiredName =
+      data.vintage && !hasVintageInName
+        ? `${data.productName} ${data.vintage}`
+        : data.productName;
+    const desiredManufacturer = data.producer ?? undefined;
+    const desiredBrand = data.producer ?? undefined;
+
+    const nameChanged = existingItem.name !== desiredName;
+    const manufacturerChanged =
+      desiredManufacturer !== undefined &&
+      (existingItem as ZohoItem & { manufacturer?: string }).manufacturer !==
+        desiredManufacturer;
+    const brandChanged =
+      desiredBrand !== undefined &&
+      (existingItem as ZohoItem & { brand?: string }).brand !== desiredBrand;
+
+    if (nameChanged || manufacturerChanged || brandChanged) {
+      const updated = await updateItem(existingItem.item_id, {
+        name: desiredName,
+        manufacturer: desiredManufacturer,
+        brand: desiredBrand,
+      });
+      return { item: updated, created: false, updated: true };
+    }
+
+    return { item: existingItem, created: false, updated: false };
   }
 
   // Create new item
   const newItem = await createWineItem(data);
-  return { item: newItem, created: true };
-};
-
-/**
- * Update an existing item
- */
-const updateItem = async (itemId: string, item: Partial<ZohoCreateItemRequest>) => {
-  const response = await zohoFetch<{ code: number; message: string; item: ZohoItem }>(
-    `/items/${itemId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify(item),
-    },
-  );
-  return response.item;
+  return { item: newItem, created: true, updated: false };
 };
 
 /**
