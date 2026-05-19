@@ -205,10 +205,19 @@ const ShipmentDetailPage = () => {
   const { mutate: syncToZoho, isPending: isSyncingToZoho } = useMutation(
     api.logistics.admin.syncItemsToZoho.mutationOptions({
       onSuccess: (result) => {
+        const { created, updated, exists, skipped, errors } = result.summary;
+        const parts = [
+          `${created} created`,
+          `${updated} updated`,
+          `${exists} unchanged`,
+        ];
+        if (skipped > 0) parts.push(`${skipped} skipped`);
+        if (errors > 0) parts.push(`${errors} errors`);
+        const message = `Synced to Zoho: ${parts.join(', ')}`;
         if (result.success) {
-          toast.success(`Synced to Zoho: ${result.summary.created} created, ${result.summary.exists} already exist`);
+          toast.success(message);
         } else {
-          toast.warning(`Sync completed with errors: ${result.summary.errors} failed`);
+          toast.warning(message);
         }
         void refetch();
       },
