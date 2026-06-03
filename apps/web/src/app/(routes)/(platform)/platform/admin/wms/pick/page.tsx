@@ -9,6 +9,7 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -208,6 +209,15 @@ const WMSPickListsPage = () => {
                               <Typography variant="bodyXs" colorRole="muted">
                                 Assigned to: {pickList.assignedToName}
                               </Typography>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-text-muted">
+                            <span>Created {formatDistanceToNow(new Date(pickList.createdAt), { addSuffix: true })}</span>
+                            {pickList.completedAt && (
+                              <span>Completed {format(new Date(pickList.completedAt), 'dd MMM yyyy')}</span>
+                            )}
+                            {!pickList.completedAt && pickList.status === 'in_progress' && pickList.startedAt && (
+                              <span className="text-amber-600">Started {formatDistanceToNow(new Date(pickList.startedAt), { addSuffix: true })}</span>
                             )}
                           </div>
                           {/* Progress bar */}
