@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  rewrites: async () => {
+    return [
+      {
+        source: '/platform-mvp',
+        destination: '/platform-mvp.html',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
