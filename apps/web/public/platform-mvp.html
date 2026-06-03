@@ -459,7 +459,8 @@
 <body>
 
 <div class="actions">
-  <button id="save" type="button">Download filled copy</button>
+  <button id="email" type="button">Email responses to Kevin</button>
+  <button id="save" class="alt" type="button">Download filled copy</button>
   <button id="print" class="alt" type="button">Print / PDF</button>
 </div>
 
@@ -739,6 +740,72 @@
   });
   document.getElementById('print').addEventListener('click', function(){
     window.print();
+  });
+  document.getElementById('email').addEventListener('click', function(){
+    var lines = ['Responses to the fine wine platform planning brief.', ''];
+    var anyAnswers = false;
+    document.querySelectorAll('section.block').forEach(function(s){
+      var h2 = s.querySelector('h2');
+      if (!h2) return;
+      var numEl = s.querySelector('.section-head .num');
+      var num = numEl ? numEl.textContent.trim() : '';
+      var sectionTitle = (num ? num + ' — ' : '') + h2.textContent.trim();
+      var items = [];
+      s.querySelectorAll('ol.q li').forEach(function(li){
+        var t = li.querySelector('textarea.ans');
+        if (t && t.value.trim()) {
+          var qtEl = li.querySelector('.qt');
+          var qt = qtEl ? qtEl.textContent.trim().replace(/\s+/g,' ') : '';
+          var n = li.getAttribute('data-n') || '';
+          items.push('Q' + n + '. ' + qt);
+          items.push('→ ' + t.value.trim());
+          items.push('');
+          anyAnswers = true;
+        }
+      });
+      if (items.length > 0) {
+        lines.push('');
+        lines.push('### ' + sectionTitle);
+        lines.push('');
+        lines = lines.concat(items);
+      }
+    });
+    var checkedOutputs = [];
+    document.querySelectorAll('.outputs li').forEach(function(li){
+      var cb = li.querySelector('input[type="checkbox"]');
+      if (cb && cb.checked) {
+        var label = li.querySelector('label');
+        if (label) {
+          checkedOutputs.push('  [x] ' + label.textContent.replace(/\s+/g,' ').trim());
+        }
+      }
+    });
+    if (checkedOutputs.length > 0) {
+      lines.push('');
+      lines.push('### Decisions confirmed');
+      lines.push('');
+      lines = lines.concat(checkedOutputs);
+      anyAnswers = true;
+    }
+    if (!anyAnswers) {
+      if (!confirm('No answers filled in yet — send an empty email anyway?')) return;
+    }
+    lines.push('');
+    lines.push('— Sent from ' + window.location.href);
+    var body = lines.join('\n');
+    var subject = 'Fine wine platform planning — responses';
+    var to = 'kevin@craftculture.xyz';
+    var mailto = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    if (mailto.length > 1800) {
+      var proceed = confirm(
+        'Your responses are long (' + mailto.length + ' chars).\n\n' +
+        'Some email clients truncate at ~2000 characters.\n\n' +
+        'OK = open email anyway.\n' +
+        'Cancel = use "Download filled copy" instead and attach the file.'
+      );
+      if (!proceed) return;
+    }
+    window.location.href = mailto;
   });
 })();
 </script>
