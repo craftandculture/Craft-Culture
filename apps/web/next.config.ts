@@ -36,6 +36,10 @@ const nextConfig: NextConfig = {
         source: '/platform-mvp',
         destination: '/platform-mvp.html',
       },
+      {
+        source: '/inbound-cellar',
+        destination: '/inbound-cellar.html',
+      },
     ];
   },
   images: {
