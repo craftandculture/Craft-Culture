@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Static-asset clean URLs. Update this list to add new shareable docs.
   rewrites: async () => {
     return [
       {
