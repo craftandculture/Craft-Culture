@@ -17,6 +17,7 @@ import {
   IconCurrencyDollar,
   IconDeviceFloppy,
   IconDownload,
+  IconHistory,
   IconLayoutRows,
   IconLoader2,
   IconLock,
@@ -44,8 +45,11 @@ import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
+import exportStockToExcel from '@/app/_wms/utils/exportStockToExcel';
+import type { StockExportProduct } from '@/app/_wms/utils/exportStockToExcel';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
@@ -482,6 +486,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
   const [transferNotes, setTransferNotes] = useState('');
   const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
   const editingName = editingLwin18 === product.lwin18;
   const isSaving = editingLwin18 === `saving:${product.lwin18}`;
   const [editName, setEditName] = useState(product.productName);
@@ -705,6 +710,17 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                       Labels
                     </Button>
                   </Link>
+                  <Button
+                    variant={showHistory ? 'primary' : 'outline'}
+                    size="xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowHistory((v) => !v);
+                    }}
+                  >
+                    <IconHistory className="mr-1 h-3 w-3" />
+                    History
+                  </Button>
                   <Button
                     variant={adjustingStockId ? 'primary' : 'outline'}
                     size="xs"
@@ -996,6 +1012,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                 </tbody>
               </table>
               </div>
+              {showHistory && <ProductMovementHistory lwin18={product.lwin18} />}
             </div>
           </td>
         </tr>
@@ -1418,6 +1435,7 @@ const StockExplorerPage = () => {
   const [page, setPage] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [limit, setLimit] = useState(50);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Persisted preferences
   const [density, setDensity] = useState<RowDensity>(() => loadPreference('se-density', 'normal'));
@@ -1615,59 +1633,77 @@ const StockExplorerPage = () => {
     [sortBy],
   );
 
-  // CSV export
-  const handleExport = useCallback(() => {
-    if (!products.length) return;
-    const headers = [
-      'Product Name',
-      'Producer',
-      'LWIN18',
-      'Vintage',
-      'Size',
-      'Pack',
-      'Total Cases',
-      'Available',
-      'Reserved',
-      'Import $/btl',
-      'Import $/case',
-      'Bottles',
-      'Locations',
-      'Owners',
-      'Status',
-    ];
-    const csvSafe = (val: string | number | null | undefined) => {
-      const str = String(val ?? '');
-      return `"${str.replace(/"/g, '""')}"`;
-    };
-    const rows = products.map((p) => {
-      const price = bulkPricing?.[p.lwin18]?.importPricePerBottle;
-      return [
-        csvSafe(p.productName),
-        csvSafe(p.producer),
-        csvSafe(p.lwin18),
-        csvSafe(p.vintage),
-        csvSafe(p.bottleSize),
-        csvSafe(p.caseConfig),
-        csvSafe(p.totalCases),
-        csvSafe(p.availableCases),
-        csvSafe(p.reservedCases),
-        csvSafe(price != null ? price.toFixed(2) : ''),
-        csvSafe(price != null ? (price * (p.caseConfig ?? 12)).toFixed(2) : ''),
-        csvSafe(p.totalBottles),
-        csvSafe(p.locationCount),
-        csvSafe(p.ownerCount),
-        csvSafe(p.expiryStatus),
-      ];
-    });
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `stock-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, bulkPricing]);
+  // Excel export — fetches ALL pages for the current filters (not just this page)
+  const handleExport = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const baseInput = {
+        search: debouncedSearch || undefined,
+        ownerId: ownerId || undefined,
+        category: category || undefined,
+        includeZeroQty: showZeroQty || undefined,
+        quickFilter:
+          quickFilter !== 'all' && quickFilter !== 'inbound' ? quickFilter : undefined,
+        vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
+        vintageTo: vintageTo ? Number(vintageTo) : undefined,
+        sortBy,
+        sortOrder,
+      };
+
+      // Page through all matching products (server caps limit at 200)
+      const pageSize = 200;
+      const allProducts: StockExportProduct[] = [];
+      for (let offset = 0; offset < 20000; offset += pageSize) {
+        const res = await trpcClient.wms.admin.stock.getByProduct.query({
+          ...baseInput,
+          limit: pageSize,
+          offset,
+        });
+        allProducts.push(...res.products);
+        if (!res.pagination.hasMore) break;
+      }
+
+      if (!allProducts.length) {
+        toast.info('No stock matches the current filters');
+        return;
+      }
+
+      // Fetch import prices for all exported products (chunked)
+      const priceMap: Record<string, { importPricePerBottle: number }> = {};
+      const lwin18s = [...new Set(allProducts.map((p) => p.lwin18))];
+      for (let i = 0; i < lwin18s.length; i += 200) {
+        const chunk = lwin18s.slice(i, i + 200);
+        const partial = await trpcClient.wms.admin.stock.pricing.getBulk.query({
+          lwin18s: chunk,
+        });
+        Object.assign(priceMap, partial);
+      }
+
+      const label =
+        owners.find((o) => o.ownerId === ownerId)?.ownerName ?? category ?? undefined;
+      exportStockToExcel(allProducts, { priceMap, label });
+      toast.success(`Exported ${allProducts.length} products to Excel`);
+    } catch (err) {
+      console.error('Stock Excel export failed', { err });
+      toast.error('Export failed — please try again');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [
+    isExporting,
+    debouncedSearch,
+    ownerId,
+    category,
+    showZeroQty,
+    quickFilter,
+    vintageFrom,
+    vintageTo,
+    sortBy,
+    sortOrder,
+    trpcClient,
+    owners,
+  ]);
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -1824,10 +1860,20 @@ const StockExplorerPage = () => {
             {/* Column toggle */}
             <ColumnToggle columns={visibleColumns} onChange={setVisibleColumns} />
 
-            {/* Export */}
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={!products.length}>
-              <IconDownload className="h-4 w-4" />
-              Export
+            {/* Export — all filtered rows to Excel */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={isExporting || isInboundView || (!products.length && !showZeroQty)}
+              title={isInboundView ? 'Switch off Inbound to export stock' : 'Export all filtered rows to Excel'}
+            >
+              {isExporting ? (
+                <IconLoader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <IconDownload className="h-4 w-4" />
+              )}
+              {isExporting ? 'Exporting…' : 'Export Excel'}
             </Button>
           </div>
         </div>
