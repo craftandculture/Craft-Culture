@@ -72,16 +72,27 @@ const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSche
     });
   }
 
-  // Determine the new status based on whether distributor requires verification
+  // Check whether the client is already verified (e.g. from a prior order).
+  // A verified client should not be sent through the verification handshake again.
+  let clientAlreadyVerified = false;
+  if (order.clientId) {
+    const client = await db.query.privateClientContacts.findFirst({
+      where: { id: order.clientId },
+      columns: { cityDrinksVerifiedAt: true },
+    });
+    clientAlreadyVerified = !!client?.cityDrinksVerifiedAt;
+  }
+
+  // Determine the new status based on whether verification is still needed
   const previousStatus = order.status;
   let newStatus: PrivateClientOrder['status'];
   let paymentReference: string | null = null;
 
-  if (distributor.requiresClientVerification) {
-    // Distributor requires verification - prompt partner first
+  if (distributor.requiresClientVerification && !clientAlreadyVerified) {
+    // Distributor requires verification and client isn't verified yet - prompt partner first
     newStatus = 'awaiting_partner_verification';
   } else {
-    // No verification required - proceed directly to payment
+    // No verification required, or client already verified - proceed directly to payment
     newStatus = 'awaiting_client_payment';
     // Generate payment reference: {distributorCode}-{orderNumber}
     paymentReference = `${distributor.distributorCode ?? 'ORD'}-${order.orderNumber}`;
@@ -112,7 +123,7 @@ const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSche
   });
 
   // Send notifications based on the flow
-  if (distributor.requiresClientVerification && order.partnerId) {
+  if (newStatus === 'awaiting_partner_verification' && order.partnerId) {
     // Notify partner to verify client with distributor
     await notifyPartnerOfOrderUpdate({
       orderId,
