@@ -30,6 +30,7 @@ const ordersGetOne = winePartnerProcedure
           id: partners.id,
           businessName: partners.businessName,
           logoUrl: partners.logoUrl,
+          requiresClientVerification: partners.requiresClientVerification,
         },
         client: {
           id: privateClientContacts.id,

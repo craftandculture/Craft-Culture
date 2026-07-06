@@ -71,6 +71,7 @@ const adminGetOne = wmsOperatorProcedure
           businessName: partners.businessName,
           logoUrl: partners.logoUrl,
           brandColor: partners.brandColor,
+          requiresClientVerification: partners.requiresClientVerification,
         })
         .from(partners)
         .where(eq(partners.id, orderResult.order.distributorId));
