@@ -34,18 +34,24 @@ interface WmsStockComboboxProps {
   placeholder?: string;
   /** For admin use — specify which partner's stock to browse */
   ownerId?: string;
+  /** For admin use — browse ALL warehouse stock across every owner (C&C orders) */
+  allOwners?: boolean;
   omitLwin18s?: string[];
 }
 
 /**
  * Searchable combobox for browsing WMS warehouse stock.
- * Uses partner endpoint for wine partners, admin endpoint when ownerId is provided.
+ *
+ * Uses the partner endpoint for wine partners (own stock only). Uses the
+ * admin endpoint when `ownerId` is set (that partner's stock) or when
+ * `allOwners` is set (all stock across every owner, for C&C orders).
  */
 const WmsStockCombobox = ({
   onSelect,
   value,
   placeholder = 'Search warehouse stock...',
   ownerId,
+  allOwners = false,
   omitLwin18s = [],
 }: WmsStockComboboxProps) => {
   const [open, setOpen] = useState(false);
@@ -74,8 +80,9 @@ const WmsStockCombobox = ({
 
   const normalizedSearch = debouncedSearch.trim();
 
-  // Use admin endpoint when ownerId is provided, partner endpoint otherwise
-  const isAdmin = !!ownerId;
+  // Use admin endpoint when browsing a specific owner or all owners;
+  // partner endpoint (own stock only) otherwise.
+  const isAdmin = !!ownerId || allOwners;
 
   const partnerQuery = useQuery({
     ...api.privateClientOrders.partnerWmsStock.queryOptions({
@@ -88,12 +95,12 @@ const WmsStockCombobox = ({
 
   const adminQuery = useQuery({
     ...api.privateClientOrders.adminWmsStock.queryOptions({
-      ownerId: ownerId ?? '',
+      ownerId: ownerId || undefined,
       search: normalizedSearch.length > 0 ? normalizedSearch : undefined,
       limit: 30,
       offset: 0,
     }),
-    enabled: open && !isDebouncing && isAdmin && !!ownerId,
+    enabled: open && !isDebouncing && isAdmin,
   });
 
   const queryResult = isAdmin ? adminQuery : partnerQuery;

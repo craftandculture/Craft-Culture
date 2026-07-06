@@ -6,17 +6,19 @@ import { wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
-  ownerId: z.string().uuid(),
+  ownerId: z.string().uuid().optional(),
   search: z.string().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
 });
 
 /**
- * Get WMS stock for a specific partner (admin use).
+ * Get WMS stock for order entry (admin use).
  *
- * Same as getPartnerWmsStock but takes ownerId as input
- * so admins can browse any partner's warehouse stock.
+ * When `ownerId` is provided, scopes to that partner's warehouse stock
+ * (used when an admin builds an order on behalf of a partner). When
+ * `ownerId` is omitted, returns all warehouse stock across every owner,
+ * aggregated by LWIN — so C&C can sell anything held in the warehouse.
  */
 const adminGetWmsStockForOrder = wmsOperatorProcedure
   .input(inputSchema)
@@ -45,7 +47,7 @@ const adminGetWmsStockForOrder = wmsOperatorProcedure
       .from(wmsStock)
       .where(
         and(
-          eq(wmsStock.ownerId, ownerId),
+          ownerId ? eq(wmsStock.ownerId, ownerId) : undefined,
           searchConditions,
         ),
       )

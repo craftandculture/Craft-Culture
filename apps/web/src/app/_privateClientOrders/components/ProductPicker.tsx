@@ -48,6 +48,8 @@ export interface ProductPickerProps {
   defaultMode?: 'wms' | 'search' | 'manual';
   /** Partner ID for admin WMS stock browsing */
   wmsOwnerId?: string;
+  /** Admin: browse ALL warehouse stock across every owner (C&C orders) */
+  wmsAllOwners?: boolean;
 }
 
 /**
@@ -63,6 +65,7 @@ const ProductPicker = ({
   source,
   defaultMode = 'search',
   wmsOwnerId,
+  wmsAllOwners = false,
 }: ProductPickerProps) => {
   const hasManualDataOnly = !value.productId && value.productName.trim().length > 0 && !value.lwin;
   const hasWmsData = !value.productId && value.lwin && value.productName.trim().length > 0;
@@ -258,6 +261,7 @@ const ProductPicker = ({
             <WmsStockCombobox
               onSelect={handleWmsStockSelect}
               ownerId={wmsOwnerId}
+              allOwners={wmsAllOwners}
             />
           )}
         </div>
