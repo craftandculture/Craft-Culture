@@ -109,6 +109,7 @@ const distributorGetOne = distributorProcedure
         id: partners.id,
         businessName: partners.businessName,
         financeEmail: partners.financeEmail,
+        requiresClientVerification: partners.requiresClientVerification,
       })
       .from(partners)
       .where(eq(partners.id, partnerId));

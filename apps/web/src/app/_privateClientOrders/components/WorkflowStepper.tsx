@@ -17,12 +17,13 @@ import { format } from 'date-fns';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import type { PrivateClientOrder } from '@/database/schema';
 
-/** City Drinks distributor requires client app verification */
-const CITY_DRINKS_NAME = 'City Drinks';
-
 interface WorkflowStepperProps {
   order: PrivateClientOrder & {
-    distributor?: { id: string; businessName: string } | null;
+    distributor?: {
+      id: string;
+      businessName: string;
+      requiresClientVerification?: boolean | null;
+    } | null;
   };
   compact?: boolean;
 }
@@ -39,11 +40,12 @@ interface Step {
  * Visual workflow stepper showing order progress through stages
  *
  * Supports compact mode for mobile/smaller displays.
- * Shows verification step only for City Drinks distributor.
+ * Shows the verification step for distributors that require client verification.
  */
 const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
-  // Check if this order requires client verification (City Drinks only)
-  const requiresVerification = order.distributor?.businessName === CITY_DRINKS_NAME;
+  // Show the verification step for any distributor that requires client verification
+  const requiresVerification =
+    order.distributor?.requiresClientVerification === true;
 
   const getSteps = (): Step[] => {
     const baseSteps: Step[] = [
@@ -70,7 +72,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
       },
     ];
 
-    // Add verification step only for City Drinks
+    // Add verification step for distributors that require client verification
     if (requiresVerification) {
       baseSteps.push({
         id: 'verified',
@@ -118,13 +120,16 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
 
     if (step.timestamp) return 'completed';
 
-    // Map status to current step - verification step only applies for City Drinks
+    // Map status to current step - verification step applies when required
     const statusToStep: Record<string, string> = {
       draft: 'created',
       submitted: 'submitted',
       under_cc_review: 'submitted',
       revision_requested: 'submitted',
       cc_approved: 'approved',
+      awaiting_partner_verification: requiresVerification ? 'verified' : 'approved',
+      awaiting_distributor_verification: requiresVerification ? 'verified' : 'approved',
+      verification_suspended: requiresVerification ? 'verified' : 'approved',
       awaiting_client_verification: requiresVerification ? 'verified' : 'approved',
       awaiting_client_payment: requiresVerification ? 'verified' : 'approved',
       client_paid: 'paid',
