@@ -365,8 +365,9 @@ const AdminPrivateOrderForm = () => {
                     value={item}
                     onChange={(updates) => handleUpdateLineItem(item.id, updates)}
                     omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
-                    defaultMode={partnerId ? 'wms' : 'search'}
+                    defaultMode="wms"
                     wmsOwnerId={partnerId || undefined}
+                    wmsAllOwners={!partnerId}
                   />
                 </div>
               ))}
