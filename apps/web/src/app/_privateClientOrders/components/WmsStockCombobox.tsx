@@ -95,7 +95,8 @@ const WmsStockCombobox = ({
 
   const adminQuery = useQuery({
     ...api.privateClientOrders.adminWmsStock.queryOptions({
-      ownerId: ownerId || undefined,
+      // allOwners overrides any ownerId → no owner filter (all WH stock)
+      ownerId: allOwners ? undefined : ownerId || undefined,
       search: normalizedSearch.length > 0 ? normalizedSearch : undefined,
       limit: 30,
       offset: 0,
