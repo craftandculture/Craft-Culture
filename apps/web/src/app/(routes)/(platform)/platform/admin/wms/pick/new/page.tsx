@@ -155,6 +155,26 @@ const NewPickListPage = () => {
     };
   }, [filteredOrders]);
 
+  // Repack summary for the currently expanded order (e.g. "2x 6-pack -> 3-pack")
+  const repackSummary = useMemo(() => {
+    const its = expandedOrder?.items ?? [];
+    const repacks = its.filter((i) => i.repack?.needsRepack);
+    if (repacks.length === 0) return null;
+    const groups = new Map<string, number>();
+    for (const i of repacks) {
+      const from = i.repack?.fromPack;
+      const to = i.repack?.orderedPack;
+      if (from != null && to != null) {
+        const key = `${from}-pack → ${to}-pack`;
+        groups.set(key, (groups.get(key) ?? 0) + 1);
+      }
+    }
+    const breakdown = [...groups.entries()]
+      .map(([key, n]) => `${n}× ${key}`)
+      .join(', ');
+    return { count: repacks.length, total: its.length, breakdown };
+  }, [expandedOrder]);
+
   const allSelected =
     filteredOrders &&
     filteredOrders.length > 0 &&
@@ -391,7 +411,19 @@ const NewPickListPage = () => {
                               <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
                             </div>
                           ) : expandedOrder?.items.length ? (
-                            <div className="space-y-1.5">
+                            <div className="space-y-1">
+                              {repackSummary && (
+                                <div className="mb-1.5 flex items-start gap-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] leading-snug text-amber-800 ring-1 ring-inset ring-amber-200">
+                                  <IconReplace className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                                  <span>
+                                    <b>
+                                      {repackSummary.count} of{' '}
+                                      {repackSummary.total} lines need repacking
+                                    </b>{' '}
+                                    &mdash; {repackSummary.breakdown}
+                                  </span>
+                                </div>
+                              )}
                               {expandedOrder.items.map((item) => {
                                 const packMatch =
                                   /^(\d+)\s*[x×]\s*(.*)$/i.exec(
@@ -403,39 +435,44 @@ const NewPickListPage = () => {
                                     : 1;
                                 const bottleSize =
                                   packMatch?.[2]?.trim() || '75cl';
-                                const orderedFormat = `${perCase}×${bottleSize}`;
                                 const totalBottles = item.quantity * perCase;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
                                   .trim();
-                                // Repack source resolved from live stock
                                 const rp = item.repack;
                                 const needsRepack = rp?.needsRepack ?? false;
                                 return (
                                   <div
                                     key={item.id}
-                                    className="flex items-start justify-between gap-3 text-[13px]"
+                                    className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 text-[13px] ${
+                                      needsRepack
+                                        ? 'bg-amber-50 ring-1 ring-inset ring-amber-200'
+                                        : ''
+                                    }`}
                                   >
-                                    <span className="min-w-0 flex-1 truncate pt-0.5 text-text-primary">
-                                      {cleanName}
-                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-text-primary">
+                                        {cleanName}
+                                      </p>
+                                      {needsRepack && rp?.fromPack && (
+                                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                                          <IconReplace className="h-3.5 w-3.5 shrink-0" />
+                                          break a {rp.fromPack}-pack
+                                        </p>
+                                      )}
+                                    </div>
                                     <div className="shrink-0 text-right leading-tight">
-                                      <div className="text-[13px] font-bold tabular-nums text-text-primary">
+                                      <p className="font-bold tabular-nums text-text-primary">
                                         {item.quantity}{' '}
                                         {item.quantity === 1 ? 'case' : 'cases'}
-                                      </div>
-                                      <div className="mt-0.5 text-[10px] text-text-muted">
-                                        {orderedFormat}
-                                        {totalBottles
-                                          ? ` · ${totalBottles} btl`
-                                          : ''}
-                                      </div>
-                                      {needsRepack && rp?.fromPack && (
-                                        <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-semibold text-amber-700">
-                                          <IconReplace className="h-3 w-3" />
-                                          repack from {rp.fromPack}×{bottleSize}
-                                        </div>
-                                      )}
+                                        <span className="font-medium text-text-muted">
+                                          {' '}
+                                          &middot; {perCase}×{bottleSize}
+                                        </span>
+                                      </p>
+                                      <p className="text-[10px] text-text-muted">
+                                        {totalBottles} btl
+                                      </p>
                                     </div>
                                   </div>
                                 );
