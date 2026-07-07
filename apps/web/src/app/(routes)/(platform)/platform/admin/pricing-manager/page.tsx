@@ -7,6 +7,7 @@ import {
   IconChevronsRight,
   IconDownload,
   IconLoader2,
+  IconPencil,
   IconPercentage,
   IconSearch,
   IconSortAscending,
@@ -38,35 +39,54 @@ const PriceCell = ({
   value,
   onSave,
   highlight,
+  sub,
+  variant = 'muted',
+  tdClassName = '',
 }: {
   value: number | null;
   onSave: (v: number) => void;
   highlight?: boolean;
+  /** small per-case (or secondary) figure shown under the price */
+  sub?: string;
+  variant?: 'muted' | 'prominent';
+  tdClassName?: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
 
+  const valueColor = highlight
+    ? 'text-violet-600 font-semibold'
+    : variant === 'prominent'
+      ? 'font-semibold text-text-primary'
+      : 'text-text-secondary';
+
   if (!editing) {
     return (
-      <td className="px-3 py-3 text-right tabular-nums">
+      <td className={`px-3 py-2.5 text-right tabular-nums ${tdClassName}`}>
         <button
           type="button"
-          className={`cursor-pointer hover:text-text-primary hover:underline ${highlight ? 'font-medium text-violet-600' : 'text-text-muted'}`}
+          className={`group/edit inline-flex items-center gap-1 hover:underline ${valueColor}`}
           onClick={() => {
             setDraft(value?.toFixed(2) ?? '');
             setEditing(true);
           }}
         >
-          {value != null && value > 0 ? `$${value.toFixed(2)}` : (
-            <span className="tracking-widest text-text-muted/50">- -</span>
+          {value != null && value > 0 ? (
+            `$${value.toFixed(2)}`
+          ) : (
+            <span className="tracking-widest text-text-muted/40">- -</span>
           )}
+          <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
         </button>
+        {sub && value != null && value > 0 && (
+          <div className="text-[10px] tabular-nums text-text-muted/60">{sub}</div>
+        )}
       </td>
     );
   }
 
   return (
-    <td className="px-3 py-3">
+    <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
@@ -195,36 +215,11 @@ const SkeletonRow = () => (
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    <td className="px-3 py-3">
-      <div className="h-4 w-16 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="px-3 py-3">
-      <div className="ml-auto h-4 w-10 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="px-3 py-3">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="hidden px-3 py-3 lg:table-cell">
-      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="px-3 py-3">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="hidden px-3 py-3 lg:table-cell">
-      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="px-3 py-3">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="hidden px-3 py-3 lg:table-cell">
-      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="px-3 py-3">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
-    </td>
-    <td className="hidden px-3 py-3 xl:table-cell">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
-    </td>
+    {Array.from({ length: 7 }).map((_, i) => (
+      <td key={i} className="px-3 py-3">
+        <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+      </td>
+    ))}
   </tr>
 );
 
@@ -983,81 +978,74 @@ const PricingManagerPage = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 border-b border-border-muted bg-surface-muted/60 backdrop-blur-sm">
-                <tr>
+              <thead className="sticky top-0 z-10 bg-surface-muted/80 backdrop-blur-sm">
+                {/* Group row */}
+                <tr className="text-[10px] font-semibold uppercase tracking-wide">
+                  <th className="px-3 pb-1 pt-2.5" colSpan={2} />
+                  <th className="border-l border-border-muted px-3 pb-1 pt-2.5 text-right text-slate-500" colSpan={3}>
+                    Cost
+                  </th>
+                  <th className="border-l border-border-muted px-3 pb-1 pt-2.5 text-right text-blue-600">
+                    In&nbsp;Bond · B2B
+                  </th>
+                  <th className="border-l border-border-muted px-3 pb-1 pt-2.5 text-right text-violet-600">
+                    Private&nbsp;Client
+                  </th>
+                  <th className="border-l border-border-muted px-3 pb-1 pt-2.5 text-right text-emerald-600">
+                    Margin
+                  </th>
+                </tr>
+                {/* Column row */}
+                <tr className="border-b border-border-muted">
                   <th
-                    className={`px-3 py-3 text-left ${thBase}`}
+                    className={`px-3 pb-2.5 pt-1 text-left ${thBase}`}
                     onClick={() => handleSort('productName')}
                   >
                     <span className="flex items-center gap-1">
                       Product {renderSortIcon('productName')}
                     </span>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-text-muted">
-                    Pack
-                  </th>
                   <th
-                    className={`px-3 py-3 text-right ${thBase}`}
+                    className={`px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('totalCases')}
                   >
                     <span className="flex items-center justify-end gap-1">
-                      Cases {renderSortIcon('totalCases')}
+                      Stock {renderSortIcon('totalCases')}
                     </span>
                   </th>
                   <th
-                    className={`px-3 py-3 text-right ${thBase}`}
+                    className={`border-l border-border-muted px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('importPrice')}
                   >
                     <span className="flex items-center justify-end gap-1">
-                      Import $/btl {renderSortIcon('importPrice')}
+                      Import {renderSortIcon('importPrice')}
                     </span>
                   </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
-                    Logistics $/btl
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    Logistics
                   </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
-                    Landed $/btl
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    Landed
                   </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
-                    Import $/case
-                  </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
-                    <span className="flex items-center justify-end gap-1">
-                      In Bond $/btl
-                      <span className="text-[10px] font-normal text-text-muted/60">+{effInbondPct}%</span>
-                    </span>
-                  </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
-                    In Bond $/case
+                  <th className="border-l border-border-muted px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                    In Bond
+                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">+{effInbondPct}%</span>
                   </th>
                   <th
-                    className={`px-3 py-3 text-right ${thBase}`}
+                    className={`border-l border-border-muted px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
                   >
-                    <span className="flex items-center justify-end gap-1">
-                      {ownerId ? (
-                        <span className="text-violet-600">
-                          PC Price $/btl
-                        </span>
-                      ) : (
-                        'PC Price $/btl'
-                      )}
-                      {renderSortIcon('sellingPrice')}
+                    <span className="flex items-center justify-end gap-1 text-violet-600">
+                      PC Price {renderSortIcon('sellingPrice')}
                     </span>
                   </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
-                    PC Price $/case
-                  </th>
                   <th
-                    className={`px-3 py-3 text-right ${thBase}`}
+                    className={`border-l border-border-muted px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('margin')}
                   >
                     <span className="flex items-center justify-end gap-1">
-                      Margin % {renderSortIcon('margin')}
+                      Margin {renderSortIcon('margin')}
                     </span>
-                  </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted xl:table-cell">
-                    Margin $/btl
                   </th>
                 </tr>
               </thead>
@@ -1066,7 +1054,7 @@ const PricingManagerPage = () => {
                   Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-20 text-center text-text-muted">
+                    <td colSpan={8} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -1079,6 +1067,7 @@ const PricingManagerPage = () => {
                       importPrice != null && importPrice > 0
                         ? importPrice + effLogistics
                         : null;
+                    const inBondPrice = landed != null ? landed * (1 + effInbondMarkup) : null;
                     // When owner is selected, use owner-specific PC price (fall back to default)
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const sellPrice = ownerPcPrice ?? product.sellingPricePerBottle;
@@ -1088,40 +1077,53 @@ const PricingManagerPage = () => {
                       landed && sellPrice && landed > 0 && sellPrice > 0
                         ? sellPrice - landed
                         : null;
-                    // Loss-making = priced but selling at or below landed cost
                     const isLoss =
                       sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
+                    const marginColor =
+                      margin == null
+                        ? 'text-text-muted'
+                        : margin >= 20
+                          ? 'font-medium text-emerald-600'
+                          : margin >= 10
+                            ? 'font-medium text-amber-600'
+                            : 'font-medium text-red-600';
 
                     return (
                       <tr
                         key={product.lwin18}
                         className={`transition-colors ${
-                          isLoss
-                            ? 'bg-red-50/70 hover:bg-red-50'
-                            : 'hover:bg-surface-muted/30'
+                          isLoss ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-surface-muted/30'
                         }`}
                       >
                         {/* Product */}
-                        <td className="px-3 py-3">
-                          <p className="font-medium text-text-primary">{product.productName}</p>
+                        <td className="px-3 py-2.5">
+                          <p className="font-medium leading-tight text-text-primary">
+                            {product.productName}
+                          </p>
                           {product.producer && (
                             <p className="text-xs text-text-muted">{product.producer}</p>
                           )}
                         </td>
 
-                        {/* Pack */}
-                        <td className="px-3 py-3 text-xs tabular-nums text-text-secondary">
-                          {caseConfig}x{product.bottleSize ?? '75cl'}
+                        {/* Stock (cases + pack) */}
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="font-medium tabular-nums text-text-primary">
+                            {product.totalCases}
+                          </div>
+                          <div className="text-[10px] tabular-nums text-text-muted/70">
+                            {caseConfig}×{product.bottleSize ?? '75cl'}
+                          </div>
                         </td>
 
-                        {/* Cases */}
-                        <td className="px-3 py-3 text-right tabular-nums font-medium">
-                          {product.totalCases}
-                        </td>
-
-                        {/* Import $/btl (editable) */}
+                        {/* Import (editable) — COST group */}
                         <PriceCell
                           value={importPrice}
+                          tdClassName="border-l border-border-muted"
+                          sub={
+                            importPrice != null && importPrice > 0
+                              ? `$${(importPrice * caseConfig).toFixed(0)}/cs`
+                              : undefined
+                          }
                           onSave={(v) =>
                             setImportPriceMut.mutate({
                               lwin18: product.lwin18,
@@ -1131,50 +1133,46 @@ const PricingManagerPage = () => {
                           }
                         />
 
-                        {/* Logistics $/btl (flat rate) */}
-                        <td className="px-3 py-3 text-right tabular-nums text-text-secondary">
-                          {landed != null ? `$${effLogistics.toFixed(2)}` : '\u2014'}
+                        {/* Logistics */}
+                        <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
+                          {landed != null ? `$${effLogistics.toFixed(2)}` : '—'}
                         </td>
 
-                        {/* Landed $/btl (import + logistics) */}
-                        <td className="px-3 py-3 text-right tabular-nums font-medium text-text-primary">
-                          {landed != null ? `$${landed.toFixed(2)}` : '\u2014'}
+                        {/* Landed (emphasised) */}
+                        <td className="px-3 py-2.5 text-right tabular-nums">
+                          <div className="font-semibold text-text-primary">
+                            {landed != null ? `$${landed.toFixed(2)}` : '—'}
+                          </div>
+                          {landed != null && (
+                            <div className="text-[10px] text-text-muted/60">
+                              ${(landed * caseConfig).toFixed(0)}/cs
+                            </div>
+                          )}
                         </td>
 
-                        {/* Import $/case */}
-                        <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
-                          {importPrice != null && importPrice > 0
-                            ? `$${(importPrice * caseConfig).toFixed(2)}`
-                            : '\u2014'}
+                        {/* In Bond — B2B group */}
+                        <td className="border-l border-border-muted px-3 py-2.5 text-right tabular-nums">
+                          <div className="text-blue-700">
+                            {inBondPrice != null ? `$${inBondPrice.toFixed(2)}` : '—'}
+                          </div>
+                          {inBondPrice != null && (
+                            <div className="text-[10px] text-text-muted/60">
+                              ${(inBondPrice * caseConfig).toFixed(0)}/cs
+                            </div>
+                          )}
                         </td>
 
-                        {/* In Bond $/btl (computed on landed cost) */}
-                        {(() => {
-                          const inBondPrice = landed != null
-                            ? landed * (1 + effInbondMarkup)
-                            : null;
-                          return (
-                            <>
-                              <td className="px-3 py-3 text-right tabular-nums text-text-secondary">
-                                {inBondPrice != null
-                                  ? `$${inBondPrice.toFixed(2)}`
-                                  : '\u2014'}
-                              </td>
-
-                              {/* In Bond $/case */}
-                              <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
-                                {inBondPrice != null
-                                  ? `$${(inBondPrice * caseConfig).toFixed(2)}`
-                                  : '\u2014'}
-                              </td>
-                            </>
-                          );
-                        })()}
-
-                        {/* PC Price $/btl (editable) */}
+                        {/* PC Price (editable) — Private Client group */}
                         <PriceCell
                           value={sellPrice}
                           highlight={hasOwnerPrice}
+                          variant="prominent"
+                          tdClassName="border-l border-border-muted"
+                          sub={
+                            sellPrice != null && sellPrice > 0
+                              ? `$${(sellPrice * caseConfig).toFixed(0)}/cs`
+                              : undefined
+                          }
                           onSave={(v) => {
                             if (ownerId) {
                               setOwnerPricingMut.mutate({
@@ -1191,26 +1189,19 @@ const PricingManagerPage = () => {
                           }}
                         />
 
-                        {/* PC Price $/case */}
-                        <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
-                          {sellPrice != null && sellPrice > 0
-                            ? `$${(sellPrice * caseConfig).toFixed(2)}`
-                            : '\u2014'}
-                        </td>
-
-                        {/* Margin % */}
-                        <td className="px-3 py-3 text-right tabular-nums">
-                          <span className="flex items-center justify-end gap-1.5">
+                        {/* Margin */}
+                        <td className="border-l border-border-muted px-3 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5 tabular-nums">
                             <MarginDot margin={margin} />
-                            {margin != null ? `${margin.toFixed(1)}%` : '\u2014'}
-                          </span>
-                        </td>
-
-                        {/* Margin $/btl */}
-                        <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary xl:table-cell">
-                          {marginPerBottle != null
-                            ? `$${marginPerBottle.toFixed(2)}`
-                            : '\u2014'}
+                            <span className={marginColor}>
+                              {margin != null ? `${margin.toFixed(1)}%` : '—'}
+                            </span>
+                          </div>
+                          {marginPerBottle != null && (
+                            <div className="text-[10px] tabular-nums text-text-muted/60">
+                              ${marginPerBottle.toFixed(2)}/btl
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
