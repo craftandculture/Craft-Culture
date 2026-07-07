@@ -4910,3 +4910,22 @@ export const wmsOwnerPricing = pgTable(
 ).enableRLS();
 
 export type WmsOwnerPricing = typeof wmsOwnerPricing.$inferSelect;
+
+/**
+ * Per-owner pricing settings — logistics cost, in-bond margin and PC margin
+ * applied to that owner's stock in the Pricing Manager (e.g. Crurated vs Cru).
+ */
+export const wmsOwnerPricingSettings = pgTable('wms_owner_pricing_settings', {
+  ownerId: uuid('owner_id')
+    .primaryKey()
+    .references(() => partners.id, { onDelete: 'cascade' }),
+  logisticsPerBottle: doublePrecision('logistics_per_bottle').notNull().default(25),
+  inbondMarginPct: doublePrecision('inbond_margin_pct').notNull().default(10),
+  pcMarginPct: doublePrecision('pc_margin_pct'),
+  updatedBy: uuid('updated_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  ...timestamps,
+});
+
+export type WmsOwnerPricingSettings = typeof wmsOwnerPricingSettings.$inferSelect;
