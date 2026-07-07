@@ -4,61 +4,89 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
 
 /**
- * Bulk-apply a margin percentage to products, calculating selling price from import price
+ * Bulk-apply a margin percentage to products, calculating the selling price from
+ * the landed cost (import price + flat logistics per bottle).
  *
- * Formula: sellingPrice = importPrice / (1 - marginPercent / 100)
+ * Formula: sellingPrice = (importPrice + logistics) / (1 - marginPercent / 100)
+ *
+ * When `ownerId` is provided the result is written as a per-owner PC price in
+ * `wms_owner_pricing` (e.g. Crurated at 3%, Cru Wine at a higher margin);
+ * otherwise it updates the default selling price in `wms_product_pricing`.
  *
  * @param marginPercent - The target margin percentage (e.g., 20 for 20%)
  * @param category - Optional category filter (Wine, Spirits, RTD)
- * @param overwriteExisting - Whether to overwrite products that already have a selling price
+ * @param ownerId - Optional owner; writes owner-specific PC prices when set
+ * @param logisticsPerBottle - Flat logistics cost added to import before margin
+ * @param overwriteExisting - Whether to overwrite products that already have a price
  */
 const adminBulkApplyMargin = wmsOperatorProcedure
   .input(bulkApplyMarginSchema)
   .mutation(async ({ input, ctx }) => {
-    const { marginPercent, category, overwriteExisting } = input;
-
-    // Build category filter condition
-    let categoryCondition = '';
-    if (category) {
-      if (category === 'Wine') {
-        categoryCondition = `AND p.lwin18 IN (SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 AND (category = 'Wine' OR category IS NULL))`;
-      } else {
-        categoryCondition = `AND p.lwin18 IN (SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 AND category = '${category}')`;
-      }
-    } else {
-      categoryCondition = `AND p.lwin18 IN (SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0)`;
-    }
-
-    // Build overwrite condition
-    const overwriteCondition = overwriteExisting
-      ? ''
-      : 'AND (p.selling_price_per_bottle IS NULL OR p.selling_price_per_bottle = 0)';
+    const { marginPercent, category, ownerId, logisticsPerBottle, overwriteExisting } = input;
 
     const divisor = 1 - marginPercent / 100;
+    const logistics = logisticsPerBottle;
 
-    const result = await client.unsafe(`
-      UPDATE wms_product_pricing p
-      SET
-        selling_price_per_bottle = ROUND((p.import_price_per_bottle / ${divisor})::numeric, 2),
-        updated_by = '${ctx.user.id}',
-        updated_at = NOW()
-      WHERE p.import_price_per_bottle > 0
-        ${categoryCondition}
-        ${overwriteCondition}
-    `);
+    // LWIN18 set in scope: has stock, optional category, optional owner
+    const categoryFilter =
+      category === 'Wine'
+        ? `AND (category = 'Wine' OR category IS NULL)`
+        : category
+          ? `AND category = '${category}'`
+          : '';
+    const ownerFilter = ownerId ? `AND owner_id = '${ownerId}'` : '';
+    const stockScope = `SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 ${categoryFilter} ${ownerFilter}`;
 
-    // Count how many would have been skipped
-    const totalEligible = await client.unsafe(`
+    // Landed cost per bottle = stored import price + flat logistics
+    const landedExpr = `(p.import_price_per_bottle + ${logistics})`;
+    const sellExpr = `ROUND((${landedExpr} / ${divisor})::numeric, 2)`;
+
+    const totalEligibleRows = await client.unsafe(`
       SELECT COUNT(*) as count FROM wms_product_pricing p
-      WHERE p.import_price_per_bottle > 0
-        ${categoryCondition}
+      WHERE p.import_price_per_bottle > 0 AND p.lwin18 IN (${stockScope})
     `);
+    const total = parseInt(totalEligibleRows[0]?.count ?? '0', 10);
 
-    const updated = result.count;
-    const total = parseInt(totalEligible[0]?.count ?? '0', 10);
-    const skipped = total - updated;
+    let updated: number;
 
-    return { updated, skipped };
+    if (ownerId) {
+      // Per-owner PC pricing → upsert into wms_owner_pricing
+      const conflict = overwriteExisting
+        ? `ON CONFLICT (lwin18, owner_id) DO UPDATE SET
+             pc_selling_price_per_bottle = EXCLUDED.pc_selling_price_per_bottle,
+             updated_by = EXCLUDED.updated_by,
+             updated_at = NOW()`
+        : `ON CONFLICT (lwin18, owner_id) DO NOTHING`;
+
+      const result = await client.unsafe(`
+        INSERT INTO wms_owner_pricing (lwin18, owner_id, pc_selling_price_per_bottle, updated_by)
+        SELECT p.lwin18, '${ownerId}', ${sellExpr}, '${ctx.user.id}'
+        FROM wms_product_pricing p
+        WHERE p.import_price_per_bottle > 0
+          AND p.lwin18 IN (${stockScope})
+        ${conflict}
+      `);
+      updated = result.count;
+    } else {
+      // Default PC price → wms_product_pricing.selling_price_per_bottle
+      const overwriteCondition = overwriteExisting
+        ? ''
+        : 'AND (p.selling_price_per_bottle IS NULL OR p.selling_price_per_bottle = 0)';
+
+      const result = await client.unsafe(`
+        UPDATE wms_product_pricing p
+        SET
+          selling_price_per_bottle = ${sellExpr},
+          updated_by = '${ctx.user.id}',
+          updated_at = NOW()
+        WHERE p.import_price_per_bottle > 0
+          AND p.lwin18 IN (${stockScope})
+          ${overwriteCondition}
+      `);
+      updated = result.count;
+    }
+
+    return { updated, skipped: Math.max(0, total - updated) };
   });
 
 export default adminBulkApplyMargin;

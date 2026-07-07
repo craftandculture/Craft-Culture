@@ -226,6 +226,16 @@ const PricingManagerPage = () => {
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState<number>(50);
 
+  // Flat logistics cost per bottle (added to import → landed cost). Persisted.
+  const [logisticsPerBottle, setLogisticsPerBottle] = useState<number>(() => {
+    if (typeof window === 'undefined') return 25;
+    const stored = Number(localStorage.getItem('pm-logistics-per-bottle'));
+    return Number.isFinite(stored) && stored >= 0 ? stored : 25;
+  });
+  useEffect(() => {
+    localStorage.setItem('pm-logistics-per-bottle', String(logisticsPerBottle));
+  }, [logisticsPerBottle]);
+
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
   const [marginPercent, setMarginPercent] = useState('20');
@@ -372,7 +382,11 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.bulkApplyMargin.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
-      toast.success(`Updated ${result.updated} products, skipped ${result.skipped}`);
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
+      const scope = ownerId
+        ? owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner'
+        : 'default PC';
+      toast.success(`${scope}: updated ${result.updated}, skipped ${result.skipped}`);
       setShowMarginPopover(false);
     },
     onError: () => toast.error('Failed to apply margin'),
@@ -415,15 +429,18 @@ const PricingManagerPage = () => {
   const handleExport = useCallback(() => {
     if (!products.length) return;
     const rows = products.map((p) => {
-      const margin = calcMargin(p.importPricePerBottle, p.sellingPricePerBottle);
       const caseConfig = p.caseConfig ?? 12;
-      const inBond = p.importPricePerBottle ? p.importPricePerBottle * (1 + IN_BOND_MARKUP) : null;
+      const landed = p.importPricePerBottle ? p.importPricePerBottle + logisticsPerBottle : null;
+      const margin = calcMargin(landed, p.sellingPricePerBottle);
+      const inBond = landed ? landed * (1 + IN_BOND_MARKUP) : null;
       return [
         p.productName,
         p.producer ?? '',
         `${caseConfig}x${p.bottleSize ?? '75cl'}`,
         p.totalCases,
         p.importPricePerBottle?.toFixed(2) ?? '',
+        landed ? logisticsPerBottle.toFixed(2) : '',
+        landed?.toFixed(2) ?? '',
         p.importPricePerBottle ? (p.importPricePerBottle * caseConfig).toFixed(2) : '',
         inBond?.toFixed(2) ?? '',
         inBond ? (inBond * caseConfig).toFixed(2) : '',
@@ -433,7 +450,7 @@ const PricingManagerPage = () => {
       ].join(',');
     });
     const header =
-      'Product,Producer,Pack,Cases,Import $/btl,Import $/case,In Bond $/btl,In Bond $/case,PC Price $/btl,PC Price $/case,Margin %';
+      'Product,Producer,Pack,Cases,Import $/btl,Logistics $/btl,Landed $/btl,Import $/case,In Bond $/btl,In Bond $/case,PC Price $/btl,PC Price $/case,Margin %';
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -442,7 +459,7 @@ const PricingManagerPage = () => {
     a.download = `pricing-export-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [products]);
+  }, [products, logisticsPerBottle]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
 
@@ -549,6 +566,19 @@ const PricingManagerPage = () => {
           />
         </div>
 
+        {/* Logistics rate */}
+        <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
+          <span className="whitespace-nowrap text-xs text-text-muted">Logistics&nbsp;$/btl</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={logisticsPerBottle}
+            onChange={(e) => setLogisticsPerBottle(Math.max(0, Number(e.target.value) || 0))}
+            className="w-14 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
+          />
+        </div>
+
         {/* Apply Margin */}
         <div className="relative" ref={marginPopoverRef}>
           <button
@@ -577,7 +607,20 @@ const PricingManagerPage = () => {
                 <div>
                   <label className="mb-1 block text-xs text-text-muted">Scope</label>
                   <p className="text-xs text-text-secondary">
-                    {category ? `${category} products only` : 'All categories'}
+                    {category ? `${category} products` : 'All categories'}
+                    {ownerId ? (
+                      <>
+                        {' · '}
+                        <span className="font-medium text-violet-600">
+                          {owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner'} PC price
+                        </span>
+                      </>
+                    ) : (
+                      ' · default PC price'
+                    )}
+                  </p>
+                  <p className="mt-1 text-[11px] text-text-muted">
+                    On landed cost (import + ${logisticsPerBottle.toFixed(0)} logistics)
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-text-secondary">
@@ -606,6 +649,8 @@ const PricingManagerPage = () => {
                       bulkApplyMarginMut.mutate({
                         marginPercent: pct,
                         category,
+                        ownerId,
+                        logisticsPerBottle,
                         overwriteExisting,
                       });
                     }}
@@ -714,6 +759,12 @@ const PricingManagerPage = () => {
                       Import $/btl {renderSortIcon('importPrice')}
                     </span>
                   </th>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
+                    Logistics $/btl
+                  </th>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
+                    Landed $/btl
+                  </th>
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
                     Import $/case
                   </th>
@@ -762,7 +813,7 @@ const PricingManagerPage = () => {
                   Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-20 text-center text-text-muted">
+                    <td colSpan={13} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -770,14 +821,19 @@ const PricingManagerPage = () => {
                   products.map((product) => {
                     const caseConfig = product.caseConfig ?? 12;
                     const importPrice = product.importPricePerBottle;
+                    // Landed cost = import + flat logistics per bottle
+                    const landed =
+                      importPrice != null && importPrice > 0
+                        ? importPrice + logisticsPerBottle
+                        : null;
                     // When owner is selected, use owner-specific PC price (fall back to default)
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const sellPrice = ownerPcPrice ?? product.sellingPricePerBottle;
                     const hasOwnerPrice = ownerId != null && ownerPcPrice != null;
-                    const margin = calcMargin(importPrice, sellPrice);
+                    const margin = calcMargin(landed, sellPrice);
                     const marginPerBottle =
-                      importPrice && sellPrice && importPrice > 0 && sellPrice > 0
-                        ? sellPrice - importPrice
+                      landed && sellPrice && landed > 0 && sellPrice > 0
+                        ? sellPrice - landed
                         : null;
 
                     return (
@@ -815,6 +871,16 @@ const PricingManagerPage = () => {
                           }
                         />
 
+                        {/* Logistics $/btl (flat rate) */}
+                        <td className="px-3 py-3 text-right tabular-nums text-text-secondary">
+                          {landed != null ? `$${logisticsPerBottle.toFixed(2)}` : '\u2014'}
+                        </td>
+
+                        {/* Landed $/btl (import + logistics) */}
+                        <td className="px-3 py-3 text-right tabular-nums font-medium text-text-primary">
+                          {landed != null ? `$${landed.toFixed(2)}` : '\u2014'}
+                        </td>
+
                         {/* Import $/case */}
                         <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
                           {importPrice != null && importPrice > 0
@@ -822,10 +888,10 @@ const PricingManagerPage = () => {
                             : '\u2014'}
                         </td>
 
-                        {/* In Bond $/btl (computed) */}
+                        {/* In Bond $/btl (computed on landed cost) */}
                         {(() => {
-                          const inBondPrice = importPrice != null && importPrice > 0
-                            ? importPrice * (1 + IN_BOND_MARKUP)
+                          const inBondPrice = landed != null
+                            ? landed * (1 + IN_BOND_MARKUP)
                             : null;
                           return (
                             <>
