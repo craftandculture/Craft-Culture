@@ -8,6 +8,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import resolveSingleBottleRepack from '@/app/_wms/utils/resolveSingleBottleRepack';
 import db from '@/database/client';
 import {
   wmsPickLists,
@@ -31,10 +32,26 @@ const adminGetSalesOrder = wmsOperatorProcedure
       });
     }
 
-    const items = await db
+    const rawItems = await db
       .select()
       .from(zohoSalesOrderItems)
       .where(eq(zohoSalesOrderItems.salesOrderId, order.id));
+
+    // For single-bottle lines, resolve the real pick source from live stock
+    // (pick loose if available, else the smallest pack to break — a repack).
+    const items = await Promise.all(
+      rawItems.map(async (item) => {
+        if (!/single bottle/i.test(item.name ?? '')) {
+          return { ...item, repack: null };
+        }
+        const repack = await resolveSingleBottleRepack({
+          name: item.name,
+          sku: item.sku,
+          db,
+        });
+        return { ...item, repack };
+      }),
+    );
 
     // Get pick list if exists
     let pickList = null;

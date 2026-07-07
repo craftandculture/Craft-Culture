@@ -412,17 +412,19 @@ const NewPickListPage = () => {
                                   packMatch && Number(packMatch[1]) > 0
                                     ? Number(packMatch[1])
                                     : 1;
-                                const bottleSize = packMatch?.[2]?.trim() ?? '';
+                                const bottleSize =
+                                  packMatch?.[2]?.trim() || '75cl';
                                 const config = item.description
                                   ? item.description.replace(/x/i, '×').trim()
                                   : '';
-                                const totalBottles = isSingle
-                                  ? item.quantity
-                                  : item.quantity * perCase;
-                                const lineRepack = isSingle && perCase > 1;
+                                const totalBottles = item.quantity * perCase;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
                                   .trim();
+                                // Real pick source resolved from stock
+                                const rp = item.repack;
+                                const needsRepackLine =
+                                  isSingle && !rp?.looseAvailable;
                                 return (
                                   <div
                                     key={item.id}
@@ -434,7 +436,7 @@ const NewPickListPage = () => {
                                     <div className="shrink-0 text-right leading-tight">
                                       <div
                                         className={`text-[13px] font-bold tabular-nums ${
-                                          isSingle
+                                          needsRepackLine
                                             ? 'text-amber-700'
                                             : 'text-text-primary'
                                         }`}
@@ -449,13 +451,19 @@ const NewPickListPage = () => {
                                             : 'cases'}
                                       </div>
                                       <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-text-muted">
-                                        {lineRepack ? (
-                                          <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700">
-                                            <IconReplace className="h-3 w-3" />
-                                            repack from {perCase}×{bottleSize || '75cl'}
-                                          </span>
-                                        ) : isSingle ? (
-                                          <span>{bottleSize || 'single'}</span>
+                                        {isSingle ? (
+                                          needsRepackLine ? (
+                                            <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700">
+                                              <IconReplace className="h-3 w-3" />
+                                              {rp?.fromPack
+                                                ? `repack from ${rp.fromPack}×${bottleSize}`
+                                                : 'repack — check stock'}
+                                            </span>
+                                          ) : (
+                                            <span className="font-medium text-emerald-700">
+                                              loose in stock
+                                            </span>
+                                          )
                                         ) : (
                                           <span>
                                             {config}
