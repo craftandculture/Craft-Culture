@@ -5,6 +5,8 @@ export const getPricingProductsSchema = z.object({
   search: z.string().optional(),
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
   ownerId: z.string().uuid().optional(),
+  /** Price-gap filter: unpriced (import but no sell), lossMaking (sell ≤ import), noImport */
+  priceFilter: z.enum(['unpriced', 'lossMaking', 'noImport']).optional(),
   sortBy: z
     .enum(['productName', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),

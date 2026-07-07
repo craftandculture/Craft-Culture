@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -133,11 +133,15 @@ const KpiCard = ({
   value,
   subtitle,
   color,
+  onClick,
+  active,
 }: {
   label: string;
   value: string;
   subtitle?: string;
   color?: 'green' | 'amber' | 'red' | 'default';
+  onClick?: () => void;
+  active?: boolean;
 }) => {
   const valueColor =
     color === 'green'
@@ -148,13 +152,27 @@ const KpiCard = ({
           ? 'text-red-600'
           : 'text-text-primary';
 
+  const inner = (
+    <CardContent className="p-4">
+      <p className="text-xs font-medium text-text-muted">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
+      {subtitle && <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p>}
+    </CardContent>
+  );
+
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4">
-        <p className="text-xs font-medium text-text-muted">{label}</p>
-        <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
-        {subtitle && <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p>}
-      </CardContent>
+    <Card className={`shadow-sm ${active ? 'ring-2 ring-text-primary' : ''}`}>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="w-full text-left transition-colors hover:bg-surface-muted/40"
+        >
+          {inner}
+        </button>
+      ) : (
+        inner
+      )}
     </Card>
   );
 };
@@ -214,7 +232,9 @@ const SkeletonRow = () => (
 
 const PricingManagerPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
+  const [isExporting, setIsExporting] = useState(false);
 
   // State
   const [search, setSearch] = useState('');
@@ -236,6 +256,22 @@ const PricingManagerPage = () => {
     localStorage.setItem('pm-logistics-per-bottle', String(logisticsPerBottle));
   }, [logisticsPerBottle]);
 
+  // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
+  const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
+    if (typeof window === 'undefined') return IN_BOND_MARKUP * 100;
+    const stored = Number(localStorage.getItem('pm-inbond-markup-pct'));
+    return Number.isFinite(stored) && stored >= 0 ? stored : IN_BOND_MARKUP * 100;
+  });
+  useEffect(() => {
+    localStorage.setItem('pm-inbond-markup-pct', String(inBondMarkupPct));
+  }, [inBondMarkupPct]);
+  const inBondMarkup = inBondMarkupPct / 100;
+
+  // Price-gap quick filter
+  const [priceFilter, setPriceFilter] = useState<
+    'unpriced' | 'lossMaking' | 'noImport' | undefined
+  >(undefined);
+
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
   const [marginPercent, setMarginPercent] = useState('20');
@@ -254,7 +290,7 @@ const PricingManagerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [sortBy, sortOrder, category, ownerId, limit]);
+  }, [sortBy, sortOrder, category, ownerId, priceFilter, limit]);
 
   // Close margin popover on outside click
   useEffect(() => {
@@ -283,12 +319,13 @@ const PricingManagerPage = () => {
       search: debouncedSearch || undefined,
       category,
       ownerId,
+      priceFilter,
       sortBy,
       sortOrder,
       limit,
       offset: page * limit,
     }),
-    [debouncedSearch, category, ownerId, sortBy, sortOrder, limit, page],
+    [debouncedSearch, category, ownerId, priceFilter, sortBy, sortOrder, limit, page],
   );
 
   const { data, isLoading } = useQuery(
@@ -347,6 +384,7 @@ const PricingManagerPage = () => {
     setOwnerId(undefined);
     setSearch('');
     setDebouncedSearch('');
+    setPriceFilter(undefined);
   };
 
   // Mutations
@@ -425,41 +463,103 @@ const PricingManagerPage = () => {
     return `$${v.toFixed(0)}`;
   };
 
-  // CSV export
-  const handleExport = useCallback(() => {
-    if (!products.length) return;
-    const rows = products.map((p) => {
-      const caseConfig = p.caseConfig ?? 12;
-      const landed = p.importPricePerBottle ? p.importPricePerBottle + logisticsPerBottle : null;
-      const margin = calcMargin(landed, p.sellingPricePerBottle);
-      const inBond = landed ? landed * (1 + IN_BOND_MARKUP) : null;
-      return [
-        p.productName,
-        p.producer ?? '',
-        `${caseConfig}x${p.bottleSize ?? '75cl'}`,
-        p.totalCases,
-        p.importPricePerBottle?.toFixed(2) ?? '',
-        landed ? logisticsPerBottle.toFixed(2) : '',
-        landed?.toFixed(2) ?? '',
-        p.importPricePerBottle ? (p.importPricePerBottle * caseConfig).toFixed(2) : '',
-        inBond?.toFixed(2) ?? '',
-        inBond ? (inBond * caseConfig).toFixed(2) : '',
-        p.sellingPricePerBottle?.toFixed(2) ?? '',
-        p.sellingPricePerBottle ? (p.sellingPricePerBottle * caseConfig).toFixed(2) : '',
-        margin != null ? margin.toFixed(1) : '',
-      ].join(',');
-    });
-    const header =
-      'Product,Producer,Pack,Cases,Import $/btl,Logistics $/btl,Landed $/btl,Import $/case,In Bond $/btl,In Bond $/case,PC Price $/btl,PC Price $/case,Margin %';
-    const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pricing-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, logisticsPerBottle]);
+  // Excel export — pages through ALL filtered rows (not just the current page)
+  const handleExport = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const pageSize = 200;
+      const all: typeof products = [];
+      for (let offset = 0; offset < 20000; offset += pageSize) {
+        const res = await trpcClient.wms.admin.stock.pricing.getProducts.query({
+          search: debouncedSearch || undefined,
+          category,
+          ownerId,
+          priceFilter,
+          sortBy,
+          sortOrder,
+          limit: pageSize,
+          offset,
+        });
+        all.push(...res.products);
+        if (!res.pagination.hasMore) break;
+      }
+      if (!all.length) {
+        toast.info('No products to export');
+        return;
+      }
+
+      // Owner-specific PC prices when an owner is selected
+      const ownerPrices: Record<string, number> = {};
+      if (ownerId) {
+        const lwins = [...new Set(all.map((p) => p.lwin18))];
+        for (let i = 0; i < lwins.length; i += 500) {
+          const partial = await trpcClient.wms.admin.stock.pricing.getOwnerPricing.query({
+            lwin18s: lwins.slice(i, i + 500),
+            ownerId,
+          });
+          Object.assign(ownerPrices, partial.priceMap);
+        }
+      }
+
+      const XLSX = await import('xlsx');
+      const aoa: (string | number)[][] = [[
+        'Product', 'Producer', 'Pack', 'Cases', 'Import $/btl', 'Logistics $/btl',
+        'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
+        'PC Price $/btl', 'PC Price $/case', 'Margin %',
+      ]];
+      for (const p of all) {
+        const caseConfig = p.caseConfig ?? 12;
+        const landed = p.importPricePerBottle ? p.importPricePerBottle + logisticsPerBottle : null;
+        const sell = (ownerId ? ownerPrices[p.lwin18] : undefined) ?? p.sellingPricePerBottle;
+        const margin = calcMargin(landed, sell);
+        const inBond = landed ? landed * (1 + inBondMarkup) : null;
+        const num = (v: number | null | undefined, dp = 2) =>
+          v != null ? Number(v.toFixed(dp)) : '';
+        aoa.push([
+          p.productName,
+          p.producer ?? '',
+          `${caseConfig}x${p.bottleSize ?? '75cl'}`,
+          p.totalCases,
+          num(p.importPricePerBottle),
+          landed != null ? num(logisticsPerBottle) : '',
+          num(landed),
+          num(p.importPricePerBottle != null ? p.importPricePerBottle * caseConfig : null),
+          num(inBond),
+          num(inBond != null ? inBond * caseConfig : null),
+          num(sell),
+          num(sell != null ? sell * caseConfig : null),
+          num(margin, 1),
+        ]);
+      }
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [
+        { wch: 40 }, { wch: 22 }, { wch: 10 }, { wch: 7 }, { wch: 12 }, { wch: 13 },
+        { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 9 },
+      ];
+      ws['!autofilter'] = { ref: `A1:M${all.length + 1}` };
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
+      XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(`Exported ${all.length} products`);
+    } catch (err) {
+      console.error('Pricing export failed', { err });
+      toast.error('Export failed');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [
+    isExporting,
+    trpcClient,
+    debouncedSearch,
+    category,
+    ownerId,
+    priceFilter,
+    sortBy,
+    sortOrder,
+    logisticsPerBottle,
+    inBondMarkup,
+  ]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
 
@@ -505,6 +605,8 @@ const PricingManagerPage = () => {
           value={summary?.unpricedCount?.toString() ?? '\u2014'}
           subtitle="have import but no sell price"
           color={summary?.unpricedCount && summary.unpricedCount > 0 ? 'amber' : 'default'}
+          onClick={() => setPriceFilter(priceFilter === 'unpriced' ? undefined : 'unpriced')}
+          active={priceFilter === 'unpriced'}
         />
         <KpiCard
           label="Total Sell Value"
@@ -576,6 +678,19 @@ const PricingManagerPage = () => {
             value={logisticsPerBottle}
             onChange={(e) => setLogisticsPerBottle(Math.max(0, Number(e.target.value) || 0))}
             className="w-14 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
+          />
+        </div>
+
+        {/* In-bond markup */}
+        <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
+          <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={inBondMarkupPct}
+            onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
+            className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
           />
         </div>
 
@@ -668,14 +783,42 @@ const PricingManagerPage = () => {
           )}
         </div>
 
-        {/* Export CSV */}
+        {/* Export all filtered rows → Excel */}
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-muted"
+          disabled={isExporting}
+          className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-muted disabled:opacity-50"
         >
-          <IconDownload className="h-4 w-4" />
-          Export
+          {isExporting ? (
+            <IconLoader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <IconDownload className="h-4 w-4" />
+          )}
+          {isExporting ? 'Exporting…' : 'Export Excel'}
         </button>
+      </div>
+
+      {/* Price-gap quick filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs text-text-muted">Show</span>
+        {([
+          { key: undefined, label: 'All' },
+          { key: 'unpriced' as const, label: 'Unpriced' },
+          { key: 'lossMaking' as const, label: 'Below cost' },
+          { key: 'noImport' as const, label: 'No import cost' },
+        ]).map((f) => (
+          <button
+            key={f.label}
+            onClick={() => setPriceFilter(f.key)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              priceFilter === f.key
+                ? 'bg-text-primary text-white'
+                : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Active filter chips */}
@@ -771,7 +914,7 @@ const PricingManagerPage = () => {
                   <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
                     <span className="flex items-center justify-end gap-1">
                       In Bond $/btl
-                      <span className="text-[10px] font-normal text-text-muted/60">+{IN_BOND_MARKUP * 100}%</span>
+                      <span className="text-[10px] font-normal text-text-muted/60">+{inBondMarkupPct}%</span>
                     </span>
                   </th>
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
@@ -835,11 +978,18 @@ const PricingManagerPage = () => {
                       landed && sellPrice && landed > 0 && sellPrice > 0
                         ? sellPrice - landed
                         : null;
+                    // Loss-making = priced but selling at or below landed cost
+                    const isLoss =
+                      sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
 
                     return (
                       <tr
                         key={product.lwin18}
-                        className="transition-colors hover:bg-surface-muted/30"
+                        className={`transition-colors ${
+                          isLoss
+                            ? 'bg-red-50/70 hover:bg-red-50'
+                            : 'hover:bg-surface-muted/30'
+                        }`}
                       >
                         {/* Product */}
                         <td className="px-3 py-3">
@@ -891,7 +1041,7 @@ const PricingManagerPage = () => {
                         {/* In Bond $/btl (computed on landed cost) */}
                         {(() => {
                           const inBondPrice = landed != null
-                            ? landed * (1 + IN_BOND_MARKUP)
+                            ? landed * (1 + inBondMarkup)
                             : null;
                           return (
                             <>
