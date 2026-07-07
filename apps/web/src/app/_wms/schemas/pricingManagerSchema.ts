@@ -23,6 +23,10 @@ export const setSellingPriceSchema = z.object({
 export const bulkApplyMarginSchema = z.object({
   marginPercent: z.number().min(0.1).max(99.9),
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
+  /** When set, writes per-owner PC prices instead of the default selling price */
+  ownerId: z.string().uuid().optional(),
+  /** Flat logistics cost per bottle added to import before applying the margin */
+  logisticsPerBottle: z.number().min(0).max(1000).default(0),
   overwriteExisting: z.boolean().default(false),
 });
 
