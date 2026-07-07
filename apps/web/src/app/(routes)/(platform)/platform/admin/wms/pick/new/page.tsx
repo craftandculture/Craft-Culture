@@ -296,7 +296,6 @@ const NewPickListPage = () => {
                 {filteredOrders?.map((order, index) => {
                   const isSelected = selectedOrderIds.has(order.id);
                   const isExpanded = expandedOrderId === order.id;
-                  const unit = order.unitLabel ?? 'case';
                   const showBottleTotal =
                     order.bottleCount != null &&
                     order.bottleCount !== order.totalQuantity;
@@ -339,22 +338,16 @@ const NewPickListPage = () => {
                           <p className="truncate text-[13px] font-medium leading-tight text-text-primary">
                             {order.customerName ?? 'Unknown'}
                           </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {order.referenceNumber && (
+                          {order.referenceNumber && (
+                            <div className="mt-1">
                               <span className="inline-flex max-w-full items-center gap-1 truncate rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
                                 <IconTag className="h-3 w-3 shrink-0" />
                                 <span className="truncate">
                                   {order.referenceNumber}
                                 </span>
                               </span>
-                            )}
-                            {order.needsRepack && (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                                <IconReplace className="h-3 w-3" />
-                                Repack
-                              </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Quantity + value — prominent */}
@@ -363,8 +356,7 @@ const NewPickListPage = () => {
                             {order.totalQuantity}
                           </span>
                           <p className="text-[11px] leading-tight text-text-muted">
-                            {unit}
-                            {order.totalQuantity === 1 ? '' : 's'}
+                            {order.totalQuantity === 1 ? 'case' : 'cases'}
                           </p>
                           {showBottleTotal && (
                             <p className="text-[10px] leading-tight text-text-muted/70">
@@ -401,9 +393,6 @@ const NewPickListPage = () => {
                           ) : expandedOrder?.items.length ? (
                             <div className="space-y-1.5">
                               {expandedOrder.items.map((item) => {
-                                const isSingle = /single bottle/i.test(
-                                  item.name ?? '',
-                                );
                                 const packMatch =
                                   /^(\d+)\s*[x×]\s*(.*)$/i.exec(
                                     (item.description ?? '').trim(),
@@ -414,17 +403,14 @@ const NewPickListPage = () => {
                                     : 1;
                                 const bottleSize =
                                   packMatch?.[2]?.trim() || '75cl';
-                                const config = item.description
-                                  ? item.description.replace(/x/i, '×').trim()
-                                  : '';
+                                const orderedFormat = `${perCase}×${bottleSize}`;
                                 const totalBottles = item.quantity * perCase;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
                                   .trim();
-                                // Real pick source resolved from stock
+                                // Repack source resolved from live stock
                                 const rp = item.repack;
-                                const needsRepackLine =
-                                  isSingle && !rp?.looseAvailable;
+                                const needsRepack = rp?.needsRepack ?? false;
                                 return (
                                   <div
                                     key={item.id}
@@ -434,45 +420,22 @@ const NewPickListPage = () => {
                                       {cleanName}
                                     </span>
                                     <div className="shrink-0 text-right leading-tight">
-                                      <div
-                                        className={`text-[13px] font-bold tabular-nums ${
-                                          needsRepackLine
-                                            ? 'text-amber-700'
-                                            : 'text-text-primary'
-                                        }`}
-                                      >
+                                      <div className="text-[13px] font-bold tabular-nums text-text-primary">
                                         {item.quantity}{' '}
-                                        {isSingle
-                                          ? item.quantity === 1
-                                            ? 'bottle'
-                                            : 'bottles'
-                                          : item.quantity === 1
-                                            ? 'case'
-                                            : 'cases'}
+                                        {item.quantity === 1 ? 'case' : 'cases'}
                                       </div>
-                                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-text-muted">
-                                        {isSingle ? (
-                                          needsRepackLine ? (
-                                            <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700">
-                                              <IconReplace className="h-3 w-3" />
-                                              {rp?.fromPack
-                                                ? `repack from ${rp.fromPack}×${bottleSize}`
-                                                : 'repack — check stock'}
-                                            </span>
-                                          ) : (
-                                            <span className="font-medium text-emerald-700">
-                                              loose in stock
-                                            </span>
-                                          )
-                                        ) : (
-                                          <span>
-                                            {config}
-                                            {totalBottles
-                                              ? ` · ${totalBottles} btl`
-                                              : ''}
-                                          </span>
-                                        )}
+                                      <div className="mt-0.5 text-[10px] text-text-muted">
+                                        {orderedFormat}
+                                        {totalBottles
+                                          ? ` · ${totalBottles} btl`
+                                          : ''}
                                       </div>
+                                      {needsRepack && rp?.fromPack && (
+                                        <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-semibold text-amber-700">
+                                          <IconReplace className="h-3 w-3" />
+                                          repack from {rp.fromPack}×{bottleSize}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 );
