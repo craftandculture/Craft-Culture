@@ -16,10 +16,23 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
-    const { search, category, ownerId, sortBy, sortOrder, limit, offset } = input;
+    const { search, category, ownerId, priceFilter, sortBy, sortOrder, limit, offset } = input;
 
     const conditions = [gt(sql`SUM(${wmsStock.quantityCases})`, 0)];
     const whereConditions = [gt(wmsStock.quantityCases, 0)];
+
+    // Price-gap filters operate on the grouped MAX() pricing values (HAVING)
+    if (priceFilter === 'unpriced') {
+      conditions.push(
+        sql`MAX(${wmsProductPricing.importPricePerBottle}) > 0 AND COALESCE(MAX(${wmsProductPricing.sellingPricePerBottle}), 0) = 0`,
+      );
+    } else if (priceFilter === 'lossMaking') {
+      conditions.push(
+        sql`MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.sellingPricePerBottle}) <= MAX(${wmsProductPricing.importPricePerBottle})`,
+      );
+    } else if (priceFilter === 'noImport') {
+      conditions.push(sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`);
+    }
 
     if (search) {
       whereConditions.push(
@@ -131,12 +144,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const countSubquery = db
       .select({
         lwin18: wmsStock.lwin18,
-        totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
       })
       .from(wmsStock)
+      .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
-      .having(gt(sql`SUM(${wmsStock.quantityCases})`, 0))
+      .having(and(...conditions))
       .as('counted');
 
     const [countResult] = await db
