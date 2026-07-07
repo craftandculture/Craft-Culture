@@ -265,12 +265,59 @@ const PricingManagerPage = () => {
   useEffect(() => {
     localStorage.setItem('pm-inbond-markup-pct', String(inBondMarkupPct));
   }, [inBondMarkupPct]);
-  const inBondMarkup = inBondMarkupPct / 100;
 
   // Price-gap quick filter
   const [priceFilter, setPriceFilter] = useState<
     'unpriced' | 'lossMaking' | 'noImport' | undefined
   >(undefined);
+
+  // Per-owner pricing settings (logistics / in-bond margin / PC margin)
+  const { data: ownerSettings } = useQuery({
+    ...api.wms.admin.stock.pricing.getOwnerSettings.queryOptions({ ownerId: ownerId ?? '' }),
+    enabled: !!ownerId,
+  });
+  const [ownerDraft, setOwnerDraft] = useState<{
+    logistics: number;
+    inbondPct: number;
+    pcPct: number | null;
+  }>({ logistics: 25, inbondPct: 10, pcPct: null });
+  useEffect(() => {
+    if (ownerSettings) {
+      setOwnerDraft({
+        logistics: ownerSettings.logisticsPerBottle,
+        inbondPct: ownerSettings.inbondMarginPct,
+        pcPct: ownerSettings.pcMarginPct,
+      });
+    }
+  }, [ownerSettings]);
+
+  const setOwnerSettingsMut = useMutation({
+    ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getOwnerSettings.getQueryKey(),
+      });
+    },
+    onError: () => toast.error('Failed to save owner settings'),
+  });
+  const saveOwnerSettings = (draft: {
+    logistics: number;
+    inbondPct: number;
+    pcPct: number | null;
+  }) => {
+    if (!ownerId) return;
+    setOwnerSettingsMut.mutate({
+      ownerId,
+      logisticsPerBottle: draft.logistics,
+      inbondMarginPct: draft.inbondPct,
+      pcMarginPct: draft.pcPct,
+    });
+  };
+
+  // Effective rates: owner settings when an owner is selected, else global defaults
+  const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
+  const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
+  const effInbondMarkup = effInbondPct / 100;
 
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
@@ -510,10 +557,10 @@ const PricingManagerPage = () => {
       ]];
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
-        const landed = p.importPricePerBottle ? p.importPricePerBottle + logisticsPerBottle : null;
+        const landed = p.importPricePerBottle ? p.importPricePerBottle + effLogistics : null;
         const sell = (ownerId ? ownerPrices[p.lwin18] : undefined) ?? p.sellingPricePerBottle;
         const margin = calcMargin(landed, sell);
-        const inBond = landed ? landed * (1 + inBondMarkup) : null;
+        const inBond = landed ? landed * (1 + effInbondMarkup) : null;
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -522,7 +569,7 @@ const PricingManagerPage = () => {
           `${caseConfig}x${p.bottleSize ?? '75cl'}`,
           p.totalCases,
           num(p.importPricePerBottle),
-          landed != null ? num(logisticsPerBottle) : '',
+          landed != null ? num(effLogistics) : '',
           num(landed),
           num(p.importPricePerBottle != null ? p.importPricePerBottle * caseConfig : null),
           num(inBond),
@@ -557,8 +604,8 @@ const PricingManagerPage = () => {
     priceFilter,
     sortBy,
     sortOrder,
-    logisticsPerBottle,
-    inBondMarkup,
+    effLogistics,
+    effInbondMarkup,
   ]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
@@ -668,36 +715,99 @@ const PricingManagerPage = () => {
           />
         </div>
 
-        {/* Logistics rate */}
-        <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-          <span className="whitespace-nowrap text-xs text-text-muted">Logistics&nbsp;$/btl</span>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={logisticsPerBottle}
-            onChange={(e) => setLogisticsPerBottle(Math.max(0, Number(e.target.value) || 0))}
-            className="w-14 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-          />
-        </div>
+        {/* Global rates (when no owner selected) */}
+        {!ownerId && (
+          <>
+            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
+              <span className="whitespace-nowrap text-xs text-text-muted">Logistics&nbsp;$/btl</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={logisticsPerBottle}
+                onChange={(e) => setLogisticsPerBottle(Math.max(0, Number(e.target.value) || 0))}
+                className="w-14 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
+              <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={inBondMarkupPct}
+                onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
+                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
+              />
+            </div>
+          </>
+        )}
 
-        {/* In-bond markup */}
-        <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-          <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={inBondMarkupPct}
-            onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
-            className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-          />
-        </div>
+        {/* Per-owner rates (when an owner is selected) — saved to that owner */}
+        {ownerId && (
+          <div className="flex items-center gap-3 rounded-lg border border-violet-300 bg-violet-50/50 px-3 py-2">
+            <span className="whitespace-nowrap text-xs font-medium text-violet-700">
+              {owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'Owner'} rates
+            </span>
+            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
+              Log&nbsp;$
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={ownerDraft.logistics}
+                onChange={(e) =>
+                  setOwnerDraft((d) => ({ ...d, logistics: Math.max(0, Number(e.target.value) || 0) }))
+                }
+                onBlur={() => saveOwnerSettings(ownerDraft)}
+                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
+              />
+            </label>
+            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
+              In-Bond&nbsp;%
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={ownerDraft.inbondPct}
+                onChange={(e) =>
+                  setOwnerDraft((d) => ({ ...d, inbondPct: Math.max(0, Number(e.target.value) || 0) }))
+                }
+                onBlur={() => saveOwnerSettings(ownerDraft)}
+                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
+              />
+            </label>
+            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
+              PC&nbsp;%
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="—"
+                value={ownerDraft.pcPct ?? ''}
+                onChange={(e) =>
+                  setOwnerDraft((d) => ({
+                    ...d,
+                    pcPct: e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0),
+                  }))
+                }
+                onBlur={() => saveOwnerSettings(ownerDraft)}
+                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
+              />
+            </label>
+          </div>
+        )}
 
         {/* Apply Margin */}
         <div className="relative" ref={marginPopoverRef}>
           <button
-            onClick={() => setShowMarginPopover(!showMarginPopover)}
+            onClick={() => {
+              const opening = !showMarginPopover;
+              setShowMarginPopover(opening);
+              if (opening && ownerId && ownerDraft.pcPct != null) {
+                setMarginPercent(String(ownerDraft.pcPct));
+              }
+            }}
             className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-muted"
           >
             <IconPercentage className="h-4 w-4" />
@@ -735,7 +845,7 @@ const PricingManagerPage = () => {
                     )}
                   </p>
                   <p className="mt-1 text-[11px] text-text-muted">
-                    On landed cost (import + ${logisticsPerBottle.toFixed(0)} logistics)
+                    On landed cost (import + ${effLogistics.toFixed(0)} logistics)
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-text-secondary">
@@ -765,7 +875,7 @@ const PricingManagerPage = () => {
                         marginPercent: pct,
                         category,
                         ownerId,
-                        logisticsPerBottle,
+                        logisticsPerBottle: effLogistics,
                         overwriteExisting,
                       });
                     }}
@@ -914,7 +1024,7 @@ const PricingManagerPage = () => {
                   <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
                     <span className="flex items-center justify-end gap-1">
                       In Bond $/btl
-                      <span className="text-[10px] font-normal text-text-muted/60">+{inBondMarkupPct}%</span>
+                      <span className="text-[10px] font-normal text-text-muted/60">+{effInbondPct}%</span>
                     </span>
                   </th>
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
@@ -967,7 +1077,7 @@ const PricingManagerPage = () => {
                     // Landed cost = import + flat logistics per bottle
                     const landed =
                       importPrice != null && importPrice > 0
-                        ? importPrice + logisticsPerBottle
+                        ? importPrice + effLogistics
                         : null;
                     // When owner is selected, use owner-specific PC price (fall back to default)
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
@@ -1023,7 +1133,7 @@ const PricingManagerPage = () => {
 
                         {/* Logistics $/btl (flat rate) */}
                         <td className="px-3 py-3 text-right tabular-nums text-text-secondary">
-                          {landed != null ? `$${logisticsPerBottle.toFixed(2)}` : '\u2014'}
+                          {landed != null ? `$${effLogistics.toFixed(2)}` : '\u2014'}
                         </td>
 
                         {/* Landed $/btl (import + logistics) */}
@@ -1041,7 +1151,7 @@ const PricingManagerPage = () => {
                         {/* In Bond $/btl (computed on landed cost) */}
                         {(() => {
                           const inBondPrice = landed != null
-                            ? landed * (1 + inBondMarkup)
+                            ? landed * (1 + effInbondMarkup)
                             : null;
                           return (
                             <>

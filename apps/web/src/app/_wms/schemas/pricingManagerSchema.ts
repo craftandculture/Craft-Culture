@@ -44,3 +44,16 @@ export const getOwnerPricingSchema = z.object({
   lwin18s: z.array(z.string()).min(1).max(500),
   ownerId: z.string().uuid(),
 });
+
+/** Schema for reading an owner's pricing settings (logistics / margins) */
+export const getOwnerPricingSettingsSchema = z.object({
+  ownerId: z.string().uuid(),
+});
+
+/** Schema for upserting an owner's pricing settings */
+export const setOwnerPricingSettingsSchema = z.object({
+  ownerId: z.string().uuid(),
+  logisticsPerBottle: z.number().min(0).max(1000),
+  inbondMarginPct: z.number().min(0).max(99.9),
+  pcMarginPct: z.number().min(0).max(99.9).nullable().optional(),
+});
