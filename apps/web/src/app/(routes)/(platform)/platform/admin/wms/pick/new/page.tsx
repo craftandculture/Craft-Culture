@@ -9,6 +9,7 @@ import {
   IconPlus,
   IconRefresh,
   IconSearch,
+  IconTag,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -21,76 +22,50 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
-
-type Tab = 'sales' | 'private';
+import formatPrice from '@/utils/formatPrice';
 
 /**
- * Create new pick list from order
+ * Create new pick list from Zoho sales orders.
  *
- * Shows two tabs: Sales Orders (Zoho) and Private Orders (PCO).
- * Sales Orders tab is the default — shows invoiced Zoho orders ready for picking.
+ * Lists invoiced Zoho orders ready for picking. Each card shows the invoice
+ * number (primary), sales order number, customer, order subject/reference and
+ * value so the picker has full context. Expanding a card shows each line's pack
+ * config (e.g. 6×75cl) and flags single bottles so "x1" is never mistaken for a
+ * full case.
  */
 const NewPickListPage = () => {
   const router = useRouter();
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
     new Set(),
   );
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  // Fetch Zoho sales orders
-  const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
+  // Fetch invoiced Zoho sales orders ready for picking
+  const { data: zohoOrders, isLoading } = useQuery({
     ...api.zohoSalesOrders.list.queryOptions(),
     select: (orders) =>
       orders
-        .filter(
-          (o) => o.status === 'synced' && o.zohoStatus === 'invoiced',
-        )
+        .filter((o) => o.status === 'synced' && o.zohoStatus === 'invoiced')
         .sort((a, b) =>
-          (b.salesOrderNumber ?? '').localeCompare(
-            a.salesOrderNumber ?? '',
-          ),
+          (b.salesOrderNumber ?? '').localeCompare(a.salesOrderNumber ?? ''),
         ),
   });
 
-  // Fetch PCO orders (cc_approved status, no pick list yet)
-  const { data: pcoOrders, isLoading: isLoadingPco } = useQuery({
-    ...api.privateClientOrders.adminGetMany.queryOptions({
-      status: 'cc_approved',
-      limit: 50,
-    }),
+  // Lazy-load line items when a card is expanded
+  const { data: expandedOrder, isLoading: isLoadingItems } = useQuery({
+    ...api.zohoSalesOrders.get.queryOptions({ id: expandedOrderId ?? '' }),
+    enabled: !!expandedOrderId,
   });
 
-  // Lazy-load Zoho order items when expanded
-  const { data: expandedZohoOrder, isLoading: isLoadingZohoItems } = useQuery({
-    ...api.zohoSalesOrders.get.queryOptions({
-      id: expandedOrderId ?? '',
-    }),
-    enabled: !!expandedOrderId && activeTab === 'sales',
-  });
-
-  // Lazy-load PCO order items when expanded
-  const { data: expandedPcoOrder, isLoading: isLoadingPcoItems } = useQuery({
-    ...api.privateClientOrders.adminGetOne.queryOptions({
-      id: expandedOrderId ?? '',
-    }),
-    enabled: !!expandedOrderId && activeTab === 'private',
-  });
-
-  // Release Zoho order to pick (creates pick list)
   const releaseToPickMutation = useMutation({
     ...api.zohoSalesOrders.releaseToPick.mutationOptions(),
   });
 
-  // Create PCO pick list
-  const createPcoMutation = useMutation({
-    ...api.wms.admin.picking.create.mutationOptions(),
-  });
-
-  // Sync Zoho orders
   const syncMutation = useMutation({
     ...api.zohoSalesOrders.sync.mutationOptions(),
     onSuccess: (data) => {
@@ -98,9 +73,6 @@ const NewPickListPage = () => {
       toast.success(data.message);
     },
   });
-
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
 
   const toggleOrder = (orderId: string) => {
     setSelectedOrderIds((prev) => {
@@ -124,18 +96,13 @@ const NewPickListPage = () => {
     setIsCreating(true);
     setCreateError(null);
 
-    const ids = Array.from(selectedOrderIds);
     let succeeded = 0;
     let failed = 0;
 
     // Process sequentially to avoid pick list number race condition
-    for (const id of ids) {
+    for (const id of Array.from(selectedOrderIds)) {
       try {
-        if (activeTab === 'sales') {
-          await releaseToPickMutation.mutateAsync({ salesOrderId: id });
-        } else {
-          await createPcoMutation.mutateAsync({ orderId: id });
-        }
+        await releaseToPickMutation.mutateAsync({ salesOrderId: id });
         succeeded++;
       } catch {
         failed++;
@@ -146,85 +113,45 @@ const NewPickListPage = () => {
     void queryClient.invalidateQueries();
 
     if (failed === 0) {
-      toast.success(
-        `${succeeded} pick list${succeeded === 1 ? '' : 's'} created`,
-      );
+      toast.success(`${succeeded} pick list${succeeded === 1 ? '' : 's'} created`);
       router.push('/platform/admin/wms/pick');
     } else if (succeeded > 0) {
-      toast.warning(
-        `${succeeded} created, ${failed} failed`,
-      );
+      toast.warning(`${succeeded} created, ${failed} failed`);
       router.push('/platform/admin/wms/pick');
     } else {
-      const firstError = results.find((r) => r.status === 'rejected') as
-        | PromiseRejectedResult
-        | undefined;
-      setCreateError(
-        firstError?.reason instanceof Error
-          ? firstError.reason.message
-          : 'Failed to create pick lists',
-      );
+      setCreateError('Failed to create pick lists');
     }
   };
 
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setSelectedOrderIds(new Set());
-    setSearchQuery('');
-    setExpandedOrderId(null);
-  };
+  // Filter by SO number, invoice number, customer or subject/reference
+  const filteredOrders = zohoOrders?.filter((order) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      order.salesOrderNumber?.toLowerCase().includes(q) ||
+      order.invoiceNumber?.toLowerCase().includes(q) ||
+      order.customerName?.toLowerCase().includes(q) ||
+      order.referenceNumber?.toLowerCase().includes(q)
+    );
+  });
 
-  // Filter Zoho orders by search
-  const filteredZohoOrders = zohoOrders?.filter((order) =>
-    searchQuery
-      ? order.salesOrderNumber
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.invoiceNumber
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customerName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      : true,
-  );
-
-  // Filter PCO orders by search
-  const filteredPcoOrders = pcoOrders?.data.filter((order) =>
-    searchQuery
-      ? order.orderNumber
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.clientName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      : true,
-  );
-
-  const isLoading = activeTab === 'sales' ? isLoadingZoho : isLoadingPco;
-
-  // Compute total selected cases for the action bar
   const selectedCaseCount = useMemo(() => {
-    if (activeTab === 'sales' && filteredZohoOrders) {
-      return filteredZohoOrders
-        .filter((o) => selectedOrderIds.has(o.id))
-        .reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0);
-    }
-    if (activeTab === 'private' && filteredPcoOrders) {
-      return filteredPcoOrders
-        .filter((o) => selectedOrderIds.has(o.id))
-        .reduce((sum, o) => sum + (o.caseCount ?? 0), 0);
-    }
-    return 0;
-  }, [activeTab, filteredZohoOrders, filteredPcoOrders, selectedOrderIds]);
+    if (!filteredOrders) return 0;
+    return filteredOrders
+      .filter((o) => selectedOrderIds.has(o.id))
+      .reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0);
+  }, [filteredOrders, selectedOrderIds]);
 
-  // Select All helpers
-  const currentOrders = activeTab === 'sales' ? filteredZohoOrders : filteredPcoOrders;
-  const allSelected = currentOrders && currentOrders.length > 0 && currentOrders.every((o) => selectedOrderIds.has(o.id));
+  const allSelected =
+    filteredOrders &&
+    filteredOrders.length > 0 &&
+    filteredOrders.every((o) => selectedOrderIds.has(o.id));
+
   const toggleSelectAll = () => {
-    if (!currentOrders) return;
-    const allIds = currentOrders.map((o) => o.id);
-    setSelectedOrderIds(allSelected ? new Set() : new Set(allIds));
+    if (!filteredOrders) return;
+    setSelectedOrderIds(
+      allSelected ? new Set() : new Set(filteredOrders.map((o) => o.id)),
+    );
   };
 
   return (
@@ -238,49 +165,27 @@ const NewPickListPage = () => {
           >
             <IconArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="flex-1 text-lg font-bold">New Pick List</h1>
-          {activeTab === 'sales' && (
-            <button
-              type="button"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary disabled:opacity-50"
-            >
-              {syncMutation.isPending ? (
-                <IconLoader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <IconRefresh className="h-5 w-5" />
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* Tabs + Search row */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 gap-1 rounded-lg bg-fill-secondary p-0.5">
-            <button
-              type="button"
-              onClick={() => handleTabChange('sales')}
-              className={`flex-1 rounded-md px-2 py-2 text-[13px] font-semibold transition-colors ${
-                activeTab === 'sales'
-                  ? 'bg-fill-primary text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              Sales{filteredZohoOrders ? ` (${filteredZohoOrders.length})` : ''}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('private')}
-              className={`flex-1 rounded-md px-2 py-2 text-[13px] font-semibold transition-colors ${
-                activeTab === 'private'
-                  ? 'bg-fill-primary text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              Private{filteredPcoOrders ? ` (${filteredPcoOrders.length})` : ''}
-            </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold leading-tight">New Pick List</h1>
+            {filteredOrders && (
+              <p className="text-[12px] leading-tight text-text-muted">
+                {filteredOrders.length} sales order
+                {filteredOrders.length === 1 ? '' : 's'} ready to pick
+              </p>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary disabled:opacity-50"
+          >
+            {syncMutation.isPending ? (
+              <IconLoader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <IconRefresh className="h-5 w-5" />
+            )}
+          </button>
         </div>
 
         {/* Search */}
@@ -290,7 +195,7 @@ const NewPickListPage = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search orders..."
+            placeholder="Search invoice, order, customer or subject..."
             className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
@@ -308,7 +213,7 @@ const NewPickListPage = () => {
         )}
 
         {/* Select All bar */}
-        {!isLoading && currentOrders && currentOrders.length > 1 && (
+        {!isLoading && filteredOrders && filteredOrders.length > 1 && (
           <button
             type="button"
             onClick={toggleSelectAll}
@@ -323,14 +228,14 @@ const NewPickListPage = () => {
             >
               {allSelected && <IconCheck className="h-3.5 w-3.5" />}
             </div>
-            {allSelected ? 'Deselect All' : `Select All (${currentOrders.length})`}
+            {allSelected ? 'Deselect All' : `Select All (${filteredOrders.length})`}
           </button>
         )}
 
-        {/* Sales Orders List (Zoho) */}
-        {activeTab === 'sales' && !isLoadingZoho && (
+        {/* Sales Orders List */}
+        {!isLoading && (
           <div>
-            {filteredZohoOrders?.length === 0 ? (
+            {filteredOrders?.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Typography variant="headingSm" className="mb-2">
@@ -343,9 +248,10 @@ const NewPickListPage = () => {
               </Card>
             ) : (
               <div className="overflow-hidden rounded-xl border border-border-primary">
-                {filteredZohoOrders?.map((order, index) => {
+                {filteredOrders?.map((order, index) => {
                   const isSelected = selectedOrderIds.has(order.id);
                   const isExpanded = expandedOrderId === order.id;
+                  const unit = order.unitLabel ?? 'case';
                   return (
                     <div
                       key={order.id}
@@ -382,134 +288,32 @@ const NewPickListPage = () => {
                               </span>
                             )}
                           </div>
-                          <p className="truncate text-[13px] leading-tight text-text-muted">
+                          <p className="truncate text-[13px] font-medium leading-tight text-text-primary">
                             {order.customerName ?? 'Unknown'}
                           </p>
+                          {order.referenceNumber && (
+                            <p className="mt-0.5 flex items-center gap-1 truncate text-[12px] leading-tight text-text-muted">
+                              <IconTag className="h-3 w-3 shrink-0" />
+                              {order.referenceNumber}
+                            </p>
+                          )}
                         </div>
 
-                        {/* Case count — prominent */}
+                        {/* Cases + value — prominent */}
                         <div className="shrink-0 text-right">
                           <span className="text-[17px] font-bold tabular-nums leading-tight">
                             {order.totalQuantity}
                           </span>
                           <p className="text-[11px] leading-tight text-text-muted">
-                            {order.totalQuantity === 1 ? 'case' : 'cases'}
+                            {unit}
+                            {order.totalQuantity === 1 ? '' : 's'}
                           </p>
-                        </div>
-
-                        {/* Expand chevron */}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleExpand(e, order.id)}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted/60 hover:bg-black/5 hover:text-text-muted"
-                        >
-                          <Icon
-                            icon={isExpanded ? IconChevronUp : IconChevronDown}
-                            size="sm"
-                          />
-                        </button>
-                      </div>
-
-                      {/* Expanded items */}
-                      {isExpanded && (
-                        <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
-                          {isLoadingZohoItems ? (
-                            <div className="flex items-center justify-center py-2">
-                              <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
-                            </div>
-                          ) : expandedZohoOrder?.items.length ? (
-                            <div className="space-y-0.5">
-                              {expandedZohoOrder.items.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between py-0.5 text-[13px]"
-                                >
-                                  <span className="truncate text-text-primary">
-                                    {item.name}
-                                  </span>
-                                  <span className="ml-2 shrink-0 font-semibold tabular-nums text-text-muted">
-                                    x{item.quantity}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="py-1 text-center text-[13px] text-text-muted">
-                              No items
+                          {order.total != null && (
+                            <p className="mt-0.5 text-[12px] font-semibold tabular-nums leading-tight text-text-muted">
+                              {formatPrice(order.total, order.currencyCode ?? 'USD')}
                             </p>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Private Orders List (PCO) */}
-        {activeTab === 'private' && !isLoadingPco && (
-          <div>
-            {filteredPcoOrders?.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Typography variant="headingSm" className="mb-2">
-                    No Orders Available
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    There are no approved orders ready for picking
-                  </Typography>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="overflow-hidden rounded-xl border border-border-primary">
-                {filteredPcoOrders?.map((order, index) => {
-                  const isSelected = selectedOrderIds.has(order.id);
-                  const isExpanded = expandedOrderId === order.id;
-                  return (
-                    <div
-                      key={order.id}
-                      className={`cursor-pointer transition-colors ${
-                        index > 0 ? 'border-t border-border-muted' : ''
-                      } ${
-                        isSelected
-                          ? 'bg-emerald-50'
-                          : 'bg-fill-primary hover:bg-surface-secondary/50'
-                      }`}
-                      onClick={() => toggleOrder(order.id)}
-                    >
-                      <div className="flex items-center gap-3 px-3 py-2.5">
-                        {/* Checkbox */}
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
-                            isSelected
-                              ? 'bg-emerald-500 text-white shadow-sm'
-                              : 'border-2 border-text-muted/30'
-                          }`}
-                        >
-                          {isSelected && <IconCheck className="h-4 w-4" />}
-                        </div>
-
-                        {/* Order info */}
-                        <div className="min-w-0 flex-1">
-                          <span className="text-[15px] font-bold leading-tight">
-                            {order.orderNumber}
-                          </span>
-                          <p className="truncate text-[13px] leading-tight text-text-muted">
-                            {order.clientName ?? 'Unknown'}
-                          </p>
-                        </div>
-
-                        {/* Case count — prominent */}
-                        <div className="shrink-0 text-right">
-                          <span className="text-[17px] font-bold tabular-nums leading-tight">
-                            {order.caseCount ?? 0}
-                          </span>
-                          <p className="text-[11px] leading-tight text-text-muted">
-                            {(order.caseCount ?? 0) === 1 ? 'case' : 'cases'}
-                          </p>
-                        </div>
 
                         {/* Expand chevron */}
                         <button
@@ -524,31 +328,50 @@ const NewPickListPage = () => {
                         </button>
                       </div>
 
-                      {/* Expanded items */}
+                      {/* Expanded items — with pack config / single-bottle flag */}
                       {isExpanded && (
                         <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
-                          {isLoadingPcoItems ? (
+                          {isLoadingItems ? (
                             <div className="flex items-center justify-center py-2">
                               <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
                             </div>
-                          ) : expandedPcoOrder?.items.length ? (
-                            <div className="space-y-0.5">
-                              {expandedPcoOrder.items.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between py-0.5 text-[13px]"
-                                >
-                                  <span className="truncate text-text-primary">
-                                    {item.productName}
-                                    {item.producer || item.vintage
-                                      ? ` (${[item.producer, item.vintage].filter(Boolean).join(', ')})`
-                                      : ''}
-                                  </span>
-                                  <span className="ml-2 shrink-0 font-semibold tabular-nums text-text-muted">
-                                    x{item.quantity}
-                                  </span>
-                                </div>
-                              ))}
+                          ) : expandedOrder?.items.length ? (
+                            <div className="space-y-1">
+                              {expandedOrder.items.map((item) => {
+                                const isSingle = /single bottle/i.test(
+                                  item.name ?? '',
+                                );
+                                const cleanName = (item.name ?? '')
+                                  .replace(/\s*\(single bottle\)\s*/i, '')
+                                  .trim();
+                                const config = item.description
+                                  ?.replace(/x/gi, '×')
+                                  .trim();
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center gap-2 py-0.5 text-[13px]"
+                                  >
+                                    <span className="min-w-0 flex-1 truncate text-text-primary">
+                                      {cleanName}
+                                    </span>
+                                    {isSingle ? (
+                                      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                                        Single bottle
+                                      </span>
+                                    ) : (
+                                      config && (
+                                        <span className="shrink-0 rounded bg-fill-primary px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">
+                                          {config}
+                                        </span>
+                                      )
+                                    )}
+                                    <span className="shrink-0 font-semibold tabular-nums text-text-muted">
+                                      ×{item.quantity}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="py-1 text-center text-[13px] text-text-muted">
