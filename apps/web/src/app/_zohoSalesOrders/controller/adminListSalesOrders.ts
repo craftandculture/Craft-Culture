@@ -56,19 +56,47 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         ? invoiceByRef.get(order.salesOrderNumber)
         : undefined;
 
-      // When every line is a single bottle, the "cases" label is misleading —
-      // surface a 'bottle' unit label so the picker isn't fooled by "x1".
-      const allSingleBottles =
-        items.length > 0 &&
-        items.every((item) => /single bottle/i.test(item.name ?? ''));
+      // Classify each line as a single bottle or a full case, and compute the
+      // TRUE physical bottle count. A line named "(Single Bottle)" is 1 bottle
+      // per qty regardless of its case-config description (e.g. "3x75cl" is the
+      // wine's native pack, not what's sold). A case line is qty × pack size.
+      let caseUnits = 0;
+      let bottleUnits = 0;
+      let bottleCount = 0;
+      let needsRepack = false;
+      for (const item of items) {
+        const isSingle = /single bottle/i.test(item.name ?? '');
+        const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
+        const perCase =
+          packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
+        if (isSingle) {
+          bottleUnits += item.quantity;
+          bottleCount += item.quantity;
+          // A single bottle pulled from a multi-bottle pack means a case must
+          // be broken down — flag it so the picker plans a repack.
+          if (perCase > 1) needsRepack = true;
+        } else {
+          caseUnits += item.quantity;
+          bottleCount += item.quantity * perCase;
+        }
+      }
+
+      const unitLabel =
+        bottleUnits > 0 && caseUnits === 0
+          ? ('bottle' as const)
+          : caseUnits > 0 && bottleUnits === 0
+            ? ('case' as const)
+            : ('unit' as const);
 
       return {
         ...order,
         invoiceNumber: order.invoiceNumber ?? linkedInvoice?.invoiceNumber ?? null,
         invoiceStatus: linkedInvoice?.invoiceStatus ?? null,
         itemCount: items.length,
-        totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
-        unitLabel: allSingleBottles ? ('bottle' as const) : ('case' as const),
+        totalQuantity: caseUnits + bottleUnits,
+        bottleCount,
+        unitLabel,
+        needsRepack,
       };
     }),
   );

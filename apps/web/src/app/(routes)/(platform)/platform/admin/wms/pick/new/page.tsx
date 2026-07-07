@@ -8,6 +8,7 @@ import {
   IconLoader2,
   IconPlus,
   IconRefresh,
+  IconReplace,
   IconSearch,
   IconTag,
 } from '@tabler/icons-react';
@@ -27,11 +28,10 @@ import formatPrice from '@/utils/formatPrice';
 /**
  * Create new pick list from Zoho sales orders.
  *
- * Lists invoiced Zoho orders ready for picking. Each card shows the invoice
- * number (primary), sales order number, customer, order subject/reference and
- * value so the picker has full context. Expanding a card shows each line's pack
- * config (e.g. 6×75cl) and flags single bottles so "x1" is never mistaken for a
- * full case.
+ * Lists invoiced Zoho orders ready for picking. Cards lead with the invoice
+ * number, customer, subject and value. Expanding a card shows each line's exact
+ * physical pick — single bottle vs full case, the pack config and total bottles
+ * — and flags any line that needs a case broken down (repack).
  */
 const NewPickListPage = () => {
   const router = useRouter();
@@ -142,6 +142,19 @@ const NewPickListPage = () => {
       .reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0);
   }, [filteredOrders, selectedOrderIds]);
 
+  // Aggregate totals across all listed orders for the summary bar
+  const summary = useMemo(() => {
+    const orders = filteredOrders ?? [];
+    return {
+      bottles: orders.reduce(
+        (sum, o) => sum + (o.bottleCount ?? o.totalQuantity ?? 0),
+        0,
+      ),
+      value: orders.reduce((sum, o) => sum + (o.total ?? 0), 0),
+      currency: orders[0]?.currencyCode ?? 'USD',
+    };
+  }, [filteredOrders]);
+
   const allSelected =
     filteredOrders &&
     filteredOrders.length > 0 &&
@@ -212,6 +225,38 @@ const NewPickListPage = () => {
           </div>
         )}
 
+        {/* Summary bar */}
+        {!isLoading && filteredOrders && filteredOrders.length > 0 && (
+          <div className="flex items-stretch rounded-lg border border-border-muted bg-fill-secondary/40 py-2">
+            <div className="flex-1 text-center">
+              <p className="text-[15px] font-bold leading-none tabular-nums">
+                {filteredOrders.length}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
+                Orders
+              </p>
+            </div>
+            <div className="w-px bg-border-muted" />
+            <div className="flex-1 text-center">
+              <p className="text-[15px] font-bold leading-none tabular-nums">
+                {summary.bottles}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
+                Bottles
+              </p>
+            </div>
+            <div className="w-px bg-border-muted" />
+            <div className="flex-1 text-center">
+              <p className="text-[15px] font-bold leading-none tabular-nums">
+                {formatPrice(summary.value, summary.currency)}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
+                Value
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Select All bar */}
         {!isLoading && filteredOrders && filteredOrders.length > 1 && (
           <button
@@ -252,6 +297,9 @@ const NewPickListPage = () => {
                   const isSelected = selectedOrderIds.has(order.id);
                   const isExpanded = expandedOrderId === order.id;
                   const unit = order.unitLabel ?? 'case';
+                  const showBottleTotal =
+                    order.bottleCount != null &&
+                    order.bottleCount !== order.totalQuantity;
                   return (
                     <div
                       key={order.id}
@@ -259,7 +307,7 @@ const NewPickListPage = () => {
                         index > 0 ? 'border-t border-border-muted' : ''
                       } ${
                         isSelected
-                          ? 'bg-emerald-50'
+                          ? 'bg-emerald-50 shadow-[inset_3px_0_0_#10b981]'
                           : 'bg-fill-primary hover:bg-surface-secondary/50'
                       }`}
                       onClick={() => toggleOrder(order.id)}
@@ -291,15 +339,25 @@ const NewPickListPage = () => {
                           <p className="truncate text-[13px] font-medium leading-tight text-text-primary">
                             {order.customerName ?? 'Unknown'}
                           </p>
-                          {order.referenceNumber && (
-                            <p className="mt-0.5 flex items-center gap-1 truncate text-[12px] leading-tight text-text-muted">
-                              <IconTag className="h-3 w-3 shrink-0" />
-                              {order.referenceNumber}
-                            </p>
-                          )}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {order.referenceNumber && (
+                              <span className="inline-flex max-w-full items-center gap-1 truncate rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
+                                <IconTag className="h-3 w-3 shrink-0" />
+                                <span className="truncate">
+                                  {order.referenceNumber}
+                                </span>
+                              </span>
+                            )}
+                            {order.needsRepack && (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                                <IconReplace className="h-3 w-3" />
+                                Repack
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Cases + value — prominent */}
+                        {/* Quantity + value — prominent */}
                         <div className="shrink-0 text-right">
                           <span className="text-[17px] font-bold tabular-nums leading-tight">
                             {order.totalQuantity}
@@ -308,6 +366,11 @@ const NewPickListPage = () => {
                             {unit}
                             {order.totalQuantity === 1 ? '' : 's'}
                           </p>
+                          {showBottleTotal && (
+                            <p className="text-[10px] leading-tight text-text-muted/70">
+                              {order.bottleCount} btl
+                            </p>
+                          )}
                           {order.total != null && (
                             <p className="mt-0.5 text-[12px] font-semibold tabular-nums leading-tight text-text-muted">
                               {formatPrice(order.total, order.currencyCode ?? 'USD')}
@@ -328,7 +391,7 @@ const NewPickListPage = () => {
                         </button>
                       </div>
 
-                      {/* Expanded items — with pack config / single-bottle flag */}
+                      {/* Expanded items — exact physical pick per line */}
                       {isExpanded && (
                         <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
                           {isLoadingItems ? (
@@ -336,39 +399,73 @@ const NewPickListPage = () => {
                               <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
                             </div>
                           ) : expandedOrder?.items.length ? (
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               {expandedOrder.items.map((item) => {
                                 const isSingle = /single bottle/i.test(
                                   item.name ?? '',
                                 );
+                                const packMatch =
+                                  /^(\d+)\s*[x×]\s*(.*)$/i.exec(
+                                    (item.description ?? '').trim(),
+                                  );
+                                const perCase =
+                                  packMatch && Number(packMatch[1]) > 0
+                                    ? Number(packMatch[1])
+                                    : 1;
+                                const bottleSize = packMatch?.[2]?.trim() ?? '';
+                                const config = item.description
+                                  ? item.description.replace(/x/i, '×').trim()
+                                  : '';
+                                const totalBottles = isSingle
+                                  ? item.quantity
+                                  : item.quantity * perCase;
+                                const lineRepack = isSingle && perCase > 1;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
-                                  .trim();
-                                const config = item.description
-                                  ?.replace(/x/gi, '×')
                                   .trim();
                                 return (
                                   <div
                                     key={item.id}
-                                    className="flex items-center gap-2 py-0.5 text-[13px]"
+                                    className="flex items-start justify-between gap-3 text-[13px]"
                                   >
-                                    <span className="min-w-0 flex-1 truncate text-text-primary">
+                                    <span className="min-w-0 flex-1 truncate pt-0.5 text-text-primary">
                                       {cleanName}
                                     </span>
-                                    {isSingle ? (
-                                      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                                        Single bottle
-                                      </span>
-                                    ) : (
-                                      config && (
-                                        <span className="shrink-0 rounded bg-fill-primary px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">
-                                          {config}
-                                        </span>
-                                      )
-                                    )}
-                                    <span className="shrink-0 font-semibold tabular-nums text-text-muted">
-                                      ×{item.quantity}
-                                    </span>
+                                    <div className="shrink-0 text-right leading-tight">
+                                      <div
+                                        className={`text-[13px] font-bold tabular-nums ${
+                                          isSingle
+                                            ? 'text-amber-700'
+                                            : 'text-text-primary'
+                                        }`}
+                                      >
+                                        {item.quantity}{' '}
+                                        {isSingle
+                                          ? item.quantity === 1
+                                            ? 'bottle'
+                                            : 'bottles'
+                                          : item.quantity === 1
+                                            ? 'case'
+                                            : 'cases'}
+                                      </div>
+                                      <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-text-muted">
+                                        {lineRepack ? (
+                                          <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700">
+                                            <IconReplace className="h-3 w-3" />
+                                            repack from {perCase}×{bottleSize || '75cl'}
+                                          </span>
+                                        ) : isSingle ? (
+                                          <span>{bottleSize || 'single'}</span>
+                                        ) : (
+                                          <span>
+                                            {config}
+                                            {totalBottles
+                                              ? ` · ${totalBottles} btl`
+                                              : ''}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -405,7 +502,7 @@ const NewPickListPage = () => {
             )}
             {isCreating
               ? 'Releasing...'
-              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} (${selectedCaseCount} cases)`}
+              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} (${selectedCaseCount} lines)`}
           </button>
           {createError && (
             <p className="mt-2 text-center text-[13px] text-red-600">
