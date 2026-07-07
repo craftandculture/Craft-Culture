@@ -8,6 +8,7 @@
 import { logger, schedules } from '@trigger.dev/sdk';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
 import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import {
   zohoInvoices,
@@ -83,37 +84,21 @@ export const zohoSalesOrderSyncJob = schedules.task({
                 })
                 .where(eq(zohoSalesOrders.id, existing.id));
 
-              // Upsert line items — add new ones that don't exist yet
+              // Reconcile line items to match Zoho exactly — add new, update
+              // changed quantities/prices, and delete lines removed in Zoho so
+              // they're no longer picked (releasing any held stock).
               if (fullOrder.line_items && fullOrder.line_items.length > 0) {
-                const existingItems = await triggerDb
-                  .select({ id: zohoSalesOrderItems.id, zohoLineItemId: zohoSalesOrderItems.zohoLineItemId })
-                  .from(zohoSalesOrderItems)
-                  .where(eq(zohoSalesOrderItems.salesOrderId, existing.id));
+                const reconciled = await reconcileZohoSalesOrderItems({
+                  orderId: existing.id,
+                  zohoLineItems: fullOrder.line_items,
+                  db: triggerDb,
+                });
 
-                const existingLineItemIds = new Set(existingItems.map((i) => i.zohoLineItemId));
-
-                const newItems = fullOrder.line_items.filter(
-                  (item) => !existingLineItemIds.has(item.line_item_id),
-                );
-
-                if (newItems.length > 0) {
-                  await triggerDb.insert(zohoSalesOrderItems).values(
-                    newItems.map((item) => ({
-                      salesOrderId: existing.id,
-                      zohoLineItemId: item.line_item_id,
-                      zohoItemId: item.item_id,
-                      sku: item.sku,
-                      name: item.name,
-                      description: item.description,
-                      rate: item.rate,
-                      quantity: item.quantity,
-                      unit: item.unit,
-                      discount: item.discount,
-                      itemTotal: item.item_total,
-                    })),
+                if (reconciled.added || reconciled.updated || reconciled.removed) {
+                  logger.info(
+                    `Reconciled line items for ${zohoOrder.salesorder_number}`,
+                    reconciled,
                   );
-
-                  logger.info(`Added ${newItems.length} new line items to ${zohoOrder.salesorder_number}`);
                 }
               }
 
