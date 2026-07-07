@@ -56,47 +56,27 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         ? invoiceByRef.get(order.salesOrderNumber)
         : undefined;
 
-      // Classify each line as a single bottle or a full case, and compute the
-      // TRUE physical bottle count. A line named "(Single Bottle)" is 1 bottle
-      // per qty regardless of its case-config description (e.g. "3x75cl" is the
-      // wine's native pack, not what's sold). A case line is qty × pack size.
-      let caseUnits = 0;
-      let bottleUnits = 0;
+      // Every line is `quantity` cases of its ordered pack format (from the
+      // description, e.g. "3x75cl"). totalQuantity is the case count; bottleCount
+      // is the true physical bottle total (quantity × bottles-per-case). The
+      // "(Single Bottle)" name is just a Zoho product-code variant — ignored.
+      let cases = 0;
       let bottleCount = 0;
-      let needsRepack = false;
       for (const item of items) {
-        const isSingle = /single bottle/i.test(item.name ?? '');
         const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
         const perCase =
           packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
-        if (isSingle) {
-          bottleUnits += item.quantity;
-          bottleCount += item.quantity;
-          // A single bottle pulled from a multi-bottle pack means a case must
-          // be broken down — flag it so the picker plans a repack.
-          if (perCase > 1) needsRepack = true;
-        } else {
-          caseUnits += item.quantity;
-          bottleCount += item.quantity * perCase;
-        }
+        cases += item.quantity;
+        bottleCount += item.quantity * perCase;
       }
-
-      const unitLabel =
-        bottleUnits > 0 && caseUnits === 0
-          ? ('bottle' as const)
-          : caseUnits > 0 && bottleUnits === 0
-            ? ('case' as const)
-            : ('unit' as const);
 
       return {
         ...order,
         invoiceNumber: order.invoiceNumber ?? linkedInvoice?.invoiceNumber ?? null,
         invoiceStatus: linkedInvoice?.invoiceStatus ?? null,
         itemCount: items.length,
-        totalQuantity: caseUnits + bottleUnits,
+        totalQuantity: cases,
         bottleCount,
-        unitLabel,
-        needsRepack,
       };
     }),
   );

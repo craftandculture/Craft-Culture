@@ -8,7 +8,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import resolveSingleBottleRepack from '@/app/_wms/utils/resolveSingleBottleRepack';
+import resolveLineRepack from '@/app/_wms/utils/resolveLineRepack';
 import db from '@/database/client';
 import {
   wmsPickLists,
@@ -37,16 +37,15 @@ const adminGetSalesOrder = wmsOperatorProcedure
       .from(zohoSalesOrderItems)
       .where(eq(zohoSalesOrderItems.salesOrderId, order.id));
 
-    // For single-bottle lines, resolve the real pick source from live stock
-    // (pick loose if available, else the smallest pack to break — a repack).
+    // Every line is `quantity` cases of its ordered pack format. Resolve each
+    // against live stock to see if it must be repacked (ordered pack not on the
+    // shelf) — e.g. order a 3×75cl, only a 6×75cl in stock → break the 6-pack.
     const items = await Promise.all(
       rawItems.map(async (item) => {
-        if (!/single bottle/i.test(item.name ?? '')) {
-          return { ...item, repack: null };
-        }
-        const repack = await resolveSingleBottleRepack({
+        const repack = await resolveLineRepack({
           name: item.name,
           sku: item.sku,
+          description: item.description,
           db,
         });
         return { ...item, repack };
