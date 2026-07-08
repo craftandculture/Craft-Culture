@@ -62,9 +62,12 @@ const WMSPickListDetailPage = () => {
 
   const scanInputRef = useRef<ScanInputHandle>(null);
 
-  // Fetch pick list — routes through local NUC when available
+  // Fetch pick list from cloud tRPC (not the NUC mirror): the local server's
+  // response doesn't include quantity_bottles, which the split-case UI needs.
+  // This is a page-load read, not a per-scan action, so latency is fine; scan
+  // and pick actions still route through the NUC.
   const { data, isLoading } = useQuery({
-    ...wmsApi.pickListQueryOptions(pickListId),
+    ...api.wms.admin.picking.getOne.queryOptions({ pickListId }),
   });
 
   // Invalidate both cloud tRPC and local NUC pick queries
