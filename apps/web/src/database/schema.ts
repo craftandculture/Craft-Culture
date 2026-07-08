@@ -4071,6 +4071,11 @@ export const wmsCaseLabels = pgTable(
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     currentLocationId: uuid('current_location_id').references(() => wmsLocations.id),
     isActive: boolean('is_active').default(true),
+    // Bottles remaining in this specific physical case. NULL = sealed/full
+    // (all bottles present). A number = the case has been opened (split) and
+    // holds that many loose bottles. Tracked per case so two cases of the same
+    // SKU can differ (one sealed, one open) — the unique case barcode disambiguates.
+    openBottles: integer('open_bottles'),
     printedAt: timestamp('printed_at', { mode: 'date' }),
     ...timestamps,
   },
