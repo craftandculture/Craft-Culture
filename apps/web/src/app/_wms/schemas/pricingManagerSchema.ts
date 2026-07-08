@@ -7,6 +7,8 @@ export const getPricingProductsSchema = z.object({
   ownerId: z.string().uuid().optional(),
   /** Price-gap filter: unpriced (import but no sell), lossMaking (sell ≤ import), noImport */
   priceFilter: z.enum(['unpriced', 'lossMaking', 'noImport']).optional(),
+  /** Also return in-transit (inbound shipment) products as a separate list */
+  includeInbound: z.boolean().optional(),
   sortBy: z
     .enum(['productName', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),

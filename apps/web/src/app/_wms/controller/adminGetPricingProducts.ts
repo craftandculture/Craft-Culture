@@ -1,7 +1,12 @@
 import { and, asc, desc, eq, gt, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, wmsProductPricing, wmsStock } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  wmsProductPricing,
+  wmsStock,
+} from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
@@ -16,7 +21,8 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
-    const { search, category, ownerId, priceFilter, sortBy, sortOrder, limit, offset } = input;
+    const { search, category, ownerId, priceFilter, includeInbound, sortBy, sortOrder, limit, offset } =
+      input;
 
     const conditions = [gt(sql`SUM(${wmsStock.quantityCases})`, 0)];
     const whereConditions = [gt(wmsStock.quantityCases, 0)];
@@ -191,7 +197,95 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const unpricedCount =
       (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);
 
+    // In-transit (inbound shipment) products — returned separately so the
+    // on-hand pagination is untouched. Cost comes from the shipment.
+    const INBOUND_STATUSES = [
+      'booked',
+      'picked_up',
+      'in_transit',
+      'arrived_port',
+      'customs_clearance',
+      'cleared',
+      'at_warehouse',
+    ] as const;
+    type InboundRow = {
+      lwin18: string;
+      productName: string;
+      producer: string | null;
+      caseConfig: number | null;
+      bottleSize: string | null;
+      totalCases: number;
+      category: string | null;
+      importPricePerBottle: number | null;
+      sellingPricePerBottle: number | null;
+      earliestEta: Date | null;
+      isInbound: true;
+    };
+    let inbound: InboundRow[] = [];
+
+    if (includeInbound) {
+      const groupKey = sql`COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
+      const inboundConditions = [
+        eq(logisticsShipments.type, 'inbound'),
+        inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
+      ];
+      if (search) {
+        inboundConditions.push(
+          or(
+            ilike(logisticsShipmentItems.productName, `%${search}%`),
+            ilike(logisticsShipmentItems.producer, `%${search}%`),
+            ilike(logisticsShipmentItems.lwin, `%${search}%`),
+          )!,
+        );
+      }
+      if (category) {
+        const hsCodes =
+          category === 'Wine'
+            ? ['22042100', '22041000']
+            : category === 'Spirits'
+              ? ['22084000', '22083000', '22082000', '22089090', '22085000', '22087000', '22086000']
+              : ['22030000', '22060000'];
+        inboundConditions.push(inArray(logisticsShipmentItems.hsCode, hsCodes));
+      }
+
+      const inboundRows = await db
+        .select({
+          lwin18: sql<string>`COALESCE(MAX(${logisticsShipmentItems.lwin}), MAX(${logisticsShipmentItems.productName}))`,
+          productName: sql<string>`MAX(${logisticsShipmentItems.productName})`,
+          producer: sql<string | null>`MAX(${logisticsShipmentItems.producer})`,
+          caseConfig: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})::int`,
+          bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
+          totalCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+          costPerBottle: sql<number | null>`MAX(${logisticsShipmentItems.productCostPerBottle})`,
+          sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+          earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
+          category: sql<string | null>`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
+        })
+        .from(logisticsShipmentItems)
+        .innerJoin(logisticsShipments, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
+        .leftJoin(wmsProductPricing, eq(wmsProductPricing.lwin18, logisticsShipmentItems.lwin))
+        .where(and(...inboundConditions))
+        .groupBy(groupKey)
+        .orderBy(asc(sql`MAX(${logisticsShipmentItems.productName})`))
+        .limit(300);
+
+      inbound = inboundRows.map((r) => ({
+        lwin18: r.lwin18,
+        productName: r.productName,
+        producer: r.producer,
+        caseConfig: r.caseConfig,
+        bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
+        totalCases: r.totalCases,
+        category: r.category,
+        importPricePerBottle: r.costPerBottle,
+        sellingPricePerBottle: r.sellingPricePerBottle,
+        earliestEta: r.earliestEta,
+        isInbound: true as const,
+      }));
+    }
+
     return {
+      inbound,
       products: enrichedProducts,
       pagination: {
         total: totalCount,
