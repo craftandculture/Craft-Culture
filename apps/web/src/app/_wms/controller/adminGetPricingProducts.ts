@@ -86,6 +86,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         category: sql<string | null>`MAX(${wmsStock.category})`,
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
+        costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
       })
       .from(wmsStock)

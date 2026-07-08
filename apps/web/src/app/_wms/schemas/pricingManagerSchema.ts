@@ -23,6 +23,16 @@ export const setSellingPriceSchema = z.object({
   sellingPricePerBottle: z.number().positive(),
 });
 
+/**
+ * Schema for a manual per-SKU landed-cost override.
+ * landed = import + logistics + override. May be negative (to correct an
+ * overstated import) or null (to clear the override).
+ */
+export const setCostOverrideSchema = z.object({
+  lwin18: z.string().min(1),
+  costOverridePerBottle: z.number().min(-100000).max(100000).nullable(),
+});
+
 /** Schema for bulk-applying a margin percentage to products */
 export const bulkApplyMarginSchema = z.object({
   marginPercent: z.number().min(0.1).max(99.9),

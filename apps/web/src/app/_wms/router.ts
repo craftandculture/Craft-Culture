@@ -89,6 +89,7 @@ import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest'
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
+import adminSetCostOverride from './controller/adminSetCostOverride';
 import adminSetImportPrice from './controller/adminSetImportPrice';
 import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
 import adminSetOwnerPricingSettings from './controller/adminSetOwnerPricingSettings';
@@ -156,6 +157,7 @@ const stockPricingRouter = createTRPCRouter({
   getByProduct: adminGetProductPricing,
   getBulk: adminGetBulkPricing,
   setImportPrice: adminSetImportPrice,
+  setCostOverride: adminSetCostOverride,
   setSellingPrice: adminSetSellingPrice,
   setOwnerPricing: adminSetOwnerPricing,
   getOwnerPricing: adminGetOwnerPricing,
