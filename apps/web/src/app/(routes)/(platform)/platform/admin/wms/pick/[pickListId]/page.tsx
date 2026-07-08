@@ -8,6 +8,7 @@ import {
   IconHandStop,
   IconLoader2,
   IconPackage,
+  IconPrinter,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -46,6 +47,7 @@ const WMSPickListDetailPage = () => {
     lwin18: string;
     quantityNeeded: number;
     suggestedLocationId: string | null;
+    isBottlePick: boolean;
   } | null>(null);
   const [pickedLocationId, setPickedLocationId] = useState<string | null>(null);
   const [pickedLocationCode, setPickedLocationCode] = useState('');
@@ -72,23 +74,33 @@ const WMSPickListDetailPage = () => {
     void queryClient.invalidateQueries({ queryKey: ['wms', 'pickLists'] });
   };
 
-  // Pick item mutation — routes through local NUC when available
+  // Shared reset after any successful pick
+  const resetAfterPick = () => {
+    invalidatePickQueries();
+    setPickingItem(null);
+    setPickedLocationId(null);
+    setPickedLocationCode('');
+    setPickedQuantity(0);
+    setCaseVerified(false);
+    setScanStep('location');
+    setScannedBarcodes(new Set());
+    setDuplicateScanError(null);
+    setLocationError(null);
+    // Reset to first unpicked item (list re-sorts after invalidation)
+    setCurrentItemIndex(0);
+  };
+
+  // Whole-case pick — routes through local NUC when available
   const pickItemMutation = useMutation({
     ...wmsApi.pickItemMutationOptions(),
-    onSuccess: () => {
-      invalidatePickQueries();
-      setPickingItem(null);
-      setPickedLocationId(null);
-      setPickedLocationCode('');
-      setPickedQuantity(0);
-      setCaseVerified(false);
-      setScanStep('location');
-      setScannedBarcodes(new Set());
-      setDuplicateScanError(null);
-      setLocationError(null);
-      // Reset to first unpicked item (list re-sorts after invalidation)
-      setCurrentItemIndex(0);
-    },
+    onSuccess: resetAfterPick,
+  });
+
+  // Bottle (split-case) pick — always cloud tRPC; the local NUC server has no
+  // bottle/auto-split logic.
+  const pickBottlesMutation = useMutation({
+    ...api.wms.admin.picking.pickItem.mutationOptions(),
+    onSuccess: resetAfterPick,
   });
 
   // Complete pick list mutation — routes through local NUC when available
@@ -215,14 +227,17 @@ const WMSPickListDetailPage = () => {
   // Start picking current item
   const startPicking = () => {
     if (!currentItem) return;
+    const isBottle = currentItem.quantityBottles != null;
+    const needed = currentItem.quantityBottles ?? currentItem.quantityCases;
     setPickingItem({
       itemId: currentItem.id,
       productName: currentItem.productName,
       lwin18: currentItem.lwin18,
-      quantityNeeded: currentItem.quantityCases,
+      quantityNeeded: needed,
       suggestedLocationId: currentItem.suggestedLocationId,
+      isBottlePick: isBottle,
     });
-    setPickedQuantity(currentItem.quantityCases);
+    setPickedQuantity(needed);
     setPickedLocationId(null);
     setPickedLocationCode('');
     setCaseVerified(false);
@@ -245,11 +260,21 @@ const WMSPickListDetailPage = () => {
       return;
     }
 
-    pickItemMutation.mutate({
-      pickListItemId: pickingItem.itemId,
-      pickedFromLocationId: locationId,
-      pickedQuantity: pickedQuantity,
-    });
+    if (pickingItem.isBottlePick) {
+      // Split-case pick: send the bottle count; the engine auto-splits the case.
+      pickBottlesMutation.mutate({
+        pickListItemId: pickingItem.itemId,
+        pickedFromLocationId: locationId,
+        pickedQuantity: 1,
+        pickedBottles: pickedQuantity,
+      });
+    } else {
+      pickItemMutation.mutate({
+        pickListItemId: pickingItem.itemId,
+        pickedFromLocationId: locationId,
+        pickedQuantity: pickedQuantity,
+      });
+    }
   };
 
   // Handle complete
@@ -314,6 +339,15 @@ const WMSPickListDetailPage = () => {
             </span>
           </div>
         </div>
+        <a
+          href={`/api/admin/wms/picking-list/${pickListId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Print picking list"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-fill-secondary"
+        >
+          <Icon icon={IconPrinter} size="sm" />
+        </a>
         {!isComplete && (
           <Button
             variant="ghost"
@@ -409,10 +443,14 @@ const WMSPickListDetailPage = () => {
                     Pick Qty
                   </span>
                   <div className="text-3xl font-bold text-brand-600">
-                    {currentItem.quantityCases}
+                    {currentItem.quantityBottles ?? currentItem.quantityCases}
                   </div>
                   <span className="text-[10px] text-text-muted">
-                    {currentItem.caseConfig ? `cases of ${currentItem.caseConfig}` : 'cases'}
+                    {currentItem.quantityBottles != null
+                      ? 'bottles'
+                      : currentItem.caseConfig
+                        ? `cases of ${currentItem.caseConfig}`
+                        : 'cases'}
                   </span>
                 </div>
                 <div className="bg-fill-secondary px-4 py-3 text-center">
@@ -488,7 +526,9 @@ const WMSPickListDetailPage = () => {
             </div>
             <div className="shrink-0 text-right">
               <div className="text-2xl font-bold text-brand-600">{pickingItem.quantityNeeded}</div>
-              <span className="text-[10px] text-text-muted">cases</span>
+              <span className="text-[10px] text-text-muted">
+                {pickingItem.isBottlePick ? 'bottles' : 'cases'}
+              </span>
             </div>
           </div>
 
@@ -662,17 +702,31 @@ const WMSPickListDetailPage = () => {
               variant="default"
               className="h-12 flex-[2]"
               onClick={confirmPick}
-              disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
+              disabled={
+                pickItemMutation.isPending ||
+                pickBottlesMutation.isPending ||
+                !pickedLocationId ||
+                !caseVerified
+              }
             >
-              <ButtonContent iconLeft={pickItemMutation.isPending ? IconLoader2 : IconCheck}>
-                {pickItemMutation.isPending ? 'Saving...' : 'Confirm Pick'}
+              <ButtonContent
+                iconLeft={
+                  pickItemMutation.isPending || pickBottlesMutation.isPending
+                    ? IconLoader2
+                    : IconCheck
+                }
+              >
+                {pickItemMutation.isPending || pickBottlesMutation.isPending
+                  ? 'Saving...'
+                  : 'Confirm Pick'}
               </ButtonContent>
             </Button>
           </div>
 
-          {pickItemMutation.isError && (
+          {(pickItemMutation.isError || pickBottlesMutation.isError) && (
             <Typography variant="bodyXs" className="text-center text-red-600">
-              {pickItemMutation.error?.message}
+              {pickItemMutation.error?.message ??
+                pickBottlesMutation.error?.message}
             </Typography>
           )}
 
@@ -729,7 +783,9 @@ const WMSPickListDetailPage = () => {
                     </Typography>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-text-muted">
-                        {item.quantityCases}cs
+                        {item.quantityBottles != null
+                          ? `${item.quantityBottles} btl`
+                          : `${item.quantityCases}cs`}
                       </span>
                       {formatCaseConfig(item) && (
                         <span className="rounded bg-amber-100 px-1 py-px text-[9px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">

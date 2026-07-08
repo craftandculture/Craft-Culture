@@ -54,6 +54,7 @@ const adminGetPickList = wmsOperatorProcedure
         lwin18: wmsPickListItems.lwin18,
         productName: wmsPickListItems.productName,
         quantityCases: wmsPickListItems.quantityCases,
+        quantityBottles: wmsPickListItems.quantityBottles,
         suggestedLocationId: wmsPickListItems.suggestedLocationId,
         suggestedLocationCode: wmsLocations.locationCode,
         pickedFromLocationId: wmsPickListItems.pickedFromLocationId,
