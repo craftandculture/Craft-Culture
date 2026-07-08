@@ -150,6 +150,14 @@ const runMigrations = async () => {
       console.log('✅ Added local_inventory enum value');
     }
 
+    // Split-case picking: per-case open-bottle tracking.
+    // NULL = sealed/full case; a number = opened case with that many bottles left.
+    console.log('🔄 Ensuring wms_case_labels.open_bottles column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_case_labels" ADD COLUMN IF NOT EXISTS "open_bottles" integer`,
+    );
+    console.log('✅ wms_case_labels.open_bottles ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
