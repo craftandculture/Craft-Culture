@@ -95,6 +95,7 @@ const adminReleaseToPick = wmsOperatorProcedure
 
     // Create pick list items with suggested locations
     const pickListItems = [];
+    const unresolvedItems: string[] = [];
 
     for (const item of orderItems) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
@@ -147,10 +148,13 @@ const adminReleaseToPick = wmsOperatorProcedure
 
       // Strategy 3: Match by product name (case-insensitive, ALL terms must match)
       if (availableStock.length === 0 && item.name) {
-        // Extract key words from product name for matching
+        // Extract key words from product name for matching. Exclude vintage
+        // years (e.g. "2022") — WMS stock product names don't carry the
+        // vintage (it lives in a separate column), so requiring the year to
+        // appear in the name would make every match fail.
         const searchTerms = item.name
           .split(/[\s,\-]+/)
-          .filter((word) => word.length > 2)
+          .filter((word) => word.length > 2 && !/^(19|20)\d{2}$/.test(word))
           .slice(0, 8); // Use up to 8 significant words for better disambiguation
 
         if (searchTerms.length > 0) {
@@ -180,16 +184,26 @@ const adminReleaseToPick = wmsOperatorProcedure
         (s) => s.availableCases >= item.quantity,
       ) ?? availableStock[0]; // Fall back to any available stock if none has enough
 
+      if (!suggestedStock) {
+        unresolvedItems.push(item.name);
+      }
+
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          // Use matched stock's LWIN if available, otherwise fall back to normalized order item data
-          lwin18: suggestedStock?.lwin18 ?? itemLwin18 ?? item.sku ?? '',
+          // Only store an authoritative LWIN: the matched stock's LWIN, or the
+          // normalized order LWIN. Never store the raw Zoho SKU — an unmatched
+          // SKU produces a pick line that can't be found and fails cryptically
+          // on the warehouse floor.
+          lwin18: suggestedStock?.lwin18 ?? itemLwin18 ?? '',
           productName: item.name,
           quantityCases: item.quantity,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
+          notes: suggestedStock
+            ? null
+            : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking',
         })
         .returning();
 
@@ -218,7 +232,11 @@ const adminReleaseToPick = wmsOperatorProcedure
       success: true,
       pickList,
       items: pickListItems,
-      message: `Released to pick: ${pickListNumber} with ${pickListItems.length} items`,
+      unresolvedItems,
+      message:
+        unresolvedItems.length > 0
+          ? `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${unresolvedItems.length} could not be matched to stock and need checking: ${unresolvedItems.join(', ')}`
+          : `Released to pick: ${pickListNumber} with ${pickListItems.length} items`,
     };
   });
 
