@@ -158,6 +158,14 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_case_labels.open_bottles ready');
 
+    // Split-case picking: bottle-level pick quantity on pick lines.
+    // NULL = whole-case pick; a number = pick that many loose bottles.
+    console.log('🔄 Ensuring wms_pick_list_items.quantity_bottles column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_pick_list_items" ADD COLUMN IF NOT EXISTS "quantity_bottles" integer`,
+    );
+    console.log('✅ wms_pick_list_items.quantity_bottles ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

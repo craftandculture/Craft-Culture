@@ -4229,6 +4229,10 @@ export const wmsPickListItems = pgTable(
     lwin18: text('lwin18').notNull(),
     productName: text('product_name').notNull(),
     quantityCases: integer('quantity_cases').notNull(),
+    // Bottle-level pick quantity. NULL = whole-case pick (use quantityCases, as
+    // today). A number = pick exactly this many loose bottles; quantityCases
+    // then holds how many cases must be touched/cracked (ceil(bottles / pack)).
+    quantityBottles: integer('quantity_bottles'),
     suggestedLocationId: uuid('suggested_location_id').references(() => wmsLocations.id),
     suggestedStockId: uuid('suggested_stock_id').references(() => wmsStock.id),
     pickedFromLocationId: uuid('picked_from_location_id').references(() => wmsLocations.id),
@@ -4868,6 +4872,8 @@ export const wmsProductPricing = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     lwin18: text('lwin18').notNull().unique(),
     importPricePerBottle: doublePrecision('import_price_per_bottle').notNull(),
+    /** Manual per-SKU landed-cost adjustment: landed = import + logistics + override */
+    costOverridePerBottle: doublePrecision('cost_override_per_bottle'),
     sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
     importPriceSource: importPriceSource('import_price_source')
       .notNull()
