@@ -31,6 +31,8 @@ export const bulkApplyMarginSchema = z.object({
   ownerId: z.string().uuid().optional(),
   /** Flat logistics cost per bottle added to import before applying the margin */
   logisticsPerBottle: z.number().min(0).max(1000).default(0),
+  /** In-bond margin % — PC price stacks on the in-bond (B2B) price, not landed */
+  inbondMarginPct: z.number().min(0).max(99.9).default(0),
   overwriteExisting: z.boolean().default(false),
 });
 
