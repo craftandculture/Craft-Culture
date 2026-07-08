@@ -136,6 +136,88 @@ const PriceCell = ({
   );
 };
 
+// ─── Override Cell (manual landed-cost adjustment, signed / clearable) ─────────
+
+const OverrideCell = ({
+  value,
+  onSave,
+  tdClassName = '',
+}: {
+  value: number | null;
+  onSave: (v: number | null) => void;
+  tdClassName?: string;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+
+  if (!editing) {
+    const has = value != null && value !== 0;
+    return (
+      <td className={`px-3 py-2.5 text-right tabular-nums ${tdClassName}`}>
+        <button
+          type="button"
+          className={`group/edit inline-flex items-center gap-1 hover:underline ${
+            has ? (value! < 0 ? 'text-red-500' : 'font-medium text-text-secondary') : 'text-text-muted/40'
+          }`}
+          onClick={() => {
+            setDraft(value != null ? value.toFixed(2) : '');
+            setEditing(true);
+          }}
+        >
+          {has ? (
+            `${value! >= 0 ? '+' : '−'}$${Math.abs(value!).toFixed(2)}`
+          ) : (
+            <span className="text-text-muted/40">—</span>
+          )}
+          <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className={`px-3 py-2.5 ${tdClassName}`}>
+      <form
+        className="flex items-center justify-end gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const t = draft.trim();
+          if (t === '') {
+            onSave(null);
+          } else {
+            const num = parseFloat(t);
+            if (!isNaN(num) && num !== value) onSave(num);
+          }
+          setEditing(false);
+        }}
+      >
+        <span className="text-xs text-text-muted">$</span>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          placeholder="0.00"
+          type="number"
+          step="0.01"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditing(false);
+              setDraft(value != null ? value.toFixed(2) : '');
+            }
+          }}
+        />
+        <button
+          type="submit"
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    </td>
+  );
+};
+
 // ─── Pagination Button ────────────────────────────────────────────────────────
 
 const PaginationButton = ({
@@ -244,7 +326,7 @@ const SkeletonRow = () => (
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 7 }).map((_, i) => (
+    {Array.from({ length: 8 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -474,6 +556,15 @@ const PricingManagerPage = () => {
     onError: () => toast.error('Failed to update import price'),
   });
 
+  const setCostOverrideMut = useMutation({
+    ...api.wms.admin.stock.pricing.setCostOverride.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
+      toast.success('Cost override updated');
+    },
+    onError: () => toast.error('Failed to update cost override'),
+  });
+
   const setSellingPriceMut = useMutation({
     ...api.wms.admin.stock.pricing.setSellingPrice.mutationOptions(),
     onSuccess: () => {
@@ -582,12 +673,16 @@ const PricingManagerPage = () => {
       const XLSX = await import('xlsx');
       const aoa: (string | number)[][] = [[
         'Product', 'Producer', 'Pack', 'Cases', 'Import $/btl', 'Logistics $/btl',
-        'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
+        'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
         'PC Price $/btl', 'PC Price $/case', 'Margin %',
       ]];
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
-        const landed = p.importPricePerBottle ? p.importPricePerBottle + effLogistics : null;
+        const override = p.costOverridePerBottle ?? null;
+        const hasCost = (p.importPricePerBottle != null && p.importPricePerBottle > 0) || override != null;
+        const landed = hasCost
+          ? (p.importPricePerBottle ?? 0) + effLogistics + (override ?? 0)
+          : null;
         const sell = (ownerId ? ownerPrices[p.lwin18] : undefined) ?? p.sellingPricePerBottle;
         const margin = calcMargin(landed, sell);
         const inBond = landed && effInbondDivisor ? landed / effInbondDivisor : null;
@@ -600,6 +695,7 @@ const PricingManagerPage = () => {
           p.totalCases,
           num(p.importPricePerBottle),
           landed != null ? num(effLogistics) : '',
+          override != null ? num(override) : '',
           num(landed),
           num(p.importPricePerBottle != null ? p.importPricePerBottle * caseConfig : null),
           num(inBond),
@@ -612,9 +708,9 @@ const PricingManagerPage = () => {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
         { wch: 40 }, { wch: 22 }, { wch: 10 }, { wch: 7 }, { wch: 12 }, { wch: 13 },
-        { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 9 },
+        { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
       ];
-      ws['!autofilter'] = { ref: `A1:M${all.length + 1}` };
+      ws['!autofilter'] = { ref: `A1:N${all.length + 1}` };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
       XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -1042,7 +1138,7 @@ const PricingManagerPage = () => {
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={2} />
-                  <th className="border-l border-slate-200 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={3}>
+                  <th className="border-l border-slate-200 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={4}>
                     Cost
                   </th>
                   <th className="border-l border-blue-200 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600">
@@ -1085,6 +1181,9 @@ const PricingManagerPage = () => {
                     Logistics
                   </th>
                   <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    Override
+                  </th>
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
                     Landed
                   </th>
                   <th className="border-l border-blue-200 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
@@ -1115,7 +1214,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={8} className="py-20 text-center text-text-muted">
+                    <td colSpan={9} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -1128,11 +1227,14 @@ const PricingManagerPage = () => {
                   ].map(({ product, isInbound }) => {
                     const caseConfig = product.caseConfig ?? 12;
                     const importPrice = product.importPricePerBottle;
-                    // Landed cost = import + flat logistics per bottle
-                    const landed =
-                      importPrice != null && importPrice > 0
-                        ? importPrice + effLogistics
-                        : null;
+                    const costOverride =
+                      (product as { costOverridePerBottle?: number | null }).costOverridePerBottle ??
+                      null;
+                    // Landed cost = import + flat logistics + manual override
+                    const hasCost = (importPrice != null && importPrice > 0) || costOverride != null;
+                    const landed = hasCost
+                      ? (importPrice ?? 0) + effLogistics + (costOverride ?? 0)
+                      : null;
                     const inBondPrice =
                       landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
                     // When owner is selected, use owner-specific PC price (fall back to default)
@@ -1236,6 +1338,17 @@ const PricingManagerPage = () => {
                         <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
                           {landed != null ? `$${effLogistics.toFixed(2)}` : '—'}
                         </td>
+
+                        {/* Override (manual per-SKU landed adjustment) */}
+                        <OverrideCell
+                          value={costOverride}
+                          onSave={(v) =>
+                            setCostOverrideMut.mutate({
+                              lwin18: product.lwin18,
+                              costOverridePerBottle: v,
+                            })
+                          }
+                        />
 
                         {/* Landed (emphasised) */}
                         <td className="px-3 py-2.5 text-right tabular-nums">
