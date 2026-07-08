@@ -1,10 +1,13 @@
 'use client';
 
 import {
+  IconAlertTriangle,
+  IconBottle,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconCurrencyDollar,
   IconDownload,
   IconLoader2,
   IconPencil,
@@ -12,6 +15,8 @@ import {
   IconSearch,
   IconSortAscending,
   IconSortDescending,
+  IconTrendingDown,
+  IconTrendingUp,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -153,40 +158,59 @@ const PaginationButton = ({
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
+const KPI_THEMES = {
+  default: { text: 'text-text-primary', chip: 'bg-surface-muted text-text-muted', ring: 'ring-text-primary' },
+  green: { text: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-500', ring: 'ring-emerald-400' },
+  amber: { text: 'text-amber-600', chip: 'bg-amber-50 text-amber-500', ring: 'ring-amber-400' },
+  red: { text: 'text-red-600', chip: 'bg-red-50 text-red-500', ring: 'ring-red-400' },
+  brand: { text: 'text-text-primary', chip: 'bg-fill-brand/10 text-fill-brand', ring: 'ring-fill-brand' },
+} as const;
+
 const KpiCard = ({
   label,
   value,
   subtitle,
-  color,
+  color = 'default',
+  icon,
   onClick,
   active,
 }: {
   label: string;
   value: string;
   subtitle?: string;
-  color?: 'green' | 'amber' | 'red' | 'default';
+  color?: keyof typeof KPI_THEMES;
+  icon?: React.ReactNode;
   onClick?: () => void;
   active?: boolean;
 }) => {
-  const valueColor =
-    color === 'green'
-      ? 'text-emerald-600'
-      : color === 'amber'
-        ? 'text-amber-600'
-        : color === 'red'
-          ? 'text-red-600'
-          : 'text-text-primary';
+  const theme = KPI_THEMES[color];
 
   const inner = (
-    <CardContent className="p-4">
-      <p className="text-xs font-medium text-text-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
-      {subtitle && <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p>}
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+          {label}
+        </p>
+        {icon && (
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${theme.chip}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <p className={`mt-3 text-3xl font-bold tracking-tight tabular-nums ${theme.text}`}>{value}</p>
+      {subtitle && <p className="mt-1 text-xs text-text-muted">{subtitle}</p>}
+      {onClick && (
+        <p className="mt-2 text-[11px] font-medium text-fill-brand">
+          {active ? '✓ Filtering — click to clear' : 'Click to filter →'}
+        </p>
+      )}
     </CardContent>
   );
 
   return (
-    <Card className={`shadow-sm ${active ? 'ring-2 ring-text-primary' : ''}`}>
+    <Card
+      className={`overflow-hidden shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${active ? `ring-2 ${theme.ring}` : ''}`}
+    >
       {onClick ? (
         <button
           type="button"
@@ -639,6 +663,7 @@ const PricingManagerPage = () => {
           label="Products"
           value={summary?.totalProducts?.toLocaleString() ?? '\u2014'}
           subtitle="with stock"
+          icon={<IconBottle className="h-5 w-5" />}
         />
         <KpiCard
           label="Avg Margin"
@@ -652,18 +677,28 @@ const PricingManagerPage = () => {
                   ? 'amber'
                   : 'red'
           }
+          icon={
+            summary?.avgMargin != null && summary.avgMargin < 10 ? (
+              <IconTrendingDown className="h-5 w-5" />
+            ) : (
+              <IconTrendingUp className="h-5 w-5" />
+            )
+          }
         />
         <KpiCard
           label="Unpriced"
           value={summary?.unpricedCount?.toString() ?? '\u2014'}
           subtitle="have import but no sell price"
           color={summary?.unpricedCount && summary.unpricedCount > 0 ? 'amber' : 'default'}
+          icon={<IconAlertTriangle className="h-5 w-5" />}
           onClick={() => setPriceFilter(priceFilter === 'unpriced' ? undefined : 'unpriced')}
           active={priceFilter === 'unpriced'}
         />
         <KpiCard
           label="Total Sell Value"
           value={summary?.totalSellingValue ? formatValue(summary.totalSellingValue) : '\u2014'}
+          color="brand"
+          icon={<IconCurrencyDollar className="h-5 w-5" />}
           subtitle={
             summary?.totalImportValue
               ? `Import: ${formatValue(summary.totalImportValue)}`
@@ -673,9 +708,9 @@ const PricingManagerPage = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border-muted bg-surface-muted/20 p-3">
         {/* Category pills */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {([
             { key: 'Wine' as const, label: 'Wine' },
             { key: 'Spirits' as const, label: 'Spirits' },
@@ -684,10 +719,10 @@ const PricingManagerPage = () => {
             <button
               key={cat.key}
               onClick={() => setCategory(category === cat.key ? undefined : cat.key)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
                 category === cat.key
-                  ? 'bg-text-primary text-white'
-                  : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+                  ? 'bg-text-primary text-white shadow-sm'
+                  : 'bg-background-primary text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
               }`}
             >
               {cat.label}
@@ -916,7 +951,9 @@ const PricingManagerPage = () => {
 
       {/* Price-gap quick filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-xs text-text-muted">Show</span>
+        <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+          Show
+        </span>
         {([
           { key: undefined, label: 'All' },
           { key: 'unpriced' as const, label: 'Unpriced' },
@@ -926,10 +963,10 @@ const PricingManagerPage = () => {
           <button
             key={f.label}
             onClick={() => setPriceFilter(f.key)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
               priceFilter === f.key
-                ? 'bg-text-primary text-white'
-                : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+                ? 'border-transparent bg-text-primary text-white shadow-sm'
+                : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
             }`}
           >
             {f.label}
@@ -938,13 +975,13 @@ const PricingManagerPage = () => {
         <span className="mx-1 h-4 w-px bg-border-muted" />
         <button
           onClick={() => setIncludeInbound((v) => !v)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
             includeInbound
-              ? 'bg-amber-500 text-white'
-              : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+              ? 'border-transparent bg-amber-500 text-white shadow-sm'
+              : 'border-amber-300 bg-amber-50/40 text-amber-700 hover:bg-amber-50'
           }`}
         >
-          + Inbound stock
+          {includeInbound ? '✓ Inbound stock' : '+ Inbound stock'}
         </button>
       </div>
 
