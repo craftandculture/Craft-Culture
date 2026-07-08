@@ -81,7 +81,12 @@ const adminGetStockByOwner = wmsOperatorProcedure
     const owners = await db
       .select({
         ownerId: wmsStock.ownerId,
-        ownerName: wmsStock.ownerName,
+        // Canonical name from partners — the denormalised wmsStock.ownerName can
+        // differ between rows of the same owner (mislabelled stock), which would
+        // otherwise split one owner into duplicate dropdown rows sharing an ownerId.
+        ownerName: sql<
+          string | null
+        >`COALESCE(MAX(${partners.businessName}), MAX(${wmsStock.ownerName}))`,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
         reservedCases: sql<number>`SUM(${wmsStock.reservedCases})::int`,
@@ -91,8 +96,9 @@ const adminGetStockByOwner = wmsOperatorProcedure
         purchasedCount: sql<number>`COUNT(*) FILTER (WHERE ${wmsStock.salesArrangement} = 'purchased')::int`,
       })
       .from(wmsStock)
+      .leftJoin(partners, eq(partners.id, wmsStock.ownerId))
       .where(gt(wmsStock.quantityCases, 0))
-      .groupBy(wmsStock.ownerId, wmsStock.ownerName)
+      .groupBy(wmsStock.ownerId)
       .orderBy(desc(sql`SUM(${wmsStock.quantityCases})`));
 
     // Calculate grand totals

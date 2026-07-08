@@ -372,6 +372,16 @@ const PricingManagerPage = () => {
     localStorage.setItem('pm-inbond-markup-pct', String(inBondMarkupPct));
   }, [inBondMarkupPct]);
 
+  // Global PC margin % (no owner selected). 0 = unset → show stored prices.
+  const [pcMarginPct, setPcMarginPct] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    const stored = Number(localStorage.getItem('pm-pc-margin-pct'));
+    return Number.isFinite(stored) && stored >= 0 ? stored : 0;
+  });
+  useEffect(() => {
+    localStorage.setItem('pm-pc-margin-pct', String(pcMarginPct));
+  }, [pcMarginPct]);
+
   // Price-gap quick filter
   const [priceFilter, setPriceFilter] = useState<
     'unpriced' | 'lossMaking' | 'noImport' | undefined
@@ -426,8 +436,8 @@ const PricingManagerPage = () => {
   const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
   // In-Bond is a MARGIN on landed cost: price = landed / (1 - margin%)
   const effInbondDivisor = effInbondPct < 100 ? 1 - effInbondPct / 100 : null;
-  // Per-owner PC margin — when set, computes a suggested PC price off landed
-  const effPcPct = ownerId ? ownerDraft.pcPct : null;
+  // PC margin — per-owner when an owner is selected, else the global PC% (0 = unset)
+  const effPcPct = ownerId ? ownerDraft.pcPct : pcMarginPct > 0 ? pcMarginPct : null;
   const effPcDivisor = effPcPct != null && effPcPct < 100 ? 1 - effPcPct / 100 : null;
 
   // Apply Margin popover
@@ -882,6 +892,18 @@ const PricingManagerPage = () => {
                 step="1"
                 value={inBondMarkupPct}
                 onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
+                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
+              <span className="whitespace-nowrap text-xs text-text-muted">PC&nbsp;%</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="—"
+                value={pcMarginPct || ''}
+                onChange={(e) => setPcMarginPct(Math.max(0, Number(e.target.value) || 0))}
                 className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
               />
             </div>
