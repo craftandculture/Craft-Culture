@@ -265,6 +265,7 @@ const PricingManagerPage = () => {
   const [priceFilter, setPriceFilter] = useState<
     'unpriced' | 'lossMaking' | 'noImport' | undefined
   >(undefined);
+  const [includeInbound, setIncludeInbound] = useState(false);
 
   // Per-owner pricing settings (logistics / in-bond margin / PC margin)
   const { data: ownerSettings } = useQuery({
@@ -332,7 +333,7 @@ const PricingManagerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [sortBy, sortOrder, category, ownerId, priceFilter, limit]);
+  }, [sortBy, sortOrder, category, ownerId, priceFilter, includeInbound, limit]);
 
   // Close margin popover on outside click
   useEffect(() => {
@@ -362,12 +363,13 @@ const PricingManagerPage = () => {
       category,
       ownerId,
       priceFilter,
+      includeInbound,
       sortBy,
       sortOrder,
       limit,
       offset: page * limit,
     }),
-    [debouncedSearch, category, ownerId, priceFilter, sortBy, sortOrder, limit, page],
+    [debouncedSearch, category, ownerId, priceFilter, includeInbound, sortBy, sortOrder, limit, page],
   );
 
   const { data, isLoading } = useQuery(
@@ -924,6 +926,17 @@ const PricingManagerPage = () => {
             {f.label}
           </button>
         ))}
+        <span className="mx-1 h-4 w-px bg-border-muted" />
+        <button
+          onClick={() => setIncludeInbound((v) => !v)}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            includeInbound
+              ? 'bg-amber-500 text-white'
+              : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+          }`}
+        >
+          + Inbound stock
+        </button>
       </div>
 
       {/* Active filter chips */}
@@ -1052,14 +1065,20 @@ const PricingManagerPage = () => {
               <tbody className="divide-y divide-border-muted">
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-                ) : products.length === 0 ? (
+                ) : products.length === 0 &&
+                  !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
                     <td colSpan={8} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => {
+                  [
+                    ...(includeInbound && page === 0
+                      ? (data?.inbound ?? []).map((p) => ({ product: p, isInbound: true }))
+                      : []),
+                    ...products.map((p) => ({ product: p, isInbound: false })),
+                  ].map(({ product, isInbound }) => {
                     const caseConfig = product.caseConfig ?? 12;
                     const importPrice = product.importPricePerBottle;
                     // Landed cost = import + flat logistics per bottle
@@ -1079,6 +1098,10 @@ const PricingManagerPage = () => {
                         : null;
                     const isLoss =
                       sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
+                    const eta =
+                      isInbound && 'earliestEta' in product
+                        ? (product as { earliestEta?: Date | null }).earliestEta ?? null
+                        : null;
                     const marginColor =
                       margin == null
                         ? 'text-text-muted'
@@ -1090,18 +1113,36 @@ const PricingManagerPage = () => {
 
                     return (
                       <tr
-                        key={product.lwin18}
+                        key={`${isInbound ? 'inb-' : ''}${product.lwin18}`}
                         className={`transition-colors ${
-                          isLoss ? 'bg-red-50/70 hover:bg-red-50' : 'even:bg-surface-muted/25 hover:bg-surface-muted/50'
+                          isInbound
+                            ? 'bg-amber-50/60 hover:bg-amber-50'
+                            : isLoss
+                              ? 'bg-red-50/70 hover:bg-red-50'
+                              : 'even:bg-surface-muted/25 hover:bg-surface-muted/50'
                         }`}
                       >
                         {/* Product */}
                         <td className="px-3 py-2.5">
-                          <p className="font-medium leading-tight text-text-primary">
-                            {product.productName}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium leading-tight text-text-primary">
+                              {product.productName}
+                            </p>
+                            {isInbound && (
+                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
+                                Inbound
+                              </span>
+                            )}
+                          </div>
                           {product.producer && (
                             <p className="text-xs text-text-muted">{product.producer}</p>
+                          )}
+                          {isInbound && (
+                            <p className="text-[10px] text-amber-600">
+                              {eta
+                                ? `ETA ${new Date(eta).toLocaleDateString('en-GB')}`
+                                : 'In transit'}
+                            </p>
                           )}
                         </td>
 
