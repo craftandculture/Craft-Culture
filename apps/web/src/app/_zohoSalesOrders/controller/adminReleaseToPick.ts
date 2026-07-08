@@ -109,6 +109,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         availableCases: number;
         lwin18: string;
         productName: string;
+        caseConfig: number | null;
       }[] = [];
 
       // Strategy 1: Match by LWIN18 (if populated)
@@ -121,6 +122,7 @@ const adminReleaseToPick = wmsOperatorProcedure
             availableCases: wmsStock.availableCases,
             lwin18: wmsStock.lwin18,
             productName: wmsStock.productName,
+            caseConfig: wmsStock.caseConfig,
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -139,6 +141,7 @@ const adminReleaseToPick = wmsOperatorProcedure
             availableCases: wmsStock.availableCases,
             lwin18: wmsStock.lwin18,
             productName: wmsStock.productName,
+            caseConfig: wmsStock.caseConfig,
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -171,6 +174,7 @@ const adminReleaseToPick = wmsOperatorProcedure
               availableCases: wmsStock.availableCases,
               lwin18: wmsStock.lwin18,
               productName: wmsStock.productName,
+              caseConfig: wmsStock.caseConfig,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -179,9 +183,23 @@ const adminReleaseToPick = wmsOperatorProcedure
         }
       }
 
-      // Find first location with enough stock
+      // Bottle vs case: Zoho lines carry a unit ('Case'/'Cases'/'Bottle'). When
+      // the order is in bottles, store the true bottle quantity and derive how
+      // many cases must be touched (ceil(bottles / pack)) so availability and
+      // the auto-split at pick time work. Case lines behave exactly as before.
+      const isBottleUnit = /^bottle/i.test((item.unit ?? '').trim());
+      const pack =
+        availableStock[0]?.caseConfig && availableStock[0].caseConfig > 0
+          ? availableStock[0].caseConfig
+          : 12;
+      const quantityBottles = isBottleUnit ? item.quantity : null;
+      const casesNeeded = isBottleUnit
+        ? Math.max(1, Math.ceil(item.quantity / pack))
+        : item.quantity;
+
+      // Find first location with enough stock (in cases)
       const suggestedStock = availableStock.find(
-        (s) => s.availableCases >= item.quantity,
+        (s) => s.availableCases >= casesNeeded,
       ) ?? availableStock[0]; // Fall back to any available stock if none has enough
 
       if (!suggestedStock) {
@@ -198,7 +216,8 @@ const adminReleaseToPick = wmsOperatorProcedure
           // on the warehouse floor.
           lwin18: suggestedStock?.lwin18 ?? itemLwin18 ?? '',
           productName: item.name,
-          quantityCases: item.quantity,
+          quantityCases: casesNeeded,
+          quantityBottles,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: suggestedStock
