@@ -683,9 +683,16 @@ const PricingManagerPage = () => {
         const landed = hasCost
           ? (p.importPricePerBottle ?? 0) + effLogistics + (override ?? 0)
           : null;
-        const sell = (ownerId ? ownerPrices[p.lwin18] : undefined) ?? p.sellingPricePerBottle;
-        const margin = calcMargin(landed, sell);
         const inBond = landed && effInbondDivisor ? landed / effInbondDivisor : null;
+        const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
+        const computed =
+          effPcDivisor != null && inBond != null && inBond > 0
+            ? Math.round(inBond * 100) / 100 / effPcDivisor
+            : null;
+        const sell =
+          ownerP != null && ownerP > 0 ? ownerP : computed != null ? computed : p.sellingPricePerBottle;
+        // Margin measured against the In-Bond (B2B) price, not landed cost
+        const margin = calcMargin(inBond, sell);
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -732,6 +739,7 @@ const PricingManagerPage = () => {
     sortOrder,
     effLogistics,
     effInbondDivisor,
+    effPcDivisor,
   ]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
@@ -1237,27 +1245,31 @@ const PricingManagerPage = () => {
                       : null;
                     const inBondPrice =
                       landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
-                    // When owner is selected, use owner-specific PC price (fall back to default)
+                    // PC precedence: explicit owner price > owner PC% (computed) > default selling.
+                    // Computed PC = in-bond / (1 - PC%); round in-bond to 2dp first to match display.
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
-                    const storedPc = ownerPcPrice ?? product.sellingPricePerBottle;
-                    const hasStoredPc = storedPc != null && storedPc > 0;
-                    // When owner PC% is set and nothing stored, suggest PC = in-bond / (1 - PC%)
-                    // (PC margin stacks on the In-Bond B2B price, not on landed cost).
-                    // Round in-bond to 2dp first so it matches the displayed figure.
+                    const hasOwnerPrice = ownerId != null && ownerPcPrice != null && ownerPcPrice > 0;
                     const computedPc =
                       effPcDivisor != null && inBondPrice != null && inBondPrice > 0
                         ? Math.round(inBondPrice * 100) / 100 / effPcDivisor
                         : null;
-                    const sellPrice = hasStoredPc ? storedPc : computedPc;
-                    const isSuggestedPc = !hasStoredPc && computedPc != null;
-                    const hasOwnerPrice = ownerId != null && ownerPcPrice != null;
-                    const margin = calcMargin(landed, sellPrice);
+                    const sellPrice = hasOwnerPrice
+                      ? ownerPcPrice!
+                      : computedPc != null
+                        ? computedPc
+                        : product.sellingPricePerBottle;
+                    const isSuggestedPc = !hasOwnerPrice && computedPc != null;
+                    // Margin is measured against the In-Bond (B2B) price, not landed cost
+                    const margin = calcMargin(inBondPrice, sellPrice);
                     const marginPerBottle =
-                      landed && sellPrice && landed > 0 && sellPrice > 0
-                        ? sellPrice - landed
+                      inBondPrice && sellPrice && inBondPrice > 0 && sellPrice > 0
+                        ? sellPrice - inBondPrice
                         : null;
                     const isLoss =
-                      sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
+                      sellPrice != null &&
+                      sellPrice > 0 &&
+                      inBondPrice != null &&
+                      sellPrice <= inBondPrice;
                     const eta =
                       isInbound && 'earliestEta' in product
                         ? (product as { earliestEta?: Date | null }).earliestEta ?? null
