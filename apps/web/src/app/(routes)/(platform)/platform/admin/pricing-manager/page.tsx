@@ -917,6 +917,7 @@ const PricingManagerPage = () => {
                         category,
                         ownerId,
                         logisticsPerBottle: effLogistics,
+                        inbondMarginPct: effInbondPct,
                         overwriteExisting,
                       });
                     }}
@@ -1138,10 +1139,12 @@ const PricingManagerPage = () => {
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const storedPc = ownerPcPrice ?? product.sellingPricePerBottle;
                     const hasStoredPc = storedPc != null && storedPc > 0;
-                    // When owner PC% is set and nothing stored, suggest PC = landed / (1 - PC%)
+                    // When owner PC% is set and nothing stored, suggest PC = in-bond / (1 - PC%)
+                    // (PC margin stacks on the In-Bond B2B price, not on landed cost).
+                    // Round in-bond to 2dp first so it matches the displayed figure.
                     const computedPc =
-                      effPcDivisor != null && landed != null && landed > 0
-                        ? landed / effPcDivisor
+                      effPcDivisor != null && inBondPrice != null && inBondPrice > 0
+                        ? Math.round(inBondPrice * 100) / 100 / effPcDivisor
                         : null;
                     const sellPrice = hasStoredPc ? storedPc : computedPc;
                     const isSuggestedPc = !hasStoredPc && computedPc != null;
