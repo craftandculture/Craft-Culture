@@ -40,6 +40,7 @@ const PriceCell = ({
   onSave,
   highlight,
   sub,
+  suggested,
   variant = 'muted',
   tdClassName = '',
 }: {
@@ -48,17 +49,21 @@ const PriceCell = ({
   highlight?: boolean;
   /** small per-case (or secondary) figure shown under the price */
   sub?: string;
+  /** value is computed from a margin %, not saved — render as a hint */
+  suggested?: boolean;
   variant?: 'muted' | 'prominent';
   tdClassName?: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
 
-  const valueColor = highlight
-    ? 'text-violet-600 font-semibold'
-    : variant === 'prominent'
-      ? 'font-semibold text-text-primary'
-      : 'text-text-secondary';
+  const valueColor = suggested
+    ? 'italic text-violet-400'
+    : highlight
+      ? 'text-violet-600 font-semibold'
+      : variant === 'prominent'
+        ? 'font-semibold text-text-primary'
+        : 'text-text-secondary';
 
   if (!editing) {
     return (
@@ -72,7 +77,7 @@ const PriceCell = ({
           }}
         >
           {value != null && value > 0 ? (
-            `$${value.toFixed(2)}`
+            `${suggested ? '~' : ''}$${value.toFixed(2)}`
           ) : (
             <span className="text-text-muted/40">—</span>
           )}
@@ -313,7 +318,11 @@ const PricingManagerPage = () => {
   // Effective rates: owner settings when an owner is selected, else global defaults
   const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
   const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
-  const effInbondMarkup = effInbondPct / 100;
+  // In-Bond is a MARGIN on landed cost: price = landed / (1 - margin%)
+  const effInbondDivisor = effInbondPct < 100 ? 1 - effInbondPct / 100 : null;
+  // Per-owner PC margin — when set, computes a suggested PC price off landed
+  const effPcPct = ownerId ? ownerDraft.pcPct : null;
+  const effPcDivisor = effPcPct != null && effPcPct < 100 ? 1 - effPcPct / 100 : null;
 
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
@@ -557,7 +566,7 @@ const PricingManagerPage = () => {
         const landed = p.importPricePerBottle ? p.importPricePerBottle + effLogistics : null;
         const sell = (ownerId ? ownerPrices[p.lwin18] : undefined) ?? p.sellingPricePerBottle;
         const margin = calcMargin(landed, sell);
-        const inBond = landed ? landed * (1 + effInbondMarkup) : null;
+        const inBond = landed && effInbondDivisor ? landed / effInbondDivisor : null;
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -602,7 +611,7 @@ const PricingManagerPage = () => {
     sortBy,
     sortOrder,
     effLogistics,
-    effInbondMarkup,
+    effInbondDivisor,
   ]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
@@ -1042,7 +1051,7 @@ const PricingManagerPage = () => {
                   </th>
                   <th className="border-l border-blue-200 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     In Bond
-                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">+{effInbondPct}%</span>
+                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">{effInbondPct}% mgn</span>
                   </th>
                   <th
                     className={`border-l border-violet-200 px-3 pb-2.5 pt-1 text-right ${thBase}`}
@@ -1086,10 +1095,19 @@ const PricingManagerPage = () => {
                       importPrice != null && importPrice > 0
                         ? importPrice + effLogistics
                         : null;
-                    const inBondPrice = landed != null ? landed * (1 + effInbondMarkup) : null;
+                    const inBondPrice =
+                      landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
                     // When owner is selected, use owner-specific PC price (fall back to default)
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
-                    const sellPrice = ownerPcPrice ?? product.sellingPricePerBottle;
+                    const storedPc = ownerPcPrice ?? product.sellingPricePerBottle;
+                    const hasStoredPc = storedPc != null && storedPc > 0;
+                    // When owner PC% is set and nothing stored, suggest PC = landed / (1 - PC%)
+                    const computedPc =
+                      effPcDivisor != null && landed != null && landed > 0
+                        ? landed / effPcDivisor
+                        : null;
+                    const sellPrice = hasStoredPc ? storedPc : computedPc;
+                    const isSuggestedPc = !hasStoredPc && computedPc != null;
                     const hasOwnerPrice = ownerId != null && ownerPcPrice != null;
                     const margin = calcMargin(landed, sellPrice);
                     const marginPerBottle =
@@ -1207,6 +1225,7 @@ const PricingManagerPage = () => {
                         <PriceCell
                           value={sellPrice}
                           highlight={hasOwnerPrice}
+                          suggested={isSuggestedPc}
                           variant="prominent"
                           tdClassName="border-l border-violet-200"
                           sub={
