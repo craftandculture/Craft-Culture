@@ -166,6 +166,13 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_pick_list_items.quantity_bottles ready');
 
+    // Split-case picking: authoritative loose-bottle count on the stock row.
+    console.log('🔄 Ensuring wms_stock.open_bottles column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_stock" ADD COLUMN IF NOT EXISTS "open_bottles" integer NOT NULL DEFAULT 0`,
+    );
+    console.log('✅ wms_stock.open_bottles ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
