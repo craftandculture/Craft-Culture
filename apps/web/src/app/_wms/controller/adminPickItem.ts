@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -29,7 +29,8 @@ import generateMovementNumber from '../utils/generateMovementNumber';
 const adminPickItem = wmsOperatorProcedure
   .input(pickItemSchema)
   .mutation(async ({ input, ctx }) => {
-    const { pickListItemId, pickedFromLocationId, pickedQuantity, notes } = input;
+    const { pickListItemId, pickedFromLocationId, pickedQuantity, pickedBottles, notes } =
+      input;
 
     // Get user ID from context (adminProcedure guarantees ctx.user exists)
     const userId = ctx.user.id;
@@ -113,12 +114,66 @@ const adminPickItem = wmsOperatorProcedure
       });
     }
 
-    // Validate stock availability
-    if (stock.availableCases < pickedQuantity) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Insufficient stock. Available: ${stock.availableCases}, requested: ${pickedQuantity}`,
+    const isBottlePick = pickedBottles != null;
+    const pack = stock.caseConfig ?? 12;
+
+    // How many sealed cases this pick removes, and what to store on the line.
+    let casesRemoved: number;
+    let recordedPickedQuantity: number;
+    let resultMessage: string;
+
+    if (isBottlePick) {
+      // --- Split-case (bottle) pick ---
+      // Draw from already-open bottles first, then crack sealed cases as needed.
+      const takeFromOpen = Math.min(pickedBottles, stock.openBottles);
+      const shortfallBottles = pickedBottles - takeFromOpen;
+      casesRemoved = Math.ceil(shortfallBottles / pack);
+
+      if (stock.availableCases < casesRemoved) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Insufficient stock to pick ${pickedBottles} bottle(s). Open bottles: ${stock.openBottles}, sealed cases: ${stock.availableCases}`,
+        });
+      }
+
+      // New open count: existing open + bottles freed by cracking − bottles picked.
+      const newOpenBottles =
+        stock.openBottles + casesRemoved * pack - pickedBottles;
+
+      await db
+        .update(wmsStock)
+        .set({
+          quantityCases: sql`${wmsStock.quantityCases} - ${casesRemoved}`,
+          availableCases: sql`${wmsStock.availableCases} - ${casesRemoved}`,
+          openBottles: newOpenBottles,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsStock.id, stock.id));
+
+      recordedPickedQuantity = pickedBottles;
+      resultMessage =
+        `Picked ${pickedBottles} bottle(s) from ${location.locationCode}` +
+        (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
+        `; ${newOpenBottles} open bottle(s) remain`;
+    } else {
+      // --- Whole-case pick (unchanged behaviour) ---
+      if (stock.availableCases < pickedQuantity) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Insufficient stock. Available: ${stock.availableCases}, requested: ${pickedQuantity}`,
+        });
+      }
+
+      await convertReservationToPick({
+        stockId: stock.id,
+        orderId: pickList.orderId ?? '',
+        quantityCases: pickedQuantity,
+        db,
       });
+
+      casesRemoved = pickedQuantity;
+      recordedPickedQuantity = pickedQuantity;
+      resultMessage = `Picked ${pickedQuantity} cases from ${location.locationCode}`;
     }
 
     // Update pick list item
@@ -126,7 +181,7 @@ const adminPickItem = wmsOperatorProcedure
       .update(wmsPickListItems)
       .set({
         pickedFromLocationId,
-        pickedQuantity,
+        pickedQuantity: recordedPickedQuantity,
         pickedAt: new Date(),
         pickedBy: userId,
         isPicked: true,
@@ -136,14 +191,6 @@ const adminPickItem = wmsOperatorProcedure
       .where(eq(wmsPickListItems.id, pickListItemId))
       .returning();
 
-    // Update stock — reservation-aware decrement
-    await convertReservationToPick({
-      stockId: stock.id,
-      orderId: pickList.orderId ?? '',
-      quantityCases: pickedQuantity,
-      db,
-    });
-
     // Record movement
     const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
@@ -151,10 +198,12 @@ const adminPickItem = wmsOperatorProcedure
       movementType: 'pick',
       lwin18: pickListItem.lwin18,
       productName: pickListItem.productName,
-      quantityCases: pickedQuantity,
+      quantityCases: casesRemoved,
       fromLocationId: pickedFromLocationId,
       orderId: pickList.orderId,
-      notes: `Pick list ${pickList.pickListNumber}`,
+      notes: isBottlePick
+        ? `Pick list ${pickList.pickListNumber} — ${pickedBottles} bottle(s) (split-case)`
+        : `Pick list ${pickList.pickListNumber}`,
       performedBy: userId,
       performedAt: new Date(),
     });
@@ -177,7 +226,7 @@ const adminPickItem = wmsOperatorProcedure
     return {
       success: true,
       item: updatedItem,
-      message: `Picked ${pickedQuantity} cases from ${location.locationCode}`,
+      message: resultMessage,
     };
   });
 

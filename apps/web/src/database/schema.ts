@@ -3951,6 +3951,11 @@ export const wmsStock = pgTable(
     quantityCases: integer('quantity_cases').notNull().default(0),
     reservedCases: integer('reserved_cases').notNull().default(0),
     availableCases: integer('available_cases').notNull().default(0),
+    // Loose bottles from opened (split) cases at this location, authoritative
+    // count. quantityCases counts SEALED cases; openBottles holds bottles from
+    // cracked cases. Total bottles = quantityCases * caseConfig + openBottles.
+    // 0 for whole-case stock, so existing case flow is unaffected.
+    openBottles: integer('open_bottles').notNull().default(0),
     lotNumber: text('lot_number'),
     receivedAt: timestamp('received_at', { mode: 'date' }),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),

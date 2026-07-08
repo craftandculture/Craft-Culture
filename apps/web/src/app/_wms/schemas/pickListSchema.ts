@@ -38,6 +38,11 @@ export const pickItemSchema = z.object({
   pickListItemId: z.string().uuid(),
   pickedFromLocationId: z.string().uuid(),
   pickedQuantity: z.number().int().positive(),
+  // Bottle-level pick. When set, this is a split-case pick of exactly this many
+  // loose bottles: the system draws from already-open bottles first, then
+  // cracks sealed cases as needed (auto-split). Omitted = normal whole-case pick.
+  pickedBottles: z.number().int().positive().optional(),
+  caseBarcode: z.string().optional(),
   notes: z.string().optional(),
 });
 
