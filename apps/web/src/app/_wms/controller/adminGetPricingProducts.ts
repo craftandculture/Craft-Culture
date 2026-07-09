@@ -67,6 +67,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Sort expression mapping
     const sortExpressions = {
       productName: sql`MAX(${wmsStock.productName})`,
+      vintage: sql`MAX(${wmsStock.vintage})`,
       totalCases: sql`SUM(${wmsStock.quantityCases})`,
       importPrice: sql`MAX(${wmsProductPricing.importPricePerBottle})`,
       sellingPrice: sql`MAX(${wmsProductPricing.sellingPricePerBottle})`,

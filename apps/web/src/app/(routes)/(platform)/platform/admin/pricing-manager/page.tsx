@@ -35,7 +35,13 @@ const IN_BOND_MARKUP = 0.10; // 10% on top of import price
 const PAGE_SIZES = [50, 100, 200] as const;
 
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
-type SortField = 'productName' | 'totalCases' | 'importPrice' | 'sellingPrice' | 'margin';
+type SortField =
+  | 'productName'
+  | 'vintage'
+  | 'totalCases'
+  | 'importPrice'
+  | 'sellingPrice'
+  | 'margin';
 type SortOrder = 'asc' | 'desc';
 
 // ─── PriceCell (click-to-edit) ────────────────────────────────────────────────
@@ -326,7 +332,7 @@ const SkeletonRow = () => (
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 8 }).map((_, i) => (
+    {Array.from({ length: 9 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -1167,7 +1173,7 @@ const PricingManagerPage = () => {
               <thead className="sticky top-0 z-10 bg-surface-muted/80 backdrop-blur-sm">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
-                  <th className="px-3 pb-1.5 pt-2.5" colSpan={2} />
+                  <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
                   <th className="border-l border-slate-200 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={4}>
                     Cost
                   </th>
@@ -1189,6 +1195,14 @@ const PricingManagerPage = () => {
                   >
                     <span className="flex items-center gap-1">
                       Product {renderSortIcon('productName')}
+                    </span>
+                  </th>
+                  <th
+                    className={`px-2 pb-2.5 pt-1 text-center ${thBase}`}
+                    onClick={() => handleSort('vintage')}
+                  >
+                    <span className="flex items-center justify-center gap-1">
+                      Vintage {renderSortIcon('vintage')}
                     </span>
                   </th>
                   <th
@@ -1244,7 +1258,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={9} className="py-20 text-center text-text-muted">
+                    <td colSpan={10} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -1323,11 +1337,6 @@ const PricingManagerPage = () => {
                           <div className="flex items-center gap-2">
                             <p className="font-medium leading-tight text-text-primary">
                               {product.productName}
-                              {product.vintage ? (
-                                <span className="ml-1 font-normal text-text-muted">
-                                  {product.vintage}
-                                </span>
-                              ) : null}
                             </p>
                             {isInbound && (
                               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
@@ -1344,6 +1353,15 @@ const PricingManagerPage = () => {
                                 ? `ETA ${new Date(eta).toLocaleDateString('en-GB')}`
                                 : 'In transit'}
                             </p>
+                          )}
+                        </td>
+
+                        {/* Vintage */}
+                        <td className="px-2 py-2.5 text-center">
+                          {product.vintage ? (
+                            <span className="tabular-nums text-text-secondary">{product.vintage}</span>
+                          ) : (
+                            <span className="text-[11px] text-text-muted/50">NV</span>
                           )}
                         </td>
 

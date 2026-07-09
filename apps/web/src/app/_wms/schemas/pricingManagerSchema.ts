@@ -10,7 +10,7 @@ export const getPricingProductsSchema = z.object({
   /** Also return in-transit (inbound shipment) products as a separate list */
   includeInbound: z.boolean().optional(),
   sortBy: z
-    .enum(['productName', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
+    .enum(['productName', 'vintage', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   limit: z.number().int().min(1).max(200).default(50),
