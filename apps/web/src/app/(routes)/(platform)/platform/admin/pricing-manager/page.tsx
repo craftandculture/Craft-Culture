@@ -3,6 +3,7 @@
 import {
   IconAlertTriangle,
   IconBottle,
+  IconBuildingWarehouse,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
@@ -12,6 +13,7 @@ import {
   IconLoader2,
   IconPencil,
   IconPercentage,
+  IconReportMoney,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
@@ -831,6 +833,38 @@ const PricingManagerPage = () => {
               ? `Import: ${formatValue(summary.totalImportValue)}`
               : undefined
           }
+        />
+        <KpiCard
+          label="Stock at Cost"
+          value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '\u2014'}
+          subtitle="landed \u00d7 cases in stock"
+          icon={<IconBuildingWarehouse className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="Potential Profit"
+          value={
+            summary?.potentialGrossProfit != null
+              ? formatValue(summary.potentialGrossProfit)
+              : '\u2014'
+          }
+          color={
+            summary?.potentialGrossProfit != null && summary.potentialGrossProfit < 0
+              ? 'red'
+              : 'green'
+          }
+          subtitle="stored PC \u2212 landed, if sold"
+          icon={<IconReportMoney className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="Below Cost"
+          value={summary?.belowCostCount != null ? summary.belowCostCount.toString() : '\u2014'}
+          subtitle="priced at/below landed cost"
+          color={summary?.belowCostCount ? 'red' : 'default'}
+          icon={<IconAlertTriangle className="h-5 w-5" />}
+          onClick={() =>
+            setPriceFilter(priceFilter === 'lossMaking' ? undefined : 'lossMaking')
+          }
+          active={priceFilter === 'lossMaking'}
         />
       </div>
 

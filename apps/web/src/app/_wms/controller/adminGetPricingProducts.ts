@@ -4,6 +4,8 @@ import db from '@/database/client';
 import {
   logisticsShipmentItems,
   logisticsShipments,
+  wmsOwnerPricing,
+  wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
 } from '@/database/schema';
@@ -167,11 +169,23 @@ const adminGetPricingProducts = wmsOperatorProcedure
 
     const totalCount = countResult?.count ?? 0;
 
-    // Summary stats — respect owner filter
+    // Summary stats — respect owner + category filter
     const summaryConditions = [gt(wmsStock.quantityCases, 0)];
     if (ownerId) {
       summaryConditions.push(eq(wmsStock.ownerId, ownerId));
     }
+    if (category === 'Wine') {
+      summaryConditions.push(
+        or(eq(wmsStock.category, 'Wine'), sql`${wmsStock.category} IS NULL`)!,
+      );
+    } else if (category) {
+      summaryConditions.push(eq(wmsStock.category, category));
+    }
+
+    // Per-owner landed cost / stored PC (used for the value + gap KPIs)
+    const landedExpr = sql`(COALESCE(${wmsProductPricing.importPricePerBottle}, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
+    const pcExpr = sql`COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle})`;
+    const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
 
     const [summaryResult] = await db
       .select({
@@ -180,9 +194,23 @@ const adminGetPricingProducts = wmsOperatorProcedure
         totalSellingValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.sellingPricePerBottle}), 0)::float`,
         pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.importPricePerBottle} IS NOT NULL AND ${wmsProductPricing.importPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
         pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.sellingPricePerBottle} IS NOT NULL AND ${wmsProductPricing.sellingPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
+        // Landed cost value of stock on hand (import + override + owner logistics)
+        stockAtCost: sql<number>`COALESCE(SUM(${bottlesExpr} * ${landedExpr}), 0)::float`,
+        // Potential gross profit if sold at stored PC (owner price, else default)
+        potentialGrossProfit: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${bottlesExpr} * (${pcExpr} - ${landedExpr}) END), 0)::float`,
+        // SKUs priced at/below their landed cost
+        belowCostCount: sql<number>`COUNT(DISTINCT CASE WHEN ${pcExpr} > 0 AND ${pcExpr} <= ${landedExpr} THEN ${wmsStock.lwin18} END)::int`,
       })
       .from(wmsStock)
       .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+      .leftJoin(
+        wmsOwnerPricing,
+        and(
+          eq(wmsOwnerPricing.lwin18, wmsStock.lwin18),
+          eq(wmsOwnerPricing.ownerId, wmsStock.ownerId),
+        ),
+      )
       .where(and(...summaryConditions));
 
     // Avg margin = value-weighted portfolio margin over the filtered stock:
@@ -305,6 +333,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         unpricedCount: Math.max(0, unpricedCount),
         totalImportValue: Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
         totalSellingValue: Math.round((summaryResult?.totalSellingValue ?? 0) * 100) / 100,
+        stockAtCost: Math.round((summaryResult?.stockAtCost ?? 0) * 100) / 100,
+        potentialGrossProfit: Math.round((summaryResult?.potentialGrossProfit ?? 0) * 100) / 100,
+        belowCostCount: summaryResult?.belowCostCount ?? 0,
       },
     };
   });
