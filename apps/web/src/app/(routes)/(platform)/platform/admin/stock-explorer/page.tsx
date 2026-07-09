@@ -1390,8 +1390,10 @@ const StockExplorerPage = () => {
         toast.success(`Stock adjusted: ${data.oldQuantity} → ${data.newQuantity} cases`);
       }
     },
-    onError: () => {
-      toast.error('Failed to adjust stock');
+    onError: (err) => {
+      // Surface the real error so we can diagnose the long-standing false failure.
+      console.error('adjustStock failed:', err);
+      toast.error(`Failed to adjust stock: ${err.message}`);
     },
   });
 
