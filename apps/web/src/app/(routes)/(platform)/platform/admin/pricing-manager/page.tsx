@@ -1267,20 +1267,22 @@ const PricingManagerPage = () => {
                       : null;
                     const inBondPrice =
                       landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
-                    // PC precedence: explicit owner price > owner PC% (computed) > default selling.
+                    // PC precedence: an ACTIVE PC% drives the price (override-aware) and beats
+                    // stored prices; otherwise use the stored owner price, then the default.
                     // Computed PC = in-bond / (1 - PC%); round in-bond to 2dp first to match display.
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
-                    const hasOwnerPrice = ownerId != null && ownerPcPrice != null && ownerPcPrice > 0;
+                    const storedOwnerPrice =
+                      ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
                     const computedPc =
                       effPcDivisor != null && inBondPrice != null && inBondPrice > 0
                         ? Math.round(inBondPrice * 100) / 100 / effPcDivisor
                         : null;
-                    const sellPrice = hasOwnerPrice
-                      ? ownerPcPrice!
-                      : computedPc != null
+                    const sellPrice =
+                      computedPc != null
                         ? computedPc
-                        : product.sellingPricePerBottle;
-                    const isSuggestedPc = !hasOwnerPrice && computedPc != null;
+                        : (storedOwnerPrice ?? product.sellingPricePerBottle);
+                    const isSuggestedPc = computedPc != null;
+                    const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
                     // Margin is measured against the In-Bond (B2B) price, not landed cost
                     const margin = calcMargin(inBondPrice, sellPrice);
                     const marginPerBottle =
