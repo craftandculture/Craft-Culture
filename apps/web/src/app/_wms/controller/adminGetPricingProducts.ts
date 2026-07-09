@@ -198,25 +198,32 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // owner has a PC%, PC = landed/(1-inbond%)/(1-pc%) (always > landed, so not
     // "below cost"); otherwise the stored owner/default price. This keeps the
     // gap KPIs in step with the displayed rows instead of stale stored prices.
-    const landedExpr = sql`(COALESCE(${wmsProductPricing.importPricePerBottle}, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
+    // Import falls back to the latest shipment cost when no stored import price
+    // (same as the displayed rows), so stock values aren't understated.
+    const landedExpr = sql`(COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
     const pcExpr = sql`(CASE
       WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
       ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle})
     END)`;
+    // In-bond (B2B) price = landed / (1 - inbond%). C&C's profit = in-bond - landed.
+    const inBondExpr = sql`(${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0))`;
     const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
 
     const [summaryResult] = await db
       .select({
         totalProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
         totalImportValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.importPricePerBottle}), 0)::float`,
-        totalSellingValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.sellingPricePerBottle}), 0)::float`,
         pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.importPricePerBottle} IS NOT NULL AND ${wmsProductPricing.importPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
         pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.sellingPricePerBottle} IS NOT NULL AND ${wmsProductPricing.sellingPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
-        // Landed cost value of stock on hand (import + override + owner logistics)
+        // Landed cost value of stock on hand (import/shipment + override + logistics)
         stockAtCost: sql<number>`COALESCE(SUM(${bottlesExpr} * ${landedExpr}), 0)::float`,
-        // Potential gross profit if sold at stored PC (owner price, else default)
-        potentialGrossProfit: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${bottlesExpr} * (${pcExpr} - ${landedExpr}) END), 0)::float`,
+        // In-bond (B2B) value of stock
+        inBondValue: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${bottlesExpr} * ${inBondExpr} END), 0)::float`,
+        // Private-client value of stock (effective PC)
+        pcValue: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${bottlesExpr} * ${pcExpr} END), 0)::float`,
+        // C&C profit on stock = in-bond (B2B) price − landed cost
+        potentialGrossProfit: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${bottlesExpr} * (${inBondExpr} - ${landedExpr}) END), 0)::float`,
         // SKUs priced at/below their landed cost
         belowCostCount: sql<number>`COUNT(DISTINCT CASE WHEN ${pcExpr} > 0 AND ${pcExpr} <= ${landedExpr} THEN ${wmsStock.lwin18} END)::int`,
       })
@@ -230,16 +237,18 @@ const adminGetPricingProducts = wmsOperatorProcedure
           eq(wmsOwnerPricing.ownerId, wmsStock.ownerId),
         ),
       )
+      .leftJoin(
+        sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, COALESCE(landed_cost_per_bottle, product_cost_per_bottle) AS cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`,
+        sql`ship.lwin18 = ${wmsStock.lwin18}`,
+      )
       .where(and(...summaryConditions));
 
-    // Avg margin = value-weighted portfolio margin over the filtered stock:
-    // (Σ sell·qty − Σ import·qty) / Σ sell·qty. This is robust — a single
-    // mispriced SKU can't blow it up the way an average-of-ratios can — and it
-    // respects the same category/owner/search filter as the totals above.
-    const totalSell = summaryResult?.totalSellingValue ?? 0;
-    const totalImport = summaryResult?.totalImportValue ?? 0;
-    const avgMargin =
-      totalSell > 0 ? Math.round(((totalSell - totalImport) / totalSell) * 1000) / 10 : null;
+    // Blended margin = C&C's portfolio margin between in-bond and landed:
+    // (in-bond value − landed value) / in-bond value. Value-weighted.
+    const inBondValue = summaryResult?.inBondValue ?? 0;
+    const stockAtCostVal = summaryResult?.stockAtCost ?? 0;
+    const blendedMargin =
+      inBondValue > 0 ? Math.round(((inBondValue - stockAtCostVal) / inBondValue) * 1000) / 10 : null;
 
     const unpricedCount =
       (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);
@@ -348,11 +357,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
       },
       summary: {
         totalProducts: summaryResult?.totalProducts ?? 0,
-        avgMargin,
+        blendedMargin,
         unpricedCount: Math.max(0, unpricedCount),
         totalImportValue: Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
-        totalSellingValue: Math.round((summaryResult?.totalSellingValue ?? 0) * 100) / 100,
         stockAtCost: Math.round((summaryResult?.stockAtCost ?? 0) * 100) / 100,
+        inBondValue: Math.round((summaryResult?.inBondValue ?? 0) * 100) / 100,
+        pcValue: Math.round((summaryResult?.pcValue ?? 0) * 100) / 100,
         potentialGrossProfit: Math.round((summaryResult?.potentialGrossProfit ?? 0) * 100) / 100,
         belowCostCount: summaryResult?.belowCostCount ?? 0,
       },

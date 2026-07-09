@@ -804,20 +804,54 @@ const PricingManagerPage = () => {
           icon={<IconBottle className="h-5 w-5" />}
         />
         <KpiCard
-          label="Avg Margin"
-          value={summary?.avgMargin != null ? `${summary.avgMargin.toFixed(1)}%` : '—'}
-          subtitle="value-weighted, sell vs import"
+          label="Stock at Cost"
+          value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '—'}
+          subtitle="landed cost of stock on hand"
+          icon={<IconBuildingWarehouse className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="In-Bond Value"
+          value={summary?.inBondValue ? formatValue(summary.inBondValue) : '—'}
+          subtitle="B2B value of stock"
+          icon={<IconCurrencyDollar className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="PC Value"
+          value={summary?.pcValue ? formatValue(summary.pcValue) : '—'}
+          color="brand"
+          subtitle="private client value of stock"
+          icon={<IconCurrencyDollar className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="C&C Profit"
+          value={
+            summary?.potentialGrossProfit != null
+              ? formatValue(summary.potentialGrossProfit)
+              : '—'
+          }
           color={
-            summary?.avgMargin == null
+            summary?.potentialGrossProfit != null && summary.potentialGrossProfit < 0
+              ? 'red'
+              : 'green'
+          }
+          subtitle="in-bond (B2B) less landed cost"
+          icon={<IconReportMoney className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="Blended Margin"
+          value={summary?.blendedMargin != null ? `${summary.blendedMargin.toFixed(1)}%` : '—'}
+          subtitle="in-bond vs landed, value-weighted"
+          color={
+            summary?.blendedMargin == null
               ? 'default'
-              : summary.avgMargin >= 20
+              : summary.blendedMargin >= 15
                 ? 'green'
-                : summary.avgMargin >= 10
+                : summary.blendedMargin >= 5
                   ? 'amber'
                   : 'red'
           }
           icon={
-            summary?.avgMargin != null && summary.avgMargin < 10 ? (
+            summary?.blendedMargin != null && summary.blendedMargin < 5 ? (
               <IconTrendingDown className="h-5 w-5" />
             ) : (
               <IconTrendingUp className="h-5 w-5" />
@@ -832,38 +866,6 @@ const PricingManagerPage = () => {
           icon={<IconAlertTriangle className="h-5 w-5" />}
           onClick={() => setPriceFilter(priceFilter === 'unpriced' ? undefined : 'unpriced')}
           active={priceFilter === 'unpriced'}
-        />
-        <KpiCard
-          label="Total Sell Value"
-          value={summary?.totalSellingValue ? formatValue(summary.totalSellingValue) : '—'}
-          color="brand"
-          icon={<IconCurrencyDollar className="h-5 w-5" />}
-          subtitle={
-            summary?.totalImportValue
-              ? `Import: ${formatValue(summary.totalImportValue)}`
-              : undefined
-          }
-        />
-        <KpiCard
-          label="Stock at Cost"
-          value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '—'}
-          subtitle="landed cost of stock on hand"
-          icon={<IconBuildingWarehouse className="h-5 w-5" />}
-        />
-        <KpiCard
-          label="Potential Profit"
-          value={
-            summary?.potentialGrossProfit != null
-              ? formatValue(summary.potentialGrossProfit)
-              : '—'
-          }
-          color={
-            summary?.potentialGrossProfit != null && summary.potentialGrossProfit < 0
-              ? 'red'
-              : 'green'
-          }
-          subtitle="PC less landed, if sold"
-          icon={<IconReportMoney className="h-5 w-5" />}
         />
         <KpiCard
           label="Below Cost"
