@@ -416,6 +416,7 @@ const PricingManagerPage = () => {
 
   const setOwnerSettingsMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
+    retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: api.wms.admin.stock.pricing.getOwnerSettings.getQueryKey(),
@@ -565,6 +566,7 @@ const PricingManagerPage = () => {
   // Mutations
   const setImportPriceMut = useMutation({
     ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
+    retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
       toast.success('Import price updated');
@@ -574,6 +576,7 @@ const PricingManagerPage = () => {
 
   const setCostOverrideMut = useMutation({
     ...api.wms.admin.stock.pricing.setCostOverride.mutationOptions(),
+    retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
       toast.success('Cost override updated');
@@ -583,6 +586,7 @@ const PricingManagerPage = () => {
 
   const setSellingPriceMut = useMutation({
     ...api.wms.admin.stock.pricing.setSellingPrice.mutationOptions(),
+    retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
       toast.success('PC price updated');
@@ -592,6 +596,7 @@ const PricingManagerPage = () => {
 
   const setOwnerPricingMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerPricing.mutationOptions(),
+    retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
       const ownerName = owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner';
@@ -602,6 +607,7 @@ const PricingManagerPage = () => {
 
   const bulkApplyMarginMut = useMutation({
     ...api.wms.admin.stock.pricing.bulkApplyMargin.mutationOptions(),
+    retry: 2,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
@@ -788,6 +794,7 @@ const PricingManagerPage = () => {
         <KpiCard
           label="Avg Margin"
           value={summary?.avgMargin != null ? `${summary.avgMargin.toFixed(1)}%` : '\u2014'}
+          subtitle="value-weighted \u00b7 sell vs import"
           color={
             summary?.avgMargin == null
               ? 'default'

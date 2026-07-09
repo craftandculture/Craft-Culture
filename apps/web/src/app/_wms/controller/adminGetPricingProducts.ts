@@ -185,17 +185,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
       .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
       .where(and(...summaryConditions));
 
-    // Calculate avg margin — respect owner filter
-    const ownerSubquery = ownerId
-      ? sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 AND owner_id = ${ownerId}) s`
-      : sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0) s`;
-
-    const [marginResult] = await db
-      .select({
-        avgMargin: sql<number | null>`AVG(CASE WHEN p.selling_price_per_bottle > 0 AND p.import_price_per_bottle > 0 THEN (1 - p.import_price_per_bottle / p.selling_price_per_bottle) * 100 END)`,
-      })
-      .from(sql`wms_product_pricing p`)
-      .innerJoin(ownerSubquery, sql`s.lwin18 = p.lwin18`);
+    // Avg margin = value-weighted portfolio margin over the filtered stock:
+    // (Σ sell·qty − Σ import·qty) / Σ sell·qty. This is robust — a single
+    // mispriced SKU can't blow it up the way an average-of-ratios can — and it
+    // respects the same category/owner/search filter as the totals above.
+    const totalSell = summaryResult?.totalSellingValue ?? 0;
+    const totalImport = summaryResult?.totalImportValue ?? 0;
+    const avgMargin =
+      totalSell > 0 ? Math.round(((totalSell - totalImport) / totalSell) * 1000) / 10 : null;
 
     const unpricedCount =
       (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);
@@ -304,7 +301,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
       },
       summary: {
         totalProducts: summaryResult?.totalProducts ?? 0,
-        avgMargin: marginResult?.avgMargin != null ? Math.round(marginResult.avgMargin * 10) / 10 : null,
+        avgMargin,
         unpricedCount: Math.max(0, unpricedCount),
         totalImportValue: Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
         totalSellingValue: Math.round((summaryResult?.totalSellingValue ?? 0) * 100) / 100,
