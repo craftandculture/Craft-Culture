@@ -93,9 +93,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+        // Owner's own rates (explicit settings; null if the owner hasn't set them)
+        ownerLogistics: sql<number | null>`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
+        ownerInbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+        ownerPcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
       })
       .from(wmsStock)
       .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
       .having(and(...conditions))
