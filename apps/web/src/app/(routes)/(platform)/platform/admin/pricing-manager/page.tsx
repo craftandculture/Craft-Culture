@@ -1323,6 +1323,11 @@ const PricingManagerPage = () => {
                           <div className="flex items-center gap-2">
                             <p className="font-medium leading-tight text-text-primary">
                               {product.productName}
+                              {product.vintage ? (
+                                <span className="ml-1 font-normal text-text-muted">
+                                  {product.vintage}
+                                </span>
+                              ) : null}
                             </p>
                             {isInbound && (
                               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
