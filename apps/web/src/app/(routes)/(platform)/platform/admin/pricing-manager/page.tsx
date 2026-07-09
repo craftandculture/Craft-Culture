@@ -443,11 +443,8 @@ const PricingManagerPage = () => {
   // Effective rates: owner settings when an owner is selected, else global defaults
   const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
   const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
-  // In-Bond is a MARGIN on landed cost: price = landed / (1 - margin%)
-  const effInbondDivisor = effInbondPct < 100 ? 1 - effInbondPct / 100 : null;
   // PC margin — per-owner when an owner is selected, else the global PC% (0 = unset)
   const effPcPct = ownerId ? ownerDraft.pcPct : pcMarginPct > 0 ? pcMarginPct : null;
-  const effPcDivisor = effPcPct != null && effPcPct < 100 ? 1 - effPcPct / 100 : null;
 
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
@@ -703,20 +700,30 @@ const PricingManagerPage = () => {
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
         const override = p.costOverridePerBottle ?? null;
+        // Per-row rates: selected owner's, else each row's owner rates, else global
+        const rowLog = ownerId ? effLogistics : (p.ownerLogistics ?? logisticsPerBottle);
+        const rowInbondDiv = (() => {
+          const pct = ownerId ? effInbondPct : (p.ownerInbondPct ?? inBondMarkupPct);
+          return pct < 100 ? 1 - pct / 100 : null;
+        })();
+        const rowPcDiv = (() => {
+          const pct = ownerId ? effPcPct : (p.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
+          return pct != null && pct < 100 ? 1 - pct / 100 : null;
+        })();
         const hasCost = (p.importPricePerBottle != null && p.importPricePerBottle > 0) || override != null;
         const landed = hasCost
-          ? (p.importPricePerBottle ?? 0) + effLogistics + (override ?? 0)
+          ? (p.importPricePerBottle ?? 0) + rowLog + (override ?? 0)
           : null;
-        const inBond = landed && effInbondDivisor ? landed / effInbondDivisor : null;
+        const inBond = landed && rowInbondDiv ? landed / rowInbondDiv : null;
         const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
         const computed =
-          effPcDivisor != null && landed != null && landed > 0
-            ? Math.round(landed * 100) / 100 / effPcDivisor
+          rowPcDiv != null && inBond != null && inBond > 0
+            ? Math.round(inBond * 100) / 100 / rowPcDiv
             : null;
         const sell =
           ownerP != null && ownerP > 0 ? ownerP : computed != null ? computed : p.sellingPricePerBottle;
-        // Margin measured against the landed cost (import + logistics + override)
-        const margin = calcMargin(landed, sell);
+        // Margin measured against the in-bond (B2B) price
+        const margin = calcMargin(inBond, sell);
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -725,7 +732,7 @@ const PricingManagerPage = () => {
           `${caseConfig}x${p.bottleSize ?? '75cl'}`,
           p.totalCases,
           num(p.importPricePerBottle),
-          landed != null ? num(effLogistics) : '',
+          landed != null ? num(rowLog) : '',
           override != null ? num(override) : '',
           num(landed),
           num(p.importPricePerBottle != null ? p.importPricePerBottle * caseConfig : null),
@@ -762,8 +769,11 @@ const PricingManagerPage = () => {
     sortBy,
     sortOrder,
     effLogistics,
-    effInbondDivisor,
-    effPcDivisor,
+    effInbondPct,
+    effPcPct,
+    logisticsPerBottle,
+    inBondMarkupPct,
+    pcMarginPct,
   ]);
 
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
@@ -1235,7 +1245,7 @@ const PricingManagerPage = () => {
                     Private&nbsp;Client
                   </th>
                   <th
-                    title="Margin of PC price over landed cost"
+                    title="Margin of PC price over the in-bond (B2B) price"
                     className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600"
                   >
                     Margin
@@ -1302,12 +1312,14 @@ const PricingManagerPage = () => {
                     className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80"
                   >
                     In Bond
-                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">{effInbondPct}% mgn</span>
+                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">
+                      {ownerId ? `${effInbondPct}% mgn` : 'per owner'}
+                    </span>
                   </th>
                   <th
                     className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
-                    title="Private client price = Landed / (1 - PC%). Click a cell to edit."
+                    title="Private client price = In-Bond / (1 - PC%). Click a cell to edit."
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
@@ -1316,7 +1328,7 @@ const PricingManagerPage = () => {
                   <th
                     className={`border-l-2 border-emerald-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('margin')}
-                    title="Margin = (PC - Landed) / PC, measured on landed cost"
+                    title="Margin = (PC - In-Bond) / PC, measured on the in-bond price"
                   >
                     <span className="flex items-center justify-end gap-1">
                       Margin {renderSortIcon('margin')}
@@ -1346,22 +1358,41 @@ const PricingManagerPage = () => {
                     const costOverride =
                       (product as { costOverridePerBottle?: number | null }).costOverridePerBottle ??
                       null;
-                    // Landed cost = import + flat logistics + manual override
+                    // Rates: a selected owner's rates apply to all rows; in "All Owners" each row
+                    // uses ITS owner's own rates (falling back to the global toolbar values).
+                    const orow = product as {
+                      ownerLogistics?: number | null;
+                      ownerInbondPct?: number | null;
+                      ownerPcPct?: number | null;
+                    };
+                    const rowLogistics = ownerId
+                      ? effLogistics
+                      : (orow.ownerLogistics ?? logisticsPerBottle);
+                    const rowInbondPct = ownerId
+                      ? effInbondPct
+                      : (orow.ownerInbondPct ?? inBondMarkupPct);
+                    const rowInbondDivisor = rowInbondPct < 100 ? 1 - rowInbondPct / 100 : null;
+                    const rowPcPct = ownerId
+                      ? effPcPct
+                      : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
+                    const rowPcDivisor =
+                      rowPcPct != null && rowPcPct < 100 ? 1 - rowPcPct / 100 : null;
+                    // Landed cost = import + logistics + manual override
                     const hasCost = (importPrice != null && importPrice > 0) || costOverride != null;
                     const landed = hasCost
-                      ? (importPrice ?? 0) + effLogistics + (costOverride ?? 0)
+                      ? (importPrice ?? 0) + rowLogistics + (costOverride ?? 0)
                       : null;
                     const inBondPrice =
-                      landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
-                    // PC precedence: an ACTIVE PC% drives the price (override-aware) and beats
-                    // stored prices; otherwise use the stored owner price, then the default.
-                    // Computed PC = landed cost (import + logistics + override) / (1 - PC%).
+                      landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
+                    // PC precedence: an ACTIVE PC% drives the price and beats stored prices; else
+                    // stored owner price, then default. PC is a margin on the IN-BOND price
+                    // (which already reflects the override via landed).
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const storedOwnerPrice =
                       ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
                     const computedPc =
-                      effPcDivisor != null && landed != null && landed > 0
-                        ? Math.round(landed * 100) / 100 / effPcDivisor
+                      rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
+                        ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
                         : null;
                     const sellPrice =
                       computedPc != null
@@ -1369,12 +1400,13 @@ const PricingManagerPage = () => {
                         : (storedOwnerPrice ?? product.sellingPricePerBottle);
                     const isSuggestedPc = computedPc != null;
                     const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
-                    // Margin is measured against the landed cost (import + logistics + override)
-                    const margin = calcMargin(landed, sellPrice);
+                    // Margin measured against the in-bond (B2B) price
+                    const margin = calcMargin(inBondPrice, sellPrice);
                     const marginPerBottle =
-                      landed && sellPrice && landed > 0 && sellPrice > 0
-                        ? sellPrice - landed
+                      inBondPrice && sellPrice && inBondPrice > 0 && sellPrice > 0
+                        ? sellPrice - inBondPrice
                         : null;
+                    // Below cost = selling at/below the landed cost
                     const isLoss =
                       sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
                     const eta =
@@ -1464,7 +1496,7 @@ const PricingManagerPage = () => {
 
                         {/* Logistics */}
                         <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
-                          {landed != null ? `$${effLogistics.toFixed(2)}` : '—'}
+                          {landed != null ? `$${rowLogistics.toFixed(2)}` : '—'}
                         </td>
 
                         {/* Override (manual per-SKU landed adjustment) */}
