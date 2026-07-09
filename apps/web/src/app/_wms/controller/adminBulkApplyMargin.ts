@@ -22,12 +22,9 @@ import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
 const adminBulkApplyMargin = wmsOperatorProcedure
   .input(bulkApplyMarginSchema)
   .mutation(async ({ input, ctx }) => {
-    const { marginPercent, category, ownerId, logisticsPerBottle, inbondMarginPct, overwriteExisting } =
-      input;
+    const { marginPercent, category, ownerId, logisticsPerBottle, overwriteExisting } = input;
 
     const divisor = 1 - marginPercent / 100;
-    // PC margin stacks on the in-bond (B2B) price: in-bond = landed / (1 - inbond%)
-    const inbondDivisor = inbondMarginPct > 0 ? 1 - inbondMarginPct / 100 : 1;
     const logistics = logisticsPerBottle;
 
     // LWIN18 set in scope: has stock, optional category, optional owner
@@ -40,12 +37,10 @@ const adminBulkApplyMargin = wmsOperatorProcedure
     const ownerFilter = ownerId ? `AND owner_id = '${ownerId}'` : '';
     const stockScope = `SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 ${categoryFilter} ${ownerFilter}`;
 
-    // Landed cost per bottle = stored import price + flat logistics
-    // PC price = landed / (1 - inbond%) / (1 - pc%) — margins stack via in-bond
-    const landedExpr = `(p.import_price_per_bottle + ${logistics})`;
-    // Round in-bond to 2dp first so the PC price matches the displayed figure
-    const inBondExpr = `ROUND((${landedExpr} / ${inbondDivisor})::numeric, 2)`;
-    const sellExpr = `ROUND((${inBondExpr} / ${divisor})::numeric, 2)`;
+    // Landed cost per bottle = import + override + flat logistics
+    // PC price = landed / (1 - pc%), computed off the (2dp-rounded) landed cost
+    const landedExpr = `ROUND((p.import_price_per_bottle + COALESCE(p.cost_override_per_bottle, 0) + ${logistics})::numeric, 2)`;
+    const sellExpr = `ROUND((${landedExpr} / ${divisor})::numeric, 2)`;
 
     const totalEligibleRows = await client.unsafe(`
       SELECT COUNT(*) as count FROM wms_product_pricing p

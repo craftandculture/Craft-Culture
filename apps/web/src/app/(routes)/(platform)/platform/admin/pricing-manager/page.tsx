@@ -710,13 +710,13 @@ const PricingManagerPage = () => {
         const inBond = landed && effInbondDivisor ? landed / effInbondDivisor : null;
         const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
         const computed =
-          effPcDivisor != null && inBond != null && inBond > 0
-            ? Math.round(inBond * 100) / 100 / effPcDivisor
+          effPcDivisor != null && landed != null && landed > 0
+            ? Math.round(landed * 100) / 100 / effPcDivisor
             : null;
         const sell =
           ownerP != null && ownerP > 0 ? ownerP : computed != null ? computed : p.sellingPricePerBottle;
-        // Margin measured against the In-Bond (B2B) price, not landed cost
-        const margin = calcMargin(inBond, sell);
+        // Margin measured against the landed cost (import + logistics + override)
+        const margin = calcMargin(landed, sell);
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -1215,16 +1215,29 @@ const PricingManagerPage = () => {
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
-                  <th className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={4}>
+                  <th
+                    title="Cost build-up per bottle: Import + Logistics + Override = Landed"
+                    className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500"
+                    colSpan={4}
+                  >
                     Cost
                   </th>
-                  <th className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600">
+                  <th
+                    title="In-bond (B2B) selling price tier for trade"
+                    className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600"
+                  >
                     In&nbsp;Bond · B2B
                   </th>
-                  <th className="border-l-2 border-violet-300 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600">
+                  <th
+                    title="Private client (retail) selling price tier"
+                    className="border-l-2 border-violet-300 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600"
+                  >
                     Private&nbsp;Client
                   </th>
-                  <th className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600">
+                  <th
+                    title="Margin of PC price over landed cost"
+                    className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600"
+                  >
                     Margin
                   </th>
                 </tr>
@@ -1233,6 +1246,7 @@ const PricingManagerPage = () => {
                   <th
                     className={`px-3 pb-2.5 pt-1 text-left ${thBase}`}
                     onClick={() => handleSort('productName')}
+                    title="Wine / product name and producer"
                   >
                     <span className="flex items-center gap-1">
                       Product {renderSortIcon('productName')}
@@ -1241,6 +1255,7 @@ const PricingManagerPage = () => {
                   <th
                     className={`px-2 pb-2.5 pt-1 text-center ${thBase}`}
                     onClick={() => handleSort('vintage')}
+                    title="Vintage year (NV = non-vintage). Click to sort."
                   >
                     <span className="flex items-center justify-center gap-1">
                       Vintage {renderSortIcon('vintage')}
@@ -1249,6 +1264,7 @@ const PricingManagerPage = () => {
                   <th
                     className={`px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('totalCases')}
+                    title="Cases on hand (pack size shown below the count)"
                   >
                     <span className="flex items-center justify-end gap-1">
                       Stock {renderSortIcon('totalCases')}
@@ -1257,27 +1273,41 @@ const PricingManagerPage = () => {
                   <th
                     className={`border-l-2 border-slate-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('importPrice')}
+                    title="Import price per bottle (ex-works cost). Click a cell to edit."
                   >
                     <span className="flex items-center justify-end gap-1">
                       Import {renderSortIcon('importPrice')}
                     </span>
                   </th>
-                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                  <th
+                    title="Flat logistics cost per bottle, added to import"
+                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
+                  >
                     Logistics
                   </th>
-                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                  <th
+                    title="Manual per-SKU cost adjustment (can be +/-), added to landed. Click a cell to edit."
+                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
+                  >
                     Override
                   </th>
-                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                  <th
+                    title="Landed cost per bottle = Import + Logistics + Override"
+                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
+                  >
                     Landed
                   </th>
-                  <th className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                  <th
+                    title="In-bond (B2B) price = Landed / (1 - In-Bond%)"
+                    className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80"
+                  >
                     In Bond
                     <span className="ml-1 text-[10px] font-normal text-text-muted/60">{effInbondPct}% mgn</span>
                   </th>
                   <th
                     className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
+                    title="Private client price = Landed / (1 - PC%). Click a cell to edit."
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
@@ -1286,6 +1316,7 @@ const PricingManagerPage = () => {
                   <th
                     className={`border-l-2 border-emerald-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('margin')}
+                    title="Margin = (PC - Landed) / PC, measured on landed cost"
                   >
                     <span className="flex items-center justify-end gap-1">
                       Margin {renderSortIcon('margin')}
@@ -1324,13 +1355,13 @@ const PricingManagerPage = () => {
                       landed != null && effInbondDivisor ? landed / effInbondDivisor : null;
                     // PC precedence: an ACTIVE PC% drives the price (override-aware) and beats
                     // stored prices; otherwise use the stored owner price, then the default.
-                    // Computed PC = in-bond / (1 - PC%); round in-bond to 2dp first to match display.
+                    // Computed PC = landed cost (import + logistics + override) / (1 - PC%).
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const storedOwnerPrice =
                       ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
                     const computedPc =
-                      effPcDivisor != null && inBondPrice != null && inBondPrice > 0
-                        ? Math.round(inBondPrice * 100) / 100 / effPcDivisor
+                      effPcDivisor != null && landed != null && landed > 0
+                        ? Math.round(landed * 100) / 100 / effPcDivisor
                         : null;
                     const sellPrice =
                       computedPc != null
@@ -1338,17 +1369,14 @@ const PricingManagerPage = () => {
                         : (storedOwnerPrice ?? product.sellingPricePerBottle);
                     const isSuggestedPc = computedPc != null;
                     const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
-                    // Margin is measured against the In-Bond (B2B) price, not landed cost
-                    const margin = calcMargin(inBondPrice, sellPrice);
+                    // Margin is measured against the landed cost (import + logistics + override)
+                    const margin = calcMargin(landed, sellPrice);
                     const marginPerBottle =
-                      inBondPrice && sellPrice && inBondPrice > 0 && sellPrice > 0
-                        ? sellPrice - inBondPrice
+                      landed && sellPrice && landed > 0 && sellPrice > 0
+                        ? sellPrice - landed
                         : null;
                     const isLoss =
-                      sellPrice != null &&
-                      sellPrice > 0 &&
-                      inBondPrice != null &&
-                      sellPrice <= inBondPrice;
+                      sellPrice != null && sellPrice > 0 && landed != null && sellPrice <= landed;
                     const eta =
                       isInbound && 'earliestEta' in product
                         ? (product as { earliestEta?: Date | null }).earliestEta ?? null

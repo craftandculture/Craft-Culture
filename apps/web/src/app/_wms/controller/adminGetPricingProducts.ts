@@ -35,8 +35,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         sql`MAX(${wmsProductPricing.importPricePerBottle}) > 0 AND COALESCE(MAX(${wmsProductPricing.sellingPricePerBottle}), 0) = 0`,
       );
     } else if (priceFilter === 'lossMaking') {
+      // Below cost = selling at/below landed cost (import + override)
       conditions.push(
-        sql`MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.sellingPricePerBottle}) <= MAX(${wmsProductPricing.importPricePerBottle})`,
+        sql`MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.sellingPricePerBottle}) <= MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0)`,
       );
     } else if (priceFilter === 'noImport') {
       conditions.push(sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`);
