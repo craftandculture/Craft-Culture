@@ -862,7 +862,7 @@ const PricingManagerPage = () => {
               ? 'red'
               : 'green'
           }
-          subtitle="stored PC less landed, if sold"
+          subtitle="PC less landed, if sold"
           icon={<IconReportMoney className="h-5 w-5" />}
         />
         <KpiCard

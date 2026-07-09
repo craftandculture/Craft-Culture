@@ -35,10 +35,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
         sql`MAX(${wmsProductPricing.importPricePerBottle}) > 0 AND COALESCE(MAX(${wmsProductPricing.sellingPricePerBottle}), 0) = 0`,
       );
     } else if (priceFilter === 'lossMaking') {
-      // Below cost = selling at/below landed cost (import + override)
-      conditions.push(
-        sql`MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.sellingPricePerBottle}) <= MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0)`,
-      );
+      // Below cost = EFFECTIVE PC (computed when owner has a PC%, else stored)
+      // at/below landed cost — matches the Below-Cost KPI and the red rows.
+      const landedH = sql`(MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0) + COALESCE(MAX(${wmsOwnerPricingSettings.logisticsPerBottle}), 25))`;
+      const effH = sql`(CASE
+        WHEN MAX(${wmsOwnerPricingSettings.pcMarginPct}) IS NOT NULL AND MAX(${wmsOwnerPricingSettings.pcMarginPct}) < 100
+        THEN ${landedH} / (1 - COALESCE(MAX(${wmsOwnerPricingSettings.inbondMarginPct}), 0) / 100.0) / (1 - MAX(${wmsOwnerPricingSettings.pcMarginPct}) / 100.0)
+        ELSE MAX(${wmsProductPricing.sellingPricePerBottle})
+      END)`;
+      conditions.push(sql`${effH} > 0 AND ${effH} <= ${landedH}`);
     } else if (priceFilter === 'noImport') {
       conditions.push(sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`);
     }
@@ -164,6 +169,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
       })
       .from(wmsStock)
       .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
       .having(and(...conditions))
@@ -188,9 +194,16 @@ const adminGetPricingProducts = wmsOperatorProcedure
       summaryConditions.push(eq(wmsStock.category, category));
     }
 
-    // Per-owner landed cost / stored PC (used for the value + gap KPIs)
+    // Per-owner landed cost and EFFECTIVE PC (what the table shows): when the
+    // owner has a PC%, PC = landed/(1-inbond%)/(1-pc%) (always > landed, so not
+    // "below cost"); otherwise the stored owner/default price. This keeps the
+    // gap KPIs in step with the displayed rows instead of stale stored prices.
     const landedExpr = sql`(COALESCE(${wmsProductPricing.importPricePerBottle}, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
-    const pcExpr = sql`COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle})`;
+    const pcExpr = sql`(CASE
+      WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
+      THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
+      ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle})
+    END)`;
     const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
 
     const [summaryResult] = await db
