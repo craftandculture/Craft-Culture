@@ -276,21 +276,21 @@ const KpiCard = ({
   const theme = KPI_THEMES[color];
 
   const inner = (
-    <CardContent className="p-5">
+    <CardContent className="gap-1.5 p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           {label}
         </p>
         {icon && (
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${theme.chip}`}>
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${theme.chip}`}>
             {icon}
           </span>
         )}
       </div>
-      <p className={`mt-3 text-3xl font-bold tracking-tight tabular-nums ${theme.text}`}>{value}</p>
-      {subtitle && <p className="mt-1 text-xs text-text-muted">{subtitle}</p>}
+      <p className={`mt-1.5 text-2xl font-bold tracking-tight tabular-nums ${theme.text}`}>{value}</p>
+      {subtitle && <p className="mt-0.5 text-[11px] leading-tight text-text-muted">{subtitle}</p>}
       {onClick && (
-        <p className="mt-2 text-[11px] font-medium text-fill-brand">
+        <p className="mt-1.5 text-[10px] font-medium text-fill-brand">
           {active ? '✓ Filtering — click to clear' : 'Click to filter →'}
         </p>
       )}
@@ -786,17 +786,17 @@ const PricingManagerPage = () => {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Products"
-          value={summary?.totalProducts?.toLocaleString() ?? '\u2014'}
+          value={summary?.totalProducts?.toLocaleString() ?? '—'}
           subtitle="with stock"
           icon={<IconBottle className="h-5 w-5" />}
         />
         <KpiCard
           label="Avg Margin"
-          value={summary?.avgMargin != null ? `${summary.avgMargin.toFixed(1)}%` : '\u2014'}
-          subtitle="value-weighted \u00b7 sell vs import"
+          value={summary?.avgMargin != null ? `${summary.avgMargin.toFixed(1)}%` : '—'}
+          subtitle="value-weighted, sell vs import"
           color={
             summary?.avgMargin == null
               ? 'default'
@@ -816,7 +816,7 @@ const PricingManagerPage = () => {
         />
         <KpiCard
           label="Unpriced"
-          value={summary?.unpricedCount?.toString() ?? '\u2014'}
+          value={summary?.unpricedCount?.toString() ?? '—'}
           subtitle="have import but no sell price"
           color={summary?.unpricedCount && summary.unpricedCount > 0 ? 'amber' : 'default'}
           icon={<IconAlertTriangle className="h-5 w-5" />}
@@ -825,7 +825,7 @@ const PricingManagerPage = () => {
         />
         <KpiCard
           label="Total Sell Value"
-          value={summary?.totalSellingValue ? formatValue(summary.totalSellingValue) : '\u2014'}
+          value={summary?.totalSellingValue ? formatValue(summary.totalSellingValue) : '—'}
           color="brand"
           icon={<IconCurrencyDollar className="h-5 w-5" />}
           subtitle={
@@ -836,8 +836,8 @@ const PricingManagerPage = () => {
         />
         <KpiCard
           label="Stock at Cost"
-          value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '\u2014'}
-          subtitle="landed \u00d7 cases in stock"
+          value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '—'}
+          subtitle="landed cost of stock on hand"
           icon={<IconBuildingWarehouse className="h-5 w-5" />}
         />
         <KpiCard
@@ -845,19 +845,19 @@ const PricingManagerPage = () => {
           value={
             summary?.potentialGrossProfit != null
               ? formatValue(summary.potentialGrossProfit)
-              : '\u2014'
+              : '—'
           }
           color={
             summary?.potentialGrossProfit != null && summary.potentialGrossProfit < 0
               ? 'red'
               : 'green'
           }
-          subtitle="stored PC \u2212 landed, if sold"
+          subtitle="stored PC less landed, if sold"
           icon={<IconReportMoney className="h-5 w-5" />}
         />
         <KpiCard
           label="Below Cost"
-          value={summary?.belowCostCount != null ? summary.belowCostCount.toString() : '\u2014'}
+          value={summary?.belowCostCount != null ? summary.belowCostCount.toString() : '—'}
           subtitle="priced at/below landed cost"
           color={summary?.belowCostCount ? 'red' : 'default'}
           icon={<IconAlertTriangle className="h-5 w-5" />}
