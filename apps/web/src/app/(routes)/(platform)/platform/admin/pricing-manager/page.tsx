@@ -421,7 +421,7 @@ const PricingManagerPage = () => {
     retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getOwnerSettings.getQueryKey(),
+        queryKey: api.wms.admin.stock.pricing.getOwnerSettings.queryKey(),
       });
     },
     onError: () => toast.error('Failed to save owner settings'),
@@ -570,7 +570,7 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
     retry: 2,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
       toast.success('Import price updated');
     },
     onError: () => toast.error('Failed to update import price'),
@@ -580,7 +580,7 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.setCostOverride.mutationOptions(),
     retry: 2,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
       toast.success('Cost override updated');
     },
     onError: () => toast.error('Failed to update cost override'),
@@ -590,7 +590,7 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.setSellingPrice.mutationOptions(),
     retry: 2,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
       toast.success('PC price updated');
     },
     onError: () => toast.error('Failed to update PC price'),
@@ -600,7 +600,7 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.setOwnerPricing.mutationOptions(),
     retry: 2,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.queryKey() });
       const ownerName = owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner';
       toast.success(`PC price updated for ${ownerName}`);
     },
@@ -611,8 +611,8 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.bulkApplyMargin.mutationOptions(),
     retry: 2,
     onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.queryKey() });
       const scope = ownerId
         ? owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner'
         : 'default PC';

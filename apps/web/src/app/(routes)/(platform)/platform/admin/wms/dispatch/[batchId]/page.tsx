@@ -91,7 +91,7 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.addOrders.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+        queryKey: api.wms.admin.dispatch.getOne.queryKey({ batchId }),
       });
       setShowAddOrders(false);
       setSelectedOrderIds([]);
@@ -103,7 +103,7 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.addZohoOrders.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+        queryKey: api.wms.admin.dispatch.getOne.queryKey({ batchId }),
       });
       setShowAddOrders(false);
       setSelectedOrderIds([]);
@@ -115,7 +115,7 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.updateStatus.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+        queryKey: api.wms.admin.dispatch.getOne.queryKey({ batchId }),
       });
     },
   });
@@ -125,7 +125,7 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.removeOrder.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+        queryKey: api.wms.admin.dispatch.getOne.queryKey({ batchId }),
       });
     },
   });
@@ -135,7 +135,7 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.generateDeliveryNote.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+        queryKey: api.wms.admin.dispatch.getOne.queryKey({ batchId }),
       });
     },
   });

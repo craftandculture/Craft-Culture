@@ -74,7 +74,7 @@ const DispatchWizardPage = () => {
     ...api.zohoSalesOrders.sync.mutationOptions(),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
-        queryKey: api.zohoSalesOrders.getPickedForDispatch.getQueryKey({}),
+        queryKey: api.zohoSalesOrders.getPickedForDispatch.queryKey({}),
       });
       toast.success(data.message);
     },
