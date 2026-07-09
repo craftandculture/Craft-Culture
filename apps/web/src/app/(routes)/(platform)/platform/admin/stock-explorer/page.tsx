@@ -1366,7 +1366,7 @@ const StockExplorerPage = () => {
   const { mutate: updateBoe } = useMutation({
     ...api.wms.admin.stock.updateBoe.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
       toast.success('RE BOE updated');
     },
     onError: () => {
@@ -1389,7 +1389,7 @@ const StockExplorerPage = () => {
       // lives in ProductRow, not here — resetting it from this scope threw a
       // ReferenceError after the write committed, which surfaced as a false
       // "Failed to adjust" toast. The row closes its own panel on submit.
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
       if (data.noChange) {
         toast.info('No change needed');
       } else {
@@ -1554,7 +1554,7 @@ const StockExplorerPage = () => {
     ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
     onSettled: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getBulk.getQueryKey(),
+        queryKey: api.wms.admin.stock.pricing.getBulk.queryKey(),
       });
     },
     onSuccess: () => {
@@ -1583,9 +1583,9 @@ const StockExplorerPage = () => {
   const { mutate: transferOwnership, isPending: isTransferring } = useMutation({
     ...api.wms.admin.ownership.transfer.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByOwner.getQueryKey() });
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getOverview.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByOwner.queryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getOverview.queryKey() });
       toast.success('Ownership transferred');
     },
     onError: (err) => {
