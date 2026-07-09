@@ -81,6 +81,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         lwin18: wmsStock.lwin18,
         productName: sql<string>`MAX(${wmsStock.productName})`,
         producer: sql<string | null>`MAX(${wmsStock.producer})`,
+        vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
         caseConfig: sql<number | null>`MAX(${wmsStock.caseConfig})`,
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
@@ -213,6 +214,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
       lwin18: string;
       productName: string;
       producer: string | null;
+      vintage: number | null;
       caseConfig: number | null;
       bottleSize: string | null;
       totalCases: number;
@@ -274,6 +276,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
         lwin18: r.lwin18,
         productName: r.productName,
         producer: r.producer,
+        // Derive vintage from a dashed LWIN (positions 8-11); null if the key
+        // is a product-name fallback rather than a real LWIN.
+        vintage: /^\d{7}-(\d{4})-/.test(r.lwin18)
+          ? Number(r.lwin18.slice(8, 12))
+          : null,
         caseConfig: r.caseConfig,
         bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
         totalCases: r.totalCases,
