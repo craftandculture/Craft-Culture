@@ -1174,16 +1174,16 @@ const PricingManagerPage = () => {
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
-                  <th className="border-l border-slate-200 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={4}>
+                  <th className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500" colSpan={4}>
                     Cost
                   </th>
-                  <th className="border-l border-blue-200 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600">
+                  <th className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600">
                     In&nbsp;Bond · B2B
                   </th>
-                  <th className="border-l border-violet-200 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600">
+                  <th className="border-l-2 border-violet-300 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600">
                     Private&nbsp;Client
                   </th>
-                  <th className="border-l border-emerald-200 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600">
+                  <th className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600">
                     Margin
                   </th>
                 </tr>
@@ -1214,7 +1214,7 @@ const PricingManagerPage = () => {
                     </span>
                   </th>
                   <th
-                    className={`border-l border-slate-200 px-3 pb-2.5 pt-1 text-right ${thBase}`}
+                    className={`border-l-2 border-slate-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('importPrice')}
                   >
                     <span className="flex items-center justify-end gap-1">
@@ -1230,12 +1230,12 @@ const PricingManagerPage = () => {
                   <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
                     Landed
                   </th>
-                  <th className="border-l border-blue-200 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                  <th className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     In Bond
                     <span className="ml-1 text-[10px] font-normal text-text-muted/60">{effInbondPct}% mgn</span>
                   </th>
                   <th
-                    className={`border-l border-violet-200 px-3 pb-2.5 pt-1 text-right ${thBase}`}
+                    className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
@@ -1243,7 +1243,7 @@ const PricingManagerPage = () => {
                     </span>
                   </th>
                   <th
-                    className={`border-l border-emerald-200 px-3 pb-2.5 pt-1 text-right ${thBase}`}
+                    className={`border-l-2 border-emerald-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('margin')}
                   >
                     <span className="flex items-center justify-end gap-1">
@@ -1329,13 +1329,13 @@ const PricingManagerPage = () => {
                             ? 'bg-amber-50/60 hover:bg-amber-50'
                             : isLoss
                               ? 'bg-red-50/70 hover:bg-red-50'
-                              : 'even:bg-surface-muted/25 hover:bg-surface-muted/50'
+                              : 'even:bg-surface-muted/40 hover:bg-surface-muted/60'
                         }`}
                       >
                         {/* Product */}
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium leading-tight text-text-primary">
+                            <p className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
                               {product.productName}
                             </p>
                             {isInbound && (
@@ -1378,7 +1378,7 @@ const PricingManagerPage = () => {
                         {/* Import (editable) — COST group */}
                         <PriceCell
                           value={importPrice}
-                          tdClassName="border-l border-slate-200"
+                          tdClassName="border-l-2 border-slate-300"
                           sub={
                             importPrice != null && importPrice > 0
                               ? `$${(importPrice * caseConfig).toFixed(0)}/cs`
@@ -1422,8 +1422,8 @@ const PricingManagerPage = () => {
                         </td>
 
                         {/* In Bond — B2B group */}
-                        <td className="border-l border-blue-200 px-3 py-2.5 text-right tabular-nums">
-                          <div className="text-blue-700">
+                        <td className="border-l-2 border-blue-300 px-3 py-2.5 text-right tabular-nums">
+                          <div className="font-medium text-blue-700">
                             {inBondPrice != null ? `$${inBondPrice.toFixed(2)}` : '—'}
                           </div>
                           {inBondPrice != null && (
@@ -1439,7 +1439,7 @@ const PricingManagerPage = () => {
                           highlight={hasOwnerPrice}
                           suggested={isSuggestedPc}
                           variant="prominent"
-                          tdClassName="border-l border-violet-200"
+                          tdClassName="border-l-2 border-violet-300"
                           sub={
                             sellPrice != null && sellPrice > 0
                               ? `$${(sellPrice * caseConfig).toFixed(0)}/cs`
@@ -1462,7 +1462,7 @@ const PricingManagerPage = () => {
                         />
 
                         {/* Margin */}
-                        <td className="border-l border-emerald-200 px-3 py-2.5 text-right">
+                        <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-1.5 tabular-nums">
                             <MarginDot margin={margin} />
                             <span className={marginColor}>
