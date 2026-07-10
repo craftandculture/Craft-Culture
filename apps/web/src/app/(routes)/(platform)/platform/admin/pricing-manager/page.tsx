@@ -702,7 +702,7 @@ const PricingManagerPage = () => {
         const override = p.costOverridePerBottle ?? null;
         // Per-row rates: selected owner's, else each row's owner rates, else global
         const rowLog =
-          p.category === 'Spirits'
+          p.category === 'Spirits' || p.category === 'RTD'
             ? 0
             : ownerId
               ? effLogistics
@@ -1106,7 +1106,8 @@ const PricingManagerPage = () => {
                         marginPercent: pct,
                         category,
                         ownerId,
-                        logisticsPerBottle: category === 'Spirits' ? 0 : effLogistics,
+                        logisticsPerBottle:
+                          category === 'Spirits' || category === 'RTD' ? 0 : effLogistics,
                         inbondMarginPct: effInbondPct,
                         overwriteExisting,
                       });
@@ -1372,9 +1373,9 @@ const PricingManagerPage = () => {
                       ownerInbondPct?: number | null;
                       ownerPcPct?: number | null;
                     };
-                    // Spirits carry no logistics
+                    // Spirits & RTD carry no logistics
                     const rowLogistics =
-                      product.category === 'Spirits'
+                      product.category === 'Spirits' || product.category === 'RTD'
                         ? 0
                         : ownerId
                           ? effLogistics
