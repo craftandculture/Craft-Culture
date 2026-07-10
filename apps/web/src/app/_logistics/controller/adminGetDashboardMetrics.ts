@@ -5,6 +5,7 @@ import {
   logisticsDocuments,
   logisticsQuoteRequests,
   logisticsQuotes,
+  logisticsShipmentItems,
   logisticsShipments,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -65,7 +66,23 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
         destinationWarehouse: logisticsShipments.destinationWarehouse,
         carrierName: logisticsShipments.carrierName,
         eta: logisticsShipments.eta,
-        totalCases: logisticsShipments.totalCases,
+        // Derive case/bottle totals from line items (authoritative); the
+        // denormalized header counters have drifted (and are NULL for
+        // Hillebrand-imported shipments), so only fall back to them when a
+        // shipment has no items yet.
+        totalCases: sql<number>`COALESCE((
+          SELECT SUM(${logisticsShipmentItems.cases})
+          FROM ${logisticsShipmentItems}
+          WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+        ), ${logisticsShipments.totalCases}, 0)`,
+        totalBottles: sql<number>`COALESCE((
+          SELECT SUM(COALESCE(
+            ${logisticsShipmentItems.totalBottles},
+            ${logisticsShipmentItems.cases} * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
+          ))
+          FROM ${logisticsShipmentItems}
+          WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+        ), ${logisticsShipments.totalBottles}, 0)`,
         createdAt: logisticsShipments.createdAt,
       })
       .from(logisticsShipments)

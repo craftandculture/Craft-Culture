@@ -593,6 +593,10 @@ const LogisticsDashboardPage = () => {
                           <Typography variant="bodySm">
                             {shipment.totalCases ?? 0} cases
                           </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {(shipment.totalBottles ?? 0).toLocaleString()}{' '}
+                            bottles
+                          </Typography>
                           {shipment.eta && (
                             <Typography variant="bodyXs" colorRole="muted">
                               ETA {formatDate(shipment.eta)}
