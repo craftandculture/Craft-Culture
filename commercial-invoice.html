@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commercial Invoice — Craft & Culture FZE</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1a1a1a; background: #f1f5f9; padding: 20px; font-size: 11px; line-height: 1.4; }
+    .invoice { max-width: 850px; margin: 0 auto; background: #fff; padding: 40px 44px; border: 1px solid #e2e8f0; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; padding-bottom: 12px; border-bottom: 2px solid #1a1a1a; }
+    .logo-block { display: flex; align-items: center; gap: 10px; }
+    .logo-block img { height: 48px; }
+    .logo-text { font-size: 20px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; line-height: 1.1; }
+    .logo-text span { display: block; font-size: 9px; font-weight: 400; letter-spacing: 1px; color: #666; text-transform: none; margin-top: 2px; }
+    .doc-title { text-align: right; }
+    .doc-title h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    .doc-title .inv-num { font-size: 11px; color: #666; margin-top: 2px; }
+
+    /* Parties */
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 16px 0; }
+    .party-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+    .party-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    .party-detail { font-size: 10.5px; color: #444; line-height: 1.5; }
+
+    /* Info bar */
+    .info-bar { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid #ccc; margin: 14px 0; }
+    .info-item { padding: 6px 10px; border-right: 1px solid #ccc; }
+    .info-item:last-child { border-right: none; }
+    .info-label { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #888; }
+    .info-value { font-size: 11px; font-weight: 700; margin-top: 1px; }
+
+    /* BOE Section */
+    .boe-section { margin: 14px 0; }
+    .boe-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .boe-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    .boe-table th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #666; text-align: left; padding: 4px 8px; border-bottom: 1px solid #ccc; }
+    .boe-table td { padding: 4px 8px; border-bottom: 1px solid #eee; font-size: 10.5px; }
+
+    /* Items table */
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .items-table th { font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; background: #444; padding: 5px 6px; text-align: left; }
+    .items-table th:nth-child(n+6) { text-align: right; }
+    .items-table td { padding: 4px 6px; border-bottom: 1px solid #eee; font-size: 10.5px; vertical-align: top; }
+    .items-table td:nth-child(n+6) { text-align: right; }
+    .items-table td:first-child { width: 22px; text-align: center; color: #888; }
+    .items-table td:nth-child(2) { max-width: 240px; }
+
+    /* Category row */
+    .cat-row td { background: #666; color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 6px; border-bottom: none; }
+
+    /* Totals */
+    .amount-col { font-variant-numeric: tabular-nums; }
+    .summary-section { margin-top: 20px; }
+    .summary-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .summary-table { width: 60%; border-collapse: collapse; }
+    .summary-table th { font-size: 9px; font-weight: 600; text-align: left; padding: 4px 8px; border-bottom: 1px solid #ccc; color: #666; }
+    .summary-table th:last-child { text-align: right; }
+    .summary-table td { padding: 4px 8px; border-bottom: 1px solid #eee; font-size: 10.5px; }
+    .summary-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .summary-table tr.total-row td { font-weight: 700; border-top: 1px solid #444; border-bottom: none; }
+
+    .grand-total { margin-top: 20px; text-align: right; }
+    .grand-total .line { border-top: 1px solid #ccc; display: inline-flex; justify-content: space-between; width: 260px; padding: 6px 0; font-size: 11px; }
+    .grand-total .total-line { border-top: 2px solid #1a1a1a; font-size: 13px; font-weight: 700; padding-top: 8px; }
+
+    /* Certification */
+    .certification { margin-top: 24px; padding: 10px 12px; border-left: 3px solid #ccc; font-size: 10px; color: #555; line-height: 1.5; }
+    .ref-invoices { margin-top: 10px; font-size: 10px; }
+    .ref-invoices strong { font-weight: 700; }
+
+    /* Signature */
+    .sig-block { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 30px; }
+    .sig-area { text-align: center; }
+    .sig-line { border-top: 1px solid #ccc; padding-top: 6px; margin-top: 50px; font-size: 10px; color: #666; }
+
+    /* Editable fields */
+    .editable { border: none; border-bottom: 1px dashed #ccc; background: transparent; font: inherit; color: inherit; outline: none; min-width: 60px; }
+    .editable:focus { border-bottom-color: #7c3aed; background: #faf5ff; }
+    .editable-wide { width: 100%; }
+    .editable-num { text-align: right; width: 70px; font-variant-numeric: tabular-nums; }
+    .editable-sm { width: 50px; text-align: center; }
+    .editable-med { width: 90px; }
+    td .editable { font-size: 10.5px; }
+
+    /* Actions (screen only) */
+    .actions { max-width: 850px; margin: 12px auto; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: #fff; color: #1a1a1a; font-family: inherit; }
+    .btn:hover { background: #f8fafc; }
+    .btn-primary { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-sm { padding: 2px 8px; font-size: 10px; border-radius: 4px; }
+    .btn-danger { color: #dc2626; border-color: #fecaca; }
+
+    /* Add row buttons */
+    .add-row-btn { display: inline-block; margin: 4px 6px; padding: 2px 10px; font-size: 10px; color: #7c3aed; border: 1px dashed #7c3aed; border-radius: 4px; cursor: pointer; background: transparent; }
+    .add-row-btn:hover { background: #faf5ff; }
+    .remove-btn { cursor: pointer; color: #dc2626; font-size: 9px; border: none; background: none; padding: 0 2px; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .invoice { border: none; padding: 20px 30px; }
+      .actions, .add-row-btn, .remove-btn, .btn { display: none !important; }
+      .editable { border-bottom: none !important; }
+      .editable:empty::after { content: ''; }
+      @page { size: A4; margin: 8mm 10mm; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="actions">
+  <button class="btn btn-danger" onclick="if(confirm('Clear all?')){location.reload()}">Clear All</button>
+  <button class="btn" onclick="saveInvoice()">Save Draft</button>
+  <button class="btn" onclick="loadInvoice()">Load Draft</button>
+  <button class="btn btn-primary" onclick="window.print()">Print / PDF</button>
+</div>
+
+<div class="invoice" id="invoice">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-block">
+      <img src="cc-logo-cropped.png" alt="C&C">
+      <div class="logo-text">
+        CRAFT &amp;<br>CULTURE
+        <span>Fine Wine Import &amp; Distribution</span>
+      </div>
+    </div>
+    <div class="doc-title">
+      <h1>COMMERCIAL INVOICE</h1>
+      <div class="inv-num"><input class="editable" id="invNumber" placeholder="EXP-2026-XXXX" style="text-align:right;width:130px;"></div>
+    </div>
+  </div>
+
+  <!-- Parties -->
+  <div class="parties">
+    <div>
+      <div class="party-label">Exporter / Shipper</div>
+      <div class="party-name">Craft and Culture FZE</div>
+      <div class="party-detail">
+        Fujairah Free Zone<br>
+        Fujairah<br>
+        PO BOX 50365<br>
+        United Arab Emirates<br>
+        <br>
+        TRN: 104621721000003
+      </div>
+    </div>
+    <div>
+      <div class="party-label">Consignee / Importer</div>
+      <div class="party-name"><input class="editable editable-wide" id="consigneeName" placeholder="Company Name"></div>
+      <div class="party-detail">
+        <input class="editable editable-wide" id="consigneeAddr1" placeholder="Address line 1"><br>
+        <input class="editable editable-wide" id="consigneeAddr2" placeholder="Address line 2"><br>
+        <input class="editable editable-wide" id="consigneeAddr3" placeholder="City / Area"><br>
+        <input class="editable editable-wide" id="consigneeCountry" placeholder="Country"><br>
+        <br>
+        TRN: <input class="editable" id="consigneeTrn" placeholder="TRN number" style="width:140px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">Invoice Date</div>
+      <div class="info-value"><input class="editable" id="invoiceDate" type="date"></div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Terms of Delivery</div>
+      <div class="info-value"><input class="editable" id="deliveryTerms" value="CIF" style="width:60px;"></div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Currency</div>
+      <div class="info-value"><input class="editable" id="currency" value="USD" style="width:40px;"></div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Total Cases</div>
+      <div class="info-value"><span id="totalCases">0</span> Cases</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Gross Weight</div>
+      <div class="info-value"><input class="editable" id="grossWeight" placeholder="0" style="width:50px;"> kg</div>
+    </div>
+  </div>
+
+  <!-- BOE References -->
+  <div class="boe-section">
+    <div class="boe-title">Re-Export Bill of Entry References</div>
+    <table class="boe-table">
+      <thead>
+        <tr><th>BOE Number</th><th>Source Invoice</th><th>Line Items (this invoice)</th><th></th></tr>
+      </thead>
+      <tbody id="boeBody">
+        <tr>
+          <td><input class="editable" placeholder="BOE number" style="width:140px;"></td>
+          <td><input class="editable" placeholder="INV-XXXXXX" style="width:110px;"></td>
+          <td><input class="editable" placeholder="1, 2, 3..." style="width:160px;"></td>
+          <td><button class="remove-btn" onclick="this.closest('tr').remove()">&times;</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="add-row-btn" onclick="addBoeRow()">+ Add BOE</button>
+  </div>
+
+  <!-- Line Items -->
+  <table class="items-table" id="itemsTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Description of Goods</th>
+        <th>HS Code</th>
+        <th>Origin</th>
+        <th>Pack Size</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Amount USD</th>
+        <th style="width:20px;"></th>
+      </tr>
+    </thead>
+    <tbody id="itemsBody">
+    </tbody>
+  </table>
+
+  <div style="margin-top:6px;">
+    <button class="add-row-btn" onclick="addCategoryRow()">+ Add Category</button>
+    <button class="add-row-btn" onclick="addItemRow()">+ Add Item</button>
+  </div>
+
+  <!-- Summary by Country -->
+  <div class="summary-section">
+    <div class="summary-title">Summary by Country of Origin</div>
+    <table class="summary-table">
+      <thead>
+        <tr><th>Country</th><th>Lines</th><th>Cases</th><th>Amount (USD)</th></tr>
+      </thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Grand Total -->
+  <div class="grand-total">
+    <div class="line">
+      <span>Subtotal</span>
+      <span id="subtotal">$0.00</span>
+    </div>
+    <div class="line total-line">
+      <span>Total</span>
+      <span id="grandTotal">$0.00</span>
+    </div>
+  </div>
+
+  <!-- Certification -->
+  <div class="certification">
+    We certify that this invoice shows the actual price of the goods described, that all particulars are true and correct, and that the goods originate from the countries stated above.
+  </div>
+  <div class="ref-invoices">
+    <strong>Reference Invoices:</strong> <input class="editable" id="refInvoices" placeholder="INV-000210, INV-000211" style="width:300px;">
+  </div>
+
+  <!-- Signature -->
+  <div class="sig-block">
+    <div class="sig-area">
+      <div class="sig-line">Craft and Culture FZE</div>
+    </div>
+    <div class="sig-area">
+      <div class="sig-line">Name &amp; Title</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let itemCounter = 0;
+
+const addCategoryRow = (name) => {
+  const tbody = document.getElementById('itemsBody');
+  const tr = document.createElement('tr');
+  tr.className = 'cat-row';
+  tr.innerHTML = `<td colspan="8"><input class="editable" value="${name || ''}" placeholder="COUNTRY - REGION" style="color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;width:100%;"></td><td><button class="remove-btn" onclick="this.closest('tr').remove()" style="color:#fca5a5;">&times;</button></td>`;
+  tbody.appendChild(tr);
+};
+
+const addItemRow = (data) => {
+  itemCounter++;
+  const tbody = document.getElementById('itemsBody');
+  const tr = document.createElement('tr');
+  tr.className = 'item-row';
+  tr.innerHTML = `
+    <td>${itemCounter}</td>
+    <td><input class="editable editable-wide" value="${data?.desc || ''}" placeholder="Wine name, vintage"></td>
+    <td><input class="editable editable-sm" value="${data?.hs || '22042100'}" style="width:65px;"></td>
+    <td><input class="editable editable-sm" value="${data?.origin || ''}" placeholder="France" style="width:55px;"></td>
+    <td><input class="editable editable-sm" value="${data?.pack || '6x75cl'}" style="width:50px;"></td>
+    <td><input class="editable editable-num" value="${data?.qty || ''}" placeholder="0" style="width:35px;text-align:right;" oninput="calcRow(this)"></td>
+    <td><input class="editable editable-num" value="${data?.price || ''}" placeholder="0.00" style="width:60px;" oninput="calcRow(this)"></td>
+    <td class="amount-col"><span class="row-amount">0.00</span></td>
+    <td><button class="remove-btn" onclick="removeItem(this)">&times;</button></td>
+  `;
+  tbody.appendChild(tr);
+  if (data?.qty && data?.price) calcRow(tr.querySelector('input[oninput]'));
+  return tr;
+};
+
+const removeItem = (btn) => {
+  btn.closest('tr').remove();
+  renumber();
+  recalcAll();
+};
+
+const renumber = () => {
+  let n = 0;
+  document.querySelectorAll('#itemsBody .item-row').forEach(tr => {
+    n++;
+    tr.querySelector('td:first-child').textContent = n;
+  });
+  itemCounter = n;
+};
+
+const calcRow = (el) => {
+  const tr = el.closest('tr');
+  const inputs = tr.querySelectorAll('input.editable-num');
+  const qty = parseFloat(inputs[0].value) || 0;
+  const price = parseFloat(inputs[1].value) || 0;
+  const amount = qty * price;
+  tr.querySelector('.row-amount').textContent = amount.toFixed(2);
+  recalcAll();
+};
+
+const recalcAll = () => {
+  let total = 0;
+  let totalCases = 0;
+  const countryMap = {};
+
+  document.querySelectorAll('#itemsBody .item-row').forEach((tr, idx) => {
+    const inputs = tr.querySelectorAll('input.editable-num');
+    const qty = parseFloat(inputs[0]?.value) || 0;
+    const price = parseFloat(inputs[1]?.value) || 0;
+    const amount = qty * price;
+    const origin = tr.querySelectorAll('input.editable-sm')[1]?.value?.trim() || 'Unknown';
+    const packStr = tr.querySelectorAll('input.editable-sm')[2]?.value?.trim() || '6x75cl';
+
+    // Parse pack to get cases: qty is already in cases
+    totalCases += qty;
+    total += amount;
+
+    if (!countryMap[origin]) countryMap[origin] = { lines: [], cases: 0, amount: 0 };
+    countryMap[origin].lines.push(idx + 1);
+    countryMap[origin].cases += qty;
+    countryMap[origin].amount += amount;
+  });
+
+  document.getElementById('totalCases').textContent = totalCases;
+  document.getElementById('subtotal').textContent = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('grandTotal').textContent = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Country summary
+  const summaryBody = document.getElementById('summaryBody');
+  summaryBody.innerHTML = '';
+  let grandCases = 0;
+  let grandAmount = 0;
+  const countries = Object.keys(countryMap).sort();
+  countries.forEach(country => {
+    const d = countryMap[country];
+    const lineRange = d.lines.length > 0 ? `${d.lines[0]}\u2013${d.lines[d.lines.length - 1]}` : '';
+    grandCases += d.cases;
+    grandAmount += d.amount;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${country}</td><td>${lineRange}</td><td>${d.cases}</td><td>${d.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+    summaryBody.appendChild(tr);
+  });
+  // Total row
+  const totalTr = document.createElement('tr');
+  totalTr.className = 'total-row';
+  totalTr.innerHTML = `<td>Total</td><td>${itemCounter} lines</td><td>${grandCases}</td><td>${grandAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+  summaryBody.appendChild(totalTr);
+};
+
+const addBoeRow = () => {
+  const tbody = document.getElementById('boeBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="editable" placeholder="BOE number" style="width:140px;"></td>
+    <td><input class="editable" placeholder="INV-XXXXXX" style="width:110px;"></td>
+    <td><input class="editable" placeholder="1, 2, 3..." style="width:160px;"></td>
+    <td><button class="remove-btn" onclick="this.closest('tr').remove()">&times;</button></td>
+  `;
+  tbody.appendChild(tr);
+};
+
+const saveInvoice = () => {
+  localStorage.setItem('cc-invoice-draft', document.getElementById('invoice').innerHTML);
+  alert('Draft saved!');
+};
+
+const loadInvoice = () => {
+  const data = localStorage.getItem('cc-invoice-draft');
+  if (data) {
+    document.getElementById('invoice').innerHTML = data;
+    // Re-attach event listeners by re-parsing
+    alert('Draft loaded. Note: some interactive features may need a page refresh.');
+  } else {
+    alert('No saved draft found.');
+  }
+};
+
+// Start with one category and one item
+addCategoryRow('FRANCE - BORDEAUX RED');
+addItemRow();
+</script>
+</body>
+</html>

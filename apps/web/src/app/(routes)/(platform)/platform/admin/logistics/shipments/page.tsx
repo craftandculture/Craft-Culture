@@ -169,6 +169,11 @@ const ShipmentsListPage = () => {
                 className={isFetching ? 'animate-spin' : ''}
               />
             </Button>
+            <Button variant="outline" asChild>
+              <Link href="/platform/admin/logistics/groups">
+                <ButtonContent iconLeft={IconBox}>Groups</ButtonContent>
+              </Link>
+            </Button>
             <Button asChild>
               <Link href="/platform/admin/logistics/shipments/new">
                 <ButtonContent iconLeft={IconPlus}>New Shipment</ButtonContent>

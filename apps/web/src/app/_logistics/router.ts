@@ -5,12 +5,15 @@ import adminAddItem from './controller/adminAddItem';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
+import adminCalculateShipmentGroup from './controller/adminCalculateShipmentGroup';
 import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminCreate from './controller/adminCreate';
 import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
+import adminCreateShipmentGroup from './controller/adminCreateShipmentGroup';
 import adminDeleteDocument from './controller/adminDeleteDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
+import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
@@ -27,6 +30,8 @@ import adminGetQuoteRequest from './controller/adminGetQuoteRequest';
 import adminGetQuoteRequests from './controller/adminGetQuoteRequests';
 import adminGetQuotes from './controller/adminGetQuotes';
 import adminGetReportMetrics from './controller/adminGetReportMetrics';
+import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
+import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
@@ -38,6 +43,7 @@ import adminUpdate from './controller/adminUpdate';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateQuote from './controller/adminUpdateQuote';
 import adminUpdateQuoteRequest from './controller/adminUpdateQuoteRequest';
+import adminUpdateShipmentGroup from './controller/adminUpdateShipmentGroup';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import adminUploadDocument from './controller/adminUploadDocument';
 import adminUploadQuoteRequestAttachment from './controller/adminUploadQuoteRequestAttachment';
@@ -70,6 +76,16 @@ const adminRouter = createTRPCRouter({
 
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,
+
+  // Consolidation groups (share freight/logistics costs across shipments)
+  groups: createTRPCRouter({
+    create: adminCreateShipmentGroup,
+    getMany: adminGetShipmentGroups,
+    getOne: adminGetShipmentGroup,
+    update: adminUpdateShipmentGroup,
+    calculate: adminCalculateShipmentGroup,
+    delete: adminDeleteShipmentGroup,
+  }),
 
   // Invoices
   getInvoices: adminGetInvoices,
