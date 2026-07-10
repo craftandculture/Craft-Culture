@@ -320,26 +320,25 @@ const ShipmentGroupDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Allocation result — landed = goods (product) + freight & logistics */}
-        {group.allocatedAt &&
-          (() => {
-            const freightTotal = COST_FIELDS.reduce(
-              (s, f) => s + (group[f.key] ?? 0),
-              0,
-            );
-            const landed = group.totalLandedCostUsd ?? 0;
-            const goods = landed - freightTotal;
-            const bottles = group.totalBottles ?? 0;
-            const tiles = [
-              { v: fmtUsd(goods), label: 'Goods (product) cost' },
-              { v: fmtUsd(freightTotal), label: 'Freight & logistics' },
-              { v: fmtUsd(landed), label: 'Total landed cost' },
-              { v: bottles ? fmtUsd(landed / bottles) : '—', label: 'Landed / bottle' },
-              { v: bottles ? fmtUsd(freightTotal / bottles) : '—', label: 'Freight / bottle' },
-            ];
-            return (
-              <Card>
-                <CardContent className="flex-row flex-wrap items-center justify-around gap-4 p-4 text-center">
+        {/* Live summary — goods off the items, freight off the cost inputs.
+            Always current (updates as you edit items or type costs); no need to
+            re-allocate just to see the numbers. */}
+        {(() => {
+          const goods = data.totalProductCost;
+          const freightTotal = totalCost;
+          const landed = goods + freightTotal;
+          const bottles = totalBottles;
+          const tiles = [
+            { v: fmtUsd(goods), label: 'Goods (product) cost' },
+            { v: fmtUsd(freightTotal), label: 'Freight & logistics' },
+            { v: fmtUsd(landed), label: 'Total landed cost' },
+            { v: bottles ? fmtUsd(landed / bottles) : '—', label: 'Landed / bottle' },
+            { v: bottles ? fmtUsd(freightTotal / bottles) : '—', label: 'Freight / bottle' },
+          ];
+          return (
+            <Card>
+              <CardContent className="gap-2 p-4">
+                <div className="flex flex-row flex-wrap items-center justify-around gap-4 text-center">
                   {tiles.map((t) => (
                     <div key={t.label}>
                       <Typography variant="headingSm">{t.v}</Typography>
@@ -348,10 +347,16 @@ const ShipmentGroupDetailPage = () => {
                       </Typography>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
-            );
-          })()}
+                </div>
+                <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                  {group.allocatedAt
+                    ? 'Applied to items — these costs are written onto each bottle for pricing.'
+                    : 'Live preview. Hit “Calculate & apply” to write the freight onto each bottle.'}
+                </Typography>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </main>
   );
