@@ -2858,6 +2858,9 @@ export const logisticsShipmentGroups = pgTable(
       'by_bottle',
     ),
 
+    // Chargeable weight (kg) from the AWB — used for the $/kg benchmark
+    chargeableWeightKg: doublePrecision('chargeable_weight_kg'),
+
     // Results of the last allocation
     totalLandedCostUsd: doublePrecision('total_landed_cost_usd'),
     totalCases: integer('total_cases').default(0),
@@ -2871,6 +2874,42 @@ export const logisticsShipmentGroups = pgTable(
 );
 
 export type LogisticsShipmentGroup = typeof logisticsShipmentGroups.$inferSelect;
+
+/**
+ * A single logistics cost line on a group — one row per invoice charge (freight,
+ * collection, customs, handling…). Added as invoices arrive; the group's total
+ * logistics is the sum of these. `scope='shared'` lines spread across every
+ * bottle in the group; `scope='shipment'` lines (e.g. a per-collection charge)
+ * attach to one shipment. Original currency is kept alongside the USD amount.
+ */
+export const logisticsGroupCostLines = pgTable(
+  'logistics_group_cost_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    groupId: uuid('group_id')
+      .references(() => logisticsShipmentGroups.id, { onDelete: 'cascade' })
+      .notNull(),
+    category: text('category').notNull().default('freight'),
+    description: text('description'),
+    amount: doublePrecision('amount').notNull(),
+    currency: text('currency').notNull().default('USD'),
+    fxToUsd: doublePrecision('fx_to_usd').notNull().default(1),
+    amountUsd: doublePrecision('amount_usd').notNull(),
+    invoiceRef: text('invoice_ref'),
+    invoiceDate: timestamp('invoice_date', { mode: 'date' }),
+    // 'shared' spreads across all bottles; 'shipment' attaches to shipmentId
+    scope: text('scope').notNull().default('shared'),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, {
+      onDelete: 'set null',
+    }),
+    sourceDocument: text('source_document'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_group_cost_lines_group_id_idx').on(table.groupId)],
+);
+
+export type LogisticsGroupCostLine = typeof logisticsGroupCostLines.$inferSelect;
 
 /**
  * Tracks deleted Hillebrand shipment IDs so re-sync does not recreate them

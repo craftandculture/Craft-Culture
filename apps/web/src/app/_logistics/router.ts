@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAcceptQuote from './controller/adminAcceptQuote';
+import adminAddGroupCostLine from './controller/adminAddGroupCostLine';
 import adminAddItem from './controller/adminAddItem';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
@@ -12,6 +13,7 @@ import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminCreateShipmentGroup from './controller/adminCreateShipmentGroup';
 import adminDeleteDocument from './controller/adminDeleteDocument';
+import adminDeleteGroupCostLine from './controller/adminDeleteGroupCostLine';
 import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
@@ -40,6 +42,7 @@ import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocume
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
 import adminSyncItemsToZoho from './controller/adminSyncItemsToZoho';
 import adminUpdate from './controller/adminUpdate';
+import adminUpdateGroupCostLine from './controller/adminUpdateGroupCostLine';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateQuote from './controller/adminUpdateQuote';
 import adminUpdateQuoteRequest from './controller/adminUpdateQuoteRequest';
@@ -85,6 +88,9 @@ const adminRouter = createTRPCRouter({
     update: adminUpdateShipmentGroup,
     calculate: adminCalculateShipmentGroup,
     delete: adminDeleteShipmentGroup,
+    addCostLine: adminAddGroupCostLine,
+    updateCostLine: adminUpdateGroupCostLine,
+    deleteCostLine: adminDeleteGroupCostLine,
   }),
 
   // Invoices
