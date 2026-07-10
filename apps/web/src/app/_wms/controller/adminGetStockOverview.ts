@@ -5,6 +5,8 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   wmsLocations,
+  wmsOwnerPricing,
+  wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
   wmsStockMovements,
@@ -26,6 +28,20 @@ const adminGetStockOverview = wmsOperatorProcedure
     // When an owner is selected, scope stock stats + valuation to that owner
     const ownerCond = ownerId ? eq(wmsStock.ownerId, ownerId) : undefined;
 
+    // Effective per-bottle cost/price expressions (mirror the Pricing Manager):
+    // import falls back to the latest shipment cost; landed adds override +
+    // owner logistics; in-bond & PC apply the owner's margins.
+    const shipJoin = sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, COALESCE(landed_cost_per_bottle, product_cost_per_bottle) AS cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`;
+    const impFb = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0)`;
+    const landedExpr = sql`(${impFb} + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
+    const inBondExpr = sql`(${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0))`;
+    const pcExpr = sql`(CASE
+      WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
+      THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
+      ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle}, 0)
+    END)`;
+    const btl = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
+
     // Prepare date constants for queries (as ISO strings for SQL compatibility)
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -44,6 +60,7 @@ const adminGetStockOverview = wmsOperatorProcedure
       receivingStockResult,
       inboundStockResult,
       valuationResult,
+      valueByOwnerResult,
     ] = await Promise.all([
       // Get total stock stats
       db
@@ -142,15 +159,46 @@ const adminGetStockOverview = wmsOperatorProcedure
           ),
         ),
 
-      // Get total inventory value (cases × bottles_per_case × import_price_per_bottle)
+      // Total inventory value at each tier (cost / in-bond / PC) with fallback
       db
         .select({
-          totalValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.importPricePerBottle}), 0)::float`,
-          pricedProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+          costValue: sql<number>`COALESCE(SUM(${btl} * ${landedExpr}), 0)::float`,
+          inBondValue: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${btl} * ${inBondExpr} END), 0)::float`,
+          pcValue: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${btl} * ${pcExpr} END), 0)::float`,
+          pricedProducts: sql<number>`COUNT(DISTINCT CASE WHEN ${impFb} > 0 THEN ${wmsStock.lwin18} END)::int`,
         })
         .from(wmsStock)
-        .innerJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+        .leftJoin(
+          wmsOwnerPricing,
+          and(eq(wmsOwnerPricing.lwin18, wmsStock.lwin18), eq(wmsOwnerPricing.ownerId, wmsStock.ownerId)),
+        )
+        .leftJoin(shipJoin, sql`ship.lwin18 = ${wmsStock.lwin18}`)
         .where(and(gt(wmsStock.quantityCases, 0), ownerCond)),
+
+      // Value broken down by owner (top 15 by cost value)
+      db
+        .select({
+          ownerId: wmsStock.ownerId,
+          ownerName: wmsStock.ownerName,
+          costValue: sql<number>`COALESCE(SUM(${btl} * ${landedExpr}), 0)::float`,
+          inBondValue: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${btl} * ${inBondExpr} END), 0)::float`,
+          pcValue: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${btl} * ${pcExpr} END), 0)::float`,
+          cases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
+        })
+        .from(wmsStock)
+        .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+        .leftJoin(
+          wmsOwnerPricing,
+          and(eq(wmsOwnerPricing.lwin18, wmsStock.lwin18), eq(wmsOwnerPricing.ownerId, wmsStock.ownerId)),
+        )
+        .leftJoin(shipJoin, sql`ship.lwin18 = ${wmsStock.lwin18}`)
+        .where(and(gt(wmsStock.quantityCases, 0), ownerCond))
+        .groupBy(wmsStock.ownerId, wmsStock.ownerName)
+        .orderBy(sql`SUM(${btl} * ${landedExpr}) DESC`)
+        .limit(15),
     ]);
 
     const stockStats = stockStatsResult[0];
@@ -204,9 +252,21 @@ const adminGetStockOverview = wmsOperatorProcedure
         value: Math.round((inboundStock?.inboundValue ?? 0) * 100) / 100,
       },
       valuation: {
-        totalValue: Math.round((valuation?.totalValue ?? 0) * 100) / 100,
+        // Cost (landed) value — kept as `totalValue` for the headline
+        totalValue: Math.round((valuation?.costValue ?? 0) * 100) / 100,
+        costValue: Math.round((valuation?.costValue ?? 0) * 100) / 100,
+        inBondValue: Math.round((valuation?.inBondValue ?? 0) * 100) / 100,
+        pcValue: Math.round((valuation?.pcValue ?? 0) * 100) / 100,
         pricedProducts: valuation?.pricedProducts ?? 0,
         totalProducts: stockStats?.uniqueProducts ?? 0,
+        byOwner: valueByOwnerResult.map((o) => ({
+          ownerId: o.ownerId,
+          ownerName: o.ownerName,
+          costValue: Math.round(o.costValue * 100) / 100,
+          inBondValue: Math.round(o.inBondValue * 100) / 100,
+          pcValue: Math.round(o.pcValue * 100) / 100,
+          cases: o.cases,
+        })),
       },
     };
   });

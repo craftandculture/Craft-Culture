@@ -1443,6 +1443,7 @@ const StockExplorerPage = () => {
   const [vintageFrom, setVintageFrom] = useState('');
   const [vintageTo, setVintageTo] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [showValueDetail, setShowValueDetail] = useState(false);
   const [showZeroQty, setShowZeroQty] = useState(false);
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [sortBy, setSortBy] = useState<SortField>('totalCases');
@@ -1895,6 +1896,7 @@ const StockExplorerPage = () => {
 
         {/* KPI Cards */}
         {overview && (
+          <>
           <div className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-9' : 'lg:grid-cols-8'}`}>
             {/* Total Stock */}
             <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
@@ -1992,7 +1994,15 @@ const StockExplorerPage = () => {
             </div>
 
             {/* Value */}
-            <div className="rounded-xl border border-green-100 bg-gradient-to-b from-green-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+            <button
+              onClick={() => setShowValueDetail((v) => !v)}
+              title="Click for cost / in-bond / PC value breakdown"
+              className={`rounded-xl border px-3 py-2.5 text-center shadow-sm transition-colors ${
+                showValueDetail
+                  ? 'border-green-300 bg-green-50 ring-1 ring-green-200'
+                  : 'border-green-100 bg-gradient-to-b from-green-50/40 to-background-primary hover:border-green-200 hover:bg-green-50/50'
+              }`}
+            >
               <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-green-100/70 text-green-600">
                 <IconCurrencyDollar size={13} />
               </div>
@@ -2010,7 +2020,7 @@ const StockExplorerPage = () => {
               <div className="text-[10px] text-text-muted">
                 {overview.valuation.pricedProducts}/{overview.valuation.totalProducts} priced
               </div>
-            </div>
+            </button>
 
             {/* Inbound */}
             {overview.inbound.cases > 0 && (
@@ -2040,6 +2050,75 @@ const StockExplorerPage = () => {
               </button>
             )}
           </div>
+
+          {/* Value breakdown panel */}
+          {showValueDetail && (
+            <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-semibold text-text-primary">
+                  Stock Value Breakdown{ownerId ? ' · selected owner' : ''}
+                </div>
+                <button
+                  onClick={() => setShowValueDetail(false)}
+                  className="text-xs text-text-muted hover:text-text-primary"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { label: 'Cost (landed)', v: overview.valuation.costValue, c: 'text-text-primary' },
+                  { label: 'In-Bond (B2B)', v: overview.valuation.inBondValue, c: 'text-blue-600' },
+                  { label: 'Private Client', v: overview.valuation.pcValue, c: 'text-violet-600' },
+                  { label: 'Inbound (in-transit)', v: overview.inbound.value, c: 'text-sky-500' },
+                  {
+                    label: 'Total incl. inbound',
+                    v: overview.valuation.costValue + overview.inbound.value,
+                    c: 'text-green-700',
+                  },
+                ].map((t) => (
+                  <div
+                    key={t.label}
+                    className="rounded-lg border border-border-muted bg-background-primary px-3 py-2"
+                  >
+                    <div className={`text-base font-bold tabular-nums ${t.c}`}>{fmtMoney(t.v)}</div>
+                    <div className="text-[10px] text-text-muted">{t.label}</div>
+                  </div>
+                ))}
+              </div>
+              {overview.valuation.byOwner.length > 1 && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border-muted text-left text-text-muted">
+                        <th className="py-1 font-medium">Owner</th>
+                        <th className="py-1 text-right font-medium">Cases</th>
+                        <th className="py-1 text-right font-medium">Cost</th>
+                        <th className="py-1 text-right font-medium">In-Bond</th>
+                        <th className="py-1 text-right font-medium">PC</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-muted">
+                      {overview.valuation.byOwner.map((o) => (
+                        <tr key={o.ownerId ?? o.ownerName}>
+                          <td className="py-1">{o.ownerName ?? 'Unknown'}</td>
+                          <td className="py-1 text-right tabular-nums">{o.cases.toLocaleString()}</td>
+                          <td className="py-1 text-right tabular-nums">{fmtMoney(o.costValue)}</td>
+                          <td className="py-1 text-right tabular-nums text-blue-600">
+                            {fmtMoney(o.inBondValue)}
+                          </td>
+                          <td className="py-1 text-right tabular-nums text-violet-600">
+                            {fmtMoney(o.pcValue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          </>
         )}
 
         {/* Search & Filters */}
@@ -2281,8 +2360,8 @@ const StockExplorerPage = () => {
                       </th>
                     )}
                     {visibleColumns.reserved && (
-                      <th className={`${dc.td} text-right ${thBase}`}>
-                        {isInboundView ? 'Ships' : 'Rsvd'}
+                      <th className={`${dc.td} text-right ${thBase}`} title={isInboundView ? 'Number of shipments this product is arriving in' : undefined}>
+                        {isInboundView ? 'Shipments' : 'Rsvd'}
                       </th>
                     )}
                     {visibleColumns.importPrice && (
