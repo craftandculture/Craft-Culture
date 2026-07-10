@@ -33,8 +33,8 @@ const adminGetStockOverview = wmsOperatorProcedure
     // owner logistics; in-bond & PC apply the owner's margins.
     const shipJoin = sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, COALESCE(landed_cost_per_bottle, product_cost_per_bottle) AS cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`;
     const impFb = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0)`;
-    // Spirits carry no logistics; Wine/RTD use the owner's logistics rate.
-    const logisticsExpr = sql`(CASE WHEN ${wmsStock.category} = 'Spirits' THEN 0 ELSE COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25) END)`;
+    // Spirits & RTD carry no logistics; only Wine uses the owner's logistics rate.
+    const logisticsExpr = sql`(CASE WHEN ${wmsStock.category} IN ('Spirits', 'RTD') THEN 0 ELSE COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25) END)`;
     const landedExpr = sql`(${impFb} + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + ${logisticsExpr})`;
     const inBondExpr = sql`(${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0))`;
     const pcExpr = sql`(CASE
