@@ -1,10 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import recalcShipmentTotals from '../utils/recalcShipmentTotals';
 
 const updateItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -78,23 +80,9 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
     .where(eq(logisticsShipmentItems.id, itemId))
     .returning();
 
-  // Update shipment totals if cases changed
+  // Recompute shipment totals from line items when cases/pack changed
   if (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined) {
-    const caseDiff = (updateFields.cases ?? existingItem.cases) - existingItem.cases;
-    const newTotalBottles = newCases * newBpc;
-    const oldTotalBottles = existingItem.totalBottles ?? existingItem.cases * (existingItem.bottlesPerCase ?? 12);
-    const bottleDiff = newTotalBottles - oldTotalBottles;
-
-    if (caseDiff !== 0 || bottleDiff !== 0) {
-      await db
-        .update(logisticsShipments)
-        .set({
-          totalCases: sql`COALESCE(${logisticsShipments.totalCases}, 0) + ${caseDiff}`,
-          totalBottles: sql`COALESCE(${logisticsShipments.totalBottles}, 0) + ${bottleDiff}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(logisticsShipments.id, existingItem.shipmentId));
-    }
+    await recalcShipmentTotals(existingItem.shipmentId);
   }
 
   return updatedItem;

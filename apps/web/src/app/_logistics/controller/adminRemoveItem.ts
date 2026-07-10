@@ -1,10 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import recalcShipmentTotals from '../utils/recalcShipmentTotals';
 
 const removeItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -33,18 +35,8 @@ const adminRemoveItem = adminProcedure.input(removeItemSchema).mutation(async ({
   // Delete the item
   await db.delete(logisticsShipmentItems).where(eq(logisticsShipmentItems.id, itemId));
 
-  // Update shipment totals (subtract)
-  await db
-    .update(logisticsShipments)
-    .set({
-      totalCases: sql`GREATEST(0, COALESCE(${logisticsShipments.totalCases}, 0) - ${item.cases})`,
-      totalBottles: sql`GREATEST(0, COALESCE(${logisticsShipments.totalBottles}, 0) - ${item.totalBottles ?? 0})`,
-      totalWeightKg: item.grossWeightKg
-        ? sql`GREATEST(0, COALESCE(${logisticsShipments.totalWeightKg}, 0) - ${item.grossWeightKg})`
-        : logisticsShipments.totalWeightKg,
-      updatedAt: new Date(),
-    })
-    .where(eq(logisticsShipments.id, item.shipmentId));
+  // Recompute shipment totals from the remaining line items (drift-proof)
+  await recalcShipmentTotals(item.shipmentId);
 
   return { success: true };
 });
