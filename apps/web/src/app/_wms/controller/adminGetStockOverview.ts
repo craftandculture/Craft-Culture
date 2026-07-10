@@ -158,6 +158,10 @@ const adminGetStockOverview = wmsOperatorProcedure
               'cleared',
               'at_warehouse',
             ]),
+            // Owner = item override, else the shipment's partner
+            ownerId
+              ? sql`COALESCE(${logisticsShipmentItems.overrideOwnerId}, ${logisticsShipments.partnerId}) = ${ownerId}`
+              : undefined,
           ),
         ),
 
