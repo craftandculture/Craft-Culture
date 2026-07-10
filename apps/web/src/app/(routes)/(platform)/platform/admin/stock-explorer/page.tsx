@@ -61,6 +61,14 @@ type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | '
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
 type RowDensity = 'compact' | 'normal' | 'relaxed';
 
+/** Compact money formatter for the KPI cards ($1.2M / $489K / $842) */
+const fmtMoney = (v: number) =>
+  v >= 1_000_000
+    ? `$${(v / 1_000_000).toFixed(2)}M`
+    : v >= 1_000
+      ? `$${(v / 1_000).toFixed(0)}K`
+      : `$${v.toFixed(0)}`;
+
 const DENSITY_CLASSES: Record<RowDensity, { td: string; text: string }> = {
   compact: { td: 'px-3 py-1.5', text: 'text-xs' },
   normal: { td: 'px-4 py-3', text: 'text-sm' },
@@ -1520,9 +1528,9 @@ const StockExplorerPage = () => {
     enabled: isInboundView,
   });
 
-  // Fetch overview for KPI cards
+  // Fetch overview for KPI cards (scoped to the selected owner)
   const { data: overview } = useQuery({
-    ...api.wms.admin.stock.getOverview.queryOptions({}),
+    ...api.wms.admin.stock.getOverview.queryOptions({ ownerId: ownerId || undefined }),
   });
 
   // Fetch owners for filter dropdown
@@ -1989,13 +1997,16 @@ const StockExplorerPage = () => {
                 <IconCurrencyDollar size={13} />
               </div>
               <div className="text-lg font-bold leading-tight text-green-700">
-                {overview.valuation.totalValue >= 1000000
-                  ? `$${(overview.valuation.totalValue / 1000000).toFixed(2)}M`
-                  : overview.valuation.totalValue >= 1000
-                    ? `$${(overview.valuation.totalValue / 1000).toFixed(0)}K`
-                    : `$${overview.valuation.totalValue.toFixed(0)}`}
+                {fmtMoney(overview.valuation.totalValue)}
               </div>
-              <div className="text-[11px] text-text-muted">Value</div>
+              <div className="text-[11px] text-text-muted">
+                Value{ownerId ? ' · owner' : ''}
+              </div>
+              {overview.inbound.value > 0 && (
+                <div className="text-[10px] font-medium text-blue-500">
+                  +{fmtMoney(overview.inbound.value)} inbound
+                </div>
+              )}
               <div className="text-[10px] text-text-muted">
                 {overview.valuation.pricedProducts}/{overview.valuation.totalProducts} priced
               </div>
@@ -2021,6 +2032,11 @@ const StockExplorerPage = () => {
                 <div className="text-[10px] text-text-muted">
                   {overview.inbound.shipments} shipment{overview.inbound.shipments !== 1 ? 's' : ''}
                 </div>
+                {overview.inbound.value > 0 && (
+                  <div className="text-[10px] font-medium text-blue-500">
+                    {fmtMoney(overview.inbound.value)}
+                  </div>
+                )}
               </button>
             )}
           </div>

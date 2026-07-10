@@ -3,7 +3,10 @@ import { z } from 'zod';
 /**
  * Schema for querying stock overview with filtering and pagination
  */
-export const getStockOverviewSchema = z.object({});
+export const getStockOverviewSchema = z.object({
+  /** When set, stock stats + valuation are filtered to this owner */
+  ownerId: z.string().uuid().optional(),
+});
 
 /**
  * Schema for querying stock by product (LWIN)

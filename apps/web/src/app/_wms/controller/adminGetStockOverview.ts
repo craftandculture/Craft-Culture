@@ -21,7 +21,11 @@ import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
  */
 const adminGetStockOverview = wmsOperatorProcedure
   .input(getStockOverviewSchema)
-  .query(async () => {
+  .query(async ({ input }) => {
+    const { ownerId } = input;
+    // When an owner is selected, scope stock stats + valuation to that owner
+    const ownerCond = ownerId ? eq(wmsStock.ownerId, ownerId) : undefined;
+
     // Prepare date constants for queries (as ISO strings for SQL compatibility)
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -52,7 +56,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           uniqueOwners: sql<number>`COUNT(DISTINCT ${wmsStock.ownerId})::int`,
         })
         .from(wmsStock)
-        .where(gt(wmsStock.quantityCases, 0)),
+        .where(and(gt(wmsStock.quantityCases, 0), ownerCond)),
 
       // Get location stats
       db
@@ -116,6 +120,7 @@ const adminGetStockOverview = wmsOperatorProcedure
         .select({
           inboundCases: sql<number>`COALESCE(SUM(${logisticsShipmentItems.cases}), 0)::int`,
           inboundShipments: sql<number>`COUNT(DISTINCT ${logisticsShipments.id})::int`,
+          inboundValue: sql<number>`COALESCE(SUM(${logisticsShipmentItems.cases} * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12) * COALESCE(${logisticsShipmentItems.landedCostPerBottle}, ${logisticsShipmentItems.productCostPerBottle}, 0)), 0)::float`,
         })
         .from(logisticsShipmentItems)
         .innerJoin(
@@ -145,7 +150,7 @@ const adminGetStockOverview = wmsOperatorProcedure
         })
         .from(wmsStock)
         .innerJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
-        .where(gt(wmsStock.quantityCases, 0)),
+        .where(and(gt(wmsStock.quantityCases, 0), ownerCond)),
     ]);
 
     const stockStats = stockStatsResult[0];
@@ -196,6 +201,7 @@ const adminGetStockOverview = wmsOperatorProcedure
       inbound: {
         cases: inboundStock?.inboundCases ?? 0,
         shipments: inboundStock?.inboundShipments ?? 0,
+        value: Math.round((inboundStock?.inboundValue ?? 0) * 100) / 100,
       },
       valuation: {
         totalValue: Math.round((valuation?.totalValue ?? 0) * 100) / 100,
