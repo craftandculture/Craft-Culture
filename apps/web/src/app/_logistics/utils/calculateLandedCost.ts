@@ -1,4 +1,21 @@
-import type { LogisticsShipment, LogisticsShipmentItem } from '@/database/schema';
+import type { LogisticsShipmentItem } from '@/database/schema';
+
+/**
+ * The shipment-level cost fields + allocation method needed to compute landed
+ * cost. Both a LogisticsShipment and a LogisticsShipmentGroup satisfy this
+ * structurally, so the same engine allocates per-shipment or across a group.
+ */
+export interface LandedCostSource {
+  freightCostUsd: number | null;
+  insuranceCostUsd: number | null;
+  originHandlingUsd: number | null;
+  destinationHandlingUsd: number | null;
+  customsClearanceUsd: number | null;
+  govFeesUsd: number | null;
+  deliveryCostUsd: number | null;
+  otherCostsUsd: number | null;
+  costAllocationMethod: 'by_bottle' | 'by_weight' | 'by_value' | null;
+}
 
 interface LandedCostResult {
   totalLandedCost: number;
@@ -33,7 +50,7 @@ interface LandedCostResult {
  *   console.log(result.landedCostPerBottle); // e.g., $18.88
  */
 const calculateLandedCost = (
-  shipment: LogisticsShipment,
+  shipment: LandedCostSource,
   items: LogisticsShipmentItem[],
 ): LandedCostResult => {
   // Sum all shipment-level costs

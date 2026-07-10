@@ -44,9 +44,8 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import usePrint from '@/app/_wms/hooks/usePrint';
+import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
-import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -140,7 +139,7 @@ const AdminPrivateOrderDetailPage = () => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
-  const { print } = usePrint();
+  const { printLabels, isPrinting } = usePrintPcoLabels();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
@@ -161,7 +160,6 @@ const AdminPrivateOrderDetailPage = () => {
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
   const [distributorPaymentRef, setDistributorPaymentRef] = useState('');
   const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   // Fetch order details
   const {
@@ -456,41 +454,6 @@ const AdminPrivateOrderDetailPage = () => {
     return currency === 'USD' ? amount : amount * usdToAedRate;
   };
 
-  /** Print case labels for all order items on Zebra ZD421 */
-  const handlePrintLabels = async () => {
-    if (!order.items || order.items.length === 0) return;
-    setIsPrinting(true);
-    try {
-      const totalCases = order.caseCount ?? order.items.reduce((sum, i) => sum + (i.quantity ?? 1), 0);
-      const labels = order.items.map((item) => {
-        const lwin = item.lwin || 'UNKNOWN';
-        const bottleSizeNum = parseInt(String(item.bottleSize ?? '75').replace(/\D/g, ''), 10);
-        const bottleSizeCl = bottleSizeNum > 200 ? bottleSizeNum / 10 : bottleSizeNum;
-        const qty = item.quantity ?? 1;
-        const packSize = `${item.caseConfig ?? 12}x${bottleSizeCl}cl | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
-        return {
-          showBarcode: false,
-          productName: item.productName || 'Unknown Product',
-          lwin18: lwin,
-          packSize,
-          vintage: item.vintage || undefined,
-          lotNumber: `${order.orderNumber || 'PCO'} | Total Order: ${totalCases} ${totalCases === 1 ? 'Case' : 'Cases'}`,
-          owner: order.partner?.businessName || undefined,
-        };
-      });
-      const zpl = generateBatchLabelsZpl(labels);
-      const success = await print(zpl, '4x2');
-      if (success) {
-        toast.success(`Printed ${labels.length} label${labels.length === 1 ? '' : 's'}`);
-      } else {
-        toast.error('Failed to reach printer — check WiFi connection');
-      }
-    } catch {
-      toast.error('Failed to generate labels');
-    } finally {
-      setIsPrinting(false);
-    }
-  };
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -817,7 +780,7 @@ const AdminPrivateOrderDetailPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => void handlePrintLabels()}
+                    onClick={() => void printLabels(order)}
                     disabled={isPrinting}
                   >
                     <Icon icon={isPrinting ? IconLoader2 : IconPrinter} size="xs" className={isPrinting ? 'animate-spin' : ''} />

@@ -9,6 +9,7 @@ import {
   IconLoader2,
   IconPackage,
   IconPrinter,
+  IconTag,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -26,6 +27,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
+import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -69,6 +71,21 @@ const WMSPickListDetailPage = () => {
   const { data, isLoading } = useQuery({
     ...api.wms.admin.picking.getOne.queryOptions({ pickListId }),
   });
+
+  // Resolve the private-client order (PCO) behind this pick, if any, so the
+  // operator can print client labels without leaving the pick flow. Returns
+  // null for non-PCO picks (distributor/consignment orders), which hides the
+  // label action entirely.
+  const { data: pcoRef } = useQuery({
+    ...api.wms.admin.picking.resolvePcoOrder.queryOptions({ pickListId }),
+  });
+  const { data: pcoOrder } = useQuery({
+    ...api.privateClientOrders.adminGetOne.queryOptions({
+      id: pcoRef?.orderId ?? '',
+    }),
+    enabled: !!pcoRef?.orderId,
+  });
+  const { printLabels, isPrinting: isPrintingLabels } = usePrintPcoLabels();
 
   // Invalidate both cloud tRPC and local NUC pick queries
   const invalidatePickQueries = () => {
@@ -362,6 +379,40 @@ const WMSPickListDetailPage = () => {
           </Button>
         )}
       </div>
+
+      {/* PCO client labels — only for picks that resolve to a private-client order */}
+      {pcoRef?.orderId && (
+        <button
+          type="button"
+          onClick={() => pcoOrder && void printLabels(pcoOrder)}
+          disabled={!pcoOrder || isPrintingLabels}
+          title="Print client labels for this order"
+          className="mb-3 flex w-full items-center gap-3 rounded-lg border border-brand-500/40 bg-brand-50 px-4 py-2.5 text-left transition-colors hover:bg-brand-100 disabled:opacity-60 dark:bg-brand-900/20 dark:hover:bg-brand-900/30"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white">
+            <Icon
+              icon={isPrintingLabels ? IconLoader2 : IconTag}
+              size="sm"
+              className={isPrintingLabels ? 'animate-spin' : ''}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <Typography
+              variant="bodySm"
+              className="font-semibold text-brand-700 dark:text-brand-400"
+            >
+              {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" className="truncate">
+              {pcoRef.orderNumber}
+              {pcoRef.labelCount
+                ? ` · ${pcoRef.labelCount} label${pcoRef.labelCount === 1 ? '' : 's'}`
+                : ''}
+            </Typography>
+          </div>
+          <Icon icon={IconChevronRight} size="sm" className="shrink-0 text-brand-600" />
+        </button>
+      )}
 
       {/* Completed State */}
       {isComplete && (

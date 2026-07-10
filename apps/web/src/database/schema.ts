@@ -2802,6 +2802,10 @@ export const logisticsShipments = pgTable(
       'by_bottle',
     ),
 
+    // Consolidation group — share one freight/logistics invoice across shipments
+    // (FK to logistics_shipment_groups added in the DB migration).
+    groupId: uuid('group_id'),
+
     // CO2 emissions (from Hillebrand)
     co2EmissionsTonnes: doublePrecision('co2_emissions_tonnes'),
 
@@ -2824,6 +2828,49 @@ export const logisticsShipments = pgTable(
 ).enableRLS();
 
 export type LogisticsShipment = typeof logisticsShipments.$inferSelect;
+
+/**
+ * Consolidation group — ties several shipments that move together (e.g. one
+ * flight / AWB) so a single set of freight & logistics costs can be allocated
+ * across all their bottles. Shipments reference this via logistics_shipments.group_id.
+ */
+export const logisticsShipmentGroups = pgTable(
+  'logistics_shipment_groups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    // AWB / flight / container reference the group shares
+    reference: text('reference'),
+    notes: text('notes'),
+
+    // Shared costs to spread across every bottle in the group
+    freightCostUsd: doublePrecision('freight_cost_usd'),
+    insuranceCostUsd: doublePrecision('insurance_cost_usd'),
+    originHandlingUsd: doublePrecision('origin_handling_usd'),
+    destinationHandlingUsd: doublePrecision('destination_handling_usd'),
+    customsClearanceUsd: doublePrecision('customs_clearance_usd'),
+    govFeesUsd: doublePrecision('gov_fees_usd'),
+    deliveryCostUsd: doublePrecision('delivery_cost_usd'),
+    otherCostsUsd: doublePrecision('other_costs_usd'),
+
+    // How the shared costs are split across items
+    costAllocationMethod: logisticsCostAllocationMethod('cost_allocation_method').default(
+      'by_bottle',
+    ),
+
+    // Results of the last allocation
+    totalLandedCostUsd: doublePrecision('total_landed_cost_usd'),
+    totalCases: integer('total_cases').default(0),
+    totalBottles: integer('total_bottles').default(0),
+    allocatedAt: timestamp('allocated_at', { mode: 'date' }),
+
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_shipment_groups_name_idx').on(table.name)],
+);
+
+export type LogisticsShipmentGroup = typeof logisticsShipmentGroups.$inferSelect;
 
 /**
  * Tracks deleted Hillebrand shipment IDs so re-sync does not recreate them
