@@ -51,3 +51,13 @@ dump*.csv
 repomix-output.xml
 .vercel
 .env*.local
+
+# Stray working files — keep loose docs/data out of the app repo
+/antinori-order.xlsx
+/fine-wine-supercellar.xlsx
+/cc-logo-cropped.png
+/cd-april-consolidated.html
+/commercial-invoice.html
+/payslip.html
+# Accidental build-artifact filename from a botched shell redirect
+apps/web/loadProducts*
