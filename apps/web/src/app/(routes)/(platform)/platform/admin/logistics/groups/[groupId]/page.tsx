@@ -320,33 +320,38 @@ const ShipmentGroupDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Allocation result */}
-        {group.allocatedAt && (
-          <Card>
-            <CardContent className="flex-row items-center justify-around gap-4 p-4 text-center">
-              <div>
-                <Typography variant="headingSm">{fmtUsd(group.totalLandedCostUsd)}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Total landed cost
-                </Typography>
-              </div>
-              <div>
-                <Typography variant="headingSm">
-                  {group.totalBottles ? fmtUsd(totalCost / group.totalBottles) : '—'}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Freight / bottle
-                </Typography>
-              </div>
-              <div>
-                <Typography variant="headingSm">{group.totalBottles?.toLocaleString()}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Bottles
-                </Typography>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Allocation result — landed = goods (product) + freight & logistics */}
+        {group.allocatedAt &&
+          (() => {
+            const freightTotal = COST_FIELDS.reduce(
+              (s, f) => s + (group[f.key] ?? 0),
+              0,
+            );
+            const landed = group.totalLandedCostUsd ?? 0;
+            const goods = landed - freightTotal;
+            const bottles = group.totalBottles ?? 0;
+            const tiles = [
+              { v: fmtUsd(goods), label: 'Goods (product) cost' },
+              { v: fmtUsd(freightTotal), label: 'Freight & logistics' },
+              { v: fmtUsd(landed), label: 'Total landed cost' },
+              { v: bottles ? fmtUsd(landed / bottles) : '—', label: 'Landed / bottle' },
+              { v: bottles ? fmtUsd(freightTotal / bottles) : '—', label: 'Freight / bottle' },
+            ];
+            return (
+              <Card>
+                <CardContent className="flex-row flex-wrap items-center justify-around gap-4 p-4 text-center">
+                  {tiles.map((t) => (
+                    <div key={t.label}>
+                      <Typography variant="headingSm">{t.v}</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {t.label}
+                      </Typography>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })()}
       </div>
     </main>
   );
