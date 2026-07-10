@@ -87,8 +87,20 @@ const adminGetOne = adminProcedure
         .orderBy(logisticsShipmentActivityLogs.createdAt),
     ]);
 
+    // Derive case/bottle totals from line items (authoritative). The
+    // denormalized header counters drift and are set inconsistently across
+    // ingestion paths, so prefer the items and only fall back to the header
+    // when a shipment has no items yet.
+    const derivedCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
+    const derivedBottles = items.reduce(
+      (sum, i) => sum + (i.totalBottles ?? (i.cases ?? 0) * (i.bottlesPerCase ?? 12)),
+      0,
+    );
+
     return {
       ...result.shipment,
+      totalCases: items.length > 0 ? derivedCases : result.shipment.totalCases,
+      totalBottles: items.length > 0 ? derivedBottles : result.shipment.totalBottles,
       partner: result.partner,
       clientContact: result.clientContact,
       createdByUser: result.createdByUser,
