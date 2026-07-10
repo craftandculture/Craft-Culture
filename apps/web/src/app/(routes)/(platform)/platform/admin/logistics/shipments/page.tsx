@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -379,38 +380,13 @@ const ShipmentsListPage = () => {
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0 sm:gap-4">
-                          <div className="flex flex-col items-end gap-1.5">
-                            <div className="flex items-stretch gap-3 sm:gap-4">
-                              <div className="flex flex-col items-end justify-center">
-                                <Typography
-                                  variant="headingSm"
-                                  className="tabular-nums leading-none"
-                                >
-                                  {(shipment.totalCases ?? 0).toLocaleString()}
-                                </Typography>
-                                <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-text-muted">
-                                  cases
-                                </span>
-                              </div>
-                              <div className="w-px self-stretch bg-border-muted" />
-                              <div className="flex flex-col items-end justify-center">
-                                <Typography
-                                  variant="headingSm"
-                                  className="tabular-nums leading-none"
-                                >
-                                  {(shipment.totalBottles ?? 0).toLocaleString()}
-                                </Typography>
-                                <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-text-muted">
-                                  bottles
-                                </span>
-                              </div>
-                            </div>
-                            {shipment.eta && (
-                              <span className="inline-flex items-center rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
-                                ETA {formatDate(shipment.eta)}
-                              </span>
-                            )}
-                          </div>
+                          <ShipmentMetrics
+                            cases={shipment.totalCases}
+                            bottles={shipment.totalBottles}
+                            etaLabel={
+                              shipment.eta ? formatDate(shipment.eta) : null
+                            }
+                          />
                           <IconChevronRight className="h-5 w-5 shrink-0 text-text-muted" />
                         </div>
                       </div>

@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
+import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -588,22 +589,13 @@ const LogisticsDashboardPage = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 shrink-0">
-                        <div className="text-right">
-                          <Typography variant="bodySm">
-                            {shipment.totalCases ?? 0} cases
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {(shipment.totalBottles ?? 0).toLocaleString()}{' '}
-                            bottles
-                          </Typography>
-                          {shipment.eta && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              ETA {formatDate(shipment.eta)}
-                            </Typography>
-                          )}
-                        </div>
-                        <IconChevronRight className="h-5 w-5 text-text-muted" />
+                      <div className="flex items-center gap-3 shrink-0 sm:gap-4">
+                        <ShipmentMetrics
+                          cases={shipment.totalCases}
+                          bottles={shipment.totalBottles}
+                          etaLabel={shipment.eta ? formatDate(shipment.eta) : null}
+                        />
+                        <IconChevronRight className="h-5 w-5 shrink-0 text-text-muted" />
                       </div>
                     </Link>
                   );
