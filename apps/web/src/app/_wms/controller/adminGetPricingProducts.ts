@@ -200,7 +200,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // gap KPIs in step with the displayed rows instead of stale stored prices.
     // Import falls back to the latest shipment cost when no stored import price
     // (same as the displayed rows), so stock values aren't understated.
-    const landedExpr = sql`(COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25))`;
+    const landedExpr = sql`(COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + (CASE WHEN ${wmsStock.category} = 'Spirits' THEN 0 ELSE COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25) END))`;
     const pcExpr = sql`(CASE
       WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
