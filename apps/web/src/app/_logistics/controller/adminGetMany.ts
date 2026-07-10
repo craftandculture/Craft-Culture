@@ -1,7 +1,12 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipments, partners, users } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  partners,
+  users,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getShipmentsSchema from '../schemas/getShipmentsSchema';
@@ -70,6 +75,23 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
   const shipmentsList = await db
     .select({
       shipment: logisticsShipments,
+      // Case/bottle totals derived from line items (authoritative). The
+      // denormalized header counters drift (increment bugs) and are set
+      // inconsistently across ingestion paths (Hillebrand sync, PDF extract,
+      // manual add), so only fall back to them when a shipment has no items.
+      itemCases: sql<number>`COALESCE((
+        SELECT SUM(${logisticsShipmentItems.cases})
+        FROM ${logisticsShipmentItems}
+        WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+      ), ${logisticsShipments.totalCases}, 0)`,
+      itemBottles: sql<number>`COALESCE((
+        SELECT SUM(COALESCE(
+          ${logisticsShipmentItems.totalBottles},
+          ${logisticsShipmentItems.cases} * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
+        ))
+        FROM ${logisticsShipmentItems}
+        WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+      ), ${logisticsShipments.totalBottles}, 0)`,
       partner: {
         id: partners.id,
         businessName: partners.businessName,
@@ -92,6 +114,8 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
   // Flatten response
   const shipmentsWithRelations = shipmentsList.map((row) => ({
     ...row.shipment,
+    totalCases: Number(row.itemCases),
+    totalBottles: Number(row.itemBottles),
     partner: row.partner,
     createdByUser: row.createdByUser,
   }));
