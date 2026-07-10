@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
+  logisticsGroupCostLines,
   logisticsShipmentGroups,
   logisticsShipmentItems,
   logisticsShipments,
@@ -10,12 +11,15 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { calculateShipmentGroupSchema } from '../schemas/shipmentGroupSchemas';
-import calculateLandedCost from '../utils/calculateLandedCost';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const bottlesOf = (i: { totalBottles: number | null; cases: number; bottlesPerCase: number | null }) =>
+  i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
 
 /**
- * Allocate a group's shared freight & logistics costs across every bottle in
- * all member shipments, writing landed cost per bottle onto each item. The
- * group's cost fields drive the allocation; product cost comes from the items.
+ * Allocate a group's logistics cost ledger across every bottle and write the
+ * landed cost per bottle onto each item. Shared cost lines spread across all
+ * bottles in the group; per-shipment lines spread only within their shipment.
  */
 const adminCalculateShipmentGroup = adminProcedure
   .input(calculateShipmentGroupSchema)
@@ -54,34 +58,64 @@ const adminCalculateShipmentGroup = adminProcedure
       });
     }
 
-    // The group satisfies LandedCostSource (same cost fields as a shipment),
-    // so the shared engine spreads its costs across the pooled items.
-    const result = calculateLandedCost(group, items);
+    const costLines = await db
+      .select()
+      .from(logisticsGroupCostLines)
+      .where(eq(logisticsGroupCostLines.groupId, group.id));
 
-    for (const itemResult of result.items) {
+    const sharedUsd = costLines
+      .filter((l) => l.scope === 'shared')
+      .reduce((s, l) => s + l.amountUsd, 0);
+    const directByShipment = new Map<string, number>();
+    for (const l of costLines) {
+      if (l.scope === 'shipment' && l.shipmentId) {
+        directByShipment.set(l.shipmentId, (directByShipment.get(l.shipmentId) ?? 0) + l.amountUsd);
+      }
+    }
+
+    const totalBottles = items.reduce((s, i) => s + bottlesOf(i), 0);
+    const bottlesByShipment = new Map<string, number>();
+    for (const i of items) {
+      bottlesByShipment.set(i.shipmentId, (bottlesByShipment.get(i.shipmentId) ?? 0) + bottlesOf(i));
+    }
+
+    let totalProductCost = 0;
+    let totalFreight = 0;
+
+    for (const item of items) {
+      const bottles = bottlesOf(item);
+      const productCost = bottles * (item.productCostPerBottle ?? 0);
+      // Shared costs spread across every bottle; direct costs only within the
+      // item's own shipment.
+      const sharedShare = totalBottles > 0 ? sharedUsd * (bottles / totalBottles) : 0;
+      const shipBottles = bottlesByShipment.get(item.shipmentId) ?? 0;
+      const directShare =
+        shipBottles > 0
+          ? (directByShipment.get(item.shipmentId) ?? 0) * (bottles / shipBottles)
+          : 0;
+      const freight = sharedShare + directShare;
+      const landedTotal = productCost + freight;
+
+      totalProductCost += productCost;
+      totalFreight += freight;
+
       await db
         .update(logisticsShipmentItems)
         .set({
-          freightAllocated: itemResult.freightAllocated,
-          handlingAllocated: itemResult.handlingAllocated,
-          insuranceAllocated: itemResult.insuranceAllocated,
-          govFeesAllocated: itemResult.govFeesAllocated,
-          landedCostTotal: itemResult.landedCostTotal,
-          landedCostPerBottle: itemResult.landedCostPerBottle,
-          marginPerBottle: itemResult.marginPerBottle,
-          marginPercent: itemResult.marginPercent,
+          freightAllocated: round2(freight),
+          landedCostTotal: round2(landedTotal),
+          landedCostPerBottle: bottles > 0 ? round2(landedTotal / bottles) : 0,
           updatedAt: new Date(),
         })
-        .where(eq(logisticsShipmentItems.id, itemResult.itemId));
+        .where(eq(logisticsShipmentItems.id, item.id));
     }
 
-    const totalBottles = result.items.reduce((sum, r) => sum + r.totalBottles, 0);
-    const totalCases = shipments.reduce((sum, s) => sum + (s.totalCases ?? 0), 0);
+    const totalCases = items.reduce((s, i) => s + (i.cases ?? 0), 0);
 
     await db
       .update(logisticsShipmentGroups)
       .set({
-        totalLandedCostUsd: result.totalLandedCost,
+        totalLandedCostUsd: round2(totalProductCost + totalFreight),
         totalBottles,
         totalCases,
         allocatedAt: new Date(),
@@ -89,7 +123,14 @@ const adminCalculateShipmentGroup = adminProcedure
       })
       .where(eq(logisticsShipmentGroups.id, group.id));
 
-    return { ...result, totalBottles, totalCases };
+    return {
+      totalProductCost: round2(totalProductCost),
+      totalFreight: round2(totalFreight),
+      totalLanded: round2(totalProductCost + totalFreight),
+      totalBottles,
+      totalCases,
+      perBottleFreight: totalBottles > 0 ? round2(totalFreight / totalBottles) : 0,
+    };
   });
 
 export default adminCalculateShipmentGroup;

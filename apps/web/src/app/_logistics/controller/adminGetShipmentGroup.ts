@@ -1,8 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
+  logisticsGroupCostLines,
   logisticsShipmentGroups,
   logisticsShipmentItems,
   logisticsShipments,
@@ -58,6 +59,33 @@ const adminGetShipmentGroup = adminProcedure
       return sum + bottles * (i.productCostPerBottle ?? 0);
     }, 0);
 
+    // Logistics cost ledger + derived per-unit metrics
+    const costLines = await db
+      .select()
+      .from(logisticsGroupCostLines)
+      .where(eq(logisticsGroupCostLines.groupId, group.id))
+      .orderBy(desc(logisticsGroupCostLines.createdAt));
+
+    const sharedUsd = costLines
+      .filter((l) => l.scope === 'shared')
+      .reduce((s, l) => s + l.amountUsd, 0);
+    const shipmentDirectUsd = costLines
+      .filter((l) => l.scope === 'shipment')
+      .reduce((s, l) => s + l.amountUsd, 0);
+    const totalLogisticsUsd = sharedUsd + shipmentDirectUsd;
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const metrics = {
+      sharedUsd: round2(sharedUsd),
+      shipmentDirectUsd: round2(shipmentDirectUsd),
+      totalLogisticsUsd: round2(totalLogisticsUsd),
+      perBottle: totalBottles ? round2(totalLogisticsUsd / totalBottles) : null,
+      perCase: totalCases ? round2(totalLogisticsUsd / totalCases) : null,
+      perKg: group.chargeableWeightKg
+        ? round2(totalLogisticsUsd / group.chargeableWeightKg)
+        : null,
+    };
+
     return {
       group,
       shipments: shipmentsWithItems,
@@ -65,6 +93,8 @@ const adminGetShipmentGroup = adminProcedure
       totalBottles,
       totalCases,
       totalProductCost,
+      costLines,
+      metrics,
     };
   });
 

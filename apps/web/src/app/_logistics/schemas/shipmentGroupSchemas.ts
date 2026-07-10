@@ -29,6 +29,8 @@ export const updateShipmentGroupSchema = z.object({
   notes: z.string().max(2000).nullable().optional(),
   /** When provided, replaces the group's shipment membership entirely. */
   shipmentIds: z.array(z.string().uuid()).optional(),
+  /** Chargeable weight (kg) from the AWB, for the $/kg benchmark. */
+  chargeableWeightKg: z.number().min(0).nullable().optional(),
   ...groupCostFields,
 });
 
@@ -44,5 +46,53 @@ export const calculateShipmentGroupSchema = z.object({
 
 /** Delete a group (shipments are unassigned, not deleted). */
 export const deleteShipmentGroupSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const costLineCategories = [
+  'freight',
+  'collection',
+  'customs',
+  'handling',
+  'security',
+  'documentation',
+  'insurance',
+  'duty',
+  'delivery',
+  'other',
+] as const;
+
+/** Add one logistics cost line (invoice charge) to a group. */
+export const addGroupCostLineSchema = z.object({
+  groupId: z.string().uuid(),
+  category: z.enum(costLineCategories).default('freight'),
+  description: z.string().max(300).nullable().optional(),
+  amount: z.number().min(0),
+  currency: z.string().min(3).max(3).default('USD'),
+  /** FX rate to USD locked in at entry time (amountUsd = amount * fxToUsd). */
+  fxToUsd: z.number().min(0).default(1),
+  invoiceRef: z.string().max(120).nullable().optional(),
+  invoiceDate: z.string().nullable().optional(),
+  scope: z.enum(['shared', 'shipment']).default('shared'),
+  shipmentId: z.string().uuid().nullable().optional(),
+  sourceDocument: z.string().max(300).nullable().optional(),
+});
+
+/** Update a cost line. */
+export const updateGroupCostLineSchema = z.object({
+  id: z.string().uuid(),
+  category: z.enum(costLineCategories).optional(),
+  description: z.string().max(300).nullable().optional(),
+  amount: z.number().min(0).optional(),
+  currency: z.string().min(3).max(3).optional(),
+  fxToUsd: z.number().min(0).optional(),
+  invoiceRef: z.string().max(120).nullable().optional(),
+  invoiceDate: z.string().nullable().optional(),
+  scope: z.enum(['shared', 'shipment']).optional(),
+  shipmentId: z.string().uuid().nullable().optional(),
+});
+
+/** Delete a cost line. */
+export const deleteGroupCostLineSchema = z.object({
   id: z.string().uuid(),
 });
