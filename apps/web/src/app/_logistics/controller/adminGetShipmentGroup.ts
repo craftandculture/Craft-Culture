@@ -46,12 +46,26 @@ const adminGetShipmentGroup = adminProcedure
       items: items.filter((i) => i.shipmentId === s.id),
     }));
 
+    // Live totals straight off the items so the group summary stays in step
+    // with item edits without needing a re-allocation.
     const totalBottles = items.reduce(
       (sum, i) => sum + (i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12)),
       0,
     );
+    const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
+    const totalProductCost = items.reduce((sum, i) => {
+      const bottles = i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+      return sum + bottles * (i.productCostPerBottle ?? 0);
+    }, 0);
 
-    return { group, shipments: shipmentsWithItems, itemCount: items.length, totalBottles };
+    return {
+      group,
+      shipments: shipmentsWithItems,
+      itemCount: items.length,
+      totalBottles,
+      totalCases,
+      totalProductCost,
+    };
   });
 
 export default adminGetShipmentGroup;
