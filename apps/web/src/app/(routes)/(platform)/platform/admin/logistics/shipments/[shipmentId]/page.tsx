@@ -1582,16 +1582,35 @@ const ShipmentDetailPage = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Typography variant="headingSm">Cost Breakdown</Typography>
-                  <Button
-                    size="sm"
-                    onClick={() => calculateLandedCost({ shipmentId })}
-                    disabled={isCalculating || !shipment.items?.length}
-                  >
-                    <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
-                      {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
-                    </ButtonContent>
-                  </Button>
+                  {shipment.groupId ? (
+                    <Link
+                      href={`/platform/admin/logistics/groups/${shipment.groupId}`}
+                      className="text-sm font-medium text-text-brand hover:underline"
+                    >
+                      Managed by group →
+                    </Link>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => calculateLandedCost({ shipmentId })}
+                      disabled={isCalculating || !shipment.items?.length}
+                    >
+                      <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
+                        {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
+                      </ButtonContent>
+                    </Button>
+                  )}
                 </div>
+                {shipment.groupId && (
+                  <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-2">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      This shipment is in a consolidation group — its freight &amp; logistics are
+                      allocated at the group level so shared costs aren&apos;t counted more than
+                      once. Don&apos;t calculate here or you&apos;ll overwrite the group&apos;s
+                      allocation with this shipment&apos;s own (empty) costs.
+                    </Typography>
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     [
