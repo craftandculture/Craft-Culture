@@ -1,11 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import addItemSchema from '../schemas/addItemSchema';
+import recalcShipmentTotals from '../utils/recalcShipmentTotals';
 
 /**
  * Add an item to a logistics shipment
@@ -81,18 +81,8 @@ const adminAddItem = adminProcedure.input(addItemSchema).mutation(async ({ input
     });
   }
 
-  // Update shipment totals
-  await db
-    .update(logisticsShipments)
-    .set({
-      totalCases: sql`COALESCE(${logisticsShipments.totalCases}, 0) + ${cases}`,
-      totalBottles: sql`COALESCE(${logisticsShipments.totalBottles}, 0) + ${totalBottles}`,
-      totalWeightKg: grossWeightKg
-        ? sql`COALESCE(${logisticsShipments.totalWeightKg}, 0) + ${grossWeightKg}`
-        : logisticsShipments.totalWeightKg,
-      updatedAt: new Date(),
-    })
-    .where(eq(logisticsShipments.id, shipmentId));
+  // Recompute shipment totals from line items (drift-proof)
+  await recalcShipmentTotals(shipmentId);
 
   return item;
 });
