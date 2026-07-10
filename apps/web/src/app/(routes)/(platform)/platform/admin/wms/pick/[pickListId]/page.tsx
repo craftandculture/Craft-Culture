@@ -329,7 +329,7 @@ const WMSPickListDetailPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-lg px-3 py-4 md:max-w-3xl md:px-4 lg:max-w-5xl">
+    <div className="mx-auto max-w-lg px-3 py-4 sm:px-4 md:max-w-2xl">
       {/* Compact Header */}
       <div className="mb-3 flex items-center gap-3">
         <Link href="/platform/admin/wms/pick">
@@ -380,7 +380,7 @@ const WMSPickListDetailPage = () => {
         )}
       </div>
 
-      {/* PCO client labels — slim, secondary action; only shown for picks that
+      {/* PCO client labels — secondary action; only shown for picks that
           resolve to a private-client order */}
       {pcoRef?.orderId && (
         <button
@@ -388,26 +388,29 @@ const WMSPickListDetailPage = () => {
           onClick={() => pcoOrder && void printLabels(pcoOrder)}
           disabled={!pcoOrder || isPrintingLabels}
           title="Print client labels for this order"
-          className="mb-3 flex w-full items-center gap-2 rounded-md border border-border-primary px-3 py-1.5 text-left transition-colors hover:bg-fill-secondary disabled:opacity-60"
+          className="mb-3 flex w-full items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-4 py-2.5 text-left transition-colors hover:bg-fill-muted disabled:opacity-60"
         >
-          <Icon
-            icon={isPrintingLabels ? IconLoader2 : IconTag}
-            size="xs"
-            className={`shrink-0 text-text-muted ${isPrintingLabels ? 'animate-spin' : ''}`}
-          />
-          <span className="min-w-0 flex-1 truncate text-xs">
-            <span className="font-semibold text-text-primary">
-              {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
-            </span>
-            <span className="text-text-muted">
-              {' · '}
-              {pcoRef.orderNumber}
-              {pcoRef.labelCount
-                ? ` · ${pcoRef.labelCount} label${pcoRef.labelCount === 1 ? '' : 's'}`
-                : ''}
-            </span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-brand">
+            <Icon
+              icon={isPrintingLabels ? IconLoader2 : IconTag}
+              size="sm"
+              className={isPrintingLabels ? 'animate-spin' : ''}
+            />
           </span>
-          <Icon icon={IconChevronRight} size="xs" className="shrink-0 text-text-muted" />
+          <span className="min-w-0 flex-1">
+            <Typography variant="bodySm" className="font-semibold text-text-primary">
+              {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" className="truncate">
+              {pcoRef.orderNumber}
+            </Typography>
+          </span>
+          {pcoRef.labelCount ? (
+            <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-brand">
+              {pcoRef.labelCount} label{pcoRef.labelCount === 1 ? '' : 's'}
+            </span>
+          ) : null}
+          <Icon icon={IconChevronRight} size="sm" className="shrink-0 text-text-muted" />
         </button>
       )}
 
@@ -443,7 +446,7 @@ const WMSPickListDetailPage = () => {
             </Typography>
             <Button
               variant="default"
-              className="h-12 w-full"
+              className="h-14 w-full text-base font-semibold shadow-sm"
               onClick={handleComplete}
               disabled={completeMutation.isPending}
             >
@@ -519,7 +522,11 @@ const WMSPickListDetailPage = () => {
 
               {/* Start picking — embedded in card */}
               <div className="p-3">
-                <Button variant="default" className="h-12 w-full text-base" onClick={startPicking}>
+                <Button
+                  variant="default"
+                  className="h-14 w-full text-base font-semibold shadow-sm"
+                  onClick={startPicking}
+                >
                   <ButtonContent iconLeft={IconPackage}>Start Picking</ButtonContent>
                 </Button>
               </div>
@@ -734,7 +741,7 @@ const WMSPickListDetailPage = () => {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="h-12 flex-1"
+              className="h-14 flex-1"
               onClick={() => {
                 setPickingItem(null);
                 setPickedLocationId(null);
@@ -751,7 +758,7 @@ const WMSPickListDetailPage = () => {
             </Button>
             <Button
               variant="default"
-              className="h-12 flex-[2]"
+              className="h-14 flex-[2] text-base font-semibold"
               onClick={confirmPick}
               disabled={
                 pickItemMutation.isPending ||
