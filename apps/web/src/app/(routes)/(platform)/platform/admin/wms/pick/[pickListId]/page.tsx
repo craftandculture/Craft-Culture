@@ -380,37 +380,34 @@ const WMSPickListDetailPage = () => {
         )}
       </div>
 
-      {/* PCO client labels — only for picks that resolve to a private-client order */}
+      {/* PCO client labels — slim, secondary action; only shown for picks that
+          resolve to a private-client order */}
       {pcoRef?.orderId && (
         <button
           type="button"
           onClick={() => pcoOrder && void printLabels(pcoOrder)}
           disabled={!pcoOrder || isPrintingLabels}
           title="Print client labels for this order"
-          className="mb-3 flex w-full items-center gap-3 rounded-lg border border-brand-500/40 bg-brand-50 px-4 py-2.5 text-left transition-colors hover:bg-brand-100 disabled:opacity-60 dark:bg-brand-900/20 dark:hover:bg-brand-900/30"
+          className="mb-3 flex w-full items-center gap-2 rounded-md border border-border-primary px-3 py-1.5 text-left transition-colors hover:bg-fill-secondary disabled:opacity-60"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white">
-            <Icon
-              icon={isPrintingLabels ? IconLoader2 : IconTag}
-              size="sm"
-              className={isPrintingLabels ? 'animate-spin' : ''}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Typography
-              variant="bodySm"
-              className="font-semibold text-brand-700 dark:text-brand-400"
-            >
+          <Icon
+            icon={isPrintingLabels ? IconLoader2 : IconTag}
+            size="xs"
+            className={`shrink-0 text-text-muted ${isPrintingLabels ? 'animate-spin' : ''}`}
+          />
+          <span className="min-w-0 flex-1 truncate text-xs">
+            <span className="font-semibold text-text-primary">
               {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted" className="truncate">
+            </span>
+            <span className="text-text-muted">
+              {' · '}
               {pcoRef.orderNumber}
               {pcoRef.labelCount
                 ? ` · ${pcoRef.labelCount} label${pcoRef.labelCount === 1 ? '' : 's'}`
                 : ''}
-            </Typography>
-          </div>
-          <Icon icon={IconChevronRight} size="sm" className="shrink-0 text-brand-600" />
+            </span>
+          </span>
+          <Icon icon={IconChevronRight} size="xs" className="shrink-0 text-text-muted" />
         </button>
       )}
 
