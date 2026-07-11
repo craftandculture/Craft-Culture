@@ -81,6 +81,7 @@ const adminCalculateShipmentGroup = adminProcedure
 
     let totalProductCost = 0;
     let totalFreight = 0;
+    const landedByShipment = new Map<string, number>();
 
     for (const item of items) {
       const bottles = bottlesOf(item);
@@ -98,6 +99,10 @@ const adminCalculateShipmentGroup = adminProcedure
 
       totalProductCost += productCost;
       totalFreight += freight;
+      landedByShipment.set(
+        item.shipmentId,
+        (landedByShipment.get(item.shipmentId) ?? 0) + landedTotal,
+      );
 
       await db
         .update(logisticsShipmentItems)
@@ -108,6 +113,18 @@ const adminCalculateShipmentGroup = adminProcedure
           updatedAt: new Date(),
         })
         .where(eq(logisticsShipmentItems.id, item.id));
+    }
+
+    // Keep each member shipment's header landed cost in step with its share,
+    // so the shipment Costs tab (and anything reading the header) is correct.
+    for (const shipment of shipments) {
+      await db
+        .update(logisticsShipments)
+        .set({
+          totalLandedCostUsd: round2(landedByShipment.get(shipment.id) ?? 0),
+          updatedAt: new Date(),
+        })
+        .where(eq(logisticsShipments.id, shipment.id));
     }
 
     const totalCases = items.reduce((s, i) => s + (i.cases ?? 0), 0);
