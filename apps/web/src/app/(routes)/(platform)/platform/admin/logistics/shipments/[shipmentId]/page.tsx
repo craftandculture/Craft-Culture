@@ -1611,6 +1611,62 @@ const ShipmentDetailPage = () => {
                     </Typography>
                   </div>
                 )}
+                {shipment.groupId ? (
+                  (() => {
+                    const gItems = shipment.items ?? [];
+                    const bof = (i: {
+                      totalBottles: number | null;
+                      cases: number;
+                      bottlesPerCase: number | null;
+                    }) => i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+                    const gGoods = gItems.reduce(
+                      (s, i) => s + bof(i) * (i.productCostPerBottle ?? 0),
+                      0,
+                    );
+                    const gFreight = gItems.reduce((s, i) => s + (i.freightAllocated ?? 0), 0);
+                    const gLanded = gItems.reduce((s, i) => s + (i.landedCostTotal ?? 0), 0);
+                    const gBottles = gItems.reduce((s, i) => s + bof(i), 0);
+                    return (
+                      <>
+                        <dl className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <dt className="text-text-muted">Goods (product) cost</dt>
+                            <dd className="tabular-nums">
+                              {gGoods ? formatPrice(gGoods, 'USD') : '-'}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <dt className="text-text-muted">
+                              Freight &amp; logistics (allocated from group)
+                            </dt>
+                            <dd className="tabular-nums">
+                              {gFreight ? formatPrice(gFreight, 'USD') : '-'}
+                            </dd>
+                          </div>
+                        </dl>
+                        <div className="mt-6 border-t border-border-muted pt-4">
+                          <div className="flex items-center justify-between">
+                            <Typography variant="headingSm">Total Landed Cost</Typography>
+                            <Typography variant="headingMd">
+                              {gLanded ? formatPrice(gLanded, 'USD') : '-'}
+                            </Typography>
+                          </div>
+                          {gBottles ? (
+                            <div className="mt-2 flex items-center justify-between">
+                              <Typography variant="bodySm" colorRole="muted">
+                                Per Bottle ({gBottles} bottles)
+                              </Typography>
+                              <Typography variant="headingSm" className="text-text-brand">
+                                {formatPrice(gLanded / gBottles, 'USD')}
+                              </Typography>
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     [
@@ -1707,6 +1763,8 @@ const ShipmentDetailPage = () => {
                     </div>
                   ) : null}
                 </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
