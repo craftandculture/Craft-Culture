@@ -644,14 +644,14 @@ const WMSPickListDetailPage = () => {
               <div className={`p-3 ${scanStep === 'location' ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       pickedLocationCode
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     }`}>
-                      {pickedLocationCode ? <Icon icon={IconCheck} size="xs" /> : '1'}
+                      {pickedLocationCode ? <Icon icon={IconCheck} size="sm" /> : '1'}
                     </span>
-                    <span className="text-xs font-medium">Scan Bay</span>
+                    <span className="text-sm font-semibold">Scan Bay</span>
                   </div>
                   {pickedLocationCode && (
                     <span className="text-xs font-semibold text-emerald-600">{pickedLocationCode}</span>
@@ -696,16 +696,16 @@ const WMSPickListDetailPage = () => {
               <div className={`p-3 ${scanStep === 'case' ? 'bg-brand-50/50 dark:bg-brand-900/10' : !pickedLocationCode ? 'opacity-40' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       caseVerified
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : scanStep === 'case'
                           ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                           : 'bg-fill-secondary text-text-muted'
                     }`}>
-                      {caseVerified ? <Icon icon={IconCheck} size="xs" /> : '2'}
+                      {caseVerified ? <Icon icon={IconCheck} size="sm" /> : '2'}
                     </span>
-                    <span className="text-xs font-medium">Scan Case</span>
+                    <span className="text-sm font-semibold">Scan Case</span>
                   </div>
                   {caseVerified && (
                     <span className="text-xs font-semibold text-emerald-600">Verified</span>
