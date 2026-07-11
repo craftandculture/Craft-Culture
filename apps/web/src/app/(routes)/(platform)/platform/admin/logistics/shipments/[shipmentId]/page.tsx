@@ -1654,10 +1654,10 @@ const ShipmentDetailPage = () => {
                           {gBottles ? (
                             <div className="mt-2 flex items-center justify-between">
                               <Typography variant="bodySm" colorRole="muted">
-                                Per Bottle ({gBottles} bottles)
+                                Freight / bottle ({gBottles} bottles)
                               </Typography>
                               <Typography variant="headingSm" className="text-text-brand">
-                                {formatPrice(gLanded / gBottles, 'USD')}
+                                {formatPrice(gFreight / gBottles, 'USD')}
                               </Typography>
                             </div>
                           ) : null}
