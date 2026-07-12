@@ -5,12 +5,14 @@ import {
   IconCalculator,
   IconLoader2,
   IconPlus,
+  IconSparkles,
   IconTrash,
+  IconUpload,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -34,6 +36,24 @@ const CATEGORIES = [
   'other',
 ] as const;
 type Category = (typeof CATEGORIES)[number];
+
+interface ParsedCandidate {
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  scope: 'shared' | 'shipment';
+  shipmentId: string | null;
+  shipmentMatch: string | null;
+}
+interface ParsedResult {
+  vendor: string | null;
+  invoiceRef: string | null;
+  invoiceDate: string | null;
+  currency: string;
+  chargeableWeightKg: number | null;
+  candidates: ParsedCandidate[];
+}
 
 const fmtUsd = (v: number | null | undefined) =>
   v == null ? '—' : `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -118,6 +138,70 @@ const ShipmentGroupDetailPage = () => {
       router.push('/platform/admin/logistics/groups');
     },
   });
+
+  // ── Invoice upload + auto-parse ──────────────────────────────────────────
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [parsed, setParsed] = useState<ParsedResult | null>(null);
+  const [batchFx, setBatchFx] = useState('1');
+  const [savingBatch, setSavingBatch] = useState(false);
+
+  const parseMut = useMutation({
+    ...api.logistics.admin.groups.parseInvoice.mutationOptions(),
+    onSuccess: (r) => {
+      setParsed(r);
+      if (r.chargeableWeightKg && !weightKg) setWeightKg(String(r.chargeableWeightKg));
+      toast.success(`Found ${r.candidates.length} charge lines`);
+    },
+    onError: (e) => toast.error(e.message || 'Could not parse invoice'),
+  });
+
+  const handleFile = (fileList: FileList | null) => {
+    const f = fileList?.[0];
+    if (!f) return;
+    const fileType = f.type;
+    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'].includes(fileType)) {
+      toast.error('Upload a PDF, PNG or JPG');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () =>
+      parseMut.mutate({
+        groupId,
+        file: reader.result as string,
+        fileType: fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+      });
+    reader.readAsDataURL(f);
+  };
+
+  const addAllParsed = async () => {
+    if (!parsed) return;
+    setSavingBatch(true);
+    const fx = Number(batchFx) || 1;
+    try {
+      for (const c of parsed.candidates) {
+        await addLineMut.mutateAsync({
+          groupId,
+          category: c.category as Category,
+          description: c.description || null,
+          amount: c.amount,
+          currency: c.currency,
+          fxToUsd: fx,
+          scope: c.scope,
+          shipmentId: c.scope === 'shipment' ? c.shipmentId : null,
+          invoiceRef: parsed.invoiceRef,
+          sourceDocument: parsed.vendor,
+        });
+      }
+      if (parsed.chargeableWeightKg) {
+        updateMut.mutate({ id: groupId, chargeableWeightKg: parsed.chargeableWeightKg });
+      }
+      toast.success(`Added ${parsed.candidates.length} cost lines`);
+      setParsed(null);
+      void invalidate();
+    } finally {
+      setSavingBatch(false);
+    }
+  };
 
   const toggleShipment = (shipmentId: string) => {
     const next = new Set(memberIds);
@@ -258,8 +342,28 @@ const ShipmentGroupDetailPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Typography variant="labelSm">Logistics cost ledger</Typography>
               <div className="flex items-center gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="application/pdf,image/png,image/jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFile(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={parseMut.isPending}
+                >
+                  <ButtonContent iconLeft={parseMut.isPending ? IconLoader2 : IconUpload}>
+                    {parseMut.isPending ? 'Parsing…' : 'Upload invoice'}
+                  </ButtonContent>
+                </Button>
                 <Typography variant="bodyXs" colorRole="muted">
-                  AWB weight (kg)
+                  AWB kg
                 </Typography>
                 <input
                   type="number"
@@ -271,11 +375,82 @@ const ShipmentGroupDetailPage = () => {
                       chargeableWeightKg: weightKg.trim() === '' ? null : Number(weightKg),
                     })
                   }
-                  className={`${selectCls} w-24 text-right`}
+                  className={`${selectCls} w-20 text-right`}
                   placeholder="0"
                 />
               </div>
             </div>
+
+            {/* Parsed-invoice review */}
+            {parsed && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <Typography variant="labelSm">
+                    <IconSparkles className="mr-1 inline h-3.5 w-3.5 text-violet-500" />
+                    {parsed.candidates.length} charges parsed
+                    {parsed.vendor ? ` · ${parsed.vendor}` : ''}
+                    {parsed.invoiceRef ? ` · ${parsed.invoiceRef}` : ''}
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {parsed.currency}→USD FX
+                    </Typography>
+                    <input
+                      type="number"
+                      value={batchFx}
+                      onChange={(e) => setBatchFx(e.target.value)}
+                      className={`${selectCls} w-20 text-right`}
+                    />
+                  </div>
+                </div>
+                <div className="max-h-52 divide-y divide-violet-100 overflow-y-auto">
+                  {parsed.candidates.map((c, i) => {
+                    const shp = shipments.find((s) => s.id === c.shipmentId);
+                    return (
+                      <div key={i} className="flex items-center justify-between gap-2 py-1">
+                        <Typography variant="bodyXs" className="truncate">
+                          <span className="capitalize">{c.category}</span> · {c.description}
+                          {c.scope === 'shipment'
+                            ? ` → ${shp?.shipmentNumber ?? c.shipmentMatch ?? '?'}`
+                            : ''}
+                        </Typography>
+                        <div className="flex items-center gap-2">
+                          <Typography variant="bodyXs">
+                            {c.currency} {c.amount.toLocaleString()}
+                          </Typography>
+                          <button
+                            onClick={() =>
+                              setParsed((p) =>
+                                p
+                                  ? { ...p, candidates: p.candidates.filter((_, j) => j !== i) }
+                                  : p,
+                              )
+                            }
+                            className="text-text-muted hover:text-red-500"
+                          >
+                            <IconTrash className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setParsed(null)}>
+                    <ButtonContent>Discard</ButtonContent>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={addAllParsed}
+                    disabled={savingBatch || parsed.candidates.length === 0}
+                  >
+                    <ButtonContent iconLeft={savingBatch ? IconLoader2 : IconPlus}>
+                      Add {parsed.candidates.length} lines
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Cost lines */}
             {costLines.length > 0 && (

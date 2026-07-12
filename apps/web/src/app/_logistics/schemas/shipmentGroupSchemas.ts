@@ -96,3 +96,11 @@ export const updateGroupCostLineSchema = z.object({
 export const deleteGroupCostLineSchema = z.object({
   id: z.string().uuid(),
 });
+
+/** Parse an uploaded freight invoice (PDF/image) into candidate cost lines. */
+export const parseGroupInvoiceSchema = z.object({
+  groupId: z.string().uuid(),
+  /** Base64 data URL (or raw base64) of the invoice file. */
+  file: z.string(),
+  fileType: z.enum(['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']),
+});
