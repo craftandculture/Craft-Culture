@@ -15,6 +15,14 @@ import { calculateShipmentGroupSchema } from '../schemas/shipmentGroupSchemas';
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const bottlesOf = (i: { totalBottles: number | null; cases: number; bottlesPerCase: number | null }) =>
   i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+/** 75cl-equivalent units — a 1500ml magnum = 2, a 3000ml = 4, etc. Freight is
+ * split on this so larger formats carry their fair share. */
+const equivOf = (i: {
+  totalBottles: number | null;
+  cases: number;
+  bottlesPerCase: number | null;
+  bottleSizeMl: number | null;
+}) => bottlesOf(i) * ((i.bottleSizeMl ?? 750) / 750);
 
 /**
  * Allocate a group's logistics cost ledger across every bottle and write the
@@ -74,9 +82,10 @@ const adminCalculateShipmentGroup = adminProcedure
     }
 
     const totalBottles = items.reduce((s, i) => s + bottlesOf(i), 0);
-    const bottlesByShipment = new Map<string, number>();
+    const totalEquiv = items.reduce((s, i) => s + equivOf(i), 0);
+    const equivByShipment = new Map<string, number>();
     for (const i of items) {
-      bottlesByShipment.set(i.shipmentId, (bottlesByShipment.get(i.shipmentId) ?? 0) + bottlesOf(i));
+      equivByShipment.set(i.shipmentId, (equivByShipment.get(i.shipmentId) ?? 0) + equivOf(i));
     }
 
     let totalProductCost = 0;
@@ -85,15 +94,14 @@ const adminCalculateShipmentGroup = adminProcedure
 
     for (const item of items) {
       const bottles = bottlesOf(item);
+      const eq = equivOf(item);
       const productCost = bottles * (item.productCostPerBottle ?? 0);
-      // Shared costs spread across every bottle; direct costs only within the
-      // item's own shipment.
-      const sharedShare = totalBottles > 0 ? sharedUsd * (bottles / totalBottles) : 0;
-      const shipBottles = bottlesByShipment.get(item.shipmentId) ?? 0;
+      // Freight is split by 75cl-equivalent (magnum = 2, etc.): shared across
+      // the whole group, direct only within the item's own shipment.
+      const sharedShare = totalEquiv > 0 ? sharedUsd * (eq / totalEquiv) : 0;
+      const shipEquiv = equivByShipment.get(item.shipmentId) ?? 0;
       const directShare =
-        shipBottles > 0
-          ? (directByShipment.get(item.shipmentId) ?? 0) * (bottles / shipBottles)
-          : 0;
+        shipEquiv > 0 ? (directByShipment.get(item.shipmentId) ?? 0) * (eq / shipEquiv) : 0;
       const freight = sharedShare + directShare;
       const landedTotal = productCost + freight;
 
