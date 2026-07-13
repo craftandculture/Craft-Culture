@@ -94,14 +94,14 @@ const adminCalculateShipmentGroup = adminProcedure
 
     for (const item of items) {
       const bottles = bottlesOf(item);
-      const eq = equivOf(item);
+      const equiv = equivOf(item);
       const productCost = bottles * (item.productCostPerBottle ?? 0);
       // Freight is split by 75cl-equivalent (magnum = 2, etc.): shared across
       // the whole group, direct only within the item's own shipment.
-      const sharedShare = totalEquiv > 0 ? sharedUsd * (eq / totalEquiv) : 0;
+      const sharedShare = totalEquiv > 0 ? sharedUsd * (equiv / totalEquiv) : 0;
       const shipEquiv = equivByShipment.get(item.shipmentId) ?? 0;
       const directShare =
-        shipEquiv > 0 ? (directByShipment.get(item.shipmentId) ?? 0) * (eq / shipEquiv) : 0;
+        shipEquiv > 0 ? (directByShipment.get(item.shipmentId) ?? 0) * (equiv / shipEquiv) : 0;
       const freight = sharedShare + directShare;
       const landedTotal = productCost + freight;
 
