@@ -81,6 +81,30 @@ const adminUpdateStatus = wmsOperatorProcedure
       });
     }
 
+    /*
+     * Once an order reaches a stage where stock has physically left the
+     * warehouse, release any reservations that are still active. Orders
+     * dispatched through WMS Quick Dispatch already had their reservations
+     * converted to picks, so nothing active remains and this is a no-op.
+     * Orders advanced manually (bypassing dispatch) would otherwise leave
+     * stale holds in Stock Explorer. Release returns the held cases to
+     * availableCases and leaves the total on-hand count unchanged.
+     */
+    const stockDepartedStatuses = [
+      'stock_in_transit',
+      'with_distributor',
+      'out_for_delivery',
+      'delivered',
+    ];
+    if (stockDepartedStatuses.includes(status)) {
+      await releaseStockReservations({
+        orderId,
+        orderType: 'pco',
+        reason: `Reservation released on '${status}' (fulfilled outside WMS dispatch)`,
+        db,
+      });
+    }
+
     // Ensure client contact is marked as CD-verified on delivery
     if (status === 'delivered') {
       await ensureClientVerified(order.clientId);
