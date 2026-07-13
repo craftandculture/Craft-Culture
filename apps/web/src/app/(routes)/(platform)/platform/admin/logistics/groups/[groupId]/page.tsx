@@ -587,7 +587,7 @@ const ShipmentGroupDetailPage = () => {
                 { v: fmtUsd(goods), label: 'Goods (product) cost' },
                 { v: fmtUsd(logistics), label: 'Logistics (freight etc.)' },
                 { v: fmtUsd(landed), label: 'Total landed cost' },
-                { v: fmtUsd(metrics.perBottle), label: 'Logistics / bottle' },
+                { v: fmtUsd(metrics.perBottle), label: 'Logistics / 75cl btl' },
                 { v: fmtUsd(metrics.perCase), label: 'Logistics / case' },
                 {
                   v: metrics.perKg != null ? `${fmtUsd(metrics.perKg)}/kg` : '—',

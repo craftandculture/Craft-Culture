@@ -54,6 +54,13 @@ const adminGetShipmentGroup = adminProcedure
       0,
     );
     const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
+    // 75cl-equivalent units (magnum = 2, etc.) — the basis for freight/bottle.
+    const total75cl = items.reduce(
+      (sum, i) =>
+        sum +
+        (i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12)) * ((i.bottleSizeMl ?? 750) / 750),
+      0,
+    );
     const totalProductCost = items.reduce((sum, i) => {
       const bottles = i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
       return sum + bottles * (i.productCostPerBottle ?? 0);
@@ -79,7 +86,8 @@ const adminGetShipmentGroup = adminProcedure
       sharedUsd: round2(sharedUsd),
       shipmentDirectUsd: round2(shipmentDirectUsd),
       totalLogisticsUsd: round2(totalLogisticsUsd),
-      perBottle: totalBottles ? round2(totalLogisticsUsd / totalBottles) : null,
+      // Freight per 75cl-equivalent bottle (magnums etc. weighted up)
+      perBottle: total75cl ? round2(totalLogisticsUsd / total75cl) : null,
       perCase: totalCases ? round2(totalLogisticsUsd / totalCases) : null,
       perKg: group.chargeableWeightKg
         ? round2(totalLogisticsUsd / group.chargeableWeightKg)

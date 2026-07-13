@@ -1626,6 +1626,10 @@ const ShipmentDetailPage = () => {
                     const gFreight = gItems.reduce((s, i) => s + (i.freightAllocated ?? 0), 0);
                     const gLanded = gItems.reduce((s, i) => s + (i.landedCostTotal ?? 0), 0);
                     const gBottles = gItems.reduce((s, i) => s + bof(i), 0);
+                    const g75cl = gItems.reduce(
+                      (s, i) => s + bof(i) * ((i.bottleSizeMl ?? 750) / 750),
+                      0,
+                    );
                     return (
                       <>
                         <dl className="space-y-2">
@@ -1654,10 +1658,10 @@ const ShipmentDetailPage = () => {
                           {gBottles ? (
                             <div className="mt-2 flex items-center justify-between">
                               <Typography variant="bodySm" colorRole="muted">
-                                Freight / bottle ({gBottles} bottles)
+                                Freight / 75cl btl ({gBottles} bottles)
                               </Typography>
                               <Typography variant="headingSm" className="text-text-brand">
-                                {formatPrice(gFreight / gBottles, 'USD')}
+                                {formatPrice(g75cl ? gFreight / g75cl : 0, 'USD')}
                               </Typography>
                             </div>
                           ) : null}
