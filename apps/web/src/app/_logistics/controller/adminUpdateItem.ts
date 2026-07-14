@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
 import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -64,6 +65,12 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (updateData as any)[key] = updateFields[key];
     }
+  }
+
+  // Normalize LWIN to the canonical dashed form (raw 18-digit supplier codes
+  // like Cult Wines' would otherwise create duplicate stock lines)
+  if (updateData.lwin != null) {
+    updateData.lwin = normalizeLwin18(updateData.lwin);
   }
 
   // Recalculate totalBottles if cases or bottlesPerCase changed

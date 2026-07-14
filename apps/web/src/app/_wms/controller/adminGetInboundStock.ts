@@ -31,11 +31,28 @@ const HS_TO_CATEGORY = sql<string | null>`MAX(
 )`;
 
 /**
+ * Canonical dashed LWIN — some suppliers (e.g. Cult Wines) store the LWIN as
+ * 18 raw digits with no dashes, which otherwise fails to match the canonical
+ * dashed records and duplicates the inbound row. Normalize in SQL so both
+ * forms group and display as one.
+ */
+const NORMALIZED_LWIN = sql<string | null>`
+  CASE
+    WHEN ${logisticsShipmentItems.lwin} ~ '^[0-9]{18}$'
+    THEN substr(${logisticsShipmentItems.lwin}, 1, 7) || '-'
+      || substr(${logisticsShipmentItems.lwin}, 8, 4) || '-'
+      || substr(${logisticsShipmentItems.lwin}, 12, 2) || '-'
+      || substr(${logisticsShipmentItems.lwin}, 14, 5)
+    ELSE ${logisticsShipmentItems.lwin}
+  END
+`;
+
+/**
  * Grouping key for inbound items — same product across shipments should merge.
- * Uses LWIN when available, falls back to productName + pack config.
+ * Uses the normalized LWIN when available, falls back to productName + pack config.
  */
 const GROUP_KEY = sql<string>`
-  COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName})
+  COALESCE(${NORMALIZED_LWIN}, ${logisticsShipmentItems.productName})
   || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12')
   || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')
 `;
@@ -84,7 +101,7 @@ const adminGetInboundStock = wmsOperatorProcedure
         groupKey: GROUP_KEY,
         productName: sql<string>`MAX(${logisticsShipmentItems.productName})`,
         producer: sql<string | null>`MAX(${logisticsShipmentItems.producer})`,
-        lwin: sql<string | null>`MAX(${logisticsShipmentItems.lwin})`,
+        lwin: sql<string | null>`MAX(${NORMALIZED_LWIN})`,
         vintage: sql<number | null>`MAX(${logisticsShipmentItems.vintage})`,
         bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})`,
         bottlesPerCase: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})`,

@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -140,7 +141,7 @@ const adminImportExtractedItems = adminProcedure
         .values({
           shipmentId,
           productName,
-          lwin: item.lwin,
+          lwin: normalizeLwin18(item.lwin),
           supplierSku: item.supplierSku,
           producer: item.producer,
           vintage: item.vintage,
