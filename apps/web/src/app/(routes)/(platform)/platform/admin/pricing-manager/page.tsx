@@ -693,7 +693,7 @@ const PricingManagerPage = () => {
 
       const XLSX = await import('xlsx');
       const aoa: (string | number)[][] = [[
-        'Product', 'Producer', 'Pack', 'Cases', 'Import $/btl', 'Logistics $/btl',
+        'Product', 'Producer', 'Vintage', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
         'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
         'PC Price $/btl', 'PC Price $/case', 'Margin %',
       ]];
@@ -734,8 +734,10 @@ const PricingManagerPage = () => {
         aoa.push([
           p.productName,
           p.producer ?? '',
+          p.vintage ?? '',
           `${caseConfig}x${p.bottleSize ?? '75cl'}`,
           p.totalCases,
+          p.totalCases * caseConfig,
           num(p.importPricePerBottle),
           landed != null ? num(rowLog) : '',
           override != null ? num(override) : '',
@@ -750,10 +752,10 @@ const PricingManagerPage = () => {
       }
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
-        { wch: 40 }, { wch: 22 }, { wch: 10 }, { wch: 7 }, { wch: 12 }, { wch: 13 },
+        { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
         { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
       ];
-      ws['!autofilter'] = { ref: `A1:N${all.length + 1}` };
+      ws['!autofilter'] = { ref: `A1:P${all.length + 1}` };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
       XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
