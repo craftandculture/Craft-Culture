@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
+import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -128,10 +129,12 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     const hsCode = receivedItem.hsCode ?? shipmentItem.hsCode;
     const countryOfOrigin = receivedItem.countryOfOrigin ?? shipmentItem.countryOfOrigin;
 
-    // Determine LWIN-18
+    // Determine LWIN-18 — normalize to the canonical dashed form so a raw
+    // 18-digit supplier LWIN (e.g. Cult Wines) matches the existing dashed
+    // stock record instead of creating a duplicate.
     let lwin18: string;
     if (receivedItem.lwin) {
-      lwin18 = receivedItem.lwin;
+      lwin18 = normalizeLwin18(receivedItem.lwin) ?? receivedItem.lwin;
     } else {
       lwin18 = generateLwin18({
         productName,
