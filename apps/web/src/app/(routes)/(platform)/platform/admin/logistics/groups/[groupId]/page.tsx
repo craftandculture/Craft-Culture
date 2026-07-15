@@ -64,6 +64,18 @@ const bottlesOf = (i: { totalBottles: number | null; cases: number; bottlesPerCa
 const selectCls =
   'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
 
+// USD-pegged currencies convert at a fixed rate; floating ones default to 1
+// and must be set manually.
+const PEGGED_FX: Record<string, string> = {
+  USD: '1',
+  AED: '0.2723',
+  SAR: '0.2667',
+  QAR: '0.2747',
+  BHD: '2.6539',
+  OMR: '2.6008',
+};
+const defaultFxFor = (currency: string) => PEGGED_FX[currency] ?? '1';
+
 const ShipmentGroupDetailPage = () => {
   const api = useTRPC();
   const router = useRouter();
@@ -149,6 +161,7 @@ const ShipmentGroupDetailPage = () => {
     ...api.logistics.admin.groups.parseInvoice.mutationOptions(),
     onSuccess: (r) => {
       setParsed(r);
+      setBatchFx(defaultFxFor(r.currency));
       if (r.chargeableWeightKg && !weightKg) setWeightKg(String(r.chargeableWeightKg));
       toast.success(`Found ${r.candidates.length} charge lines`);
     },
@@ -399,10 +412,22 @@ const ShipmentGroupDetailPage = () => {
                       type="number"
                       value={batchFx}
                       onChange={(e) => setBatchFx(e.target.value)}
-                      className={`${selectCls} w-20 text-right`}
+                      className={`${selectCls} w-20 text-right ${
+                        parsed.currency !== 'USD' && Number(batchFx) === 1
+                          ? 'border-red-400 bg-red-50'
+                          : ''
+                      }`}
                     />
                   </div>
                 </div>
+                {parsed.currency !== 'USD' && Number(batchFx) === 1 && (
+                  <div className="mb-2 rounded border border-red-200 bg-red-50 px-2 py-1">
+                    <Typography variant="bodyXs" className="text-red-600">
+                      Amounts are in {parsed.currency} but the FX rate is 1 — set the{' '}
+                      {parsed.currency}→USD rate before adding, or they&apos;ll be treated as USD.
+                    </Typography>
+                  </div>
+                )}
                 <div className="max-h-52 divide-y divide-violet-100 overflow-y-auto">
                   {parsed.candidates.map((c, i) => {
                     const shp = shipments.find((s) => s.id === c.shipmentId);
@@ -452,40 +477,73 @@ const ShipmentGroupDetailPage = () => {
               </div>
             )}
 
-            {/* Cost lines */}
+            {/* Cost lines, grouped by source document */}
             {costLines.length > 0 && (
-              <div className="divide-y divide-border-muted">
-                {costLines.map((l) => {
-                  const shp = shipments.find((s) => s.id === l.shipmentId);
-                  return (
-                    <div key={l.id} className="flex items-center justify-between gap-3 py-1.5">
-                      <div className="min-w-0">
-                        <Typography variant="bodySm" className="truncate">
-                          <span className="capitalize">{l.category}</span>
-                          {l.description ? ` · ${l.description}` : ''}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {l.currency} {l.amount.toLocaleString()}
-                          {l.currency !== 'USD' ? ` @ ${l.fxToUsd}` : ''}
-                          {l.scope === 'shipment'
-                            ? ` · ${shp?.shipmentNumber ?? 'shipment'}`
-                            : ' · shared'}
-                          {l.invoiceRef ? ` · ${l.invoiceRef}` : ''}
-                        </Typography>
+              <div className="space-y-3">
+                {(() => {
+                  const byDoc = new Map<string, typeof costLines>();
+                  for (const l of costLines) {
+                    const key = l.invoiceRef || l.sourceDocument || 'Manual entry';
+                    const arr = byDoc.get(key) ?? [];
+                    arr.push(l);
+                    byDoc.set(key, arr);
+                  }
+                  return Array.from(byDoc.entries()).map(([doc, lines]) => {
+                    const subtotal = lines.reduce((s, l) => s + l.amountUsd, 0);
+                    const cur = lines[0]?.currency ?? 'USD';
+                    return (
+                      <div key={doc}>
+                        <div className="mb-1 flex items-center justify-between border-b border-border-primary pb-1">
+                          <Typography
+                            variant="bodyXs"
+                            className="truncate font-semibold uppercase tracking-wide text-text-secondary"
+                          >
+                            &#x1F4C4; {doc}
+                            {cur !== 'USD' ? ` · ${cur}` : ''}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {lines.length} lines · {fmtUsd(subtotal)}
+                          </Typography>
+                        </div>
+                        <div className="divide-y divide-border-muted">
+                          {lines.map((l) => {
+                            const shp = shipments.find((s) => s.id === l.shipmentId);
+                            return (
+                              <div
+                                key={l.id}
+                                className="flex items-center justify-between gap-3 py-1.5"
+                              >
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" className="truncate">
+                                    <span className="capitalize">{l.category}</span>
+                                    {l.description ? ` · ${l.description}` : ''}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {l.currency} {l.amount.toLocaleString()}
+                                    {l.currency !== 'USD' ? ` @ ${l.fxToUsd}` : ''}
+                                    {l.scope === 'shipment'
+                                      ? ` · ${shp?.shipmentNumber ?? 'shipment'}`
+                                      : ' · shared'}
+                                  </Typography>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Typography variant="labelSm">{fmtUsd(l.amountUsd)}</Typography>
+                                  <button
+                                    onClick={() => delLineMut.mutate({ id: l.id })}
+                                    className="text-text-muted hover:text-red-500"
+                                  >
+                                    <IconTrash className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Typography variant="labelSm">{fmtUsd(l.amountUsd)}</Typography>
-                        <button
-                          onClick={() => delLineMut.mutate({ id: l.id })}
-                          className="text-text-muted hover:text-red-500"
-                        >
-                          <IconTrash className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="flex items-center justify-between py-1.5">
+                    );
+                  });
+                })()}
+                <div className="flex items-center justify-between border-t border-border-primary pt-2">
                   <Typography variant="labelSm">Total logistics</Typography>
                   <Typography variant="labelSm">{fmtUsd(metrics.totalLogisticsUsd)}</Typography>
                 </div>
