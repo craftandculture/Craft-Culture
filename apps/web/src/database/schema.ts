@@ -4965,6 +4965,8 @@ export const wmsProductPricing = pgTable(
     importPricePerBottle: doublePrecision('import_price_per_bottle').notNull(),
     /** Manual per-SKU landed-cost adjustment: landed = import + logistics + override */
     costOverridePerBottle: doublePrecision('cost_override_per_bottle'),
+    /** Per-line logistics $/btl override; null = fall back to owner/global logistics */
+    logisticsPerBottle: doublePrecision('logistics_per_bottle'),
     sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
     /** Bespoke per-line margin % over landed (Spirits/RTD only): sell = landed / (1 - pct/100) */
     sellMarginPct: doublePrecision('sell_margin_pct'),

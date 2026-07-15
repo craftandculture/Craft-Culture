@@ -97,6 +97,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         category: sql<string | null>`MAX(${wmsStock.category})`,
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
+        // Per-line logistics override ($/btl); null = fall back to owner/global
+        lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
         sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
         // Bespoke per-line margin % over landed (Spirits/RTD only)
         sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
