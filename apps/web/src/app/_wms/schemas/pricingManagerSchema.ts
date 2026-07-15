@@ -43,6 +43,15 @@ export const setCostOverrideSchema = z.object({
   costOverridePerBottle: z.number().min(-100000).max(100000).nullable(),
 });
 
+/**
+ * Schema for a per-line logistics $/btl override. Null clears it so the row
+ * falls back to the owner's / global logistics rate.
+ */
+export const setLineLogisticsSchema = z.object({
+  lwin18: z.string().min(1),
+  logisticsPerBottle: z.number().min(0).max(100000).nullable(),
+});
+
 /** Schema for bulk-applying a margin percentage to products */
 export const bulkApplyMarginSchema = z.object({
   marginPercent: z.number().min(0.1).max(99.9),

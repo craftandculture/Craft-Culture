@@ -180,6 +180,13 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_product_pricing.sell_margin_pct ready');
 
+    // Pricing Manager: per-line logistics $/btl override.
+    console.log('🔄 Ensuring wms_product_pricing.logistics_per_bottle column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "logistics_per_bottle" double precision`,
+    );
+    console.log('✅ wms_product_pricing.logistics_per_bottle ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

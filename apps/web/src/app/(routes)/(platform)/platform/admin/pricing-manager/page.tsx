@@ -302,6 +302,94 @@ const MarginEditCell = ({
   );
 };
 
+// ─── Logistics Cell (per-line logistics $/btl override, clearable) ─────────────
+
+const LogisticsCell = ({
+  value,
+  effective,
+  onSave,
+  tdClassName = '',
+}: {
+  /** stored per-line override; null when inherited from owner/global */
+  value: number | null;
+  /** effective logistics currently applied (shown to the operator) */
+  effective: number | null;
+  onSave: (v: number | null) => void;
+  tdClassName?: string;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+
+  if (!editing) {
+    const isOverride = value != null;
+    return (
+      <td className={`px-3 py-2.5 text-right tabular-nums ${tdClassName}`}>
+        <button
+          type="button"
+          className={`group/edit inline-flex items-center gap-1 hover:underline ${
+            isOverride ? 'font-medium text-text-secondary' : 'text-text-muted'
+          }`}
+          onClick={() => {
+            setDraft(value != null ? value.toFixed(2) : '');
+            setEditing(true);
+          }}
+          title={isOverride ? 'Per-line logistics' : 'Inherited — click to set a per-line rate'}
+        >
+          {effective != null ? (
+            `$${effective.toFixed(2)}`
+          ) : (
+            <span className="text-text-muted/40">—</span>
+          )}
+          <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className={`px-3 py-2.5 ${tdClassName}`}>
+      <form
+        className="flex items-center justify-end gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const t = draft.trim();
+          if (t === '') {
+            onSave(null); // clear -> revert to owner/global
+          } else {
+            const num = parseFloat(t);
+            if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
+          }
+          setEditing(false);
+        }}
+      >
+        <span className="text-xs text-text-muted">$</span>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          placeholder="0.00"
+          type="number"
+          step="0.01"
+          min="0"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditing(false);
+              setDraft(value != null ? value.toFixed(2) : '');
+            }
+          }}
+        />
+        <button
+          type="submit"
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    </td>
+  );
+};
+
 // ─── Pagination Button ────────────────────────────────────────────────────────
 
 const PaginationButton = ({
@@ -657,6 +745,16 @@ const PricingManagerPage = () => {
       toast.success('Cost override updated');
     },
     onError: () => toast.error('Failed to update cost override'),
+  });
+
+  const setLineLogisticsMut = useMutation({
+    ...api.wms.admin.stock.pricing.setLineLogistics.mutationOptions(),
+    retry: 2,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
+      toast.success('Logistics updated');
+    },
+    onError: () => toast.error('Failed to update logistics'),
   });
 
   const setSellingPriceMut = useMutation({
@@ -1461,13 +1559,19 @@ const PricingManagerPage = () => {
                       ownerInbondPct?: number | null;
                       ownerPcPct?: number | null;
                     };
-                    // Spirits & RTD carry no logistics
+                    // Per-line logistics override (wines only); null = inherit
+                    const lineLogistics =
+                      (product as { lineLogistics?: number | null }).lineLogistics ?? null;
+                    // Spirits & RTD carry no logistics; otherwise a per-line override
+                    // beats the owner's / global rate.
                     const rowLogistics =
                       product.category === 'Spirits' || product.category === 'RTD'
                         ? 0
-                        : ownerId
-                          ? effLogistics
-                          : (orow.ownerLogistics ?? logisticsPerBottle);
+                        : lineLogistics != null
+                          ? lineLogistics
+                          : ownerId
+                            ? effLogistics
+                            : (orow.ownerLogistics ?? logisticsPerBottle);
                     const rowInbondPct = ownerId
                       ? effInbondPct
                       : (orow.ownerInbondPct ?? inBondMarkupPct);
@@ -1625,10 +1729,23 @@ const PricingManagerPage = () => {
                           }
                         />
 
-                        {/* Logistics */}
-                        <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
-                          {landed != null ? `$${rowLogistics.toFixed(2)}` : '—'}
-                        </td>
+                        {/* Logistics — editable per-line (wines); read-only 0 for Spirits/RTD */}
+                        {isSpiritOrRtd || isInbound ? (
+                          <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
+                            {landed != null ? `$${rowLogistics.toFixed(2)}` : '—'}
+                          </td>
+                        ) : (
+                          <LogisticsCell
+                            value={lineLogistics}
+                            effective={landed != null ? rowLogistics : null}
+                            onSave={(v) =>
+                              setLineLogisticsMut.mutate({
+                                lwin18: product.lwin18,
+                                logisticsPerBottle: v,
+                              })
+                            }
+                          />
+                        )}
 
                         {/* Override (manual per-SKU landed adjustment) */}
                         <OverrideCell
