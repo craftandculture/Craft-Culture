@@ -14,6 +14,7 @@ import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminCreateShipmentGroup from './controller/adminCreateShipmentGroup';
 import adminDeleteDocument from './controller/adminDeleteDocument';
 import adminDeleteGroupCostLine from './controller/adminDeleteGroupCostLine';
+import adminDeleteGroupDocument from './controller/adminDeleteGroupDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
@@ -50,6 +51,7 @@ import adminUpdateQuoteRequest from './controller/adminUpdateQuoteRequest';
 import adminUpdateShipmentGroup from './controller/adminUpdateShipmentGroup';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import adminUploadDocument from './controller/adminUploadDocument';
+import adminUploadGroupDocument from './controller/adminUploadGroupDocument';
 import adminUploadQuoteRequestAttachment from './controller/adminUploadQuoteRequestAttachment';
 import partnerGetMany from './controller/partnerGetMany';
 import partnerGetOne from './controller/partnerGetOne';
@@ -93,6 +95,8 @@ const adminRouter = createTRPCRouter({
     updateCostLine: adminUpdateGroupCostLine,
     deleteCostLine: adminDeleteGroupCostLine,
     parseInvoice: adminParseGroupInvoice,
+    uploadDocument: adminUploadGroupDocument,
+    deleteDocument: adminDeleteGroupDocument,
   }),
 
   // Invoices

@@ -1550,6 +1550,30 @@ const ShipmentDetailPage = () => {
               <Typography variant="headingSm" className="mb-4">
                 Documents
               </Typography>
+              {(shipment.groupDocuments?.length ?? 0) > 0 && (
+                <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
+                  <Typography variant="labelSm" className="mb-2 block">
+                    Shared from consolidation group
+                  </Typography>
+                  <div className="divide-y divide-blue-100">
+                    {shipment.groupDocuments.map((d) => (
+                      <div key={d.id} className="flex items-center justify-between gap-3 py-1.5">
+                        <a
+                          href={d.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="min-w-0 truncate text-sm text-text-brand hover:underline"
+                        >
+                          &#x1F4C4; {d.fileName}
+                        </a>
+                        <Typography variant="bodyXs" colorRole="muted" className="capitalize">
+                          {d.documentType.replace(/_/g, ' ')}
+                        </Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <LogisticsDocumentUpload
                 shipmentId={shipmentId}
                 documents={shipment.documents ?? []}

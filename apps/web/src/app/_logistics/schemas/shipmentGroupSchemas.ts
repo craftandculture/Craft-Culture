@@ -97,6 +97,35 @@ export const deleteGroupCostLineSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const groupDocumentTypes = [
+  'airway_bill',
+  'bill_of_lading',
+  'commercial_invoice',
+  'packing_list',
+  'shipping_invoice',
+  'gac_invoice',
+  'customs_declaration',
+  'certificate_of_origin',
+  'delivery_note',
+  'insurance_certificate',
+  'other',
+] as const;
+
+/** Upload a document once to a group (applies to all its shipments). */
+export const uploadGroupDocumentSchema = z.object({
+  groupId: z.string().uuid(),
+  /** Base64 data URL of the file. */
+  file: z.string(),
+  filename: z.string().min(1).max(300),
+  documentType: z.enum(groupDocumentTypes).default('other'),
+  documentNumber: z.string().max(120).nullable().optional(),
+});
+
+/** Delete a group document. */
+export const deleteGroupDocumentSchema = z.object({
+  id: z.string().uuid(),
+});
+
 /** Parse an uploaded freight invoice (PDF/image) into candidate cost lines. */
 export const parseGroupInvoiceSchema = z.object({
   groupId: z.string().uuid(),

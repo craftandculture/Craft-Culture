@@ -76,6 +76,22 @@ const PEGGED_FX: Record<string, string> = {
 };
 const defaultFxFor = (currency: string) => PEGGED_FX[currency] ?? '1';
 
+const DOC_TYPES = [
+  'airway_bill',
+  'bill_of_lading',
+  'commercial_invoice',
+  'packing_list',
+  'shipping_invoice',
+  'gac_invoice',
+  'customs_declaration',
+  'certificate_of_origin',
+  'delivery_note',
+  'insurance_certificate',
+  'other',
+] as const;
+type DocType = (typeof DOC_TYPES)[number];
+const docLabel = (t: string) => t.replace(/_/g, ' ');
+
 const ShipmentGroupDetailPage = () => {
   const api = useTRPC();
   const router = useRouter();
@@ -186,6 +202,35 @@ const ShipmentGroupDetailPage = () => {
     reader.readAsDataURL(f);
   };
 
+  // ── Group documents (upload once, applies to all shipments) ──────────────
+  const docFileRef = useRef<HTMLInputElement>(null);
+  const [docType, setDocType] = useState<DocType>('airway_bill');
+  const uploadDocMut = useMutation({
+    ...api.logistics.admin.groups.uploadDocument.mutationOptions(),
+    onSuccess: () => {
+      void invalidate();
+      toast.success('Document uploaded — applies to all shipments');
+    },
+    onError: (e) => toast.error(e.message || 'Upload failed'),
+  });
+  const delDocMut = useMutation({
+    ...api.logistics.admin.groups.deleteDocument.mutationOptions(),
+    onSuccess: () => void invalidate(),
+  });
+  const handleDocFile = (fileList: FileList | null) => {
+    const f = fileList?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () =>
+      uploadDocMut.mutate({
+        groupId,
+        file: reader.result as string,
+        filename: f.name,
+        documentType: docType,
+      });
+    reader.readAsDataURL(f);
+  };
+
   const addAllParsed = async () => {
     if (!parsed) return;
     setSavingBatch(true);
@@ -249,7 +294,8 @@ const ShipmentGroupDetailPage = () => {
     );
   }
 
-  const { group, shipments, totalBottles, totalCases, totalProductCost, costLines, metrics } = data;
+  const { group, shipments, totalBottles, totalCases, totalProductCost, costLines, metrics, documents } =
+    data;
   const goods = totalProductCost;
   const logistics = metrics.totalLogisticsUsd;
   const landed = goods + logistics;
@@ -346,6 +392,80 @@ const ShipmentGroupDetailPage = () => {
                   </label>
                 ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Group documents — upload once, applies to every shipment */}
+        <Card>
+          <CardContent className="gap-3 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <Typography variant="labelSm">Documents</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Upload the AWB or a shared doc once — it shows on all {shipments.length} shipments
+                </Typography>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value as DocType)}
+                  className={`${selectCls} capitalize`}
+                >
+                  {DOC_TYPES.map((t) => (
+                    <option key={t} value={t} className="capitalize">
+                      {docLabel(t)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  ref={docFileRef}
+                  type="file"
+                  accept="application/pdf,image/png,image/jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleDocFile(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => docFileRef.current?.click()}
+                  disabled={uploadDocMut.isPending}
+                >
+                  <ButtonContent iconLeft={uploadDocMut.isPending ? IconLoader2 : IconUpload}>
+                    {uploadDocMut.isPending ? 'Uploading…' : 'Upload'}
+                  </ButtonContent>
+                </Button>
+              </div>
+            </div>
+            {documents.length > 0 && (
+              <div className="divide-y divide-border-muted">
+                {documents.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <a
+                      href={d.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 truncate text-sm text-text-brand hover:underline"
+                    >
+                      &#x1F4C4; {d.fileName}
+                    </a>
+                    <div className="flex items-center gap-2">
+                      <Typography variant="bodyXs" colorRole="muted" className="capitalize">
+                        {docLabel(d.documentType)}
+                      </Typography>
+                      <button
+                        onClick={() => delDocMut.mutate({ id: d.id })}
+                        className="text-text-muted hover:text-red-500"
+                      >
+                        <IconTrash className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
