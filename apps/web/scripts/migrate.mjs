@@ -173,6 +173,13 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_stock.open_bottles ready');
 
+    // Pricing Manager: bespoke per-line margin % over landed (Spirits/RTD).
+    console.log('🔄 Ensuring wms_product_pricing.sell_margin_pct column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "sell_margin_pct" double precision`,
+    );
+    console.log('✅ wms_product_pricing.sell_margin_pct ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

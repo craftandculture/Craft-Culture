@@ -24,6 +24,16 @@ export const setSellingPriceSchema = z.object({
 });
 
 /**
+ * Schema for a bespoke per-line margin (Spirits/RTD only). Stores the margin %
+ * over landed and the derived selling price in one write; null clears both.
+ */
+export const setSellMarginSchema = z.object({
+  lwin18: z.string().min(1),
+  sellMarginPct: z.number().min(0.1).max(99.9).nullable(),
+  sellingPricePerBottle: z.number().positive().nullable(),
+});
+
+/**
  * Schema for a manual per-SKU landed-cost override.
  * landed = import + logistics + override. May be negative (to correct an
  * overstated import) or null (to clear the override).
