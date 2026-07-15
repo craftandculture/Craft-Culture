@@ -98,6 +98,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+        // Bespoke per-line margin % over landed (Spirits/RTD only)
+        sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
         // Owner's own rates (explicit settings; null if the owner hasn't set them)
         ownerLogistics: sql<number | null>`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
         ownerInbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,

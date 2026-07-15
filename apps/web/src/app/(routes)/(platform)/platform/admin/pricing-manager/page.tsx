@@ -226,6 +226,82 @@ const OverrideCell = ({
   );
 };
 
+// ─── Margin Cell (bespoke per-line margin % over landed — Spirits/RTD) ─────────
+
+const MarginEditCell = ({
+  value,
+  onSave,
+  tdClassName = '',
+}: {
+  value: number | null;
+  onSave: (pct: number) => void;
+  tdClassName?: string;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value != null ? value.toFixed(1) : '');
+
+  if (!editing) {
+    return (
+      <td className={`px-3 py-2.5 text-right tabular-nums ${tdClassName}`}>
+        <button
+          type="button"
+          className="group/edit inline-flex items-center gap-1 hover:underline"
+          onClick={() => {
+            setDraft(value != null ? value.toFixed(1) : '');
+            setEditing(true);
+          }}
+        >
+          {value != null ? (
+            <span className="font-semibold text-emerald-600">{value.toFixed(1)}%</span>
+          ) : (
+            <span className="text-text-muted/40">— set</span>
+          )}
+          <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className={`px-3 py-2.5 ${tdClassName}`}>
+      <form
+        className="flex items-center justify-end gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const num = parseFloat(draft);
+          if (!isNaN(num) && num > 0 && num < 100 && num !== value) onSave(num);
+          setEditing(false);
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          placeholder="0.0"
+          type="number"
+          step="0.1"
+          min="0"
+          max="99.9"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditing(false);
+              setDraft(value != null ? value.toFixed(1) : '');
+            }
+          }}
+        />
+        <span className="text-xs text-text-muted">%</span>
+        <button
+          type="submit"
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    </td>
+  );
+};
+
 // ─── Pagination Button ────────────────────────────────────────────────────────
 
 const PaginationButton = ({
@@ -591,6 +667,16 @@ const PricingManagerPage = () => {
       toast.success('PC price updated');
     },
     onError: () => toast.error('Failed to update PC price'),
+  });
+
+  const setSellMarginMut = useMutation({
+    ...api.wms.admin.stock.pricing.setSellMargin.mutationOptions(),
+    retry: 2,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
+      toast.success('Margin updated');
+    },
+    onError: () => toast.error('Failed to update margin'),
   });
 
   const setOwnerPricingMut = useMutation({
@@ -1396,28 +1482,59 @@ const PricingManagerPage = () => {
                     const landed = hasCost
                       ? (importPrice ?? 0) + rowLogistics + (costOverride ?? 0)
                       : null;
-                    const inBondPrice =
-                      landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
-                    // PC precedence: an ACTIVE PC% drives the price and beats stored prices; else
-                    // stored owner price, then default. PC is a margin on the IN-BOND price
-                    // (which already reflects the override via landed).
+                    // Spirits & RTD are priced solely by a bespoke per-line margin
+                    // over landed — the global in-bond/PC % never applies to them.
+                    const isSpiritOrRtd =
+                      product.category === 'Spirits' || product.category === 'RTD';
+                    const bespokeMargin =
+                      (product as { sellMarginPct?: number | null }).sellMarginPct ?? null;
+
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const storedOwnerPrice =
                       ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
-                    const computedPc =
-                      rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
-                        ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
-                        : null;
-                    const sellPrice =
-                      computedPc != null
-                        ? computedPc
-                        : (storedOwnerPrice ?? product.sellingPricePerBottle);
-                    const isSuggestedPc = computedPc != null;
-                    const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
-                    // Margin measured against the in-bond (B2B) price
-                    const margin = calcMargin(inBondPrice, sellPrice);
+
+                    let inBondPrice: number | null;
+                    let sellPrice: number | null;
+                    let isSuggestedPc: boolean;
+                    let hasOwnerPrice: boolean;
+                    let margin: number | null;
+
+                    if (isSpiritOrRtd) {
+                      // One sell price: sell = landed / (1 - margin/100); no B2B/PC split
+                      const bespokeSell =
+                        bespokeMargin != null && landed != null && bespokeMargin < 100
+                          ? landed / (1 - bespokeMargin / 100)
+                          : product.sellingPricePerBottle;
+                      sellPrice = bespokeSell;
+                      inBondPrice = bespokeSell;
+                      isSuggestedPc = false;
+                      hasOwnerPrice = false;
+                      margin = bespokeMargin;
+                    } else {
+                      inBondPrice =
+                        landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
+                      // PC precedence: an ACTIVE PC% drives the price and beats stored prices;
+                      // else stored owner price, then default. PC is a margin on the IN-BOND
+                      // price (which already reflects the override via landed).
+                      const computedPc =
+                        rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
+                          ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
+                          : null;
+                      sellPrice =
+                        computedPc != null
+                          ? computedPc
+                          : (storedOwnerPrice ?? product.sellingPricePerBottle);
+                      isSuggestedPc = computedPc != null;
+                      hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
+                      // Margin measured against the in-bond (B2B) price
+                      margin = calcMargin(inBondPrice, sellPrice);
+                    }
                     const marginPerBottle =
-                      inBondPrice && sellPrice && inBondPrice > 0 && sellPrice > 0
+                      !isSpiritOrRtd &&
+                      inBondPrice &&
+                      sellPrice &&
+                      inBondPrice > 0 &&
+                      sellPrice > 0
                         ? sellPrice - inBondPrice
                         : null;
                     // Below cost = selling at/below the landed cost
@@ -1576,20 +1693,38 @@ const PricingManagerPage = () => {
                           }}
                         />
 
-                        {/* Margin */}
-                        <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5 tabular-nums">
-                            <MarginDot margin={margin} />
-                            <span className={marginColor}>
-                              {margin != null ? `${margin.toFixed(1)}%` : '—'}
-                            </span>
-                          </div>
-                          {marginPerBottle != null && (
-                            <div className="text-[10px] tabular-nums text-text-muted/60">
-                              ${marginPerBottle.toFixed(2)}/btl
+                        {/* Margin — editable bespoke margin for Spirits/RTD, read-only for Wine */}
+                        {isSpiritOrRtd && !isInbound ? (
+                          <MarginEditCell
+                            value={bespokeMargin}
+                            tdClassName="border-l-2 border-emerald-300"
+                            onSave={(pct) => {
+                              const sell =
+                                landed != null && pct < 100
+                                  ? Math.round((landed / (1 - pct / 100)) * 100) / 100
+                                  : null;
+                              setSellMarginMut.mutate({
+                                lwin18: product.lwin18,
+                                sellMarginPct: pct,
+                                sellingPricePerBottle: sell,
+                              });
+                            }}
+                          />
+                        ) : (
+                          <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5 tabular-nums">
+                              <MarginDot margin={margin} />
+                              <span className={marginColor}>
+                                {margin != null ? `${margin.toFixed(1)}%` : '—'}
+                              </span>
                             </div>
-                          )}
-                        </td>
+                            {marginPerBottle != null && (
+                              <div className="text-[10px] tabular-nums text-text-muted/60">
+                                ${marginPerBottle.toFixed(2)}/btl
+                              </div>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })
