@@ -2912,6 +2912,32 @@ export const logisticsGroupCostLines = pgTable(
 export type LogisticsGroupCostLine = typeof logisticsGroupCostLines.$inferSelect;
 
 /**
+ * A document uploaded once at the consolidation-group level (e.g. the AWB or
+ * master freight invoice) that applies to every shipment in the group. Shown
+ * on the group page and on each member shipment's Documents tab.
+ */
+export const logisticsGroupDocuments = pgTable(
+  'logistics_group_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    groupId: uuid('group_id')
+      .references(() => logisticsShipmentGroups.id, { onDelete: 'cascade' })
+      .notNull(),
+    documentType: logisticsDocumentType('document_type').notNull().default('other'),
+    documentNumber: text('document_number'),
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_group_documents_group_id_idx').on(table.groupId)],
+);
+
+export type LogisticsGroupDocument = typeof logisticsGroupDocuments.$inferSelect;
+
+/**
  * Tracks deleted Hillebrand shipment IDs so re-sync does not recreate them
  */
 export const logisticsDeletedHillebrandIds = pgTable('logistics_deleted_hillebrand_ids', {

@@ -4,6 +4,7 @@ import { asc, desc, eq, inArray } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   logisticsGroupCostLines,
+  logisticsGroupDocuments,
   logisticsShipmentGroups,
   logisticsShipmentItems,
   logisticsShipments,
@@ -94,6 +95,12 @@ const adminGetShipmentGroup = adminProcedure
         : null,
     };
 
+    const documents = await db
+      .select()
+      .from(logisticsGroupDocuments)
+      .where(eq(logisticsGroupDocuments.groupId, group.id))
+      .orderBy(desc(logisticsGroupDocuments.createdAt));
+
     return {
       group,
       shipments: shipmentsWithItems,
@@ -103,6 +110,7 @@ const adminGetShipmentGroup = adminProcedure
       totalProductCost,
       costLines,
       metrics,
+      documents,
     };
   });
 
