@@ -1377,8 +1377,9 @@ const PricingManagerPage = () => {
           </div>
         )}
 
-        {/* Apply Margin */}
-        <div className="relative" ref={marginPopoverRef}>
+        {/* Apply Margin — start of the actions cluster, pushed to the right so
+            filters (left) read as distinct from actions (right). */}
+        <div className="relative ml-auto" ref={marginPopoverRef}>
           <button
             onClick={() => {
               const opening = !showMarginPopover;
@@ -1577,7 +1578,7 @@ const PricingManagerPage = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-surface-muted/80 backdrop-blur-sm">
+              <thead className="sticky top-0 z-10 bg-surface-muted shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
