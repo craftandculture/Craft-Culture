@@ -56,6 +56,7 @@ const findOrCreateStock = async (
     category: string | null;
     expiryDate: Date | null;
     isPerishable: boolean | null;
+    reExportBoeNumber: string | null;
   },
 ) => {
   const [existing] = await tx
@@ -78,6 +79,9 @@ const findOrCreateStock = async (
       .set({
         quantityCases: existing.quantityCases + targetQuantityCases,
         availableCases: existing.availableCases + targetQuantityCases,
+        // Carry the Re-Export BOE across the repack; keep the existing one if set.
+        reExportBoeNumber:
+          existing.reExportBoeNumber ?? sourceStock.reExportBoeNumber,
         updatedAt: new Date(),
       })
       .where(eq(wmsStock.id, existing.id));
@@ -107,6 +111,8 @@ const findOrCreateStock = async (
       category: sourceStock.category,
       expiryDate: sourceStock.expiryDate,
       isPerishable: sourceStock.isPerishable,
+      // Carry the Re-Export BOE onto the repacked stock for customs traceability.
+      reExportBoeNumber: sourceStock.reExportBoeNumber,
     })
     .returning();
   return newStock.id;
