@@ -63,6 +63,26 @@ const syncExistingSalesOrder = async ({
   }
 
   const zohoModifiedAt = new Date(zohoOrder.last_modified_time);
+
+  // Short-circuit BEFORE the expensive full-detail fetch: if Zoho's
+  // last-modified time matches what we already stored, nothing changed, so skip
+  // the getSalesOrder call entirely. This keeps the 2-minute poll to ~0 detail
+  // requests when orders are idle (previously every pre-pick order was fetched
+  // and reconciled each cycle — heavy on Zoho's rate limit).
+  const [current] = await db
+    .select({ zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime })
+    .from(zohoSalesOrders)
+    .where(eq(zohoSalesOrders.id, existing.id))
+    .limit(1);
+
+  const unchanged =
+    current?.zohoLastModifiedTime instanceof Date &&
+    current.zohoLastModifiedTime.getTime() === zohoModifiedAt.getTime();
+
+  if (unchanged) {
+    return { outcome: 'unchanged' as const };
+  }
+
   const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
 
   if (PRE_PICK_STATUSES.has(status)) {
@@ -89,23 +109,8 @@ const syncExistingSalesOrder = async ({
     return { outcome: 'reconciled' as const, reconciled };
   }
 
-  // Released to picking/picked — only act on a genuine change so we don't flag
-  // on every 2-minute poll. Compare Zoho's last-modified against what we stored.
-  const [current] = await db
-    .select({ zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime })
-    .from(zohoSalesOrders)
-    .where(eq(zohoSalesOrders.id, existing.id))
-    .limit(1);
-
-  const unchanged =
-    current?.zohoLastModifiedTime instanceof Date &&
-    current.zohoLastModifiedTime.getTime() === zohoModifiedAt.getTime();
-
-  if (unchanged) {
-    return { outcome: 'unchanged' as const };
-  }
-
-  // Refresh the header so the total is truthful, and raise the flag so the pick
+  // Released to picking/picked — the order changed in Zoho (unchanged already
+  // returned above). Refresh the header so the total is truthful, and raise the flag so the pick
   // screen can prompt a review. We deliberately do NOT rewrite the pick's lines
   // here — that is an explicit "re-sync pick" action, not a silent mutation.
   await db
