@@ -132,6 +132,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
     > = {};
 
     if (allLwin18s.length > 0) {
+      // Match pack-agnostically (LWIN7 + vintage + bottle size, ignoring the pack
+      // digits) so a repacked SKU (e.g. …-03-00750) inherits the base wine's
+      // per-bottle cost from the original shipment line (…-12-00750).
+      const pakStock = sql`split_part(${wmsStock.lwin18}, '-', 1) || '-' || split_part(${wmsStock.lwin18}, '-', 2) || '-' || split_part(${wmsStock.lwin18}, '-', 4)`;
+      const pakItem = sql`split_part(${logisticsShipmentItems.lwin}, '-', 1) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 2) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 4)`;
       const shipmentRows = await db
         .select({
           lwin18: wmsStock.lwin18,
@@ -142,12 +147,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         .from(wmsStock)
         .innerJoin(
           logisticsShipmentItems,
-          and(
-            eq(logisticsShipmentItems.shipmentId, wmsStock.shipmentId),
-            eq(logisticsShipmentItems.lwin, wmsStock.lwin18),
-          ),
+          and(isNotNull(logisticsShipmentItems.lwin), sql`${pakItem} = ${pakStock}`),
         )
-        .where(and(inArray(wmsStock.lwin18, allLwin18s), isNotNull(wmsStock.shipmentId)))
+        .where(inArray(wmsStock.lwin18, allLwin18s))
         .orderBy(desc(logisticsShipmentItems.createdAt));
 
       for (const row of shipmentRows) {
@@ -268,8 +270,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         ),
       )
       .leftJoin(
-        sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, product_cost_per_bottle AS product_cost, landed_cost_per_bottle AS landed_cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`,
-        sql`ship.lwin18 = ${wmsStock.lwin18}`,
+        sql`(SELECT DISTINCT ON (split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4)) split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4) AS pak, product_cost_per_bottle AS product_cost, landed_cost_per_bottle AS landed_cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4), created_at DESC) ship`,
+        sql`ship.pak = split_part(${wmsStock.lwin18},'-',1)||'-'||split_part(${wmsStock.lwin18},'-',2)||'-'||split_part(${wmsStock.lwin18},'-',4)`,
       )
       .where(and(...summaryConditions));
 
