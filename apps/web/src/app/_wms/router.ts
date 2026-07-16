@@ -87,6 +87,7 @@ import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminResolvePcoOrder from './controller/adminResolvePcoOrder';
+import adminResyncPickList from './controller/adminResyncPickList';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
@@ -216,6 +217,7 @@ const pickingRouter = createTRPCRouter({
   assign: adminAssignPickList,
   pickItem: adminPickItem,
   complete: adminCompletePickList,
+  resync: adminResyncPickList,
   resolvePcoOrder: adminResolvePcoOrder,
 });
 

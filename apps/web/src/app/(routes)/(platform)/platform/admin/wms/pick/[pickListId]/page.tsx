@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconCheck,
   IconChevronLeft,
@@ -9,6 +10,7 @@ import {
   IconLoader2,
   IconPackage,
   IconPrinter,
+  IconRefresh,
   IconTag,
   IconTrash,
 } from '@tabler/icons-react';
@@ -141,6 +143,19 @@ const WMSPickListDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete pick list');
+    },
+  });
+
+  // Re-sync this pick to the current Zoho order (order edited after release).
+  // Rebuilds unpicked lines, preserves already-picked ones, clears the flag.
+  const resyncMutation = useMutation({
+    ...api.wms.admin.picking.resync.mutationOptions(),
+    onSuccess: (result) => {
+      invalidatePickQueries();
+      toast.success(result.message);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to re-sync pick list');
     },
   });
 
@@ -379,6 +394,42 @@ const WMSPickListDetailPage = () => {
           </Button>
         )}
       </div>
+
+      {/* Order edited in Zoho after release — offer a safe re-sync */}
+      {data.soModifiedAfterRelease && !isComplete && (
+        <div className="mb-3 flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-900/20">
+          <Icon
+            icon={IconAlertTriangle}
+            size="sm"
+            className="mt-0.5 shrink-0 text-amber-600"
+          />
+          <div className="min-w-0 flex-1">
+            <Typography
+              variant="bodySm"
+              className="font-semibold text-amber-800 dark:text-amber-300"
+            >
+              Order changed in Zoho after release
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+              This pick may be out of date. Re-sync to match the current order —
+              already-picked lines are kept.
+            </Typography>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 shrink-0 border-amber-400 text-amber-700"
+            onClick={() => resyncMutation.mutate({ pickListId })}
+            disabled={resyncMutation.isPending}
+          >
+            <ButtonContent
+              iconLeft={resyncMutation.isPending ? IconLoader2 : IconRefresh}
+            >
+              {resyncMutation.isPending ? 'Syncing…' : 'Re-sync'}
+            </ButtonContent>
+          </Button>
+        </div>
+      )}
 
       {/* PCO client labels — secondary action; only shown for picks that
           resolve to a private-client order */}
