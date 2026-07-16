@@ -95,6 +95,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         category: sql<string | null>`MAX(${wmsStock.category})`,
+        // 1 when Craft & Culture owns this stock — drives the $22.50 wine
+        // logistics fallback for old C&C imports with no freight profile.
+        isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         // Per-line logistics override ($/btl); null = fall back to owner/global
@@ -222,9 +225,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // $2.50) + manual override. Replaces the old flat owner logistics rate.
     const importPaidExpr = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
     const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
+    // Logistics = live freight; else $22.50 fallback for C&C-owned wine that has
+    // no freight profile (old imports). Non-C&C / non-wine with no freight = 0.
+    const logisticsExpr = sql`(CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END)`;
     const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, 2.5)`;
     const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
-    const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${freightExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
+    const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
     const pcExpr = sql`(CASE
       WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)

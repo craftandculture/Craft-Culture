@@ -888,8 +888,13 @@ const PricingManagerPage = () => {
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
         const override = p.costOverridePerBottle ?? null;
-        // Logistics = live system freight/btl; Transfer = FZ→mainland ($2.50 default)
-        const rowLog = (p as { systemLogistics?: number | null }).systemLogistics ?? 0;
+        // Logistics = live system freight/btl; C&C wine with no profile → $22.50.
+        // Transfer = FZ→mainland ($2.50 default).
+        const systemLog = (p as { systemLogistics?: number | null }).systemLogistics ?? 0;
+        const isCcWine =
+          (p as { isCraftCulture?: number }).isCraftCulture === 1 &&
+          (p.category === 'Wine' || p.category == null);
+        const rowLog = systemLog > 0 ? systemLog : isCcWine ? 22.5 : 0;
         const rowTransfer =
           (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ?? 2.5;
         const rowInbondDiv = (() => {
@@ -1568,10 +1573,15 @@ const PricingManagerPage = () => {
                       ownerPcPct?: number | null;
                     };
                     // Logistics = live group/shipment freight per bottle (from the
-                    // system; read-only, auto-updates with invoices). Transfers =
-                    // FZ→mainland fee ($/btl; $2.50 default, editable per SKU).
-                    const rowLogistics =
+                    // system; read-only). C&C-owned wine with no freight profile
+                    // (old imports) falls back to $22.50. Transfers = FZ→mainland
+                    // fee ($2.50 default, editable per SKU).
+                    const systemLog =
                       (product as { systemLogistics?: number | null }).systemLogistics ?? 0;
+                    const isCcWine =
+                      (product as { isCraftCulture?: number }).isCraftCulture === 1 &&
+                      (product.category === 'Wine' || product.category == null);
+                    const rowLogistics = systemLog > 0 ? systemLog : isCcWine ? 22.5 : 0;
                     const transferStored =
                       (product as { transferPricePerBottle?: number | null })
                         .transferPricePerBottle ?? null;
