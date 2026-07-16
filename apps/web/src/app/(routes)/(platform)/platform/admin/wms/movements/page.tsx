@@ -5,6 +5,8 @@ import {
   IconArrowRight,
   IconBoxSeam,
   IconFilter,
+  IconLayoutGrid,
+  IconList,
   IconLoader2,
   IconTransfer,
 } from '@tabler/icons-react';
@@ -46,6 +48,7 @@ const WMSMovementsPage = () => {
   const api = useTRPC();
   const [filterType, setFilterType] = useState<MovementType | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'log'>('cards');
 
   const { data, isLoading } = useQuery({
     ...api.wms.admin.stock.getMovements.queryOptions({
@@ -106,11 +109,42 @@ const WMSMovementsPage = () => {
             <Typography variant="headingLg" className="mb-1">
               Movements
             </Typography>
-            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
-              <ButtonContent iconLeft={IconFilter}>
-                {filterType ? 'Filtered' : 'Filter'}
-              </ButtonContent>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+                <ButtonContent iconLeft={IconFilter}>
+                  {filterType ? 'Filtered' : 'Filter'}
+                </ButtonContent>
+              </Button>
+              {/* Cards / Log view toggle */}
+              <div className="inline-flex rounded-lg border border-border-primary p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('cards')}
+                  aria-pressed={viewMode === 'cards'}
+                  title="Card view"
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    viewMode === 'cards'
+                      ? 'bg-fill-secondary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  <IconLayoutGrid className="h-3.5 w-3.5" /> Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('log')}
+                  aria-pressed={viewMode === 'log'}
+                  title="Log view"
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    viewMode === 'log'
+                      ? 'bg-fill-secondary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  <IconList className="h-3.5 w-3.5" /> Log
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -171,8 +205,94 @@ const WMSMovementsPage = () => {
           </div>
         )}
 
-        {/* Movement list */}
-        {!isLoading && data && (
+        {/* Log view — compact table */}
+        {!isLoading && data && viewMode === 'log' && (
+          data.movements.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Icon icon={IconTransfer} size="xl" colorRole="muted" className="mx-auto mb-4" />
+                <Typography variant="headingSm" className="mb-2">
+                  No Movements Found
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  {filterType
+                    ? 'No movements match your filter criteria'
+                    : 'Stock movements will appear here'}
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-border-primary">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border-primary bg-fill-secondary text-left text-[11px] uppercase tracking-wide text-text-muted">
+                      <th className="px-3 py-2 font-medium">Type</th>
+                      <th className="px-3 py-2 font-medium">Ref</th>
+                      <th className="px-3 py-2 font-medium">Product</th>
+                      <th className="px-3 py-2 font-medium">Move</th>
+                      <th className="px-3 py-2 text-right font-medium">Cases</th>
+                      <th className="px-3 py-2 font-medium">When</th>
+                      <th className="px-3 py-2 font-medium">By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-muted">
+                    {data.movements.map((movement) => (
+                      <tr key={movement.id} className="hover:bg-fill-secondary/40">
+                        <td className="px-3 py-1.5">
+                          <MovementTypeBadge
+                            movementType={movement.movementType as MovementType}
+                            size="sm"
+                          />
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-text-muted">
+                          {movement.movementNumber}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <div className="max-w-[20rem] truncate font-medium">
+                            {movement.productName}
+                          </div>
+                          <div className="font-mono text-[11px] text-text-muted">
+                            {movement.lwin18}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs">
+                          {movement.fromLocationCode ?? '—'}
+                          <span className="mx-1 text-text-muted">→</span>
+                          {movement.toLocationCode ?? '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums text-blue-600">
+                          {movement.quantityCases}
+                        </td>
+                        <td
+                          className="whitespace-nowrap px-3 py-1.5 text-xs text-text-muted"
+                          title={formatFullDate(movement.performedAt)}
+                        >
+                          {formatDate(movement.performedAt)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-1.5 text-xs text-text-muted">
+                          {movement.performedBy?.name ?? '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {data.pagination.total > 0 && (
+                <Typography
+                  variant="bodyXs"
+                  colorRole="muted"
+                  className="border-t border-border-primary p-2 text-center"
+                >
+                  Showing {data.movements.length} of {data.pagination.total} movements
+                </Typography>
+              )}
+            </div>
+          )
+        )}
+
+        {/* Card view */}
+        {!isLoading && data && viewMode === 'cards' && (
           <div className="grid gap-2 md:grid-cols-2">
             {data.movements.length === 0 ? (
               <Card className="md:col-span-2">
