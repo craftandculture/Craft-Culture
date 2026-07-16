@@ -145,7 +145,6 @@ const InvoiceVendorField = ({
     return (
       <form
         className="flex items-center gap-1"
-        onClick={(e) => e.preventDefault()}
         onSubmit={(e) => {
           e.preventDefault();
           onSave(draft.trim() || null);
