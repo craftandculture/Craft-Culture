@@ -41,6 +41,13 @@ type MovementType =
   | 'pallet_dissolve'
   | 'pallet_dispatch';
 
+/** Extract the vintage from a dashed LWIN18 (LWIN7-YYYY-CC-BBBBB); null for NV/unknown. */
+const vintageFromLwin18 = (lwin18: string | null | undefined) => {
+  if (!lwin18) return null;
+  const v = lwin18.split('-')[1];
+  return v && v !== '0000' ? v : null;
+};
+
 /**
  * WMS Movement History - audit trail of all warehouse operations
  */
@@ -249,8 +256,15 @@ const WMSMovementsPage = () => {
                           {movement.movementNumber}
                         </td>
                         <td className="px-3 py-1.5">
-                          <div className="max-w-[20rem] truncate font-medium">
-                            {movement.productName}
+                          <div className="flex max-w-[22rem] items-center gap-1.5">
+                            <span className="truncate font-medium">
+                              {movement.productName}
+                            </span>
+                            {vintageFromLwin18(movement.lwin18) && (
+                              <span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                {vintageFromLwin18(movement.lwin18)}
+                              </span>
+                            )}
                           </div>
                           <div className="font-mono text-[11px] text-text-muted">
                             {movement.lwin18}
@@ -311,6 +325,7 @@ const WMSMovementsPage = () => {
             ) : (
               data.movements.map((movement) => {
                 const isPallet = movement.notes?.includes('(pallet)');
+                const vintage = vintageFromLwin18(movement.lwin18);
                 return (
                 <Card key={movement.id} className={`hover:border-border-brand ${isPallet ? 'border-l-4 border-l-indigo-500' : ''}`}>
                   {isPallet && (
@@ -331,7 +346,14 @@ const WMSMovementsPage = () => {
                             {movement.movementNumber}
                           </Typography>
                         </div>
-                        <Typography variant="headingSm">{movement.productName}</Typography>
+                        <div className="flex items-center gap-2">
+                          <Typography variant="headingSm">{movement.productName}</Typography>
+                          {vintage && (
+                            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                              {vintage}
+                            </span>
+                          )}
+                        </div>
                         <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
                           {movement.lwin18}
                         </Typography>
