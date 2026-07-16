@@ -98,6 +98,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         // 1 when Craft & Culture owns this stock — drives the $22.50 wine
         // logistics fallback for old C&C imports with no freight profile.
         isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
+        // 1 for consignment owners (Cru Wine / Crurated) — their transfer fee
+        // default is $0 rather than the $2.50 FZ→mainland default.
+        isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
         importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         // Per-line logistics override ($/btl); null = fall back to owner/global
@@ -230,7 +233,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Logistics = live freight; else $22.50 fallback for C&C-owned wine that has
     // no freight profile (old imports). Non-C&C / non-wine with no freight = 0.
     const logisticsExpr = sql`(CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END)`;
-    const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, 2.5)`;
+    const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
     const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
     const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
     const pcExpr = sql`(CASE
