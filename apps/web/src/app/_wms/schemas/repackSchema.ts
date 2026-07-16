@@ -36,12 +36,25 @@ const repackUnevenSchema = z.object({
 });
 
 /**
+ * Schema for repacking by stock ID — combine (build a larger pack from smaller
+ * ones, e.g. 3× single bottle → 1×3-pack). `sourceQuantityCases` is the number
+ * of source cases consumed; `targetCaseConfig` must be larger than the source.
+ */
+const repackCombineSchema = z.object({
+  ...repackBaseFields,
+  mode: z.literal('combine'),
+  targetCaseConfig: z.number().int().positive('Target case config must be positive'),
+});
+
+/**
  * Schema for repacking by stock ID
- * Supports even splits (e.g., 12-pack → 2×6-pack) and uneven splits (e.g., 6-pack → 1×2-pack + 1×4-pack)
+ * Supports even splits (e.g., 12-pack → 2×6-pack), uneven splits (e.g., 6-pack →
+ * 1×2-pack + 1×4-pack), and combines (e.g., 3× single → 1×3-pack).
  */
 export const repackByStockSchema = z.discriminatedUnion('mode', [
   repackEvenSchema,
   repackUnevenSchema,
+  repackCombineSchema,
 ]);
 
 export type RepackInput = z.infer<typeof repackSchema>;
