@@ -291,10 +291,33 @@ const WMSReceiveShipmentPage = () => {
 
     if (savedDraft?.items) {
       const loadedItems = new Map<string, ReceivedItem>();
-      // Load draft items
+      // Live logistics items by id, so the draft can reconcile against edits
+      // made after it was saved (e.g. consolidating a duplicate parsed line, or
+      // changing a case count).
+      const liveById = new Map(shipment.items.map((i) => [i.id, i]));
+      // Load draft items, refreshing the EXPECTED fields from the live logistics
+      // item while preserving received progress. Drop draft lines whose
+      // logistics item was deleted and were never committed (orphans).
       savedDraft.items.forEach((item) => {
+        const live = item.shipmentItemId ? liveById.get(item.shipmentItemId) : undefined;
+        if (!item.isAddedItem && !live && !(item.isCommitted ?? false)) {
+          return;
+        }
         loadedItems.set(item.id, {
           ...item,
+          ...(live
+            ? {
+                productName: live.productName,
+                producer: live.producer,
+                vintage: live.vintage,
+                lwin: live.lwin,
+                supplierSku: live.supplierSku,
+                expectedCases: live.cases,
+                expectedBottlesPerCase:
+                  live.bottlesPerCase ?? item.expectedBottlesPerCase,
+                expectedBottleSizeMl: live.bottleSizeMl ?? item.expectedBottleSizeMl,
+              }
+            : {}),
           isVerified: item.isChecked,
           isCommitted: item.isCommitted ?? false,
           committedAt: item.committedAt,
