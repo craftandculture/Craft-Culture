@@ -18,6 +18,7 @@ const adminGetPendingShipments = wmsOperatorProcedure.query(async () => {
     .select({
       id: logisticsShipments.id,
       shipmentNumber: logisticsShipments.shipmentNumber,
+      name: logisticsShipments.name,
       status: logisticsShipments.status,
       transportMode: logisticsShipments.transportMode,
       partnerId: logisticsShipments.partnerId,
@@ -48,6 +49,7 @@ const adminGetPendingShipments = wmsOperatorProcedure.query(async () => {
     )
     .groupBy(
       logisticsShipments.id,
+      logisticsShipments.name,
       logisticsShipments.transportMode,
       logisticsShipments.destinationCountry,
       logisticsShipments.destinationCity,
