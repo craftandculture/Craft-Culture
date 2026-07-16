@@ -46,6 +46,52 @@ type SortField =
   | 'margin';
 type SortOrder = 'asc' | 'desc';
 
+// ─── Owner visual cue ─────────────────────────────────────────────────────────
+// A colored dot + left border + badge so it's obvious at a glance whose stock a
+// row belongs to — especially when an unfiltered ("All Owners") list mixes
+// consignors. Craft & Culture is pinned to brand emerald; every other owner gets
+// a stable color from a hash of its name, so the same owner always looks the same.
+
+type OwnerStyle = { badge: string; border: string; dot: string };
+
+const OWNER_PALETTE: OwnerStyle[] = [
+  { badge: 'bg-violet-100 text-violet-700', border: 'border-l-violet-400', dot: 'bg-violet-500' },
+  { badge: 'bg-blue-100 text-blue-700', border: 'border-l-blue-400', dot: 'bg-blue-500' },
+  { badge: 'bg-rose-100 text-rose-700', border: 'border-l-rose-400', dot: 'bg-rose-500' },
+  { badge: 'bg-cyan-100 text-cyan-700', border: 'border-l-cyan-400', dot: 'bg-cyan-500' },
+  { badge: 'bg-fuchsia-100 text-fuchsia-700', border: 'border-l-fuchsia-400', dot: 'bg-fuchsia-500' },
+  { badge: 'bg-indigo-100 text-indigo-700', border: 'border-l-indigo-400', dot: 'bg-indigo-500' },
+  { badge: 'bg-teal-100 text-teal-700', border: 'border-l-teal-400', dot: 'bg-teal-500' },
+];
+
+// Shown when a single lwin18 is split across more than one owner.
+const MIXED_OWNER_STYLE: OwnerStyle = {
+  badge: 'bg-amber-100 text-amber-800',
+  border: 'border-l-amber-500',
+  dot: 'bg-amber-500',
+};
+
+const normalizeOwner = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const ownerStyle = (name: string): OwnerStyle => {
+  const key = normalizeOwner(name);
+  if (key.includes('craftculture')) {
+    return { badge: 'bg-emerald-100 text-emerald-700', border: 'border-l-emerald-500', dot: 'bg-emerald-500' };
+  }
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return OWNER_PALETTE[hash % OWNER_PALETTE.length] ?? OWNER_PALETTE[0]!;
+};
+
+// Compact label for the badge (full name stays in the title tooltip).
+const shortOwner = (name: string): string => {
+  const key = normalizeOwner(name);
+  if (key.includes('craftculture')) return 'C&C';
+  if (key.includes('rarewine')) return 'RareWine';
+  if (key.includes('crurated')) return 'CRURATED';
+  return name.replace(/\b(Ltd|LLC|ApS|Trading|Limited|SPC)\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+};
+
 // ─── PriceCell (click-to-edit) ────────────────────────────────────────────────
 
 const PriceCell = ({
@@ -1763,6 +1809,22 @@ const PricingManagerPage = () => {
                             ? 'font-medium text-amber-600'
                             : 'font-medium text-red-600';
 
+                    // Owner cue — colored left border + badge so it's obvious
+                    // whose stock a row is, especially in a mixed "All Owners"
+                    // list. > 1 owner on one lwin18 shows a "Mixed" flag.
+                    const ownerNames = product.ownerNames ?? [];
+                    const firstOwner = ownerNames[0];
+                    const ownerCue = firstOwner
+                      ? {
+                          fullName: firstOwner,
+                          isMixed: (product.ownerCount ?? 1) > 1,
+                          style:
+                            (product.ownerCount ?? 1) > 1
+                              ? MIXED_OWNER_STYLE
+                              : ownerStyle(firstOwner),
+                        }
+                      : null;
+
                     return (
                       <tr
                         key={`${isInbound ? 'inb-' : ''}${product.lwin18}`}
@@ -1775,11 +1837,30 @@ const PricingManagerPage = () => {
                         }`}
                       >
                         {/* Product */}
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
+                        <td
+                          className={`border-l-4 px-3 py-2.5 ${
+                            ownerCue?.style.border ?? 'border-l-transparent'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
                             <p className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
                               {product.productName}
                             </p>
+                            {ownerCue && (
+                              <span
+                                title={
+                                  ownerCue.isMixed
+                                    ? `Mixed ownership: ${product.ownerNames.join(', ')}`
+                                    : ownerCue.fullName
+                                }
+                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold ${ownerCue.style.badge}`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${ownerCue.style.dot}`} />
+                                {ownerCue.isMixed
+                                  ? `Mixed · ${product.ownerCount}`
+                                  : shortOwner(ownerCue.fullName)}
+                              </span>
+                            )}
                             {isInbound && (
                               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
                                 Inbound
