@@ -73,9 +73,18 @@ export const addGroupCostLineSchema = z.object({
   fxToUsd: z.number().min(0).default(1),
   invoiceRef: z.string().max(120).nullable().optional(),
   invoiceDate: z.string().nullable().optional(),
+  vendor: z.string().max(200).nullable().optional(),
   scope: z.enum(['shared', 'shipment']).default('shared'),
   shipmentId: z.string().uuid().nullable().optional(),
   sourceDocument: z.string().max(300).nullable().optional(),
+});
+
+/** Set the supplier/vendor for every cost line under one invoice in a group. */
+export const setGroupInvoiceVendorSchema = z.object({
+  groupId: z.string().uuid(),
+  /** The grouping key: invoiceRef ?? sourceDocument ?? 'Manual entry'. */
+  docKey: z.string().min(1).max(300),
+  vendor: z.string().max(200).nullable(),
 });
 
 /** Update a cost line. */

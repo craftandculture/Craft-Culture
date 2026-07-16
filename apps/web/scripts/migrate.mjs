@@ -187,6 +187,13 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_product_pricing.logistics_per_bottle ready');
 
+    // Logistics cost ledger: supplier/vendor per invoice line.
+    console.log('🔄 Ensuring logistics_group_cost_lines.vendor column...');
+    await client.unsafe(
+      `ALTER TABLE "logistics_group_cost_lines" ADD COLUMN IF NOT EXISTS "vendor" text`,
+    );
+    console.log('✅ logistics_group_cost_lines.vendor ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
