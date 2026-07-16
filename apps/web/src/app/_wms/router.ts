@@ -97,6 +97,7 @@ import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
 import adminSetOwnerPricingSettings from './controller/adminSetOwnerPricingSettings';
 import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
+import adminSetTransferPrice from './controller/adminSetTransferPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
@@ -162,6 +163,7 @@ const stockPricingRouter = createTRPCRouter({
   setImportPrice: adminSetImportPrice,
   setCostOverride: adminSetCostOverride,
   setLineLogistics: adminSetLineLogistics,
+  setTransferPrice: adminSetTransferPrice,
   setSellingPrice: adminSetSellingPrice,
   setSellMargin: adminSetSellMargin,
   setOwnerPricing: adminSetOwnerPricing,

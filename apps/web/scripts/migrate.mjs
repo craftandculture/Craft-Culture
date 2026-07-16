@@ -194,6 +194,13 @@ const runMigrations = async () => {
     );
     console.log('✅ logistics_group_cost_lines.vendor ready');
 
+    // Pricing Manager: per-SKU FZ→mainland transfer fee ($/btl; null = $2.50 default).
+    console.log('🔄 Ensuring wms_product_pricing.transfer_price_per_bottle column...');
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "transfer_price_per_bottle" double precision`,
+    );
+    console.log('✅ wms_product_pricing.transfer_price_per_bottle ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
