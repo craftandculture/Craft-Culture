@@ -624,11 +624,19 @@ const KpiCard = ({
 
 // ─── Margin Dot ───────────────────────────────────────────────────────────────
 
-const MarginDot = ({ margin }: { margin: number | null }) => {
+const MarginDot = ({
+  margin,
+  good = 20,
+  ok = 10,
+}: {
+  margin: number | null;
+  good?: number;
+  ok?: number;
+}) => {
   if (margin == null)
     return <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />;
-  if (margin >= 20) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />;
-  if (margin >= 10) return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
+  if (margin >= good) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />;
+  if (margin >= ok) return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
   return <span className="inline-block h-2 w-2 rounded-full bg-red-500" />;
 };
 
@@ -690,6 +698,18 @@ const PricingManagerPage = () => {
   useEffect(() => {
     localStorage.setItem('pm-pc-margin-pct', String(pcMarginPct));
   }, [pcMarginPct]);
+
+  // Which margin the green MARGIN column shows:
+  //  • 'ibLanded' — In-Bond (B2B) price vs Landed cost. Varies per owner (their
+  //    in-bond markup) and is the real cost-to-B2B margin.
+  //  • 'pcIb' — Private Client price vs In-Bond. Usually a flat % (the PC margin).
+  const [marginBasis, setMarginBasis] = useState<'ibLanded' | 'pcIb'>(() => {
+    if (typeof window === 'undefined') return 'ibLanded';
+    return localStorage.getItem('pm-margin-basis') === 'pcIb' ? 'pcIb' : 'ibLanded';
+  });
+  useEffect(() => {
+    localStorage.setItem('pm-margin-basis', marginBasis);
+  }, [marginBasis]);
 
   // Price-gap quick filter
   const [priceFilter, setPriceFilter] = useState<
@@ -1263,16 +1283,28 @@ const PricingManagerPage = () => {
           ))}
         </select>
 
-        {/* Search */}
-        <div className="relative flex-1 lg:max-w-xs">
-          <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+        {/* Search — primary control, given a distinct surface + focus ring so it
+            stands out from the filter chips rather than blending into the bar. */}
+        <div className="relative flex-1 lg:max-w-sm">
+          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search wines, producers or LWIN…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-border-primary bg-background-primary py-2 pl-10 pr-4 text-sm transition-colors focus:border-border-brand focus:outline-none"
+            aria-label="Search products"
+            className="w-full rounded-lg border-2 border-border-primary bg-surface-muted/50 py-2.5 pl-10 pr-9 text-sm shadow-sm transition-all placeholder:text-text-muted focus:border-border-brand focus:bg-background-primary focus:outline-none focus:ring-2 focus:ring-border-brand/25"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted transition-colors hover:bg-fill-primary-hover hover:text-text-primary"
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* Global rates (when no owner selected) */}
@@ -1657,12 +1689,49 @@ const PricingManagerPage = () => {
                   </th>
                   <th
                     className={`border-l-2 border-emerald-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
-                    onClick={() => handleSort('margin')}
-                    title="Margin = (PC - In-Bond) / PC, measured on the in-bond price"
+                    title={
+                      marginBasis === 'ibLanded'
+                        ? 'Margin = (In-Bond − Landed) / In-Bond — the B2B margin over cost (varies per owner)'
+                        : 'Margin = (PC − In-Bond) / PC — the private-client margin over the in-bond price'
+                    }
                   >
-                    <span className="flex items-center justify-end gap-1">
-                      Margin {renderSortIcon('margin')}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className="flex cursor-pointer items-center justify-end gap-1"
+                        onClick={() => handleSort('margin')}
+                      >
+                        Margin {renderSortIcon('margin')}
+                      </span>
+                      <div
+                        className="flex overflow-hidden rounded-md border border-emerald-300 text-[9px] font-semibold normal-case tracking-normal"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setMarginBasis('ibLanded')}
+                          title="In-Bond (B2B) vs Landed cost"
+                          className={`px-1.5 py-0.5 ${
+                            marginBasis === 'ibLanded'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          IB·Landed
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMarginBasis('pcIb')}
+                          title="Private Client vs In-Bond price"
+                          className={`border-l border-emerald-300 px-1.5 py-0.5 ${
+                            marginBasis === 'pcIb'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          PC·IB
+                        </button>
+                      </div>
+                    </div>
                   </th>
                 </tr>
               </thead>
@@ -1800,12 +1869,32 @@ const PricingManagerPage = () => {
                       isInbound && 'earliestEta' in product
                         ? (product as { earliestEta?: Date | null }).earliestEta ?? null
                         : null;
+                    // Margin the green column shows, per the header toggle.
+                    // 'ibLanded' = In-Bond vs Landed (B2B margin over cost, varies
+                    // by owner); 'pcIb' = the existing PC-vs-In-Bond margin.
+                    // Spirits/RTD keep their single bespoke margin either way.
+                    const displayMargin = isSpiritOrRtd
+                      ? margin
+                      : marginBasis === 'pcIb'
+                        ? margin
+                        : calcMargin(landed, inBondPrice);
+                    const displayMarginPerBottle = isSpiritOrRtd
+                      ? marginPerBottle
+                      : marginBasis === 'pcIb'
+                        ? marginPerBottle
+                        : inBondPrice != null && landed != null && inBondPrice > 0
+                          ? inBondPrice - landed
+                          : null;
+                    // IB·Landed margins run lower than PC margins, so the
+                    // green/amber/red bands are lower in that mode.
+                    const marginGood = marginBasis === 'ibLanded' ? 12 : 20;
+                    const marginOk = marginBasis === 'ibLanded' ? 6 : 10;
                     const marginColor =
-                      margin == null
+                      displayMargin == null
                         ? 'text-text-muted'
-                        : margin >= 20
+                        : displayMargin >= marginGood
                           ? 'font-medium text-emerald-600'
-                          : margin >= 10
+                          : displayMargin >= marginOk
                             ? 'font-medium text-amber-600'
                             : 'font-medium text-red-600';
 
@@ -2023,14 +2112,14 @@ const PricingManagerPage = () => {
                         ) : (
                           <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-1.5 tabular-nums">
-                              <MarginDot margin={margin} />
+                              <MarginDot margin={displayMargin} good={marginGood} ok={marginOk} />
                               <span className={marginColor}>
-                                {margin != null ? `${margin.toFixed(1)}%` : '—'}
+                                {displayMargin != null ? `${displayMargin.toFixed(1)}%` : '—'}
                               </span>
                             </div>
-                            {marginPerBottle != null && (
+                            {displayMarginPerBottle != null && (
                               <div className="text-[10px] tabular-nums text-text-muted/60">
-                                ${marginPerBottle.toFixed(2)}/btl
+                                ${displayMarginPerBottle.toFixed(2)}/btl
                               </div>
                             )}
                           </td>
