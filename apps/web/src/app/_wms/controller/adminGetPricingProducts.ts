@@ -95,6 +95,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         category: sql<string | null>`MAX(${wmsStock.category})`,
+        // Owner(s) holding this SKU — drives the per-row owner badge in the
+        // Pricing Manager. Usually one; ownerCount > 1 means the same lwin18 is
+        // split across consignors (rare, but worth flagging visually).
+        ownerNames: sql<string[]>`array_agg(DISTINCT ${wmsStock.ownerName})`,
+        ownerCount: sql<number>`COUNT(DISTINCT ${wmsStock.ownerId})::int`,
         // 1 when Craft & Culture owns this stock — drives the $22.50 wine
         // logistics fallback for old C&C imports with no freight profile.
         isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
@@ -309,6 +314,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
       bottleSize: string | null;
       totalCases: number;
       category: string | null;
+      ownerNames: string[];
+      ownerCount: number;
       importPricePerBottle: number | null;
       sellingPricePerBottle: number | null;
       earliestEta: Date | null;
@@ -375,6 +382,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
         totalCases: r.totalCases,
         category: r.category,
+        // Inbound stock isn't owner-attributed yet (in transit) — no badge.
+        ownerNames: [],
+        ownerCount: 0,
         importPricePerBottle: r.costPerBottle,
         sellingPricePerBottle: r.sellingPricePerBottle,
         earliestEta: r.earliestEta,
