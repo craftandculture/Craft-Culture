@@ -439,6 +439,17 @@ const NewPickListPage = () => {
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
                                   .trim();
+                                // Zoho sometimes omits the vintage from the line
+                                // name; recover it from the SKU (lwin7-VINTAGE-…).
+                                const skuVintage =
+                                  /^\d{7}-((?:19|20)\d{2})-/.exec(
+                                    (item as { sku?: string | null }).sku ?? '',
+                                  )?.[1] ?? null;
+                                const hasYear = /\b(?:19|20)\d{2}\b/.test(cleanName);
+                                const displayName =
+                                  !hasYear && skuVintage
+                                    ? `${cleanName} ${skuVintage}`
+                                    : cleanName;
                                 const rp = item.repack;
                                 const needsRepack = rp?.needsRepack ?? false;
                                 return (
@@ -452,7 +463,7 @@ const NewPickListPage = () => {
                                   >
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate text-text-primary">
-                                        {cleanName}
+                                        {displayName}
                                       </p>
                                       {needsRepack && rp?.fromPack && (
                                         <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-700">
