@@ -609,7 +609,14 @@ const WMSRepackPage = () => {
                     </>
                   )}
                   <button
-                    onClick={() => setRepackMode('combine')}
+                    onClick={() => {
+                      setRepackMode('combine');
+                      // Jump to a valid combine target (must exceed the source pack)
+                      if (targetCaseConfig <= selectedStock.caseConfig) {
+                        setTargetCaseConfig(selectedStock.caseConfig + 1);
+                      }
+                      setCombineTargetCases(1);
+                    }}
                     className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       repackMode === 'combine'
                         ? 'bg-fill-primary text-text-primary shadow-sm'
