@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { users, wmsLocations, wmsPickListItems, wmsPickLists, wmsStock, zohoInvoices } from '@/database/schema';
+import { users, wmsLocations, wmsPickListItems, wmsPickLists, wmsStock, zohoInvoices, zohoSalesOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListSchema } from '../schemas/pickListSchema';
@@ -35,9 +35,14 @@ const adminGetPickList = wmsOperatorProcedure
         completedBy: wmsPickLists.completedBy,
         notes: wmsPickLists.notes,
         createdAt: wmsPickLists.createdAt,
+        // Raised when the linked Zoho order was edited after release to pick —
+        // drives the "re-sync pick" prompt on the pick screen.
+        soModifiedAfterRelease: zohoSalesOrders.soModifiedAfterRelease,
+        soModifiedAt: zohoSalesOrders.soModifiedAt,
       })
       .from(wmsPickLists)
       .leftJoin(users, eq(wmsPickLists.assignedTo, users.id))
+      .leftJoin(zohoSalesOrders, eq(wmsPickLists.orderId, zohoSalesOrders.id))
       .where(eq(wmsPickLists.id, pickListId));
 
     if (!pickList) {
