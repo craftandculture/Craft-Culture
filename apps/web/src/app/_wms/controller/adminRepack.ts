@@ -200,8 +200,12 @@ const adminRepack = wmsOperatorProcedure
     const bottleSize = sourceStock.bottleSize ?? '75cl';
     const baseName = stripPackSuffix(sourceStock.productName);
 
-    if (input.mode === 'even') {
-      // ─── EVEN SPLIT ───
+    if (input.mode === 'even' || input.mode === 'combine') {
+      // ─── EVEN SPLIT / COMBINE ───
+      // Both conserve bottles (total in = total out). `even` builds smaller
+      // packs from one larger case; `combine` builds one larger pack from
+      // several smaller cases (e.g. 3× single bottle → 1×3-pack).
+      const isCombine = input.mode === 'combine';
       const { targetCaseConfig } = input;
       const totalBottles = sourceQuantityCases * sourceCaseConfig;
 
@@ -212,7 +216,14 @@ const adminRepack = wmsOperatorProcedure
         });
       }
 
-      if (targetCaseConfig >= sourceCaseConfig) {
+      if (isCombine && targetCaseConfig <= sourceCaseConfig) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Combine target must be larger than the source pack',
+        });
+      }
+
+      if (!isCombine && targetCaseConfig >= sourceCaseConfig) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Target case config must be smaller than source',
@@ -323,7 +334,9 @@ const adminRepack = wmsOperatorProcedure
           fromLocationId: sourceStock.locationId,
           lotNumber: sourceStock.lotNumber,
           scannedBarcodes: deactivatedBarcodes,
-          notes: `Repacked to ${targetCaseConfig}-pack (${repackNumber})`,
+          notes: isCombine
+            ? `Combined ${sourceQuantityCases}×${sourceCaseConfig}-pack into ${targetCaseConfig}-pack (${repackNumber})`
+            : `Repacked to ${targetCaseConfig}-pack (${repackNumber})`,
           performedBy: ctx.user.id,
           performedAt: new Date(),
         });
@@ -337,7 +350,9 @@ const adminRepack = wmsOperatorProcedure
           toLocationId: targetLocationId,
           lotNumber: sourceStock.lotNumber,
           scannedBarcodes: newCaseLabels.map((l) => l.barcode),
-          notes: `Repacked from ${sourceCaseConfig}-pack (${repackNumber})`,
+          notes: isCombine
+            ? `Combined into ${targetCaseConfig}-pack from ${sourceQuantityCases}×${sourceCaseConfig}-pack (${repackNumber})`
+            : `Repacked from ${sourceCaseConfig}-pack (${repackNumber})`,
           performedBy: ctx.user.id,
           performedAt: new Date(),
         });

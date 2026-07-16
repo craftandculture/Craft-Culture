@@ -142,8 +142,10 @@ const WMSRepackPage = () => {
   const [stockAtLocation, setStockAtLocation] = useState<StockItem[]>([]);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [targetCaseConfig, setTargetCaseConfig] = useState<number>(6);
-  const [repackMode, setRepackMode] = useState<'even' | 'uneven'>('even');
+  const [repackMode, setRepackMode] = useState<'even' | 'uneven' | 'combine'>('even');
   const [bottlesToRemove, setBottlesToRemove] = useState<number>(1);
+  // Combine mode: how many target cases to build from the smaller source packs
+  const [combineTargetCases, setCombineTargetCases] = useState<number>(1);
   const [error, setError] = useState<string>('');
   const [isSourceScanning, setIsSourceScanning] = useState(false);
   const [repackResult, setRepackResult] = useState<RepackResult | null>(null);
@@ -207,9 +209,13 @@ const WMSRepackPage = () => {
         locationType: result.location.locationType,
       });
 
-      // Filter stock to only items that can be repacked (>1 bottle per case)
+      // Keep stock that can be split (>1 bottle per case) OR combined
+      // (≥2 cases available can be built up into a larger pack, e.g. singles → 3-pack)
       const repackableStock = result.stock.filter(
-        (s) => s.caseConfig && s.caseConfig > 1 && s.availableCases > 0,
+        (s) =>
+          s.caseConfig &&
+          s.availableCases > 0 &&
+          (s.caseConfig > 1 || s.availableCases >= 2),
       );
 
       setStockAtLocation(repackableStock as StockItem[]);
@@ -246,6 +252,17 @@ const WMSRepackPage = () => {
             targetCaseConfig,
             destinationLocationId: result.location.id,
           });
+        } else if (repackMode === 'combine') {
+          // Combine: consume N smaller source cases into the larger target pack(s)
+          const sourceCases =
+            (combineTargetCases * targetCaseConfig) / selectedStock.caseConfig;
+          executeRepack({
+            mode: 'combine',
+            stockId: selectedStock.id,
+            sourceQuantityCases: sourceCases,
+            targetCaseConfig,
+            destinationLocationId: result.location.id,
+          });
         } else {
           // Uneven split: this is the removed portion destination, advance to scan remaining destination
           setStep('scan-destination2-bay');
@@ -254,7 +271,7 @@ const WMSRepackPage = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
     }
-  }, [wmsApi, selectedStock, repackMode, targetCaseConfig, executeRepack]);
+  }, [wmsApi, selectedStock, repackMode, targetCaseConfig, combineTargetCases, executeRepack]);
 
   const handleDestination2LocationScan = useCallback(async (barcode: string) => {
     setError('');
@@ -283,11 +300,17 @@ const WMSRepackPage = () => {
 
   const handleSelectStock = useCallback((stock: StockItem) => {
     setSelectedStock(stock);
-    // Default to half the source config, minimum 1
-    const defaultTarget = Math.max(1, Math.floor(stock.caseConfig / 2));
-    setTargetCaseConfig(defaultTarget);
     setBottlesToRemove(1);
-    setRepackMode('even');
+    setCombineTargetCases(1);
+    if (stock.caseConfig <= 1) {
+      // A single bottle can't be split — default to combining up into a 3-pack
+      setRepackMode('combine');
+      setTargetCaseConfig(3);
+    } else {
+      // Default to half the source config, minimum 1
+      setTargetCaseConfig(Math.max(1, Math.floor(stock.caseConfig / 2)));
+      setRepackMode('even');
+    }
     setStep('select-config');
   }, []);
 
@@ -322,6 +345,7 @@ const WMSRepackPage = () => {
     setTargetCaseConfig(6);
     setRepackMode('even');
     setBottlesToRemove(1);
+    setCombineTargetCases(1);
     setError('');
     setRepackResult(null);
   };
@@ -367,6 +391,31 @@ const WMSRepackPage = () => {
     if (totalBottles % targetCaseConfig !== 0) return 0;
     return totalBottles / targetCaseConfig;
   };
+
+  // ── Combine mode helpers ──
+  // Total loose bottles available across the selected source stock
+  const getCombineAvailableBottles = () =>
+    selectedStock ? selectedStock.availableCases * selectedStock.caseConfig : 0;
+
+  // Max number of target-size packs we can build from what's available
+  const getCombineMaxCases = () => {
+    if (!selectedStock || targetCaseConfig <= selectedStock.caseConfig) return 0;
+    return Math.floor(getCombineAvailableBottles() / targetCaseConfig);
+  };
+
+  // Source cases (smaller packs) consumed to build the chosen number of target packs
+  const getCombineSourceCases = () => {
+    if (!selectedStock) return 0;
+    return (combineTargetCases * targetCaseConfig) / selectedStock.caseConfig;
+  };
+
+  // Whether the current combine selection is valid (buildable + whole cases consumed)
+  const isCombineValid = () =>
+    !!selectedStock &&
+    targetCaseConfig > selectedStock.caseConfig &&
+    combineTargetCases >= 1 &&
+    combineTargetCases <= getCombineMaxCases() &&
+    Number.isInteger(getCombineSourceCases());
 
   // Get valid target configs (must evenly divide source bottles)
   const getValidConfigs = () => {
@@ -533,27 +582,41 @@ const WMSRepackPage = () => {
                   Choose how to split the case
                 </Typography>
 
-                {/* Mode toggle pills */}
+                {/* Mode toggle pills — split options only apply to multi-bottle cases */}
                 <div className="mb-4 flex rounded-lg bg-fill-secondary p-1">
+                  {selectedStock.caseConfig > 1 && (
+                    <>
+                      <button
+                        onClick={() => setRepackMode('even')}
+                        className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                          repackMode === 'even'
+                            ? 'bg-fill-primary text-text-primary shadow-sm'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        Even Split
+                      </button>
+                      <button
+                        onClick={() => setRepackMode('uneven')}
+                        className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                          repackMode === 'uneven'
+                            ? 'bg-fill-primary text-text-primary shadow-sm'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        Custom Split
+                      </button>
+                    </>
+                  )}
                   <button
-                    onClick={() => setRepackMode('even')}
+                    onClick={() => setRepackMode('combine')}
                     className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      repackMode === 'even'
+                      repackMode === 'combine'
                         ? 'bg-fill-primary text-text-primary shadow-sm'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                   >
-                    Even Split
-                  </button>
-                  <button
-                    onClick={() => setRepackMode('uneven')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      repackMode === 'uneven'
-                        ? 'bg-fill-primary text-text-primary shadow-sm'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    Custom Split
+                    Combine
                   </button>
                 </div>
 
@@ -593,6 +656,94 @@ const WMSRepackPage = () => {
                         </div>
                       </div>
                     )}
+                  </>
+                ) : repackMode === 'combine' ? (
+                  <>
+                    {/* Combine: choose target pack size + how many to build */}
+                    <div className="mb-4">
+                      <Typography variant="bodyXs" colorRole="muted" className="mb-3 text-center">
+                        Combine into pack size
+                      </Typography>
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => {
+                            setTargetCaseConfig(
+                              Math.max(selectedStock.caseConfig + 1, targetCaseConfig - 1),
+                            );
+                            setCombineTargetCases(1);
+                          }}
+                          disabled={targetCaseConfig <= selectedStock.caseConfig + 1}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                        >
+                          <IconMinus className="h-5 w-5" />
+                        </button>
+                        <div className="flex h-12 w-24 items-center justify-center rounded-xl border-2 border-blue-600 bg-blue-50 text-lg font-bold dark:bg-blue-900/20">
+                          {targetCaseConfig}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setTargetCaseConfig(targetCaseConfig + 1);
+                            setCombineTargetCases(1);
+                          }}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand"
+                        >
+                          <IconPlus className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1 text-center">
+                        bottles per pack
+                      </Typography>
+                    </div>
+
+                    <div className="mb-4">
+                      <Typography variant="bodyXs" colorRole="muted" className="mb-3 text-center">
+                        How many {targetCaseConfig}-packs to build?
+                      </Typography>
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => setCombineTargetCases(Math.max(1, combineTargetCases - 1))}
+                          disabled={combineTargetCases <= 1}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                        >
+                          <IconMinus className="h-5 w-5" />
+                        </button>
+                        <div className="flex h-12 w-24 items-center justify-center rounded-xl border-2 border-blue-600 bg-blue-50 text-lg font-bold dark:bg-blue-900/20">
+                          {combineTargetCases}
+                        </div>
+                        <button
+                          onClick={() =>
+                            setCombineTargetCases(
+                              Math.min(getCombineMaxCases(), combineTargetCases + 1),
+                            )
+                          }
+                          disabled={combineTargetCases >= getCombineMaxCases()}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                        >
+                          <IconPlus className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-fill-secondary p-4 text-center">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Result
+                      </Typography>
+                      {isCombineValid() ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Typography variant="bodySm">
+                            {getCombineSourceCases()}x {selectedStock.caseConfig}-pack
+                          </Typography>
+                          <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+                          <Typography variant="headingSm" className="text-emerald-600">
+                            {combineTargetCases}x {targetCaseConfig}-pack
+                          </Typography>
+                        </div>
+                      ) : (
+                        <Typography variant="bodySm" colorRole="muted">
+                          Not enough bottles &mdash; {getCombineAvailableBottles()} available
+                        </Typography>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -650,7 +801,10 @@ const WMSRepackPage = () => {
                 size="lg"
                 className="flex-1"
                 onClick={() => setStep('remove-case')}
-                disabled={repackMode === 'even' && getTargetCases() === 0}
+                disabled={
+                  (repackMode === 'even' && getTargetCases() === 0) ||
+                  (repackMode === 'combine' && !isCombineValid())
+                }
               >
                 <ButtonContent iconLeft={IconArrowRight}>Continue</ButtonContent>
               </Button>
@@ -682,7 +836,9 @@ const WMSRepackPage = () => {
                     {selectedStock.productName}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">
-                    1x {selectedStock.caseConfig}-pack
+                    {repackMode === 'combine'
+                      ? `${getCombineSourceCases()}x ${selectedStock.caseConfig}-pack`
+                      : `1x ${selectedStock.caseConfig}-pack`}
                   </Typography>
                 </div>
               </CardContent>
@@ -698,7 +854,9 @@ const WMSRepackPage = () => {
                 className="flex-1"
                 onClick={() => setStep('physical-repack')}
               >
-                <ButtonContent iconLeft={IconCheck}>Case Removed</ButtonContent>
+                <ButtonContent iconLeft={IconCheck}>
+                  {repackMode === 'combine' ? 'Bottles Removed' : 'Case Removed'}
+                </ButtonContent>
               </Button>
             </div>
           </div>
@@ -734,6 +892,28 @@ const WMSRepackPage = () => {
                         <Icon icon={IconPackage} size="lg" className="mx-auto mb-1 text-emerald-600" />
                         <Typography variant="headingMd" className="text-emerald-600">
                           {getTargetCases()}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          x {targetCaseConfig}-pack
+                        </Typography>
+                      </div>
+                    </div>
+                  </div>
+                ) : repackMode === 'combine' ? (
+                  <div className="rounded-lg bg-white p-4 dark:bg-fill-secondary">
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="text-center">
+                        <Icon icon={IconBox} size="lg" colorRole="muted" className="mx-auto mb-1" />
+                        <Typography variant="headingMd">{getCombineSourceCases()}</Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          x {selectedStock.caseConfig}-pack
+                        </Typography>
+                      </div>
+                      <Icon icon={IconArrowRight} size="lg" colorRole="muted" />
+                      <div className="text-center">
+                        <Icon icon={IconPackage} size="lg" className="mx-auto mb-1 text-emerald-600" />
+                        <Typography variant="headingMd" className="text-emerald-600">
+                          {combineTargetCases}
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
                           x {targetCaseConfig}-pack
@@ -779,7 +959,9 @@ const WMSRepackPage = () => {
                   <Typography variant="bodyXs" className="text-amber-800 dark:text-amber-300">
                     {repackMode === 'even'
                       ? `Place ${targetCaseConfig} bottles into each new case`
-                      : `Remove ${bottlesToRemove} bottle${bottlesToRemove > 1 ? 's' : ''} and place into a new case. Leave ${selectedStock.caseConfig - bottlesToRemove} in the original case.`}
+                      : repackMode === 'combine'
+                        ? `Pack ${targetCaseConfig} bottles into each new case (${combineTargetCases} case${combineTargetCases > 1 ? 's' : ''} total)`
+                        : `Remove ${bottlesToRemove} bottle${bottlesToRemove > 1 ? 's' : ''} and place into a new case. Leave ${selectedStock.caseConfig - bottlesToRemove} in the original case.`}
                   </Typography>
                 </div>
               </CardContent>
@@ -835,6 +1017,10 @@ const WMSRepackPage = () => {
                   <Typography variant="headingSm" className="text-emerald-600">
                     {getTargetCases()}x {targetCaseConfig}-pack
                   </Typography>
+                ) : repackMode === 'combine' ? (
+                  <Typography variant="headingSm" className="text-emerald-600">
+                    {combineTargetCases}x {targetCaseConfig}-pack
+                  </Typography>
                 ) : (
                   <Typography variant="headingSm" className="text-emerald-600">
                     1x {bottlesToRemove}-pack
@@ -849,12 +1035,12 @@ const WMSRepackPage = () => {
                 label="Destination bay barcode"
                 placeholder="LOC-..."
                 onScan={handleDestinationLocationScan}
-                isLoading={repackMode === 'even' && isRepacking}
+                isLoading={repackMode !== 'uneven' && isRepacking}
                 error={error}
-                disabled={repackMode === 'even' && isRepacking}
+                disabled={repackMode !== 'uneven' && isRepacking}
               />
 
-              {repackMode === 'even' && isRepacking && (
+              {repackMode !== 'uneven' && isRepacking && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
                   <IconLoader2 className="h-5 w-5 animate-spin" />
                   <Typography variant="bodySm">Processing repack...</Typography>
