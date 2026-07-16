@@ -2897,6 +2897,8 @@ export const logisticsGroupCostLines = pgTable(
     amountUsd: doublePrecision('amount_usd').notNull(),
     invoiceRef: text('invoice_ref'),
     invoiceDate: timestamp('invoice_date', { mode: 'date' }),
+    /** Supplier / vendor that issued the invoice (shown in the ledger header) */
+    vendor: text('vendor'),
     // 'shared' spreads across all bottles; 'shipment' attaches to shipmentId
     scope: text('scope').notNull().default('shared'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, {

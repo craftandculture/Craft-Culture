@@ -39,6 +39,7 @@ import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
@@ -94,6 +95,7 @@ const adminRouter = createTRPCRouter({
     addCostLine: adminAddGroupCostLine,
     updateCostLine: adminUpdateGroupCostLine,
     deleteCostLine: adminDeleteGroupCostLine,
+    setInvoiceVendor: adminSetGroupInvoiceVendor,
     parseInvoice: adminParseGroupInvoice,
     uploadDocument: adminUploadGroupDocument,
     deleteDocument: adminDeleteGroupDocument,

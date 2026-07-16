@@ -4,6 +4,7 @@ import {
   IconArrowLeft,
   IconCalculator,
   IconLoader2,
+  IconPencil,
   IconPlus,
   IconSparkles,
   IconTrash,
@@ -129,6 +130,72 @@ const LEDGER_TINTS = [
   },
 ] as const;
 
+/** Inline-editable supplier/vendor label for an invoice ledger header. */
+const InvoiceVendorField = ({
+  vendor,
+  onSave,
+}: {
+  vendor: string | null;
+  onSave: (v: string | null) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(vendor ?? '');
+
+  if (editing) {
+    return (
+      <form
+        className="flex items-center gap-1"
+        onClick={(e) => e.preventDefault()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave(draft.trim() || null);
+          setEditing(false);
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Supplier name"
+          autoFocus
+          className="w-52 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-sm focus:border-border-brand focus:outline-none"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setDraft(vendor ?? '');
+              setEditing(false);
+            }
+          }}
+        />
+        <button
+          type="submit"
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        setDraft(vendor ?? '');
+        setEditing(true);
+      }}
+      className="group/v inline-flex items-center gap-1 hover:underline"
+      title="Set supplier"
+    >
+      {vendor ? (
+        <span className="truncate font-semibold text-text-primary">{vendor}</span>
+      ) : (
+        <span className="text-xs font-medium text-text-muted/60">+ Add supplier</span>
+      )}
+      <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/v:opacity-60" />
+    </button>
+  );
+};
+
 const ShipmentGroupDetailPage = () => {
   const api = useTRPC();
   const router = useRouter();
@@ -183,6 +250,14 @@ const ShipmentGroupDetailPage = () => {
   const delLineMut = useMutation({
     ...api.logistics.admin.groups.deleteCostLine.mutationOptions(),
     onSuccess: () => void invalidate(),
+  });
+  const setVendorMut = useMutation({
+    ...api.logistics.admin.groups.setInvoiceVendor.mutationOptions(),
+    onSuccess: () => {
+      void invalidate();
+      toast.success('Supplier updated');
+    },
+    onError: () => toast.error('Failed to update supplier'),
   });
   const calcMut = useMutation({
     ...api.logistics.admin.groups.calculate.mutationOptions(),
@@ -284,6 +359,7 @@ const ShipmentGroupDetailPage = () => {
           scope: c.scope,
           shipmentId: c.scope === 'shipment' ? c.shipmentId : null,
           invoiceRef: parsed.invoiceRef,
+          vendor: parsed.vendor,
           sourceDocument: parsed.vendor,
         });
       }
@@ -659,15 +735,23 @@ const ShipmentGroupDetailPage = () => {
                         {/* Invoice header */}
                         <div className="flex items-center justify-between gap-3 px-3 py-2">
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${tint.dot}`} />
-                            <Typography variant="bodySm" className="truncate font-semibold">
-                              {doc}
-                            </Typography>
-                            {cur !== 'USD' && (
-                              <span className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-medium text-text-muted dark:bg-white/10">
-                                {cur} @ {fx}
-                              </span>
-                            )}
+                            <span className={`mt-1 h-2 w-2 shrink-0 self-start rounded-full ${tint.dot}`} />
+                            <div className="min-w-0">
+                              <InvoiceVendorField
+                                vendor={lines[0]?.vendor ?? null}
+                                onSave={(v) =>
+                                  setVendorMut.mutate({ groupId, docKey: doc, vendor: v })
+                                }
+                              />
+                              <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
+                                <span className="truncate font-mono">{doc}</span>
+                                {cur !== 'USD' && (
+                                  <span className="shrink-0">
+                                    · {cur} @ {fx}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           <div className="shrink-0 text-right">
                             <Typography variant="labelSm" className="tabular-nums">
