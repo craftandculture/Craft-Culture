@@ -149,26 +149,39 @@ const WMSReceivePage = () => {
                           <Icon icon={TransportIcon} size="lg" className={transportConfig.iconClass} />
                         </div>
 
-                        {/* Shipment Info */}
+                        {/* Shipment Info — supplier surfaced for the warehouse */}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <Typography variant="headingSm">{shipment.shipmentNumber}</Typography>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgClass} ${statusConfig.textClass}`}
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgClass} ${statusConfig.textClass}`}
                             >
                               {statusConfig.label}
                             </span>
                           </div>
-                          <Typography variant="bodySm" colorRole="muted" className="truncate">
-                            {shipment.partnerName ?? 'Unknown Partner'} • {shipment.originCountry ?? 'Unknown'}
-                          </Typography>
-                          {/* Destination info */}
-                          {(shipment.destinationCountry || shipment.destinationCity) && (
-                            <Typography variant="bodyXs" colorRole="muted" className="truncate">
-                              → {shipment.destinationCity ?? ''}{' '}
-                              {shipment.destinationCountry ?? ''}
+                          {shipment.name && (
+                            <Typography
+                              variant="bodySm"
+                              className="mt-0.5 truncate font-semibold text-text-primary"
+                            >
+                              {shipment.name}
                             </Typography>
                           )}
+                          <Typography
+                            variant="bodyXs"
+                            colorRole="muted"
+                            className="mt-0.5 truncate"
+                          >
+                            {shipment.partnerName ?? 'Unknown owner'} ·{' '}
+                            {shipment.originCountry ?? 'Origin'}
+                            {(shipment.destinationCity || shipment.destinationCountry) && (
+                              <>
+                                {' → '}
+                                {shipment.destinationCity ?? ''}{' '}
+                                {shipment.destinationCountry ?? ''}
+                              </>
+                            )}
+                          </Typography>
                         </div>
 
                         {/* Cases & Products */}
