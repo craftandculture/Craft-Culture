@@ -528,15 +528,10 @@ const PricingManagerPage = () => {
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState<number>(50);
 
-  // Flat logistics cost per bottle (added to import → landed cost). Persisted.
-  const [logisticsPerBottle, setLogisticsPerBottle] = useState<number>(() => {
-    if (typeof window === 'undefined') return 25;
-    const stored = Number(localStorage.getItem('pm-logistics-per-bottle'));
-    return Number.isFinite(stored) && stored >= 0 ? stored : 25;
-  });
-  useEffect(() => {
-    localStorage.setItem('pm-logistics-per-bottle', String(logisticsPerBottle));
-  }, [logisticsPerBottle]);
+  // Flat logistics still fed to the bulk "Apply Margin" tool (which prices
+  // import + flat logistics for manual-import SKUs). Landed on the table itself
+  // uses the live per-line breakdown, so this is no longer user-editable.
+  const [logisticsPerBottle] = useState<number>(25);
 
   // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
   const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
@@ -1131,17 +1126,6 @@ const PricingManagerPage = () => {
         {!ownerId && (
           <>
             <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-              <span className="whitespace-nowrap text-xs text-text-muted">Logistics&nbsp;$/btl</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={logisticsPerBottle}
-                onChange={(e) => setLogisticsPerBottle(Math.max(0, Number(e.target.value) || 0))}
-                className="w-14 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
               <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
               <input
                 type="number"
@@ -1173,20 +1157,6 @@ const PricingManagerPage = () => {
             <span className="whitespace-nowrap text-xs font-medium text-violet-700">
               {owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'Owner'} rates
             </span>
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
-              Log&nbsp;$
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={ownerDraft.logistics}
-                onChange={(e) =>
-                  setOwnerDraft((d) => ({ ...d, logistics: Math.max(0, Number(e.target.value) || 0) }))
-                }
-                onBlur={() => saveOwnerSettings(ownerDraft)}
-                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
-              />
-            </label>
             <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
               In-Bond&nbsp;%
               <input
@@ -1269,7 +1239,7 @@ const PricingManagerPage = () => {
                     )}
                   </p>
                   <p className="mt-1 text-[11px] text-text-muted">
-                    On landed cost (import + ${effLogistics.toFixed(0)} logistics)
+                    On landed cost (import + logistics)
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-text-secondary">
