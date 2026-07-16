@@ -92,6 +92,43 @@ const DOC_TYPES = [
 type DocType = (typeof DOC_TYPES)[number];
 const docLabel = (t: string) => t.replace(/_/g, ' ');
 
+/**
+ * Soft tint palette to visually separate each supplier invoice in the cost
+ * ledger — cycled by invoice index so adjacent invoices read as distinct.
+ */
+const LEDGER_TINTS = [
+  {
+    card: 'border-blue-200 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-900/10',
+    accent: 'border-l-blue-400',
+    dot: 'bg-blue-400',
+  },
+  {
+    card: 'border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-900/10',
+    accent: 'border-l-amber-400',
+    dot: 'bg-amber-400',
+  },
+  {
+    card: 'border-violet-200 bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-900/10',
+    accent: 'border-l-violet-400',
+    dot: 'bg-violet-400',
+  },
+  {
+    card: 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-900/10',
+    accent: 'border-l-emerald-400',
+    dot: 'bg-emerald-400',
+  },
+  {
+    card: 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-900/10',
+    accent: 'border-l-rose-400',
+    dot: 'bg-rose-400',
+  },
+  {
+    card: 'border-teal-200 bg-teal-50/60 dark:border-teal-900/40 dark:bg-teal-900/10',
+    accent: 'border-l-teal-400',
+    dot: 'bg-teal-400',
+  },
+] as const;
+
 const ShipmentGroupDetailPage = () => {
   const api = useTRPC();
   const router = useRouter();
@@ -597,9 +634,9 @@ const ShipmentGroupDetailPage = () => {
               </div>
             )}
 
-            {/* Cost lines, grouped by source document */}
+            {/* Cost lines, grouped by supplier invoice — colour-coded cards */}
             {costLines.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {(() => {
                   const byDoc = new Map<string, typeof costLines>();
                   for (const l of costLines) {
@@ -608,49 +645,78 @@ const ShipmentGroupDetailPage = () => {
                     arr.push(l);
                     byDoc.set(key, arr);
                   }
-                  return Array.from(byDoc.entries()).map(([doc, lines]) => {
+                  return Array.from(byDoc.entries()).map(([doc, lines], gi) => {
                     const subtotal = lines.reduce((s, l) => s + l.amountUsd, 0);
                     const cur = lines[0]?.currency ?? 'USD';
+                    const fx = lines[0]?.fxToUsd;
+                    const tint =
+                      LEDGER_TINTS[gi % LEDGER_TINTS.length] ?? LEDGER_TINTS[0];
                     return (
-                      <div key={doc}>
-                        <div className="mb-1 flex items-center justify-between border-b border-border-primary pb-1">
-                          <Typography
-                            variant="bodyXs"
-                            className="truncate font-semibold uppercase tracking-wide text-text-secondary"
-                          >
-                            &#x1F4C4; {doc}
-                            {cur !== 'USD' ? ` · ${cur}` : ''}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {lines.length} lines · {fmtUsd(subtotal)}
-                          </Typography>
+                      <div
+                        key={doc}
+                        className={`overflow-hidden rounded-lg border border-l-4 ${tint.card} ${tint.accent}`}
+                      >
+                        {/* Invoice header */}
+                        <div className="flex items-center justify-between gap-3 px-3 py-2">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${tint.dot}`} />
+                            <Typography variant="bodySm" className="truncate font-semibold">
+                              {doc}
+                            </Typography>
+                            {cur !== 'USD' && (
+                              <span className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-medium text-text-muted dark:bg-white/10">
+                                {cur} @ {fx}
+                              </span>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <Typography variant="labelSm" className="tabular-nums">
+                              {fmtUsd(subtotal)}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {lines.length} {lines.length === 1 ? 'line' : 'lines'}
+                            </Typography>
+                          </div>
                         </div>
-                        <div className="divide-y divide-border-muted">
+                        {/* Line items on a clean surface for readability */}
+                        <div className="divide-y divide-border-muted/60 border-t border-border-muted/60 bg-surface-primary/70">
                           {lines.map((l) => {
                             const shp = shipments.find((s) => s.id === l.shipmentId);
                             return (
                               <div
                                 key={l.id}
-                                className="flex items-center justify-between gap-3 py-1.5"
+                                className="flex items-center justify-between gap-3 px-3 py-2"
                               >
-                                <div className="min-w-0">
-                                  <Typography variant="bodySm" className="truncate">
-                                    <span className="capitalize">{l.category}</span>
-                                    {l.description ? ` · ${l.description}` : ''}
-                                  </Typography>
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {l.currency} {l.amount.toLocaleString()}
-                                    {l.currency !== 'USD' ? ` @ ${l.fxToUsd}` : ''}
-                                    {l.scope === 'shipment'
-                                      ? ` · ${shp?.shipmentNumber ?? 'shipment'}`
-                                      : ' · shared'}
-                                  </Typography>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary dark:bg-white/10">
+                                    {l.category}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <Typography variant="bodySm" className="truncate">
+                                      {l.description || (
+                                        <span className="capitalize">{l.category}</span>
+                                      )}
+                                    </Typography>
+                                    <Typography
+                                      variant="bodyXs"
+                                      colorRole="muted"
+                                      className="truncate"
+                                    >
+                                      {l.currency} {l.amount.toLocaleString()}
+                                      {l.scope === 'shipment'
+                                        ? ` · ${shp?.shipmentNumber ?? 'shipment'}`
+                                        : ' · shared'}
+                                    </Typography>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Typography variant="labelSm">{fmtUsd(l.amountUsd)}</Typography>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <Typography variant="labelSm" className="tabular-nums">
+                                    {fmtUsd(l.amountUsd)}
+                                  </Typography>
                                   <button
                                     onClick={() => delLineMut.mutate({ id: l.id })}
                                     className="text-text-muted hover:text-red-500"
+                                    aria-label="Delete cost line"
                                   >
                                     <IconTrash className="h-3.5 w-3.5" />
                                   </button>
@@ -663,9 +729,11 @@ const ShipmentGroupDetailPage = () => {
                     );
                   });
                 })()}
-                <div className="flex items-center justify-between border-t border-border-primary pt-2">
+                <div className="flex items-center justify-between border-t-2 border-border-primary pt-2.5">
                   <Typography variant="labelSm">Total logistics</Typography>
-                  <Typography variant="labelSm">{fmtUsd(metrics.totalLogisticsUsd)}</Typography>
+                  <Typography variant="labelSm" className="tabular-nums">
+                    {fmtUsd(metrics.totalLogisticsUsd)}
+                  </Typography>
                 </div>
               </div>
             )}
