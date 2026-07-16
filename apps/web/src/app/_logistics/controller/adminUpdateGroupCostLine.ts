@@ -6,9 +6,11 @@ import { logisticsGroupCostLines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { updateGroupCostLineSchema } from '../schemas/shipmentGroupSchemas';
+import recalcGroupLandedCost from '../utils/recalcGroupLandedCost';
 
 /**
- * Update a group cost line. Recomputes the USD amount when amount or FX change.
+ * Update a group cost line. Recomputes the USD amount when amount or FX change,
+ * then re-allocates the group's landed cost so pricing reflects it live.
  */
 const adminUpdateGroupCostLine = adminProcedure
   .input(updateGroupCostLineSchema)
@@ -47,6 +49,16 @@ const adminUpdateGroupCostLine = adminProcedure
       })
       .where(eq(logisticsGroupCostLines.id, id))
       .returning();
+
+    // Re-allocate landed cost across the group so pricing reflects the change live.
+    try {
+      await recalcGroupLandedCost(existing.groupId);
+    } catch (error) {
+      console.error('Failed to re-allocate landed cost after updating cost line', {
+        error,
+        groupId: existing.groupId,
+      });
+    }
 
     return line;
   });
