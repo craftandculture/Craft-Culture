@@ -4762,10 +4762,17 @@ export const zohoSalesOrders = pgTable(
     zohoCreatedTime: timestamp('zoho_created_time', { mode: 'date' }),
     zohoLastModifiedTime: timestamp('zoho_last_modified_time', { mode: 'date' }),
     lastSyncAt: timestamp('last_sync_at', { mode: 'date' }),
+    // Raised by the sync when Zoho edits an order that has already been released
+    // to picking/picked, so the pick is reviewed instead of silently drifting.
+    soModifiedAfterRelease: boolean('so_modified_after_release')
+      .notNull()
+      .default(false),
+    soModifiedAt: timestamp('so_modified_at', { mode: 'date' }),
     ...timestamps,
   },
   (table) => [
     index('zoho_sales_orders_zoho_id_idx').on(table.zohoSalesOrderId),
+    index('zoho_sales_orders_so_modified_idx').on(table.soModifiedAfterRelease),
     index('zoho_sales_orders_status_idx').on(table.status),
     index('zoho_sales_orders_customer_idx').on(table.zohoCustomerId),
     index('zoho_sales_orders_dispatch_batch_idx').on(table.dispatchBatchId),
