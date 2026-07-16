@@ -1,7 +1,12 @@
 import { count, desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { users, wmsPickLists, zohoInvoices } from '@/database/schema';
+import {
+  users,
+  wmsPickLists,
+  zohoInvoices,
+  zohoSalesOrders,
+} from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListsSchema } from '../schemas/pickListSchema';
@@ -37,9 +42,12 @@ const adminGetPickLists = wmsOperatorProcedure
         completedAt: wmsPickLists.completedAt,
         notes: wmsPickLists.notes,
         createdAt: wmsPickLists.createdAt,
+        // Linked order edited in Zoho after release — drives the list badge.
+        soModifiedAfterRelease: zohoSalesOrders.soModifiedAfterRelease,
       })
       .from(wmsPickLists)
       .leftJoin(users, eq(wmsPickLists.assignedTo, users.id))
+      .leftJoin(zohoSalesOrders, eq(wmsPickLists.orderId, zohoSalesOrders.id))
       .where(whereConditions)
       .orderBy(desc(wmsPickLists.createdAt))
       .limit(limit)

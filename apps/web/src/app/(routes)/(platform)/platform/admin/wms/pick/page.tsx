@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconChevronRight,
   IconClipboardList,
@@ -183,15 +184,27 @@ const WMSPickListsPage = () => {
             ) : (
               data.pickLists.map((pickList) => (
                 <Link key={pickList.id} href={`/platform/admin/wms/pick/${pickList.id}`}>
-                  <Card className="transition-shadow hover:shadow-md hover:border-border-brand">
+                  <Card
+                    className={`transition-shadow hover:shadow-md hover:border-border-brand ${
+                      pickList.soModifiedAfterRelease
+                        ? 'border-amber-400 ring-1 ring-amber-300'
+                        : ''
+                    }`}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="mb-1 flex items-center gap-2">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
                             <Typography variant="bodySm" className="font-semibold">
                               {pickList.pickListNumber}
                             </Typography>
                             {getStatusBadge(pickList.status ?? 'pending')}
+                            {pickList.soModifiedAfterRelease && (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                <IconAlertTriangle className="h-3 w-3" />
+                                Changed
+                              </span>
+                            )}
                           </div>
                           <Typography variant="bodyXs" colorRole="muted">
                             {pickList.invoiceNumber ?? pickList.orderNumber}
