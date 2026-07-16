@@ -316,6 +316,14 @@ const WMSReceiveShipmentPage = () => {
                 expectedBottlesPerCase:
                   live.bottlesPerCase ?? item.expectedBottlesPerCase,
                 expectedBottleSizeMl: live.bottleSizeMl ?? item.expectedBottleSizeMl,
+                // The received count is pre-filled to the expected on draft
+                // creation. If the operator hasn't touched it yet (still equals
+                // the old expected) and it isn't committed, keep it in step with
+                // the edited expected so the line shows the correct count.
+                ...(item.receivedCases === item.expectedCases &&
+                !(item.isCommitted ?? false)
+                  ? { receivedCases: live.cases }
+                  : {}),
               }
             : {}),
           isVerified: item.isChecked,
