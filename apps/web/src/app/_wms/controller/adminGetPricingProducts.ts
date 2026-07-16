@@ -230,9 +230,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // $2.50) + manual override. Replaces the old flat owner logistics rate.
     const importPaidExpr = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
     const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
-    // Logistics = live freight; else $22.50 fallback for C&C-owned wine that has
-    // no freight profile (old imports). Non-C&C / non-wine with no freight = 0.
-    const logisticsExpr = sql`(CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END)`;
+    // Logistics = per-line override if set; else live freight; else $22.50
+    // fallback for C&C-owned wine with no freight profile (old imports).
+    // Non-C&C / non-wine with no freight = 0.
+    const logisticsExpr = sql`COALESCE(${wmsProductPricing.logisticsPerBottle}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
     const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
     const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
     const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
