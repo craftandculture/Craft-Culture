@@ -8,8 +8,8 @@
 import { logger, schedules } from '@trigger.dev/sdk';
 import { and, eq, isNull } from 'drizzle-orm';
 
-import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
 import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
+import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import {
   zohoInvoices,
   zohoSalesOrderItems,
@@ -69,39 +69,31 @@ export const zohoSalesOrderSyncJob = schedules.task({
             .limit(1);
 
           if (existing) {
-            // Already synced — update header and re-sync line items if still in synced status
-            if (existing.status === 'synced') {
-              const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
+            // Both sync paths funnel through one helper so they can never drift.
+            // Pre-pick orders reconcile in full; orders already released to
+            // picking are flagged for review rather than silently rewritten.
+            const syncResult = await syncExistingSalesOrder({
+              existing,
+              zohoOrder,
+              db: triggerDb,
+            });
 
-              await triggerDb
-                .update(zohoSalesOrders)
-                .set({
-                  zohoStatus: zohoOrder.status,
-                  zohoLastModifiedTime: new Date(zohoOrder.last_modified_time),
-                  total: fullOrder.total,
-                  subTotal: fullOrder.sub_total,
-                  lastSyncAt: new Date(),
-                })
-                .where(eq(zohoSalesOrders.id, existing.id));
-
-              // Reconcile line items to match Zoho exactly — add new, update
-              // changed quantities/prices, and delete lines removed in Zoho so
-              // they're no longer picked (releasing any held stock).
-              if (fullOrder.line_items && fullOrder.line_items.length > 0) {
-                const reconciled = await reconcileZohoSalesOrderItems({
-                  orderId: existing.id,
-                  zohoLineItems: fullOrder.line_items,
-                  db: triggerDb,
-                });
-
-                if (reconciled.added || reconciled.updated || reconciled.removed) {
-                  logger.info(
-                    `Reconciled line items for ${zohoOrder.salesorder_number}`,
-                    reconciled,
-                  );
-                }
+            if (syncResult.outcome === 'reconciled') {
+              if (
+                syncResult.reconciled.added ||
+                syncResult.reconciled.updated ||
+                syncResult.reconciled.removed
+              ) {
+                logger.info(
+                  `Reconciled line items for ${zohoOrder.salesorder_number}`,
+                  syncResult.reconciled,
+                );
               }
-
+              results.updated++;
+            } else if (syncResult.outcome === 'flagged') {
+              logger.info(
+                `Flagged ${zohoOrder.salesorder_number} — Zoho edit after release to pick`,
+              );
               results.updated++;
             }
 
