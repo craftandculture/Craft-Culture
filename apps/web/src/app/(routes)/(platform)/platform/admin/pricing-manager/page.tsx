@@ -890,8 +890,11 @@ const PricingManagerPage = () => {
           (p as { isCraftCulture?: number }).isCraftCulture === 1 &&
           (p.category === 'Wine' || p.category == null);
         const rowLog = systemLog > 0 ? systemLog : isCcWine ? 22.5 : 0;
+        const transferDefault =
+          (p as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1 ? 0 : 2.5;
         const rowTransfer =
-          (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ?? 2.5;
+          (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ??
+          transferDefault;
         const rowInbondDiv = (() => {
           const pct = ownerId ? effInbondPct : (p.ownerInbondPct ?? inBondMarkupPct);
           return pct < 100 ? 1 - pct / 100 : null;
@@ -1555,7 +1558,12 @@ const PricingManagerPage = () => {
                     const transferStored =
                       (product as { transferPricePerBottle?: number | null })
                         .transferPricePerBottle ?? null;
-                    const rowTransfer = transferStored ?? 2.5;
+                    // Cru Wine / Crurated default to $0 transfer; everyone else $2.50
+                    const transferDefault =
+                      (product as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1
+                        ? 0
+                        : 2.5;
+                    const rowTransfer = transferStored ?? transferDefault;
                     const rowInbondPct = ownerId
                       ? effInbondPct
                       : (orow.ownerInbondPct ?? inBondMarkupPct);
