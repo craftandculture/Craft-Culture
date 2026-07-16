@@ -4995,6 +4995,8 @@ export const wmsProductPricing = pgTable(
     costOverridePerBottle: doublePrecision('cost_override_per_bottle'),
     /** Per-line logistics $/btl override; null = fall back to owner/global logistics */
     logisticsPerBottle: doublePrecision('logistics_per_bottle'),
+    /** FZ→mainland transfer fee $/btl; null = the $2.50 default is applied in pricing */
+    transferPricePerBottle: doublePrecision('transfer_price_per_bottle'),
     sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
     /** Bespoke per-line margin % over landed (Spirits/RTD only): sell = landed / (1 - pct/100) */
     sellMarginPct: doublePrecision('sell_margin_pct'),

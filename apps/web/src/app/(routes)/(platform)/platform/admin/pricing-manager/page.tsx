@@ -302,17 +302,17 @@ const MarginEditCell = ({
   );
 };
 
-// ─── Logistics Cell (per-line logistics $/btl override, clearable) ─────────────
+// ─── Transfers Cell (FZ→mainland fee $/btl, $2.50 default, clearable) ──────────
 
-const LogisticsCell = ({
+const TransfersCell = ({
   value,
   effective,
   onSave,
   tdClassName = '',
 }: {
-  /** stored per-line override; null when inherited from owner/global */
+  /** stored per-SKU transfer fee; null when the $2.50 default applies */
   value: number | null;
-  /** effective logistics currently applied (shown to the operator) */
+  /** effective transfer fee currently applied (shown to the operator) */
   effective: number | null;
   onSave: (v: number | null) => void;
   tdClassName?: string;
@@ -333,7 +333,11 @@ const LogisticsCell = ({
             setDraft(value != null ? value.toFixed(2) : '');
             setEditing(true);
           }}
-          title={isOverride ? 'Per-line logistics' : 'Inherited — click to set a per-line rate'}
+          title={
+            isOverride
+              ? 'Per-SKU transfer fee'
+              : 'Default $2.50 — click to set a per-SKU fee'
+          }
         >
           {effective != null ? (
             `$${effective.toFixed(2)}`
@@ -354,7 +358,7 @@ const LogisticsCell = ({
           e.preventDefault();
           const t = draft.trim();
           if (t === '') {
-            onSave(null); // clear -> revert to owner/global
+            onSave(null); // clear -> revert to the $2.50 default
           } else {
             const num = parseFloat(t);
             if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
@@ -367,7 +371,7 @@ const LogisticsCell = ({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
-          placeholder="0.00"
+          placeholder="2.50"
           type="number"
           step="0.01"
           min="0"
@@ -747,14 +751,14 @@ const PricingManagerPage = () => {
     onError: () => toast.error('Failed to update cost override'),
   });
 
-  const setLineLogisticsMut = useMutation({
-    ...api.wms.admin.stock.pricing.setLineLogistics.mutationOptions(),
+  const setTransferPriceMut = useMutation({
+    ...api.wms.admin.stock.pricing.setTransferPrice.mutationOptions(),
     retry: 2,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
-      toast.success('Logistics updated');
+      toast.success('Transfer fee updated');
     },
-    onError: () => toast.error('Failed to update logistics'),
+    onError: () => toast.error('Failed to update transfer fee'),
   });
 
   const setSellingPriceMut = useMutation({
@@ -878,19 +882,16 @@ const PricingManagerPage = () => {
       const XLSX = await import('xlsx');
       const aoa: (string | number)[][] = [[
         'Product', 'Producer', 'Vintage', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
-        'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
+        'Transfer $/btl', 'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
         'PC Price $/btl', 'PC Price $/case', 'Margin %',
       ]];
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
         const override = p.costOverridePerBottle ?? null;
-        // Per-row rates: selected owner's, else each row's owner rates, else global
-        const rowLog =
-          p.category === 'Spirits' || p.category === 'RTD'
-            ? 0
-            : ownerId
-              ? effLogistics
-              : (p.ownerLogistics ?? logisticsPerBottle);
+        // Logistics = live system freight/btl; Transfer = FZ→mainland ($2.50 default)
+        const rowLog = (p as { systemLogistics?: number | null }).systemLogistics ?? 0;
+        const rowTransfer =
+          (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ?? 2.5;
         const rowInbondDiv = (() => {
           const pct = ownerId ? effInbondPct : (p.ownerInbondPct ?? inBondMarkupPct);
           return pct < 100 ? 1 - pct / 100 : null;
@@ -901,7 +902,7 @@ const PricingManagerPage = () => {
         })();
         const hasCost = (p.importPricePerBottle != null && p.importPricePerBottle > 0) || override != null;
         const landed = hasCost
-          ? (p.importPricePerBottle ?? 0) + rowLog + (override ?? 0)
+          ? (p.importPricePerBottle ?? 0) + rowLog + rowTransfer + (override ?? 0)
           : null;
         const inBond = landed && rowInbondDiv ? landed / rowInbondDiv : null;
         const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
@@ -924,6 +925,7 @@ const PricingManagerPage = () => {
           p.totalCases * caseConfig,
           num(p.importPricePerBottle),
           landed != null ? num(rowLog) : '',
+          landed != null ? num(rowTransfer) : '',
           override != null ? num(override) : '',
           num(landed),
           num(p.importPricePerBottle != null ? p.importPricePerBottle * caseConfig : null),
@@ -937,7 +939,7 @@ const PricingManagerPage = () => {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
         { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
-        { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
+        { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
       ];
       ws['!autofilter'] = { ref: `A1:P${all.length + 1}` };
       const wb = XLSX.utils.book_new();
@@ -1420,9 +1422,9 @@ const PricingManagerPage = () => {
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
                   <th
-                    title="Cost build-up per bottle: Import + Logistics + Override = Landed"
+                    title="Cost build-up per bottle: Import + Logistics + Transfer + Override = Landed"
                     className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500"
-                    colSpan={4}
+                    colSpan={5}
                   >
                     Cost
                   </th>
@@ -1484,10 +1486,16 @@ const PricingManagerPage = () => {
                     </span>
                   </th>
                   <th
-                    title="Flat logistics cost per bottle, added to import"
+                    title="Live group/shipment freight per bottle (from the system, read-only)"
                     className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
                   >
                     Logistics
+                  </th>
+                  <th
+                    title="FZ→mainland transfer fee per bottle ($2.50 default). Click a cell to edit."
+                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
+                  >
+                    Transfers
                   </th>
                   <th
                     title="Manual per-SKU cost adjustment (can be +/-), added to landed. Click a cell to edit."
@@ -1496,7 +1504,7 @@ const PricingManagerPage = () => {
                     Override
                   </th>
                   <th
-                    title="Landed cost per bottle = Import + Logistics + Override"
+                    title="Landed cost per bottle = Import + Logistics + Transfer + Override"
                     className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
                   >
                     Landed
@@ -1559,19 +1567,15 @@ const PricingManagerPage = () => {
                       ownerInbondPct?: number | null;
                       ownerPcPct?: number | null;
                     };
-                    // Per-line logistics override (wines only); null = inherit
-                    const lineLogistics =
-                      (product as { lineLogistics?: number | null }).lineLogistics ?? null;
-                    // Spirits & RTD carry no logistics; otherwise a per-line override
-                    // beats the owner's / global rate.
+                    // Logistics = live group/shipment freight per bottle (from the
+                    // system; read-only, auto-updates with invoices). Transfers =
+                    // FZ→mainland fee ($/btl; $2.50 default, editable per SKU).
                     const rowLogistics =
-                      product.category === 'Spirits' || product.category === 'RTD'
-                        ? 0
-                        : lineLogistics != null
-                          ? lineLogistics
-                          : ownerId
-                            ? effLogistics
-                            : (orow.ownerLogistics ?? logisticsPerBottle);
+                      (product as { systemLogistics?: number | null }).systemLogistics ?? 0;
+                    const transferStored =
+                      (product as { transferPricePerBottle?: number | null })
+                        .transferPricePerBottle ?? null;
+                    const rowTransfer = transferStored ?? 2.5;
                     const rowInbondPct = ownerId
                       ? effInbondPct
                       : (orow.ownerInbondPct ?? inBondMarkupPct);
@@ -1581,10 +1585,10 @@ const PricingManagerPage = () => {
                       : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
                     const rowPcDivisor =
                       rowPcPct != null && rowPcPct < 100 ? 1 - rowPcPct / 100 : null;
-                    // Landed cost = import + logistics + manual override
+                    // Landed = import (paid) + logistics + transfer + manual override
                     const hasCost = (importPrice != null && importPrice > 0) || costOverride != null;
                     const landed = hasCost
-                      ? (importPrice ?? 0) + rowLogistics + (costOverride ?? 0)
+                      ? (importPrice ?? 0) + rowLogistics + rowTransfer + (costOverride ?? 0)
                       : null;
                     // Spirits & RTD are priced solely by a bespoke per-line margin
                     // over landed — the global in-bond/PC % never applies to them.
@@ -1729,23 +1733,22 @@ const PricingManagerPage = () => {
                           }
                         />
 
-                        {/* Logistics — editable per-line (wines); read-only 0 for Spirits/RTD */}
-                        {isSpiritOrRtd || isInbound ? (
-                          <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
-                            {landed != null ? `$${rowLogistics.toFixed(2)}` : '—'}
-                          </td>
-                        ) : (
-                          <LogisticsCell
-                            value={lineLogistics}
-                            effective={landed != null ? rowLogistics : null}
-                            onSave={(v) =>
-                              setLineLogisticsMut.mutate({
-                                lwin18: product.lwin18,
-                                logisticsPerBottle: v,
-                              })
-                            }
-                          />
-                        )}
+                        {/* Logistics — live group/shipment freight from the system (read-only) */}
+                        <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
+                          {landed != null ? `$${rowLogistics.toFixed(2)}` : '—'}
+                        </td>
+
+                        {/* Transfers — FZ→mainland fee, editable ($2.50 default) */}
+                        <TransfersCell
+                          value={transferStored}
+                          effective={landed != null ? rowTransfer : null}
+                          onSave={(v) =>
+                            setTransferPriceMut.mutate({
+                              lwin18: product.lwin18,
+                              transferPricePerBottle: v,
+                            })
+                          }
+                        />
 
                         {/* Override (manual per-SKU landed adjustment) */}
                         <OverrideCell

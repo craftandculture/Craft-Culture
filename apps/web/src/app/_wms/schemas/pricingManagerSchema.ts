@@ -52,6 +52,15 @@ export const setLineLogisticsSchema = z.object({
   logisticsPerBottle: z.number().min(0).max(100000).nullable(),
 });
 
+/**
+ * Schema for a per-SKU FZ→mainland transfer fee ($/btl). Null clears it so the
+ * row falls back to the $2.50 default applied in pricing.
+ */
+export const setTransferPriceSchema = z.object({
+  lwin18: z.string().min(1),
+  transferPricePerBottle: z.number().min(0).max(100000).nullable(),
+});
+
 /** Schema for bulk-applying a margin percentage to products */
 export const bulkApplyMarginSchema = z.object({
   marginPercent: z.number().min(0.1).max(99.9),

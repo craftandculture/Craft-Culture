@@ -37,7 +37,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     } else if (priceFilter === 'lossMaking') {
       // Below cost = EFFECTIVE PC (computed when owner has a PC%, else stored)
       // at/below landed cost — matches the Below-Cost KPI and the red rows.
-      const landedH = sql`(MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0) + COALESCE(MAX(${wmsOwnerPricingSettings.logisticsPerBottle}), 25))`;
+      const landedH = sql`(MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0) + COALESCE(MAX(${wmsProductPricing.transferPricePerBottle}), 2.5))`;
       const effH = sql`(CASE
         WHEN MAX(${wmsOwnerPricingSettings.pcMarginPct}) IS NOT NULL AND MAX(${wmsOwnerPricingSettings.pcMarginPct}) < 100
         THEN ${landedH} / (1 - COALESCE(MAX(${wmsOwnerPricingSettings.inbondMarginPct}), 0) / 100.0) / (1 - MAX(${wmsOwnerPricingSettings.pcMarginPct}) / 100.0)
@@ -99,6 +99,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
         // Per-line logistics override ($/btl); null = fall back to owner/global
         lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
+        // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
+        transferPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
         sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
         // Bespoke per-line margin % over landed (Spirits/RTD only)
         sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
@@ -117,14 +119,16 @@ const adminGetPricingProducts = wmsOperatorProcedure
       .limit(limit)
       .offset(offset);
 
-    // Fill missing import prices from shipment costs (same fallback as Stock Explorer)
-    const missingLwin18s = products
-      .filter((p) => p.importPricePerBottle == null || p.importPricePerBottle <= 0)
-      .map((p) => p.lwin18);
+    // Pull the latest shipment's product + landed cost for every row so we can
+    // show the PAID import price (product cost) and the live system logistics
+    // (freight = landed − product) as separate columns.
+    const allLwin18s = products.map((p) => p.lwin18);
+    const shipCostMap: Record<
+      string,
+      { productCost: number | null; landedCost: number | null }
+    > = {};
 
-    const shipmentPriceMap: Record<string, number> = {};
-
-    if (missingLwin18s.length > 0) {
+    if (allLwin18s.length > 0) {
       const shipmentRows = await db
         .select({
           lwin18: wmsStock.lwin18,
@@ -140,31 +144,40 @@ const adminGetPricingProducts = wmsOperatorProcedure
             eq(logisticsShipmentItems.lwin, wmsStock.lwin18),
           ),
         )
-        .where(
-          and(
-            inArray(wmsStock.lwin18, missingLwin18s),
-            isNotNull(wmsStock.shipmentId),
-          ),
-        )
+        .where(and(inArray(wmsStock.lwin18, allLwin18s), isNotNull(wmsStock.shipmentId)))
         .orderBy(desc(logisticsShipmentItems.createdAt));
 
       for (const row of shipmentRows) {
-        if (shipmentPriceMap[row.lwin18] != null) continue;
-        const cost = row.landedCostPerBottle ?? row.productCostPerBottle;
-        if (cost != null) {
-          shipmentPriceMap[row.lwin18] = cost;
-        }
+        if (shipCostMap[row.lwin18] != null) continue;
+        shipCostMap[row.lwin18] = {
+          productCost: row.productCostPerBottle,
+          landedCost: row.landedCostPerBottle,
+        };
       }
     }
 
-    // Build final products with shipment cost fallback
-    const enrichedProducts = products.map((p) => ({
-      ...p,
-      importPricePerBottle:
+    // Break landed cost into its parts: import (paid goods, ex-freight) + system
+    // logistics (live group freight) + transfer + override. A stored manual
+    // import price wins over the shipment product cost.
+    const enrichedProducts = products.map((p) => {
+      const ship = shipCostMap[p.lwin18];
+      const manualImport =
         p.importPricePerBottle != null && p.importPricePerBottle > 0
           ? p.importPricePerBottle
-          : shipmentPriceMap[p.lwin18] ?? null,
-    }));
+          : null;
+      const importPaid = manualImport ?? ship?.productCost ?? null;
+      const systemLogistics =
+        ship && ship.landedCost != null && ship.productCost != null
+          ? Math.max(0, Math.round((ship.landedCost - ship.productCost) * 100) / 100)
+          : 0;
+      return {
+        ...p,
+        // importPricePerBottle now carries the PAID goods cost (ex-freight)
+        importPricePerBottle: importPaid,
+        // live group/shipment freight per bottle (read-only; auto-updates)
+        systemLogistics,
+      };
+    });
 
     // Count total for pagination
     const countSubquery = db
@@ -204,7 +217,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // gap KPIs in step with the displayed rows instead of stale stored prices.
     // Import falls back to the latest shipment cost when no stored import price
     // (same as the displayed rows), so stock values aren't understated.
-    const landedExpr = sql`(COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.cost, 0) + COALESCE(${wmsProductPricing.costOverridePerBottle}, 0) + (CASE WHEN ${wmsStock.category} IN ('Spirits', 'RTD') THEN 0 ELSE COALESCE(${wmsOwnerPricingSettings.logisticsPerBottle}, 25) END))`;
+    // Landed = import (paid goods, ex-freight) + system logistics (live group
+    // freight = shipment landed − product) + FZ→mainland transfer (default
+    // $2.50) + manual override. Replaces the old flat owner logistics rate.
+    const importPaidExpr = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
+    const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
+    const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, 2.5)`;
+    const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
+    const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${freightExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
     const pcExpr = sql`(CASE
       WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
@@ -242,7 +262,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         ),
       )
       .leftJoin(
-        sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, COALESCE(landed_cost_per_bottle, product_cost_per_bottle) AS cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`,
+        sql`(SELECT DISTINCT ON (lwin) lwin AS lwin18, product_cost_per_bottle AS product_cost, landed_cost_per_bottle AS landed_cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY lwin, created_at DESC) ship`,
         sql`ship.lwin18 = ${wmsStock.lwin18}`,
       )
       .where(and(...summaryConditions));
