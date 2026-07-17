@@ -6,6 +6,7 @@ import {
   IconBox,
   IconBoxOff,
   IconCheck,
+  IconChevronRight,
   IconLoader2,
   IconMapPin,
   IconMinus,
@@ -58,6 +59,7 @@ interface StockItem {
   availableCases: number;
   caseConfig: number;
   lotNumber?: string | null;
+  vintage?: number | null;
 }
 
 interface RepackTargetResult {
@@ -115,6 +117,10 @@ const getStepNumber = (step: WorkflowStep): number => {
   };
   return stepMap[step];
 };
+
+/** Product name with vintage appended (NV wines carry no vintage). */
+const productWithVintage = (name: string, vintage?: number | null) =>
+  vintage ? `${name} ${vintage}` : name;
 
 /**
  * WMS Repack - multi-step workflow for splitting cases
@@ -443,7 +449,7 @@ const WMSRepackPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
+    <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-6">
         {/* Header with large back button */}
         <div className="flex items-start gap-3">
@@ -533,19 +539,52 @@ const WMSRepackPage = () => {
                     <button
                       key={stock.id}
                       onClick={() => handleSelectStock(stock)}
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-left transition-colors hover:border-border-brand"
+                      className="flex w-full items-center gap-3 rounded-xl border border-border-primary bg-fill-primary p-3.5 text-left transition-colors hover:border-border-brand active:bg-fill-secondary"
                     >
-                      <Typography variant="bodySm" className="font-medium">
-                        {stock.productName}
-                      </Typography>
-                      <div className="mt-1 flex items-center justify-between">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {stock.caseConfig}x per case
-                        </Typography>
-                        <Typography variant="bodySm" className="font-medium text-blue-600">
-                          {stock.availableCases} avail
-                        </Typography>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="truncate text-[14px] font-semibold text-text-primary">
+                            {stock.productName}
+                          </span>
+                          {stock.vintage ? (
+                            <span className="shrink-0 text-[14px] font-bold text-brand-600">
+                              {stock.vintage}
+                            </span>
+                          ) : (
+                            <span className="shrink-0 text-[11px] font-medium text-text-muted">
+                              NV
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            {stock.caseConfig}× per case
+                          </span>
+                          {stock.ownerName && (
+                            <span className="truncate text-[11px] text-text-muted">
+                              {stock.ownerName}
+                            </span>
+                          )}
+                          {stock.lotNumber && (
+                            <span className="text-[11px] text-text-muted/70">
+                              Lot {stock.lotNumber}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <div className="shrink-0 text-right leading-none">
+                        <div className="text-lg font-bold tabular-nums text-blue-600">
+                          {stock.availableCases}
+                        </div>
+                        <div className="mt-0.5 text-[10px] uppercase tracking-wide text-text-muted">
+                          avail
+                        </div>
+                      </div>
+                      <Icon
+                        icon={IconChevronRight}
+                        size="sm"
+                        className="shrink-0 text-text-muted/50"
+                      />
                     </button>
                   ))}
                 </div>
@@ -566,7 +605,9 @@ const WMSRepackPage = () => {
                 <Typography variant="bodyXs" colorRole="muted">
                   Source Case
                 </Typography>
-                <Typography variant="headingSm">{selectedStock.productName}</Typography>
+                <Typography variant="headingSm">
+                  {productWithVintage(selectedStock.productName, selectedStock.vintage)}
+                </Typography>
                 <Typography variant="bodySm" className="text-blue-600">
                   {selectedStock.caseConfig} bottles per case
                 </Typography>
@@ -840,7 +881,7 @@ const WMSRepackPage = () => {
                   </Typography>
                   <LocationBadge locationCode={sourceLocation.locationCode} size="md" className="mb-2" />
                   <Typography variant="bodySm" className="font-medium">
-                    {selectedStock.productName}
+                    {productWithVintage(selectedStock.productName, selectedStock.vintage)}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">
                     {repackMode === 'combine'
@@ -1034,7 +1075,7 @@ const WMSRepackPage = () => {
                   </Typography>
                 )}
                 <Typography variant="bodyXs" colorRole="muted">
-                  {selectedStock.productName}
+                  {productWithVintage(selectedStock.productName, selectedStock.vintage)}
                 </Typography>
               </div>
 
