@@ -9,6 +9,8 @@ export const getPricingProductsSchema = z.object({
   priceFilter: z.enum(['unpriced', 'lossMaking', 'noImport']).optional(),
   /** Also return in-transit (inbound shipment) products as a separate list */
   includeInbound: z.boolean().optional(),
+  /** Include sold-out SKUs (0 cases on hand) so the user can see what's moved */
+  includeSoldOut: z.boolean().optional(),
   sortBy: z
     .enum(['productName', 'vintage', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),

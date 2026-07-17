@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -23,11 +23,20 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
-    const { search, category, ownerId, priceFilter, includeInbound, sortBy, sortOrder, limit, offset } =
+    const { search, category, ownerId, priceFilter, includeInbound, includeSoldOut, sortBy, sortOrder, limit, offset } =
       input;
 
-    const conditions = [gt(sql`SUM(${wmsStock.quantityCases})`, 0)];
-    const whereConditions = [gt(wmsStock.quantityCases, 0)];
+    // Default hides sold-out SKUs (0 on hand); the "Sold (0 qty)" toggle relaxes
+    // the qty>0 gate to >=0 (always true) so depleted lines show. KPI/summary
+    // stay stock-on-hand only.
+    const conditions = [
+      includeSoldOut
+        ? gte(sql`SUM(${wmsStock.quantityCases})`, 0)
+        : gt(sql`SUM(${wmsStock.quantityCases})`, 0),
+    ];
+    const whereConditions = [
+      includeSoldOut ? gte(wmsStock.quantityCases, 0) : gt(wmsStock.quantityCases, 0),
+    ];
 
     // Price-gap filters operate on the grouped MAX() pricing values (HAVING)
     if (priceFilter === 'unpriced') {

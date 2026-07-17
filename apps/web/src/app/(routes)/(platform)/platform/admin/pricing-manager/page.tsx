@@ -746,6 +746,7 @@ const PricingManagerPage = () => {
     'unpriced' | 'lossMaking' | 'noImport' | undefined
   >(undefined);
   const [includeInbound, setIncludeInbound] = useState(false);
+  const [includeSoldOut, setIncludeSoldOut] = useState(false);
 
   // Per-owner pricing settings (logistics / in-bond margin / PC margin)
   const { data: ownerSettings } = useQuery({
@@ -815,7 +816,7 @@ const PricingManagerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [sortBy, sortOrder, category, ownerId, priceFilter, includeInbound, limit]);
+  }, [sortBy, sortOrder, category, ownerId, priceFilter, includeInbound, includeSoldOut, limit]);
 
   // Close margin popover on outside click
   useEffect(() => {
@@ -846,12 +847,13 @@ const PricingManagerPage = () => {
       ownerId,
       priceFilter,
       includeInbound,
+      includeSoldOut,
       sortBy,
       sortOrder,
       limit,
       offset: page * limit,
     }),
-    [debouncedSearch, category, ownerId, priceFilter, includeInbound, sortBy, sortOrder, limit, page],
+    [debouncedSearch, category, ownerId, priceFilter, includeInbound, includeSoldOut, sortBy, sortOrder, limit, page],
   );
 
   const { data, isLoading } = useQuery(
@@ -1553,6 +1555,17 @@ const PricingManagerPage = () => {
           }`}
         >
           {includeInbound ? '✓ Inbound stock' : '+ Inbound stock'}
+        </button>
+        <button
+          onClick={() => setIncludeSoldOut((v) => !v)}
+          title="Show sold-out SKUs (0 cases on hand) so you can see what's moved"
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+            includeSoldOut
+              ? 'border-transparent bg-text-primary text-white shadow-sm'
+              : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
+          }`}
+        >
+          {includeSoldOut ? '✓ Sold (0 qty)' : '+ Sold (0 qty)'}
         </button>
       </div>
 
