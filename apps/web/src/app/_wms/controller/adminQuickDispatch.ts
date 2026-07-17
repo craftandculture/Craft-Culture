@@ -116,6 +116,9 @@ const adminQuickDispatch = wmsOperatorProcedure
       orderId: string;
       orderNumber: string;
     }> = [];
+    // Orders already picked (via a pick list) have had their stock decremented
+    // already — Quick Dispatch must NOT decrement them again (that double-picks).
+    const alreadyPickedZohoIds = new Set<string>();
 
     // Process Zoho orders
     if (zohoOrderIds.length > 0) {
@@ -123,9 +126,20 @@ const adminQuickDispatch = wmsOperatorProcedure
         .select({
           id: zohoSalesOrders.id,
           salesOrderNumber: zohoSalesOrders.salesOrderNumber,
+          status: zohoSalesOrders.status,
         })
         .from(zohoSalesOrders)
         .where(inArray(zohoSalesOrders.id, zohoOrderIds));
+
+      // Capture the PRE-dispatch status: anything already through picking has had
+      // its stock decremented, so it must be dispatch-only (no re-decrement).
+      for (const r of zohoRows) {
+        if (
+          ['picking', 'picked', 'dispatched', 'delivered'].includes(r.status ?? '')
+        ) {
+          alreadyPickedZohoIds.add(r.id);
+        }
+      }
 
       if (zohoRows.length > 0) {
         // Update Zoho orders
@@ -226,6 +240,8 @@ const adminQuickDispatch = wmsOperatorProcedure
     // Decrement stock — Quick Dispatch skips picking so stock must be decremented here
     for (const orderRef of orderIds) {
       if (orderRef.type === 'zoho') {
+        // Already picked via a pick list → stock is decremented; dispatch only.
+        if (alreadyPickedZohoIds.has(orderRef.id)) continue;
         const items = await db
           .select({
             lwin18: zohoSalesOrderItems.lwin18,
