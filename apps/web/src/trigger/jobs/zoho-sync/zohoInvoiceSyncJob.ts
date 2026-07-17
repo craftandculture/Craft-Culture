@@ -35,6 +35,15 @@ export const zohoInvoiceSyncJob = schedules.task({
       while (hasMore) {
         const result = await listInvoices({ page, perPage: 200 });
 
+        // Guard against a malformed/error response shape (e.g. Zoho returns an
+        // error body with no `invoices`/`page_context`). Surface it as a failed
+        // run rather than crashing mid-loop or silently syncing nothing.
+        if (!result || !Array.isArray(result.invoices) || !result.pageContext) {
+          throw new Error(
+            `Zoho invoices response malformed on page ${page} (missing invoices/page_context)`,
+          );
+        }
+
         for (const inv of result.invoices) {
           if (inv.status === 'draft' || inv.status === 'void') continue;
 
@@ -94,8 +103,20 @@ export const zohoInvoiceSyncJob = schedules.task({
         page++;
       }
     } catch (error) {
+      // Don't swallow — a fetch/token/parse failure must FAIL the run so
+      // Trigger.dev surfaces and alerts it, rather than the sync silently
+      // freezing (as it did for ~10 days in Jul 2026 while sales-order sync
+      // kept working and the revenue KPIs quietly went stale).
       logger.error('Failed to fetch invoices from Zoho', { error });
-      results.errors++;
+      throw error;
+    }
+
+    // If every write failed, don't report a green run — fail loudly so the
+    // outage is visible instead of the table freezing at its last good state.
+    if (results.errors > 0 && results.created + results.updated === 0) {
+      throw new Error(
+        `Zoho invoice sync wrote nothing across ${results.errors} errors — failing run to surface the outage`,
+      );
     }
 
     logger.info('Zoho invoice sync completed', results);
