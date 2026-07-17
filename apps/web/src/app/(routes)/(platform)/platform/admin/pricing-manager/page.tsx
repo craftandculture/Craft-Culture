@@ -10,6 +10,7 @@ import {
   IconChevronsRight,
   IconCurrencyDollar,
   IconDownload,
+  IconInfoCircle,
   IconLoader2,
   IconPencil,
   IconPercentage,
@@ -28,6 +29,10 @@ import { toast } from 'sonner';
 
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -639,6 +644,31 @@ const MarginDot = ({
   if (margin >= ok) return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
   return <span className="inline-block h-2 w-2 rounded-full bg-red-500" />;
 };
+
+// ─── Header Info (hover tooltip on a small ⓘ icon) ────────────────────────────
+// Surfaces the per-column explanation that used to live in an invisible native
+// `title`. stopPropagation on the trigger so clicking the icon in a sortable
+// header doesn't also trigger a sort.
+
+const HeaderInfo = ({ text }: { text: string }) => (
+  <TooltipProvider delayDuration={100}>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="inline-flex cursor-help text-text-muted/50 transition-colors hover:text-text-secondary"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <IconInfoCircle className="h-3.5 w-3.5" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="block max-w-[230px] text-left text-xs font-normal normal-case leading-snug tracking-normal">
+          {text}
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 
@@ -1640,61 +1670,56 @@ const PricingManagerPage = () => {
                   <th
                     className={`border-l-2 border-slate-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('importPrice')}
-                    title="Import price per bottle (ex-works cost). Click a cell to edit."
                   >
                     <span className="flex items-center justify-end gap-1">
                       Import {renderSortIcon('importPrice')}
+                      <HeaderInfo text="Import price per bottle — the ex-works goods cost, before freight. Click a cell to edit." />
                     </span>
                   </th>
-                  <th
-                    title="Live group/shipment freight per bottle. Click a cell to override this line; clear to revert to the system value."
-                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
-                  >
-                    Logistics
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    <span className="flex items-center justify-end gap-1">
+                      Logistics
+                      <HeaderInfo text="Live group/shipment freight per bottle (auto-updates). Click a cell to override this line; clear to revert to the system value." />
+                    </span>
                   </th>
-                  <th
-                    title="FZ→mainland transfer fee per bottle ($2.50 default). Click a cell to edit."
-                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
-                  >
-                    Transfers
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    <span className="flex items-center justify-end gap-1">
+                      Transfers
+                      <HeaderInfo text="FZ→mainland transfer fee per bottle ($2.50 default; $0 for consignment owners). Click a cell to edit." />
+                    </span>
                   </th>
-                  <th
-                    title="Manual per-SKU cost adjustment (can be +/-), added to landed. Click a cell to edit."
-                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
-                  >
-                    Override
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    <span className="flex items-center justify-end gap-1">
+                      Override
+                      <HeaderInfo text="Manual per-SKU cost adjustment (can be + or −), added to landed cost. Click a cell to edit." />
+                    </span>
                   </th>
-                  <th
-                    title="Landed cost per bottle = Import + Logistics + Transfer + Override"
-                    className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted"
-                  >
-                    Landed
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-text-muted">
+                    <span className="flex items-center justify-end gap-1">
+                      Landed
+                      <HeaderInfo text="Landed cost per bottle = Import + Logistics + Transfer + Override." />
+                    </span>
                   </th>
-                  <th
-                    title="In-bond (B2B) price = Landed / (1 - In-Bond%)"
-                    className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80"
-                  >
-                    In Bond
-                    <span className="ml-1 text-[10px] font-normal text-text-muted/60">
-                      {ownerId ? `${effInbondPct}% mgn` : 'per owner'}
+                  <th className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                    <span className="flex items-center justify-end gap-1">
+                      In Bond
+                      <span className="text-[10px] font-normal text-text-muted/60">
+                        {ownerId ? `${effInbondPct}% mgn` : 'per owner'}
+                      </span>
+                      <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − In-Bond%). The In-Bond% is set per owner (or globally when no owner is selected)." />
                     </span>
                   </th>
                   <th
                     className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
-                    title="Private client price = In-Bond / (1 - PC%). Click a cell to edit."
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
+                      <HeaderInfo text="Private Client price = In-Bond / (1 − PC%). Click a cell to edit, or set a PC% to auto-suggest it." />
                     </span>
                   </th>
                   <th
                     className={`border-l-2 border-emerald-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
-                    title={
-                      marginBasis === 'ibLanded'
-                        ? 'Margin = (In-Bond − Landed) / In-Bond — the B2B margin over cost (varies per owner)'
-                        : 'Margin = (PC − In-Bond) / PC — the private-client margin over the in-bond price'
-                    }
                   >
                     <div className="flex flex-col items-end gap-1">
                       <span
@@ -1702,6 +1727,7 @@ const PricingManagerPage = () => {
                         onClick={() => handleSort('margin')}
                       >
                         Margin {renderSortIcon('margin')}
+                        <HeaderInfo text="IB·Landed = (In-Bond − Landed) / In-Bond, the B2B margin over cost (varies per owner). PC·IB = (PC − In-Bond) / PC, the private-client margin. Toggle below." />
                       </span>
                       <div
                         className="flex overflow-hidden rounded-md border border-emerald-300 text-[9px] font-semibold normal-case tracking-normal"
