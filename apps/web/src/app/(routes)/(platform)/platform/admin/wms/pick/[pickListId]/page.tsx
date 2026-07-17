@@ -395,6 +395,36 @@ const WMSPickListDetailPage = () => {
         )}
       </div>
 
+      {/* Print the full picking list — prominent, primary call to action */}
+      {!pickingItem && (
+        <a
+          href={`/api/admin/wms/picking-list/${pickListId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-3 flex w-full items-center gap-3 rounded-xl border-2 border-brand-500 bg-brand-50 px-4 py-3 transition-colors hover:bg-brand-100 active:scale-[0.99] dark:border-brand-700 dark:bg-brand-900/20"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white">
+            <Icon icon={IconPrinter} size="md" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <Typography
+              variant="bodyMd"
+              className="font-bold text-brand-700 dark:text-brand-300"
+            >
+              Print Pick List
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Route-ordered walk sheet — bays, quantities &amp; repacks
+            </Typography>
+          </span>
+          <Icon
+            icon={IconChevronRight}
+            size="sm"
+            className="shrink-0 text-brand-400"
+          />
+        </a>
+      )}
+
       {/* Order edited in Zoho after release — offer a safe re-sync */}
       {data.soModifiedAfterRelease && !isComplete && (
         <div className="mb-3 flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-900/20">
