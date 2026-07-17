@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconBinoculars,
   IconBolt,
   IconBrain,
@@ -200,6 +201,21 @@ const MorningViewContent = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Sync health warning — invoice sync canary ──────────── */}
+      {data?.invoiceSync?.isStale && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <IconAlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <p>
+            <span className="font-semibold">Invoice sync looks stale.</span>{' '}
+            Last update from Zoho was{' '}
+            {data.invoiceSync.lastSyncedAt
+              ? new Date(data.invoiceSync.lastSyncedAt).toLocaleString('en-GB')
+              : 'never'}
+            {' '}— the Invoiced &amp; Overdue figures below may be out of date until it catches up.
+          </p>
+        </div>
+      )}
 
       {/* ── KPI Cards — centered text ──────────── */}
       {data && (

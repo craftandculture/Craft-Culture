@@ -77,6 +77,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
     advisorBrief,
     recentPco,
     recentZoho,
+    invoiceSyncResult,
   ] = await Promise.all([
     // 1. Open orders count (PCO — operational metric)
     db
@@ -265,7 +266,23 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .from(zohoSalesOrders)
       .orderBy(desc(zohoSalesOrders.createdAt))
       .limit(5),
+
+    // 17. Invoice-sync freshness canary — newest write to zoho_invoices. The
+    // sync runs every 10 min; a stale value means it has silently frozen (as it
+    // did for ~10 days in Jul 2026), so the revenue KPIs can't be trusted.
+    db
+      .select({ lastAt: sql<Date | null>`max(${zohoInvoices.updatedAt})` })
+      .from(zohoInvoices)
+      .then((r) => r[0]),
   ]);
+
+  // Flag the invoice sync as stale if its newest write is over 2 hours old
+  // (well beyond the 10-minute cadence) — surfaced on the dashboard so a frozen
+  // sync is caught in minutes, not days.
+  const invoicesLastSyncedAt = invoiceSyncResult?.lastAt ?? null;
+  const invoiceSyncStale =
+    invoicesLastSyncedAt == null ||
+    Date.now() - new Date(invoicesLastSyncedAt).getTime() > 2 * 60 * 60 * 1000;
 
   // Parse agent brief data safely
   const parseBrief = (
@@ -410,6 +427,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
       overdueInvoices: Number(overdueResult?.count ?? 0),
       overdueAmountUsd: overdueUsd,
       overdueAmountAed: overdueUsd * USD_TO_AED,
+    },
+    invoiceSync: {
+      lastSyncedAt: invoicesLastSyncedAt,
+      isStale: invoiceSyncStale,
     },
     agentBriefs,
     recentOrders: mergedOrders,
