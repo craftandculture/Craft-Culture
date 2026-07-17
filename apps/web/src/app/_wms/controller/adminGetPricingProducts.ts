@@ -4,10 +4,14 @@ import db from '@/database/client';
 import {
   logisticsShipmentItems,
   logisticsShipments,
+  privateClientOrderItems,
+  privateClientOrders,
   wmsOwnerPricing,
   wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
+  zohoSalesOrderItems,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
@@ -181,6 +185,95 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Break landed cost into its parts: import (paid goods, ex-freight) + system
     // logistics (live group freight) + transfer + override. A stored manual
     // import price wins over the shipment product cost.
+    // Last sold price/btl — the most recent realized sale across Zoho
+    // (dispatched/delivered/invoiced) and PCO (delivered/distributor_paid),
+    // matched pack-agnostically (LWIN7+vintage+size). Rate/price is per ordered
+    // pack → ÷ pack for per-bottle.
+    const pak = (l: string) => {
+      const s = l.split('-');
+      return `${s[0] ?? ''}-${s[1] ?? ''}-${s[3] ?? ''}`;
+    };
+    const wantedKeys = new Set(products.map((p) => pak(p.lwin18)));
+    const lastSoldMap: Record<
+      string,
+      { pricePerBottle: number; ref: string; soldAt: Date | null; tier: 'B2B' | 'PC' }
+    > = {};
+    const isNewer = (
+      a: Date | null,
+      b: { soldAt: Date | null } | undefined,
+    ) => !b || (a != null && (b.soldAt == null || a > b.soldAt));
+
+    const zohoSold = await db
+      .select({
+        sku: zohoSalesOrderItems.sku,
+        rate: zohoSalesOrderItems.rate,
+        description: zohoSalesOrderItems.description,
+        ref: zohoSalesOrders.salesOrderNumber,
+        soldAt: zohoSalesOrders.updatedAt,
+      })
+      .from(zohoSalesOrderItems)
+      .innerJoin(zohoSalesOrders, eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId))
+      .where(
+        and(
+          // Realized sale: shipped, OR billed in Zoho (zoho_status='invoiced')
+          or(
+            inArray(zohoSalesOrders.status, ['dispatched', 'delivered']),
+            eq(zohoSalesOrders.zohoStatus, 'invoiced'),
+          ),
+          gt(zohoSalesOrderItems.rate, 0),
+        ),
+      )
+      .orderBy(desc(zohoSalesOrders.updatedAt));
+
+    for (const r of zohoSold) {
+      if (!r.sku) continue;
+      const key = pak(r.sku);
+      if (!wantedKeys.has(key)) continue;
+      const pack =
+        Number(/^(\d+)/.exec(r.description ?? '')?.[1]) || Number(r.sku.split('-')[2]) || 1;
+      if (isNewer(r.soldAt, lastSoldMap[key])) {
+        lastSoldMap[key] = {
+          pricePerBottle: Math.round((r.rate / pack) * 100) / 100,
+          ref: r.ref,
+          soldAt: r.soldAt,
+          tier: 'B2B',
+        };
+      }
+    }
+
+    const pcoSold = await db
+      .select({
+        lwin: privateClientOrderItems.lwin,
+        priceCase: privateClientOrderItems.pricePerCaseUsd,
+        caseConfig: privateClientOrderItems.caseConfig,
+        ref: privateClientOrders.orderNumber,
+        soldAt: privateClientOrders.updatedAt,
+      })
+      .from(privateClientOrderItems)
+      .innerJoin(privateClientOrders, eq(privateClientOrders.id, privateClientOrderItems.orderId))
+      .where(
+        and(
+          inArray(privateClientOrders.status, ['delivered', 'distributor_paid']),
+          gt(privateClientOrderItems.pricePerCaseUsd, 0),
+        ),
+      )
+      .orderBy(desc(privateClientOrders.updatedAt));
+
+    for (const r of pcoSold) {
+      if (!r.lwin) continue;
+      const key = pak(r.lwin);
+      if (!wantedKeys.has(key)) continue;
+      const pack = r.caseConfig && r.caseConfig > 0 ? r.caseConfig : 1;
+      if (isNewer(r.soldAt, lastSoldMap[key])) {
+        lastSoldMap[key] = {
+          pricePerBottle: Math.round((r.priceCase / pack) * 100) / 100,
+          ref: r.ref,
+          soldAt: r.soldAt,
+          tier: 'PC',
+        };
+      }
+    }
+
     const enrichedProducts = products.map((p) => {
       const ship = shipCostMap[p.lwin18];
       const manualImport =
@@ -198,6 +291,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         importPricePerBottle: importPaid,
         // live group/shipment freight per bottle (read-only; auto-updates)
         systemLogistics,
+        // most recent realized sale (Zoho B2B or PCO), null if never sold
+        lastSold: lastSoldMap[pak(p.lwin18)] ?? null,
       };
     });
 

@@ -24,7 +24,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Card from '@/app/_ui/components/Card/Card';
@@ -747,6 +747,8 @@ const PricingManagerPage = () => {
   >(undefined);
   const [includeInbound, setIncludeInbound] = useState(false);
   const [includeSoldOut, setIncludeSoldOut] = useState(false);
+  // Row-expand: which lwin18's last-sold detail is open (null = all collapsed)
+  const [expandedLwin, setExpandedLwin] = useState<string | null>(null);
 
   // Per-owner pricing settings (logistics / in-bond margin / PC margin)
   const { data: ownerSettings } = useQuery({
@@ -1954,9 +1956,23 @@ const PricingManagerPage = () => {
                         }
                       : null;
 
+                    // Last realized sale (Zoho B2B or PCO) for the expand panel
+                    const lastSold =
+                      (
+                        product as {
+                          lastSold?: {
+                            pricePerBottle: number;
+                            ref: string;
+                            soldAt: string | Date | null;
+                            tier: 'B2B' | 'PC';
+                          } | null;
+                        }
+                      ).lastSold ?? null;
+                    const isExpanded = expandedLwin === product.lwin18;
+
                     return (
+                      <Fragment key={`${isInbound ? 'inb-' : ''}${product.lwin18}`}>
                       <tr
-                        key={`${isInbound ? 'inb-' : ''}${product.lwin18}`}
                         className={`transition-colors ${
                           isInbound
                             ? 'bg-amber-50/60 hover:bg-amber-50'
@@ -1972,9 +1988,25 @@ const PricingManagerPage = () => {
                           }`}
                         >
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
-                              {product.productName}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedLwin((cur) =>
+                                  cur === product.lwin18 ? null : product.lwin18,
+                                )
+                              }
+                              title="Show last sold price"
+                              className="flex items-center gap-1 text-left"
+                            >
+                              <IconChevronRight
+                                className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                                  isExpanded ? 'rotate-90 text-text-secondary' : 'text-text-muted/60'
+                                }`}
+                              />
+                              <span className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
+                                {product.productName}
+                              </span>
+                            </button>
                             {ownerCue && (
                               <span
                                 title={
@@ -2165,6 +2197,55 @@ const PricingManagerPage = () => {
                           </td>
                         )}
                       </tr>
+                      {isExpanded && (
+                        <tr className="bg-surface-muted/40">
+                          <td colSpan={11} className="border-l-4 border-l-transparent px-3 py-3">
+                            {lastSold ? (
+                              <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs">
+                                <span className="font-semibold uppercase tracking-wide text-text-muted">
+                                  Last sold
+                                </span>
+                                <span className="tabular-nums">
+                                  <span className="text-sm font-semibold text-text-primary">
+                                    ${lastSold.pricePerBottle.toFixed(2)}
+                                  </span>
+                                  <span className="text-text-muted">/btl</span>
+                                  <span className="ml-1.5 text-[10px] text-text-muted/70">
+                                    ${(lastSold.pricePerBottle * caseConfig).toFixed(0)}/cs
+                                  </span>
+                                </span>
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                                    lastSold.tier === 'PC'
+                                      ? 'bg-violet-100 text-violet-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  {lastSold.tier === 'PC' ? 'Private Client' : 'B2B / Zoho'}
+                                </span>
+                                <span className="text-text-secondary">
+                                  Order{' '}
+                                  <span className="font-medium tabular-nums">{lastSold.ref}</span>
+                                </span>
+                                {lastSold.soldAt && (
+                                  <span className="text-text-muted">
+                                    {new Date(lastSold.soldAt).toLocaleDateString('en-GB', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs italic text-text-muted">
+                                No recorded sale yet for this wine.
+                              </p>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })
                 )}
