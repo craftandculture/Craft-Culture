@@ -1,8 +1,8 @@
 'use client';
 
-import { IconLoader2, IconMailX } from '@tabler/icons-react';
+import { IconMail, IconMailX } from '@tabler/icons-react';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -11,38 +11,19 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 /**
  * Magic link verification landing page.
  *
- * Email clients often prefetch links for security scanning, which consumes
- * magic link tokens before the user clicks. This page acts as a buffer:
- * email scanners fetch this HTML page (harmless), and only the user's
- * browser executes the JS redirect to the actual verify endpoint.
+ * Corporate email security (e.g. Microsoft Defender / Safe Links "detonation")
+ * opens links in a headless browser that renders and even runs JavaScript,
+ * which would consume a one-time magic-link token before the real user clicks.
+ *
+ * To defeat that, this page does NOT auto-redirect — it requires a genuine
+ * button click. Automated scanners render the page but don't click buttons, so
+ * the token is only spent by the human's browser.
  */
 const VerifyContent = () => {
   const searchParams = useSearchParams();
-  const [error, setError] = useState(false);
-  const hasRedirected = useRef(false);
+  const token = searchParams.get('token');
 
-  useEffect(() => {
-    if (hasRedirected.current) return;
-    hasRedirected.current = true;
-
-    const token = searchParams.get('token');
-    if (!token) {
-      setError(true);
-      return;
-    }
-
-    // Rebuild the verify URL with all original params
-    const verifyUrl = new URL('/api/auth/magic-link/verify', window.location.origin);
-    searchParams.forEach((value, key) => {
-      verifyUrl.searchParams.set(key, value);
-    });
-
-    // Navigate to the actual Better Auth verify endpoint
-    // This only runs in a real browser (not email client prefetch)
-    window.location.replace(verifyUrl.toString());
-  }, [searchParams]);
-
-  if (error) {
+  if (!token) {
     return (
       <div className="flex w-full flex-col items-center gap-4">
         <Icon icon={IconMailX} size="xl" colorRole="danger" />
@@ -59,15 +40,28 @@ const VerifyContent = () => {
     );
   }
 
+  // Same-origin verify endpoint with all original params preserved.
+  const verifyHref = `/api/auth/magic-link/verify?${searchParams.toString()}`;
+
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <Icon icon={IconLoader2} size="xl" colorRole="brand" className="animate-spin" />
+      <Icon icon={IconMail} size="xl" colorRole="brand" />
       <Typography variant="headingMd" className="text-center">
-        Signing you in...
+        Confirm sign-in
       </Typography>
       <Typography variant="bodySm" colorRole="muted" className="text-center">
-        Please wait while we verify your login link.
+        Click below to finish signing in. This extra step stops automated email
+        scanners from using up your one-time link.
       </Typography>
+      <Button
+        variant="default"
+        colorRole="brand"
+        onClick={() => {
+          window.location.replace(verifyHref);
+        }}
+      >
+        Sign in to Craft &amp; Culture
+      </Button>
     </div>
   );
 };
@@ -77,7 +71,6 @@ const VerifyPage = () => {
     <Suspense
       fallback={
         <div className="flex w-full flex-col items-center gap-4">
-          <Icon icon={IconLoader2} size="xl" colorRole="brand" className="animate-spin" />
           <Typography variant="headingMd" className="text-center">
             Loading...
           </Typography>
