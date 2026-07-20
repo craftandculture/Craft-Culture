@@ -32,6 +32,10 @@ const authServerClient = betterAuth({
       impersonationSessionDuration: 60 * 60, // 1 hour
     }),
     magicLink({
+      // Default is 5 minutes, which frequently expires before corporate email
+      // (Outlook / Safe Links queuing) delivers and the user clicks — landing
+      // them back on /sign-in. Give a comfortable window; links are single-use.
+      expiresIn: 60 * 30, // 30 minutes
       sendMagicLink: async ({ email, token, url }) => {
         // Build a landing page URL instead of the direct API verify URL.
         // Email clients often prefetch links for security scanning, which
