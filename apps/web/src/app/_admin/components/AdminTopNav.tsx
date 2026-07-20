@@ -29,7 +29,7 @@ interface AdminNavItem {
 
 const adminNavItems: AdminNavItem[] = [
   { label: 'Home', href: '/platform/admin/home', icon: IconHome2, section: 'home' },
-  { label: 'Orders', href: '/platform/admin/private-orders', icon: IconPackage, section: 'orders' },
+  { label: 'Orders', href: '/platform/admin', icon: IconPackage, section: 'orders' },
   { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip, section: 'logistics' },
   { label: 'Stock', href: '/platform/admin/stock-explorer', icon: IconDatabaseSearch, section: 'stock' },
   { label: 'Warehouse', href: '/platform/admin/wms', icon: IconBuildingWarehouse, section: 'warehouse' },
@@ -40,10 +40,11 @@ const adminNavItems: AdminNavItem[] = [
 
 /** Detect which top-level section the current pathname belongs to */
 const getSectionFromPathname = (pathname: string) => {
-  if (pathname === '/platform/admin/home' || pathname === '/platform/admin') return 'home';
+  if (pathname === '/platform/admin/home') return 'home';
 
-  // Orders
+  // Orders (incl. the PCO dashboard overview at /platform/admin)
   if (
+    pathname === '/platform/admin' ||
     pathname.startsWith('/platform/admin/private-orders') ||
     pathname.startsWith('/platform/admin/zoho-sales-orders') ||
     pathname.startsWith('/platform/admin/source') ||
