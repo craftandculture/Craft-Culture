@@ -90,6 +90,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     sections.push({
       title: 'Orders',
       links: [
+        { href: '/platform/admin', label: 'Overview' },
         { href: '/platform/admin/private-orders', label: 'Private Orders' },
         { href: '/platform/admin/zoho-sales-orders', label: 'Zoho Sales' },
         { href: '/platform/admin/source', label: 'Source' },
