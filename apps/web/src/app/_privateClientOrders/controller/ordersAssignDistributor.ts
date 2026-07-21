@@ -83,14 +83,33 @@ const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSche
     clientAlreadyVerified = !!client?.cityDrinksVerifiedAt;
   }
 
+  // C&C acts as its own partner on some orders, so there's no external partner
+  // to run the client-verification handshake. Detect that so we can skip the
+  // awaiting_partner_verification step and record C&C as the verifier.
+  const orderPartner = order.partnerId
+    ? await db.query.partners.findFirst({
+        where: { id: order.partnerId },
+        columns: { businessName: true },
+      })
+    : null;
+  const partnerIsCraftCulture =
+    orderPartner?.businessName?.trim().toLowerCase() === 'craft & culture';
+
   // Determine the new status based on whether verification is still needed
   const previousStatus = order.status;
   let newStatus: PrivateClientOrder['status'];
   let paymentReference: string | null = null;
+  let autoPartnerVerified = false;
 
   if (distributor.requiresClientVerification && !clientAlreadyVerified) {
-    // Distributor requires verification and client isn't verified yet - prompt partner first
-    newStatus = 'awaiting_partner_verification';
+    if (partnerIsCraftCulture) {
+      // No external partner to verify — auto-pass straight to distributor verification.
+      newStatus = 'awaiting_distributor_verification';
+      autoPartnerVerified = true;
+    } else {
+      // Distributor requires verification and client isn't verified yet - prompt partner first
+      newStatus = 'awaiting_partner_verification';
+    }
   } else {
     // No verification required, or client already verified - proceed directly to payment
     newStatus = 'awaiting_client_payment';
@@ -106,6 +125,11 @@ const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSche
       distributorAssignedAt: new Date(),
       status: newStatus,
       paymentReference,
+      ...(autoPartnerVerified && {
+        partnerVerificationResponse: 'yes',
+        partnerVerificationAt: new Date(),
+        partnerVerificationBy: user.id,
+      }),
       updatedAt: new Date(),
     })
     .where(eq(privateClientOrders.id, orderId))
@@ -131,6 +155,17 @@ const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSche
       partnerId: order.partnerId,
       type: 'verification_required',
       distributorName: distributor.businessName ?? 'the distributor',
+    });
+  } else if (autoPartnerVerified) {
+    // C&C auto-verified as partner — notify the distributor to verify the client
+    await notifyDistributorOfOrderUpdate({
+      orderId,
+      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      distributorId,
+      type: 'verification_required',
+      clientName: order.clientName ?? undefined,
+      clientEmail: order.clientEmail ?? undefined,
+      clientPhone: order.clientPhone ?? undefined,
     });
   } else {
     // Notify distributor members about the new order (with link to download PDF)
