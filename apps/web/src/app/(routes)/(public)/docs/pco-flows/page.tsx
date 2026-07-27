@@ -556,7 +556,9 @@ const PartnerTab = () => (
   </div>
 );
 
-const DistributorTab = () => (
+const DistributorTab = () => {
+  const [route, setRoute] = useState<'standard' | 'online'>('standard');
+  return (
   <div className="space-y-6">
     <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
       <Typography variant="bodySm" className="font-semibold text-blue-600 dark:text-blue-400">
@@ -564,15 +566,51 @@ const DistributorTab = () => (
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" className="mt-1">
         As a licensed distributor, you handle payment collection, stock receipt, and delivery to the
-        end client.
+        end client. Two routes exist: the <strong>Standard</strong> flow, and an{' '}
+        <strong>Online Checkout</strong> flow for e-commerce distributors.
       </Typography>
     </div>
 
     <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
-      <Typography variant="headingSm" className="mb-6">
-        Your Process Flow
-      </Typography>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Typography variant="headingSm">Your Process Flow</Typography>
+        <div className="inline-flex rounded-lg border border-border-primary p-0.5">
+          <button
+            onClick={() => setRoute('standard')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              route === 'standard'
+                ? 'bg-blue-500 text-white'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            onClick={() => setRoute('online')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              route === 'online'
+                ? 'bg-blue-500 text-white'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            Online Checkout
+          </button>
+        </div>
+      </div>
+      <div
+        className={`mb-5 rounded-lg border p-3 text-xs ${
+          route === 'online'
+            ? 'border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+            : 'border-border-primary bg-fill-secondary text-text-muted'
+        }`}
+      >
+        {route === 'standard'
+          ? 'Standard route — you upload the invoice, verify payment, then schedule delivery manually. Used by all distributors except e-commerce partners.'
+          : 'Online Checkout — for e-commerce distributors (e.g. City Drinks). The client pays and picks a delivery slot themselves via a unique checkout link. Auto-selected when City Drinks is the assigned distributor.'}
+      </div>
 
+      {route === 'standard' ? (
+        <>
       <FlowStep
         number={1}
         title="Receive Order Assignment"
@@ -636,6 +674,53 @@ const DistributorTab = () => (
         actor="distributor"
         isLast
       />
+        </>
+      ) : (
+        <>
+          <FlowStep
+            number={1}
+            title="Receive Order Assignment"
+            description="Same as standard — you're notified when an order is assigned, with the proforma PDF attached."
+            actor="system"
+          />
+          <FlowStep
+            number={2}
+            title="Verify Client (If Required)"
+            description="Same as standard — confirm the client is registered in your system so the flow can proceed."
+            status="AWAITING_DISTRIBUTOR_VERIFICATION"
+            actor="distributor"
+          />
+          <FlowStep
+            number={3}
+            title="Confirm Stock Receipt"
+            description="When stock arrives at your warehouse, confirm receipt. Each case carries a branded cold-chain label and QR code for provenance."
+            actor="distributor"
+          />
+          <FlowStep
+            number={4}
+            title="Send Online Checkout Link"
+            description="The system generates a unique checkout link for the client — e.g. https://citydrinks.com/p/pco-2026-00041-7027 — where they view the invoice, pay online, and select their own delivery slot. This single self-service step replaces the manual Upload Invoice, Verify Payment and Schedule Delivery steps. Payment flips the order to CLIENT_PAID and the chosen slot sets DELIVERY_SCHEDULED automatically."
+            status="AWAITING_CLIENT_PAYMENT"
+            actor="client"
+            notification="Client sent checkout link"
+          />
+          <FlowStep
+            number={5}
+            title="Dispatch Order"
+            description="Same as standard — mark dispatched once stock is ready; the system verifies all items before allowing dispatch."
+            status="OUT_FOR_DELIVERY"
+            actor="distributor"
+          />
+          <FlowStep
+            number={6}
+            title="Confirm Delivery"
+            description="Same as standard — mark delivered and capture proof of delivery."
+            status="DELIVERED"
+            actor="distributor"
+            isLast
+          />
+        </>
+      )}
     </div>
 
     {/* Stock Status Tracking */}
@@ -745,7 +830,8 @@ const DistributorTab = () => (
       </Typography>
     </div>
   </div>
-);
+  );
+};
 
 const AdminTab = () => (
   <div className="space-y-6">
