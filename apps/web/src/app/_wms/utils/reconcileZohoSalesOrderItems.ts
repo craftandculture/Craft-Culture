@@ -26,6 +26,8 @@ interface LocalItem {
   name: string;
   rate: number;
   itemTotal: number;
+  sku: string | null;
+  description: string | null;
 }
 
 interface ReconcileParams {
@@ -78,6 +80,8 @@ const reconcileZohoSalesOrderItems = async ({
         name: zohoSalesOrderItems.name,
         rate: zohoSalesOrderItems.rate,
         itemTotal: zohoSalesOrderItems.itemTotal,
+        sku: zohoSalesOrderItems.sku,
+        description: zohoSalesOrderItems.description,
       })
       .from(zohoSalesOrderItems)
       .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
@@ -98,7 +102,12 @@ const reconcileZohoSalesOrderItems = async ({
         (local.quantity !== item.quantity ||
           local.rate !== item.rate ||
           local.name !== item.name ||
-          local.itemTotal !== item.item_total)
+          local.itemTotal !== item.item_total ||
+          // SKU carries the pack config (…-06-… = 6-pack) which drives the
+          // pick's bottle count, and description mirrors it. A pack change that
+          // keeps the same total was previously invisible here — sync both.
+          (local.sku ?? '') !== (item.sku ?? '') ||
+          (local.description ?? '') !== (item.description ?? ''))
       ) {
         changed.push({ zoho: item, localId: local.id });
       }
@@ -165,6 +174,7 @@ const reconcileZohoSalesOrderItems = async ({
       await tx
         .update(zohoSalesOrderItems)
         .set({
+          sku: zoho.sku,
           name: zoho.name,
           description: zoho.description,
           rate: zoho.rate,

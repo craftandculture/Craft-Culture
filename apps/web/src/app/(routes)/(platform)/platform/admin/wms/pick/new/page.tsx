@@ -425,16 +425,34 @@ const NewPickListPage = () => {
                                 </div>
                               )}
                               {expandedOrder.items.map((item) => {
+                                // Pack config is driven by the SKU (the source of
+                                // truth): dashed LWIN7-VVVV-PP-SSSSS or compact
+                                // 18-digit LWIN7(7)VVVV(4)PP(2)SSSSS(5). The
+                                // description ("6x75cl") is only a fallback for
+                                // non-LWIN SKUs, so a stale description can no
+                                // longer misstate the bottle count.
+                                const skuDigits = (
+                                  (item as { sku?: string | null }).sku ?? ''
+                                ).replace(/-/g, '');
+                                let skuPack = 0;
+                                let skuSize = '';
+                                if (/^\d{18}$/.test(skuDigits)) {
+                                  skuPack = Number(skuDigits.slice(11, 13));
+                                  const ml = Number(skuDigits.slice(13, 18));
+                                  if (ml > 0) skuSize = `${ml / 10}cl`;
+                                }
                                 const packMatch =
                                   /^(\d+)\s*[x×]\s*(.*)$/i.exec(
                                     (item.description ?? '').trim(),
                                   );
                                 const perCase =
-                                  packMatch && Number(packMatch[1]) > 0
-                                    ? Number(packMatch[1])
-                                    : 1;
+                                  skuPack > 0
+                                    ? skuPack
+                                    : packMatch && Number(packMatch[1]) > 0
+                                      ? Number(packMatch[1])
+                                      : 1;
                                 const bottleSize =
-                                  packMatch?.[2]?.trim() || '75cl';
+                                  skuSize || packMatch?.[2]?.trim() || '75cl';
                                 const totalBottles = item.quantity * perCase;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')
