@@ -343,6 +343,14 @@ const WMSPickListDetailPage = () => {
     return `${item.caseConfig}x${item.bottleSize ?? '75cl'}`;
   };
 
+  // A "crack" pick = pulling loose bottles out of a sealed multi-pack (stock is
+  // a 6-pack but fewer bottles are needed). Surfaced loudly so the picker breaks
+  // the case and takes only what's required instead of grabbing the whole case.
+  const isCrackPick = (item: {
+    quantityBottles?: number | null;
+    caseConfig: number | null;
+  }) => item.quantityBottles != null && (item.caseConfig ?? 1) > 1;
+
   return (
     <div className="mx-auto max-w-lg px-3 py-4 sm:px-4 md:max-w-2xl">
       {/* Compact Header */}
@@ -550,11 +558,16 @@ const WMSPickListDetailPage = () => {
                   <span className="text-xs font-semibold text-brand-600">
                     {currentItemIndex + 1}/{unpickedItems.length}
                   </span>
-                  {formatCaseConfig(currentItem) && (
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                      {formatCaseConfig(currentItem)}
-                    </span>
-                  )}
+                  {formatCaseConfig(currentItem) &&
+                    (isCrackPick(currentItem) ? (
+                      <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                        Break {formatCaseConfig(currentItem)}
+                      </span>
+                    ) : (
+                      <span className="rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-bold text-text-muted">
+                        {formatCaseConfig(currentItem)}
+                      </span>
+                    ))}
                 </div>
                 {currentItem.suggestedLocationCode && (
                   <LocationBadge locationCode={currentItem.suggestedLocationCode} size="sm" />
@@ -571,6 +584,19 @@ const WMSPickListDetailPage = () => {
                 </Typography>
               </div>
 
+              {/* Crack-a-case alert — stock is a multi-pack, pick is loose bottles */}
+              {isCrackPick(currentItem) && (
+                <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
+                  <Icon icon={IconPackage} size="sm" className="shrink-0 text-amber-600" />
+                  <Typography variant="bodyXs" className="font-semibold text-amber-800 dark:text-amber-300">
+                    Break open a {formatCaseConfig(currentItem)} case — take{' '}
+                    {currentItem.quantityBottles} bottle
+                    {(currentItem.quantityBottles ?? 0) === 1 ? '' : 's'}, return{' '}
+                    {(currentItem.caseConfig ?? 0) - (currentItem.quantityBottles ?? 0)} to the shelf
+                  </Typography>
+                </div>
+              )}
+
               {/* Quantity + Location — side by side */}
               <div className="grid grid-cols-2 gap-px bg-border-primary">
                 <div className="bg-fill-secondary px-4 py-3 text-center">
@@ -582,9 +608,11 @@ const WMSPickListDetailPage = () => {
                   </div>
                   <span className="text-[10px] text-text-muted">
                     {currentItem.quantityBottles != null
-                      ? 'bottles'
+                      ? isCrackPick(currentItem)
+                        ? `loose bottle${currentItem.quantityBottles === 1 ? '' : 's'} — not a case`
+                        : 'bottles'
                       : currentItem.caseConfig
-                        ? `cases of ${currentItem.caseConfig}`
+                        ? `sealed case of ${currentItem.caseConfig}`
                         : 'cases'}
                   </span>
                 </div>
@@ -892,6 +920,14 @@ const WMSPickListDetailPage = () => {
           <Typography variant="bodyXs" className="mb-2 font-semibold uppercase tracking-wider text-text-muted">
             All Items ({data.progress.pickedItems}/{data.progress.totalItems})
           </Typography>
+          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-fill-secondary">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{
+                width: `${data.progress.totalItems > 0 ? (data.progress.pickedItems / data.progress.totalItems) * 100 : 0}%`,
+              }}
+            />
+          </div>
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               {data.items.map((item, idx) => (
@@ -921,16 +957,23 @@ const WMSPickListDetailPage = () => {
                       {item.productName}
                     </Typography>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-text-muted">
+                      <span
+                        className={`text-[10px] ${isCrackPick(item) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-text-muted'}`}
+                      >
                         {item.quantityBottles != null
                           ? `${item.quantityBottles} btl`
-                          : `${item.quantityCases}cs`}
+                          : `${item.quantityCases} cs`}
                       </span>
-                      {formatCaseConfig(item) && (
-                        <span className="rounded bg-amber-100 px-1 py-px text-[9px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                          {formatCaseConfig(item)}
-                        </span>
-                      )}
+                      {formatCaseConfig(item) &&
+                        (isCrackPick(item) ? (
+                          <span className="rounded bg-amber-500 px-1 py-px text-[9px] font-bold uppercase text-white">
+                            break {formatCaseConfig(item)}
+                          </span>
+                        ) : (
+                          <span className="rounded bg-fill-secondary px-1 py-px text-[9px] font-bold text-text-muted">
+                            {formatCaseConfig(item)}
+                          </span>
+                        ))}
                       {item.suggestedLocationCode && (
                         <span className="rounded bg-fill-secondary px-1 py-px text-[10px] font-mono font-medium text-text-muted">
                           {item.suggestedLocationCode}
