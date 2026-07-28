@@ -88,6 +88,7 @@ import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminResolvePcoOrder from './controller/adminResolvePcoOrder';
 import adminResyncPickList from './controller/adminResyncPickList';
+import adminReverseRepack from './controller/adminReverseRepack';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
@@ -156,6 +157,7 @@ const operationsRouter = createTRPCRouter({
   getStockAtLocation: adminGetStockAtLocation,
   transfer: adminTransferStock,
   repack: adminRepack,
+  reverseRepack: adminReverseRepack,
 });
 
 const stockPricingRouter = createTRPCRouter({

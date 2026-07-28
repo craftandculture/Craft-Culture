@@ -201,6 +201,16 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_product_pricing.transfer_price_per_bottle ready');
 
+    // Reverse Repack: mark a repack as undone so it can't be reversed twice.
+    console.log('🔄 Ensuring wms_repacks.reversed_at / reversed_by columns...');
+    await client.unsafe(
+      `ALTER TABLE "wms_repacks" ADD COLUMN IF NOT EXISTS "reversed_at" timestamp`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_repacks" ADD COLUMN IF NOT EXISTS "reversed_by" uuid`,
+    );
+    console.log('✅ wms_repacks reversal columns ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

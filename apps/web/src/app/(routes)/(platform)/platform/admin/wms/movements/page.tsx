@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconArrowBackUp,
   IconArrowLeft,
   IconArrowRight,
   IconBoxSeam,
@@ -10,9 +11,10 @@ import {
   IconLoader2,
   IconTransfer,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -57,12 +59,38 @@ const WMSMovementsPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'log'>('cards');
 
+  const queryClient = useQueryClient();
+  const [reverseTarget, setReverseTarget] = useState<{
+    repackNumber: string;
+  } | null>(null);
+
   const { data, isLoading } = useQuery({
     ...api.wms.admin.stock.getMovements.queryOptions({
       movementType: filterType,
       limit: 100,
     }),
   });
+
+  // Undo a repack straight from its movement row (bottles physically put back).
+  const reverseMutation = useMutation({
+    ...api.wms.admin.operations.reverseRepack.mutationOptions(),
+    onSuccess: (res) => {
+      toast.success(res.message);
+      setReverseTarget(null);
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock']] });
+      void queryClient.invalidateQueries({
+        queryKey: [['wms', 'admin', 'operations']],
+      });
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to reverse repack');
+      setReverseTarget(null);
+    },
+  });
+
+  /** Pull the RPK-xxxx number a repack movement references in its notes. */
+  const repackNumberFromNotes = (notes: string | null | undefined) =>
+    notes?.match(/\((RPK-[\d-]+)\)/)?.[1] ?? null;
 
   const movementTypes: { value: MovementType | undefined; label: string }[] = [
     { value: undefined, label: 'All Types' },
@@ -403,6 +431,23 @@ const WMSMovementsPage = () => {
                       {movement.notes && (
                         <span className="italic">&ldquo;{movement.notes}&rdquo;</span>
                       )}
+                      {movement.movementType === 'repack_out' &&
+                        repackNumberFromNotes(movement.notes) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReverseTarget({
+                                repackNumber: repackNumberFromNotes(
+                                  movement.notes,
+                                )!,
+                              })
+                            }
+                            className="ml-auto inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                          >
+                            <IconArrowBackUp className="h-3.5 w-3.5" />
+                            Reverse repack
+                          </button>
+                        )}
                     </div>
                   </CardContent>
                 </Card>
@@ -419,6 +464,59 @@ const WMSMovementsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Reverse-repack confirmation */}
+      {reverseTarget && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={() => setReverseTarget(null)}
+          />
+          <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2">
+            <Card>
+              <CardContent className="p-5">
+                <Typography variant="headingSm" className="mb-2">
+                  Reverse {reverseTarget.repackNumber}?
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  This restores the original pack and removes the split pack(s) it
+                  created, flipping the case labels back. Use only if the bottles
+                  have been physically put back together. It is blocked if the
+                  split packs were already picked, moved or reserved.
+                </Typography>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-12 flex-1"
+                    onClick={() => setReverseTarget(null)}
+                    disabled={reverseMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    colorRole="danger"
+                    className="h-12 flex-1"
+                    onClick={() =>
+                      reverseMutation.mutate({
+                        repackNumber: reverseTarget.repackNumber,
+                      })
+                    }
+                    disabled={reverseMutation.isPending}
+                  >
+                    <ButtonContent
+                      iconLeft={
+                        reverseMutation.isPending ? IconLoader2 : IconArrowBackUp
+                      }
+                    >
+                      {reverseMutation.isPending ? 'Reversing…' : 'Reverse repack'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };

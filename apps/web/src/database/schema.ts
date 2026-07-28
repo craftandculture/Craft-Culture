@@ -4297,6 +4297,10 @@ export const wmsRepacks = pgTable(
       .notNull(),
     performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
     notes: text('notes'),
+    // Set when the repack is undone (bottles put back), so it can't be reversed
+    // twice and the UI can show its state.
+    reversedAt: timestamp('reversed_at', { mode: 'date' }),
+    reversedBy: uuid('reversed_by').references(() => users.id),
     ...timestamps,
   },
   (table) => [
