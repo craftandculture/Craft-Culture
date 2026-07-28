@@ -55,19 +55,34 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
   if (/^\d{7}$/.test(lwin7) && vintageStr) {
     conditions.push(like(wmsStock.lwin18, `${lwin7}-${vintageStr}-%`));
   }
-  if (baseKey.length > 3 && vintage) {
+  // Match on individual name terms (not one contiguous substring) so word-order
+  // and trailing punctuation differences — e.g. a stray "-" left by the "- 2022"
+  // vintage suffix — don't drop the match. Mirrors the release-to-pick matcher.
+  // This is the fallback when the order SKU's LWIN doesn't match the stock LWIN.
+  const nameTerms = baseKey
+    .split(/[\s,\-]+/)
+    .filter((term) => term.length > 2)
+    .slice(0, 8);
+  if (nameTerms.length > 0 && vintage) {
     conditions.push(
-      and(ilike(wmsStock.productName, `%${baseKey}%`), eq(wmsStock.vintage, vintage)),
+      and(
+        ...nameTerms.map((term) => ilike(wmsStock.productName, `%${term}%`)),
+        eq(wmsStock.vintage, vintage),
+      ),
     );
   }
   if (conditions.length === 0) {
     return { orderedPack, needsRepack: false, fromPack: null, hasStock: false };
   }
 
+  // Gate on physical stock (quantityCases), NOT availableCases: a reserved
+  // 6-pack is still a 6-pack that must be broken to fill a single. Using
+  // availableCases made the repack flag vanish the moment the line's own stock
+  // was reserved for the order.
   const rows = await db
     .select({ caseConfig: wmsStock.caseConfig })
     .from(wmsStock)
-    .where(and(gt(wmsStock.availableCases, 0), or(...conditions)));
+    .where(and(gt(wmsStock.quantityCases, 0), or(...conditions)));
 
   const configs = [
     ...new Set(
