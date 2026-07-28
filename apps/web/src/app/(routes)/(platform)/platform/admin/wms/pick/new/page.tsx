@@ -165,7 +165,10 @@ const NewPickListPage = () => {
       const from = i.repack?.fromPack;
       const to = i.repack?.orderedPack;
       if (from != null && to != null) {
-        const key = `${from}-pack → ${to}-pack`;
+        const key =
+          i.repack?.mode === 'combine'
+            ? `combine ${i.repack?.sourceCount ?? 2}× ${from}-pack → ${to}-pack`
+            : `break ${from}-pack → ${to}-pack`;
         groups.set(key, (groups.get(key) ?? 0) + 1);
       }
     }
@@ -486,7 +489,9 @@ const NewPickListPage = () => {
                                       {needsRepack && rp?.fromPack && (
                                         <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-700">
                                           <IconReplace className="h-3.5 w-3.5 shrink-0" />
-                                          break a {rp.fromPack}-pack
+                                          {rp.mode === 'combine'
+                                            ? `combine ${rp.sourceCount}× ${rp.fromPack}-pack`
+                                            : `break a ${rp.fromPack}-pack`}
                                         </p>
                                       )}
                                     </div>

@@ -33,9 +33,15 @@ interface RepackParams {
  * @returns The ordered pack size, whether a repack is needed and from which pack
  */
 const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) => {
+  // Ordered pack comes from the SKU (the source of truth): an LWIN18 carries the
+  // pack in digits 12-13 (strip dashes first so a mis-dashed SKU still parses).
+  // Fall back to the description ("6x75cl") only for non-LWIN SKUs, so a drifted
+  // description can't misstate the pack.
+  const skuDigits = String(sku ?? '').replace(/-/g, '');
+  const skuPack = /^\d{18}$/.test(skuDigits) ? Number(skuDigits.slice(11, 13)) : 0;
   const packMatch = /^(\d+)\s*[x×]/i.exec(description ?? '');
-  const orderedPack =
-    packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
+  const descPack = packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 0;
+  const orderedPack = skuPack > 0 ? skuPack : descPack > 0 ? descPack : 1;
 
   const normalized = normalizeLwin18(String(sku ?? ''));
   const parts = normalized.split('-');
@@ -72,7 +78,14 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
     );
   }
   if (conditions.length === 0) {
-    return { orderedPack, needsRepack: false, fromPack: null, hasStock: false };
+    return {
+      orderedPack,
+      needsRepack: false,
+      fromPack: null,
+      mode: null,
+      sourceCount: 0,
+      hasStock: false,
+    };
   }
 
   // Gate on physical stock (quantityCases), NOT availableCases: a reserved
@@ -84,23 +97,58 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
     .from(wmsStock)
     .where(and(gt(wmsStock.quantityCases, 0), or(...conditions)));
 
-  const configs = [
+  const configs: number[] = [
     ...new Set(
-      rows
-        .map((r: { caseConfig: number | null }) => r.caseConfig)
-        .filter((c: number | null): c is number => c != null),
+      (rows as { caseConfig: number | null }[])
+        .map((r) => r.caseConfig)
+        .filter((c): c is number => c != null),
     ),
   ].sort((a, b) => a - b);
 
   if (configs.length === 0) {
-    return { orderedPack, needsRepack: false, fromPack: null, hasStock: false };
+    return {
+      orderedPack,
+      needsRepack: false,
+      fromPack: null,
+      mode: null,
+      sourceCount: 0,
+      hasStock: false,
+    };
   }
   if (configs.includes(orderedPack)) {
-    return { orderedPack, needsRepack: false, fromPack: null, hasStock: true };
+    return {
+      orderedPack,
+      needsRepack: false,
+      fromPack: null,
+      mode: null,
+      sourceCount: 0,
+      hasStock: true,
+    };
   }
   const larger = configs.filter((c) => c > orderedPack);
-  const fromPack = larger.length > 0 ? Math.min(...larger) : Math.max(...configs);
-  return { orderedPack, needsRepack: true, fromPack, hasStock: true };
+  if (larger.length > 0) {
+    // A larger pack on the shelf is broken DOWN (e.g. 6-pack → 3-pack).
+    return {
+      orderedPack,
+      needsRepack: true,
+      fromPack: Math.min(...larger),
+      mode: 'break' as const,
+      sourceCount: 1,
+      hasStock: true,
+    };
+  }
+  // Only smaller packs on the shelf → COMBINE them up to the ordered pack (e.g.
+  // order a 6-pack, hold 3-packs → combine 2× 3-pack). You cannot break a
+  // 3-pack into a 6, which is what the old "largest available" fallback implied.
+  const fromPack = Math.max(...configs);
+  return {
+    orderedPack,
+    needsRepack: true,
+    fromPack,
+    mode: 'combine' as const,
+    sourceCount: Math.max(2, Math.ceil(orderedPack / fromPack)),
+    hasStock: true,
+  };
 };
 
 export default resolveLineRepack;
