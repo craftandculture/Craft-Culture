@@ -183,19 +183,31 @@ const adminReleaseToPick = wmsOperatorProcedure
         }
       }
 
-      // Bottle vs case: Zoho lines carry a unit ('Case'/'Cases'/'Bottle'). When
-      // the order is in bottles, store the true bottle quantity and derive how
-      // many cases must be touched (ceil(bottles / pack)) so availability and
-      // the auto-split at pick time work. Case lines behave exactly as before.
+      // Resolve the pick in BOTTLES so a single ordered from a larger case is
+      // picked by the bottle (cracking the case) instead of pulling the whole
+      // case. Zoho lines carry a unit ('Case'/'Cases'/'Bottle') and a pack
+      // description ('1x75cl', '6x75cl'). The ordered pack is the bottles per
+      // ordered "case"; the stock pack is how the wine is physically cased.
       const isBottleUnit = /^bottle/i.test((item.unit ?? '').trim());
-      const pack =
+      const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
+      const orderedPack =
+        packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
+      const stockPack =
         availableStock[0]?.caseConfig && availableStock[0].caseConfig > 0
           ? availableStock[0].caseConfig
-          : 12;
-      const quantityBottles = isBottleUnit ? item.quantity : null;
-      const casesNeeded = isBottleUnit
-        ? Math.max(1, Math.ceil(item.quantity / pack))
-        : item.quantity;
+          : orderedPack;
+      // True bottle count the customer ordered.
+      const orderedBottles = isBottleUnit
+        ? item.quantity
+        : orderedPack * item.quantity;
+      // Whole-case pick ONLY when full cases of the same pack the stock is held
+      // in were ordered. Otherwise pick by the bottle — the pick engine cracks
+      // the larger case at pick time (e.g. 1x75cl ordered from a 6-pack).
+      const wholeCase = !isBottleUnit && orderedPack === stockPack;
+      const quantityBottles = wholeCase ? null : orderedBottles;
+      const casesNeeded = wholeCase
+        ? item.quantity
+        : Math.max(1, Math.ceil(orderedBottles / stockPack));
 
       // Find first location with enough stock (in cases)
       const suggestedStock = availableStock.find(
