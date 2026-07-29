@@ -257,34 +257,84 @@ const WMSDashboardContent = () => {
         </Card>
 
         {/* Critical Alert: Stock Reconciliation Issue */}
-        {hasReconcileIssues && (
-          <Card className="border-red-500 bg-red-50 dark:border-red-700 dark:bg-red-900/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Icon icon={IconAlertTriangle} size="lg" className="text-red-600" />
-                  <div>
-                    <Typography variant="headingSm" className="text-red-800 dark:text-red-300">
-                      Stock Reconciliation Required
-                    </Typography>
-                    <Typography variant="bodySm" className="text-red-700 dark:text-red-400">
-                      {Math.abs(reconcileData?.summary.discrepancy ?? 0)} case
-                      {Math.abs(reconcileData?.summary.discrepancy ?? 0) !== 1 ? 's' : ''}{' '}
-                      {(reconcileData?.summary.discrepancy ?? 0) > 0 ? 'over' : 'under'} —
-                      movements show {reconcileData?.summary.expectedStock} cases but stock has{' '}
-                      {reconcileData?.summary.actualStock}
-                    </Typography>
+        {hasReconcileIssues &&
+          (() => {
+            const disc = reconcileData?.summary.discrepancy ?? 0;
+            // Over-count = physical stock exceeds the ledger → "Fix Now"
+            // (delete orphans / merge duplicates) is the right tool. An
+            // under-count means the LEDGER over-records; Fix Now can't help, so
+            // point the user at the offending wines instead of a dead-end button.
+            const isOver = disc > 0;
+            const culprits = reconcileData?.topDiscrepancies ?? [];
+            return (
+              <Card className="border-red-500 bg-red-50 dark:border-red-700 dark:bg-red-900/30">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Icon
+                        icon={IconAlertTriangle}
+                        size="lg"
+                        className="mt-0.5 shrink-0 text-red-600"
+                      />
+                      <div className="min-w-0">
+                        <Typography
+                          variant="headingSm"
+                          className="text-red-800 dark:text-red-300"
+                        >
+                          Stock Reconciliation Required
+                        </Typography>
+                        <Typography
+                          variant="bodySm"
+                          className="text-red-700 dark:text-red-400"
+                        >
+                          {Math.abs(disc)} case{Math.abs(disc) !== 1 ? 's' : ''}{' '}
+                          {isOver ? 'over' : 'under'} — movements show{' '}
+                          {reconcileData?.summary.expectedStock} cases but stock has{' '}
+                          {reconcileData?.summary.actualStock}
+                        </Typography>
+                        {culprits.length > 0 && (
+                          <ul className="mt-2 space-y-0.5">
+                            {culprits.slice(0, 4).map((c: (typeof culprits)[number]) => (
+                              <li
+                                key={c.lwin18}
+                                className="flex items-center gap-2 text-[12px] text-red-700 dark:text-red-400"
+                              >
+                                <span className="w-9 shrink-0 text-right font-bold tabular-nums">
+                                  {c.diff > 0 ? '+' : ''}
+                                  {c.diff}
+                                </span>
+                                <span className="truncate">
+                                  {c.productName || c.lwin18}
+                                </span>
+                                <span className="shrink-0 text-red-500/70">
+                                  (ledger {c.expectedCases}, stock {c.actualCases})
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {!isOver && (
+                          <Typography
+                            variant="bodyXs"
+                            className="mt-2 block text-red-600/80 dark:text-red-400/70"
+                          >
+                            &ldquo;Fix Now&rdquo; only clears orphan/duplicate stock (for
+                            over-counts). An under-count means the ledger over-records —
+                            review the wines above.
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+                    <Button colorRole="danger" size="sm" asChild>
+                      <Link href="/platform/admin/wms/stock/reconcile">
+                        <ButtonContent>{isOver ? 'Fix Now' : 'Review'}</ButtonContent>
+                      </Link>
+                    </Button>
                   </div>
-                </div>
-                <Button colorRole="danger" size="sm" asChild>
-                  <Link href="/platform/admin/wms/stock/reconcile">
-                    <ButtonContent>Fix Now</ButtonContent>
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
         {/* Alerts Section */}
         {(hasExpiryAlerts || pendingRequestCount > 0) && (

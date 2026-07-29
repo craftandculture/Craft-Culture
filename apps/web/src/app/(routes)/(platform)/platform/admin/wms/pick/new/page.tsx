@@ -22,6 +22,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import PackBadge from '@/app/_wms/components/PackBadge';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -483,9 +484,12 @@ const NewPickListPage = () => {
                                     }`}
                                   >
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-text-primary">
-                                        {displayName}
-                                      </p>
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="truncate text-text-primary">
+                                          {displayName}
+                                        </p>
+                                        <PackBadge pack={perCase} bottleSize={bottleSize} />
+                                      </div>
                                       {needsRepack && rp?.fromPack && (
                                         <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-700">
                                           <IconReplace className="h-3.5 w-3.5 shrink-0" />

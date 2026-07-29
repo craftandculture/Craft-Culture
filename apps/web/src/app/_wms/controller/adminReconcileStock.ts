@@ -87,7 +87,51 @@ const adminReconcileStock = wmsOperatorProcedure.query(async () => {
     HAVING COUNT(*) > 1
   `);
 
-  const duplicateRows = Array.isArray(duplicates) ? duplicates : duplicates.rows ?? [];
+  const duplicateRows = Array.isArray(duplicates)
+    ? duplicates
+    : (duplicates as { rows?: unknown[] }).rows ?? [];
+
+  // Per-LWIN culprits: which wines actually drive the discrepancy (movement
+  // ledger cases vs physical stock cases). Surfaced on the dashboard banner so a
+  // mismatch points straight at the offending wine instead of a blanket number.
+  const discrepancyRows = await db.execute(sql`
+    SELECT lwin18, product_name, expected_cases, actual_cases,
+           (actual_cases - expected_cases) AS diff
+    FROM (
+      SELECT COALESCE(m.lwin18, s.lwin18) AS lwin18,
+             s.product_name,
+             COALESCE(m.expected_cases, 0) AS expected_cases,
+             COALESCE(s.actual_cases, 0) AS actual_cases
+      FROM (
+        SELECT lwin18, SUM(CASE movement_type
+          WHEN 'receive' THEN quantity_cases WHEN 'count' THEN quantity_cases
+          WHEN 'repack_in' THEN quantity_cases
+          WHEN 'adjust' THEN CASE WHEN reason_code IS DISTINCT FROM 'stock_correction' THEN quantity_cases ELSE 0 END
+          WHEN 'pick' THEN -quantity_cases WHEN 'repack_out' THEN -quantity_cases
+          ELSE 0 END) AS expected_cases
+        FROM ${wmsStockMovements} GROUP BY lwin18
+      ) m
+      FULL OUTER JOIN (
+        SELECT lwin18, SUM(quantity_cases) AS actual_cases, MAX(product_name) AS product_name
+        FROM ${wmsStock} GROUP BY lwin18
+      ) s ON s.lwin18 = m.lwin18
+    ) x
+    WHERE (actual_cases - expected_cases) <> 0
+    ORDER BY ABS(actual_cases - expected_cases) DESC
+    LIMIT 8
+  `);
+  const discRows = (
+    Array.isArray(discrepancyRows)
+      ? discrepancyRows
+      : (discrepancyRows as { rows?: unknown[] }).rows ?? []
+  ) as Record<string, unknown>[];
+  const topDiscrepancies = discRows.map((r) => ({
+    lwin18: String(r.lwin18 ?? ''),
+    productName: r.product_name ? String(r.product_name) : null,
+    expectedCases: Number(r.expected_cases ?? 0),
+    actualCases: Number(r.actual_cases ?? 0),
+    diff: Number(r.diff ?? 0),
+  }));
 
   // Get all stock records for manual inspection when there's a discrepancy
   const allStockRecords = await db
@@ -141,6 +185,8 @@ const adminReconcileStock = wmsOperatorProcedure.query(async () => {
       hasOrphans: orphanStock.length > 0,
       hasDuplicates: duplicateRows.length > 0,
     },
+    // The specific wines driving any discrepancy (largest first).
+    topDiscrepancies,
     // For manual inspection
     allStockRecords,
     allReceiveMovements,
