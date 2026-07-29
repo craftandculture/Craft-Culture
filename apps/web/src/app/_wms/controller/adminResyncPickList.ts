@@ -16,11 +16,12 @@ import db from '@/database/client';
 import {
   wmsPickListItems,
   wmsPickLists,
-  wmsStock,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+import resolvePickStock from '../utils/resolvePickStock';
 
 /**
  * Convert a raw 18-digit SKU to dashed LWIN18, matching pick-list creation.
@@ -116,22 +117,14 @@ const adminResyncPickList = wmsOperatorProcedure
         const remaining = item.quantity - alreadyPicked;
         if (remaining <= 0) continue;
 
-        const availableStock = resolvedLwin18
-          ? await tx
-              .select({
-                stockId: wmsStock.id,
-                locationId: wmsStock.locationId,
-                availableCases: wmsStock.availableCases,
-                lwin18: wmsStock.lwin18,
-              })
-              .from(wmsStock)
-              .where(eq(wmsStock.lwin18, resolvedLwin18))
-              .orderBy(wmsStock.availableCases)
-          : [];
-
-        const suggestedStock =
-          availableStock.find((s) => s.availableCases >= remaining) ??
-          availableStock[0];
+        // Pack-agnostic, in-stock-only match by LWIN7+vintage (safe name
+        // fallback) — never pins an empty pack or a lookalike cuvée.
+        const suggestedStock = await resolvePickStock({
+          lwin18: resolvedLwin18,
+          productName: item.name,
+          neededCases: remaining,
+          db: tx,
+        });
 
         await tx.insert(wmsPickListItems).values({
           pickListId,
@@ -141,7 +134,9 @@ const adminResyncPickList = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: suggestedStock
-            ? null
+            ? suggestedStock.matchedBy === 'name'
+              ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
+              : null
             : 'UNRESOLVED: no matching stock at re-sync — check wine/vintage',
         });
         added++;

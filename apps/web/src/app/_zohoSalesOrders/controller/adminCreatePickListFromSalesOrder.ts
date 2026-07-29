@@ -10,11 +10,11 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
+import resolvePickStock from '@/app/_wms/utils/resolvePickStock';
 import db from '@/database/client';
 import {
   wmsPickListItems,
   wmsPickLists,
-  wmsStock,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -105,34 +105,29 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
           ? formatSkuAsLwin18(item.sku)
           : '';
 
-      // Find available stock by LWIN18
-      const availableStock = resolvedLwin18
-        ? await db
-            .select({
-              stockId: wmsStock.id,
-              locationId: wmsStock.locationId,
-              availableCases: wmsStock.availableCases,
-              lwin18: wmsStock.lwin18,
-            })
-            .from(wmsStock)
-            .where(eq(wmsStock.lwin18, resolvedLwin18))
-            .orderBy(wmsStock.availableCases)
-        : [];
-
-      // Find first location with enough stock
-      const suggestedStock = availableStock.find(
-        (s) => s.availableCases >= item.quantity,
-      );
+      // Pack-agnostic, in-stock-only match by LWIN7+vintage with a safe name
+      // fallback — never pins an empty pack or a lookalike cuvée (this is the
+      // path that mis-matched Talenti Brunello to the empty Talenti Piero pack).
+      const suggestedStock = await resolvePickStock({
+        lwin18: resolvedLwin18,
+        productName: item.name,
+        neededCases: item.quantity,
+        db,
+      });
 
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          lwin18: resolvedLwin18,
+          lwin18: suggestedStock?.lwin18 ?? resolvedLwin18,
           productName: item.name,
           quantityCases: item.quantity,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
+          notes:
+            suggestedStock?.matchedBy === 'name'
+              ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
+              : null,
         })
         .returning();
 

@@ -7,12 +7,12 @@ import {
   privateClientOrders,
   wmsPickListItems,
   wmsPickLists,
-  wmsStock,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createPickListSchema } from '../schemas/pickListSchema';
 import generatePickListNumber from '../utils/generatePickListNumber';
+import resolvePickStock from '../utils/resolvePickStock';
 
 /**
  * Create a pick list from an order
@@ -86,32 +86,30 @@ const adminCreatePickList = wmsOperatorProcedure
     const pickListItems = [];
 
     for (const item of orderItems) {
-      // Find available stock for this product (by LWIN or product name)
-      const availableStock = await db
-        .select({
-          stockId: wmsStock.id,
-          locationId: wmsStock.locationId,
-          availableCases: wmsStock.availableCases,
-          lwin18: wmsStock.lwin18,
-        })
-        .from(wmsStock)
-        .where(eq(wmsStock.lwin18, item.lwin18 ?? ''))
-        .orderBy(wmsStock.availableCases);
-
-      // Find first location with enough stock
-      const suggestedStock = availableStock.find(
-        (s) => s.availableCases >= (item.quantityCases ?? 0),
-      );
+      // PCO line fields are `lwin`/`quantity` (not lwin18/quantityCases).
+      // Pack-agnostic, in-stock-only match by LWIN7+vintage with a safe name
+      // fallback — never pins an empty pack or a lookalike cuvée.
+      const neededCases = item.quantity ?? 0;
+      const suggestedStock = await resolvePickStock({
+        lwin18: item.lwin,
+        productName: item.productName,
+        neededCases,
+        db,
+      });
 
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          lwin18: item.lwin18 ?? '',
+          lwin18: suggestedStock?.lwin18 ?? item.lwin ?? '',
           productName: item.productName,
-          quantityCases: item.quantityCases ?? 0,
+          quantityCases: neededCases,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
+          notes:
+            suggestedStock?.matchedBy === 'name'
+              ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
+              : null,
         })
         .returning();
 
