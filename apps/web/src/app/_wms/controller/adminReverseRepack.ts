@@ -173,7 +173,10 @@ const adminReverseRepack = wmsOperatorProcedure
           movementType: 'adjust',
           lwin18: t.lwin18,
           productName: t.productName,
-          quantityCases: t.qty,
+          // Removal → negative. The stock update above subtracts t.qty; the
+          // audit movement must match, or the ledger over-counts these packs
+          // (reconciliation reads N cases short per reversal).
+          quantityCases: -t.qty,
           fromLocationId: repack.locationId,
           notes: `Reversal of ${repackNumber} — removed ${t.config}-pack`,
           reasonCode: 'repack_reversal',
