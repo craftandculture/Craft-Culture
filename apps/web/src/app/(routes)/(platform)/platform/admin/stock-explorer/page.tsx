@@ -458,6 +458,7 @@ interface ProductRowProps {
       storageMethod: string | null;
       quantityCases: number;
       availableCases: number;
+      openBottles: number | null;
       ownerId: string;
       ownerName: string;
       lotNumber: string | null;
@@ -816,6 +817,14 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
                             {loc.quantityCases}
+                            {(loc.openBottles ?? 0) > 0 && (
+                              <span
+                                title="Loose bottles from an opened case"
+                                className="ml-1 rounded bg-amber-100 px-1 py-px text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                              >
+                                +{loc.openBottles} loose
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums text-text-primary">
                             {loc.availableCases}

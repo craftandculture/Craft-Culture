@@ -197,6 +197,7 @@ const adminGetStockByProduct = wmsOperatorProcedure
             storageMethod: wmsLocations.storageMethod,
             quantityCases: wmsStock.quantityCases,
             availableCases: wmsStock.availableCases,
+            openBottles: wmsStock.openBottles,
             ownerId: wmsStock.ownerId,
             ownerName: wmsStock.ownerName,
             lotNumber: wmsStock.lotNumber,

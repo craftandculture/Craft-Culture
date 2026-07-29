@@ -24,6 +24,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
+import PackBadge from '@/app/_wms/components/PackBadge';
 import useTRPC from '@/lib/trpc/browser';
 
 type MovementType =
@@ -48,6 +49,16 @@ const vintageFromLwin18 = (lwin18: string | null | undefined) => {
   if (!lwin18) return null;
   const v = lwin18.split('-')[1];
   return v && v !== '0000' ? v : null;
+};
+
+/** Extract pack config from an LWIN18 (dash-stripped digits 12-13 = pack, 14-18 = size). */
+const packFromLwin18 = (lwin18: string | null | undefined) => {
+  const d = (lwin18 ?? '').replace(/\D/g, '');
+  if (d.length !== 18) return null;
+  const pack = Number(d.slice(11, 13));
+  const ml = Number(d.slice(13, 18));
+  if (pack <= 0) return null;
+  return { pack, bottleSize: ml > 0 ? `${ml / 10}cl` : '75cl' };
 };
 
 /**
@@ -293,6 +304,12 @@ const WMSMovementsPage = () => {
                                 {vintageFromLwin18(movement.lwin18)}
                               </span>
                             )}
+                            {(() => {
+                              const p = packFromLwin18(movement.lwin18);
+                              return p ? (
+                                <PackBadge pack={p.pack} bottleSize={p.bottleSize} />
+                              ) : null;
+                            })()}
                           </div>
                           <div className="font-mono text-[11px] text-text-muted">
                             {movement.lwin18}
