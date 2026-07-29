@@ -73,10 +73,14 @@ const refreshAccessToken = async (): Promise<string> => {
     throw new Error('Zoho credentials not configured');
   }
 
-  // Trim all credentials to remove any trailing newlines from env vars
-  const clientId = serverConfig.zohoClientId!.trim();
-  const clientSecret = serverConfig.zohoClientSecret!.trim();
-  const refreshToken = serverConfig.zohoRefreshToken!.trim();
+  // Strip ALL whitespace (not just trailing) from credentials. Zoho client
+  // IDs/secrets/refresh tokens never contain whitespace, and a stray newline
+  // pasted into an env var — even mid-value — silently breaks the OAuth token
+  // request (400 HTML from accounts.zoho.*) and froze the invoice sync for
+  // weeks in Jul 2026. .trim() only handles the ends; this handles any position.
+  const clientId = serverConfig.zohoClientId!.replace(/\s/g, '');
+  const clientSecret = serverConfig.zohoClientSecret!.replace(/\s/g, '');
+  const refreshToken = serverConfig.zohoRefreshToken!.replace(/\s/g, '');
 
   logger.info('Zoho token refresh starting', {
     clientIdPreview: `${clientId.slice(0, 10)}...${clientId.slice(-4)}`,
@@ -188,7 +192,7 @@ const zohoFetch = async <T>(
   // Build URL with organization_id
   const { api: apiUrl } = getZohoUrls();
   const url = new URL(`${apiUrl}${endpoint}`);
-  const orgId = serverConfig.zohoOrganizationId!.trim();
+  const orgId = serverConfig.zohoOrganizationId!.replace(/\s/g, '');
   url.searchParams.set('organization_id', orgId);
 
   logger.info('Zoho API request', {
