@@ -295,7 +295,21 @@ const WMSDispatchBatchDetailPage = () => {
           {canDispatch && (
             <Button
               variant="default"
-              onClick={() => handleUpdateStatus('dispatched')}
+              onClick={() => {
+                // Pre-flight: dispatch marks the truck departed (hard to
+                // reverse, generates the delivery note) — confirm the load first.
+                if (
+                  confirm(
+                    `Dispatch to ${batch.distributorName}?\n\n` +
+                      `• ${batch.orderCount} order${batch.orderCount === 1 ? '' : 's'}\n` +
+                      `• ${batch.totalCases} case${batch.totalCases === 1 ? '' : 's'}\n` +
+                      `• ${batch.palletCount ?? 1} pallet${(batch.palletCount ?? 1) === 1 ? '' : 's'}\n\n` +
+                      `This marks the truck as departed.`,
+                  )
+                ) {
+                  handleUpdateStatus('dispatched');
+                }
+              }}
               disabled={updateStatusMutation.isPending}
             >
               <ButtonContent iconLeft={updateStatusMutation.isPending ? IconLoader2 : IconTruck}>
