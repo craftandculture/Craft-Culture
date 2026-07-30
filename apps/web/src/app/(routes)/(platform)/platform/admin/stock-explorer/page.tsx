@@ -485,9 +485,11 @@ interface ProductRowProps {
   onTransferOwnership: (stockId: string, newOwnerId: string, qty: number, notes?: string) => void;
   isTransferring: boolean;
   partners: { id: string; name: string; type: string }[];
+  /** Names of confusingly-similar wines also in stock (same vintage, near-identical name). */
+  lookalikeTwins?: string[];
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice, onTransferOwnership, isTransferring, partners }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice, onTransferOwnership, isTransferring, partners, lookalikeTwins }: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
@@ -566,6 +568,14 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
             <div className="group/name flex items-center gap-1.5 truncate">
               <span className="truncate">{product.productName}</span>
               <PackBadge pack={product.caseConfig} bottleSize={product.bottleSize} />
+              {lookalikeTwins && lookalikeTwins.length > 0 && (
+                <span
+                  title={`Lookalike — easily confused with: ${lookalikeTwins.join(', ')}. Check the LWIN when picking.`}
+                  className="shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                >
+                  ⚠ lookalike
+                </span>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1556,6 +1566,13 @@ const StockExplorerPage = () => {
     ...api.wms.admin.stock.getOverview.queryOptions({ ownerId: ownerId || undefined }),
   });
 
+  // Lookalike wines in stock (near-identical names) → flag rows so they're
+  // reviewed before a picking mix-up (the Talenti vs Talenti Piero trap).
+  const { data: lookalikeData } = useQuery({
+    ...api.wms.admin.stock.lookalikes.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch owners for filter dropdown
   const { data: ownerData } = useQuery({
     ...api.wms.admin.stock.getByOwner.queryOptions({}),
@@ -2500,6 +2517,9 @@ const StockExplorerPage = () => {
                         <ProductRow
                           key={key}
                           product={product}
+                          lookalikeTwins={lookalikeData?.byLwin18[product.lwin18]?.map(
+                            (t) => t.productName,
+                          )}
                           isExpanded={isExpanded}
                           onToggle={() => toggleRow(key)}
                           density={density}
