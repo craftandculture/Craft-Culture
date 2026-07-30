@@ -36,6 +36,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
@@ -1450,6 +1451,16 @@ const StockExplorerPage = () => {
   // Search & filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Seed the search from a ?q= param (e.g. arriving via the ⌘K command palette).
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearch(q);
+      setDebouncedSearch(q);
+    }
+    // Only on first mount / param change — user edits take over afterwards.
+  }, [searchParams]);
   const [ownerId, setOwnerId] = useState<string>('');
   const [vintageFrom, setVintageFrom] = useState('');
   const [vintageTo, setVintageTo] = useState('');

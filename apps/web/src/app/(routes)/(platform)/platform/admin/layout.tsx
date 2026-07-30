@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import CommandPalette from '@/app/_wms/components/CommandPalette';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -19,7 +20,12 @@ const AdminLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/platform');
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <CommandPalette />
+      {children}
+    </>
+  );
 };
 
 export default AdminLayout;
