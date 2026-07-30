@@ -64,6 +64,7 @@ import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiv
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
+import adminGetStockLookalikes from './controller/adminGetStockLookalikes';
 import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminHealthCheckDb from './controller/adminHealthCheckDb';
 import adminHealthCheckZoho from './controller/adminHealthCheckZoho';
@@ -186,6 +187,7 @@ const stockRouter = createTRPCRouter({
   getMovements: adminGetMovementHistory,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
+  lookalikes: adminGetStockLookalikes,
   deduplicate: adminDeduplicateStock,
   getAll: adminGetAllStockRecords,
   reconcile: adminReconcileStock,

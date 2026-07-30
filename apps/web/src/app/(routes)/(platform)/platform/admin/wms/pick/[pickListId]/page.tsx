@@ -74,6 +74,13 @@ const WMSPickListDetailPage = () => {
     ...api.wms.admin.picking.getOne.queryOptions({ pickListId }),
   });
 
+  // Lookalike wines in stock — warn the picker when the current wine has a
+  // confusingly-similar twin (the Talenti vs Talenti Piero trap).
+  const { data: lookalikeData } = useQuery({
+    ...api.wms.admin.stock.lookalikes.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Resolve the private-client order (PCO) behind this pick, if any, so the
   // operator can print client labels without leaving the pick flow. Returns
   // null for non-PCO picks (distributor/consignment orders), which hides the
@@ -254,6 +261,9 @@ const WMSPickListDetailPage = () => {
     [data?.items],
   );
   const currentItem = unpickedItems[currentItemIndex];
+  const currentLookalikes = currentItem
+    ? lookalikeData?.byLwin18[currentItem.lwin18] ?? []
+    : [];
 
   // Get next location hint for picker
   const nextItem = unpickedItems[currentItemIndex + 1];
@@ -583,6 +593,27 @@ const WMSPickListDetailPage = () => {
                   {currentItem.lwin18}
                 </Typography>
               </div>
+
+              {/* Lookalike alert — a confusingly-similar wine is also in stock */}
+              {currentLookalikes.length > 0 && (
+                <div className="mx-4 mb-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 dark:border-red-800 dark:bg-red-900/20">
+                  <p className="flex items-center gap-1.5 text-[12px] font-bold text-red-700 dark:text-red-300">
+                    <IconAlertTriangle className="h-4 w-4 shrink-0" /> Lookalike in stock — check
+                    the label!
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-red-600 dark:text-red-400">
+                    Do not confuse with{' '}
+                    {currentLookalikes.map((l, i) => (
+                      <span key={l.lwin18}>
+                        {i > 0 && ', '}
+                        <b>{l.productName}</b>
+                      </span>
+                    ))}
+                    . Confirm the LWIN on the case is{' '}
+                    <span className="font-mono font-semibold">{currentItem.lwin18}</span>.
+                  </p>
+                </div>
+              )}
 
               {/* Crack-a-case alert — stock is a multi-pack, pick is loose bottles */}
               {isCrackPick(currentItem) && (
