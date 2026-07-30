@@ -30,32 +30,47 @@ const adminBulkApplyMargin = wmsOperatorProcedure
     const inbondDivisor = inbondMarginPct > 0 ? 1 - inbondMarginPct / 100 : 1;
     const logistics = logisticsPerBottle;
 
-    // LWIN18 set in scope: has stock, optional category, optional owner
-    const categoryFilter =
-      category === 'Wine'
-        ? `AND (category = 'Wine' OR category IS NULL)`
-        : category
-          ? `AND category = '${category}'`
-          : '';
-    const ownerFilter = ownerId ? `AND owner_id = '${ownerId}'` : '';
-    const stockScope = `SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 ${categoryFilter} ${ownerFilter}`;
-
-    // Landed = import + override + logistics; in-bond = landed / (1 - inbond%);
-    // PC = in-bond / (1 - pc%). Each tier rounded to 2dp to match the display.
+    // These arithmetic inputs are validated numbers (Zod), so they cannot carry
+    // SQL — safe to inline. All string values (category, ownerId, user.id) are
+    // passed as BOUND PARAMETERS below so safety does not rely on the schema.
     const landedExpr = `ROUND((p.import_price_per_bottle + COALESCE(p.cost_override_per_bottle, 0) + ${logistics})::numeric, 2)`;
     const inBondExpr = `ROUND((${landedExpr} / ${inbondDivisor})::numeric, 2)`;
     const sellExpr = `ROUND((${inBondExpr} / ${divisor})::numeric, 2)`;
 
-    const totalEligibleRows = await client.unsafe(`
-      SELECT COUNT(*) as count FROM wms_product_pricing p
-      WHERE p.import_price_per_bottle > 0 AND p.lwin18 IN (${stockScope})
-    `);
+    // Build the in-scope-LWIN subquery with $N placeholders starting at
+    // `startIdx`; returns the SQL text + the params it consumes, in order.
+    const buildStockScope = (startIdx: number) => {
+      const params: string[] = [];
+      let categoryFilter = '';
+      if (category === 'Wine') {
+        // fixed literal, no user input
+        categoryFilter = `AND (category = 'Wine' OR category IS NULL)`;
+      } else if (category) {
+        params.push(category);
+        categoryFilter = `AND category = $${startIdx + params.length - 1}`;
+      }
+      let ownerFilter = '';
+      if (ownerId) {
+        params.push(ownerId);
+        ownerFilter = `AND owner_id = $${startIdx + params.length - 1}`;
+      }
+      const sql = `SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 ${categoryFilter} ${ownerFilter}`;
+      return { sql, params };
+    };
+
+    const countScope = buildStockScope(1);
+    const totalEligibleRows = await client.unsafe(
+      `SELECT COUNT(*) as count FROM wms_product_pricing p
+       WHERE p.import_price_per_bottle > 0 AND p.lwin18 IN (${countScope.sql})`,
+      countScope.params,
+    );
     const total = parseInt(totalEligibleRows[0]?.count ?? '0', 10);
 
     let updated: number;
 
     if (ownerId) {
-      // Per-owner PC pricing → upsert into wms_owner_pricing
+      // Per-owner PC pricing → upsert into wms_owner_pricing.
+      // Params in text order: $1 ownerId, $2 user.id, then scope from $3.
       const conflict = overwriteExisting
         ? `ON CONFLICT (lwin18, owner_id) DO UPDATE SET
              pc_selling_price_per_bottle = EXCLUDED.pc_selling_price_per_bottle,
@@ -63,31 +78,36 @@ const adminBulkApplyMargin = wmsOperatorProcedure
              updated_at = NOW()`
         : `ON CONFLICT (lwin18, owner_id) DO NOTHING`;
 
-      const result = await client.unsafe(`
-        INSERT INTO wms_owner_pricing (lwin18, owner_id, pc_selling_price_per_bottle, updated_by)
-        SELECT p.lwin18, '${ownerId}', ${sellExpr}, '${ctx.user.id}'
-        FROM wms_product_pricing p
-        WHERE p.import_price_per_bottle > 0
-          AND p.lwin18 IN (${stockScope})
-        ${conflict}
-      `);
+      const scope = buildStockScope(3);
+      const result = await client.unsafe(
+        `INSERT INTO wms_owner_pricing (lwin18, owner_id, pc_selling_price_per_bottle, updated_by)
+         SELECT p.lwin18, $1, ${sellExpr}, $2
+         FROM wms_product_pricing p
+         WHERE p.import_price_per_bottle > 0
+           AND p.lwin18 IN (${scope.sql})
+         ${conflict}`,
+        [ownerId, ctx.user.id, ...scope.params],
+      );
       updated = result.count;
     } else {
-      // Default PC price → wms_product_pricing.selling_price_per_bottle
+      // Default PC price → wms_product_pricing.selling_price_per_bottle.
+      // Params in text order: $1 user.id, then scope from $2.
       const overwriteCondition = overwriteExisting
         ? ''
         : 'AND (p.selling_price_per_bottle IS NULL OR p.selling_price_per_bottle = 0)';
 
-      const result = await client.unsafe(`
-        UPDATE wms_product_pricing p
-        SET
-          selling_price_per_bottle = ${sellExpr},
-          updated_by = '${ctx.user.id}',
-          updated_at = NOW()
-        WHERE p.import_price_per_bottle > 0
-          AND p.lwin18 IN (${stockScope})
-          ${overwriteCondition}
-      `);
+      const scope = buildStockScope(2);
+      const result = await client.unsafe(
+        `UPDATE wms_product_pricing p
+         SET
+           selling_price_per_bottle = ${sellExpr},
+           updated_by = $1,
+           updated_at = NOW()
+         WHERE p.import_price_per_bottle > 0
+           AND p.lwin18 IN (${scope.sql})
+           ${overwriteCondition}`,
+        [ctx.user.id, ...scope.params],
+      );
       updated = result.count;
     }
 
