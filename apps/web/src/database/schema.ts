@@ -2712,6 +2712,8 @@ export const logisticsDocumentType = pgEnum('logistics_document_type', [
   'proof_of_delivery',
   'gac_invoice',
   'shipping_invoice',
+  'transit_boe',
+  're_export_boe',
   'cargo_photo',
   'other',
 ]);

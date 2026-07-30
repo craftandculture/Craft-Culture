@@ -88,10 +88,18 @@ const DOC_TYPES = [
   'certificate_of_origin',
   'delivery_note',
   'insurance_certificate',
+  'transit_boe',
+  're_export_boe',
   'other',
 ] as const;
 type DocType = (typeof DOC_TYPES)[number];
-const docLabel = (t: string) => t.replace(/_/g, ' ');
+/** Labels needing specific casing (acronyms) beyond the generic word-split. */
+const DOC_LABEL_OVERRIDES: Record<string, string> = {
+  transit_boe: 'Transit BOE',
+  re_export_boe: 'Re-Export BOE',
+  gac_invoice: 'GAC Invoice',
+};
+const docLabel = (t: string) => DOC_LABEL_OVERRIDES[t] ?? t.replace(/_/g, ' ');
 
 /**
  * Soft tint palette to visually separate each supplier invoice in the cost

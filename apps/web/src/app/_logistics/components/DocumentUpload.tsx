@@ -68,6 +68,8 @@ type DocumentType =
   | 'proof_of_delivery'
   | 'gac_invoice'
   | 'shipping_invoice'
+  | 'transit_boe'
+  | 're_export_boe'
   | 'cargo_photo'
   | 'other';
 
@@ -92,6 +94,8 @@ const documentTypeLabels: Record<DocumentType, string> = {
   proof_of_delivery: 'Proof of Delivery',
   gac_invoice: 'GAC Invoice',
   shipping_invoice: 'Shipping Invoice',
+  transit_boe: 'Transit BOE',
+  re_export_boe: 'Re-Export BOE',
   cargo_photo: 'Cargo Photo',
   other: 'Other',
 };

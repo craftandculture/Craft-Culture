@@ -38,6 +38,8 @@ type DocumentType =
   | 'health_certificate'
   | 'insurance_certificate'
   | 'proof_of_delivery'
+  | 'transit_boe'
+  | 're_export_boe'
   | 'other';
 
 interface PartnerDocumentUploadProps {
@@ -59,6 +61,8 @@ const documentTypeLabels: Record<DocumentType, string> = {
   health_certificate: 'Health Certificate',
   insurance_certificate: 'Insurance Certificate',
   proof_of_delivery: 'Proof of Delivery',
+  transit_boe: 'Transit BOE',
+  re_export_boe: 'Re-Export BOE',
   other: 'Other',
 };
 

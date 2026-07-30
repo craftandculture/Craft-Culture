@@ -117,6 +117,8 @@ export const groupDocumentTypes = [
   'certificate_of_origin',
   'delivery_note',
   'insurance_certificate',
+  'transit_boe',
+  're_export_boe',
   'other',
 ] as const;
 

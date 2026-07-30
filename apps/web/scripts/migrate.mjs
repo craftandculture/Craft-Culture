@@ -194,6 +194,16 @@ const runMigrations = async () => {
     );
     console.log('✅ logistics_group_cost_lines.vendor ready');
 
+    // Logistics documents: Transit BOE and Re-Export BOE document types.
+    console.log('🔄 Ensuring logistics_document_type has BOE values...');
+    await client.unsafe(
+      `ALTER TYPE "logistics_document_type" ADD VALUE IF NOT EXISTS 'transit_boe'`,
+    );
+    await client.unsafe(
+      `ALTER TYPE "logistics_document_type" ADD VALUE IF NOT EXISTS 're_export_boe'`,
+    );
+    console.log('✅ logistics_document_type BOE values ready');
+
     // Pricing Manager: per-SKU FZ→mainland transfer fee ($/btl; null = $2.50 default).
     console.log('🔄 Ensuring wms_product_pricing.transfer_price_per_bottle column...');
     await client.unsafe(
