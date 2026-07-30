@@ -397,7 +397,10 @@ The Neon MCP server hangs and is unreliable. **Never use Neon MCP tools.** Inste
 
 ```bash
 # Run SQL against production (preferred — fast, flexible)
-/usr/local/opt/libpq/bin/psql "postgresql://neondb_owner:***REMOVED***@ep-wispy-math-agjx83pw.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require" -c "SELECT count(*) FROM products"
+# The connection string is a SECRET — never commit it. Export it into your
+# shell first (from the Neon console / your password manager):
+#   export DATABASE_URL="postgresql://<user>:<password>@<host>/neondb?sslmode=require"
+/usr/local/opt/libpq/bin/psql "$DATABASE_URL" -c "SELECT count(*) FROM products"
 
 # Branch management via neonctl
 npx neonctl branches list --project-id little-river-49556671
