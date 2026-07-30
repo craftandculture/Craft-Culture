@@ -154,6 +154,44 @@ const ReconcilePage = () => {
           </CardContent>
         </Card>
 
+        {/* Culprit wines — which LWINs actually drive the discrepancy */}
+        {!isReconciled && (data?.topDiscrepancies?.length ?? 0) > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-1">
+                Wines driving the discrepancy
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3">
+                Ledger (movements) vs physical stock — largest gaps first. Count these to
+                confirm before adjusting.
+              </Typography>
+              <div className="divide-y divide-border-muted">
+                {(data?.topDiscrepancies ?? []).map((c) => (
+                  <div key={c.lwin18} className="flex items-center gap-3 py-2 text-sm">
+                    <span
+                      className={`w-12 shrink-0 text-right font-bold tabular-nums ${
+                        c.diff > 0 ? 'text-amber-600' : 'text-red-600'
+                      }`}
+                    >
+                      {c.diff > 0 ? '+' : ''}
+                      {c.diff}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-text-primary">
+                        {c.productName || c.lwin18}
+                      </p>
+                      <p className="font-mono text-[11px] text-text-muted">{c.lwin18}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-text-muted">
+                      ledger {c.expectedCases} &middot; stock {c.actualCases}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Auto-Fix Results */}
         {autoFixMutation.data && (
           <Card className="border-blue-200 bg-blue-50">
