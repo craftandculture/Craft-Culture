@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, products, supplierProducts } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import { catalogWineDetailSchema } from '../../schemas/exchangeOrderSchema';
 
@@ -18,7 +18,7 @@ import { catalogWineDetailSchema } from '../../schemas/exchangeOrderSchema';
  *     productId: 'uuid',
  *   });
  */
-const catalogWineDetail = protectedProcedure
+const catalogWineDetail = approvedProcedure
   .input(catalogWineDetailSchema)
   .query(async ({ input }) => {
     const { productId } = input;

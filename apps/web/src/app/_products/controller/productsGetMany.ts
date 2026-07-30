@@ -7,7 +7,7 @@ import { productOffers, products } from '@/database/schema';
 import exchangeRateService, {
   type SupportedCurrency,
 } from '@/lib/currency/exchangeRateService';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 interface PreparedSearch {
   trimmedSearch: string;
@@ -143,7 +143,7 @@ const createSearchExpressions = (
   };
 };
 
-const productsGetMany = protectedProcedure
+const productsGetMany = approvedProcedure
   .input(
     z.object({
       cursor: z.number().optional().default(0),

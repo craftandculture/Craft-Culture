@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { products } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
   countries: z.array(z.string()).optional(),
@@ -25,7 +25,7 @@ const inputSchema = z.object({
  *     producers: ['Château Margaux'],
  *   });
  */
-const productsGetFilterOptions = protectedProcedure
+const productsGetFilterOptions = approvedProcedure
   .input(inputSchema)
   .query(async ({ input }) => {
   // Get countries with counts

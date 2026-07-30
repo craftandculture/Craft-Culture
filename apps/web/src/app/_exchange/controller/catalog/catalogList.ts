@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { products, supplierProducts } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import { catalogListSchema } from '../../schemas/exchangeOrderSchema';
 
@@ -20,7 +20,7 @@ import { catalogListSchema } from '../../schemas/exchangeOrderSchema';
  *     region: 'Burgundy',
  *   });
  */
-const catalogList = protectedProcedure
+const catalogList = approvedProcedure
   .input(catalogListSchema)
   .query(async ({ input }) => {
     const { page, limit, region, minPrice, maxPrice, sortBy } = input;

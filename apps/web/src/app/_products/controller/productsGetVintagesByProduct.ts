@@ -2,7 +2,7 @@ import { and, eq, ne, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { products } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import getVintagesByProductSchema from '../schemas/getVintagesByProductSchema';
 
@@ -18,7 +18,7 @@ import getVintagesByProductSchema from '../schemas/getVintagesByProductSchema';
  *   });
  *   // Returns: ["2018", "2019", "2020", "2021", "2022"]
  */
-const productsGetVintagesByProduct = protectedProcedure
+const productsGetVintagesByProduct = approvedProcedure
   .input(getVintagesByProductSchema)
   .query(async ({ input }) => {
     // Get the source product

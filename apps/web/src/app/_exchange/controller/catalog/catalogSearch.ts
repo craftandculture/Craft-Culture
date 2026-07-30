@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { products, supplierProducts } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import { catalogSearchSchema } from '../../schemas/exchangeOrderSchema';
 
@@ -18,7 +18,7 @@ import { catalogSearchSchema } from '../../schemas/exchangeOrderSchema';
  *     page: 1,
  *   });
  */
-const catalogSearch = protectedProcedure
+const catalogSearch = approvedProcedure
   .input(catalogSearchSchema)
   .query(async ({ input }) => {
     const { query, page, limit } = input;

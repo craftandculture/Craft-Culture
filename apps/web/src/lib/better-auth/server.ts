@@ -106,14 +106,17 @@ const authServerClient = betterAuth({
   },
   trustedOrigins: isVercelProduction
     ? [
+        // Explicit allow-list — no wildcards. A catch-all /*.craftculture.xyz/
+        // would let any subdomain (e.g. a dangling-CNAME takeover) become a
+        // trusted auth origin; a /craft-culture*.vercel.app/ wildcard trusts
+        // public, predictable preview URLs. If a new origin needs auth, add it
+        // here explicitly.
         'https://wine.craftculture.xyz',
         'https://www.wine.craftculture.xyz',
-        'https://craft-culture.vercel.app',
         'https://warehouse.craftculture.xyz',
-        // Allow all craftculture.xyz subdomains
-        /^https:\/\/.*\.craftculture\.xyz$/,
-        // Allow all Vercel preview deployments
-        /^https:\/\/craft-culture.*\.vercel\.app$/,
+        'https://craftculture.xyz',
+        'https://www.craftculture.xyz',
+        'https://craft-culture.vercel.app',
       ]
     : ['http://localhost:3000'],
   database: drizzleAdapter(db, {

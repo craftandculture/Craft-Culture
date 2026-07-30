@@ -36,6 +36,28 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 });
 
 /**
+ * Approved procedure
+ *
+ * Requires an authenticated user whose account has been APPROVED by an admin.
+ * Use for shared business/catalog data endpoints so a merely-signed-up
+ * (approvalStatus 'pending') account cannot read that data before approval.
+ *
+ * Deliberately NOT the base for onboarding/self-service endpoints (usersUpdate,
+ * settings, notifications, usersGetMe) — those stay on `protectedProcedure` so a
+ * pending user can still complete signup while awaiting approval.
+ */
+export const approvedProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.approvalStatus !== 'approved') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Your account is awaiting approval.',
+    });
+  }
+
+  return next({ ctx });
+});
+
+/**
  * Admin procedure
  *
  * Only accessible to users with admin role.
