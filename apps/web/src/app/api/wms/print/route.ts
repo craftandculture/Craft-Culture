@@ -1,8 +1,20 @@
+import crypto from 'node:crypto';
 import net from 'node:net';
 
 import { NextRequest, NextResponse } from 'next/server';
 
 import serverConfig from '@/server.config';
+
+/** Constant-time comparison of a supplied device token against the configured one. */
+const isValidDeviceToken = (supplied: string | null | undefined) => {
+  const expected = serverConfig.wmsDeviceToken?.trim();
+  const given = supplied?.trim();
+  if (!expected || !given) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+};
 
 /**
  * Send raw data to a TCP socket (Zebra printer on port 9100)
@@ -50,9 +62,8 @@ export const GET = async (request: NextRequest) => {
   const deviceToken = searchParams.get('device_token');
   const zplParam = searchParams.get('zpl'); // direct ZPL content (base64 encoded)
 
-  // Validate device token
-  const expectedToken = serverConfig.wmsDeviceToken?.trim();
-  if (!deviceToken || deviceToken !== expectedToken) {
+  // Validate device token (constant-time)
+  if (!isValidDeviceToken(deviceToken)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -90,7 +101,16 @@ export const GET = async (request: NextRequest) => {
  *   });
  */
 export const POST = async (request: NextRequest) => {
-  const { zpl } = (await request.json()) as { zpl?: string };
+  const body = (await request.json()) as { zpl?: string; device_token?: string };
+  const { zpl } = body;
+
+  // Require the same device token as GET (from query or body) before opening a
+  // socket to the internal printer — otherwise any caller could send raw ZPL.
+  const deviceToken =
+    request.nextUrl.searchParams.get('device_token') ?? body.device_token ?? null;
+  if (!isValidDeviceToken(deviceToken)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   if (!zpl || typeof zpl !== 'string') {
     return NextResponse.json({ error: 'ZPL data required' }, { status: 400 });

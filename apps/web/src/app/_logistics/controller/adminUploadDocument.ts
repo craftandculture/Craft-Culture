@@ -7,6 +7,7 @@ import db from '@/database/client';
 import { logisticsDocuments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { logisticsDocumentExtractionJob } from '@/trigger/jobs/logistics-document-extraction/logisticsDocumentExtractionJob';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -48,7 +49,11 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
     let finalMimeType: string;
 
     if (blobUrl) {
-      // File already uploaded to Vercel Blob via client upload
+      // File already uploaded to Vercel Blob via client upload.
+      // SSRF guard: only accept our own Vercel Blob URLs (fetched server-side).
+      if (!isVercelBlobUrl(blobUrl)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid upload URL' });
+      }
       finalUrl = blobUrl;
       finalSize = fileSize ?? 0;
       finalMimeType = fileType;

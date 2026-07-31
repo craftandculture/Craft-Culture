@@ -42,36 +42,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No orders found' }, { status: 404 });
     }
 
-    // Verify all orders belong to the same distributor and user has access
     const distributorIds = new Set(ordersResult.map((o) => o.distributorId).filter(Boolean));
     if (distributorIds.size === 0) {
       return NextResponse.json({ error: 'Orders have no distributor assigned' }, { status: 400 });
     }
 
-    // Verify user is a member of at least one of the distributors (or is admin)
+    // Scope the orders to only those the caller is entitled to. A distributor
+    // member sees ONLY orders assigned to a distributor they belong to — never
+    // orders they merely bundled into the request. (Admins see all requested.)
+    let orders = ordersResult;
     if (user.role !== 'admin') {
-      let hasAccess = false;
-      for (const distributorId of distributorIds) {
-        if (!distributorId) continue;
-        const membership = await db.query.partnerMembers.findFirst({
-          where: {
-            userId: user.id,
-            partnerId: distributorId,
-          },
-        });
-        if (membership) {
-          hasAccess = true;
-          break;
-        }
-      }
+      const memberships = await db.query.partnerMembers.findMany({
+        where: {
+          userId: user.id,
+          partnerId: { in: [...distributorIds].filter((id): id is string => !!id) },
+        },
+      });
+      const allowedDistributorIds = new Set(memberships.map((m) => m.partnerId));
+      orders = ordersResult.filter(
+        (o) => o.distributorId && allowedDistributorIds.has(o.distributorId),
+      );
 
-      if (!hasAccess) {
+      if (orders.length === 0) {
         return NextResponse.json({ error: 'You do not have access to these orders' }, { status: 403 });
       }
     }
 
-    // Get the distributor name from the first order's distributor
-    const firstDistributorId = ordersResult[0]?.distributorId;
+    // From here on, only the caller-owned `orders` (and their ids) are used.
+    const scopedOrderIds = orders.map((o) => o.id);
+
+    // Get the distributor name from the first (owned) order's distributor
+    const firstDistributorId = orders[0]?.distributorId;
     let distributorName = 'Distributor';
     if (firstDistributorId) {
       const [distributorResult] = await db
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
     const allLineItems = await db
       .select()
       .from(privateClientOrderItems)
-      .where(inArray(privateClientOrderItems.orderId, orderIds));
+      .where(inArray(privateClientOrderItems.orderId, scopedOrderIds));
 
     // Group line items by order
     const lineItemsByOrder = new Map<string, typeof allLineItems>();
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build orders data for the PDF template
-    const ordersData = ordersResult.map((order) => {
+    const ordersData = orders.map((order) => {
       const items = lineItemsByOrder.get(order.id) ?? [];
       const usdToAedRate = order.usdToAedRate ?? 3.6725;
       const totalSupplierCost = items.reduce((sum, item) => sum + item.totalUsd, 0);

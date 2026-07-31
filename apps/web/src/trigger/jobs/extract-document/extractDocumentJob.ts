@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { privateClientOrderDocuments } from '@/database/schema';
 import triggerDb from '@/trigger/triggerDb';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
 /**
  * Schema for extracted invoice data
@@ -75,6 +76,10 @@ export const extractDocumentJob = task({
       .where(eq(privateClientOrderDocuments.id, documentId));
 
     try {
+      // SSRF guard: never fetch a URL that isn't our own Vercel Blob storage.
+      if (!isVercelBlobUrl(document.fileUrl)) {
+        throw new AbortTaskRunError('Refusing to fetch non-Vercel-Blob document URL');
+      }
       // Fetch document content from Vercel Blob
       const response = await fetch(document.fileUrl);
       if (!response.ok) {

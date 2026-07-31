@@ -24,8 +24,22 @@ const authServerClient = betterAuth({
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   session: {
-    expiresIn: 60 * 60 * 24 * 399, // 399 days (max cookie Max-Age is 400 days)
+    // 30 days idle timeout; updateAge slides it daily so active users stay
+    // signed in. (Was 399 days — a stolen cookie stayed valid for over a year.)
+    // Only affects NEW sessions; existing sessions keep their original expiry.
+    expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24, // Refresh session daily
+  },
+  rateLimit: {
+    // Keep better-auth's default global throttle (already active in prod), and
+    // add a tight rule on the magic-link SEND endpoint to stop email-bombing /
+    // enumeration — each magic-link email costs a Loops send.
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      '/sign-in/magic-link': { window: 300, max: 10 },
+    },
   },
   plugins: [
     admin({

@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
@@ -390,7 +392,12 @@ export const validateDeviceToken = (deviceToken: string | undefined) => {
 
   const trimmedToken = deviceToken?.trim();
 
-  if (!trimmedToken || trimmedToken !== expectedToken) {
+  const a = Buffer.from(trimmedToken ?? '');
+  const b = Buffer.from(expectedToken);
+  const tokenValid =
+    !!trimmedToken && a.length === b.length && crypto.timingSafeEqual(a, b);
+
+  if (!tokenValid) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Invalid device token',

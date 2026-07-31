@@ -6,6 +6,7 @@ import { fileTypeFromBuffer } from 'file-type';
 import db from '@/database/client';
 import { logisticsDocuments, logisticsShipments } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -47,6 +48,11 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
     let finalMimeType: string;
 
     if (blobUrl) {
+      // SSRF guard: only accept our own Vercel Blob URLs — this value is fetched
+      // server-side by the extraction job.
+      if (!isVercelBlobUrl(blobUrl)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid upload URL' });
+      }
       finalUrl = blobUrl;
       finalSize = fileSize ?? 0;
       finalMimeType = fileType;

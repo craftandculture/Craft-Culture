@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { logisticsDocuments } from '@/database/schema';
 import triggerDb from '@/trigger/triggerDb';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
 /**
  * Combined extraction schema for logistics documents
@@ -174,6 +175,10 @@ export const logisticsDocumentExtractionJob = task({
       .where(eq(logisticsDocuments.id, documentId));
 
     try {
+      // SSRF guard: never fetch a URL that isn't our own Vercel Blob storage.
+      if (!isVercelBlobUrl(document.fileUrl)) {
+        throw new AbortTaskRunError('Refusing to fetch non-Vercel-Blob document URL');
+      }
       // Fetch document content
       const response = await fetch(document.fileUrl);
       if (!response.ok) {
