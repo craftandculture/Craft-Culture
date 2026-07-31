@@ -1,6 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
+import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
+
+/** Image types accepted for uploaded photos. */
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
@@ -32,7 +36,7 @@ const uploadReceivingPhotoSchema = z.object({
 const adminUploadReceivingPhoto = wmsOperatorProcedure
   .input(uploadReceivingPhotoSchema)
   .mutation(async ({ input }) => {
-    const { shipmentId, itemId, file, filename, fileType } = input;
+    const { shipmentId, itemId, file, filename } = input;
 
     // Extract base64 data
     const base64Data = file.split(',')[1];
@@ -54,15 +58,21 @@ const adminUploadReceivingPhoto = wmsOperatorProcedure
       });
     }
 
+    // Verify the ACTUAL file type from magic bytes (not the client's claim)
+    const detected = await fileTypeFromBuffer(buffer);
+    if (!detected || !ALLOWED_IMAGE_MIMES.includes(detected.mime)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported image type' });
+    }
+
     // Sanitize filename
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const timestamp = Date.now();
     const blobFilename = `wms/receiving/${shipmentId}/${itemId}/${timestamp}-${sanitizedFilename}`;
 
-    // Upload to Vercel Blob
+    // Upload to Vercel Blob (using the verified content type)
     const blob = await put(blobFilename, buffer, {
       access: 'public',
-      contentType: fileType,
+      contentType: detected.mime,
     });
 
     return {

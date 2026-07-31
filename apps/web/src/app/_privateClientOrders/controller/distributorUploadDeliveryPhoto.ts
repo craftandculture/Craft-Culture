@@ -1,7 +1,18 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
+import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
+
+/** Proof-of-delivery accepts images or a PDF. */
+const ALLOWED_DELIVERY_MIMES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+];
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
@@ -32,7 +43,7 @@ const uploadDeliveryPhotoSchema = z.object({
 const distributorUploadDeliveryPhoto = distributorProcedure
   .input(uploadDeliveryPhotoSchema)
   .mutation(async ({ input, ctx }) => {
-    const { orderId, file, filename, fileType, notes } = input;
+    const { orderId, file, filename, notes } = input;
     const { partnerId, user } = ctx;
 
     // Verify order belongs to this distributor
@@ -68,15 +79,21 @@ const distributorUploadDeliveryPhoto = distributorProcedure
       });
     }
 
+    // Verify the ACTUAL file type from magic bytes (not the client's claim)
+    const detected = await fileTypeFromBuffer(buffer);
+    if (!detected || !ALLOWED_DELIVERY_MIMES.includes(detected.mime)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported file type' });
+    }
+
     // Sanitize filename
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const timestamp = Date.now();
     const blobFilename = `delivery-photos/${partnerId}/${orderId}/${timestamp}-${sanitizedFilename}`;
 
-    // Upload to Vercel Blob
+    // Upload to Vercel Blob (using the verified content type)
     const blob = await put(blobFilename, buffer, {
       access: 'public',
-      contentType: fileType,
+      contentType: detected.mime,
     });
 
     const now = new Date();
