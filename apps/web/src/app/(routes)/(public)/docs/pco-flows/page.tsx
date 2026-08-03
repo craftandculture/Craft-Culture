@@ -407,9 +407,24 @@ const PartnerTab = () => (
     </div>
 
     <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
-      <Typography variant="headingSm" className="mb-6">
+      <Typography variant="headingSm" className="mb-4">
         Your Process Flow
       </Typography>
+
+      {/* Pricing guardrail — the most common ordering mistake */}
+      <div className="mb-6 rounded-lg border-2 border-amber-500 bg-amber-500/10 p-4">
+        <Typography variant="bodySm" className="font-semibold text-amber-700 dark:text-amber-400">
+          ⚠️ Enter the C&amp;C cost — not the final client price
+        </Typography>
+        <Typography variant="bodySm" className="mt-1.5 text-text-secondary">
+          When you add a product, the price you enter is the{' '}
+          <strong>C&amp;C cost</strong> — the price C&amp;C pays for that wine (your invoice price to
+          C&amp;C). C&amp;C then adds its margin, import duty, the distributor margin and VAT to reach
+          the client&apos;s final price <em>automatically</em>. If you enter the already-marked-up
+          retail / client price by mistake, those margins stack on top and the client&apos;s price
+          comes out far too high. Always enter your <strong>cost</strong>.
+        </Typography>
+      </div>
 
       <FlowStep
         number={1}
@@ -422,7 +437,7 @@ const PartnerTab = () => (
       <FlowStep
         number={2}
         title="Add Products"
-        description="Search and add products to the order. Set quantities and review the pricing breakdown for each line item."
+        description="Search and add products. For each line, enter the C&C COST (what C&C pays — your invoice price to C&C) and the quantity — NOT the final client price. The client's price is calculated automatically from your cost."
         status="DRAFT"
         actor="partner"
       />

@@ -368,22 +368,28 @@ const ProductPicker = ({
           />
         </div>
 
-        {/* Price per case */}
-        <div className="flex items-center gap-1.5">
-          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">$/case:</Typography>
+        {/* Cost per case — the C&C buy price, NOT the final client price */}
+        <div
+          className="flex items-center gap-1.5"
+          title="The C&C cost — what C&C pays for this wine (your invoice price to C&C). NOT the final client price; margins are added automatically."
+        >
+          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
+            Cost $/case:
+          </Typography>
           <Input
             type="number"
             min={0}
             step={0.01}
             value={value.pricePerCaseUsd || ''}
             onChange={handlePriceChange}
+            placeholder="C&C cost"
             className="h-8 w-full text-right text-xs sm:w-24"
           />
         </div>
 
-        {/* Line total */}
+        {/* Cost subtotal (quantity × cost) — not the client's final price */}
         <div className="col-span-2 flex items-center justify-end gap-1.5 border-t border-border-muted pt-2 sm:ml-auto sm:border-t-0 sm:pt-0">
-          <Typography variant="bodyXs" colorRole="muted">Line Total:</Typography>
+          <Typography variant="bodyXs" colorRole="muted">Cost subtotal:</Typography>
           <Typography variant="bodySm" className="font-semibold text-text-brand">
             {formattedTotal}
           </Typography>

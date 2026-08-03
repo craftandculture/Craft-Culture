@@ -5,6 +5,7 @@ import {
   IconBox,
   IconCheck,
   IconCloudUpload,
+  IconInfoCircle,
   IconLoader2,
   IconPlus,
   IconQuestionMark,
@@ -784,6 +785,17 @@ const PrivateOrderForm = () => {
             <Button type="button" variant="outline" size="sm" onClick={handleAddLineItem}>
               <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
             </Button>
+          </div>
+
+          {/* Cost-not-final-price guardrail — prevents entering the retail price */}
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-800/60 dark:bg-amber-900/20">
+            <Icon icon={IconInfoCircle} size="sm" className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <Typography variant="bodyXs" className="text-amber-900 dark:text-amber-200">
+              Enter the <strong>C&amp;C cost</strong> — the price C&amp;C pays for each wine (your
+              invoice price to C&amp;C). The client&apos;s <strong>final price is calculated
+              automatically</strong> (C&amp;C margin, import duty, distributor margin, VAT), so do
+              <strong> not</strong> enter the retail / final client price here.
+            </Typography>
           </div>
 
           {lineItems.length === 0 ? (
