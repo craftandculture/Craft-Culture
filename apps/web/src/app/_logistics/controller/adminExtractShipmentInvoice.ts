@@ -70,31 +70,35 @@ const adminExtractShipmentInvoice = adminProcedure
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'AI parsing not configured.' });
     }
 
-    // Pick the document to parse: the specified one, else the newest invoice-ish doc.
+    // Parse ALL logistics invoices on the shipment (GAC + shipping + customs +
+    // delivery) — not just one — and combine their charges. Commercial invoices
+    // and packing lists are goods, so they're excluded.
+    const LOGISTICS_TYPES = /gac|shipping|freight|customs|clearance|delivery|bill_of_lading|airway/i;
     const docs = await db
       .select()
       .from(logisticsDocuments)
       .where(eq(logisticsDocuments.shipmentId, input.shipmentId))
       .orderBy(desc(logisticsDocuments.createdAt));
-    const doc = input.documentId
-      ? docs.find((d) => d.id === input.documentId)
-      : docs.find((d) => /invoice|gac|freight|shipping|customs/i.test(d.documentType)) ?? docs[0];
-    if (!doc) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'No document to parse. Upload the invoice first.' });
+    const targetDocs = input.documentId
+      ? docs.filter((d) => d.id === input.documentId)
+      : docs.filter((d) => LOGISTICS_TYPES.test(d.documentType));
+    if (targetDocs.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No logistics invoice to parse. Upload a freight/GAC/clearance invoice first.',
+      });
     }
 
-    const fileRes = await fetch(doc.fileUrl);
-    if (!fileRes.ok) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not read the uploaded document.' });
-    }
-    const buffer = Buffer.from(await fileRes.arrayBuffer());
     const anthropic = createAnthropic({ apiKey: anthropicKey });
     const system =
       'You extract logistics charge lines from freight/clearance invoices. Return numbers only for amounts and the currency.';
 
-    let object: z.infer<typeof extractedSchema>;
-    try {
-      if ((doc.mimeType ?? '').startsWith('image/')) {
+    const parseOne = async (fileUrl: string, mimeType: string | null) => {
+      const fileRes = await fetch(fileUrl);
+      if (!fileRes.ok) return null;
+      const buffer = Buffer.from(await fileRes.arrayBuffer());
+      const instruction = 'Extract every logistics charge, the currency and (if not USD) the FX to USD.';
+      if ((mimeType ?? '').startsWith('image/')) {
         const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedSchema,
@@ -103,34 +107,25 @@ const adminExtractShipmentInvoice = adminProcedure
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'Extract every logistics charge, the currency and (if not USD) the FX to USD.' },
+                { type: 'text', text: instruction },
                 { type: 'image', image: buffer.toString('base64') },
               ],
             },
           ],
         });
-        object = result.object;
-      } else {
-        const pdf = await pdfParse(buffer);
-        const result = await generateObject({
-          model: anthropic('claude-sonnet-4-6'),
-          schema: extractedSchema,
-          system,
-          prompt: `Extract every logistics charge, the currency and (if not USD) the FX to USD.\n\nINVOICE:\n${pdf.text}`,
-        });
-        object = result.object;
+        return result.object;
       }
-    } catch (error) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to parse invoice: ${error instanceof Error ? error.message : 'unknown error'}`,
+      const pdf = await pdfParse(buffer);
+      const result = await generateObject({
+        model: anthropic('claude-sonnet-4-6'),
+        schema: extractedSchema,
+        system,
+        prompt: `${instruction}\n\nINVOICE:\n${pdf.text}`,
       });
-    }
+      return result.object;
+    };
 
-    const currency = (object.currency ?? 'USD').toUpperCase();
-    const fx = PEGGED[currency] ?? object.fxToUsd ?? 1;
-
-    // Sum charges (in USD) into the shipment's 8 cost buckets.
+    // Sum charges (in USD, per-document FX) into the shipment's 8 cost buckets.
     const buckets: Record<(typeof CATEGORIES)[number], number> = {
       freight: 0,
       insurance: 0,
@@ -141,8 +136,28 @@ const adminExtractShipmentInvoice = adminProcedure
       delivery: 0,
       other: 0,
     };
-    for (const c of object.charges) {
-      buckets[c.category] += (c.amount || 0) * fx;
+    let chargeCount = 0;
+    let anyFloating = false;
+    const currencies = new Set<string>();
+    for (const d of targetDocs) {
+      let object: z.infer<typeof extractedSchema> | null;
+      try {
+        object = await parseOne(d.fileUrl, d.mimeType);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to parse ${d.fileName}: ${error instanceof Error ? error.message : 'unknown'}`,
+        });
+      }
+      if (!object) continue;
+      const cur = (object.currency ?? 'USD').toUpperCase();
+      const fx = PEGGED[cur] ?? object.fxToUsd ?? 1;
+      if (!(cur in PEGGED) && cur !== 'USD') anyFloating = true;
+      currencies.add(cur);
+      for (const c of object.charges) {
+        buckets[c.category] += (c.amount || 0) * fx;
+        chargeCount += 1;
+      }
     }
     const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -191,11 +206,11 @@ const adminExtractShipmentInvoice = adminProcedure
 
     const totalLogisticsUsd = round2(Object.values(buckets).reduce((s, v) => s + v, 0));
     return {
-      currency,
-      fx,
-      pegged: currency in PEGGED,
+      currencies: Array.from(currencies),
+      anyFloating,
       totalLogisticsUsd,
-      chargeCount: object.charges.length,
+      chargeCount,
+      documentsParsed: targetDocs.length,
       buckets: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, round2(v)])),
     };
   });

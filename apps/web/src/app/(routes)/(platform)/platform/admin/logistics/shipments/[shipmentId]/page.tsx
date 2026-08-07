@@ -255,12 +255,14 @@ const ShipmentDetailPage = () => {
     api.logistics.admin.extractShipmentInvoice.mutationOptions({
       onSuccess: (r) => {
         toast.success(
-          `Pulled ${r.chargeCount} charges — ${formatPrice(r.totalLogisticsUsd, 'USD')} logistics${
-            r.currency !== 'USD' ? ` (${r.currency} @ ${r.fx})` : ''
+          `Pulled ${r.chargeCount} charges from ${r.documentsParsed} invoice${
+            r.documentsParsed !== 1 ? 's' : ''
+          } — ${formatPrice(r.totalLogisticsUsd, 'USD')} logistics${
+            r.currencies.length ? ` (${r.currencies.join(', ')})` : ''
           }`,
         );
-        if (!r.pegged && r.currency !== 'USD') {
-          toast.warning(`${r.currency} isn't a pegged currency — check the FX rate (${r.fx}) on the amounts.`);
+        if (r.anyFloating) {
+          toast.warning('A non-pegged currency (GBP/EUR) was used — check the converted amounts.');
         }
         void refetch();
       },
@@ -1803,41 +1805,60 @@ const ShipmentDetailPage = () => {
                     </dl>
                   ))}
                 </div>
-                <div className="mt-6 pt-4 border-t border-border-muted">
-                  <div className="flex justify-between items-center">
-                    <Typography variant="headingSm">Total Landed Cost</Typography>
-                    <Typography variant="headingMd">
-                      {shipment.totalLandedCostUsd ? formatPrice(shipment.totalLandedCostUsd, 'USD') : '-'}
-                    </Typography>
-                  </div>
-                  {shipment.totalBottles
-                    ? (() => {
-                        // Logistics per bottle = the freight/customs/handling from
-                        // the LOGS invoices ÷ bottles — NOT the blended goods price.
-                        const logistics =
-                          (shipment.freightCostUsd ?? 0) +
-                          (shipment.insuranceCostUsd ?? 0) +
-                          (shipment.originHandlingUsd ?? 0) +
-                          (shipment.destinationHandlingUsd ?? 0) +
-                          (shipment.customsClearanceUsd ?? 0) +
-                          (shipment.govFeesUsd ?? 0) +
-                          (shipment.deliveryCostUsd ?? 0) +
-                          (shipment.otherCostsUsd ?? 0);
-                        return (
-                          <div className="mt-2 flex items-center justify-between">
-                            <Typography variant="bodySm" colorRole="muted">
-                              Logistics / bottle ({shipment.totalBottles} bottles)
-                            </Typography>
-                            <Typography variant="headingSm" className="text-text-brand">
-                              {logistics > 0
-                                ? formatPrice(logistics / shipment.totalBottles, 'USD')
-                                : 'enter costs above'}
-                            </Typography>
-                          </div>
-                        );
-                      })()
-                    : null}
-                </div>
+                {/* Full breakdown — goods vs logistics, per 75cl / case / kg */}
+                {(() => {
+                  const sItems = shipment.items ?? [];
+                  const bof = (i: {
+                    totalBottles: number | null;
+                    cases: number;
+                    bottlesPerCase: number | null;
+                  }) => i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+                  const goods = sItems.reduce((s, i) => s + bof(i) * (i.productCostPerBottle ?? 0), 0);
+                  const logistics =
+                    (shipment.freightCostUsd ?? 0) +
+                    (shipment.insuranceCostUsd ?? 0) +
+                    (shipment.originHandlingUsd ?? 0) +
+                    (shipment.destinationHandlingUsd ?? 0) +
+                    (shipment.customsClearanceUsd ?? 0) +
+                    (shipment.govFeesUsd ?? 0) +
+                    (shipment.deliveryCostUsd ?? 0) +
+                    (shipment.otherCostsUsd ?? 0);
+                  const eq75 = sItems.reduce(
+                    (s, i) => s + bof(i) * ((i.bottleSizeMl ?? 750) / 750),
+                    0,
+                  );
+                  const cases = sItems.reduce((s, i) => s + (i.cases ?? 0), 0);
+                  const kg = shipment.totalWeightKg ?? 0;
+                  const tiles = [
+                    { v: formatPrice(goods, 'USD'), label: 'Goods (product) cost' },
+                    { v: formatPrice(logistics, 'USD'), label: 'Logistics (freight etc.)' },
+                    { v: formatPrice(goods + logistics, 'USD'), label: 'Total landed cost' },
+                    {
+                      v: eq75 && logistics ? formatPrice(logistics / eq75, 'USD') : '—',
+                      label: 'Logistics / 75cl btl',
+                    },
+                    {
+                      v: cases && logistics ? formatPrice(logistics / cases, 'USD') : '—',
+                      label: 'Logistics / case',
+                    },
+                    {
+                      v: kg && logistics ? `${formatPrice(logistics / kg, 'USD')}/kg` : '—',
+                      label: 'Logistics / kg',
+                    },
+                  ];
+                  return (
+                    <div className="mt-6 flex flex-row flex-wrap items-center justify-around gap-4 border-t border-border-muted pt-6 text-center">
+                      {tiles.map((t) => (
+                        <div key={t.label}>
+                          <Typography variant="headingSm">{t.v}</Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {t.label}
+                          </Typography>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
                   </>
                 )}
               </CardContent>
