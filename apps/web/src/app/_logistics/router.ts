@@ -20,6 +20,7 @@ import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
+import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoice';
 import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
@@ -83,6 +84,7 @@ const adminRouter = createTRPCRouter({
 
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,
+  extractShipmentInvoice: adminExtractShipmentInvoice,
 
   // Consolidation groups (share freight/logistics costs across shipments)
   groups: createTRPCRouter({

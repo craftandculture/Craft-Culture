@@ -251,6 +251,23 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: extractInvoice, isPending: isExtracting } = useMutation(
+    api.logistics.admin.extractShipmentInvoice.mutationOptions({
+      onSuccess: (r) => {
+        toast.success(
+          `Pulled ${r.chargeCount} charges — ${formatPrice(r.totalLogisticsUsd, 'USD')} logistics${
+            r.currency !== 'USD' ? ` (${r.currency} @ ${r.fx})` : ''
+          }`,
+        );
+        if (!r.pegged && r.currency !== 'USD') {
+          toast.warning(`${r.currency} isn't a pegged currency — check the FX rate (${r.fx}) on the amounts.`);
+        }
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const { mutate: deleteShipment, isPending: isDeleting } = useMutation(
     api.logistics.admin.delete.mutationOptions({
       onSuccess: () => {
@@ -1614,15 +1631,28 @@ const ShipmentDetailPage = () => {
                       Managed by group →
                     </Link>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => calculateLandedCost({ shipmentId })}
-                      disabled={isCalculating || !shipment.items?.length}
-                    >
-                      <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
-                        {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
-                      </ButtonContent>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => extractInvoice({ shipmentId })}
+                        disabled={isExtracting || !(shipment.documents ?? []).length}
+                        title="Read the uploaded invoice and fill the cost fields automatically"
+                      >
+                        <ButtonContent iconLeft={isExtracting ? IconLoader2 : IconWand}>
+                          {isExtracting ? 'Reading…' : 'Extract from invoice'}
+                        </ButtonContent>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => calculateLandedCost({ shipmentId })}
+                        disabled={isCalculating || !shipment.items?.length}
+                      >
+                        <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
+                          {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
+                        </ButtonContent>
+                      </Button>
+                    </div>
                   )}
                 </div>
                 {shipment.groupId && (
