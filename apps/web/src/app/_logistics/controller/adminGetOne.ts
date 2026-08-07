@@ -6,6 +6,7 @@ import {
   logisticsDocuments,
   logisticsGroupDocuments,
   logisticsShipmentActivityLogs,
+  logisticsShipmentCostLines,
   logisticsShipmentItems,
   logisticsShipments,
   partners,
@@ -101,6 +102,13 @@ const adminGetOne = adminProcedure
           .orderBy(desc(logisticsGroupDocuments.createdAt))
       : [];
 
+    // Native per-shipment cost ledger (line-by-line invoice charges)
+    const costLines = await db
+      .select()
+      .from(logisticsShipmentCostLines)
+      .where(eq(logisticsShipmentCostLines.shipmentId, input.id))
+      .orderBy(desc(logisticsShipmentCostLines.createdAt));
+
     const derivedCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
     const derivedBottles = items.reduce(
       (sum, i) => sum + (i.totalBottles ?? (i.cases ?? 0) * (i.bottlesPerCase ?? 12)),
@@ -120,6 +128,7 @@ const adminGetOne = adminProcedure
         uploadedByUser: d.uploadedByUser,
       })),
       groupDocuments,
+      costLines,
       activityLogs: activityLogs.map((l) => ({
         ...l.log,
         user: l.user,

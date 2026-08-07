@@ -2942,6 +2942,36 @@ export const logisticsGroupDocuments = pgTable(
 export type LogisticsGroupDocument = typeof logisticsGroupDocuments.$inferSelect;
 
 /**
+ * Native per-shipment logistics cost ledger — one row per invoice charge on a
+ * single (non-grouped) shipment. The 8 shipment cost fields are kept in sync as
+ * the sum of these lines by category, so landed cost still computes normally.
+ */
+export const logisticsShipmentCostLines = pgTable(
+  'logistics_shipment_cost_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+    category: text('category').notNull().default('freight'),
+    description: text('description'),
+    amount: doublePrecision('amount').notNull(),
+    currency: text('currency').notNull().default('USD'),
+    fxToUsd: doublePrecision('fx_to_usd').notNull().default(1),
+    amountUsd: doublePrecision('amount_usd').notNull(),
+    invoiceRef: text('invoice_ref'),
+    invoiceDate: timestamp('invoice_date', { mode: 'date' }),
+    vendor: text('vendor'),
+    sourceDocument: text('source_document'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_shipment_cost_lines_shipment_id_idx').on(table.shipmentId)],
+);
+
+export type LogisticsShipmentCostLine = typeof logisticsShipmentCostLines.$inferSelect;
+
+/**
  * Tracks deleted Hillebrand shipment IDs so re-sync does not recreate them
  */
 export const logisticsDeletedHillebrandIds = pgTable('logistics_deleted_hillebrand_ids', {

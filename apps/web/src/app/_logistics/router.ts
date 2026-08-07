@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminAcceptQuote from './controller/adminAcceptQuote';
 import adminAddGroupCostLine from './controller/adminAddGroupCostLine';
 import adminAddItem from './controller/adminAddItem';
+import adminAddShipmentCostLine from './controller/adminAddShipmentCostLine';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
@@ -16,6 +17,7 @@ import adminDeleteDocument from './controller/adminDeleteDocument';
 import adminDeleteGroupCostLine from './controller/adminDeleteGroupCostLine';
 import adminDeleteGroupDocument from './controller/adminDeleteGroupDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
+import adminDeleteShipmentCostLine from './controller/adminDeleteShipmentCostLine';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
@@ -85,6 +87,8 @@ const adminRouter = createTRPCRouter({
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,
   extractShipmentInvoice: adminExtractShipmentInvoice,
+  addShipmentCostLine: adminAddShipmentCostLine,
+  deleteShipmentCostLine: adminDeleteShipmentCostLine,
 
   // Consolidation groups (share freight/logistics costs across shipments)
   groups: createTRPCRouter({

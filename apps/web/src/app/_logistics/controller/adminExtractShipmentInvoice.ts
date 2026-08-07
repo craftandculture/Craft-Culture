@@ -1,19 +1,15 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { generateObject } from 'ai';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import {
-  logisticsDocuments,
-  logisticsShipmentItems,
-  logisticsShipments,
-} from '@/database/schema';
+import { logisticsDocuments, logisticsShipmentCostLines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import calculateLandedCost from '../utils/calculateLandedCost';
+import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
 
 /** USD-pegged currencies convert at a fixed rate; others need the LLM's rate. */
 const PEGGED: Record<string, number> = {
@@ -47,6 +43,7 @@ const extractedSchema = z.object({
     .number()
     .optional()
     .describe('Approximate rate to convert the currency to USD (1 if already USD).'),
+  vendor: z.string().optional().describe('The forwarder / vendor / issuer name on the invoice'),
   charges: z
     .array(
       z.object({
@@ -69,7 +66,7 @@ const extractedSchema = z.object({
  */
 const adminExtractShipmentInvoice = adminProcedure
   .input(z.object({ shipmentId: z.string().uuid(), documentId: z.string().uuid().optional() }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'AI parsing not configured.' });
@@ -130,17 +127,6 @@ const adminExtractShipmentInvoice = adminProcedure
       return result.object;
     };
 
-    // Sum charges (in USD, per-document FX) into the shipment's 8 cost buckets.
-    const buckets: Record<(typeof CATEGORIES)[number], number> = {
-      freight: 0,
-      insurance: 0,
-      origin_handling: 0,
-      destination_handling: 0,
-      customs: 0,
-      gov_fees: 0,
-      delivery: 0,
-      other: 0,
-    };
     // Resolve any currency to USD: pegged → fixed rate; else a live FX lookup;
     // else the model's rate; else unresolved (kept at 1 and flagged).
     const fxCache = new Map<string, number>();
@@ -165,9 +151,12 @@ const adminExtractShipmentInvoice = adminProcedure
       return { fx: 1, resolved: false };
     };
 
+    const round2 = (n: number) => Math.round(n * 100) / 100;
     let chargeCount = 0;
+    let totalLogisticsUsd = 0;
     const currencies = new Set<string>();
     const unresolved = new Set<string>();
+
     for (const d of targetDocs) {
       let object: z.infer<typeof extractedSchema> | null;
       try {
@@ -183,64 +172,49 @@ const adminExtractShipmentInvoice = adminProcedure
       const { fx, resolved } = await resolveFx(cur, object.fxToUsd);
       currencies.add(cur);
       if (!resolved) unresolved.add(cur);
-      for (const c of object.charges) {
-        buckets[c.category] += (c.amount || 0) * fx;
-        chargeCount += 1;
-      }
-    }
-    const round2 = (n: number) => Math.round(n * 100) / 100;
 
-    await db
-      .update(logisticsShipments)
-      .set({
-        freightCostUsd: round2(buckets.freight),
-        insuranceCostUsd: round2(buckets.insurance),
-        originHandlingUsd: round2(buckets.origin_handling),
-        destinationHandlingUsd: round2(buckets.destination_handling),
-        customsClearanceUsd: round2(buckets.customs),
-        govFeesUsd: round2(buckets.gov_fees),
-        deliveryCostUsd: round2(buckets.delivery),
-        otherCostsUsd: round2(buckets.other),
-        updatedAt: new Date(),
-      })
-      .where(eq(logisticsShipments.id, input.shipmentId));
-
-    // Recompute landed cost + per-item allocation so logistics/bottle is live.
-    const [shipment] = await db
-      .select()
-      .from(logisticsShipments)
-      .where(eq(logisticsShipments.id, input.shipmentId));
-    const items = await db
-      .select()
-      .from(logisticsShipmentItems)
-      .where(eq(logisticsShipmentItems.shipmentId, input.shipmentId));
-    if (shipment && items.length > 0) {
-      const result = calculateLandedCost(shipment, items);
+      // Re-extracting a document replaces its previous ledger lines.
       await db
-        .update(logisticsShipments)
-        .set({ totalLandedCostUsd: result.totalLandedCost, updatedAt: new Date() })
-        .where(eq(logisticsShipments.id, input.shipmentId));
-      for (const r of result.items) {
-        await db
-          .update(logisticsShipmentItems)
-          .set({
-            freightAllocated: r.freightAllocated,
-            landedCostTotal: r.landedCostTotal,
-            landedCostPerBottle: r.landedCostPerBottle,
-            updatedAt: new Date(),
-          })
-          .where(eq(logisticsShipmentItems.id, r.itemId));
-      }
+        .delete(logisticsShipmentCostLines)
+        .where(
+          and(
+            eq(logisticsShipmentCostLines.shipmentId, input.shipmentId),
+            eq(logisticsShipmentCostLines.sourceDocument, d.fileName),
+          ),
+        );
+
+      const rows = object.charges
+        .filter((c) => (c.amount || 0) > 0)
+        .map((c) => {
+          const amountUsd = round2((c.amount || 0) * fx);
+          totalLogisticsUsd += amountUsd;
+          chargeCount += 1;
+          return {
+            shipmentId: input.shipmentId,
+            category: c.category,
+            description: c.description,
+            amount: c.amount || 0,
+            currency: cur,
+            fxToUsd: fx,
+            amountUsd,
+            invoiceRef: d.documentNumber ?? null,
+            vendor: object?.vendor ?? null,
+            sourceDocument: d.fileName,
+            createdBy: ctx.user.id,
+          };
+        });
+      if (rows.length > 0) await db.insert(logisticsShipmentCostLines).values(rows);
     }
 
-    const totalLogisticsUsd = round2(Object.values(buckets).reduce((s, v) => s + v, 0));
+    // Sync the 8 cost fields from the ledger + recompute landed cost.
+    await syncShipmentCostsFromLedger(input.shipmentId);
+
     return {
       currencies: Array.from(currencies),
       unresolvedCurrencies: Array.from(unresolved),
-      totalLogisticsUsd,
+      totalLogisticsUsd: round2(totalLogisticsUsd),
       chargeCount,
       documentsParsed: targetDocs.length,
-      buckets: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, round2(v)])),
     };
   });
 

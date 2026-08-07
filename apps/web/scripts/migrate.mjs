@@ -211,6 +211,32 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_product_pricing.transfer_price_per_bottle ready');
 
+    // Native per-shipment cost ledger (line-by-line invoice charges).
+    console.log('🔄 Ensuring logistics_shipment_cost_lines table...');
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_shipment_cost_lines" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "shipment_id" uuid NOT NULL REFERENCES "logistics_shipments"("id") ON DELETE CASCADE,
+        "category" text NOT NULL DEFAULT 'freight',
+        "description" text,
+        "amount" double precision NOT NULL,
+        "currency" text NOT NULL DEFAULT 'USD',
+        "fx_to_usd" double precision NOT NULL DEFAULT 1,
+        "amount_usd" double precision NOT NULL,
+        "invoice_ref" text,
+        "invoice_date" timestamp,
+        "vendor" text,
+        "source_document" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_shipment_cost_lines_shipment_id_idx" ON "logistics_shipment_cost_lines"("shipment_id")`,
+    );
+    console.log('✅ logistics_shipment_cost_lines ready');
+
     // Reverse Repack: mark a repack as undone so it can't be reversed twice.
     console.log('🔄 Ensuring wms_repacks.reversed_at / reversed_by columns...');
     await client.unsafe(

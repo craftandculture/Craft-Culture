@@ -86,6 +86,21 @@ const statusOptions: { value: ShipmentStatus; label: string }[] = [
 
 type TabType = 'overview' | 'tracking' | 'items' | 'documents' | 'costs';
 
+const SHIP_COST_CATEGORIES = [
+  'freight',
+  'insurance',
+  'origin_handling',
+  'destination_handling',
+  'customs',
+  'gov_fees',
+  'delivery',
+  'other',
+] as const;
+type ShipCostCategory = (typeof SHIP_COST_CATEGORIES)[number];
+const catLabel = (c: string) => c.replace(/_/g, ' ');
+const ledgerSelectCls =
+  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
+
 /**
  * Shipment detail page with tabs
  */
@@ -284,6 +299,30 @@ const ShipmentDetailPage = () => {
         }
         void refetch();
       },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  // Native cost ledger — add/delete manual lines
+  const [newLine, setNewLine] = useState({
+    category: 'freight' as ShipCostCategory,
+    description: '',
+    amount: '',
+    currency: 'USD',
+    fxToUsd: '1',
+  });
+  const { mutate: addCostLine, isPending: isAddingLine } = useMutation(
+    api.logistics.admin.addShipmentCostLine.mutationOptions({
+      onSuccess: () => {
+        setNewLine((l) => ({ ...l, description: '', amount: '' }));
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+  const { mutate: delCostLine } = useMutation(
+    api.logistics.admin.deleteShipmentCostLine.mutationOptions({
+      onSuccess: () => void refetch(),
       onError: (error) => toast.error(error.message),
     }),
   );
@@ -1745,6 +1784,139 @@ const ShipmentDetailPage = () => {
                   })()
                 ) : (
                   <>
+                {/* Cost ledger — line-by-line invoice charges, grouped by document */}
+                <div className="mb-6">
+                  <Typography variant="labelSm" className="mb-2 block">
+                    Cost ledger
+                  </Typography>
+                  {(shipment.costLines?.length ?? 0) > 0 && (
+                    <div className="mb-3 space-y-3">
+                      {(() => {
+                        const lines = shipment.costLines ?? [];
+                        const byDoc = new Map<string, typeof lines>();
+                        for (const l of lines) {
+                          const key = l.invoiceRef || l.vendor || l.sourceDocument || 'Manual entry';
+                          const arr = byDoc.get(key) ?? [];
+                          arr.push(l);
+                          byDoc.set(key, arr);
+                        }
+                        return Array.from(byDoc.entries()).map(([doc, dLines]) => {
+                          const subtotal = dLines.reduce((s, l) => s + l.amountUsd, 0);
+                          return (
+                            <div key={doc}>
+                              <div className="mb-1 flex items-center justify-between border-b border-border-primary pb-1">
+                                <Typography
+                                  variant="bodyXs"
+                                  className="truncate font-semibold uppercase tracking-wide text-text-secondary"
+                                >
+                                  {doc}
+                                </Typography>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {dLines.length} lines · {formatPrice(subtotal, 'USD')}
+                                </Typography>
+                              </div>
+                              <div className="divide-y divide-border-muted">
+                                {dLines.map((l) => (
+                                  <div
+                                    key={l.id}
+                                    className="flex items-center justify-between gap-3 py-1.5"
+                                  >
+                                    <div className="min-w-0">
+                                      <Typography variant="bodySm" className="truncate">
+                                        <span className="capitalize">{catLabel(l.category)}</span>
+                                        {l.description ? ` · ${l.description}` : ''}
+                                      </Typography>
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        {l.currency} {l.amount.toLocaleString()}
+                                        {l.currency !== 'USD' ? ` @ ${l.fxToUsd}` : ''}
+                                      </Typography>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Typography variant="labelSm">
+                                        {formatPrice(l.amountUsd, 'USD')}
+                                      </Typography>
+                                      <button
+                                        onClick={() => delCostLine({ id: l.id })}
+                                        className="text-text-muted hover:text-red-500"
+                                      >
+                                        <IconTrash className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-end gap-2 border-t border-border-muted pt-3">
+                    <select
+                      value={newLine.category}
+                      onChange={(e) =>
+                        setNewLine((l) => ({ ...l, category: e.target.value as ShipCostCategory }))
+                      }
+                      className={`${ledgerSelectCls} capitalize`}
+                    >
+                      {SHIP_COST_CATEGORIES.map((c) => (
+                        <option key={c} value={c} className="capitalize">
+                          {catLabel(c)}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      placeholder="Description"
+                      value={newLine.description}
+                      onChange={(e) => setNewLine((l) => ({ ...l, description: e.target.value }))}
+                      className="min-w-[140px] flex-1"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      value={newLine.amount}
+                      onChange={(e) => setNewLine((l) => ({ ...l, amount: e.target.value }))}
+                      className={`${ledgerSelectCls} w-24 text-right`}
+                    />
+                    <select
+                      value={newLine.currency}
+                      onChange={(e) => setNewLine((l) => ({ ...l, currency: e.target.value }))}
+                      className={ledgerSelectCls}
+                    >
+                      {['USD', 'GBP', 'EUR', 'AED', 'DKK'].map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="FX→USD"
+                      value={newLine.fxToUsd}
+                      onChange={(e) => setNewLine((l) => ({ ...l, fxToUsd: e.target.value }))}
+                      title="FX rate to USD"
+                      className={`${ledgerSelectCls} w-20 text-right`}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const amt = Number(newLine.amount);
+                        if (!amt) return;
+                        addCostLine({
+                          shipmentId,
+                          category: newLine.category,
+                          description: newLine.description.trim() || null,
+                          amount: amt,
+                          currency: newLine.currency,
+                          fxToUsd: Number(newLine.fxToUsd) || 1,
+                        });
+                      }}
+                      disabled={!newLine.amount || isAddingLine}
+                    >
+                      <ButtonContent iconLeft={isAddingLine ? IconLoader2 : IconPlus}>Add</ButtonContent>
+                    </Button>
+                  </div>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     [
