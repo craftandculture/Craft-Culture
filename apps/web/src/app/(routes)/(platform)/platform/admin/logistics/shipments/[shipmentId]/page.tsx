@@ -242,7 +242,23 @@ const ShipmentDetailPage = () => {
   const { mutate: calculateLandedCost, isPending: isCalculating } = useMutation(
     api.logistics.admin.calculateLandedCost.mutationOptions({
       onSuccess: (result) => {
-        toast.success(`Landed cost calculated: ${formatPrice(result.landedCostPerBottle, 'USD')}/bottle`);
+        // Report LOGISTICS cost, not the blended landed-per-bottle (which
+        // averages cheap and expensive wines and is meaningless).
+        const logistics = result.items.reduce(
+          (s, i) =>
+            s +
+            (i.freightAllocated ?? 0) +
+            (i.handlingAllocated ?? 0) +
+            (i.insuranceAllocated ?? 0) +
+            (i.govFeesAllocated ?? 0),
+          0,
+        );
+        const bottles = result.items.reduce((s, i) => s + i.totalBottles, 0);
+        toast.success(
+          `Landed cost applied — ${formatPrice(logistics, 'USD')} logistics${
+            bottles ? ` (${formatPrice(logistics / bottles, 'USD')}/bottle)` : ''
+          }`,
+        );
         void refetch();
       },
       onError: (error) => {
