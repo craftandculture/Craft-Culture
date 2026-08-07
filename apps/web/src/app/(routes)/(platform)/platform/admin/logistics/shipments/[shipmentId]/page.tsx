@@ -101,6 +101,16 @@ const catLabel = (c: string) => c.replace(/_/g, ' ');
 const ledgerSelectCls =
   'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
 
+// Colour-coded tints per invoice/document, cycled — matches the group ledger.
+const LEDGER_TINTS = [
+  { card: 'border-blue-200 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-900/10', accent: 'border-l-blue-400', dot: 'bg-blue-400' },
+  { card: 'border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-900/10', accent: 'border-l-amber-400', dot: 'bg-amber-400' },
+  { card: 'border-violet-200 bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-900/10', accent: 'border-l-violet-400', dot: 'bg-violet-400' },
+  { card: 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-900/10', accent: 'border-l-emerald-400', dot: 'bg-emerald-400' },
+  { card: 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-900/10', accent: 'border-l-rose-400', dot: 'bg-rose-400' },
+  { card: 'border-teal-200 bg-teal-50/60 dark:border-teal-900/40 dark:bg-teal-900/10', accent: 'border-l-teal-400', dot: 'bg-teal-400' },
+] as const;
+
 /**
  * Shipment detail page with tabs
  */
@@ -1800,22 +1810,46 @@ const ShipmentDetailPage = () => {
                           arr.push(l);
                           byDoc.set(key, arr);
                         }
-                        return Array.from(byDoc.entries()).map(([doc, dLines]) => {
+                        return Array.from(byDoc.entries()).map(([doc, dLines], gi) => {
                           const subtotal = dLines.reduce((s, l) => s + l.amountUsd, 0);
+                          const cur = dLines[0]?.currency ?? 'USD';
+                          const fx = dLines[0]?.fxToUsd;
+                          const vendor = dLines[0]?.vendor;
+                          const tint = LEDGER_TINTS[gi % LEDGER_TINTS.length] ?? LEDGER_TINTS[0];
                           return (
-                            <div key={doc}>
-                              <div className="mb-1 flex items-center justify-between border-b border-border-primary pb-1">
-                                <Typography
-                                  variant="bodyXs"
-                                  className="truncate font-semibold uppercase tracking-wide text-text-secondary"
-                                >
-                                  {doc}
-                                </Typography>
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {dLines.length} lines · {formatPrice(subtotal, 'USD')}
-                                </Typography>
+                            <div
+                              key={doc}
+                              className={`overflow-hidden rounded-lg border border-l-4 ${tint.card} ${tint.accent}`}
+                            >
+                              <div className="flex items-center justify-between gap-3 px-3 py-2">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className={`mt-1 h-2 w-2 shrink-0 self-start rounded-full ${tint.dot}`}
+                                  />
+                                  <div className="min-w-0">
+                                    <Typography variant="labelSm" className="truncate">
+                                      {vendor || doc}
+                                    </Typography>
+                                    <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
+                                      <span className="truncate font-mono">{doc}</span>
+                                      {cur !== 'USD' && (
+                                        <span className="shrink-0">
+                                          · {cur} @ {fx}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="shrink-0 text-right">
+                                  <Typography variant="labelSm" className="tabular-nums">
+                                    {formatPrice(subtotal, 'USD')}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {dLines.length} {dLines.length === 1 ? 'line' : 'lines'}
+                                  </Typography>
+                                </div>
                               </div>
-                              <div className="divide-y divide-border-muted">
+                              <div className="divide-y divide-border-muted/60 border-t border-border-muted/50 bg-background-primary/40 px-3">
                                 {dLines.map((l) => (
                                   <div
                                     key={l.id}
