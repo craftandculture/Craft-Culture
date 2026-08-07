@@ -117,12 +117,37 @@ const adminExtractShipmentInvoice = adminProcedure
         });
         return result.object;
       }
-      const pdf = await pdfParse(buffer);
+      // PDF: use the text layer when present; otherwise (scanned/image-only PDF,
+      // e.g. most GAC invoices) send the PDF to Claude to read natively.
+      let text = '';
+      try {
+        const pdf = await pdfParse(buffer);
+        text = pdf.text ?? '';
+      } catch {
+        text = '';
+      }
+      if (text.trim().length >= 500) {
+        const result = await generateObject({
+          model: anthropic('claude-sonnet-4-6'),
+          schema: extractedSchema,
+          system,
+          prompt: `${instruction}\n\nINVOICE:\n${text}`,
+        });
+        return result.object;
+      }
       const result = await generateObject({
         model: anthropic('claude-sonnet-4-6'),
         schema: extractedSchema,
         system,
-        prompt: `${instruction}\n\nINVOICE:\n${pdf.text}`,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: instruction },
+              { type: 'file', data: buffer.toString('base64'), mediaType: 'application/pdf' },
+            ],
+          },
+        ],
       });
       return result.object;
     };
