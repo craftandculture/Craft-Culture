@@ -261,8 +261,10 @@ const ShipmentDetailPage = () => {
             r.currencies.length ? ` (${r.currencies.join(', ')})` : ''
           }`,
         );
-        if (r.anyFloating) {
-          toast.warning('A non-pegged currency (GBP/EUR) was used — check the converted amounts.');
+        if (r.unresolvedCurrencies.length) {
+          toast.warning(
+            `Couldn't auto-convert ${r.unresolvedCurrencies.join(', ')} — check those amounts.`,
+          );
         }
         void refetch();
       },

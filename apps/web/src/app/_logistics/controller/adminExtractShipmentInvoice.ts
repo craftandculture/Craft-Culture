@@ -37,11 +37,16 @@ const CATEGORIES = [
 ] as const;
 
 const extractedSchema = z.object({
-  currency: z.string().optional().describe('Main currency code, e.g. AED, USD, GBP, EUR'),
+  currency: z
+    .string()
+    .optional()
+    .describe(
+      '3-letter ISO 4217 code of the amounts (USD, DKK, EUR, GBP, AED, SEK, NOK...). Infer from symbols/words: kr→DKK/SEK/NOK, £→GBP, €→EUR, AED/Dhs→AED, $→USD. Always return your best guess — never "unknown".',
+    ),
   fxToUsd: z
     .number()
     .optional()
-    .describe('Rate to convert the currency to USD (1 if already USD). Only needed for non-pegged currencies.'),
+    .describe('Approximate rate to convert the currency to USD (1 if already USD).'),
   charges: z
     .array(
       z.object({
@@ -136,9 +141,33 @@ const adminExtractShipmentInvoice = adminProcedure
       delivery: 0,
       other: 0,
     };
+    // Resolve any currency to USD: pegged → fixed rate; else a live FX lookup;
+    // else the model's rate; else unresolved (kept at 1 and flagged).
+    const fxCache = new Map<string, number>();
+    const resolveFx = async (cur: string, llmFx?: number) => {
+      if (cur === 'USD') return { fx: 1, resolved: true };
+      if (PEGGED[cur] != null) return { fx: PEGGED[cur], resolved: true };
+      if (fxCache.has(cur)) return { fx: fxCache.get(cur) as number, resolved: true };
+      try {
+        const res = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(cur)}`);
+        if (res.ok) {
+          const data = (await res.json()) as { rates?: Record<string, number> };
+          const rate = data.rates?.USD;
+          if (typeof rate === 'number' && rate > 0) {
+            fxCache.set(cur, rate);
+            return { fx: rate, resolved: true };
+          }
+        }
+      } catch {
+        // fall through to model rate / unresolved
+      }
+      if (llmFx && llmFx > 0) return { fx: llmFx, resolved: true };
+      return { fx: 1, resolved: false };
+    };
+
     let chargeCount = 0;
-    let anyFloating = false;
     const currencies = new Set<string>();
+    const unresolved = new Set<string>();
     for (const d of targetDocs) {
       let object: z.infer<typeof extractedSchema> | null;
       try {
@@ -151,9 +180,9 @@ const adminExtractShipmentInvoice = adminProcedure
       }
       if (!object) continue;
       const cur = (object.currency ?? 'USD').toUpperCase();
-      const fx = PEGGED[cur] ?? object.fxToUsd ?? 1;
-      if (!(cur in PEGGED) && cur !== 'USD') anyFloating = true;
+      const { fx, resolved } = await resolveFx(cur, object.fxToUsd);
       currencies.add(cur);
+      if (!resolved) unresolved.add(cur);
       for (const c of object.charges) {
         buckets[c.category] += (c.amount || 0) * fx;
         chargeCount += 1;
@@ -207,7 +236,7 @@ const adminExtractShipmentInvoice = adminProcedure
     const totalLogisticsUsd = round2(Object.values(buckets).reduce((s, v) => s + v, 0));
     return {
       currencies: Array.from(currencies),
-      anyFloating,
+      unresolvedCurrencies: Array.from(unresolved),
       totalLogisticsUsd,
       chargeCount,
       documentsParsed: targetDocs.length,
