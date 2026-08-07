@@ -1780,16 +1780,33 @@ const ShipmentDetailPage = () => {
                       {shipment.totalLandedCostUsd ? formatPrice(shipment.totalLandedCostUsd, 'USD') : '-'}
                     </Typography>
                   </div>
-                  {shipment.totalBottles && shipment.totalLandedCostUsd ? (
-                    <div className="flex justify-between items-center mt-2">
-                      <Typography variant="bodySm" colorRole="muted">
-                        Per Bottle ({shipment.totalBottles} bottles)
-                      </Typography>
-                      <Typography variant="headingSm" className="text-text-brand">
-                        {formatPrice(shipment.totalLandedCostUsd / shipment.totalBottles, 'USD')}
-                      </Typography>
-                    </div>
-                  ) : null}
+                  {shipment.totalBottles
+                    ? (() => {
+                        // Logistics per bottle = the freight/customs/handling from
+                        // the LOGS invoices ÷ bottles — NOT the blended goods price.
+                        const logistics =
+                          (shipment.freightCostUsd ?? 0) +
+                          (shipment.insuranceCostUsd ?? 0) +
+                          (shipment.originHandlingUsd ?? 0) +
+                          (shipment.destinationHandlingUsd ?? 0) +
+                          (shipment.customsClearanceUsd ?? 0) +
+                          (shipment.govFeesUsd ?? 0) +
+                          (shipment.deliveryCostUsd ?? 0) +
+                          (shipment.otherCostsUsd ?? 0);
+                        return (
+                          <div className="mt-2 flex items-center justify-between">
+                            <Typography variant="bodySm" colorRole="muted">
+                              Logistics / bottle ({shipment.totalBottles} bottles)
+                            </Typography>
+                            <Typography variant="headingSm" className="text-text-brand">
+                              {logistics > 0
+                                ? formatPrice(logistics / shipment.totalBottles, 'USD')
+                                : 'enter costs above'}
+                            </Typography>
+                          </div>
+                        );
+                      })()
+                    : null}
                 </div>
                   </>
                 )}
