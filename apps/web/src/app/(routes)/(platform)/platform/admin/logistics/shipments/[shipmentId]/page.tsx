@@ -288,17 +288,6 @@ const ShipmentDetailPage = () => {
     }),
   );
 
-  // Open the full cost ledger for a single shipment by wrapping it in a
-  // one-shipment cost group (reuses the entire group ledger experience).
-  const { mutate: openCostLedger, isPending: isOpeningLedger } = useMutation(
-    api.logistics.admin.groups.create.mutationOptions({
-      onSuccess: (group) => {
-        if (group?.id) router.push(`/platform/admin/logistics/groups/${group.id}`);
-      },
-      onError: (error) => toast.error(error.message),
-    }),
-  );
-
   const { mutate: deleteShipment, isPending: isDeleting } = useMutation(
     api.logistics.admin.delete.mutationOptions({
       onSuccess: () => {
@@ -1663,22 +1652,6 @@ const ShipmentDetailPage = () => {
                     </Link>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          openCostLedger({
-                            name: `${shipment.name ?? shipment.shipmentNumber} — costs`,
-                            shipmentIds: [shipmentId],
-                          })
-                        }
-                        disabled={isOpeningLedger}
-                        title="Open the full cost ledger (line-by-line invoice charges, like groups)"
-                      >
-                        <ButtonContent iconLeft={isOpeningLedger ? IconLoader2 : IconFileText}>
-                          {isOpeningLedger ? 'Opening…' : 'Cost ledger'}
-                        </ButtonContent>
-                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
