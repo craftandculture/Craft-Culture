@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import getCatalogueInboundRows from '@/app/_wms/data/getCatalogueInboundRows';
 import getCatalogueRows from '@/app/_wms/data/getCatalogueRows';
+import type { CatalogueRow } from '@/app/_wms/data/getCatalogueRows';
 import logger from '@/utils/logger';
 
 import type { CatalogueResponse, CatalogueResponseItem } from './schema';
@@ -14,7 +16,8 @@ import logApiRequest from '../_utils/logApiRequest';
  * GET /api/v1/catalogue
  *
  * Live consumer catalogue for the public portals — availability straight from
- * WMS stock, priced with the Pricing Manager's own rates (matches that screen).
+ * WMS stock, priced with the Pricing Manager's own rates (matches that
+ * screen).
  *
  * @example
  *   GET /api/v1/catalogue?feed=trade&category=Wine
@@ -48,7 +51,10 @@ export const GET = async (request: NextRequest) => {
       partnerId,
       errorMessage: 'Missing read:inventory permission',
     });
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Insufficient permissions' },
+      { status: 403 },
+    );
   }
 
   const rateLimitResult = await checkRateLimit(apiKeyId);
@@ -72,6 +78,7 @@ export const GET = async (request: NextRequest) => {
       category: searchParams.get('category') ?? undefined,
       ownerId: searchParams.get('ownerId') ?? undefined,
       search: searchParams.get('search') ?? undefined,
+      stock: searchParams.get('stock') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -85,17 +92,24 @@ export const GET = async (request: NextRequest) => {
         errorMessage: 'Invalid query parameters',
       });
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: queryResult.error.issues },
+        {
+          error: 'Invalid query parameters',
+          details: queryResult.error.issues,
+        },
         { status: 400 },
       );
     }
 
-    const { feed, category, ownerId, search } = queryResult.data;
+    const { feed, category, ownerId, search, stock } = queryResult.data;
 
-    const rows = await getCatalogueRows({ category, ownerId, search });
+    const rows: (CatalogueRow & { eta?: Date | null })[] =
+      stock === 'inbound'
+        ? await getCatalogueInboundRows({ category, search })
+        : await getCatalogueRows({ category, ownerId, search });
 
     const data: CatalogueResponseItem[] = rows.map((r) => {
       const useRetail = feed === 'retail';
+      const eta = r.eta ? r.eta.toISOString() : null;
       return {
         lwin18: r.lwin18,
         product: r.product,
@@ -114,12 +128,13 @@ export const GET = async (request: NextRequest) => {
         pricePerCase: useRetail ? r.pcPerCase : r.ibPerCase,
         ib: { perBottle: r.ibPerBottle, perCase: r.ibPerCase },
         pc: { perBottle: r.pcPerBottle, perCase: r.pcPerCase },
+        eta,
       };
     });
 
     const response: CatalogueResponse = {
       data,
-      meta: { feed, totalCount: data.length },
+      meta: { feed, stock, totalCount: data.length },
     };
 
     void logApiRequest({
@@ -145,6 +160,9 @@ export const GET = async (request: NextRequest) => {
       partnerId,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 };

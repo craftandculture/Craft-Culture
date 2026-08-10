@@ -5,6 +5,11 @@ export const catalogueQuerySchema = z.object({
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
   ownerId: z.string().uuid().optional(),
   search: z.string().optional(),
+  /**
+   * 'available' (default) = landed stock in the UAE warehouse. 'inbound' =
+   * bought and in transit, not yet received — carries an eta.
+   */
+  stock: z.enum(['available', 'inbound']).optional().default('available'),
 });
 
 export type CatalogueQuery = z.infer<typeof catalogueQuerySchema>;
@@ -30,9 +35,11 @@ export interface CatalogueResponseItem {
   ib: { perBottle: number; perCase: number };
   /** Private-Client (retail) price */
   pc: { perBottle: number; perCase: number };
+  /** Estimated arrival, ISO date — inbound stock only, null otherwise */
+  eta?: string | null;
 }
 
 export interface CatalogueResponse {
   data: CatalogueResponseItem[];
-  meta: { feed: string; totalCount: number };
+  meta: { feed: string; stock: string; totalCount: number };
 }
