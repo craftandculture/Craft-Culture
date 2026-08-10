@@ -37,7 +37,8 @@ export interface CatalogueFilters {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const isCraftCulture = (owner: string | null) => !!owner && /craft.*culture/i.test(owner);
+const isCraftCulture = (owner: string | null) =>
+  !!owner && /craft.*culture/i.test(owner);
 const isZeroTransferOwner = (owner: string | null) =>
   !!owner && /(cru wine|crurated)/i.test(owner);
 
@@ -51,8 +52,8 @@ const isZeroTransferOwner = (owner: string | null) =>
  * Landed = importPaid + logistics + transfer + override. Import falls back to
  * the latest shipment's product cost (pack-agnostic) when no manual price.
  *
- * @param filters - optional category / owner / search narrowing
- * @returns one row per product (lwin18) with live availability + IB & PC prices
+ * @param filters - Optional category / owner / search narrowing
+ * @returns One row per product (lwin18) with live availability + IB & PC prices
  */
 const getCatalogueRows = async (
   filters: CatalogueFilters = {},
@@ -69,7 +70,10 @@ const getCatalogueRows = async (
   if (filters.search) {
     const q = `%${filters.search}%`;
     where.push(
-      or(sql`${wmsStock.productName} ILIKE ${q}`, sql`${wmsStock.producer} ILIKE ${q}`)!,
+      or(
+        sql`${wmsStock.productName} ILIKE ${q}`,
+        sql`${wmsStock.producer} ILIKE ${q}`,
+      )!,
     );
   }
 
@@ -84,17 +88,32 @@ const getCatalogueRows = async (
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
-      importPrice: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
-      logistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
-      transfer: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
-      override: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
-      selling: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
-      inbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+      importPrice: sql<
+        number | null
+      >`MAX(${wmsProductPricing.importPricePerBottle})`,
+      logistics: sql<
+        number | null
+      >`MAX(${wmsProductPricing.logisticsPerBottle})`,
+      transfer: sql<
+        number | null
+      >`MAX(${wmsProductPricing.transferPricePerBottle})`,
+      override: sql<
+        number | null
+      >`MAX(${wmsProductPricing.costOverridePerBottle})`,
+      selling: sql<
+        number | null
+      >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+      inbondPct: sql<
+        number | null
+      >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
       pcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
     })
     .from(wmsStock)
     .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
-    .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+    .leftJoin(
+      wmsOwnerPricingSettings,
+      eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+    )
     .where(and(...where))
     .groupBy(wmsStock.lwin18);
 
@@ -102,11 +121,34 @@ const getCatalogueRows = async (
   if (lwins.length === 0) return [];
 
   // Region/country from the product master (wms_stock doesn't carry region).
+  // Matched on LWIN7 (the first 7 digits — the wine itself), NOT the full
+  // LWIN18: the pack digits differ between a stock line and its product-master
+  // row, so an exact match returns nothing. Region and country are properties
+  // of the wine, so they hold across every vintage, pack and bottle size.
+  const lwin7Of = (lwin18: string) => lwin18.slice(0, 7);
+  const lwin7s = [...new Set(lwins.map(lwin7Of))];
   const regionRows = await db
-    .select({ lwin18: products.lwin18, region: products.region, country: products.country })
+    .select({
+      lwin7: sql<string>`LEFT(${products.lwin18}, 7)`,
+      region: products.region,
+      country: products.country,
+    })
     .from(products)
-    .where(inArray(products.lwin18, lwins));
-  const regionMap = new Map(regionRows.map((r) => [r.lwin18, r]));
+    .where(inArray(sql`LEFT(${products.lwin18}, 7)`, lwin7s));
+  const regionMap = new Map<
+    string,
+    { region: string | null; country: string | null }
+  >();
+  regionRows.forEach((r) => {
+    const prev = regionMap.get(r.lwin7);
+    // Prefer the first row that actually carries a region/country.
+    if (!prev || (!prev.region && r.region) || (!prev.country && r.country)) {
+      regionMap.set(r.lwin7, {
+        region: r.region ?? prev?.region ?? null,
+        country: r.country ?? prev?.country ?? null,
+      });
+    }
+  });
 
   // Latest shipment product/landed cost, matched pack-agnostically (LWIN7 +
   // vintage + bottle size) so repacked SKUs inherit the base wine's cost.
@@ -121,18 +163,29 @@ const getCatalogueRows = async (
     .from(wmsStock)
     .innerJoin(
       logisticsShipmentItems,
-      and(isNotNull(logisticsShipmentItems.lwin), sql`${pakItem} = ${pakStock}`),
+      and(
+        isNotNull(logisticsShipmentItems.lwin),
+        sql`${pakItem} = ${pakStock}`,
+      ),
     )
     .where(inArray(wmsStock.lwin18, lwins))
     .orderBy(desc(logisticsShipmentItems.createdAt));
-  const shipMap = new Map<string, { productCost: number | null; landedCost: number | null }>();
+  const shipMap = new Map<
+    string,
+    { productCost: number | null; landedCost: number | null }
+  >();
   for (const r of shipRows) {
-    if (!shipMap.has(r.lwin18)) shipMap.set(r.lwin18, { productCost: r.productCost, landedCost: r.landedCost });
+    if (!shipMap.has(r.lwin18))
+      shipMap.set(r.lwin18, {
+        productCost: r.productCost,
+        landedCost: r.landedCost,
+      });
   }
 
   return rows.map((r) => {
     const ship = shipMap.get(r.lwin18);
-    const manualImport = r.importPrice && r.importPrice > 0 ? r.importPrice : null;
+    const manualImport =
+      r.importPrice && r.importPrice > 0 ? r.importPrice : null;
     const importPaid = manualImport ?? ship?.productCost ?? 0;
     const systemLogistics =
       ship && ship.landedCost != null && ship.productCost != null
@@ -142,12 +195,16 @@ const getCatalogueRows = async (
       r.logistics ??
       (systemLogistics > 0
         ? systemLogistics
-        : isCraftCulture(r.owner) && (r.category === 'Wine' || r.category == null)
+        : isCraftCulture(r.owner) &&
+            (r.category === 'Wine' || r.category == null)
           ? 22.5
           : 0);
     const transfer = r.transfer ?? (isZeroTransferOwner(r.owner) ? 0 : 2.5);
     const override = r.override ?? 0;
-    const landed = importPaid > 0 || override !== 0 ? importPaid + logistics + transfer + override : 0;
+    const landed =
+      importPaid > 0 || override !== 0
+        ? importPaid + logistics + transfer + override
+        : 0;
     const inbondPct = r.inbondPct ?? 0;
     const ib = landed > 0 ? landed / (1 - inbondPct / 100) : 0;
     const pc =
@@ -157,7 +214,7 @@ const getCatalogueRows = async (
           : 0
         : (r.selling ?? 0);
     const cc = r.caseConfig || 1;
-    const region = regionMap.get(r.lwin18);
+    const region = regionMap.get(lwin7Of(r.lwin18));
     return {
       lwin18: r.lwin18,
       product: r.product,
