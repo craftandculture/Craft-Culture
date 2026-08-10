@@ -2,6 +2,7 @@
 
 import {
   IconActivity,
+  IconArrowsShuffle,
   IconBolt,
   IconBottle,
   IconBuildingStore,
@@ -67,6 +68,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Commissions', href: '/platform/admin/commissions', icon: IconCoin },
       { label: 'Pricing', href: '/platform/admin/pricing', icon: IconCurrencyDollar },
+      { label: 'Triangulation', href: '/platform/admin/triangulation', icon: IconArrowsShuffle },
     ],
   },
   {

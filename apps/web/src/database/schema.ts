@@ -5108,3 +5108,202 @@ export const wmsOwnerPricingSettings = pgTable('wms_owner_pricing_settings', {
 });
 
 export type WmsOwnerPricingSettings = typeof wmsOwnerPricingSettings.$inferSelect;
+
+/* -------------------------------------------------------------------------- */
+/*                            STOCK TRIANGULATION                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The five monthly/quarterly inputs that feed the stock triangulation.
+ *
+ * Flow inputs accumulate over time; snapshot inputs are point-in-time counts
+ * that get compared against the running calculation.
+ *
+ * - `cc_opening`     flow     — stock C&C holds for the owner (shipment packing lists / WMS receipts)
+ * - `cc_sales_to_cd` flow     — what C&C invoiced City Drinks (Zoho invoice export)
+ * - `cc_count`       snapshot — C&C physical count (quarterly, export from the WMS)
+ * - `cd_sales`       flow     — what City Drinks sold to consumers (their monthly sheet)
+ * - `cd_count`       snapshot — stock City Drinks declare on hand (their monthly sheet)
+ */
+export const triImportKind = pgEnum('tri_import_kind', [
+  'cc_opening',
+  'cc_sales_to_cd',
+  'cc_count',
+  'cd_sales',
+  'cd_count',
+]);
+
+export const triImportStatus = pgEnum('tri_import_status', ['draft', 'committed']);
+
+export const triPeriodStatus = pgEnum('tri_period_status', ['open', 'locked']);
+
+/**
+ * Canonical SKU registry for triangulation, keyed on the internal W code.
+ *
+ * Every other party's product code (City Drinks' CD codes, Zoho item codes)
+ * resolves to one of these rows via `tri_sku_aliases`, so all five inputs can
+ * be summed on a single identifier.
+ */
+export const triSkus = pgTable(
+  'tri_skus',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Internal W code — the canonical identity for a triangulated product
+    wCode: text('w_code').notNull().unique(),
+    lwin18: text('lwin18'),
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    bottleSize: text('bottle_size').default('750ml'),
+    // Bottles per case, used to convert case-denominated import lines to bottles
+    caseConfig: integer('case_config').notNull().default(6),
+    ownerName: text('owner_name').default('Crurated'),
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('tri_skus_lwin18_idx').on(table.lwin18),
+    index('tri_skus_product_name_idx').on(table.productName),
+  ],
+);
+
+export type TriSku = typeof triSkus.$inferSelect;
+
+/**
+ * Alias codes that map an external party's product code to a W code.
+ *
+ * `normalized_code` is the uppercased, punctuation-stripped form used for
+ * lookups so "cd-1234" and "CD 1234" resolve to the same SKU.
+ */
+export const triSkuAliases = pgTable(
+  'tri_sku_aliases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    skuId: uuid('sku_id')
+      .references(() => triSkus.id, { onDelete: 'cascade' })
+      .notNull(),
+    // Which party's code this is: city_drinks | zoho | crurated | packing_list | other
+    source: text('source').notNull().default('city_drinks'),
+    aliasCode: text('alias_code').notNull(),
+    normalizedCode: text('normalized_code').notNull(),
+    aliasName: text('alias_name'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('tri_sku_aliases_sku_id_idx').on(table.skuId),
+    uniqueIndex('tri_sku_aliases_source_code_unique').on(
+      table.source,
+      table.normalizedCode,
+    ),
+  ],
+);
+
+export type TriSkuAlias = typeof triSkuAliases.$inferSelect;
+
+/**
+ * A reporting period (normally a calendar month). Locking a period freezes the
+ * inputs assigned to it so a signed-off reconciliation cannot drift.
+ */
+export const triPeriods = pgTable(
+  'tri_periods',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    label: text('label').notNull().unique(),
+    periodStart: date('period_start').notNull(),
+    periodEnd: date('period_end').notNull(),
+    status: triPeriodStatus('status').notNull().default('open'),
+    notes: text('notes'),
+    lockedAt: timestamp('locked_at', { mode: 'date' }),
+    lockedBy: uuid('locked_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('tri_periods_period_end_idx').on(table.periodEnd)],
+);
+
+export type TriPeriod = typeof triPeriods.$inferSelect;
+
+/**
+ * One uploaded file (or WMS sync) of one input kind.
+ *
+ * Imports land as `draft` so unmapped codes can be resolved first; only
+ * `committed` imports feed the reconciliation.
+ */
+export const triImports = pgTable(
+  'tri_imports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    periodId: uuid('period_id').references(() => triPeriods.id, {
+      onDelete: 'set null',
+    }),
+    kind: triImportKind('kind').notNull(),
+    status: triImportStatus('status').notNull().default('draft'),
+    fileName: text('file_name'),
+    sourceRef: text('source_ref'),
+    // Which party's product codes this file uses, so re-mapping after a new
+    // alias is added looks the codes up in the right namespace
+    aliasSource: text('alias_source').notNull().default('city_drinks'),
+    // Effective date of the data: the count date for snapshots, the period end
+    // for flows. Drives every "as at" cut-off in the reconciliation.
+    asOfDate: date('as_of_date').notNull(),
+    rowCount: integer('row_count').notNull().default(0),
+    mappedRowCount: integer('mapped_row_count').notNull().default(0),
+    totalBottles: doublePrecision('total_bottles').notNull().default(0),
+    notes: text('notes'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    committedAt: timestamp('committed_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('tri_imports_period_id_idx').on(table.periodId),
+    index('tri_imports_kind_idx').on(table.kind),
+    index('tri_imports_as_of_date_idx').on(table.asOfDate),
+  ],
+);
+
+export type TriImport = typeof triImports.$inferSelect;
+
+/**
+ * A single row from an import, normalised to bottles.
+ *
+ * `quantity` / `unit` keep what the source file actually said (cases on a
+ * packing list, bottles on the City Drinks sales sheet) for audit; every
+ * calculation uses `quantity_bottles`.
+ */
+export const triImportLines = pgTable(
+  'tri_import_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    importId: uuid('import_id')
+      .references(() => triImports.id, { onDelete: 'cascade' })
+      .notNull(),
+    skuId: uuid('sku_id').references(() => triSkus.id, { onDelete: 'set null' }),
+    rawCode: text('raw_code'),
+    normalizedCode: text('normalized_code'),
+    rawDescription: text('raw_description'),
+    rawVintage: text('raw_vintage'),
+    quantity: doublePrecision('quantity').notNull().default(0),
+    unit: text('unit').notNull().default('bottle'),
+    caseConfig: integer('case_config'),
+    quantityBottles: doublePrecision('quantity_bottles').notNull().default(0),
+    unitPrice: doublePrecision('unit_price'),
+    currency: text('currency'),
+    docRef: text('doc_ref'),
+    docDate: date('doc_date'),
+    // mapped | unmapped | ignored
+    status: text('status').notNull().default('unmapped'),
+    raw: jsonb('raw'),
+    ...timestamps,
+  },
+  (table) => [
+    index('tri_import_lines_import_id_idx').on(table.importId),
+    index('tri_import_lines_sku_id_idx').on(table.skuId),
+    index('tri_import_lines_normalized_code_idx').on(table.normalizedCode),
+    index('tri_import_lines_status_idx').on(table.status),
+  ],
+);
+
+export type TriImportLine = typeof triImportLines.$inferSelect;

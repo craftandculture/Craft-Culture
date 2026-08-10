@@ -142,6 +142,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/commissions', label: 'Commissions' },
         { href: '/platform/admin/pricing', label: 'Pricing' },
         { href: '/platform/admin/pricing-calculator', label: 'Calculator' },
+        { href: '/platform/admin/triangulation', label: 'Triangulation' },
       ],
     });
     sections.push({

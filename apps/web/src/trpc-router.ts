@@ -15,6 +15,7 @@ import privateClientOrdersRouter from '@/app/_privateClientOrders/router';
 import quotesRouter from '@/app/_quotes/router';
 import settingsRouter from '@/app/_settings/router';
 import sourceRouter from '@/app/_source/router';
+import triangulationRouter from '@/app/_triangulation/router';
 import warehouseRouter from '@/app/_warehouse/router';
 import wmsRouter from '@/app/_wms/router';
 import zohoImportRouter from '@/app/_zohoImport/router';
@@ -41,6 +42,7 @@ export const appRouter = createTRPCRouter({
   products: productsRouter,
   quotes: quotesRouter,
   source: sourceRouter,
+  triangulation: triangulationRouter,
   warehouse: warehouseRouter,
   wms: wmsRouter,
   settings: settingsRouter,

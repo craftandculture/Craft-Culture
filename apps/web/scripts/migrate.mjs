@@ -247,6 +247,158 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_repacks reversal columns ready');
 
+    // Stock Triangulation: reconcile owner stock across C&C and City Drinks.
+    console.log('🔄 Ensuring stock triangulation tables...');
+
+    const createEnum = async (name, values) => {
+      const literals = values.map((value) => `'${value}'`).join(', ');
+      await client.unsafe(`
+        DO $$ BEGIN
+          CREATE TYPE "${name}" AS ENUM (${literals});
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+    };
+
+    await createEnum('tri_import_kind', [
+      'cc_opening',
+      'cc_sales_to_cd',
+      'cc_count',
+      'cd_sales',
+      'cd_count',
+    ]);
+    await createEnum('tri_import_status', ['draft', 'committed']);
+    await createEnum('tri_period_status', ['open', 'locked']);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_skus" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "w_code" text NOT NULL UNIQUE,
+        "lwin18" text,
+        "product_name" text NOT NULL,
+        "producer" text,
+        "vintage" integer,
+        "bottle_size" text DEFAULT '750ml',
+        "case_config" integer NOT NULL DEFAULT 6,
+        "owner_name" text DEFAULT 'Crurated',
+        "is_active" boolean NOT NULL DEFAULT true,
+        "notes" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_skus_lwin18_idx" ON "tri_skus"("lwin18")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_skus_product_name_idx" ON "tri_skus"("product_name")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_sku_aliases" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "sku_id" uuid NOT NULL REFERENCES "tri_skus"("id") ON DELETE CASCADE,
+        "source" text NOT NULL DEFAULT 'city_drinks',
+        "alias_code" text NOT NULL,
+        "normalized_code" text NOT NULL,
+        "alias_name" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_sku_aliases_sku_id_idx" ON "tri_sku_aliases"("sku_id")`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "tri_sku_aliases_source_code_unique" ON "tri_sku_aliases"("source", "normalized_code")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_periods" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "label" text NOT NULL UNIQUE,
+        "period_start" date NOT NULL,
+        "period_end" date NOT NULL,
+        "status" "tri_period_status" NOT NULL DEFAULT 'open',
+        "notes" text,
+        "locked_at" timestamp,
+        "locked_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_periods_period_end_idx" ON "tri_periods"("period_end")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_imports" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "period_id" uuid REFERENCES "tri_periods"("id") ON DELETE SET NULL,
+        "kind" "tri_import_kind" NOT NULL,
+        "status" "tri_import_status" NOT NULL DEFAULT 'draft',
+        "file_name" text,
+        "source_ref" text,
+        "alias_source" text NOT NULL DEFAULT 'city_drinks',
+        "as_of_date" date NOT NULL,
+        "row_count" integer NOT NULL DEFAULT 0,
+        "mapped_row_count" integer NOT NULL DEFAULT 0,
+        "total_bottles" double precision NOT NULL DEFAULT 0,
+        "notes" text,
+        "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "committed_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_imports_period_id_idx" ON "tri_imports"("period_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_imports_kind_idx" ON "tri_imports"("kind")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_imports_as_of_date_idx" ON "tri_imports"("as_of_date")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_import_lines" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "import_id" uuid NOT NULL REFERENCES "tri_imports"("id") ON DELETE CASCADE,
+        "sku_id" uuid REFERENCES "tri_skus"("id") ON DELETE SET NULL,
+        "raw_code" text,
+        "normalized_code" text,
+        "raw_description" text,
+        "raw_vintage" text,
+        "quantity" double precision NOT NULL DEFAULT 0,
+        "unit" text NOT NULL DEFAULT 'bottle',
+        "case_config" integer,
+        "quantity_bottles" double precision NOT NULL DEFAULT 0,
+        "unit_price" double precision,
+        "currency" text,
+        "doc_ref" text,
+        "doc_date" date,
+        "status" text NOT NULL DEFAULT 'unmapped',
+        "raw" jsonb,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_import_lines_import_id_idx" ON "tri_import_lines"("import_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_import_lines_sku_id_idx" ON "tri_import_lines"("sku_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_import_lines_normalized_code_idx" ON "tri_import_lines"("normalized_code")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_import_lines_status_idx" ON "tri_import_lines"("status")`,
+    );
+    console.log('✅ stock triangulation tables ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
