@@ -194,6 +194,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         // carries in the name ("(3 pack)", "(6x)", "(single bottle)") aren't in
         // the stock name either, so they're stripped rather than required.
         const searchTerms = item.name
+          .replace(/_/g, ' ')
           .replace(
             /\(\s*(?:single bottle|\d+\s*(?:x|pack|packs|bottles?|btl))\s*\)/gi,
             ' ',

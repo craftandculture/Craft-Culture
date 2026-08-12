@@ -25,9 +25,15 @@ const PACK_SUFFIX =
 /**
  * Strip the pack/vintage noise off a line or stock name so the two can be
  * compared on the wine itself.
+ *
+ * Underscores become spaces FIRST: a name like `Latour_1993` is one word to
+ * both the vintage strip and the term split (`_` is a word character, so `\b`
+ * never fires inside it), which left "latour_1993" as the search term and
+ * matched no stock at all.
  */
 const baseName = (name: string) =>
   name
+    .replace(/_/g, ' ')
     .replace(PACK_SUFFIX, ' ')
     .replace(/\b(19|20)\d{2}\b/g, ' ')
     .replace(/\s{2,}/g, ' ')

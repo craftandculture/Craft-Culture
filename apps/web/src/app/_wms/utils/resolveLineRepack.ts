@@ -39,7 +39,10 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
   const vintageStr = parts[1] ?? (name.match(/\b(19|20)\d{2}\b/)?.[0] ?? '');
   const vintage = Number(vintageStr) || null;
 
+  // Underscores first — `Latour_1993` is one word to the vintage strip and the
+  // term split, so the term would be "latour_1993" and match no stock.
   const baseKey = name
+    .replace(/_/g, ' ')
     .replace(/\(\s*(?:single bottle|\d+\s*(?:x|pack|packs|bottles?|btl))\s*\)/gi, ' ')
     .replace(/\b(19|20)\d{2}\b/g, '')
     .replace(/\s{2,}/g, ' ')
