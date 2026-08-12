@@ -82,14 +82,16 @@ const MappingTab = () => {
     mapAlias.mutate({
       skuId,
       source: aliasSource as TriAliasSource,
-      aliasCode: rawCode ?? normalizedCode,
+      // A codeless line keys on its normalised description, so that is the
+      // alias to record — never an empty string, which the schema rejects.
+      aliasCode: rawCode?.trim() || normalizedCode,
       aliasName: rawDescription,
       applyToExistingLines: true,
     });
   };
 
   const handleCreateAndMap = async (row: (typeof rows)[number]) => {
-    const wCode = row.rawCode ?? row.normalizedCode;
+    const wCode = row.rawCode?.trim() || row.normalizedCode;
 
     const created = await createSku.mutateAsync({
       wCode,
@@ -151,7 +153,13 @@ const MappingTab = () => {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Typography variant="labelSm" asChild>
-                      <span className="font-mono">{row.rawCode ?? row.normalizedCode}</span>
+                      {row.rawCode?.trim() ? (
+                        <span className="font-mono">{row.rawCode}</span>
+                      ) : (
+                        <span className="text-text-muted italic">
+                          no code — matched on name
+                        </span>
+                      )}
                     </Typography>
                     <Badge size="xs" colorRole="muted">
                       {row.aliasSource.replace('_', ' ')}

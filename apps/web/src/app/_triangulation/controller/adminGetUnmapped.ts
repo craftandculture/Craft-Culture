@@ -1,6 +1,7 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import backfillDescriptionKeys from '../data/backfillDescriptionKeys';
 import { getUnmappedSchema } from '../schemas/triangulationSchemas';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
 
@@ -29,6 +30,12 @@ const adminGetUnmapped = adminProcedure
   .input(getUnmappedSchema)
   .query(async ({ input }) => {
     const { importId, limit } = input;
+
+    // A write inside a read, deliberately: until every line has a key, this
+    // queue shows unrelated wines merged into one group, and mapping that
+    // group would assign them all to one SKU. The repair only fills missing
+    // keys, so it matches nothing once the data is sound.
+    await backfillDescriptionKeys(importId ?? undefined);
 
     const rows = await client<TriUnmappedRow[]>`
       WITH unmapped AS (

@@ -65,7 +65,10 @@ const adminCreateImport = adminProcedure
     const rows = lines.map((line) => ({
       import_id: importId,
       raw_code: line.rawCode ?? null,
-      normalized_code: normalizeCode(line.rawCode),
+      // A line with no code keys on its description instead, so codeless wines
+      // stay distinct from each other rather than sharing an empty key.
+      normalized_code:
+        normalizeCode(line.rawCode) || normalizeCode(line.rawDescription),
       raw_description: line.rawDescription ?? null,
       raw_vintage: line.rawVintage ?? null,
       quantity: line.quantity,

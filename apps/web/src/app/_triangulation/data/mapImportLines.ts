@@ -1,5 +1,6 @@
 import { client } from '@/database/client';
 
+import backfillDescriptionKeys from './backfillDescriptionKeys';
 import recalculateLineBottles from './recalculateLineBottles';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
 
@@ -21,6 +22,9 @@ import type { TriAliasSource } from '../schemas/triangulationSchemas';
  * @returns Row counts and the recomputed bottle total for the import
  */
 const mapImportLines = async (importId: string, source: TriAliasSource) => {
+  // Codeless lines key on their description — see backfillDescriptionKeys.
+  await backfillDescriptionKeys(importId);
+
   // Reset so a removed alias cannot leave a stale mapping behind.
   await client`
     UPDATE tri_import_lines
