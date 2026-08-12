@@ -131,6 +131,13 @@ export const seedSkusFromWmsSchema = z.object({
   ownerName: z.string().min(1).max(200).default('Crurated'),
 });
 
+export const extractPackingListSchema = z.object({
+  /** Base64-encoded document, without a data: prefix */
+  file: z.string().min(1),
+  mediaType: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
+  fileName: z.string().max(300).optional(),
+});
+
 export const syncSalesFromZohoSchema = z.object({
   /**
    * Matched against the Zoho customer name word by word, ignoring spacing and

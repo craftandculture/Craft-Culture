@@ -16,6 +16,7 @@ import type {
   TriImportKind,
 } from '../schemas/triangulationSchemas';
 import detectHeaderRow from '../utils/detectHeaderRow';
+import fileToBase64 from '../utils/fileToBase64';
 import guessColumnMapping from '../utils/guessColumnMapping';
 import type { TriColumnField, TriColumnMapping } from '../utils/guessColumnMapping';
 import importKindLabels from '../utils/importKindLabels';
@@ -42,6 +43,9 @@ const COLUMN_FIELDS: { field: TriColumnField; label: string; required?: boolean 
   { field: 'docRef', label: 'Invoice / doc ref' },
   { field: 'docDate', label: 'Document date' },
 ];
+
+/** File types that go to document extraction rather than the spreadsheet parser */
+const DOCUMENT_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
 
 const ALIAS_SOURCES: { value: TriAliasSource; label: string }[] = [
   { value: 'city_drinks', label: 'City Drinks (CD codes)' },
@@ -94,6 +98,14 @@ const ImportWizard = ({
   );
   const [asOfDate, setAsOfDate] = useState(defaultAsOfDate);
   const [isParsing, setIsParsing] = useState(false);
+  /** Lines read out of a PDF or scan, which bypass sheet and column mapping */
+  const [extracted, setExtracted] = useState<ImportLineInput[] | null>(null);
+  const [extractionNote, setExtractionNote] = useState<string | null>(null);
+
+  const extractPackingList = useMutation({
+    ...api.triangulation.admin.extractPackingList.mutationOptions(),
+    onError: (error) => toast.error(error.message),
+  });
 
   const sheet = sheets[sheetIndex];
   const headers = useMemo(() => sheet?.matrix[headerRow] ?? [], [sheet, headerRow]);
@@ -127,6 +139,61 @@ const ImportWizard = ({
     }
 
     setIsParsing(true);
+
+    // Packing lists arrive as PDFs or scans, which have no rows or columns to
+    // map — they go to extraction and come back as lines directly.
+    const documentType = DOCUMENT_TYPES.find((type) => type === file.type);
+
+    if (documentType) {
+      try {
+        const result = await extractPackingList.mutateAsync({
+          file: await fileToBase64(file),
+          mediaType: documentType,
+          fileName: file.name,
+        });
+
+        setExtracted(
+          result.lines.map((line) => ({
+            rawCode: line.code ?? null,
+            rawDescription: line.productName,
+            rawVintage: line.vintage ?? null,
+            quantity: line.quantityCases,
+            unit: 'case' as const,
+            caseConfig: line.caseConfig ?? null,
+            unitPrice: null,
+            currency: null,
+            docRef: result.documentRef ?? null,
+            docDate: result.documentDate ?? null,
+            raw: null,
+          })),
+        );
+        setExtractionNote(
+          [
+            result.documentRef ? `Ref ${result.documentRef}` : null,
+            result.linesWithoutPack > 0
+              ? `${result.linesWithoutPack} lines state no pack size — each SKU's own pack size will be used`
+              : null,
+            result.linesWithoutCode > 0
+              ? `${result.linesWithoutCode} lines have no product code and will need mapping by hand`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || null,
+        );
+
+        if (result.documentDate) {
+          setAsOfDate(result.documentDate);
+        }
+
+        setFileName(file.name);
+      } catch {
+        // The mutation's onError has already surfaced the reason.
+      } finally {
+        setIsParsing(false);
+      }
+
+      return;
+    }
 
     try {
       const parsed = await parseWorkbook(file);
@@ -166,6 +233,10 @@ const ImportWizard = ({
   };
 
   const { lines, skipped } = useMemo(() => {
+    if (extracted) {
+      return { lines: extracted, skipped: 0 };
+    }
+
     if (!sheet || mapping.quantity === undefined) {
       return { lines: [] as ImportLineInput[], skipped: 0 };
     }
@@ -208,14 +279,18 @@ const ImportWizard = ({
     }
 
     return { lines: built, skipped: ignored };
-  }, [sheet, mapping, headerRow, unit]);
+  }, [sheet, mapping, headerRow, unit, extracted]);
 
   const totalBottles = lines.reduce(
     (sum, line) => sum + line.quantity * (unit === 'case' ? (line.caseConfig ?? 6) : 1),
     0,
   );
 
-  const canSubmit = lines.length > 0 && mapping.rawCode !== undefined && !!asOfDate;
+  // Extracted documents carry their own codes, so there is no mapping to confirm.
+  const canSubmit =
+    lines.length > 0 &&
+    (extracted !== null || mapping.rawCode !== undefined) &&
+    !!asOfDate;
 
   if (!fileName) {
     return (
@@ -230,14 +305,19 @@ const ImportWizard = ({
             <IconUpload className="size-6" />
           )}
           <Typography variant="labelSm">
-            {isParsing ? 'Reading file…' : 'Choose an Excel or CSV file'}
+            {isParsing
+              ? extractPackingList.isPending
+                ? 'Reading the document — this can take a minute…'
+                : 'Reading file…'
+              : 'Choose a spreadsheet or a packing list'}
           </Typography>
           <Typography variant="bodyXs" colorRole="muted">
-            .xlsx, .xls or .csv — parsed in your browser
+            .xlsx, .xls or .csv parsed in your browser · .pdf, .png or .jpg read
+            by Claude
           </Typography>
           <input
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg"
             className="hidden"
             onChange={(event) => void handleFile(event.target.files?.[0])}
           />
@@ -259,13 +339,29 @@ const ImportWizard = ({
             setFileName(null);
             setSheets([]);
             setMapping({});
+            setExtracted(null);
+            setExtractionNote(null);
           }}
         >
           Change file
         </Button>
       </div>
 
+      {extracted ? (
+        <div className="border-border-warning/40 bg-fill-warning/10 rounded-lg border p-3">
+          <Typography variant="bodyXs" colorRole="warning" asChild>
+            <p>
+              Read from the document by Claude — check the rows below against the
+              original before importing.
+              {extractionNote ? ` ${extractionNote}.` : ''}
+            </p>
+          </Typography>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {extracted ? null : (
+          <>
         <SelectField
           label="Sheet"
           value={sheetIndex}
@@ -304,6 +400,8 @@ const ImportWizard = ({
           <option value="bottle">Bottles</option>
           <option value="case">Cases</option>
         </SelectField>
+          </>
+        )}
 
         <SelectField
           label="Codes in this file are"
@@ -318,7 +416,7 @@ const ImportWizard = ({
         </SelectField>
       </div>
 
-      <div>
+      <div className={extracted ? 'hidden' : undefined}>
         <Typography variant="labelSm" asChild>
           <p className="mb-2">Column mapping</p>
         </Typography>
