@@ -11,6 +11,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 import SkuLedgerPanel from './SkuLedgerPanel';
 import StatTile from './StatTile';
+import type { TriangulationRow } from '../controller/adminGetTriangulation';
 import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 import formatBottles from '../utils/formatBottles';
 
@@ -18,6 +19,19 @@ import formatBottles from '../utils/formatBottles';
 export interface OverviewTabProps {
   periodId: string | null;
 }
+
+/**
+ * The C&C position as actually held, and how far the calculation is from it
+ *
+ * The warehouse cycle counts continuously, so a count is not an independent
+ * check on `wms_stock` — it is folded straight into it. That leaves one true
+ * C&C position, and the WMS is it. An uploaded count sheet is only used when
+ * no WMS snapshot exists, e.g. stock counted outside the system.
+ */
+const actualOf = (row: TriangulationRow) =>
+  row.ccSystem !== null
+    ? { value: row.ccSystem, variance: row.ccSystemVariance }
+    : { value: row.ccCounted, variance: row.ccVariance };
 
 /** Colour a variance by whether it is worth a conversation */
 const varianceTone = (value: number | null) => {
@@ -62,8 +76,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   const missingInputs = [
     present.includes('cc_opening') ? null : 'C&C opening stock',
     present.includes('cc_sales_to_cd') ? null : 'C&C sales to City Drinks',
-    meta?.ccSystemDate ? null : 'C&C system position (WMS)',
-    meta?.ccCountDate ? null : 'C&C physical count',
+    meta?.ccSystemDate || meta?.ccCountDate ? null : 'C&C stock position (WMS)',
     present.includes('cd_sales') ? null : 'City Drinks sales',
     present.includes('cd_count') ? null : 'City Drinks stock on hand',
   ].filter((entry): entry is string => entry !== null);
@@ -221,8 +234,8 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
               <p className="text-right">
                 {meta.periodLabel}
                 <br />
-                C&C system: {meta.ccSystemDate ?? 'none'} · C&C count:{' '}
-                {meta.ccCountDate ?? 'none'} · CD count: {meta.cdCountDate ?? 'none'}
+                WMS as at {meta.ccSystemDate ?? meta.ccCountDate ?? 'none'} · CD
+                declared {meta.cdCountDate ?? 'none'}
               </p>
             </Typography>
           ) : null}
@@ -267,7 +280,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 <th className="py-2 pr-3" colSpan={3} />
                 <th
                   className="border-border-primary border-x py-2 text-center"
-                  colSpan={5}
+                  colSpan={4}
                 >
                   Craft &amp; Culture
                 </th>
@@ -284,9 +297,8 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 </th>
                 <th className="py-2 pr-3 text-right">Sold to CD</th>
                 <th className="py-2 pr-3 text-right">On hand (calc)</th>
-                <th className="py-2 pr-3 text-right">System / Δ</th>
                 <th className="border-border-primary border-r py-2 pr-3 text-right">
-                  Counted / Δ
+                  WMS actual / Δ
                 </th>
                 <th className="py-2 pr-3 text-right">Received</th>
                 <th className="py-2 pr-3 text-right">Sold</th>
@@ -323,27 +335,13 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                   <td className="py-2 pr-3 text-right tabular-nums">
                     {formatBottles(row.ccOnHandCalc)}
                   </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.ccSystem)}
-                    {row.ccSystemVariance !== null && row.ccSystemVariance !== 0 ? (
-                      <span className={`ml-1 ${varianceTone(row.ccSystemVariance)}`}>
-                        ({row.ccSystemVariance > 0 ? '+' : ''}
-                        {formatBottles(row.ccSystemVariance)})
-                      </span>
-                    ) : null}
-                  </td>
                   <td className="border-border-primary border-r py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.ccCounted)}
-                    {row.ccVariance !== null && row.ccVariance !== 0 ? (
-                      <span className={`ml-1 ${varianceTone(row.ccVariance)}`}>
-                        ({row.ccVariance > 0 ? '+' : ''}
-                        {formatBottles(row.ccVariance)})
-                      </span>
-                    ) : null}
-                    {row.ccCountVsSystem !== null && row.ccCountVsSystem !== 0 ? (
-                      <span className="text-text-danger block text-xs">
-                        {row.ccCountVsSystem > 0 ? '+' : ''}
-                        {formatBottles(row.ccCountVsSystem)} vs system
+                    {formatBottles(actualOf(row).value)}
+                    {actualOf(row).variance !== null &&
+                    actualOf(row).variance !== 0 ? (
+                      <span className={`ml-1 ${varianceTone(actualOf(row).variance)}`}>
+                        ({(actualOf(row).variance ?? 0) > 0 ? '+' : ''}
+                        {formatBottles(actualOf(row).variance)})
                       </span>
                     ) : null}
                   </td>
