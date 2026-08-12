@@ -16,6 +16,7 @@ interface SyncExistingParams {
   zohoOrder: ZohoOrderSummary;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
+  force?: boolean;
 }
 
 /** Statuses with no pick list yet — the order can be reconciled in full. */
@@ -49,12 +50,16 @@ const RELEASED_STATUSES = new Set(['picking', 'picked']);
  * @param existing - The local row ({ id, status }) already found for this order
  * @param zohoOrder - The order summary from Zoho's list endpoint
  * @param db - Drizzle db handle (cloud client or trigger client)
+ * @param force - Re-fetch the details even when Zoho reports the order
+ *   unchanged. Item-master edits (e.g. fixing a SKU's pack digits) don't bump
+ *   the order's last-modified time, so only a forced pass picks them up.
  * @returns The sync outcome, for counting/logging by the caller
  */
 const syncExistingSalesOrder = async ({
   existing,
   zohoOrder,
   db,
+  force = false,
 }: SyncExistingParams) => {
   const status = existing.status ?? 'synced';
 
@@ -75,7 +80,13 @@ const syncExistingSalesOrder = async ({
     .where(eq(zohoSalesOrders.id, existing.id))
     .limit(1);
 
+  // A forced pass only overrides the short-circuit pre-pick, where it results in
+  // a line reconcile. On a released order it would raise
+  // `soModifiedAfterRelease` for an order Zoho says never changed.
+  const forceDetailFetch = force && PRE_PICK_STATUSES.has(status);
+
   const unchanged =
+    !forceDetailFetch &&
     current?.zohoLastModifiedTime instanceof Date &&
     current.zohoLastModifiedTime.getTime() === zohoModifiedAt.getTime();
 

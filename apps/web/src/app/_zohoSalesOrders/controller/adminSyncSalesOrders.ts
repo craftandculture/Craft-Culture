@@ -7,6 +7,7 @@
 
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import db from '@/database/client';
@@ -15,13 +16,30 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrders';
 
-const adminSyncSalesOrders = adminProcedure.mutation(async () => {
+const syncSalesOrdersSchema = z
+  .object({
+    /**
+     * Re-fetch these orders' details even when Zoho reports them unchanged.
+     * Edits to the ITEM master (e.g. correcting a SKU's pack digits) don't bump
+     * the sales order's last-modified time, so the normal short-circuit would
+     * never pick them up. Scoped to named orders to stay inside Zoho's rate
+     * limit — a blanket force would mean one detail request per open order.
+     */
+    forceRefreshOrderNumbers: z.array(z.string()).max(25).optional(),
+  })
+  .optional();
+
+const adminSyncSalesOrders = adminProcedure
+  .input(syncSalesOrdersSchema)
+  .mutation(async ({ input }) => {
   if (!isZohoConfigured()) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Zoho integration not configured',
     });
   }
+
+  const forceOrderNumbers = new Set(input?.forceRefreshOrderNumbers ?? []);
 
   const results = {
     fetched: 0,
@@ -60,6 +78,7 @@ const adminSyncSalesOrders = adminProcedure.mutation(async () => {
           existing,
           zohoOrder,
           db,
+          force: forceOrderNumbers.has(zohoOrder.salesorder_number),
         });
 
         if (
