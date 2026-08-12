@@ -239,16 +239,20 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
           </Typography>
         </div>
       ) : (
-        <div className="border-border-primary max-h-[70vh] overflow-auto rounded-xl border">
+        <div className="border-border-primary max-h-[calc(100vh-19rem)] overflow-auto rounded-xl border">
           <table className="w-full text-left text-sm">
             {/* Sticky so the column meaning survives scrolling a few hundred
                 SKUs — otherwise every scroll is a trip back to the top. */}
-            <thead className="bg-fill-primary text-text-muted sticky top-0 z-10">
+            {/* Sticky sits on every th, not on thead — browsers disagree about
+                a sticky thead. The two rows stack: group row at top-0 with a
+                fixed height, column row pinned directly beneath it. Header
+                cells must be fully opaque or scrolled rows show through. */}
+            <thead className="text-text-muted">
               <tr className="border-border-primary border-b">
-                <th className="bg-fill-primary sticky left-0 z-20 py-2 pl-3 pr-3" />
-                <th className="py-2 pr-3" colSpan={3} />
+                <th className="bg-fill-primary sticky left-0 top-0 z-30 h-9 py-2 pl-3 pr-3" />
+                <th className="bg-fill-primary sticky top-0 z-20 h-9 py-2 pr-3" colSpan={3} />
                 <th
-                  className="border-border-primary text-text-brand border-x py-2 text-center font-medium"
+                  className="border-border-primary bg-fill-primary text-text-brand sticky top-0 z-20 h-9 border-x py-2 text-center font-medium"
                   colSpan={4}
                 >
                   <span className="flex items-center justify-center gap-1.5">
@@ -257,7 +261,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                   </span>
                 </th>
                 <th
-                  className="bg-fill-info/5 text-text-info py-2 text-center font-medium"
+                  className="bg-fill-primary text-text-info sticky top-0 z-20 h-9 py-2 text-center font-medium"
                   colSpan={4}
                 >
                   <span className="flex items-center justify-center gap-1.5">
@@ -269,34 +273,34 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
               <tr className="border-border-primary border-b text-xs">
                 {/* W over CD in one column: one identity in two systems, and
                     stacked they cost a third of the width side by side did. */}
-                <th className="bg-fill-primary sticky left-0 z-20 py-2 pl-3 pr-3 font-medium">
+                <th className="bg-fill-primary sticky left-0 top-9 z-30 py-2 pl-3 pr-3 font-medium">
                   Codes
                 </th>
-                <th className="py-2 pr-3 font-medium">Product</th>
-                <th className="py-2 pr-3 text-right font-medium">Vintage</th>
-                <th className="py-2 pr-3 text-right font-medium">Pack</th>
-                <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 font-medium">Product</th>
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Vintage</th>
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Pack</th>
+                <th className="border-border-primary bg-fill-primary sticky top-9 z-20 border-l py-2 pr-3 text-right font-medium">
                   Received
                 </th>
-                <th className="py-2 pr-3 text-right font-medium">Sold to CD</th>
-                <th className="py-2 pr-3 text-right font-medium">On hand</th>
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Sold to CD</th>
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">On hand</th>
                 <th
-                  className="border-border-primary border-r py-2 pr-3 text-right font-medium"
+                  className="border-border-primary bg-fill-primary sticky top-9 z-20 border-r py-2 pr-3 text-right font-medium"
                   title="What the WMS holds, with the gap from the calculated position beneath"
                 >
                   WMS actual
                 </th>
-                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">
                   Received
                 </th>
-                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">
                   Sold
                 </th>
-                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">
                   On hand
                 </th>
                 <th
-                  className="bg-fill-info/5 py-2 pr-3 text-right font-medium"
+                  className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium"
                   title="What City Drinks say they hold, with the gap from the calculated position beneath"
                 >
                   Declared
