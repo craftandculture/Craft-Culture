@@ -13,6 +13,7 @@ import DataQualityNotice from './DataQualityNotice';
 import type { DataQualityIssue } from './DataQualityNotice';
 import SkuLedgerPanel from './SkuLedgerPanel';
 import StatTile from './StatTile';
+import ValueCell from './ValueCell';
 import type { TriangulationRow } from '../controller/adminGetTriangulation';
 import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 import formatBottles from '../utils/formatBottles';
@@ -34,15 +35,6 @@ const actualOf = (row: TriangulationRow) =>
   row.ccSystem !== null
     ? { value: row.ccSystem, variance: row.ccSystemVariance }
     : { value: row.ccCounted, variance: row.ccVariance };
-
-/** Colour a variance by whether it is worth a conversation */
-const varianceTone = (value: number | null) => {
-  if (value === null || value === 0) {
-    return '';
-  }
-
-  return value < 0 ? 'text-text-danger' : 'text-text-warning';
-};
 
 /**
  * The reconciliation itself, one row per W code
@@ -192,36 +184,44 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
 
       <DataQualityNotice issues={issues} />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-64">
-            <Typography variant="labelXs" colorRole="muted" asChild>
-              <p className="mb-1">Search</p>
-            </Typography>
+      {/* One control row: filters left, provenance and export right — the
+          labelled stack above each control pushed the table below the fold. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="w-72">
             <Input
-              placeholder="W code, CD code, producer or wine…"
+              placeholder="Search W code, CD code, producer or wine…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <label className="flex h-9 items-center gap-2">
+          <label
+            className={`flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
+              variancesOnly
+                ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                : 'border-border-primary text-text-muted hover:bg-fill-muted/20'
+            }`}
+          >
             <input
               type="checkbox"
+              className="sr-only"
               checked={variancesOnly}
               onChange={(event) => setVariancesOnly(event.target.checked)}
             />
-            <Typography variant="bodySm">Variances only</Typography>
+            Variances only
           </label>
+          <Typography variant="bodyXs" colorRole="muted">
+            {rows.length.toLocaleString('en-GB')} SKU
+            {rows.length === 1 ? '' : 's'}
+          </Typography>
         </div>
 
-        <div className="flex items-end gap-3">
+        <div className="flex items-center gap-3">
           {meta ? (
             <Typography variant="bodyXs" colorRole="muted" asChild>
               <p className="text-right">
-                {meta.periodLabel}
-                <br />
-                WMS as at {meta.ccSystemDate ?? meta.ccCountDate ?? 'none'} · CD
-                declared {meta.cdCountDate ?? 'none'}
+                WMS {meta.ccSystemDate ?? meta.ccCountDate ?? '—'} · CD declared{' '}
+                {meta.cdCountDate ?? '—'}
               </p>
             </Typography>
           ) : null}
@@ -259,37 +259,50 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
           </Typography>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-5xl text-left text-sm">
-            <thead className="text-text-muted">
+        <div className="border-border-primary max-h-[70vh] overflow-auto rounded-xl border">
+          <table className="w-full text-left text-sm">
+            {/* Sticky so the column meaning survives scrolling a few hundred
+                SKUs — otherwise every scroll is a trip back to the top. */}
+            <thead className="bg-fill-primary text-text-muted sticky top-0 z-10">
               <tr className="border-border-primary border-b">
-                <th className="py-2 pr-3" colSpan={3} />
+                <th className="py-2 pl-3 pr-3" colSpan={3} />
                 <th
-                  className="border-border-primary border-x py-2 text-center"
+                  className="border-border-primary border-x py-2 text-center font-medium"
                   colSpan={4}
                 >
                   Craft &amp; Culture
                 </th>
-                <th className="py-2 text-center" colSpan={4}>
+                <th
+                  className="bg-fill-muted/20 py-2 text-center font-medium"
+                  colSpan={4}
+                >
                   City Drinks
                 </th>
               </tr>
-              <tr className="border-border-primary border-b">
-                <th className="py-2 pr-3">W code</th>
-                <th className="py-2 pr-3">Product</th>
-                <th className="py-2 pr-3">CD code</th>
-                <th className="border-border-primary border-l py-2 pr-3 text-right">
+              <tr className="border-border-primary border-b text-xs">
+                <th className="py-2 pl-3 pr-3 font-medium">W code</th>
+                <th className="py-2 pr-3 font-medium">Product</th>
+                <th className="py-2 pr-3 font-medium">CD code</th>
+                <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
                   Received
                 </th>
-                <th className="py-2 pr-3 text-right">Sold to CD</th>
-                <th className="py-2 pr-3 text-right">On hand (calc)</th>
-                <th className="border-border-primary border-r py-2 pr-3 text-right">
-                  WMS actual / Δ
+                <th className="py-2 pr-3 text-right font-medium">Sold to CD</th>
+                <th className="py-2 pr-3 text-right font-medium">On hand</th>
+                <th className="border-border-primary border-r py-2 pr-3 text-right font-medium">
+                  WMS actual
                 </th>
-                <th className="py-2 pr-3 text-right">Received</th>
-                <th className="py-2 pr-3 text-right">Sold</th>
-                <th className="py-2 pr-3 text-right">On hand (calc)</th>
-                <th className="py-2 text-right">Declared / Δ</th>
+                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                  Received
+                </th>
+                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                  Sold
+                </th>
+                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                  On hand
+                </th>
+                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                  Declared
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -299,59 +312,52 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                   className="border-border-primary hover:bg-fill-muted/20 cursor-pointer border-b"
                   onClick={() => setOpenSkuId(row.skuId)}
                 >
-                  <td className="py-2 pr-3 font-mono text-xs">{row.wCode}</td>
-                  <td className="py-2 pr-3">
-                    {row.productName}
-                    {row.vintage ? ` ${row.vintage}` : ''}
-                    {/* A word on nearly every row stops being a signal — the
-                        count lives in the notice, so this is just a marker. */}
-                    {row.hasNegative ? (
-                      <span
-                        title="Calculates to a negative position — more went out than was recorded in"
-                        className="bg-fill-danger ml-1.5 inline-block size-1.5 rounded-full align-middle"
-                      />
-                    ) : null}
+                  <td
+                    className="text-text-muted whitespace-nowrap py-2 pl-3 pr-3 font-mono text-xs"
+                    title={row.wCode}
+                  >
+                    {row.wCode.length > 14
+                      ? `${row.wCode.slice(0, 13)}…`
+                      : row.wCode}
                   </td>
-                  <td className="text-text-muted py-2 pr-3 font-mono text-xs">
+                  <td className="max-w-72 py-2 pr-3">
+                    <span className="flex items-center gap-1.5">
+                      {/* One line per row: wrapping doubles the height of every
+                          row to accommodate a handful of long names. */}
+                      <span className="truncate" title={row.productName}>
+                        {row.productName}
+                        {row.vintage ? ` ${row.vintage}` : ''}
+                      </span>
+                      {row.hasNegative ? (
+                        <span
+                          title="Calculates to a negative position — more went out than was recorded in"
+                          className="bg-fill-danger size-1.5 shrink-0 rounded-full"
+                        />
+                      ) : null}
+                    </span>
+                  </td>
+                  <td className="text-text-muted whitespace-nowrap py-2 pr-3 font-mono text-xs">
                     {row.cdCodes ?? '—'}
                   </td>
-                  <td className="border-border-primary border-l py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.ccReceived)}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.ccSoldToCd)}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.ccOnHandCalc)}
-                  </td>
-                  <td className="border-border-primary border-r py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(actualOf(row).value)}
-                    {actualOf(row).variance !== null &&
-                    actualOf(row).variance !== 0 ? (
-                      <span className={`ml-1 ${varianceTone(actualOf(row).variance)}`}>
-                        ({(actualOf(row).variance ?? 0) > 0 ? '+' : ''}
-                        {formatBottles(actualOf(row).variance)})
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.cdReceived)}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.cdSold)}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {formatBottles(row.cdOnHandCalc)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {formatBottles(row.cdDeclared)}
-                    {row.cdVariance !== null && row.cdVariance !== 0 ? (
-                      <span className={`ml-1 ${varianceTone(row.cdVariance)}`}>
-                        ({row.cdVariance > 0 ? '+' : ''}
-                        {formatBottles(row.cdVariance)})
-                      </span>
-                    ) : null}
-                  </td>
+                  <ValueCell
+                    value={row.ccReceived}
+                    className="border-border-primary border-l"
+                  />
+                  <ValueCell value={row.ccSoldToCd} />
+                  <ValueCell value={row.ccOnHandCalc} />
+                  <ValueCell
+                    value={actualOf(row).value}
+                    variance={actualOf(row).variance}
+                    className="border-border-primary border-r"
+                  />
+                  <ValueCell value={row.cdReceived} className="bg-fill-muted/20" />
+                  <ValueCell value={row.cdSold} className="bg-fill-muted/20" />
+                  <ValueCell value={row.cdOnHandCalc} className="bg-fill-muted/20" />
+                  <ValueCell
+                    value={row.cdDeclared}
+                    variance={row.cdVariance}
+                    className="bg-fill-muted/20"
+                  />
                 </tr>
               ))}
             </tbody>
