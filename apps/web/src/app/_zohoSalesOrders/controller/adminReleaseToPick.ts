@@ -7,7 +7,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, ilike } from 'drizzle-orm';
+import { and, eq, gt, ilike, like } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -22,6 +22,27 @@ import {
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+/**
+ * A pack-agnostic LIKE pattern for a dashed LWIN18 — same wine, same vintage,
+ * same bottle size, ANY pack (`1109704-2008-%-00750`). Returns null when the
+ * code isn't in `LWIN7-VVVV-PP-SSSSS` shape.
+ *
+ * A 3-pack invoiced off a 6-pack on the shelf (`…-03-…` vs `…-06-…`) is the
+ * same wine in the same bay — just a case that gets broken at pick time — so
+ * the bay lookup must ignore the pack segment. The bottle size is deliberately
+ * kept: a magnum is a different physical thing, not a repack.
+ *
+ * @example
+ *   lwinPackAgnosticPattern('1109704-2008-03-00750'); // '1109704-2008-%-00750'
+ */
+const lwinPackAgnosticPattern = (lwin18: string | null | undefined) => {
+  if (!lwin18) return null;
+  const parts = lwin18.split('-');
+  if (parts.length !== 4) return null;
+  const [wine, vintage, , size] = parts;
+  return wine && vintage && size ? `${wine}-${vintage}-%-${size}` : null;
+};
 
 const adminReleaseToPick = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
@@ -112,41 +133,55 @@ const adminReleaseToPick = wmsOperatorProcedure
         caseConfig: number | null;
       }[] = [];
 
-      // Strategy 1: Match by LWIN18 (if populated)
-      if (itemLwin18) {
+      const stockSelect = {
+        stockId: wmsStock.id,
+        locationId: wmsStock.locationId,
+        locationCode: wmsLocations.locationCode,
+        availableCases: wmsStock.availableCases,
+        lwin18: wmsStock.lwin18,
+        productName: wmsStock.productName,
+        caseConfig: wmsStock.caseConfig,
+      };
+
+      // Strategy 1: Match by LWIN18, PACK-AGNOSTIC — the ordered pack and the
+      // pack the wine is physically cased in are allowed to differ (invoice a
+      // 3-pack, hold a 6-pack: same wine, same bay, broken at pick time). An
+      // exact-pack match is ranked first below, so this only widens the net.
+      const packPattern =
+        lwinPackAgnosticPattern(itemLwin18) ??
+        lwinPackAgnosticPattern(item.sku ? normalizeLwin18(item.sku) : null);
+
+      if (packPattern) {
         availableStock = await db
-          .select({
-            stockId: wmsStock.id,
-            locationId: wmsStock.locationId,
-            locationCode: wmsLocations.locationCode,
-            availableCases: wmsStock.availableCases,
-            lwin18: wmsStock.lwin18,
-            productName: wmsStock.productName,
-            caseConfig: wmsStock.caseConfig,
-          })
+          .select(stockSelect)
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(and(eq(wmsStock.lwin18, itemLwin18), gt(wmsStock.availableCases, 0)))
+          .where(
+            and(
+              like(wmsStock.lwin18, packPattern),
+              gt(wmsStock.availableCases, 0),
+            ),
+          )
           .orderBy(wmsStock.availableCases);
       }
 
-      // Strategy 2: Match by SKU (normalize to dashed format for comparison)
-      if (availableStock.length === 0 && item.sku) {
-        const normalizedSku = normalizeLwin18(item.sku);
-        availableStock = await db
-          .select({
-            stockId: wmsStock.id,
-            locationId: wmsStock.locationId,
-            locationCode: wmsLocations.locationCode,
-            availableCases: wmsStock.availableCases,
-            lwin18: wmsStock.lwin18,
-            productName: wmsStock.productName,
-            caseConfig: wmsStock.caseConfig,
-          })
-          .from(wmsStock)
-          .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(and(eq(wmsStock.lwin18, normalizedSku), gt(wmsStock.availableCases, 0)))
-          .orderBy(wmsStock.availableCases);
+      // Strategy 2: Exact LWIN18 for codes that aren't in LWIN7-VVVV-PP-SSSSS
+      // shape (supplier codes, mis-dashed values) — no pattern to widen on.
+      if (availableStock.length === 0 && !packPattern) {
+        const exactCodes = [
+          itemLwin18,
+          item.sku ? normalizeLwin18(item.sku) : null,
+        ].filter((code): code is string => !!code);
+
+        for (const code of exactCodes) {
+          availableStock = await db
+            .select(stockSelect)
+            .from(wmsStock)
+            .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(and(eq(wmsStock.lwin18, code), gt(wmsStock.availableCases, 0)))
+            .orderBy(wmsStock.availableCases);
+          if (availableStock.length > 0) break;
+        }
       }
 
       // Strategy 3: Match by product name (case-insensitive, ALL terms must match)
@@ -154,8 +189,14 @@ const adminReleaseToPick = wmsOperatorProcedure
         // Extract key words from product name for matching. Exclude vintage
         // years (e.g. "2022") — WMS stock product names don't carry the
         // vintage (it lives in a separate column), so requiring the year to
-        // appear in the name would make every match fail.
+        // appear in the name would make every match fail. Pack suffixes Zoho
+        // carries in the name ("(3 pack)", "(6x)", "(single bottle)") aren't in
+        // the stock name either, so they're stripped rather than required.
         const searchTerms = item.name
+          .replace(
+            /\(\s*(?:single bottle|\d+\s*(?:x|pack|packs|bottles?|btl))\s*\)/gi,
+            ' ',
+          )
           .split(/[\s,\-]+/)
           .filter((word) => word.length > 2 && !/^(19|20)\d{2}$/.test(word))
           .slice(0, 8); // Use up to 8 significant words for better disambiguation
@@ -192,27 +233,49 @@ const adminReleaseToPick = wmsOperatorProcedure
       const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
       const orderedPack =
         packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
-      const stockPack =
-        availableStock[0]?.caseConfig && availableStock[0].caseConfig > 0
-          ? availableStock[0].caseConfig
-          : orderedPack;
       // True bottle count the customer ordered.
       const orderedBottles = isBottleUnit
         ? item.quantity
         : orderedPack * item.quantity;
-      // Whole-case pick ONLY when full cases of the same pack the stock is held
-      // in were ordered. Otherwise pick by the bottle — the pick engine cracks
-      // the larger case at pick time (e.g. 1x75cl ordered from a 6-pack).
+
+      // Cases to pull from a bay holding this pack. A whole-case pick ONLY when
+      // full cases of the pack the stock is held in were ordered; otherwise the
+      // pick engine cracks the case at pick time (e.g. a 3x75cl off a 6-pack).
+      const casesNeededFor = (pack: number) =>
+        !isBottleUnit && pack === orderedPack
+          ? item.quantity
+          : Math.max(1, Math.ceil(orderedBottles / pack));
+
+      // Rank the candidate bays: the exact ordered pack first (no repack), then
+      // the smallest larger pack that can be broken down, then smaller packs to
+      // combine. Ties keep the DB order (least available first) so a part-empty
+      // bay is drained before a full one.
+      const packOf = (caseConfig: number | null) =>
+        caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
+      const rankOf = (caseConfig: number | null) => {
+        const pack = packOf(caseConfig);
+        if (pack === orderedPack) return 0;
+        return pack > orderedPack ? 1 : 2;
+      };
+      availableStock = [...availableStock].sort((a, b) => {
+        const rankDiff = rankOf(a.caseConfig) - rankOf(b.caseConfig);
+        if (rankDiff !== 0) return rankDiff;
+        return (
+          Math.abs(packOf(a.caseConfig) - orderedPack) -
+          Math.abs(packOf(b.caseConfig) - orderedPack)
+        );
+      });
+
+      // Find first location with enough stock (in cases of ITS pack)
+      const suggestedStock =
+        availableStock.find(
+          (s) => s.availableCases >= casesNeededFor(packOf(s.caseConfig)),
+        ) ?? availableStock[0]; // Fall back to any available stock if none has enough
+
+      const stockPack = packOf(suggestedStock?.caseConfig ?? null);
       const wholeCase = !isBottleUnit && orderedPack === stockPack;
       const quantityBottles = wholeCase ? null : orderedBottles;
-      const casesNeeded = wholeCase
-        ? item.quantity
-        : Math.max(1, Math.ceil(orderedBottles / stockPack));
-
-      // Find first location with enough stock (in cases)
-      const suggestedStock = availableStock.find(
-        (s) => s.availableCases >= casesNeeded,
-      ) ?? availableStock[0]; // Fall back to any available stock if none has enough
+      const casesNeeded = casesNeededFor(stockPack);
 
       if (!suggestedStock) {
         unresolvedItems.push(item.name);
