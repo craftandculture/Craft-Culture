@@ -112,6 +112,62 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     onError: (error) => toast.error(error.message),
   });
 
+  const syncReceipts = useMutation({
+    ...api.triangulation.admin.syncReceiptsFromWms.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `Synced ${result.receipts} WMS receipts — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const syncZoho = useMutation({
+    ...api.triangulation.admin.syncSalesFromZoho.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `Synced ${result.orderLines} Zoho lines — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
+          (result.unknownPack > 0
+            ? `; ${result.unknownPack} with no stated pack size, using the SKU's`
+            : ''),
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const syncCycleCount = useMutation({
+    ...api.triangulation.admin.syncCycleCountFromWms.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `Synced the cycle count of ${result.asOfDate} — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles counted`,
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const isSyncing =
+    syncCount.isPending ||
+    syncReceipts.isPending ||
+    syncZoho.isPending ||
+    syncCycleCount.isPending;
+
+  /**
+   * Pull every in-house input in one go; City Drinks' two still arrive as files.
+   *
+   * Each feed reports its own outcome and one failing must not stop the rest —
+   * a missing Zoho customer should not cost you the WMS refresh.
+   */
+  const refreshLive = async () => {
+    await syncReceipts.mutateAsync({ ownerName: 'Crurated' }).catch(() => null);
+    await syncZoho.mutateAsync({ customerMatch: 'City Drinks' }).catch(() => null);
+    await syncCount
+      .mutateAsync({ ownerName: 'Crurated', periodId })
+      .catch(() => null);
+  };
+
   const deleteImport = useMutation({
     ...api.triangulation.admin.deleteImport.mutationOptions(),
     onSuccess: async () => {
@@ -145,6 +201,28 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
 
   return (
     <div className="space-y-6">
+      <div className="border-border-primary bg-fill-muted/20 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+        <div>
+          <Typography variant="labelSm">In-house inputs</Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1 max-w-2xl">
+              WMS receipts, Zoho sales and the WMS stock position are read
+              straight from our own systems — no spreadsheets. Each line keeps
+              its own date, so a closed period stays put; refreshing only brings
+              in what has happened since.
+            </p>
+          </Typography>
+        </div>
+        <Button
+          colorRole="brand"
+          isDisabled={isLocked || isSyncing}
+          onClick={() => void refreshLive()}
+        >
+          <IconRefresh className="mr-1 size-4" />
+          {isSyncing ? 'Refreshing…' : 'Refresh live data'}
+        </Button>
+      </div>
+
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {KIND_ORDER.map((kind) => {
           const meta = importKindLabels[kind];
@@ -189,20 +267,59 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                   <IconPlus className="mr-1 size-4" />
                   Upload
                 </Button>
-                {/* The WMS already holds this figure, so it needs no spreadsheet */}
-                {kind === 'cc_count' ? (
+                {/* These three are in-house, so they need no spreadsheet */}
+                {kind === 'cc_opening' ? (
                   <Button
                     size="sm"
                     colorRole="brand"
                     className="grow justify-center"
-                    isDisabled={isLocked || syncCount.isPending}
-                    onClick={() =>
-                      syncCount.mutate({ ownerName: 'Crurated', periodId })
-                    }
+                    isDisabled={isLocked || isSyncing}
+                    onClick={() => syncReceipts.mutate({ ownerName: 'Crurated' })}
                   >
                     <IconRefresh className="mr-1 size-4" />
-                    {syncCount.isPending ? 'Syncing…' : 'Sync from WMS'}
+                    {syncReceipts.isPending ? 'Syncing…' : 'Sync receipts'}
                   </Button>
+                ) : null}
+                {kind === 'cc_sales_to_cd' ? (
+                  <Button
+                    size="sm"
+                    colorRole="brand"
+                    className="grow justify-center"
+                    isDisabled={isLocked || isSyncing}
+                    onClick={() => syncZoho.mutate({ customerMatch: 'City Drinks' })}
+                  >
+                    <IconRefresh className="mr-1 size-4" />
+                    {syncZoho.isPending ? 'Syncing…' : 'Sync Zoho'}
+                  </Button>
+                ) : null}
+                {kind === 'cc_count' ? (
+                  <>
+                    <Button
+                      size="sm"
+                      colorRole="brand"
+                      className="grow justify-center"
+                      isDisabled={isLocked || isSyncing}
+                      onClick={() =>
+                        syncCount.mutate({ ownerName: 'Crurated', periodId })
+                      }
+                    >
+                      <IconRefresh className="mr-1 size-4" />
+                      {syncCount.isPending ? 'Syncing…' : 'System'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      colorRole="muted"
+                      variant="outline"
+                      className="grow justify-center"
+                      isDisabled={isLocked || isSyncing}
+                      onClick={() =>
+                        syncCycleCount.mutate({ ownerName: 'Crurated', periodId })
+                      }
+                    >
+                      <IconRefresh className="mr-1 size-4" />
+                      {syncCycleCount.isPending ? 'Syncing…' : 'Count'}
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </div>

@@ -131,6 +131,13 @@ export const seedSkusFromWmsSchema = z.object({
   ownerName: z.string().min(1).max(200).default('Crurated'),
 });
 
+export const syncSalesFromZohoSchema = z.object({
+  /** Matched against the Zoho customer name, substring and case-insensitive */
+  customerMatch: z.string().min(2).max(200).default('City Drinks'),
+  periodId: z.string().uuid().nullable().optional(),
+  asOfDate: isoDateSchema.optional(),
+});
+
 export const syncCountFromWmsSchema = z.object({
   ownerName: z.string().min(1).max(200).default('Crurated'),
   periodId: z.string().uuid().nullable().optional(),

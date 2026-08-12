@@ -19,12 +19,12 @@ interface WmsCountRow {
 }
 
 /**
- * Take the C&C on-hand snapshot straight from the WMS instead of a spreadsheet
+ * Take C&C's system position straight from the WMS
  *
- * `wms_stock` is the system of record for what C&C physically holds, so
- * exporting it to Excel only to upload it again adds a step and a chance to
- * pick the wrong column. This reads it directly and files it as a `cc_count`
- * import, the same shape a manual upload would produce.
+ * This is what the WMS *believes* it holds, not a physical count — it cannot
+ * catch the WMS itself being wrong, which is what the cycle count is for. It
+ * is filed as a `cc_count` import tagged `wms-stock` so the reconciliation can
+ * hold it apart from a genuine count and report both gaps separately.
  *
  * It is more precise than an export, too: bottles are computed as sealed cases
  * times pack size plus loose bottles from split cases, so a cracked case is
@@ -103,14 +103,14 @@ const adminSyncCountFromWms = adminProcedure
       FROM tri_imports
       WHERE kind = 'cc_count'
         AND as_of_date = ${asOfDate}
-        AND (source_ref IS DISTINCT FROM 'wms-sync')
+        AND (source_ref IS DISTINCT FROM 'wms-stock')
     `;
 
     await client`
       DELETE FROM tri_imports
       WHERE kind = 'cc_count'
         AND as_of_date = ${asOfDate}
-        AND source_ref = 'wms-sync'
+        AND source_ref = 'wms-stock'
     `;
 
     const [created] = await client<{ id: string }[]>`
@@ -120,7 +120,7 @@ const adminSyncCountFromWms = adminProcedure
       )
       VALUES (
         ${periodId ?? null}, 'cc_count', 'committed',
-        ${`WMS stock — ${ownerName}`}, 'wms-sync', 'crurated',
+        ${`WMS stock — ${ownerName}`}, 'wms-stock', 'crurated',
         ${asOfDate}, ${'Synced live from wms_stock. Bottles = sealed cases x pack size + loose bottles.'},
         ${ctx.user.id}, NOW()
       )

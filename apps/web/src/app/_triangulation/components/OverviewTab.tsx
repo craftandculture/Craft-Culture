@@ -178,8 +178,8 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
               <p className="text-right">
                 {meta.periodLabel}
                 <br />
-                C&C count: {meta.ccCountDate ?? 'none'} · CD count:{' '}
-                {meta.cdCountDate ?? 'none'}
+                C&C system: {meta.ccSystemDate ?? 'none'} · C&C count:{' '}
+                {meta.ccCountDate ?? 'none'} · CD count: {meta.cdCountDate ?? 'none'}
               </p>
             </Typography>
           ) : null}
@@ -224,7 +224,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 <th className="py-2 pr-3" colSpan={3} />
                 <th
                   className="border-border-primary border-x py-2 text-center"
-                  colSpan={4}
+                  colSpan={5}
                 >
                   Craft &amp; Culture
                 </th>
@@ -241,6 +241,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 </th>
                 <th className="py-2 pr-3 text-right">Sold to CD</th>
                 <th className="py-2 pr-3 text-right">On hand (calc)</th>
+                <th className="py-2 pr-3 text-right">System / Δ</th>
                 <th className="border-border-primary border-r py-2 pr-3 text-right">
                   Counted / Δ
                 </th>
@@ -279,12 +280,27 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                   <td className="py-2 pr-3 text-right tabular-nums">
                     {formatBottles(row.ccOnHandCalc)}
                   </td>
+                  <td className="py-2 pr-3 text-right tabular-nums">
+                    {formatBottles(row.ccSystem)}
+                    {row.ccSystemVariance !== null && row.ccSystemVariance !== 0 ? (
+                      <span className={`ml-1 ${varianceTone(row.ccSystemVariance)}`}>
+                        ({row.ccSystemVariance > 0 ? '+' : ''}
+                        {formatBottles(row.ccSystemVariance)})
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="border-border-primary border-r py-2 pr-3 text-right tabular-nums">
                     {formatBottles(row.ccCounted)}
                     {row.ccVariance !== null && row.ccVariance !== 0 ? (
                       <span className={`ml-1 ${varianceTone(row.ccVariance)}`}>
                         ({row.ccVariance > 0 ? '+' : ''}
                         {formatBottles(row.ccVariance)})
+                      </span>
+                    ) : null}
+                    {row.ccCountVsSystem !== null && row.ccCountVsSystem !== 0 ? (
+                      <span className="text-text-danger block text-xs">
+                        {row.ccCountVsSystem > 0 ? '+' : ''}
+                        {formatBottles(row.ccCountVsSystem)} vs system
                       </span>
                     ) : null}
                   </td>

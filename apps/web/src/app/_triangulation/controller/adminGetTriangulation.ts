@@ -19,8 +19,15 @@ export interface TriangulationRow {
   ccOnHandCalc: number;
   /** The same calculation re-cut to the physical count date */
   ccOnHandCalcAtCount: number | null;
+  /** Bottles physically found — a cycle count or an uploaded count sheet */
   ccCounted: number | null;
   ccVariance: number | null;
+  /** Bottles the WMS believes it holds, live from wms_stock */
+  ccSystem: number | null;
+  /** System position less the calculated one, at the system snapshot date */
+  ccSystemVariance: number | null;
+  /** Counted less system: the warehouse disagreeing with its own records */
+  ccCountVsSystem: number | null;
   /** What City Drinks received is what we invoiced them */
   cdReceived: number;
   cdSold: number;
@@ -41,6 +48,9 @@ export interface TriangulationSummary {
   cdOnHandCalc: number;
   ccVarianceAbs: number;
   cdVarianceAbs: number;
+  ccSystem: number;
+  ccSystemVarianceAbs: number;
+  ccCountVsSystemAbs: number;
   negativeRows: number;
   skuCount: number;
 }
@@ -76,13 +86,29 @@ const adminGetTriangulation = adminProcedure
     // With no period selected, reconcile everything recorded to date.
     const cutoff = period?.periodEnd ?? '9999-12-31';
 
+    // Two different things arrive as a C&C snapshot and they must not be mixed.
+    // `wms-stock` is what the system believes it holds; a cycle count or an
+    // uploaded sheet is what someone physically found on the shelf. Comparing
+    // the calculation against each separately is what makes the difference
+    // between "picking and invoicing disagree" and "the warehouse and the
+    // system disagree" legible.
     const [countDates] = await client<
-      { ccCountDate: string | null; cdCountDate: string | null }[]
+      {
+        ccSystemDate: string | null;
+        ccCountDate: string | null;
+        cdCountDate: string | null;
+      }[]
     >`
       SELECT
         (
           SELECT MAX(as_of_date)::text FROM tri_imports
-          WHERE kind = 'cc_count' AND status = 'committed' AND as_of_date <= ${cutoff}
+          WHERE kind = 'cc_count' AND status = 'committed'
+            AND source_ref = 'wms-stock' AND as_of_date <= ${cutoff}
+        ) AS "ccSystemDate",
+        (
+          SELECT MAX(as_of_date)::text FROM tri_imports
+          WHERE kind = 'cc_count' AND status = 'committed'
+            AND source_ref IS DISTINCT FROM 'wms-stock' AND as_of_date <= ${cutoff}
         ) AS "ccCountDate",
         (
           SELECT MAX(as_of_date)::text FROM tri_imports
@@ -90,36 +116,54 @@ const adminGetTriangulation = adminProcedure
         ) AS "cdCountDate"
     `;
 
+    const ccSystemDate = countDates?.ccSystemDate ?? null;
     const ccCountDate = countDates?.ccCountDate ?? null;
     const cdCountDate = countDates?.cdCountDate ?? null;
 
     const term = search?.trim() ? `%${search.trim()}%` : null;
 
     const rows = await client<TriangulationRow[]>`
-      WITH flows AS (
+      WITH flow_lines AS (
+        -- A flow line counts from its own document date when the source gave
+        -- one. The live feeds file all of history as a single import, so
+        -- cutting by the import's date would put every movement in whichever
+        -- period the feed last refreshed. Uploads without a date column fall
+        -- back to the import date as before.
         SELECT
           l.sku_id,
-          SUM(CASE WHEN i.kind = 'cc_opening' THEN l.quantity_bottles ELSE 0 END)
-            AS cc_received,
-          SUM(CASE WHEN i.kind = 'cc_sales_to_cd' THEN l.quantity_bottles ELSE 0 END)
-            AS cc_sold_to_cd,
-          SUM(CASE WHEN i.kind = 'cd_sales' THEN l.quantity_bottles ELSE 0 END)
-            AS cd_sold,
-          SUM(CASE WHEN i.kind = 'cc_opening' AND i.as_of_date <= ${ccCountDate}
-              THEN l.quantity_bottles ELSE 0 END) AS cc_received_at_count,
-          SUM(CASE WHEN i.kind = 'cc_sales_to_cd' AND i.as_of_date <= ${ccCountDate}
-              THEN l.quantity_bottles ELSE 0 END) AS cc_sold_at_count,
-          SUM(CASE WHEN i.kind = 'cc_sales_to_cd' AND i.as_of_date <= ${cdCountDate}
-              THEN l.quantity_bottles ELSE 0 END) AS cd_received_at_count,
-          SUM(CASE WHEN i.kind = 'cd_sales' AND i.as_of_date <= ${cdCountDate}
-              THEN l.quantity_bottles ELSE 0 END) AS cd_sold_at_count
+          i.kind,
+          l.quantity_bottles,
+          COALESCE(l.doc_date, i.as_of_date) AS effective_date
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.status = 'committed'
           AND l.sku_id IS NOT NULL
           AND i.kind IN ('cc_opening', 'cc_sales_to_cd', 'cd_sales')
-          AND i.as_of_date <= ${cutoff}
-        GROUP BY l.sku_id
+      ),
+      flows AS (
+        SELECT
+          sku_id,
+          SUM(CASE WHEN kind = 'cc_opening' THEN quantity_bottles ELSE 0 END)
+            AS cc_received,
+          SUM(CASE WHEN kind = 'cc_sales_to_cd' THEN quantity_bottles ELSE 0 END)
+            AS cc_sold_to_cd,
+          SUM(CASE WHEN kind = 'cd_sales' THEN quantity_bottles ELSE 0 END)
+            AS cd_sold,
+          SUM(CASE WHEN kind = 'cc_opening' AND effective_date <= ${ccCountDate}
+              THEN quantity_bottles ELSE 0 END) AS cc_received_at_count,
+          SUM(CASE WHEN kind = 'cc_sales_to_cd' AND effective_date <= ${ccCountDate}
+              THEN quantity_bottles ELSE 0 END) AS cc_sold_at_count,
+          SUM(CASE WHEN kind = 'cc_opening' AND effective_date <= ${ccSystemDate}
+              THEN quantity_bottles ELSE 0 END) AS cc_received_at_system,
+          SUM(CASE WHEN kind = 'cc_sales_to_cd' AND effective_date <= ${ccSystemDate}
+              THEN quantity_bottles ELSE 0 END) AS cc_sold_at_system,
+          SUM(CASE WHEN kind = 'cc_sales_to_cd' AND effective_date <= ${cdCountDate}
+              THEN quantity_bottles ELSE 0 END) AS cd_received_at_count,
+          SUM(CASE WHEN kind = 'cd_sales' AND effective_date <= ${cdCountDate}
+              THEN quantity_bottles ELSE 0 END) AS cd_sold_at_count
+        FROM flow_lines
+        WHERE effective_date <= ${cutoff}
+        GROUP BY sku_id
       ),
       cc_counts AS (
         SELECT l.sku_id, SUM(l.quantity_bottles) AS qty
@@ -127,7 +171,19 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cc_count'
           AND i.status = 'committed'
+          AND i.source_ref IS DISTINCT FROM 'wms-stock'
           AND i.as_of_date = ${ccCountDate}
+          AND l.sku_id IS NOT NULL
+        GROUP BY l.sku_id
+      ),
+      cc_system AS (
+        SELECT l.sku_id, SUM(l.quantity_bottles) AS qty
+        FROM tri_import_lines l
+        JOIN tri_imports i ON i.id = l.import_id
+        WHERE i.kind = 'cc_count'
+          AND i.status = 'committed'
+          AND i.source_ref = 'wms-stock'
+          AND i.as_of_date = ${ccSystemDate}
           AND l.sku_id IS NOT NULL
         GROUP BY l.sku_id
       ),
@@ -165,6 +221,15 @@ const adminGetTriangulation = adminProcedure
           CASE WHEN cc.qty IS NULL THEN NULL ELSE
             (cc.qty - (COALESCE(f.cc_received_at_count, 0) - COALESCE(f.cc_sold_at_count, 0)))::float8
           END AS "ccVariance",
+          sys.qty::float8 AS "ccSystem",
+          CASE WHEN sys.qty IS NULL THEN NULL ELSE
+            (sys.qty - (COALESCE(f.cc_received_at_system, 0) - COALESCE(f.cc_sold_at_system, 0)))::float8
+          END AS "ccSystemVariance",
+          -- The warehouse against its own system: what was counted on the shelf
+          -- versus what the WMS says is there.
+          CASE WHEN cc.qty IS NULL OR sys.qty IS NULL THEN NULL ELSE
+            (cc.qty - sys.qty)::float8
+          END AS "ccCountVsSystem",
           COALESCE(f.cc_sold_to_cd, 0)::float8 AS "cdReceived",
           COALESCE(f.cd_sold, 0)::float8 AS "cdSold",
           (COALESCE(f.cc_sold_to_cd, 0) - COALESCE(f.cd_sold, 0))::float8
@@ -183,8 +248,12 @@ const adminGetTriangulation = adminProcedure
         FROM tri_skus s
         LEFT JOIN flows f ON f.sku_id = s.id
         LEFT JOIN cc_counts cc ON cc.sku_id = s.id
+        LEFT JOIN cc_system sys ON sys.sku_id = s.id
         LEFT JOIN cd_counts cd ON cd.sku_id = s.id
-        WHERE (f.sku_id IS NOT NULL OR cc.sku_id IS NOT NULL OR cd.sku_id IS NOT NULL)
+        WHERE (
+            f.sku_id IS NOT NULL OR cc.sku_id IS NOT NULL
+            OR sys.sku_id IS NOT NULL OR cd.sku_id IS NOT NULL
+          )
           ${
             term
               ? client`AND (
@@ -204,11 +273,18 @@ const adminGetTriangulation = adminProcedure
         variancesOnly
           ? client`WHERE COALESCE("ccVariance", 0) <> 0
               OR COALESCE("cdVariance", 0) <> 0
+              OR COALESCE("ccSystemVariance", 0) <> 0
+              OR COALESCE("ccCountVsSystem", 0) <> 0
               OR "hasNegative"`
           : client``
       }
       ORDER BY
-        GREATEST(ABS(COALESCE("ccVariance", 0)), ABS(COALESCE("cdVariance", 0))) DESC,
+        GREATEST(
+          ABS(COALESCE("ccVariance", 0)),
+          ABS(COALESCE("cdVariance", 0)),
+          ABS(COALESCE("ccCountVsSystem", 0)),
+          ABS(COALESCE("ccSystemVariance", 0))
+        ) DESC,
         "productName",
         "vintage"
     `;
@@ -222,6 +298,11 @@ const adminGetTriangulation = adminProcedure
         cdOnHandCalc: accumulator.cdOnHandCalc + row.cdOnHandCalc,
         ccVarianceAbs: accumulator.ccVarianceAbs + Math.abs(row.ccVariance ?? 0),
         cdVarianceAbs: accumulator.cdVarianceAbs + Math.abs(row.cdVariance ?? 0),
+        ccSystem: accumulator.ccSystem + (row.ccSystem ?? 0),
+        ccSystemVarianceAbs:
+          accumulator.ccSystemVarianceAbs + Math.abs(row.ccSystemVariance ?? 0),
+        ccCountVsSystemAbs:
+          accumulator.ccCountVsSystemAbs + Math.abs(row.ccCountVsSystem ?? 0),
         negativeRows: accumulator.negativeRows + (row.hasNegative ? 1 : 0),
         skuCount: accumulator.skuCount + 1,
       }),
@@ -233,6 +314,9 @@ const adminGetTriangulation = adminProcedure
         cdOnHandCalc: 0,
         ccVarianceAbs: 0,
         cdVarianceAbs: 0,
+        ccSystem: 0,
+        ccSystemVarianceAbs: 0,
+        ccCountVsSystemAbs: 0,
         negativeRows: 0,
         skuCount: 0,
       },
@@ -266,6 +350,7 @@ const adminGetTriangulation = adminProcedure
       meta: {
         periodLabel: period?.label ?? 'All time',
         cutoff: period?.periodEnd ?? null,
+        ccSystemDate,
         ccCountDate,
         cdCountDate,
         unmappedLines: dataQuality?.unmappedLines ?? 0,

@@ -7,9 +7,11 @@ import type { TriAliasSource } from '../schemas/triangulationSchemas';
 /**
  * Resolve every line of an import to a canonical W code SKU
  *
- * Matching runs in two passes: first the alias table for the party whose codes
- * the file uses (City Drinks' CD codes, Zoho item codes), then a direct match
- * on the W code itself for files that already speak our internal language.
+ * Three things are tried in order of authority: the alias table for the party
+ * whose codes the file uses (City Drinks' CD codes), the W code itself for
+ * files that already speak our internal language, and finally the LWIN — which
+ * is how the in-house feeds identify a wine, since Zoho SKUs and WMS cycle
+ * counts are keyed on LWIN rather than on a W code.
  *
  * Safe to re-run — it clears and recomputes the mapping, so resolving a new
  * alias and replaying this brings older draft imports up to date.
@@ -30,13 +32,20 @@ const mapImportLines = async (importId: string, source: TriAliasSource) => {
     UPDATE tri_import_lines l
     SET sku_id = m.sku_id, status = 'mapped', updated_at = NOW()
     FROM (
-      SELECT l2.id, COALESCE(a.sku_id, s.id) AS sku_id
+      SELECT l2.id, COALESCE(a.sku_id, s.id, w.id) AS sku_id
       FROM tri_import_lines l2
       LEFT JOIN tri_sku_aliases a
         ON a.source = ${source}
         AND a.normalized_code = l2.normalized_code
       LEFT JOIN tri_skus s
         ON UPPER(REGEXP_REPLACE(s.w_code, '[^A-Za-z0-9]', '', 'g')) = l2.normalized_code
+      LEFT JOIN LATERAL (
+        SELECT s2.id FROM tri_skus s2
+        WHERE s2.lwin18 IS NOT NULL
+          AND UPPER(REGEXP_REPLACE(s2.lwin18, '[^A-Za-z0-9]', '', 'g'))
+              = l2.normalized_code
+        LIMIT 1
+      ) w ON TRUE
       WHERE l2.import_id = ${importId}
         AND l2.status <> 'ignored'
         AND l2.normalized_code IS NOT NULL
