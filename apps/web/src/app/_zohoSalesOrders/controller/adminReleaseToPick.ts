@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
+import rankStockByPack from '@/app/_wms/utils/rankStockByPack';
 import db from '@/database/client';
 import {
   wmsLocations,
@@ -246,25 +247,11 @@ const adminReleaseToPick = wmsOperatorProcedure
           ? item.quantity
           : Math.max(1, Math.ceil(orderedBottles / pack));
 
-      // Rank the candidate bays: the exact ordered pack first (no repack), then
-      // the smallest larger pack that can be broken down, then smaller packs to
-      // combine. Ties keep the DB order (least available first) so a part-empty
-      // bay is drained before a full one.
+      // Rank the candidate bays by pack fit — shared with the pick-list screen's
+      // preview so the bay an operator was shown is the bay they're sent to.
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
-      const rankOf = (caseConfig: number | null) => {
-        const pack = packOf(caseConfig);
-        if (pack === orderedPack) return 0;
-        return pack > orderedPack ? 1 : 2;
-      };
-      availableStock = [...availableStock].sort((a, b) => {
-        const rankDiff = rankOf(a.caseConfig) - rankOf(b.caseConfig);
-        if (rankDiff !== 0) return rankDiff;
-        return (
-          Math.abs(packOf(a.caseConfig) - orderedPack) -
-          Math.abs(packOf(b.caseConfig) - orderedPack)
-        );
-      });
+      availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Find first location with enough stock (in cases of ITS pack)
       const suggestedStock =

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconCheck,
   IconChevronDown,
@@ -22,18 +23,28 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import PackBadge from '@/app/_wms/components/PackBadge';
-import parseSkuPack from '@/app/_wms/utils/parseSkuPack';
+import PickOrderLines from '@/app/_wms/components/PickOrderLines';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
+
+/** Readiness filters — how pickable an order is right now. */
+type ReadinessFilter = 'all' | 'ready' | 'repack' | 'unmatched';
+
+const READINESS_FILTERS: { key: ReadinessFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'repack', label: 'Needs repack' },
+  { key: 'unmatched', label: 'No stock' },
+];
 
 /**
  * Create new pick list from Zoho sales orders.
  *
  * Lists invoiced Zoho orders ready for picking. Cards lead with the invoice
- * number, customer, subject and value. Expanding a card shows each line's exact
- * physical pick — single bottle vs full case, the pack config and total bottles
- * — and flags any line that needs a case broken down (repack).
+ * number, customer, subject and value, and carry badges when lines need a
+ * repack or have no matching stock. Expanding a card (several can be open at
+ * once) shows each line's exact physical pick — the pack config, total bottles,
+ * the bay it will be picked from, and whether a case must be broken.
  */
 const NewPickListPage = () => {
   const router = useRouter();
@@ -43,7 +54,10 @@ const NewPickListPage = () => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
     new Set(),
   );
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [readinessFilter, setReadinessFilter] = useState<ReadinessFilter>('all');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -56,12 +70,6 @@ const NewPickListPage = () => {
         .sort((a, b) =>
           (b.salesOrderNumber ?? '').localeCompare(a.salesOrderNumber ?? ''),
         ),
-  });
-
-  // Lazy-load line items when a card is expanded
-  const { data: expandedOrder, isLoading: isLoadingItems } = useQuery({
-    ...api.zohoSalesOrders.get.queryOptions({ id: expandedOrderId ?? '' }),
-    enabled: !!expandedOrderId,
   });
 
   const releaseToPickMutation = useMutation({
@@ -90,7 +98,15 @@ const NewPickListPage = () => {
 
   const toggleExpand = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
-    setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
+    setExpandedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
   };
 
   const handleCreate = async () => {
@@ -125,60 +141,48 @@ const NewPickListPage = () => {
     }
   };
 
-  // Filter by SO number, invoice number, customer or subject/reference
+  // Filter by SO number, invoice number, customer or subject/reference, then by
+  // how pickable the order is (repack needed / stock missing).
   const filteredOrders = zohoOrders?.filter((order) => {
-    if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
+      !searchQuery ||
       order.salesOrderNumber?.toLowerCase().includes(q) ||
       order.invoiceNumber?.toLowerCase().includes(q) ||
       order.customerName?.toLowerCase().includes(q) ||
-      order.referenceNumber?.toLowerCase().includes(q)
-    );
+      order.referenceNumber?.toLowerCase().includes(q);
+    if (!matchesSearch) return false;
+
+    const repackLines = order.repackLines ?? 0;
+    const unmatchedLines = order.unmatchedLines ?? 0;
+    if (readinessFilter === 'repack') return repackLines > 0;
+    if (readinessFilter === 'unmatched') return unmatchedLines > 0;
+    if (readinessFilter === 'ready')
+      return repackLines === 0 && unmatchedLines === 0;
+    return true;
   });
 
-  const selectedCaseCount = useMemo(() => {
-    if (!filteredOrders) return 0;
-    return filteredOrders
-      .filter((o) => selectedOrderIds.has(o.id))
-      .reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0);
-  }, [filteredOrders, selectedOrderIds]);
-
-  // Aggregate totals across all listed orders for the summary bar
-  const summary = useMemo(() => {
+  // Totals for the summary bar and the release button. Once anything is ticked
+  // the numbers follow the SELECTION — a bar that keeps reporting the whole
+  // list is worse than no bar when you're releasing one order of four.
+  const totals = useMemo(() => {
     const orders = filteredOrders ?? [];
+    const selected = orders.filter((o) => selectedOrderIds.has(o.id));
+    const scope = selected.length > 0 ? selected : orders;
     return {
-      bottles: orders.reduce(
+      isSelection: selected.length > 0,
+      orders: scope.length,
+      listedOrders: orders.length,
+      lines: scope.reduce((sum, o) => sum + (o.itemCount ?? 0), 0),
+      cases: scope.reduce((sum, o) => sum + (o.totalQuantity ?? 0), 0),
+      bottles: scope.reduce(
         (sum, o) => sum + (o.bottleCount ?? o.totalQuantity ?? 0),
         0,
       ),
-      value: orders.reduce((sum, o) => sum + (o.total ?? 0), 0),
-      currency: orders[0]?.currencyCode ?? 'USD',
+      value: scope.reduce((sum, o) => sum + (o.total ?? 0), 0),
+      currency: scope[0]?.currencyCode ?? 'USD',
     };
-  }, [filteredOrders]);
-
-  // Repack summary for the currently expanded order (e.g. "2x 6-pack -> 3-pack")
-  const repackSummary = useMemo(() => {
-    const its = expandedOrder?.items ?? [];
-    const repacks = its.filter((i) => i.repack?.needsRepack);
-    if (repacks.length === 0) return null;
-    const groups = new Map<string, number>();
-    for (const i of repacks) {
-      const from = i.repack?.fromPack;
-      const to = i.repack?.orderedPack;
-      if (from != null && to != null) {
-        const key =
-          i.repack?.mode === 'combine'
-            ? `combine ${i.repack?.sourceCount ?? 2}× ${from}-pack → ${to}-pack`
-            : `break ${from}-pack → ${to}-pack`;
-        groups.set(key, (groups.get(key) ?? 0) + 1);
-      }
-    }
-    const breakdown = [...groups.entries()]
-      .map(([key, n]) => `${n}× ${key}`)
-      .join(', ');
-    return { count: repacks.length, total: its.length, breakdown };
-  }, [expandedOrder]);
+  }, [filteredOrders, selectedOrderIds]);
 
   const allSelected =
     filteredOrders &&
@@ -250,21 +254,33 @@ const NewPickListPage = () => {
           </div>
         )}
 
-        {/* Summary bar */}
+        {/* Summary bar — follows the selection once anything is ticked */}
         {!isLoading && filteredOrders && filteredOrders.length > 0 && (
-          <div className="flex items-stretch rounded-lg border border-border-muted bg-fill-secondary/40 py-2">
+          <div
+            className={`flex items-stretch rounded-lg border py-2 ${
+              totals.isSelection
+                ? 'border-emerald-200 bg-emerald-50/60'
+                : 'border-border-muted bg-fill-secondary/40'
+            }`}
+          >
             <div className="flex-1 text-center">
               <p className="text-[15px] font-bold leading-none tabular-nums">
-                {filteredOrders.length}
+                {totals.orders}
+                {totals.isSelection && (
+                  <span className="text-[11px] font-medium text-text-muted">
+                    {' '}
+                    of {totals.listedOrders}
+                  </span>
+                )}
               </p>
               <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
-                Orders
+                {totals.isSelection ? 'Selected' : 'Orders'}
               </p>
             </div>
             <div className="w-px bg-border-muted" />
             <div className="flex-1 text-center">
               <p className="text-[15px] font-bold leading-none tabular-nums">
-                {summary.bottles}
+                {totals.bottles}
               </p>
               <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
                 Bottles
@@ -273,12 +289,52 @@ const NewPickListPage = () => {
             <div className="w-px bg-border-muted" />
             <div className="flex-1 text-center">
               <p className="text-[15px] font-bold leading-none tabular-nums">
-                {formatPrice(summary.value, summary.currency)}
+                {formatPrice(totals.value, totals.currency)}
               </p>
               <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
                 Value
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Readiness filters */}
+        {!isLoading && zohoOrders && zohoOrders.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {READINESS_FILTERS.map(({ key, label }) => {
+              const count =
+                key === 'all'
+                  ? zohoOrders.length
+                  : zohoOrders.filter((o) => {
+                      const repackLines = o.repackLines ?? 0;
+                      const unmatchedLines = o.unmatchedLines ?? 0;
+                      if (key === 'repack') return repackLines > 0;
+                      if (key === 'unmatched') return unmatchedLines > 0;
+                      return repackLines === 0 && unmatchedLines === 0;
+                    }).length;
+              const isActive = readinessFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setReadinessFilter(key)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-text-primary text-white'
+                      : 'bg-fill-secondary text-text-muted hover:bg-fill-secondary/70'
+                  }`}
+                >
+                  {label}
+                  <span
+                    className={`tabular-nums ${
+                      isActive ? 'text-white/70' : 'text-text-muted/70'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -320,10 +376,12 @@ const NewPickListPage = () => {
               <div className="overflow-hidden rounded-xl border border-border-primary">
                 {filteredOrders?.map((order, index) => {
                   const isSelected = selectedOrderIds.has(order.id);
-                  const isExpanded = expandedOrderId === order.id;
+                  const isExpanded = expandedOrderIds.has(order.id);
                   const showBottleTotal =
                     order.bottleCount != null &&
                     order.bottleCount !== order.totalQuantity;
+                  const repackLines = order.repackLines ?? 0;
+                  const unmatchedLines = order.unmatchedLines ?? 0;
                   return (
                     <div
                       key={order.id}
@@ -363,19 +421,32 @@ const NewPickListPage = () => {
                           <p className="truncate text-[13px] font-medium leading-tight text-text-primary">
                             {order.customerName ?? 'Unknown'}
                           </p>
-                          {order.referenceNumber && (
-                            <div className="mt-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {order.referenceNumber && (
                               <span className="inline-flex max-w-full items-center gap-1 truncate rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
                                 <IconTag className="h-3 w-3 shrink-0" />
                                 <span className="truncate">
                                   {order.referenceNumber}
                                 </span>
                               </span>
-                            </div>
-                          )}
+                            )}
+                            {unmatchedLines > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">
+                                <IconAlertTriangle className="h-3 w-3 shrink-0" />
+                                {unmatchedLines} no stock
+                              </span>
+                            )}
+                            {repackLines > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
+                                <IconReplace className="h-3 w-3 shrink-0" />
+                                {repackLines} repack
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Quantity + value — prominent */}
+                        {/* Quantity + value — bottles carry equal weight to
+                            cases: a split or repack is counted in bottles. */}
                         <div className="shrink-0 text-right">
                           <span className="text-[17px] font-bold tabular-nums leading-tight">
                             {order.totalQuantity}
@@ -384,7 +455,7 @@ const NewPickListPage = () => {
                             {order.totalQuantity === 1 ? 'case' : 'cases'}
                           </p>
                           {showBottleTotal && (
-                            <p className="text-[10px] leading-tight text-text-muted/70">
+                            <p className="text-[13px] font-semibold tabular-nums leading-tight text-text-primary">
                               {order.bottleCount} btl
                             </p>
                           )}
@@ -410,113 +481,11 @@ const NewPickListPage = () => {
 
                       {/* Expanded items — exact physical pick per line */}
                       {isExpanded && (
-                        <div className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2">
-                          {isLoadingItems ? (
-                            <div className="flex items-center justify-center py-2">
-                              <IconLoader2 className="h-4 w-4 animate-spin text-text-muted" />
-                            </div>
-                          ) : expandedOrder?.items.length ? (
-                            <div className="space-y-1">
-                              {repackSummary && (
-                                <div className="mb-1.5 flex items-start gap-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] leading-snug text-amber-800 ring-1 ring-inset ring-amber-200">
-                                  <IconReplace className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                                  <span>
-                                    <b>
-                                      {repackSummary.count} of{' '}
-                                      {repackSummary.total} lines need repacking
-                                    </b>{' '}
-                                    &mdash; {repackSummary.breakdown}
-                                  </span>
-                                </div>
-                              )}
-                              {expandedOrder.items.map((item) => {
-                                // Pack config is driven by the SKU (the source of
-                                // truth): dashed LWIN7-VVVV-PP-SSSSS or compact
-                                // 18-digit LWIN7(7)VVVV(4)PP(2)SSSSS(5). The
-                                // description ("6x75cl") is the fallback for
-                                // non-LWIN SKUs — and for SKUs whose pack digits
-                                // are corrupt — so neither a stale description
-                                // nor a bad SKU can misstate the bottle count.
-                                const skuPack = parseSkuPack(
-                                  (item as { sku?: string | null }).sku,
-                                );
-                                const packMatch =
-                                  /^(\d+)\s*[x×]\s*(.*)$/i.exec(
-                                    (item.description ?? '').trim(),
-                                  );
-                                const perCase =
-                                  skuPack?.pack ??
-                                  (packMatch && Number(packMatch[1]) > 0
-                                    ? Number(packMatch[1])
-                                    : 1);
-                                const bottleSize =
-                                  skuPack?.bottleSize ||
-                                  packMatch?.[2]?.trim() ||
-                                  '75cl';
-                                const totalBottles = item.quantity * perCase;
-                                const cleanName = (item.name ?? '')
-                                  .replace(/\s*\(single bottle\)\s*/i, '')
-                                  .trim();
-                                // Zoho sometimes omits the vintage from the line
-                                // name; recover it from the SKU (lwin7-VINTAGE-…).
-                                const skuVintage =
-                                  /^\d{7}-((?:19|20)\d{2})-/.exec(
-                                    (item as { sku?: string | null }).sku ?? '',
-                                  )?.[1] ?? null;
-                                const hasYear = /\b(?:19|20)\d{2}\b/.test(cleanName);
-                                const displayName =
-                                  !hasYear && skuVintage
-                                    ? `${cleanName} ${skuVintage}`
-                                    : cleanName;
-                                const rp = item.repack;
-                                const needsRepack = rp?.needsRepack ?? false;
-                                return (
-                                  <div
-                                    key={item.id}
-                                    className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 text-[13px] ${
-                                      needsRepack
-                                        ? 'bg-amber-50 ring-1 ring-inset ring-amber-200'
-                                        : ''
-                                    }`}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-1.5">
-                                        <p className="truncate text-text-primary">
-                                          {displayName}
-                                        </p>
-                                        <PackBadge pack={perCase} bottleSize={bottleSize} />
-                                      </div>
-                                      {needsRepack && rp?.fromPack && (
-                                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-700">
-                                          <IconReplace className="h-3.5 w-3.5 shrink-0" />
-                                          {rp.mode === 'combine'
-                                            ? `combine ${rp.sourceCount}× ${rp.fromPack}-pack`
-                                            : `break a ${rp.fromPack}-pack`}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="shrink-0 text-right leading-tight">
-                                      <p className="font-bold tabular-nums text-text-primary">
-                                        {item.quantity}{' '}
-                                        {item.quantity === 1 ? 'case' : 'cases'}
-                                        <span className="font-medium text-text-muted">
-                                          {' '}
-                                          &middot; {perCase}×{bottleSize}
-                                        </span>
-                                      </p>
-                                      <p className="text-[10px] text-text-muted">
-                                        {totalBottles} btl
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="py-1 text-center text-[13px] text-text-muted">
-                              No items
-                            </p>
-                          )}
+                        <div
+                          className="border-t border-border-muted bg-fill-secondary/60 px-4 py-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <PickOrderLines orderId={order.id} />
                         </div>
                       )}
                     </div>
@@ -544,7 +513,7 @@ const NewPickListPage = () => {
             )}
             {isCreating
               ? 'Releasing...'
-              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} (${selectedCaseCount} lines)`}
+              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} · ${totals.lines} line${totals.lines === 1 ? '' : 's'} · ${totals.cases} case${totals.cases === 1 ? '' : 's'} · ${totals.bottles} btl`}
           </button>
           {createError && (
             <p className="mt-2 text-center text-[13px] text-red-600">

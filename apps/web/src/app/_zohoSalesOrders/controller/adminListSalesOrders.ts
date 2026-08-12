@@ -7,10 +7,14 @@
  * sync backfills the invoice_number column onto the order).
  */
 
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, gt, inArray } from 'drizzle-orm';
 
+import resolveRepackFromStock from '@/app/_wms/utils/resolveRepackFromStock';
+import type { RepackStockRow } from '@/app/_wms/utils/resolveRepackFromStock';
 import db from '@/database/client';
 import {
+  wmsLocations,
+  wmsStock,
   zohoInvoices,
   zohoSalesOrderItems,
   zohoSalesOrders,
@@ -44,6 +48,33 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
     invoices.map((invoice) => [invoice.referenceNumber, invoice]),
   );
 
+  // Stock for the readiness flags below. Loaded ONCE for the whole list and
+  // matched in memory — per-line queries would mean hundreds of round trips on
+  // a list this page polls.
+  const readyOrderIds = new Set(
+    orders
+      .filter(
+        (order) => order.status === 'synced' && order.zohoStatus === 'invoiced',
+      )
+      .map((order) => order.id),
+  );
+
+  const stockRows: RepackStockRow[] = readyOrderIds.size
+    ? await db
+        .select({
+          lwin18: wmsStock.lwin18,
+          productName: wmsStock.productName,
+          vintage: wmsStock.vintage,
+          caseConfig: wmsStock.caseConfig,
+          quantityCases: wmsStock.quantityCases,
+          availableCases: wmsStock.availableCases,
+          locationCode: wmsLocations.locationCode,
+        })
+        .from(wmsStock)
+        .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+        .where(gt(wmsStock.quantityCases, 0))
+    : [];
+
   // Fetch item counts for each order
   const ordersWithItems = await Promise.all(
     orders.map(async (order) => {
@@ -70,6 +101,23 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         bottleCount += item.quantity * perCase;
       }
 
+      // Readiness for the pick-list picker's filters: how many lines need a
+      // case broken/combined, and how many can't be matched to stock at all —
+      // the ones that would be released UNRESOLVED and stall on the floor.
+      let repackLines = 0;
+      let unmatchedLines = 0;
+      if (readyOrderIds.has(order.id)) {
+        for (const item of items) {
+          const repack = resolveRepackFromStock(stockRows, {
+            name: item.name,
+            sku: item.sku,
+            description: item.description,
+          });
+          if (!repack.hasStock) unmatchedLines++;
+          else if (repack.needsRepack) repackLines++;
+        }
+      }
+
       return {
         ...order,
         invoiceNumber: order.invoiceNumber ?? linkedInvoice?.invoiceNumber ?? null,
@@ -77,6 +125,8 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         itemCount: items.length,
         totalQuantity: cases,
         bottleCount,
+        repackLines,
+        unmatchedLines,
       };
     }),
   );
