@@ -27,6 +27,13 @@ const PACK_SUFFIX =
   /\(\s*(?:single bottle|\d+\s*(?:x|pack|packs|bottles?|btl))\s*\)/gi;
 
 /**
+ * Drop diacritics so the same wine spelled either way is one wine:
+ * `François Thienpont` in Zoho vs `Francois Thienpont` in stock.
+ */
+const deburr = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/**
  * Strip the pack/vintage noise off a line or stock name so the two can be
  * compared on the wine itself.
  *
@@ -76,24 +83,30 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
   const lwin7 = parts[0] ?? '';
   const vintageStr =
     parts[1] ?? (line.name.match(/\b(19|20)\d{2}\b/)?.[0] ?? '');
-  const vintage = Number(vintageStr) || null;
+
+  // LWIN's non-vintage codes. A mixed-vintage case (e.g. a 6-bottle
+  // anniversary case spanning 2012-2017) is NV, and its stock row carries no
+  // vintage — so an NV line has to match NV stock, not be dropped for having
+  // no year to compare. '1000' must be caught HERE: Number('1000') is truthy,
+  // so it would otherwise be compared as if the wine were vintage 1000.
+  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
+  const vintage = isNonVintage ? null : Number(vintageStr) || null;
+  const rowIsNonVintage = (row: RepackStockRow) =>
+    row.vintage == null || row.vintage === 0;
 
   const terms = baseName(line.name)
     .split(/[\s,\-]+/)
     .filter((term) => term.length > 2)
     .slice(0, 8)
-    .map((term) => term.toLowerCase());
+    .map((term) => deburr(term).toLowerCase());
 
+  // Any wine code, not just a 7-digit LWIN — stock received under a supplier
+  // code (e.g. `W12008024-2021-06-00750`) is still the same wine in the same
+  // bay, and the pack/size segments are what we're deliberately ignoring.
   const lwinPrefix =
-    /^\d{7}$/.test(lwin7) && vintageStr ? `${lwin7}-${vintageStr}-` : null;
-
-  // LWIN's non-vintage codes. A mixed-vintage case (e.g. a 6-bottle
-  // anniversary case spanning 2012-2017) is NV, and its stock row carries no
-  // vintage — so an NV line has to match NV stock, not be dropped for having
-  // no year to compare.
-  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
-  const rowIsNonVintage = (row: RepackStockRow) =>
-    row.vintage == null || row.vintage === 0;
+    lwin7.length >= 3 && vintageStr && parts.length === 4
+      ? `${lwin7}-${vintageStr}-`
+      : null;
 
   // Gate on physical stock (quantityCases), NOT availableCases: a reserved
   // 6-pack is still a 6-pack that must be broken to fill a single.
@@ -110,7 +123,7 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
     } else {
       return false;
     }
-    const haystack = row.productName.toLowerCase();
+    const haystack = deburr(row.productName).toLowerCase();
     return terms.every((term) => haystack.includes(term));
   });
 

@@ -204,9 +204,14 @@ const adminReleaseToPick = wmsOperatorProcedure
           .slice(0, 8); // Use up to 8 significant words for better disambiguation
 
         if (searchTerms.length > 0) {
-          // Build AND conditions — all terms must appear in product name
+          // Build AND conditions — all terms must appear in product name. A
+          // non-ASCII char becomes a wildcard so `François` on the order still
+          // matches `Francois` in stock.
           const conditions = searchTerms.map((term) =>
-            ilike(wmsStock.productName, `%${term}%`),
+            ilike(
+              wmsStock.productName,
+              `%${term.replace(/[^\x20-\x7E]/g, '%')}%`,
+            ),
           );
 
           availableStock = await db

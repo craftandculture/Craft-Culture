@@ -50,7 +50,11 @@ const resolveLineRepack = async ({
   const parts = normalized.split('-');
   const lwin7 = parts[0] ?? '';
   const vintageStr = parts[1] ?? (name.match(/\b(19|20)\d{2}\b/)?.[0] ?? '');
-  const vintage = Number(vintageStr) || null;
+  // A mixed-vintage case is NV in LWIN ('0000'/'1000') and its stock row holds
+  // no vintage. '1000' must be caught before the Number() — it is truthy, so it
+  // would otherwise be compared as if the wine were vintage 1000.
+  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
+  const vintage = isNonVintage ? null : Number(vintageStr) || null;
 
   // Underscores first — `Latour_1993` is one word to the vintage strip and the
   // term split, so the term would be "latour_1993" and match no stock.
@@ -63,7 +67,9 @@ const resolveLineRepack = async ({
     .trim();
 
   const conditions = [];
-  if (/^\d{7}$/.test(lwin7) && vintageStr) {
+  // Any wine code, not just a 7-digit LWIN — stock received under a supplier
+  // code (e.g. `W12008024-2021-06-00750`) is the same wine in the same bay.
+  if (lwin7.length >= 3 && vintageStr && parts.length === 4) {
     conditions.push(like(wmsStock.lwin18, `${lwin7}-${vintageStr}-%`));
   }
   // Match on individual name terms (not one contiguous substring) so word-order
@@ -74,13 +80,12 @@ const resolveLineRepack = async ({
     .split(/[\s,\-]+/)
     .filter((term) => term.length > 2)
     .slice(0, 8);
-  // A mixed-vintage case is NV in LWIN ('0000'/'1000') and its stock row holds
-  // no vintage, so an NV line matches NV stock by name.
-  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
   if (nameTerms.length > 0 && (vintage || isNonVintage)) {
     conditions.push(
       and(
-        ...nameTerms.map((term) => ilike(wmsStock.productName, `%${term}%`)),
+        ...nameTerms.map((term) =>
+          ilike(wmsStock.productName, `%${term.replace(/[^\x20-\x7E]/g, '%')}%`),
+        ),
         vintage
           ? eq(wmsStock.vintage, vintage)
           : or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0)),
