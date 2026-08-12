@@ -1,4 +1,4 @@
-import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
+import { and, eq, gt, ilike, isNull, like, or } from 'drizzle-orm';
 
 import { wmsLocations, wmsStock } from '@/database/schema';
 
@@ -61,11 +61,16 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
     .split(/[\s,\-]+/)
     .filter((term) => term.length > 2)
     .slice(0, 8);
-  if (nameTerms.length > 0 && vintage) {
+  // A mixed-vintage case is NV in LWIN ('0000'/'1000') and its stock row holds
+  // no vintage, so an NV line matches NV stock by name.
+  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
+  if (nameTerms.length > 0 && (vintage || isNonVintage)) {
     conditions.push(
       and(
         ...nameTerms.map((term) => ilike(wmsStock.productName, `%${term}%`)),
-        eq(wmsStock.vintage, vintage),
+        vintage
+          ? eq(wmsStock.vintage, vintage)
+          : or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0)),
       ),
     );
   }

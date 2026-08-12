@@ -83,13 +83,29 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
   const lwinPrefix =
     /^\d{7}$/.test(lwin7) && vintageStr ? `${lwin7}-${vintageStr}-` : null;
 
+  // LWIN's non-vintage codes. A mixed-vintage case (e.g. a 6-bottle
+  // anniversary case spanning 2012-2017) is NV, and its stock row carries no
+  // vintage — so an NV line has to match NV stock, not be dropped for having
+  // no year to compare.
+  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
+  const rowIsNonVintage = (row: RepackStockRow) =>
+    row.vintage == null || row.vintage === 0;
+
   // Gate on physical stock (quantityCases), NOT availableCases: a reserved
   // 6-pack is still a 6-pack that must be broken to fill a single.
   const candidates = stock.filter((row) => {
     if (row.quantityCases <= 0) return false;
     if (lwinPrefix && row.lwin18.startsWith(lwinPrefix)) return true;
-    if (!vintage || terms.length === 0) return false;
-    if (row.vintage !== vintage) return false;
+    if (terms.length === 0) return false;
+    // Vintage must agree before a name match is trusted — picking the wrong
+    // year of the right label is worse than reporting no stock.
+    if (vintage) {
+      if (row.vintage !== vintage) return false;
+    } else if (isNonVintage) {
+      if (!rowIsNonVintage(row)) return false;
+    } else {
+      return false;
+    }
     const haystack = row.productName.toLowerCase();
     return terms.every((term) => haystack.includes(term));
   });
