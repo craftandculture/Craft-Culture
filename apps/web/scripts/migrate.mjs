@@ -399,6 +399,58 @@ const runMigrations = async () => {
     );
     console.log('✅ stock triangulation tables ready');
 
+    /* ── SALES QUOTES — team-built client offer pages served at /q/<slug> ── */
+    await client.unsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "sales_quote_status" AS ENUM ('draft', 'published', 'archived');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "sales_quotes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "slug" text NOT NULL,
+        "status" "sales_quote_status" NOT NULL DEFAULT 'draft',
+        "quote_ref" text NOT NULL,
+        "client" text NOT NULL,
+        "client_company" text,
+        "contact_name" text,
+        "contact_email" text,
+        "eyebrow" text NOT NULL DEFAULT 'Indicative Quotation',
+        "h1" text NOT NULL DEFAULT 'Fine Wine Quotation',
+        "subtitle" text,
+        "valid_until" date,
+        "promo_until" date,
+        "lines" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "options" jsonb NOT NULL DEFAULT '{}'::jsonb,
+        "total_bottles" integer NOT NULL DEFAULT 0,
+        "total_usd" double precision NOT NULL DEFAULT 0,
+        "published_at" timestamp,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "sales_quotes_slug_idx" ON "sales_quotes"("slug")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sales_quotes_status_idx" ON "sales_quotes"("status")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sales_quotes_client_idx" ON "sales_quotes"("client")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sales_quotes_created_by_idx" ON "sales_quotes"("created_by")`,
+    );
+    // RLS is disabled across this schema and the app connects via the pooled
+    // endpoint, which does not reliably honour the owner's RLS bypass — leaving
+    // it enabled here would silently block writes. See the pricing-manager notes.
+    await client.unsafe(
+      `ALTER TABLE "sales_quotes" DISABLE ROW LEVEL SECURITY`,
+    );
+    console.log('✅ sales_quotes table ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

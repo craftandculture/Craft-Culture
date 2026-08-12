@@ -5307,3 +5307,106 @@ export const triImportLines = pgTable(
 );
 
 export type TriImportLine = typeof triImportLines.$inferSelect;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SALES QUOTES — team-built, client-facing offer pages
+ *
+ * Distinct from `quotes` above: that table drives the partner buy-request
+ * workflow (buy request -> C&C review -> PO -> payment) and outputs a PDF.
+ * These are outbound sales offers rendered with the standard branded template
+ * and served publicly at /q/<slug>. Built in /platform/admin/quote-builder.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export const salesQuoteStatus = pgEnum('sales_quote_status', [
+  'draft',
+  'published',
+  'archived',
+]);
+
+/** One selectable line on a sales quote. Prices are per BOTTLE, In Bond USD. */
+export interface SalesQuoteLine {
+  lwin18: string;
+  wine: string;
+  vintage: string;
+  /** bottle volume in cl — 75, 150, 300… */
+  size: number;
+  /** bottles per case */
+  pack: number;
+  /** available BOTTLES */
+  avail: number;
+  /** pre-filled quantity in bottles; 0 = open offer, client selects */
+  qty: number;
+  busd: number;
+  baed?: number;
+  cusd?: number;
+  caed?: number;
+  /** section heading this line sits under */
+  region: string;
+  promo?: boolean;
+  /** private-client badge */
+  pc?: boolean;
+  /** overrides the stock-location chip text, e.g. "C&C UK Warehouse" */
+  loc?: string;
+  note?: string;
+  oos?: boolean;
+}
+
+/** Template toggles — mirror the cfg keys the Python builder reads. */
+export interface SalesQuoteOptions {
+  /** true = drop pack from Format and hide the Case column */
+  bottlesOnly?: boolean;
+  /** Avail column shows the offered qty rather than free stock */
+  offered?: boolean;
+  /** priced and ordered per bottle vs per case */
+  orderUnit?: 'bottle' | 'case';
+  /** chip every line with where the wine physically is */
+  stockStatus?: boolean;
+  pcLabel?: string;
+  whLabel?: string;
+  ibLabel?: string;
+  /** explicit section order; unlisted sections fall to the end */
+  regionOrder?: string[];
+  priceBasis?: string;
+  leadNote?: string;
+  /** browser/OG title; defaults to "<h1> — Craft & Culture" */
+  title?: string;
+}
+
+export const salesQuotes = pgTable(
+  'sales_quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** public URL segment — /q/<slug> */
+    slug: text('slug').notNull(),
+    status: salesQuoteStatus('status').notNull().default('draft'),
+    quoteRef: text('quote_ref').notNull(),
+    client: text('client').notNull(),
+    clientCompany: text('client_company'),
+    contactName: text('contact_name'),
+    contactEmail: text('contact_email'),
+    eyebrow: text('eyebrow').notNull().default('Indicative Quotation'),
+    h1: text('h1').notNull().default('Fine Wine Quotation'),
+    subtitle: text('subtitle'),
+    validUntil: date('valid_until'),
+    promoUntil: date('promo_until'),
+    lines: jsonb('lines').$type<SalesQuoteLine[]>().notNull().default([]),
+    options: jsonb('options').$type<SalesQuoteOptions>().notNull().default({}),
+    /** denormalised for the dashboard, recomputed on save */
+    totalBottles: integer('total_bottles').notNull().default(0),
+    totalUsd: doublePrecision('total_usd').notNull().default(0),
+    publishedAt: timestamp('published_at', { mode: 'date' }),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('sales_quotes_slug_idx').on(table.slug),
+    index('sales_quotes_status_idx').on(table.status),
+    index('sales_quotes_client_idx').on(table.client),
+    index('sales_quotes_created_by_idx').on(table.createdBy),
+  ],
+);
+
+export type SalesQuote = typeof salesQuotes.$inferSelect;
+export type NewSalesQuote = typeof salesQuotes.$inferInsert;

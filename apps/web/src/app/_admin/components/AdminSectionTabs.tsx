@@ -47,6 +47,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Pricing', href: '/platform/admin/pricing' },
     { label: 'Pricing Manager', href: '/platform/admin/pricing-manager' },
     { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
+    { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
   ],
   agents: [
     { label: 'Dashboard', href: '/platform/admin/agents' },
