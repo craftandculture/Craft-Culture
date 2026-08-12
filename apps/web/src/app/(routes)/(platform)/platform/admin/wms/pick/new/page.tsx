@@ -84,6 +84,22 @@ const NewPickListPage = () => {
     },
   });
 
+  /**
+   * Hard-refresh the orders on screen.
+   *
+   * A plain sync skips any order Zoho reports as unchanged — and correcting an
+   * ITEM's SKU (a wrong vintage, a bad pack) doesn't touch the sales order's
+   * last-modified time, so the fix would never arrive. The orders listed here
+   * are the handful ready to pick, so refreshing them in full is cheap.
+   */
+  const handleSync = () => {
+    const orderNumbers = (zohoOrders ?? [])
+      .map((order) => order.salesOrderNumber)
+      .filter((n): n is string => !!n)
+      .slice(0, 25);
+    syncMutation.mutate({ forceRefreshOrderNumbers: orderNumbers });
+  };
+
   const toggleOrder = (orderId: string) => {
     setSelectedOrderIds((prev) => {
       const next = new Set(prev);
@@ -218,8 +234,9 @@ const NewPickListPage = () => {
           </div>
           <button
             type="button"
-            onClick={() => syncMutation.mutate()}
+            onClick={handleSync}
             disabled={syncMutation.isPending}
+            title="Sync from Zoho — re-reads these orders in full, including SKU fixes"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary disabled:opacity-50"
           >
             {syncMutation.isPending ? (
