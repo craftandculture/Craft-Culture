@@ -112,6 +112,8 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
             name: item.name,
             sku: item.sku,
             description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
           });
           if (!repack.hasStock) unmatchedLines++;
           else if (repack.needsRepack) repackLines++;

@@ -16,6 +16,10 @@ export interface RepackLine {
   name: string;
   sku: string | null;
   description: string | null;
+  /** Ordered quantity — cases, or bottles when the unit is a bottle. */
+  quantity?: number | null;
+  /** The Zoho line unit ('Case'/'Cases'/'Bottle'). */
+  unit?: string | null;
 }
 
 /** Pack suffixes Zoho carries in line names that no stock name ever has. */
@@ -122,8 +126,29 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
 
   if (candidates.length === 0) return empty;
 
+  // Suggest the bay release-to-pick would actually choose: best pack fit that
+  // holds ENOUGH, falling back to the best fit overall. Ranking alone would
+  // point at a bay with one case when the line needs two, and the operator
+  // would be sent somewhere else at release.
+  const quantity = line.quantity ?? 1;
+  const isBottleUnit = /^bottle/i.test((line.unit ?? '').trim());
+  const orderedBottles = isBottleUnit ? quantity : quantity * orderedPack;
+  const casesNeededFor = (pack: number) =>
+    !isBottleUnit && pack === orderedPack
+      ? quantity
+      : Math.max(1, Math.ceil(orderedBottles / pack));
+
+  const ranked = rankStockByPack(candidates, orderedPack);
   const suggestedLocation =
-    rankStockByPack(candidates, orderedPack)[0]?.locationCode ?? null;
+    (
+      ranked.find(
+        (row) =>
+          row.availableCases >=
+          casesNeededFor(
+            row.caseConfig && row.caseConfig > 0 ? row.caseConfig : orderedPack,
+          ),
+      ) ?? ranked[0]
+    )?.locationCode ?? null;
 
   const configs = [
     ...new Set(

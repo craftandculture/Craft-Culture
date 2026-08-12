@@ -46,6 +46,8 @@ const adminGetSalesOrder = wmsOperatorProcedure
           name: item.name,
           sku: item.sku,
           description: item.description,
+          quantity: item.quantity,
+          unit: item.unit,
           db,
         });
         return { ...item, repack };

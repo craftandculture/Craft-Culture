@@ -9,6 +9,10 @@ interface RepackParams {
   name: string;
   sku: string | null;
   description: string | null;
+  /** Ordered quantity — cases, or bottles when the unit is a bottle. */
+  quantity?: number | null;
+  /** The Zoho line unit ('Case'/'Cases'/'Bottle'). */
+  unit?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }
@@ -29,10 +33,19 @@ interface RepackParams {
  * @param name - The line item name
  * @param sku - The line item SKU (LWIN-based)
  * @param description - The line pack format, e.g. "3x75cl"
+ * @param quantity - Ordered quantity, so the suggested bay holds enough
+ * @param unit - The Zoho line unit ('Case'/'Cases'/'Bottle')
  * @param db - Drizzle db handle
  * @returns The ordered pack, the repack decision and the suggested bay
  */
-const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) => {
+const resolveLineRepack = async ({
+  name,
+  sku,
+  description,
+  quantity,
+  unit,
+  db,
+}: RepackParams) => {
   const normalized = normalizeLwin18(String(sku ?? ''));
   const parts = normalized.split('-');
   const lwin7 = parts[0] ?? '';
@@ -75,7 +88,7 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
     );
   }
   if (conditions.length === 0) {
-    return resolveRepackFromStock([], { name, sku, description });
+    return resolveRepackFromStock([], { name, sku, description, quantity, unit });
   }
 
   const rows = await db
@@ -92,7 +105,7 @@ const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) =
     .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
     .where(and(gt(wmsStock.quantityCases, 0), or(...conditions)));
 
-  return resolveRepackFromStock(rows, { name, sku, description });
+  return resolveRepackFromStock(rows, { name, sku, description, quantity, unit });
 };
 
 export default resolveLineRepack;
