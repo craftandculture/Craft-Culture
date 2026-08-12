@@ -130,3 +130,10 @@ export const skuLedgerSchema = z.object({
 export const seedSkusFromWmsSchema = z.object({
   ownerName: z.string().min(1).max(200).default('Crurated'),
 });
+
+export const syncCountFromWmsSchema = z.object({
+  ownerName: z.string().min(1).max(200).default('Crurated'),
+  periodId: z.string().uuid().nullable().optional(),
+  /** Snapshot date; defaults to today on the server when omitted */
+  asOfDate: isoDateSchema.optional(),
+});

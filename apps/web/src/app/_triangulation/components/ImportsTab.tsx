@@ -1,6 +1,12 @@
 'use client';
 
-import { IconCheck, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconPencil,
+  IconPlus,
+  IconRefresh,
+  IconTrash,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -76,6 +82,36 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     onError: (error) => toast.error(error.message),
   });
 
+  const syncCount = useMutation({
+    ...api.triangulation.admin.syncCountFromWms.mutationOptions(),
+    onSuccess: async (result) => {
+      const warnings: string[] = [];
+
+      if (result.missingWCodes > 0) {
+        warnings.push(`${result.missingWCodes} without a W code`);
+      }
+
+      if (result.missingCaseConfig > 0) {
+        warnings.push(
+          `${result.missingCaseConfig} with no pack size in the WMS, counted as 6s`,
+        );
+      }
+
+      if (result.manualCountsSameDate > 0) {
+        warnings.push(
+          `a manual count also exists for ${result.asOfDate} and will be added to this one`,
+        );
+      }
+
+      toast.success(
+        `Synced ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles from the WMS as at ${result.asOfDate}` +
+          (warnings.length > 0 ? ` — ${warnings.join('; ')}` : ''),
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const deleteImport = useMutation({
     ...api.triangulation.admin.deleteImport.mutationOptions(),
     onSuccess: async () => {
@@ -141,17 +177,34 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                     : 'nothing uploaded'}
                 </p>
               </Typography>
-              <Button
-                size="sm"
-                colorRole="muted"
-                variant="outline"
-                className="mt-3 justify-center"
-                isDisabled={isLocked}
-                onClick={() => setActiveKind(kind)}
-              >
-                <IconPlus className="mr-1 size-4" />
-                Upload
-              </Button>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  colorRole="muted"
+                  variant="outline"
+                  className="grow justify-center"
+                  isDisabled={isLocked}
+                  onClick={() => setActiveKind(kind)}
+                >
+                  <IconPlus className="mr-1 size-4" />
+                  Upload
+                </Button>
+                {/* The WMS already holds this figure, so it needs no spreadsheet */}
+                {kind === 'cc_count' ? (
+                  <Button
+                    size="sm"
+                    colorRole="brand"
+                    className="grow justify-center"
+                    isDisabled={isLocked || syncCount.isPending}
+                    onClick={() =>
+                      syncCount.mutate({ ownerName: 'Crurated', periodId })
+                    }
+                  >
+                    <IconRefresh className="mr-1 size-4" />
+                    {syncCount.isPending ? 'Syncing…' : 'Sync from WMS'}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           );
         })}

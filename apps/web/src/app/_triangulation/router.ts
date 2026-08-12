@@ -14,6 +14,7 @@ import adminGetUnmapped from './controller/adminGetUnmapped';
 import adminMapAlias from './controller/adminMapAlias';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
+import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminUpdateImport from './controller/adminUpdateImport';
 import adminUpsertSku from './controller/adminUpsertSku';
 
@@ -36,6 +37,7 @@ const triangulationRouter = createTRPCRouter({
     getSkus: adminGetSkus,
     upsertSku: adminUpsertSku,
     seedSkusFromWms: adminSeedSkusFromWms,
+    syncCountFromWms: adminSyncCountFromWms,
     getUnmapped: adminGetUnmapped,
     mapAlias: adminMapAlias,
     deleteAlias: adminDeleteAlias,

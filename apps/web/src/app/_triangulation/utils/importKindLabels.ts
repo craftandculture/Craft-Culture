@@ -44,11 +44,11 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'C&C physical count',
     shortLabel: 'C&C counted',
     description:
-      'Quarterly physical count exported from the WMS, compared against the calculated C&C position.',
+      "C&C's own stock position, compared against the calculated one. Sync it live from the WMS rather than uploading a sheet; upload only for a count taken outside the system.",
     behaviour: 'snapshot',
     side: 'cc',
     defaultUnit: 'case',
-    cadence: 'Quarterly',
+    cadence: 'Sync any time · count quarterly',
   },
   cd_sales: {
     label: 'City Drinks sales to consumers',
