@@ -15,6 +15,7 @@ import SkuLedgerPanel from './SkuLedgerPanel';
 import SummaryBar from './SummaryBar';
 import ValueCell from './ValueCell';
 import type { TriangulationRow } from '../controller/adminGetTriangulation';
+import cleanProductName from '../utils/cleanProductName';
 import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 
 
@@ -244,7 +245,8 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 SKUs — otherwise every scroll is a trip back to the top. */}
             <thead className="bg-fill-primary text-text-muted sticky top-0 z-10">
               <tr className="border-border-primary border-b">
-                <th className="py-2 pl-3 pr-3" colSpan={3} />
+                <th className="bg-fill-primary sticky left-0 z-20 py-2 pl-3 pr-3" />
+                <th className="py-2 pr-3" colSpan={3} />
                 <th
                   className="border-border-primary text-text-brand border-x py-2 text-center font-medium"
                   colSpan={4}
@@ -265,17 +267,23 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 </th>
               </tr>
               <tr className="border-border-primary border-b text-xs">
-                {/* W code beside CD code: they are one identity in two
-                    systems, so adjacency is what lets a mapping be eyeballed. */}
-                <th className="py-2 pl-3 pr-3 font-medium">W code</th>
-                <th className="py-2 pr-3 font-medium">CD code</th>
+                {/* W over CD in one column: one identity in two systems, and
+                    stacked they cost a third of the width side by side did. */}
+                <th className="bg-fill-primary sticky left-0 z-20 py-2 pl-3 pr-3 font-medium">
+                  Codes
+                </th>
                 <th className="py-2 pr-3 font-medium">Product</th>
+                <th className="py-2 pr-3 text-right font-medium">Vintage</th>
+                <th className="py-2 pr-3 text-right font-medium">Pack</th>
                 <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
                   Received
                 </th>
                 <th className="py-2 pr-3 text-right font-medium">Sold to CD</th>
                 <th className="py-2 pr-3 text-right font-medium">On hand</th>
-                <th className="border-border-primary border-r py-2 pr-3 text-right font-medium">
+                <th
+                  className="border-border-primary border-r py-2 pr-3 text-right font-medium"
+                  title="What the WMS holds, with the gap from the calculated position beneath"
+                >
                   WMS actual
                 </th>
                 <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
@@ -287,7 +295,10 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
                   On hand
                 </th>
-                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
+                <th
+                  className="bg-fill-info/5 py-2 pr-3 text-right font-medium"
+                  title="What City Drinks say they hold, with the gap from the calculated position beneath"
+                >
                   Declared
                 </th>
               </tr>
@@ -296,42 +307,51 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
               {rows.map((row) => (
                 <tr
                   key={row.skuId}
-                  className="border-border-primary hover:bg-fill-muted/20 cursor-pointer border-b"
+                  className="border-border-primary bg-fill-primary hover:bg-fill-muted/20 cursor-pointer border-b"
                   onClick={() => setOpenSkuId(row.skuId)}
                 >
+                  {/* The identity column stays put when the eleven numeric
+                      columns are scrolled — a figure with no code beside it is
+                      unreadable. `bg-inherit` keeps the row hover intact. */}
                   <td
-                    className="text-text-muted whitespace-nowrap py-2 pl-3 pr-3 font-mono text-xs"
-                    title={row.wCode}
+                    className={`sticky left-0 z-[1] whitespace-nowrap bg-inherit py-1.5 pl-3 pr-3 font-mono text-xs ${
+                      row.hasNegative ? 'border-l-fill-danger border-l-2' : ''
+                    }`}
+                    title={
+                      row.hasNegative
+                        ? `${row.wCode} — calculates to a negative position, so more went out than was recorded in`
+                        : row.wCode
+                    }
                   >
-                    {row.wCode.length > 14
-                      ? `${row.wCode.slice(0, 13)}…`
-                      : row.wCode}
-                  </td>
-                  <td className="text-text-muted whitespace-nowrap py-2 pr-3 font-mono text-xs">
-                    {row.cdCodes ?? (
-                      <span
-                        className="text-text-danger"
-                        title="No City Drinks code mapped — their sales for this wine cannot be attributed"
-                      >
-                        unmapped
-                      </span>
-                    )}
-                  </td>
-                  <td className="max-w-80 py-2 pr-3">
-                    <span className="flex items-center gap-1.5">
-                      {/* One line per row: wrapping doubles the height of every
-                          row to accommodate a handful of long names. */}
-                      <span className="truncate" title={row.productName}>
-                        {row.productName}
-                        {row.vintage ? ` ${row.vintage}` : ''}
-                      </span>
-                      {row.hasNegative ? (
-                        <span
-                          title="Calculates to a negative position — more went out than was recorded in"
-                          className="bg-fill-danger size-1.5 shrink-0 rounded-full"
-                        />
-                      ) : null}
+                    <span className="text-text-primary block leading-tight">
+                      {row.wCode.length > 18
+                        ? `${row.wCode.slice(0, 17)}…`
+                        : row.wCode}
                     </span>
+                    <span className="text-text-muted block leading-tight">
+                      {row.cdCodes ?? (
+                        <span
+                          className="text-text-danger"
+                          title="No City Drinks code mapped — their sales for this wine cannot be attributed"
+                        >
+                          unmapped
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="max-w-80 py-1.5 pr-3">
+                    {/* One line per row: wrapping doubles the height of every
+                        row to accommodate a handful of long names. */}
+                    <span className="block truncate" title={row.productName}>
+                      {cleanProductName(row.productName, row.vintage)}
+                    </span>
+                  </td>
+                  <td className="text-text-muted py-1.5 pr-3 text-right tabular-nums">
+                    {row.vintage ?? '—'}
+                  </td>
+                  <td className="text-text-muted whitespace-nowrap py-1.5 pr-3 text-right text-xs">
+                    {row.caseConfig}
+                    {row.bottleSize ? ` × ${row.bottleSize}` : ''}
                   </td>
                   <ValueCell
                     value={row.ccReceived}

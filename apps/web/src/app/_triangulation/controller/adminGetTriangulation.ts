@@ -10,6 +10,7 @@ export interface TriangulationRow {
   producer: string | null;
   vintage: number | null;
   caseConfig: number;
+  bottleSize: string | null;
   cdCodes: string | null;
   /** Bottles C&C has taken in for this SKU, cumulative to the cut-off */
   ccReceived: number;
@@ -227,6 +228,7 @@ const adminGetTriangulation = adminProcedure
           s.producer,
           s.vintage,
           s.case_config AS "caseConfig",
+          s.bottle_size AS "bottleSize",
           (
             SELECT STRING_AGG(a.alias_code, ', ' ORDER BY a.alias_code)
             FROM tri_sku_aliases a

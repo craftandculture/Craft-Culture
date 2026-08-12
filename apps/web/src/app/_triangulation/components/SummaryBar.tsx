@@ -78,9 +78,6 @@ const SummaryBar = ({
           ))}
         </div>
       ))}
-      <Typography variant="bodyXs" colorRole="muted" asChild>
-        <span className="ml-auto">bottles</span>
-      </Typography>
     </div>
   );
 };
