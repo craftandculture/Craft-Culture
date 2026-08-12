@@ -12,11 +12,10 @@ import useTRPC from '@/lib/trpc/browser';
 import DataQualityNotice from './DataQualityNotice';
 import type { DataQualityIssue } from './DataQualityNotice';
 import SkuLedgerPanel from './SkuLedgerPanel';
-import StatTile from './StatTile';
+import SummaryBar from './SummaryBar';
 import ValueCell from './ValueCell';
 import type { TriangulationRow } from '../controller/adminGetTriangulation';
 import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
-import formatBottles from '../utils/formatBottles';
 
 
 export interface OverviewTabProps {
@@ -154,33 +153,13 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatTile
-          label="Received into C&C"
-          value={formatBottles(summary?.ccReceived ?? 0)}
-          hint="cumulative"
-        />
-        <StatTile
-          label="Invoiced to City Drinks"
-          value={formatBottles(summary?.ccSoldToCd ?? 0)}
-          hint="cumulative"
-        />
-        <StatTile
-          label="C&C on hand"
-          value={formatBottles(summary?.ccOnHandCalc ?? 0)}
-          hint="calculated"
-        />
-        <StatTile
-          label="CD sold through"
-          value={formatBottles(summary?.cdSold ?? 0)}
-          hint="to consumers"
-        />
-        <StatTile
-          label="CD on hand"
-          value={formatBottles(summary?.cdOnHandCalc ?? 0)}
-          hint="calculated"
-        />
-      </div>
+      <SummaryBar
+        ccReceived={summary?.ccReceived ?? 0}
+        ccSoldToCd={summary?.ccSoldToCd ?? 0}
+        ccOnHand={summary?.ccOnHandCalc ?? 0}
+        cdSold={summary?.cdSold ?? 0}
+        cdOnHand={summary?.cdOnHandCalc ?? 0}
+      />
 
       <DataQualityNotice issues={issues} />
 
@@ -267,22 +246,30 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
               <tr className="border-border-primary border-b">
                 <th className="py-2 pl-3 pr-3" colSpan={3} />
                 <th
-                  className="border-border-primary border-x py-2 text-center font-medium"
+                  className="border-border-primary text-text-brand border-x py-2 text-center font-medium"
                   colSpan={4}
                 >
-                  Craft &amp; Culture
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span className="bg-fill-brand size-2 rounded-full" />
+                    Craft &amp; Culture
+                  </span>
                 </th>
                 <th
-                  className="bg-fill-muted/20 py-2 text-center font-medium"
+                  className="bg-fill-info/5 text-text-info py-2 text-center font-medium"
                   colSpan={4}
                 >
-                  City Drinks
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span className="bg-fill-info size-2 rounded-full" />
+                    City Drinks
+                  </span>
                 </th>
               </tr>
               <tr className="border-border-primary border-b text-xs">
+                {/* W code beside CD code: they are one identity in two
+                    systems, so adjacency is what lets a mapping be eyeballed. */}
                 <th className="py-2 pl-3 pr-3 font-medium">W code</th>
-                <th className="py-2 pr-3 font-medium">Product</th>
                 <th className="py-2 pr-3 font-medium">CD code</th>
+                <th className="py-2 pr-3 font-medium">Product</th>
                 <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
                   Received
                 </th>
@@ -291,16 +278,16 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 <th className="border-border-primary border-r py-2 pr-3 text-right font-medium">
                   WMS actual
                 </th>
-                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
                   Received
                 </th>
-                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
                   Sold
                 </th>
-                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
                   On hand
                 </th>
-                <th className="bg-fill-muted/20 py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-info/5 py-2 pr-3 text-right font-medium">
                   Declared
                 </th>
               </tr>
@@ -320,7 +307,17 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                       ? `${row.wCode.slice(0, 13)}…`
                       : row.wCode}
                   </td>
-                  <td className="max-w-72 py-2 pr-3">
+                  <td className="text-text-muted whitespace-nowrap py-2 pr-3 font-mono text-xs">
+                    {row.cdCodes ?? (
+                      <span
+                        className="text-text-danger"
+                        title="No City Drinks code mapped — their sales for this wine cannot be attributed"
+                      >
+                        unmapped
+                      </span>
+                    )}
+                  </td>
+                  <td className="max-w-80 py-2 pr-3">
                     <span className="flex items-center gap-1.5">
                       {/* One line per row: wrapping doubles the height of every
                           row to accommodate a handful of long names. */}
@@ -336,9 +333,6 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                       ) : null}
                     </span>
                   </td>
-                  <td className="text-text-muted whitespace-nowrap py-2 pr-3 font-mono text-xs">
-                    {row.cdCodes ?? '—'}
-                  </td>
                   <ValueCell
                     value={row.ccReceived}
                     className="border-border-primary border-l"
@@ -350,13 +344,13 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                     variance={actualOf(row).variance}
                     className="border-border-primary border-r"
                   />
-                  <ValueCell value={row.cdReceived} className="bg-fill-muted/20" />
-                  <ValueCell value={row.cdSold} className="bg-fill-muted/20" />
-                  <ValueCell value={row.cdOnHandCalc} className="bg-fill-muted/20" />
+                  <ValueCell value={row.cdReceived} className="bg-fill-info/5" />
+                  <ValueCell value={row.cdSold} className="bg-fill-info/5" />
+                  <ValueCell value={row.cdOnHandCalc} className="bg-fill-info/5" />
                   <ValueCell
                     value={row.cdDeclared}
                     variance={row.cdVariance}
-                    className="bg-fill-muted/20"
+                    className="bg-fill-info/5"
                   />
                 </tr>
               ))}
