@@ -22,6 +22,10 @@ export interface TriImportRow {
   uploadedByName: string | null;
   createdAt: Date;
   committedAt: Date | null;
+  /** How the lines are denominated — 'bottle', 'case', or both if mixed */
+  unit: string | null;
+  /** Pack sizes present on the lines, joined when the file supplied several */
+  caseConfig: string | null;
 }
 
 /**
@@ -57,7 +61,16 @@ const adminGetImports = adminProcedure
         i.notes,
         u.name AS "uploadedByName",
         i.created_at AS "createdAt",
-        i.committed_at AS "committedAt"
+        i.committed_at AS "committedAt",
+        (
+          SELECT STRING_AGG(DISTINCT l.unit, ' / ' ORDER BY l.unit)
+          FROM tri_import_lines l WHERE l.import_id = i.id
+        ) AS "unit",
+        (
+          SELECT STRING_AGG(DISTINCT l.case_config::text, ' / ' ORDER BY l.case_config::text)
+          FROM tri_import_lines l
+          WHERE l.import_id = i.id AND l.case_config IS NOT NULL
+        ) AS "caseConfig"
       FROM tri_imports i
       LEFT JOIN tri_periods p ON p.id = i.period_id
       LEFT JOIN users u ON u.id = i.uploaded_by

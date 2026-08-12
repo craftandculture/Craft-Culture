@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconCheck, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -10,7 +10,9 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import EditImportPanel from './EditImportPanel';
 import ImportWizard from './ImportWizard';
+import type { TriImportRow } from '../controller/adminGetImports';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
 import importKindLabels from '../utils/importKindLabels';
 
@@ -41,6 +43,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const queryClient = useQueryClient();
 
   const [activeKind, setActiveKind] = useState<TriImportKind | null>(null);
+  const [editing, setEditing] = useState<TriImportRow | null>(null);
 
   const imports = useQuery(
     api.triangulation.admin.getImports.queryOptions({ periodId, limit: 200 }),
@@ -83,6 +86,10 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   });
 
   const rows = imports.data ?? [];
+
+  if (editing) {
+    return <EditImportPanel record={editing} onClose={() => setEditing(null)} />;
+  }
 
   if (activeKind) {
     return (
@@ -167,6 +174,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                   <th className="py-2 pr-3">Input</th>
                   <th className="py-2 pr-3">As at</th>
                   <th className="py-2 pr-3">File</th>
+                  <th className="py-2 pr-3">Unit</th>
                   <th className="py-2 pr-3 text-right">Rows</th>
                   <th className="py-2 pr-3 text-right">Mapped</th>
                   <th className="py-2 pr-3 text-right">Bottles</th>
@@ -184,6 +192,14 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                       <td className="py-2 pr-3 tabular-nums">{row.asOfDate}</td>
                       <td className="text-text-muted py-2 pr-3">
                         {row.fileName ?? row.sourceRef ?? '—'}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {row.unit === 'case' ? 'Cases' : row.unit === 'bottle' ? 'Bottles' : (row.unit ?? '—')}
+                        {row.caseConfig ? (
+                          <span className="text-text-muted block text-xs">
+                            × {row.caseConfig}
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">
                         {row.rowCount}
@@ -223,6 +239,16 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                               Commit
                             </Button>
                           ) : null}
+                          <Button
+                            size="xs"
+                            colorRole="muted"
+                            variant="outline"
+                            isDisabled={isLocked}
+                            onClick={() => setEditing(row)}
+                          >
+                            <IconPencil className="mr-1 size-3.5" />
+                            Edit
+                          </Button>
                           <Button
                             size="xs"
                             colorRole="danger"

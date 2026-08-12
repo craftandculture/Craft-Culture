@@ -67,6 +67,26 @@ export const createImportSchema = z.object({
 
 export const importIdSchema = z.object({ importId: z.string().uuid() });
 
+/**
+ * Corrections to an import already uploaded.
+ *
+ * Every field is optional — only what is supplied changes. `unit` and
+ * `caseConfigOverride` rewrite the lines themselves, which is the common
+ * repair: a file uploaded as bottles when it was really cases.
+ */
+export const updateImportSchema = z.object({
+  importId: z.string().uuid(),
+  kind: triImportKindSchema.optional(),
+  periodId: z.string().uuid().nullable().optional(),
+  asOfDate: isoDateSchema.optional(),
+  aliasSource: triAliasSourceSchema.optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  /** Reinterpret every line's quantity as bottles or as cases */
+  unit: z.enum(['bottle', 'case']).optional(),
+  /** Force a pack size onto every line; null clears it back to the SKU default */
+  caseConfigOverride: z.number().int().positive().max(120).nullable().optional(),
+});
+
 export const upsertSkuSchema = z.object({
   skuId: z.string().uuid().optional(),
   wCode: z.string().min(1).max(80),

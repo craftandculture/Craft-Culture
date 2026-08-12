@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 
+import recalculateLineBottles from './recalculateLineBottles';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
+
 
 /**
  * Resolve every line of an import to a canonical W code SKU
@@ -45,15 +47,7 @@ const mapImportLines = async (importId: string, source: TriAliasSource) => {
 
   // Case-denominated lines that did not state a pack size inherit it from the
   // SKU now that we know which SKU they are.
-  await client`
-    UPDATE tri_import_lines l
-    SET quantity_bottles = l.quantity * COALESCE(l.case_config, s.case_config, 6),
-        updated_at = NOW()
-    FROM tri_skus s
-    WHERE l.sku_id = s.id
-      AND l.import_id = ${importId}
-      AND l.unit = 'case'
-  `;
+  await recalculateLineBottles(importId);
 
   const [totals] = await client<
     { rowCount: number; mappedRowCount: number; totalBottles: number }[]
