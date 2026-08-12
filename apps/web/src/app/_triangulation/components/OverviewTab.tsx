@@ -101,6 +101,10 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
       {(meta?.unmappedLines ?? 0) > 0 ||
       (meta?.draftImports ?? 0) > 0 ||
       missingInputs.length > 0 ||
+      !meta?.ccSystemDate ||
+      meta?.ccSystemOutsidePeriod ||
+      meta?.ccCountOutsidePeriod ||
+      (meta?.systemMappedLines ?? 0) === 0 ||
       (summary?.negativeRows ?? 0) > 0 ? (
         <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
           <div className="flex items-start gap-2">
@@ -113,6 +117,49 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 {missingInputs.length > 0 ? (
                   <li>
                     Not yet received: {missingInputs.join(', ')}.
+                  </li>
+                ) : null}
+                {/* An empty System column has several causes — name the actual one */}
+                {!meta?.ccSystemDate && (meta?.systemImports ?? 0) === 0 ? (
+                  <li>
+                    No WMS stock snapshot has been committed. Use{' '}
+                    <strong>Sync from WMS</strong> on the Imports tab — until
+                    then the System column stays empty.
+                  </li>
+                ) : null}
+                {!meta?.ccSystemDate && (meta?.systemImports ?? 0) > 0 ? (
+                  <li>
+                    A WMS snapshot exists but none of its lines resolved to a W
+                    code, so it contributes nothing. Clear the Mapping tab and
+                    re-sync.
+                  </li>
+                ) : null}
+                {meta?.ccSystemDate && (meta?.systemMappedLines ?? 0) === 0 ? (
+                  <li>
+                    The WMS snapshot of {meta.ccSystemDate} has no mapped lines —
+                    every product code in it is unresolved, so the System column
+                    reads empty.
+                  </li>
+                ) : null}
+                {meta?.ccSystemOutsidePeriod ? (
+                  <li>
+                    The WMS snapshot shown is dated {meta.ccSystemDate}, after
+                    this period closed — the WMS can only be read as it is now.
+                    Its comparison is re-cut to that date, so it is consistent,
+                    but it is not a position as at {meta.cutoff}.
+                  </li>
+                ) : null}
+                {meta?.ccCountOutsidePeriod ? (
+                  <li>
+                    The physical count shown is dated {meta.ccCountDate}, after
+                    this period closed.
+                  </li>
+                ) : null}
+                {(meta?.draftSnapshots ?? 0) > 0 ? (
+                  <li>
+                    {meta?.draftSnapshots} stock snapshot
+                    {meta?.draftSnapshots === 1 ? ' is' : 's are'} still in draft
+                    and excluded — commit on the Imports tab.
                   </li>
                 ) : null}
                 {(meta?.unmappedLines ?? 0) > 0 ? (

@@ -92,6 +92,12 @@ const adminGetTriangulation = adminProcedure
     // the calculation against each separately is what makes the difference
     // between "picking and invoicing disagree" and "the warehouse and the
     // system disagree" legible.
+    // A snapshot is dated when it was taken, and the WMS is only ever read
+    // *now* — so on any period that closed before today there is nothing on or
+    // before the cut-off to find, and both snapshot columns come back empty.
+    // Falling back to the earliest snapshot after the cut-off keeps the columns
+    // useful, and stays honest because each comparison is re-cut to its own
+    // snapshot date; the header and the banner say which date was used.
     const [countDates] = await client<
       {
         ccSystemDate: string | null;
@@ -100,15 +106,31 @@ const adminGetTriangulation = adminProcedure
       }[]
     >`
       SELECT
-        (
-          SELECT MAX(as_of_date)::text FROM tri_imports
-          WHERE kind = 'cc_count' AND status = 'committed'
-            AND source_ref = 'wms-stock' AND as_of_date <= ${cutoff}
+        COALESCE(
+          (
+            SELECT MAX(as_of_date)::text FROM tri_imports
+            WHERE kind = 'cc_count' AND status = 'committed'
+              AND source_ref IN ('wms-stock', 'wms-sync')
+              AND as_of_date <= ${cutoff}
+          ),
+          (
+            SELECT MIN(as_of_date)::text FROM tri_imports
+            WHERE kind = 'cc_count' AND status = 'committed'
+              AND source_ref IN ('wms-stock', 'wms-sync')
+          )
         ) AS "ccSystemDate",
-        (
-          SELECT MAX(as_of_date)::text FROM tri_imports
-          WHERE kind = 'cc_count' AND status = 'committed'
-            AND source_ref IS DISTINCT FROM 'wms-stock' AND as_of_date <= ${cutoff}
+        COALESCE(
+          (
+            SELECT MAX(as_of_date)::text FROM tri_imports
+            WHERE kind = 'cc_count' AND status = 'committed'
+              AND (source_ref IS NULL OR source_ref NOT IN ('wms-stock', 'wms-sync'))
+              AND as_of_date <= ${cutoff}
+          ),
+          (
+            SELECT MIN(as_of_date)::text FROM tri_imports
+            WHERE kind = 'cc_count' AND status = 'committed'
+              AND (source_ref IS NULL OR source_ref NOT IN ('wms-stock', 'wms-sync'))
+          )
         ) AS "ccCountDate",
         (
           SELECT MAX(as_of_date)::text FROM tri_imports
@@ -171,7 +193,7 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cc_count'
           AND i.status = 'committed'
-          AND i.source_ref IS DISTINCT FROM 'wms-stock'
+          AND (i.source_ref IS NULL OR i.source_ref NOT IN ('wms-stock', 'wms-sync'))
           AND i.as_of_date = ${ccCountDate}
           AND l.sku_id IS NOT NULL
         GROUP BY l.sku_id
@@ -182,7 +204,7 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cc_count'
           AND i.status = 'committed'
-          AND i.source_ref = 'wms-stock'
+          AND i.source_ref IN ('wms-stock', 'wms-sync')
           AND i.as_of_date = ${ccSystemDate}
           AND l.sku_id IS NOT NULL
         GROUP BY l.sku_id
@@ -322,6 +344,39 @@ const adminGetTriangulation = adminProcedure
       },
     );
 
+    // An empty snapshot column has several very different causes — never
+    // synced, synced but never committed, synced but every line unmapped — and
+    // they are indistinguishable on screen. Count them so the banner can say
+    // which one it is instead of leaving a bare dash.
+    const [snapshotHealth] = await client<
+      {
+        systemImports: number;
+        systemMappedLines: number;
+        countImports: number;
+        draftSnapshots: number;
+      }[]
+    >`
+      SELECT
+        COUNT(DISTINCT i.id) FILTER (
+          WHERE i.status = 'committed'
+            AND i.source_ref IN ('wms-stock', 'wms-sync')
+        )::int AS "systemImports",
+        COUNT(l.id) FILTER (
+          WHERE i.status = 'committed'
+            AND i.source_ref IN ('wms-stock', 'wms-sync')
+            AND l.status = 'mapped'
+        )::int AS "systemMappedLines",
+        COUNT(DISTINCT i.id) FILTER (
+          WHERE i.status = 'committed'
+            AND (i.source_ref IS NULL OR i.source_ref NOT IN ('wms-stock', 'wms-sync'))
+        )::int AS "countImports",
+        COUNT(DISTINCT i.id) FILTER (WHERE i.status = 'draft')::int
+          AS "draftSnapshots"
+      FROM tri_imports i
+      LEFT JOIN tri_import_lines l ON l.import_id = i.id
+      WHERE i.kind = 'cc_count'
+    `;
+
     const [dataQuality] = await client<
       {
         unmappedLines: number;
@@ -353,6 +408,15 @@ const adminGetTriangulation = adminProcedure
         ccSystemDate,
         ccCountDate,
         cdCountDate,
+        /** The snapshot used post-dates this period — shown, but say so */
+        ccSystemOutsidePeriod:
+          !!ccSystemDate && !!period?.periodEnd && ccSystemDate > period.periodEnd,
+        ccCountOutsidePeriod:
+          !!ccCountDate && !!period?.periodEnd && ccCountDate > period.periodEnd,
+        systemImports: snapshotHealth?.systemImports ?? 0,
+        systemMappedLines: snapshotHealth?.systemMappedLines ?? 0,
+        countImports: snapshotHealth?.countImports ?? 0,
+        draftSnapshots: snapshotHealth?.draftSnapshots ?? 0,
         unmappedLines: dataQuality?.unmappedLines ?? 0,
         unmappedCodes: dataQuality?.unmappedCodes ?? 0,
         draftImports: dataQuality?.draftImports ?? 0,
