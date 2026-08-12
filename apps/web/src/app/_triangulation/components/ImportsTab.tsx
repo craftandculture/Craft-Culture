@@ -32,6 +32,9 @@ export interface ImportsTabProps {
 /** Where the Zoho customer name for City Drinks is remembered between visits */
 const ZOHO_CUSTOMER_KEY = 'triangulation.zohoCustomer';
 
+/** Where the WMS stock owner name is remembered between visits */
+const OWNER_NAME_KEY = 'triangulation.ownerName';
+
 const KIND_ORDER: TriImportKind[] = [
   'cc_opening',
   'cc_sales_to_cd',
@@ -56,12 +59,18 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   // City Drinks trade in Zoho under a different name, and that is the sort of
   // thing that changes, so it is editable and remembered rather than compiled in.
   const [zohoCustomer, setZohoCustomer] = useState('CD General');
+  const [ownerName, setOwnerName] = useState('Crurated');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(ZOHO_CUSTOMER_KEY);
+    const storedCustomer = window.localStorage.getItem(ZOHO_CUSTOMER_KEY);
+    const storedOwner = window.localStorage.getItem(OWNER_NAME_KEY);
 
-    if (stored) {
-      setZohoCustomer(stored);
+    if (storedCustomer) {
+      setZohoCustomer(storedCustomer);
+    }
+
+    if (storedOwner) {
+      setOwnerName(storedOwner);
     }
   }, []);
 
@@ -117,8 +126,12 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
         );
       }
 
+      if (result.matchedOwners.length > 1) {
+        warnings.push(`matched ${result.matchedOwners.length} owners: ${result.matchedOwners.join(', ')}`);
+      }
+
       toast.success(
-        `Synced ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles from the WMS as at ${result.asOfDate}` +
+        `Synced ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles from ${result.matchedOwners[0] ?? 'the WMS'} as at ${result.asOfDate}` +
           (warnings.length > 0 ? ` — ${warnings.join('; ')}` : ''),
       );
       await invalidate();
@@ -185,15 +198,15 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
    * a missing Zoho customer should not cost you the WMS refresh.
    */
   const refreshLive = async () => {
-    await syncReceipts.mutateAsync({ ownerName: 'Crurated' }).catch(() => null);
+    await syncReceipts.mutateAsync({ ownerName }).catch(() => null);
     await syncZoho.mutateAsync({ customerMatch: zohoCustomer }).catch(() => null);
     await syncCount
-      .mutateAsync({ ownerName: 'Crurated', periodId })
+      .mutateAsync({ ownerName, periodId })
       .catch(() => null);
     // The physical count only yields anything once a cycle count has been
     // completed in the WMS, so it is expected to no-op much of the time.
     await syncCycleCount
-      .mutateAsync({ ownerName: 'Crurated', periodId })
+      .mutateAsync({ ownerName, periodId })
       .catch(() => null);
   };
 
@@ -242,14 +255,28 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
             </p>
           </Typography>
         </div>
-        <Button
-          colorRole="brand"
-          isDisabled={isLocked || isSyncing}
-          onClick={() => void refreshLive()}
-        >
-          <IconRefresh className="mr-1 size-4" />
-          {isSyncing ? 'Refreshing…' : 'Refresh live data'}
-        </Button>
+        <div className="flex items-end gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-text-muted text-xs">Stock owner in the WMS</span>
+            <input
+              value={ownerName}
+              onChange={(event) => {
+                setOwnerName(event.target.value);
+                window.localStorage.setItem(OWNER_NAME_KEY, event.target.value);
+              }}
+              placeholder="Crurated"
+              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-40 rounded-md border px-2 text-sm"
+            />
+          </label>
+          <Button
+            colorRole="brand"
+            isDisabled={isLocked || isSyncing || !ownerName.trim()}
+            onClick={() => void refreshLive()}
+          >
+            <IconRefresh className="mr-1 size-4" />
+            {isSyncing ? 'Refreshing…' : 'Refresh live data'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -303,7 +330,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                     colorRole="brand"
                     className="grow justify-center"
                     isDisabled={isLocked || isSyncing}
-                    onClick={() => syncReceipts.mutate({ ownerName: 'Crurated' })}
+                    onClick={() => syncReceipts.mutate({ ownerName })}
                   >
                     <IconRefresh className="mr-1 size-4" />
                     {syncReceipts.isPending ? 'Syncing…' : 'Sync receipts'}
@@ -348,7 +375,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                       className="grow justify-center"
                       isDisabled={isLocked || isSyncing}
                       onClick={() =>
-                        syncCount.mutate({ ownerName: 'Crurated', periodId })
+                        syncCount.mutate({ ownerName, periodId })
                       }
                     >
                       <IconRefresh className="mr-1 size-4" />
@@ -361,7 +388,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                       className="grow justify-center"
                       isDisabled={isLocked || isSyncing}
                       onClick={() =>
-                        syncCycleCount.mutate({ ownerName: 'Crurated', periodId })
+                        syncCycleCount.mutate({ ownerName, periodId })
                       }
                     >
                       <IconRefresh className="mr-1 size-4" />

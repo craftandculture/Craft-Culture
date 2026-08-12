@@ -8,6 +8,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncSalesFromZohoSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface ZohoSaleRow {
   sku: string | null;
@@ -70,10 +71,7 @@ const adminSyncSalesFromZoho = adminProcedure
     // once both are stripped to letters and digits — "CD General", "CD General
     // LLC" and "c.d. general trading" all then find it, while a genuinely
     // different customer still does not.
-    const tokens = customerMatch
-      .toUpperCase()
-      .split(/[^A-Z0-9]+/)
-      .filter(Boolean);
+    const tokens = tokenizeMatch(customerMatch);
 
     if (tokens.length === 0) {
       throw new TRPCError({

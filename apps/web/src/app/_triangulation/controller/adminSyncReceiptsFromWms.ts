@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface WmsReceiptRow {
   code: string | null;
@@ -60,7 +61,12 @@ const adminSyncReceiptsFromWms = adminProcedure
         LIMIT 1
       ) st ON TRUE
       WHERE m.movement_type = 'receive'
-        AND p.business_name ILIKE ${ownerName}
+        AND NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(p.business_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
         AND m.quantity_cases <> 0
       ORDER BY m.performed_at
     `;

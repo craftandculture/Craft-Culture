@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface CycleCountRow {
   lwin18: string;
@@ -32,8 +33,17 @@ interface CycleCountRow {
 const adminSyncCycleCountFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
-    const { periodId } = input;
+    const { ownerName, periodId } = input;
     const upTo = input.asOfDate ?? new Date().toISOString().slice(0, 10);
+
+    const tokens = tokenizeMatch(ownerName);
+
+    if (tokens.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Owner name must contain at least one letter or number',
+      });
+    }
 
     // A count can span several location-scoped runs finished on the same day,
     // so the snapshot is the whole of the latest day's completed counting.
@@ -55,6 +65,11 @@ const adminSyncCycleCountFromWms = adminProcedure
       });
     }
 
+    // A cycle count covers a location, not an owner, so it will include other
+    // owners' wine. The count line's stock record is what attributes it — a
+    // line with no stock link cannot be attributed and is reported rather than
+    // guessed at, since counting someone else's bottles as Crurated's would
+    // manufacture a variance out of nothing.
     const rows = await client<CycleCountRow[]>`
       SELECT
         ci.lwin18,
@@ -65,23 +80,38 @@ const adminSyncCycleCountFromWms = adminProcedure
           AS bottles
       FROM wms_cycle_count_items ci
       JOIN wms_cycle_counts c ON c.id = ci.cycle_count_id
-      LEFT JOIN LATERAL (
-        SELECT s.case_config FROM wms_stock s
-        WHERE s.lwin18 = ci.lwin18
-        ORDER BY s.received_at DESC NULLS LAST
-        LIMIT 1
-      ) st ON TRUE
+      JOIN wms_stock st ON st.id = ci.stock_id
       WHERE c.status = 'completed'
         AND c.completed_at::date = ${countDate}
         AND ci.counted_quantity IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(st.owner_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
       GROUP BY ci.lwin18
       HAVING SUM(ci.counted_quantity) > 0
+    `;
+
+    const [unattributed] = await client<{ lines: number }[]>`
+      SELECT COUNT(*)::int AS lines
+      FROM wms_cycle_count_items ci
+      JOIN wms_cycle_counts c ON c.id = ci.cycle_count_id
+      WHERE c.status = 'completed'
+        AND c.completed_at::date = ${countDate}
+        AND ci.counted_quantity IS NOT NULL
+        AND ci.stock_id IS NULL
     `;
 
     if (rows.length === 0) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: `The cycle count completed on ${countDate} recorded no counted quantities.`,
+        message:
+          `The cycle count completed on ${countDate} recorded nothing for an owner containing all of: ${tokens.join(', ')}.` +
+          ((unattributed?.lines ?? 0) > 0
+            ? ` ${unattributed?.lines} counted lines have no stock record, so their owner could not be determined.`
+            : ''),
       });
     }
 
@@ -149,6 +179,7 @@ const adminSyncCycleCountFromWms = adminProcedure
       asOfDate: countDate,
       ...totals,
       missingCaseConfig: rows.filter((row) => !row.caseConfig).length,
+      unattributedLines: unattributed?.lines ?? 0,
     };
   });
 

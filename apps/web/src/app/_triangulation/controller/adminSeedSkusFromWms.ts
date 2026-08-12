@@ -3,6 +3,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import insertRows from '../data/insertRows';
 import { seedSkusFromWmsSchema } from '../schemas/triangulationSchemas';
+import tokenizeMatch from '../utils/tokenizeMatch';
 
 /**
  * Populate the SKU registry from stock the WMS already holds for an owner
@@ -41,7 +42,12 @@ const adminSeedSkusFromWms = adminProcedure
       FROM wms_stock s
       WHERE s.supplier_sku IS NOT NULL
         AND TRIM(s.supplier_sku) <> ''
-        AND s.owner_name ILIKE ${ownerName}
+        AND NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
       ORDER BY s.supplier_sku, s.received_at DESC NULLS LAST
     `;
 

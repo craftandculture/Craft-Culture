@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface WmsCountRow {
   code: string | null;
@@ -40,6 +41,18 @@ const adminSyncCountFromWms = adminProcedure
     const { ownerName, periodId } = input;
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
+    // The owner is written differently in different places — "Crurated",
+    // "Crurated SRL" — so every word of the search must appear rather than the
+    // whole string matching exactly, which silently found nothing.
+    const tokens = tokenizeMatch(ownerName);
+
+    if (tokens.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Owner name must contain at least one letter or number',
+      });
+    }
+
     if (periodId) {
       const [period] = await client<{ status: string }[]>`
         SELECT status FROM tri_periods WHERE id = ${periodId} LIMIT 1
@@ -68,7 +81,12 @@ const adminSyncCountFromWms = adminProcedure
         BOOL_OR(NULLIF(TRIM(s.supplier_sku), '') IS NULL) AS "missingWCode",
         BOOL_OR(NULLIF(s.case_config, 0) IS NULL) AS "missingCaseConfig"
       FROM wms_stock s
-      WHERE s.owner_name ILIKE ${ownerName}
+      WHERE NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
       GROUP BY COALESCE(NULLIF(TRIM(s.supplier_sku), ''), s.lwin18)
       HAVING SUM(
         s.quantity_cases * COALESCE(NULLIF(s.case_config, 0), 6)
@@ -89,12 +107,27 @@ const adminSyncCountFromWms = adminProcedure
       throw new TRPCError({
         code: 'NOT_FOUND',
         message:
-          `No stock in the WMS for owner "${ownerName}".` +
+          `No WMS stock has an owner containing all of: ${tokens.join(', ')}.` +
           (owners.length > 0
             ? ` Owners with stock: ${owners.map((row) => row.ownerName).join(', ')}.`
             : ''),
       });
     }
+
+    // Loose matching is what makes "Crurated" find "Crurated S.r.l.", but it
+    // would also let "Cru" sweep in Crurated alongside Cru Wine. Reporting the
+    // owners actually matched is what keeps that visible rather than silent.
+    const matchedOwners = await client<{ ownerName: string }[]>`
+      SELECT DISTINCT s.owner_name AS "ownerName"
+      FROM wms_stock s
+      WHERE NOT EXISTS (
+        SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+        WHERE POSITION(
+          tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+        ) = 0
+      )
+      ORDER BY s.owner_name
+    `;
 
     // A manual count filed for the same date would be summed alongside this
     // one, so flag it rather than quietly double the position.
@@ -175,6 +208,7 @@ const adminSyncCountFromWms = adminProcedure
       missingWCodes: rows.filter((row) => row.missingWCode).length,
       missingCaseConfig: rows.filter((row) => row.missingCaseConfig).length,
       manualCountsSameDate: manual?.count ?? 0,
+      matchedOwners: matchedOwners.map((row) => row.ownerName),
     };
   });
 
