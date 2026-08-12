@@ -34,7 +34,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'C&C sales to City Drinks',
     shortLabel: 'Sold to CD',
     description:
-      'Everything invoiced to City Drinks, synced from the Zoho orders the platform already keeps current. Only invoiced orders count.',
+      'Everything invoiced to City Drinks, synced from the Zoho orders the platform already keeps current. They trade in Zoho as C D General Trading, so the name is matched loosely — check it below.',
     behaviour: 'flow',
     side: 'cc',
     defaultUnit: 'case',

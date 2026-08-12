@@ -132,8 +132,11 @@ export const seedSkusFromWmsSchema = z.object({
 });
 
 export const syncSalesFromZohoSchema = z.object({
-  /** Matched against the Zoho customer name, substring and case-insensitive */
-  customerMatch: z.string().min(2).max(200).default('City Drinks'),
+  /**
+   * Matched against the Zoho customer name word by word, ignoring spacing and
+   * punctuation. City Drinks trade as "C D General Trading L.L.C".
+   */
+  customerMatch: z.string().min(2).max(200).default('CD General'),
   periodId: z.string().uuid().nullable().optional(),
   asOfDate: isoDateSchema.optional(),
 });

@@ -8,7 +8,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -28,6 +28,9 @@ export interface ImportsTabProps {
   periodEnd: string | null;
   isLocked: boolean;
 }
+
+/** Where the Zoho customer name for City Drinks is remembered between visits */
+const ZOHO_CUSTOMER_KEY = 'triangulation.zohoCustomer';
 
 const KIND_ORDER: TriImportKind[] = [
   'cc_opening',
@@ -50,6 +53,17 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
 
   const [activeKind, setActiveKind] = useState<TriImportKind | null>(null);
   const [editing, setEditing] = useState<TriImportRow | null>(null);
+  // City Drinks trade in Zoho under a different name, and that is the sort of
+  // thing that changes, so it is editable and remembered rather than compiled in.
+  const [zohoCustomer, setZohoCustomer] = useState('CD General');
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(ZOHO_CUSTOMER_KEY);
+
+    if (stored) {
+      setZohoCustomer(stored);
+    }
+  }, []);
 
   const imports = useQuery(
     api.triangulation.admin.getImports.queryOptions({ periodId, limit: 200 }),
@@ -162,7 +176,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
    */
   const refreshLive = async () => {
     await syncReceipts.mutateAsync({ ownerName: 'Crurated' }).catch(() => null);
-    await syncZoho.mutateAsync({ customerMatch: 'City Drinks' }).catch(() => null);
+    await syncZoho.mutateAsync({ customerMatch: zohoCustomer }).catch(() => null);
     await syncCount
       .mutateAsync({ ownerName: 'Crurated', periodId })
       .catch(() => null);
@@ -281,16 +295,35 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                   </Button>
                 ) : null}
                 {kind === 'cc_sales_to_cd' ? (
-                  <Button
-                    size="sm"
-                    colorRole="brand"
-                    className="grow justify-center"
-                    isDisabled={isLocked || isSyncing}
-                    onClick={() => syncZoho.mutate({ customerMatch: 'City Drinks' })}
-                  >
-                    <IconRefresh className="mr-1 size-4" />
-                    {syncZoho.isPending ? 'Syncing…' : 'Sync Zoho'}
-                  </Button>
+                  <div className="flex grow flex-col gap-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-text-muted text-xs">
+                        Zoho customer name
+                      </span>
+                      <input
+                        value={zohoCustomer}
+                        onChange={(event) => {
+                          setZohoCustomer(event.target.value);
+                          window.localStorage.setItem(
+                            ZOHO_CUSTOMER_KEY,
+                            event.target.value,
+                          );
+                        }}
+                        placeholder="CD General"
+                        className="border-border-primary bg-fill-primary text-text-primary min-h-8 rounded-md border px-2 text-sm"
+                      />
+                    </label>
+                    <Button
+                      size="sm"
+                      colorRole="brand"
+                      className="justify-center"
+                      isDisabled={isLocked || isSyncing || !zohoCustomer.trim()}
+                      onClick={() => syncZoho.mutate({ customerMatch: zohoCustomer })}
+                    >
+                      <IconRefresh className="mr-1 size-4" />
+                      {syncZoho.isPending ? 'Syncing…' : 'Sync Zoho'}
+                    </Button>
+                  </div>
                 ) : null}
                 {kind === 'cc_count' ? (
                   <>

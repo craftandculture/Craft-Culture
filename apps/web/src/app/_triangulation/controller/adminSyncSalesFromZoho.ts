@@ -64,6 +64,24 @@ const adminSyncSalesFromZoho = adminProcedure
     const { customerMatch } = input;
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
+    // City Drinks trade in Zoho as "C D General Trading L.L.C", so a plain
+    // substring match fails on spacing, on punctuation, and on the words in
+    // between. Every word of the search has to appear in the customer name
+    // once both are stripped to letters and digits — "CD General", "CD General
+    // LLC" and "c.d. general trading" all then find it, while a genuinely
+    // different customer still does not.
+    const tokens = customerMatch
+      .toUpperCase()
+      .split(/[^A-Z0-9]+/)
+      .filter(Boolean);
+
+    if (tokens.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Customer name must contain at least one letter or number',
+      });
+    }
+
     const rows = await client<ZohoSaleRow[]>`
       SELECT
         it.sku,
@@ -81,7 +99,12 @@ const adminSyncSalesFromZoho = adminProcedure
       JOIN zoho_sales_orders so ON so.id = it.sales_order_id
       LEFT JOIN zoho_invoices inv
         ON inv.reference_number = so.salesorder_number
-      WHERE so.customer_name ILIKE ${`%${customerMatch}%`}
+      WHERE NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(so.customer_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
         AND so.status IS DISTINCT FROM 'cancelled'
         AND (so.invoice_number IS NOT NULL OR so.zoho_status ILIKE '%invoiced%')
         AND it.quantity <> 0
@@ -100,7 +123,7 @@ const adminSyncSalesFromZoho = adminProcedure
       throw new TRPCError({
         code: 'NOT_FOUND',
         message:
-          `No invoiced Zoho orders match a customer like "${customerMatch}".` +
+          `No invoiced Zoho orders have a customer containing all of: ${tokens.join(', ')}.` +
           (customers.length > 0
             ? ` Invoiced customers: ${customers.map((row) => row.customerName).join(', ')}.`
             : ''),
