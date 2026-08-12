@@ -24,7 +24,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'C&C opening stock',
     shortLabel: 'Received',
     description:
-      'Everything received into C&C for the owner. Synced from the WMS receiving ledger, which is where the packing list was keyed in — upload only for a shipment never received in the system.',
+      'Received into C&C. Synced from WMS receiving; upload a packing list for anything that predates it.',
     behaviour: 'flow',
     side: 'cc',
     defaultUnit: 'case',
@@ -34,7 +34,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'C&C sales to City Drinks',
     shortLabel: 'Sold to CD',
     description:
-      'Everything invoiced to City Drinks, synced from the Zoho orders the platform already keeps current. They trade in Zoho as C D General Trading, so the name is matched loosely — check it below.',
+      'Invoiced to City Drinks, from Zoho. They trade as C D General Trading — check the name below.',
     behaviour: 'flow',
     side: 'cc',
     defaultUnit: 'case',
@@ -44,7 +44,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'C&C stock position',
     shortLabel: 'C&C counted',
     description:
-      "Two things: the system position from wms_stock, and the physical count from a WMS cycle count. The gap between them is the warehouse disagreeing with its own records — only a real count can catch that.",
+      'What C&C actually holds, live from the WMS. Upload only for stock counted outside the system.',
     behaviour: 'snapshot',
     side: 'cc',
     defaultUnit: 'case',
@@ -54,7 +54,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'City Drinks sales to consumers',
     shortLabel: 'CD sold',
     description:
-      'City Drinks sales spreadsheet. Uses CD codes, which map to W codes on the Mapping tab.',
+      'Their sales sheet. CD codes resolve to W codes on the Mapping tab.',
     behaviour: 'flow',
     side: 'cd',
     defaultUnit: 'bottle',
@@ -64,7 +64,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     label: 'City Drinks stock on hand',
     shortLabel: 'CD declared',
     description:
-      'Stock City Drinks declare on hand, compared against received-minus-sold.',
+      'What they say they hold, checked against received less sold.',
     behaviour: 'snapshot',
     side: 'cd',
     defaultUnit: 'bottle',

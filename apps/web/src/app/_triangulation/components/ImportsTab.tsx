@@ -247,11 +247,9 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
         <div>
           <Typography variant="labelSm">In-house inputs</Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
-            <p className="mt-1 max-w-2xl">
-              WMS receipts, Zoho sales and the WMS stock position are read
-              straight from our own systems — no spreadsheets. Each line keeps
-              its own date, so a closed period stays put; refreshing only brings
-              in what has happened since.
+            <p className="mt-1 max-w-xl">
+              WMS receipts, Zoho sales and WMS stock, read from our own systems.
+              Closed periods stay put — refreshing only adds what happened since.
             </p>
           </Typography>
         </div>

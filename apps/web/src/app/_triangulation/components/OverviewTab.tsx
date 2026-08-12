@@ -1,6 +1,6 @@
 'use client';
 
-import { IconAlertTriangle, IconDownload } from '@tabler/icons-react';
+import { IconDownload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -9,6 +9,8 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import DataQualityNotice from './DataQualityNotice';
+import type { DataQualityIssue } from './DataQualityNotice';
 import SkuLedgerPanel from './SkuLedgerPanel';
 import StatTile from './StatTile';
 import type { TriangulationRow } from '../controller/adminGetTriangulation';
@@ -73,6 +75,15 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   // than on the import kind, or having one would imply having both.
   const present = meta?.presentKinds ?? [];
 
+  /**
+   * Everything that qualifies the figures, ordered worst first.
+   *
+   * `blocking` means a number on screen is wrong until it is fixed; `caution`
+   * means it is readable with a caveat. Keeping that distinction explicit stops
+   * a stale-date note reading as urgently as an unmapped-lines note.
+   */
+  const issues: DataQualityIssue[] = [];
+
   const missingInputs = [
     present.includes('cc_opening') ? null : 'C&C opening stock',
     present.includes('cc_sales_to_cd') ? null : 'C&C sales to City Drinks',
@@ -81,18 +92,86 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
     present.includes('cd_count') ? null : 'City Drinks stock on hand',
   ].filter((entry): entry is string => entry !== null);
 
+  if (missingInputs.length > 0) {
+    issues.push({
+      label: `${missingInputs.length} input${missingInputs.length === 1 ? '' : 's'} missing`,
+      detail: `Not yet received: ${missingInputs.join(', ')}. Every position that depends on them reads low.`,
+      severity: 'blocking',
+    });
+  }
+
+  if ((meta?.unmappedLines ?? 0) > 0) {
+    issues.push({
+      label: `${meta?.unmappedCodes} unmapped codes`,
+      detail: `${meta?.unmappedLines} imported lines carry a product code that does not resolve to a W code, so they are excluded from every figure here. Resolve them on the Mapping tab.`,
+      severity: 'blocking',
+    });
+  }
+
+  if ((summary?.negativeRows ?? 0) > 0) {
+    issues.push({
+      label: `${summary?.negativeRows} negative`,
+      detail:
+        'More went out than was ever recorded in. That is a data gap rather than a stock loss — usually missing opening stock, or a code mapped to the wrong wine.',
+      severity: 'blocking',
+    });
+  }
+
+  if (!meta?.ccSystemDate && (meta?.systemImports ?? 0) === 0) {
+    issues.push({
+      label: 'No WMS snapshot',
+      detail:
+        'Nothing has been synced from the WMS, so the C&C actual column is empty. Use Refresh live data on the Imports tab.',
+      severity: 'blocking',
+    });
+  }
+
+  if ((meta?.systemImports ?? 0) > 0 && (meta?.systemMappedLines ?? 0) === 0) {
+    issues.push({
+      label: 'WMS snapshot unmapped',
+      detail:
+        'A WMS snapshot exists but none of its lines resolved to a W code, so it contributes nothing. Clear the Mapping tab, then re-sync.',
+      severity: 'blocking',
+    });
+  }
+
+  if ((meta?.draftImports ?? 0) > 0) {
+    issues.push({
+      label: `${meta?.draftImports} draft`,
+      detail:
+        'Imports stay out of the figures until committed. Commit them on the Imports tab.',
+      severity: 'caution',
+    });
+  }
+
+  if (meta?.ccSystemOutsidePeriod) {
+    issues.push({
+      label: 'WMS date outside period',
+      detail: `The WMS can only be read as it is now, so the snapshot shown is dated ${meta.ccSystemDate} — after this period closed. Its comparison is re-cut to that date and is internally consistent, but it is not a position as at ${meta.cutoff}.`,
+      severity: 'caution',
+    });
+  }
+
+  if (meta?.ccCountOutsidePeriod) {
+    issues.push({
+      label: 'Count date outside period',
+      detail: `The physical count shown is dated ${meta.ccCountDate}, after this period closed.`,
+      severity: 'caution',
+    });
+  }
+
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
           label="Received into C&C"
           value={formatBottles(summary?.ccReceived ?? 0)}
-          hint="bottles, cumulative"
+          hint="cumulative"
         />
         <StatTile
           label="Invoiced to City Drinks"
           value={formatBottles(summary?.ccSoldToCd ?? 0)}
-          hint="bottles, cumulative"
+          hint="cumulative"
         />
         <StatTile
           label="C&C on hand"
@@ -111,100 +190,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
         />
       </div>
 
-      {(meta?.unmappedLines ?? 0) > 0 ||
-      (meta?.draftImports ?? 0) > 0 ||
-      missingInputs.length > 0 ||
-      !meta?.ccSystemDate ||
-      meta?.ccSystemOutsidePeriod ||
-      meta?.ccCountOutsidePeriod ||
-      (meta?.systemMappedLines ?? 0) === 0 ||
-      (summary?.negativeRows ?? 0) > 0 ? (
-        <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
-          <div className="flex items-start gap-2">
-            <IconAlertTriangle className="text-text-warning mt-0.5 size-4 shrink-0" />
-            <div className="space-y-1">
-              <Typography variant="labelSm" colorRole="warning">
-                Read these figures with the following in mind
-              </Typography>
-              <ul className="text-text-muted list-disc space-y-0.5 pl-4 text-sm">
-                {missingInputs.length > 0 ? (
-                  <li>
-                    Not yet received: {missingInputs.join(', ')}.
-                  </li>
-                ) : null}
-                {/* An empty System column has several causes — name the actual one */}
-                {!meta?.ccSystemDate && (meta?.systemImports ?? 0) === 0 ? (
-                  <li>
-                    No WMS stock snapshot has been committed. Use{' '}
-                    <strong>Sync from WMS</strong> on the Imports tab — until
-                    then the System column stays empty.
-                  </li>
-                ) : null}
-                {!meta?.ccSystemDate && (meta?.systemImports ?? 0) > 0 ? (
-                  <li>
-                    A WMS snapshot exists but none of its lines resolved to a W
-                    code, so it contributes nothing. Clear the Mapping tab and
-                    re-sync.
-                  </li>
-                ) : null}
-                {meta?.ccSystemDate && (meta?.systemMappedLines ?? 0) === 0 ? (
-                  <li>
-                    The WMS snapshot of {meta.ccSystemDate} has no mapped lines —
-                    every product code in it is unresolved, so the System column
-                    reads empty.
-                  </li>
-                ) : null}
-                {meta?.ccSystemOutsidePeriod ? (
-                  <li>
-                    The WMS snapshot shown is dated {meta.ccSystemDate}, after
-                    this period closed — the WMS can only be read as it is now.
-                    Its comparison is re-cut to that date, so it is consistent,
-                    but it is not a position as at {meta.cutoff}.
-                  </li>
-                ) : null}
-                {meta?.ccCountOutsidePeriod ? (
-                  <li>
-                    The physical count shown is dated {meta.ccCountDate}, after
-                    this period closed.
-                  </li>
-                ) : null}
-                {(meta?.draftSnapshots ?? 0) > 0 ? (
-                  <li>
-                    {meta?.draftSnapshots} stock snapshot
-                    {meta?.draftSnapshots === 1 ? ' is' : 's are'} still in draft
-                    and excluded — commit on the Imports tab.
-                  </li>
-                ) : null}
-                {(meta?.unmappedLines ?? 0) > 0 ? (
-                  <li>
-                    {meta?.unmappedLines} imported line
-                    {meta?.unmappedLines === 1 ? '' : 's'} across{' '}
-                    {meta?.unmappedCodes} product code
-                    {meta?.unmappedCodes === 1 ? '' : 's'} are excluded — resolve
-                    them on the Mapping tab.
-                  </li>
-                ) : null}
-                {(meta?.draftImports ?? 0) > 0 ? (
-                  <li>
-                    {meta?.draftImports} import
-                    {meta?.draftImports === 1 ? '' : 's'} still in draft and not
-                    counted.
-                  </li>
-                ) : null}
-                {(summary?.negativeRows ?? 0) > 0 ? (
-                  <li>
-                    {summary?.negativeRows} SKU
-                    {summary?.negativeRows === 1 ? '' : 's'} calculate to a
-                    negative position — more went out than was ever recorded in,
-                    which points at missing opening stock or a code mapped to the
-                    wrong wine.
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <DataQualityNotice issues={issues} />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
@@ -317,10 +303,13 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                   <td className="py-2 pr-3">
                     {row.productName}
                     {row.vintage ? ` ${row.vintage}` : ''}
+                    {/* A word on nearly every row stops being a signal — the
+                        count lives in the notice, so this is just a marker. */}
                     {row.hasNegative ? (
-                      <span className="text-text-danger ml-1 text-xs">
-                        negative
-                      </span>
+                      <span
+                        title="Calculates to a negative position — more went out than was recorded in"
+                        className="bg-fill-danger ml-1.5 inline-block size-1.5 rounded-full align-middle"
+                      />
                     ) : null}
                   </td>
                   <td className="text-text-muted py-2 pr-3 font-mono text-xs">

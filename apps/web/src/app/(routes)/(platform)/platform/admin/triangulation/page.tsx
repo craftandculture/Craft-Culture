@@ -15,13 +15,8 @@ const TriangulationPage = () => {
           <h1>Stock triangulation</h1>
         </Typography>
         <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Reconciles Crurated stock across both parties holding it. Two chains
-            are calculated from the monthly inputs, in bottles —{' '}
-            <strong>C&amp;C on hand</strong> = received into C&amp;C less
-            invoiced to City Drinks, and <strong>City Drinks on hand</strong> =
-            invoiced to them less sold to consumers — and each is checked against
-            the physical count that side declared.
+          <p className="mt-1">
+            Crurated stock reconciled across C&amp;C and City Drinks, in bottles.
           </p>
         </Typography>
       </div>
