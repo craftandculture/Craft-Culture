@@ -23,6 +23,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PackBadge from '@/app/_wms/components/PackBadge';
+import parseSkuPack from '@/app/_wms/utils/parseSkuPack';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -432,31 +433,26 @@ const NewPickListPage = () => {
                                 // Pack config is driven by the SKU (the source of
                                 // truth): dashed LWIN7-VVVV-PP-SSSSS or compact
                                 // 18-digit LWIN7(7)VVVV(4)PP(2)SSSSS(5). The
-                                // description ("6x75cl") is only a fallback for
-                                // non-LWIN SKUs, so a stale description can no
-                                // longer misstate the bottle count.
-                                const skuDigits = (
-                                  (item as { sku?: string | null }).sku ?? ''
-                                ).replace(/-/g, '');
-                                let skuPack = 0;
-                                let skuSize = '';
-                                if (/^\d{18}$/.test(skuDigits)) {
-                                  skuPack = Number(skuDigits.slice(11, 13));
-                                  const ml = Number(skuDigits.slice(13, 18));
-                                  if (ml > 0) skuSize = `${ml / 10}cl`;
-                                }
+                                // description ("6x75cl") is the fallback for
+                                // non-LWIN SKUs — and for SKUs whose pack digits
+                                // are corrupt — so neither a stale description
+                                // nor a bad SKU can misstate the bottle count.
+                                const skuPack = parseSkuPack(
+                                  (item as { sku?: string | null }).sku,
+                                );
                                 const packMatch =
                                   /^(\d+)\s*[x×]\s*(.*)$/i.exec(
                                     (item.description ?? '').trim(),
                                   );
                                 const perCase =
-                                  skuPack > 0
-                                    ? skuPack
-                                    : packMatch && Number(packMatch[1]) > 0
-                                      ? Number(packMatch[1])
-                                      : 1;
+                                  skuPack?.pack ??
+                                  (packMatch && Number(packMatch[1]) > 0
+                                    ? Number(packMatch[1])
+                                    : 1);
                                 const bottleSize =
-                                  skuSize || packMatch?.[2]?.trim() || '75cl';
+                                  skuPack?.bottleSize ||
+                                  packMatch?.[2]?.trim() ||
+                                  '75cl';
                                 const totalBottles = item.quantity * perCase;
                                 const cleanName = (item.name ?? '')
                                   .replace(/\s*\(single bottle\)\s*/i, '')

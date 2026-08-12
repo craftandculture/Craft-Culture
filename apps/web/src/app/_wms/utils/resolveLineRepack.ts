@@ -3,6 +3,7 @@ import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
 import { wmsStock } from '@/database/schema';
 
 import normalizeLwin18 from './normalizeLwin18';
+import parseSkuPack from './parseSkuPack';
 
 interface RepackParams {
   name: string;
@@ -34,11 +35,10 @@ interface RepackParams {
  */
 const resolveLineRepack = async ({ name, sku, description, db }: RepackParams) => {
   // Ordered pack comes from the SKU (the source of truth): an LWIN18 carries the
-  // pack in digits 12-13 (strip dashes first so a mis-dashed SKU still parses).
-  // Fall back to the description ("6x75cl") only for non-LWIN SKUs, so a drifted
-  // description can't misstate the pack.
-  const skuDigits = String(sku ?? '').replace(/-/g, '');
-  const skuPack = /^\d{18}$/.test(skuDigits) ? Number(skuDigits.slice(11, 13)) : 0;
+  // pack in digits 12-13. Fall back to the description ("6x75cl") for non-LWIN
+  // SKUs and for SKUs whose pack digits are corrupt, so neither a drifted
+  // description nor a bad SKU can misstate the pack.
+  const skuPack = parseSkuPack(sku)?.pack ?? 0;
   const packMatch = /^(\d+)\s*[x×]/i.exec(description ?? '');
   const descPack = packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 0;
   const orderedPack = skuPack > 0 ? skuPack : descPack > 0 ? descPack : 1;
