@@ -83,6 +83,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     lineHeight: 1.4,
   },
+  pickListNumber: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: BRAND_TEAL,
+    marginBottom: 3,
+    letterSpacing: 0.5,
+  },
   // Summary strip
   summaryBox: {
     flexDirection: 'row',
@@ -198,9 +205,18 @@ const styles = StyleSheet.create({
     width: 58,
     textAlign: 'right',
   },
-  colInvLn: {
-    width: 34,
+  colPicked: {
+    width: 44,
     textAlign: 'center',
+  },
+  // Write-in box for the quantity actually picked — a tick says "I was here",
+  // a number says what came off the shelf, which is what a discrepancy needs.
+  writeInBox: {
+    width: 34,
+    height: 14,
+    border: `1px solid ${TEXT_MUTED}`,
+    borderRadius: 2,
+    marginHorizontal: 'auto',
   },
   productName: {
     fontSize: 8.5,
@@ -221,6 +237,11 @@ const styles = StyleSheet.create({
     fontSize: 6.5,
     color: TEXT_MUTED,
     textTransform: 'uppercase',
+  },
+  qtyBottles: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
   },
   binText: {
     fontSize: 8.5,
@@ -270,6 +291,27 @@ const styles = StyleSheet.create({
   repackBold: {
     fontWeight: 'bold',
   },
+  // Sign-off
+  signOff: {
+    flexDirection: 'row',
+    gap: 18,
+    marginTop: 22,
+    paddingTop: 12,
+    borderTop: `1px solid ${BORDER_LIGHT}`,
+  },
+  signOffCell: {
+    flex: 1,
+  },
+  signOffLabel: {
+    fontSize: 6.5,
+    color: TEXT_MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 16,
+  },
+  signOffLine: {
+    borderBottom: `1px solid ${TEXT_MUTED}`,
+  },
   // Footer
   footer: {
     position: 'absolute',
@@ -305,7 +347,9 @@ export interface PickingListLineItem {
   pack: string;
   qtyToPick: number;
   qtyUnit: 'cases' | 'bottles';
-  invLineNumber: number;
+  /** Bottles behind the quantity, so no pack arithmetic on the floor. */
+  totalBottles?: number;
+  lineNumber: number;
   isRepack: boolean;
   repackInstruction?: string | null;
 }
@@ -313,6 +357,7 @@ export interface PickingListLineItem {
 export interface PickingListPDFTemplateProps {
   pickListNumber: string;
   orderRef: string;
+  invoiceNumber?: string | null;
   consignee: string;
   dispatchTo: string;
   date: Date;
@@ -345,6 +390,7 @@ const getAisle = (bin: string) => {
 const PickingListPDFTemplate = ({
   pickListNumber,
   orderRef,
+  invoiceNumber,
   consignee,
   dispatchTo,
   date,
@@ -363,9 +409,12 @@ const PickingListPDFTemplate = ({
   const totalCases = items
     .filter((item) => item.qtyUnit === 'cases')
     .reduce((sum, item) => sum + item.qtyToPick, 0);
-  const totalBottles = items
-    .filter((item) => item.qtyUnit === 'bottles')
-    .reduce((sum, item) => sum + item.qtyToPick, 0);
+  // Every bottle on the sheet, cases included — the old total only counted
+  // bottle-unit lines, so a sheet of full cases reported "0 bottles".
+  const totalBottleCount = items.reduce(
+    (sum, item) => sum + (item.totalBottles ?? 0),
+    0,
+  );
 
   // Group items by aisle, preserving incoming (sorted) order
   const aisleOrder: string[] = [];
@@ -392,25 +441,23 @@ const PickingListPDFTemplate = ({
               style={styles.logo}
               src="https://wine.craftculture.xyz/images/cc-logo-cropped.png"
             />
-            <Text style={styles.brandName}>CRAFT &amp; CULTURE</Text>
-            <Text style={styles.brandTagline}>
-              The bridge to the Middle East wine &amp; spirits market
-            </Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.title}>PICKING LIST</Text>
-            <Text style={styles.subtitle}>
-              For {orderRef} · {consignee} · {formatDate(date)}
-            </Text>
-            <Text style={styles.docInfo}>Pick List #: {pickListNumber}</Text>
+            <Text style={styles.pickListNumber}>{pickListNumber}</Text>
+            <Text style={styles.docInfo}>{formatDate(date)}</Text>
           </View>
         </View>
 
         {/* Summary strip */}
         <View style={styles.summaryBox}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Order Ref</Text>
-            <Text style={styles.summaryValue}>{orderRef}</Text>
+            <Text style={styles.summaryLabel}>
+              {invoiceNumber ? 'Invoice / Order' : 'Order Ref'}
+            </Text>
+            <Text style={styles.summaryValue}>
+              {invoiceNumber ? `${invoiceNumber} · ${orderRef}` : orderRef}
+            </Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Consignee</Text>
@@ -425,7 +472,7 @@ const PickingListPDFTemplate = ({
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>To Pick</Text>
             <Text style={styles.summaryValueTeal}>
-              {totalCases} cases · {totalBottles} bottles
+              {totalCases} cases · {totalBottleCount} btl
             </Text>
           </View>
           <View style={styles.summaryItem}>
@@ -437,7 +484,7 @@ const PickingListPDFTemplate = ({
         {/* Table header */}
         <View style={styles.table}>
           <View style={styles.tableHeader} fixed>
-            <Text style={styles.colCheck}>{'□'}</Text>
+            <Text style={styles.colCheck}>{''}</Text>
             <Text style={styles.colNo}>#</Text>
             <Text style={styles.colBin}>Bin</Text>
             <Text style={styles.colStorage}>Storage</Text>
@@ -445,7 +492,7 @@ const PickingListPDFTemplate = ({
             <Text style={styles.colVintage}>Vintage</Text>
             <Text style={styles.colPack}>Pack</Text>
             <Text style={styles.colQty}>Qty to Pick</Text>
-            <Text style={styles.colInvLn}>Inv Ln</Text>
+            <Text style={styles.colPicked}>Picked</Text>
           </View>
 
           {/* Aisle groups */}
@@ -501,14 +548,21 @@ const PickingListPDFTemplate = ({
                         <View style={styles.colQty}>
                           <Text style={styles.qtyNumber}>{item.qtyToPick}</Text>
                           <Text style={styles.qtyUnit}>{item.qtyUnit}</Text>
+                          {item.qtyUnit === 'cases' && item.totalBottles ? (
+                            <Text style={styles.qtyBottles}>
+                              {item.totalBottles} btl
+                            </Text>
+                          ) : null}
                         </View>
-                        <Text style={styles.colInvLn}>{item.invLineNumber}</Text>
+                        <View style={styles.colPicked}>
+                          <View style={styles.writeInBox} />
+                        </View>
                       </View>
 
                       {item.isRepack && item.repackInstruction ? (
                         <View style={styles.repackRow}>
                           <Text style={styles.repackText}>
-                            <Text style={styles.repackBold}>{'↻'} REPACK — {item.productName}: </Text>
+                            <Text style={styles.repackBold}>REPACK: </Text>
                             {item.repackInstruction}
                           </Text>
                         </View>
@@ -521,6 +575,22 @@ const PickingListPDFTemplate = ({
           })}
         </View>
 
+        {/* Sign-off — who picked it, who checked it, when */}
+        <View style={styles.signOff} wrap={false}>
+          <View style={styles.signOffCell}>
+            <Text style={styles.signOffLabel}>Picked by</Text>
+            <View style={styles.signOffLine} />
+          </View>
+          <View style={styles.signOffCell}>
+            <Text style={styles.signOffLabel}>Checked by</Text>
+            <View style={styles.signOffLine} />
+          </View>
+          <View style={styles.signOffCell}>
+            <Text style={styles.signOffLabel}>Date / time completed</Text>
+            <View style={styles.signOffLine} />
+          </View>
+        </View>
+
         {/* Footer */}
         <View style={styles.footer} fixed>
           <View style={styles.footerContent}>
@@ -530,10 +600,15 @@ const PickingListPDFTemplate = ({
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
+              <Text
+                style={styles.footerText}
+                render={({ pageNumber, totalPages }) =>
+                  `Page ${pageNumber} of ${totalPages}`
+                }
+              />
               <Text style={styles.footerText}>
                 Generated by <Text style={styles.footerBrand}>C&amp;C Index</Text>
               </Text>
-              <Text style={styles.footerText}>craftculture.xyz</Text>
             </View>
           </View>
         </View>

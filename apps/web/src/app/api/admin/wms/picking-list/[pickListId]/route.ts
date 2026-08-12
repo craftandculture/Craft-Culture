@@ -6,7 +6,13 @@ import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import type { PickingListLineItem } from '@/app/_wms/components/PickingListPDFTemplate';
 import renderPickingListPDF from '@/app/_wms/utils/renderPickingListPDF';
 import db from '@/database/client';
-import { wmsLocations, wmsPickListItems, wmsPickLists, wmsStock } from '@/database/schema';
+import {
+  wmsLocations,
+  wmsPickListItems,
+  wmsPickLists,
+  wmsStock,
+  zohoSalesOrders,
+} from '@/database/schema';
 
 /**
  * Convert a stored bottle size (e.g. "75cl", "750ml") to a whole-number cl value
@@ -67,6 +73,17 @@ export async function GET(
       return NextResponse.json({ error: 'Pick list not found' }, { status: 404 });
     }
 
+    // The order behind the pick — the sheet needs the CUSTOMER, not the order
+    // number repeated in every field.
+    const [order] = await db
+      .select({
+        customerName: zohoSalesOrders.customerName,
+        invoiceNumber: zohoSalesOrders.invoiceNumber,
+        referenceNumber: zohoSalesOrders.referenceNumber,
+      })
+      .from(zohoSalesOrders)
+      .where(eq(zohoSalesOrders.id, pickList.orderId));
+
     // Fetch items joined to stock (pack config, producer, vintage) and
     // location (bin code, storage method)
     const rows = await db
@@ -116,7 +133,8 @@ export async function GET(
           isRepack = true;
           const bottlesFromCrackedCase = remainder;
           const returnBottles = caseConfig - bottlesFromCrackedCase;
-          repackInstruction = `Break ${caseConfig}×${bottleSizeCl}cl case → pick ${bottlesFromCrackedCase} btl, return ${returnBottles} to ${bin}`;
+          // No arrows: the PDF font subset renders them as stray punctuation.
+          repackInstruction = `Break one ${caseConfig}x${bottleSizeCl}cl case: pick ${bottlesFromCrackedCase} btl, return ${returnBottles} btl to ${bin}`;
         }
       } else {
         qtyToPick = row.quantityCases;
@@ -132,7 +150,11 @@ export async function GET(
         pack: `${caseConfig}x${bottleSizeCl}cl`,
         qtyToPick,
         qtyUnit,
-        invLineNumber: index + 1,
+        // The bottle count behind the quantity, so a picker never has to do
+        // pack arithmetic on the floor.
+        totalBottles:
+          qtyUnit === 'cases' ? qtyToPick * caseConfig : qtyToPick,
+        lineNumber: index + 1,
         isRepack,
         repackInstruction,
       };
@@ -142,8 +164,9 @@ export async function GET(
     const pdfBuffer = await renderPickingListPDF({
       pickListNumber: pickList.pickListNumber,
       orderRef: pickList.orderNumber,
-      consignee: pickList.orderNumber,
-      dispatchTo: '—',
+      invoiceNumber: order?.invoiceNumber ?? null,
+      consignee: order?.customerName ?? pickList.orderNumber,
+      dispatchTo: order?.referenceNumber ?? '—',
       date: pickList.createdAt ?? new Date(),
       items,
     });
