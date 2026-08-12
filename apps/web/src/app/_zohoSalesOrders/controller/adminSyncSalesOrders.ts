@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
+import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import db from '@/database/client';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -119,6 +120,9 @@ const adminSyncSalesOrders = adminProcedure
             shippingAddress: fullOrder.shipping_address,
             zohoCreatedTime: new Date(fullOrder.created_time),
             zohoLastModifiedTime: new Date(fullOrder.last_modified_time),
+            // Straight off the order — see pickInvoiceNumber for why the
+            // reference_number match isn't enough on its own.
+            invoiceNumber: pickInvoiceNumber(fullOrder),
             lastSyncAt: new Date(),
           })
           .returning({ id: zohoSalesOrders.id });

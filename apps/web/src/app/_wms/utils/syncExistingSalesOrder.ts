@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
+import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import { zohoSalesOrders } from '@/database/schema';
 import { getSalesOrder } from '@/lib/zoho/salesOrders';
 
@@ -96,6 +97,12 @@ const syncExistingSalesOrder = async ({
 
   const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
 
+  // Only ever set the invoice number, never clear one we already hold — the
+  // detail payload is the authoritative link but an older sync may have
+  // backfilled it from zoho_invoices.
+  const invoiceNumber = pickInvoiceNumber(fullOrder);
+  const invoiceUpdate = invoiceNumber ? { invoiceNumber } : {};
+
   if (PRE_PICK_STATUSES.has(status)) {
     await db
       .update(zohoSalesOrders)
@@ -104,6 +111,7 @@ const syncExistingSalesOrder = async ({
         zohoLastModifiedTime: zohoModifiedAt,
         total: fullOrder.total,
         subTotal: fullOrder.sub_total,
+        ...invoiceUpdate,
         lastSyncAt: new Date(),
       })
       .where(eq(zohoSalesOrders.id, existing.id));
@@ -131,6 +139,7 @@ const syncExistingSalesOrder = async ({
       zohoLastModifiedTime: zohoModifiedAt,
       total: fullOrder.total,
       subTotal: fullOrder.sub_total,
+      ...invoiceUpdate,
       soModifiedAfterRelease: true,
       soModifiedAt: new Date(),
       lastSyncAt: new Date(),

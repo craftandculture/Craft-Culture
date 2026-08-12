@@ -256,6 +256,20 @@ export interface ZohoSalesOrder {
   shipping_address?: ZohoAddress;
   created_time: string;
   last_modified_time: string;
+  /**
+   * Invoices raised against this order, returned by the detail (Get Sales
+   * Order) endpoint only. This is the authoritative SO→invoice link — matching
+   * on `reference_number` fails whenever the invoice's reference carries
+   * something else (a consignment label, a PCO number).
+   */
+  invoices?: {
+    invoice_id: string;
+    invoice_number: string;
+    status?: string;
+    date?: string;
+    total?: number;
+    balance?: number;
+  }[];
 }
 
 /**
