@@ -378,6 +378,13 @@ const WMSPickListDetailPage = () => {
             <span className="shrink-0 rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
               {data.invoiceNumber ?? data.orderNumber}
             </span>
+            {/* Both references, not one or the other: the office quotes the
+                invoice, the warehouse paperwork quotes the SO. */}
+            {data.invoiceNumber && data.orderNumber && (
+              <span className="shrink-0 text-[11px] font-medium text-text-muted/70">
+                {data.orderNumber}
+              </span>
+            )}
           </div>
           {/* Progress bar inline */}
           <div className="mt-1.5 flex items-center gap-2">

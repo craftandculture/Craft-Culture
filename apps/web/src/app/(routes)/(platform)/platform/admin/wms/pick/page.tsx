@@ -206,14 +206,17 @@ const WMSPickListsPage = () => {
                               </span>
                             )}
                           </div>
+                          {/* Invoice and SO side by side — the office quotes
+                              the invoice, warehouse paperwork quotes the SO. */}
                           <Typography variant="bodyXs" colorRole="muted">
                             {pickList.invoiceNumber ?? pickList.orderNumber}
+                            {pickList.invoiceNumber && pickList.orderNumber && (
+                              <span className="opacity-60">
+                                {' '}
+                                &middot; {pickList.orderNumber}
+                              </span>
+                            )}
                           </Typography>
-                          {pickList.invoiceNumber && pickList.orderNumber && (
-                            <Typography variant="bodyXs" colorRole="muted" className="opacity-60">
-                              {pickList.orderNumber}
-                            </Typography>
-                          )}
                           <div className="mt-2 flex items-center gap-4">
                             <Typography variant="bodyXs">
                               {pickList.pickedItems}/{pickList.totalItems} items picked
