@@ -108,6 +108,11 @@ export const mapAliasSchema = z.object({
   applyToExistingLines: z.boolean().default(true),
 });
 
+export const autoMapSchema = z.object({
+  /** Report what would be mapped without writing anything */
+  dryRun: z.boolean().default(false),
+});
+
 export const deleteAliasSchema = z.object({ aliasId: z.string().uuid() });
 
 export const getTriangulationSchema = z.object({

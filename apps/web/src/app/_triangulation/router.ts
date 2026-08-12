@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAutoMapSuggestions from './controller/adminAutoMapSuggestions';
 import adminCommitImport from './controller/adminCommitImport';
 import adminCreateImport from './controller/adminCreateImport';
 import adminCreatePeriod from './controller/adminCreatePeriod';
@@ -48,6 +49,7 @@ const triangulationRouter = createTRPCRouter({
     syncSalesFromZoho: adminSyncSalesFromZoho,
     getUnmapped: adminGetUnmapped,
     mapAlias: adminMapAlias,
+    autoMapSuggestions: adminAutoMapSuggestions,
     deleteAlias: adminDeleteAlias,
     getTriangulation: adminGetTriangulation,
     getSkuLedger: adminGetSkuLedger,

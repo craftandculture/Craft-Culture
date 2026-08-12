@@ -1,6 +1,6 @@
 'use client';
 
-import { IconLink, IconPlus } from '@tabler/icons-react';
+import { IconLink, IconPlus, IconWand } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -59,6 +59,35 @@ const MappingTab = () => {
       });
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.getImports.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const autoMap = useMutation({
+    ...api.triangulation.admin.autoMapSuggestions.mutationOptions(),
+    onSuccess: async (result) => {
+      if (result.dryRun) {
+        toast.info(
+          result.accepted === 0
+            ? `Nothing is confident enough to map automatically — all ${result.declined} need a decision`
+            : `${result.accepted} can be mapped automatically, ${result.declined} still need a decision. Run it again to apply.`,
+        );
+        return;
+      }
+
+      toast.success(
+        `Mapped ${result.accepted} automatically · ${result.declined} left for you`,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
       });
     },
     onError: (error) => toast.error(error.message),
@@ -129,6 +158,26 @@ const MappingTab = () => {
         <Typography variant="bodySm" colorRole="muted">
           {rows.length} unresolved code{rows.length === 1 ? '' : 's'}
         </Typography>
+        {rows.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <Button
+              colorRole="muted"
+              variant="outline"
+              isDisabled={autoMap.isPending}
+              onClick={() => autoMap.mutate({ dryRun: true })}
+            >
+              Preview auto-map
+            </Button>
+            <Button
+              colorRole="brand"
+              isDisabled={autoMap.isPending}
+              onClick={() => autoMap.mutate({ dryRun: false })}
+            >
+              <IconWand className="mr-1 size-4" />
+              {autoMap.isPending ? 'Matching…' : 'Auto-map confident matches'}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {rows.length === 0 ? (
