@@ -11,23 +11,13 @@ import useTRPC from '@/lib/trpc/browser';
 
 import SkuLedgerPanel from './SkuLedgerPanel';
 import StatTile from './StatTile';
-import type { TriImportKind } from '../schemas/triangulationSchemas';
 import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 import formatBottles from '../utils/formatBottles';
-import importKindLabels from '../utils/importKindLabels';
 
 
 export interface OverviewTabProps {
   periodId: string | null;
 }
-
-const ALL_KINDS: TriImportKind[] = [
-  'cc_opening',
-  'cc_sales_to_cd',
-  'cc_count',
-  'cd_sales',
-  'cd_count',
-];
 
 /** Colour a variance by whether it is worth a conversation */
 const varianceTone = (value: number | null) => {
@@ -64,9 +54,19 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   const summary = triangulation.data?.summary;
   const meta = triangulation.data?.meta;
 
-  const missingKinds = ALL_KINDS.filter(
-    (kind) => !(meta?.presentKinds ?? []).includes(kind),
-  );
+  // `cc_count` now carries two different things — the WMS system position and a
+  // physical count — so presence has to be judged on the snapshot dates rather
+  // than on the import kind, or having one would imply having both.
+  const present = meta?.presentKinds ?? [];
+
+  const missingInputs = [
+    present.includes('cc_opening') ? null : 'C&C opening stock',
+    present.includes('cc_sales_to_cd') ? null : 'C&C sales to City Drinks',
+    meta?.ccSystemDate ? null : 'C&C system position (WMS)',
+    meta?.ccCountDate ? null : 'C&C physical count',
+    present.includes('cd_sales') ? null : 'City Drinks sales',
+    present.includes('cd_count') ? null : 'City Drinks stock on hand',
+  ].filter((entry): entry is string => entry !== null);
 
   return (
     <div className="space-y-5">
@@ -100,7 +100,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
 
       {(meta?.unmappedLines ?? 0) > 0 ||
       (meta?.draftImports ?? 0) > 0 ||
-      missingKinds.length > 0 ||
+      missingInputs.length > 0 ||
       (summary?.negativeRows ?? 0) > 0 ? (
         <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
           <div className="flex items-start gap-2">
@@ -110,13 +110,9 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                 Read these figures with the following in mind
               </Typography>
               <ul className="text-text-muted list-disc space-y-0.5 pl-4 text-sm">
-                {missingKinds.length > 0 ? (
+                {missingInputs.length > 0 ? (
                   <li>
-                    Not yet received:{' '}
-                    {missingKinds
-                      .map((kind) => importKindLabels[kind].label)
-                      .join(', ')}
-                    .
+                    Not yet received: {missingInputs.join(', ')}.
                   </li>
                 ) : null}
                 {(meta?.unmappedLines ?? 0) > 0 ? (

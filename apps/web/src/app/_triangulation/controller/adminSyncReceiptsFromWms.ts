@@ -65,23 +65,39 @@ const adminSyncReceiptsFromWms = adminProcedure
       ORDER BY m.performed_at
     `;
 
+    // Stock that landed before WMS receiving went live has no receipt movement
+    // to find, so an empty result is an ordinary state rather than a failure —
+    // it means the opening position rests entirely on an uploaded baseline.
+    // Clearing the feed and reporting zero is the honest outcome; throwing
+    // would also abort a Refresh All that has other feeds still to run.
     if (rows.length === 0) {
-      const owners = await client<{ businessName: string }[]>`
-        SELECT DISTINCT p.business_name AS "businessName"
-        FROM wms_stock_movements m
-        JOIN partners p ON p.id = m.to_owner_id
-        WHERE m.movement_type = 'receive'
-        ORDER BY p.business_name
+      await client`
+        DELETE FROM tri_imports
+        WHERE kind = 'cc_opening' AND source_ref = 'wms-receipts'
       `;
 
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message:
-          `No WMS receipts found for owner "${ownerName}".` +
-          (owners.length > 0
-            ? ` Owners with receipts: ${owners.map((row) => row.businessName).join(', ')}.`
-            : ''),
-      });
+      const [baseline] = await client<{ uploads: number; bottles: number }[]>`
+        SELECT
+          COUNT(DISTINCT i.id)::int AS uploads,
+          COALESCE(SUM(l.quantity_bottles), 0)::float8 AS bottles
+        FROM tri_imports i
+        LEFT JOIN tri_import_lines l ON l.import_id = i.id AND l.status = 'mapped'
+        WHERE i.kind = 'cc_opening'
+          AND i.status = 'committed'
+          AND i.source_ref IS DISTINCT FROM 'wms-receipts'
+      `;
+
+      return {
+        importId: null,
+        asOfDate,
+        rowCount: 0,
+        mappedRowCount: 0,
+        totalBottles: 0,
+        receipts: 0,
+        missingCaseConfig: 0,
+        baselineUploads: baseline?.uploads ?? 0,
+        baselineBottles: baseline?.bottles ?? 0,
+      };
     }
 
     await client`
@@ -153,6 +169,8 @@ const adminSyncReceiptsFromWms = adminProcedure
       ...totals,
       receipts: rows.length,
       missingCaseConfig: rows.filter((row) => !row.caseConfig).length,
+      baselineUploads: 0,
+      baselineBottles: 0,
     };
   });
 

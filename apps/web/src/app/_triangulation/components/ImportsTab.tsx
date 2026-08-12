@@ -129,9 +129,19 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const syncReceipts = useMutation({
     ...api.triangulation.admin.syncReceiptsFromWms.mutationOptions(),
     onSuccess: async (result) => {
-      toast.success(
-        `Synced ${result.receipts} WMS receipts — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
-      );
+      if (result.receipts === 0) {
+        // Expected for stock that landed before WMS receiving existed.
+        toast.info(
+          result.baselineUploads > 0
+            ? `No WMS receipts for this owner — opening stock rests on ${result.baselineUploads} uploaded baseline import${result.baselineUploads === 1 ? '' : 's'} (${Math.round(result.baselineBottles).toLocaleString('en-GB')} bottles)`
+            : 'No WMS receipts for this owner, and no baseline uploaded — opening stock is missing, so every position will read low',
+        );
+      } else {
+        toast.success(
+          `Synced ${result.receipts} WMS receipts — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+        );
+      }
+
       await invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -178,6 +188,11 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     await syncReceipts.mutateAsync({ ownerName: 'Crurated' }).catch(() => null);
     await syncZoho.mutateAsync({ customerMatch: zohoCustomer }).catch(() => null);
     await syncCount
+      .mutateAsync({ ownerName: 'Crurated', periodId })
+      .catch(() => null);
+    // The physical count only yields anything once a cycle count has been
+    // completed in the WMS, so it is expected to no-op much of the time.
+    await syncCycleCount
       .mutateAsync({ ownerName: 'Crurated', periodId })
       .catch(() => null);
   };

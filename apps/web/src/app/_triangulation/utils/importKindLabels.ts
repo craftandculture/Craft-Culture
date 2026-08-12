@@ -41,7 +41,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     cadence: 'Live from Zoho',
   },
   cc_count: {
-    label: 'C&C physical count',
+    label: 'C&C stock position',
     shortLabel: 'C&C counted',
     description:
       "Two things: the system position from wms_stock, and the physical count from a WMS cycle count. The gap between them is the warehouse disagreeing with its own records — only a real count can catch that.",
