@@ -123,6 +123,12 @@ export const autoMapSchema = z.object({
   dryRun: z.boolean().default(false),
 });
 
+export const setCodeIgnoredSchema = z.object({
+  normalizedCode: z.string().min(1),
+  /** True to exclude the code as not this reconciliation's stock */
+  ignore: z.boolean(),
+});
+
 export const deleteAliasSchema = z.object({ aliasId: z.string().uuid() });
 
 export const getTriangulationSchema = z.object({
@@ -134,6 +140,8 @@ export const getTriangulationSchema = z.object({
 
 export const getUnmappedSchema = z.object({
   importId: z.string().uuid().optional().nullable(),
+  /** Show codes already set aside as not this reconciliation's stock */
+  includeIgnored: z.boolean().default(false),
   limit: z.number().int().positive().max(500).default(200),
 });
 

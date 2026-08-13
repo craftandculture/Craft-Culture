@@ -95,7 +95,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   if ((meta?.unmappedLines ?? 0) > 0) {
     issues.push({
       label: `${meta?.unmappedCodes} unmapped codes`,
-      detail: `${meta?.unmappedLines} imported lines carry a product code that does not resolve to a W code, so they are excluded from every figure here. Resolve them on the Mapping tab.`,
+      detail: `${meta?.unmappedLines} imported lines carry a product code that does not resolve to a W code, so they are excluded from every figure here. Map them on the Mapping tab, or set aside the ones that are not this owner's stock — the invoices to City Drinks carry other wines too.`,
       severity: 'blocking',
     });
   }

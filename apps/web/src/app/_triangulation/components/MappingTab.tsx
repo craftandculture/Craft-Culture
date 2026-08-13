@@ -1,6 +1,6 @@
 'use client';
 
-import { IconLink, IconPlus, IconWand } from '@tabler/icons-react';
+import { IconEyeOff, IconLink, IconPlus, IconWand } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -30,9 +30,15 @@ const MappingTab = () => {
 
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<Record<string, string>>({});
+  /** Reviewing what has been set aside, rather than what still needs a decision */
+  const [showIgnored, setShowIgnored] = useState(false);
 
   const unmapped = useQuery(
-    api.triangulation.admin.getUnmapped.queryOptions({ importId: null, limit: 200 }),
+    api.triangulation.admin.getUnmapped.queryOptions({
+      importId: null,
+      includeIgnored: showIgnored,
+      limit: 200,
+    }),
   );
 
   const skus = useQuery(
@@ -88,6 +94,25 @@ const MappingTab = () => {
       });
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const setIgnored = useMutation({
+    ...api.triangulation.admin.setCodeIgnored.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.ignored
+          ? `Set aside — ${result.lines} lines excluded as not this stock`
+          : `Restored ${result.lines} lines to the queue`,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
       });
     },
     onError: (error) => toast.error(error.message),
@@ -156,8 +181,15 @@ const MappingTab = () => {
           />
         </div>
         <Typography variant="bodySm" colorRole="muted">
-          {rows.length} unresolved code{rows.length === 1 ? '' : 's'}
+          {rows.length} {showIgnored ? 'set aside' : 'unresolved'}
         </Typography>
+        <Button
+          colorRole="muted"
+          variant="ghost"
+          onClick={() => setShowIgnored((current) => !current)}
+        >
+          {showIgnored ? 'Back to the queue' : 'Show set aside'}
+        </Button>
         {rows.length > 0 ? (
           <div className="flex items-center gap-2">
             <Button
@@ -182,8 +214,10 @@ const MappingTab = () => {
 
       {rows.length === 0 ? (
         <div className="border-border-primary rounded-xl border p-8 text-center">
-          <Typography variant="labelSm" colorRole="success">
-            Every imported code resolves to a W code.
+          <Typography variant="labelSm" colorRole={showIgnored ? 'muted' : 'success'}>
+            {showIgnored
+              ? 'Nothing has been set aside.'
+              : 'Every imported code resolves to a W code.'}
           </Typography>
           <Typography variant="bodySm" colorRole="muted" asChild>
             <p className="mt-1">
@@ -279,6 +313,23 @@ const MappingTab = () => {
                   >
                     <IconPlus className="mr-1 size-4" />
                     New SKU
+                  </Button>
+                  {/* Most unresolved codes here are other owners' wine on the
+                      same invoice — a decision to exclude, not a missing map. */}
+                  <Button
+                    size="sm"
+                    colorRole="muted"
+                    variant="ghost"
+                    isDisabled={setIgnored.isPending}
+                    onClick={() =>
+                      setIgnored.mutate({
+                        normalizedCode: row.normalizedCode,
+                        ignore: !showIgnored,
+                      })
+                    }
+                  >
+                    <IconEyeOff className="mr-1 size-4" />
+                    {showIgnored ? 'Restore' : 'Not our stock'}
                   </Button>
                 </div>
               </div>

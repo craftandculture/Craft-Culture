@@ -18,6 +18,7 @@ import adminGetUnmapped from './controller/adminGetUnmapped';
 import adminMapAlias from './controller/adminMapAlias';
 import adminRepairPackSizes from './controller/adminRepairPackSizes';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
+import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
 import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminSyncCycleCountFromWms from './controller/adminSyncCycleCountFromWms';
@@ -55,6 +56,7 @@ const triangulationRouter = createTRPCRouter({
     syncSalesFromZoho: adminSyncSalesFromZoho,
     getUnmapped: adminGetUnmapped,
     mapAlias: adminMapAlias,
+    setCodeIgnored: adminSetCodeIgnored,
     autoMapSuggestions: adminAutoMapSuggestions,
     deleteAlias: adminDeleteAlias,
     getTriangulation: adminGetTriangulation,

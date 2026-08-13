@@ -29,7 +29,7 @@ export interface TriUnmappedRow {
 const adminGetUnmapped = adminProcedure
   .input(getUnmappedSchema)
   .query(async ({ input }) => {
-    const { importId, limit } = input;
+    const { importId, includeIgnored, limit } = input;
 
     // A write inside a read, deliberately: until every line has a key, this
     // queue shows unrelated wines merged into one group, and mapping that
@@ -50,7 +50,7 @@ const adminGetUnmapped = adminProcedure
           COALESCE(SUM(l.quantity_bottles), 0)::float8 AS total_quantity
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
-        WHERE l.status = 'unmapped'
+        WHERE l.status = ${includeIgnored ? 'ignored' : 'unmapped'}
           ${importId ? client`AND l.import_id = ${importId}` : client``}
         GROUP BY l.normalized_code
       )

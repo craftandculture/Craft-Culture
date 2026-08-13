@@ -58,6 +58,22 @@ const mapImportLines = async (importId: string, source: TriAliasSource) => {
     WHERE l.id = m.id AND m.sku_id IS NOT NULL
   `;
 
+  // A code set aside once stays set aside — including when the same code
+  // arrives in next month's file. Without this the decision would have to be
+  // retaken every time a feed refreshed.
+  await client`
+    UPDATE tri_import_lines l
+    SET status = 'ignored', sku_id = NULL, updated_at = NOW()
+    FROM (
+      SELECT DISTINCT normalized_code
+      FROM tri_import_lines
+      WHERE status = 'ignored' AND COALESCE(normalized_code, '') <> ''
+    ) ignored
+    WHERE l.import_id = ${importId}
+      AND l.normalized_code = ignored.normalized_code
+      AND l.status <> 'ignored'
+  `;
+
   // Case-denominated lines that did not state a pack size inherit it from the
   // SKU now that we know which SKU they are.
   await recalculateLineBottles(importId);
