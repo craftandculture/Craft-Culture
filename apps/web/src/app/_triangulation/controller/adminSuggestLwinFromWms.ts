@@ -55,7 +55,10 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
         ), 0)::float8 AS bottles
       FROM wms_stock s
       WHERE s.lwin18 IS NOT NULL
-        AND TRIM(s.lwin18) <> ''
+        -- Only genuine dashed LWINs are offered. The warehouse holds supplier
+        -- references in this column too, and adopting one would spread a bad
+        -- code into Zoho rather than out of it.
+        AND s.lwin18 ~ '^[0-9]{7}-[0-9]{4}-[0-9]{2}-[0-9]{5}$'
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokenizeMatch('Crurated')}::text[]) AS t(tok)
           WHERE POSITION(

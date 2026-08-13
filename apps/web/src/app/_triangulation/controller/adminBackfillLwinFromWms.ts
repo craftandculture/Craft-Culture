@@ -3,6 +3,7 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { autoMapSchema } from '../schemas/triangulationSchemas';
+import isCanonicalLwin18 from '../utils/isCanonicalLwin18';
 import tokenizeMatch from '../utils/tokenizeMatch';
 import wineIdentity from '../utils/wineIdentity';
 
@@ -83,6 +84,10 @@ const adminBackfillLwinFromWms = adminProcedure
 
     for (const candidate of candidates) {
       const lwin = normalizeLwin18(candidate.lwin18.trim());
+
+      // The warehouse holds supplier references in the LWIN column. Harmless
+      // there, wrong the moment one is adopted as the code Zoho should carry.
+      if (!isCanonicalLwin18(lwin)) continue;
 
       if (candidate.supplierSku?.trim()) {
         byCode.set(normalize(candidate.supplierSku), lwin);

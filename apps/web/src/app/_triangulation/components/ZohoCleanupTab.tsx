@@ -99,6 +99,24 @@ const ZohoCleanupTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const repairEncoding = useMutation({
+    ...api.triangulation.admin.repairEncoding.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.repaired === 0
+          ? `No garbled names among ${result.scanned} SKUs`
+          : `${result.repaired} names repaired — e.g. ${result.examples[0]?.to}`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const backfill = useMutation({
     ...api.triangulation.admin.backfillLwinFromWms.mutationOptions(),
     onSuccess: async (result) => {
@@ -256,6 +274,15 @@ const ZohoCleanupTab = () => {
                 onClick={() => backfill.mutate({ dryRun: true })}
               >
                 Check first
+              </Button>
+              <Button
+                size="sm"
+                colorRole="muted"
+                variant="outline"
+                isDisabled={repairEncoding.isPending}
+                onClick={() => repairEncoding.mutate({ dryRun: false })}
+              >
+                {repairEncoding.isPending ? 'Repairing…' : 'Repair garbled names'}
               </Button>
               <Button
                 size="sm"

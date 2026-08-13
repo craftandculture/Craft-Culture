@@ -21,7 +21,15 @@ export interface ParsedSheet {
  */
 const parseWorkbook = async (file: File) => {
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+  // A CSV without a byte-order mark is decoded as Windows-1252 by default,
+  // which turns every accent into mojibake — L’If arrives as Lâ€™If and stays
+  // that way in the registry. Forcing UTF-8 is right for anything exported by
+  // Zoho, the WMS or Excel this decade.
+  const workbook = XLSX.read(buffer, {
+    type: 'array',
+    cellDates: true,
+    codepage: 65001,
+  });
 
   const sheets: ParsedSheet[] = workbook.SheetNames.map((name) => {
     const sheet = workbook.Sheets[name];
