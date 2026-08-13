@@ -101,7 +101,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                         {entry.fileName ?? entry.periodLabel ?? ''}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 tabular-nums">{entry.asOfDate}</td>
+                    <td className="py-2 pr-3 tabular-nums">{entry.effectiveDate}</td>
                     <td className="py-2 pr-3">
                       {entry.docRef ?? '—'}
                       {entry.docDate ? (
