@@ -1,8 +1,7 @@
-import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsDocuments, logisticsShipments } from '@/database/schema';
+import { logisticsDocumentType } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const getDocumentComplianceSchema = z.object({
@@ -23,8 +22,13 @@ const adminGetDocumentCompliance = adminProcedure
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // Required document types based on shipment type
-    const requiredDocsByType: Record<string, string[]> = {
+    // Required document types based on shipment type. Typed against the enum so
+    // a typo here is a compile error rather than a document that is silently
+    // never reported as missing.
+    const requiredDocsByType: Record<
+      string,
+      (typeof logisticsDocumentType.enumValues)[number][]
+    > = {
       inbound: ['bill_of_lading', 'commercial_invoice', 'packing_list', 'certificate_of_origin'],
       outbound: ['commercial_invoice', 'packing_list', 'export_permit'],
       re_export: ['commercial_invoice', 'packing_list', 'import_permit', 'export_permit'],
@@ -41,10 +45,10 @@ const adminGetDocumentCompliance = adminProcedure
       'cleared',
       'at_warehouse',
       'dispatched',
-    ];
+    ] as const;
 
     const shipments = await db.query.logisticsShipments.findMany({
-      where: or(...activeStatuses.map((s) => eq(logisticsShipments.status, s))),
+      where: { status: { in: [...activeStatuses] } },
       columns: {
         id: true,
         shipmentNumber: true,
@@ -60,10 +64,7 @@ const adminGetDocumentCompliance = adminProcedure
     const shipmentIds = shipments.map((s) => s.id);
 
     const documentQuery = db.query.logisticsDocuments.findMany({
-      where:
-        shipmentIds.length > 0
-          ? or(...shipmentIds.map((id) => eq(logisticsDocuments.shipmentId, id)))
-          : undefined,
+      where: shipmentIds.length > 0 ? { shipmentId: { in: shipmentIds } } : undefined,
       columns: {
         id: true,
         shipmentId: true,

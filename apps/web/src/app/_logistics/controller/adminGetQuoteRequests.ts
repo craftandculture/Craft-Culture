@@ -50,7 +50,7 @@ const adminGetQuoteRequests = adminProcedure
     // Add cursor for pagination
     if (cursor) {
       const cursorRequest = await db.query.logisticsQuoteRequests.findFirst({
-        where: eq(logisticsQuoteRequests.id, cursor),
+        where: { id: cursor },
         columns: { createdAt: true },
       });
 
