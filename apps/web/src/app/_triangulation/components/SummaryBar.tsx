@@ -5,6 +5,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import formatBottles from '../utils/formatBottles';
 
 export interface SummaryBarProps {
+  /** True when a search or filter is narrowing the rows these totals cover */
+  isFiltered?: boolean;
   ccReceived: number;
   ccSoldToCd: number;
   ccOnHand: number;
@@ -19,8 +21,13 @@ export interface SummaryBarProps {
  * here for — below the fold. They are context, not the answer, so they earn one
  * line. Grouping them under the two party colours also states the key the table
  * then uses, without needing a legend.
+ *
+ * They total whatever the table is showing, so a search narrows them too — said
+ * out loud, because a filtered total read as a period total is how someone
+ * concludes stock has vanished.
  */
 const SummaryBar = ({
+  isFiltered,
   ccReceived,
   ccSoldToCd,
   ccOnHand,
@@ -51,6 +58,11 @@ const SummaryBar = ({
 
   return (
     <div className="border-border-primary bg-fill-primary flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border px-4 py-3">
+      {isFiltered ? (
+        <span className="bg-fill-warning/20 text-text-warning rounded-full px-2 py-0.5 text-xs">
+          filtered
+        </span>
+      ) : null}
       {groups.map((group, index) => (
         <div key={group.name} className="flex items-center gap-5">
           {index > 0 ? (

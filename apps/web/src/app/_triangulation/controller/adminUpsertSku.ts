@@ -3,7 +3,9 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import mapImportLines from '../data/mapImportLines';
 import { upsertSkuSchema } from '../schemas/triangulationSchemas';
+import type { TriAliasSource } from '../schemas/triangulationSchemas';
 
 /**
  * Create or update a canonical W code SKU
@@ -44,6 +46,10 @@ const adminUpsertSku = adminProcedure
     }
 
     if (skuId) {
+      const [existing] = await client<{ caseConfig: number }[]>`
+        SELECT case_config AS "caseConfig" FROM tri_skus WHERE id = ${skuId} LIMIT 1
+      `;
+
       await client`
         UPDATE tri_skus
         SET w_code = ${trimmedCode},
@@ -58,7 +64,33 @@ const adminUpsertSku = adminProcedure
         WHERE id = ${skuId}
       `;
 
-      return { id: skuId, wCode: trimmedCode };
+      // Pack size is what turns a case-denominated line into bottles, so
+      // changing it changes every figure this SKU appears in. Writing the new
+      // value without recomputing left the edit looking like it had done
+      // nothing — the number on screen would not move until some unrelated
+      // action happened to re-map the import.
+      if (existing && existing.caseConfig !== caseConfig) {
+        const affected = await client<
+          { id: string; aliasSource: TriAliasSource }[]
+        >`
+          SELECT DISTINCT i.id, i.alias_source AS "aliasSource"
+          FROM tri_imports i
+          JOIN tri_import_lines l ON l.import_id = i.id
+          WHERE l.sku_id = ${skuId}
+        `;
+
+        for (const record of affected) {
+          await mapImportLines(record.id, record.aliasSource);
+        }
+
+        return {
+          id: skuId,
+          wCode: trimmedCode,
+          recalculatedImports: affected.length,
+        };
+      }
+
+      return { id: skuId, wCode: trimmedCode, recalculatedImports: 0 };
     }
 
     const [created] = await client<{ id: string }[]>`
@@ -73,7 +105,7 @@ const adminUpsertSku = adminProcedure
       RETURNING id
     `;
 
-    return { id: created?.id ?? '', wCode: trimmedCode };
+    return { id: created?.id ?? '', wCode: trimmedCode, recalculatedImports: 0 };
   });
 
 export default adminUpsertSku;

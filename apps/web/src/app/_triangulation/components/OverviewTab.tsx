@@ -155,6 +155,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   return (
     <div className="space-y-5">
       <SummaryBar
+        isFiltered={!!search.trim() || variancesOnly}
         ccReceived={summary?.ccReceived ?? 0}
         ccSoldToCd={summary?.ccSoldToCd ?? 0}
         ccOnHand={summary?.ccOnHandCalc ?? 0}

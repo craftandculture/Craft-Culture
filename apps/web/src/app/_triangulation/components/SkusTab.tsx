@@ -51,8 +51,12 @@ const SkusTab = () => {
 
   const upsertSku = useMutation({
     ...api.triangulation.admin.upsertSku.mutationOptions(),
-    onSuccess: async () => {
-      toast.success('SKU updated');
+    onSuccess: async (result) => {
+      toast.success(
+        result.recalculatedImports > 0
+          ? `SKU updated — ${result.recalculatedImports} import${result.recalculatedImports === 1 ? '' : 's'} recalculated`
+          : 'SKU updated',
+      );
       await invalidate();
     },
     onError: (error) => toast.error(error.message),
