@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import deriveLwinFromCodes from '../utils/deriveLwinFromCodes';
+import type { DerivedLwin } from '../utils/deriveLwinFromCodes';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 export interface LwinSuggestion {
@@ -15,12 +17,31 @@ export interface LwinSuggestion {
   score: number;
 }
 
+export interface ReferenceSuggestion {
+  lwin7: string;
+  displayName: string;
+  producerName: string | null;
+  region: string | null;
+  country: string | null;
+  score: number;
+}
+
 export interface SkuNeedingLwin {
   skuId: string;
   wCode: string;
   productName: string;
   vintage: number | null;
+  caseConfig: number;
+  bottleSize: string | null;
+  /** Pack read off the invoice text, when the SKU's own is only a default */
+  packFromInvoice: number | null;
   suggestions: LwinSuggestion[];
+  /** LWIN7s from the reference list, for wines the warehouse never held */
+  reference: ReferenceSuggestion[];
+  /** Codes Zoho already carries for this wine, dashed LWIN or not */
+  zohoCodes: { code: string; bottles: number }[];
+  /** The LWIN implied by those codes, which is usually the whole answer */
+  derived: DerivedLwin | null;
 }
 
 /**
@@ -72,7 +93,20 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
       k.w_code AS "wCode",
       k.product_name AS "productName",
       k.vintage,
-      COALESCE(m.suggestions, '[]'::json) AS suggestions
+      k.case_config AS "caseConfig",
+      k.bottle_size AS "bottleSize",
+      -- The pack is printed on the invoice line — "(6x75cl)" — even when the
+      -- SKU carries nothing but a default. Reading it there is the only source
+      -- for a wine the warehouse never received.
+      (
+        SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\d+)\s*[xX]\s*\d'), '')::int)
+        FROM tri_import_lines l
+        WHERE l.sku_id = k.id
+          AND l.raw_description IS NOT NULL
+      ) AS "packFromInvoice",
+      COALESCE(m.suggestions, '[]'::json) AS suggestions,
+      COALESCE(r.reference, '[]'::json) AS reference,
+      COALESCE(z.codes, '[]'::json) AS "zohoCodes"
     FROM tri_skus k
     LEFT JOIN LATERAL (
       SELECT JSON_AGG(
@@ -101,12 +135,59 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
         LIMIT 5
       ) x
     ) m ON TRUE
+    -- The reference list, for wines that were invoiced but never received:
+    -- the warehouse cannot suggest a code for stock it has never held, and
+    -- those are exactly the ones left stuck at the end.
+    LEFT JOIN LATERAL (
+      SELECT JSON_AGG(
+        JSON_BUILD_OBJECT(
+          'lwin7', y.lwin,
+          'displayName', y.display_name,
+          'producerName', y.producer_name,
+          'region', y.region,
+          'country', y.country,
+          'score', y.score
+        )
+        ORDER BY y.score DESC
+      ) AS reference
+      FROM (
+        SELECT
+          w.lwin, w.display_name, w.producer_name, w.region, w.country,
+          similarity(w.display_name, k.product_name)::float8 AS score
+        FROM lwin_wines w
+        WHERE w.status = 'live'
+          AND similarity(w.display_name, k.product_name) > 0.3
+        ORDER BY similarity(w.display_name, k.product_name) DESC
+        LIMIT 5
+      ) y
+    ) r ON TRUE
+    -- The codes already on the wine's own invoices. Often one of them is a
+    -- dashed LWIN with a typo in it, and the fix is arithmetic rather than a
+    -- search of anything.
+    LEFT JOIN LATERAL (
+      SELECT JSON_AGG(
+        JSON_BUILD_OBJECT('code', c.code, 'bottles', c.bottles)
+        ORDER BY c.bottles DESC
+      ) AS codes
+      FROM (
+        SELECT
+          MIN(l.raw_code) AS code,
+          COALESCE(SUM(l.quantity_bottles), 0)::float8 AS bottles
+        FROM tri_import_lines l
+        WHERE l.sku_id = k.id
+          AND COALESCE(l.raw_code, '') <> ''
+        GROUP BY l.normalized_code
+      ) c
+    ) z ON TRUE
     WHERE k.lwin18 IS NULL OR TRIM(k.lwin18) = ''
     ORDER BY k.product_name
     LIMIT 300
   `;
 
-  return rows;
+  return rows.map((row) => ({
+    ...row,
+    derived: deriveLwinFromCodes(row.zohoCodes, row.packFromInvoice),
+  }));
 });
 
 export default adminSuggestLwinFromWms;

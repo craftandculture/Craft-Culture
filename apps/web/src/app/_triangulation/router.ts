@@ -7,6 +7,7 @@ import adminCreateImport from './controller/adminCreateImport';
 import adminCreatePeriod from './controller/adminCreatePeriod';
 import adminDeleteAlias from './controller/adminDeleteAlias';
 import adminDeleteImport from './controller/adminDeleteImport';
+import adminDeriveLwins from './controller/adminDeriveLwins';
 import adminExtractPackingList from './controller/adminExtractPackingList';
 import adminFindDoubleCounts from './controller/adminFindDoubleCounts';
 import adminFindMismatchedLines from './controller/adminFindMismatchedLines';
@@ -72,6 +73,7 @@ const triangulationRouter = createTRPCRouter({
     getZohoCleanup: adminGetZohoCleanup,
     backfillLwinFromWms: adminBackfillLwinFromWms,
     suggestLwinFromWms: adminSuggestLwinFromWms,
+    deriveLwins: adminDeriveLwins,
     setSkuLwin: adminSetSkuLwin,
     repairEncoding: adminRepairEncoding,
     syncCountFromWms: adminSyncCountFromWms,

@@ -117,6 +117,27 @@ const ZohoCleanupTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const deriveLwins = useMutation({
+    ...api.triangulation.admin.deriveLwins.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.derived === 0
+          ? `No wine's own codes imply a LWIN — ${result.remaining} still without one`
+          : `${result.derived} LWINs read off the codes already in use · ${result.remaining} still without one`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.suggestLwinFromWms.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const backfill = useMutation({
     ...api.triangulation.admin.backfillLwinFromWms.mutationOptions(),
     onSuccess: async (result) => {
@@ -287,6 +308,18 @@ const ZohoCleanupTab = () => {
               <Button
                 size="sm"
                 colorRole="brand"
+                isDisabled={deriveLwins.isPending}
+                onClick={() => deriveLwins.mutate({ dryRun: false })}
+              >
+                <IconWand className="mr-1 size-4" />
+                {deriveLwins.isPending
+                  ? 'Reading the codes…'
+                  : 'Read LWINs off the codes in use'}
+              </Button>
+              <Button
+                size="sm"
+                colorRole="muted"
+                variant="outline"
                 isDisabled={backfill.isPending}
                 onClick={() => backfill.mutate({ dryRun: false })}
               >
@@ -452,14 +485,63 @@ const ZohoCleanupTab = () => {
 
                 {isOpen && !wine.targetLwin18 ? (
                   <div className="border-border-primary border-t p-3">
+                    {(() => {
+                      const forWine = suggestions.data?.find(
+                        (entry) => entry.skuId === wine.skuId,
+                      );
+
+                      if (!forWine?.derived) return null;
+
+                      return (
+                        <div className="border-border-success/40 bg-fill-success/10 mb-3 rounded-lg border p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <Typography variant="labelSm" colorRole="success">
+                                Its own invoices already say the LWIN
+                              </Typography>
+                              <Typography variant="bodySm" asChild>
+                                <p className="mt-0.5 font-mono">
+                                  {forWine.derived.lwin18}
+                                </p>
+                              </Typography>
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="muted"
+                                asChild
+                              >
+                                <p className="mt-0.5">
+                                  {forWine.derived.reason}. Read from{' '}
+                                  {forWine.derived.fromCodes.join(' and ')}.
+                                </p>
+                              </Typography>
+                            </div>
+                            <Button
+                              size="sm"
+                              colorRole="brand"
+                              isDisabled={setLwin.isPending}
+                              onClick={() =>
+                                setLwin.mutate({
+                                  skuId: wine.skuId,
+                                  lwin18: forWine.derived?.lwin18 ?? '',
+                                })
+                              }
+                            >
+                              Use this
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <Typography variant="labelSm">
-                      Pick this wine&rsquo;s LWIN from the warehouse
+                      Or pick it from the warehouse
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted" asChild>
                       <p className="mt-0.5 mb-2">
                         What the warehouse holds under each code. The bottle
                         count is the tell — the right one is the one you
-                        actually have.
+                        actually have. Check the name: a neighbour from the same
+                        village will be offered too.
                       </p>
                     </Typography>
                     {suggestions.isLoading ? (
