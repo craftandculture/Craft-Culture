@@ -114,9 +114,43 @@ const adminSyncSalesFromZoho = adminProcedure
           ) = 0
         )
         AND so.status IS DISTINCT FROM 'cancelled'
-        AND (so.invoice_number IS NOT NULL OR so.zoho_status ILIKE '%invoiced%')
+        -- Evidence of a sale, from either side. Requiring the sales order to
+        -- look invoiced silently dropped SO-00090: INV-000260 exists and was
+        -- sent, but the order still reads "Convert to Invoice", so its own
+        -- record never said invoiced. A synced invoice referencing the order is
+        -- the same proof and is often the only one present.
+        AND (
+          so.invoice_number IS NOT NULL
+          OR so.zoho_status ILIKE '%invoiced%'
+          OR inv.id IS NOT NULL
+        )
         AND it.quantity <> 0
       ORDER BY COALESCE(inv.invoice_date, so.order_date)
+    `;
+
+    // Orders for this customer that carry no evidence of invoicing. Excluding
+    // them is right — an open order is not a sale — but doing it silently is
+    // how an invoice you know exists goes missing with nothing to point at.
+    const skipped = await client<
+      { salesOrderNumber: string; zohoStatus: string; orderDate: string }[]
+    >`
+      SELECT so.salesorder_number AS "salesOrderNumber",
+             so.zoho_status AS "zohoStatus",
+             so.order_date::text AS "orderDate"
+      FROM zoho_sales_orders so
+      LEFT JOIN zoho_invoices inv ON inv.reference_number = so.salesorder_number
+      WHERE NOT EXISTS (
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          WHERE POSITION(
+            tok IN REGEXP_REPLACE(UPPER(so.customer_name), '[^A-Z0-9]', '', 'g')
+          ) = 0
+        )
+        AND so.status IS DISTINCT FROM 'cancelled'
+        AND so.invoice_number IS NULL
+        AND so.zoho_status NOT ILIKE '%invoiced%'
+        AND inv.id IS NULL
+      ORDER BY so.order_date DESC
+      LIMIT 50
     `;
 
     if (rows.length === 0) {
@@ -242,6 +276,9 @@ const adminSyncSalesFromZoho = adminProcedure
       unknownPack,
       packDisagreements,
       customers: [...new Set(rows.map((row) => row.customerName))],
+      // Named, so an order left out is a fact on screen rather than a gap to
+      // be discovered from a variance weeks later.
+      skippedOrders: skipped.map((order) => order.salesOrderNumber),
       // Which invoices actually came through. An invoice you know exists and
       // cannot find here was never synced into the platform — a different
       // problem from a line that arrived and failed to map, and previously

@@ -183,7 +183,10 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
             ? `; ${result.unknownPack} with no stated pack size`
             : '') +
           (result.packDisagreements > 0
-            ? `; ${result.packDisagreements} where the SKU's pack contradicts the printed format — check those items in Zoho`
+            ? `; ${result.packDisagreements} where the SKU's pack contradicts the printed format`
+            : '') +
+          (result.skippedOrders.length > 0
+            ? `. Not counted as sold (no invoice on the order): ${result.skippedOrders.slice(0, 5).join(', ')}${result.skippedOrders.length > 5 ? '…' : ''}`
             : ''),
       );
       // Logged rather than shown: the list is long, and it is only wanted when
