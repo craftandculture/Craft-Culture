@@ -2,7 +2,7 @@
 
 import { IconDatabaseImport, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -24,6 +24,8 @@ const SkusTab = () => {
 
   const [search, setSearch] = useState('');
   const [packEdits, setPackEdits] = useState<Record<string, number>>({});
+
+  const splits = useQuery(api.triangulation.admin.findSplitSkus.queryOptions());
 
   const skus = useQuery(
     api.triangulation.admin.getSkus.queryOptions({ search, limit: 1000 }),
@@ -140,6 +142,67 @@ const SkusTab = () => {
           </Button>
         </div>
       </div>
+
+      {(splits.data?.length ?? 0) > 0 ? (
+        <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
+          <Typography variant="labelSm" colorRole="warning">
+            {splits.data?.length} pair
+            {splits.data?.length === 1 ? '' : 's'} of SKUs look like the same wine
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1">
+              One wine under two W codes splits its own figures — part of its
+              movement lands on each, so one side reads short and nothing looks
+              obviously wrong. Two vintages, or a magnum beside a bottle, are
+              legitimately separate; only you can tell which is which.
+            </p>
+          </Typography>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-text-muted">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">W code</th>
+                  <th className="py-1 pr-3 font-medium">Product</th>
+                  <th className="py-1 pr-3 text-right font-medium">Lines</th>
+                  <th className="py-1 pr-3 text-right font-medium">Bottles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {splits.data?.map((pair) => (
+                  <Fragment key={`${pair.aId}-${pair.bId}`}>
+                    <tr className="border-border-warning/20 border-t">
+                      <td className="py-1 pr-3 font-mono">{pair.aWCode}</td>
+                      <td className="py-1 pr-3">
+                        {pair.aName}
+                        {pair.aVintage ? ` ${pair.aVintage}` : ''}
+                      </td>
+                      <td className="py-1 pr-3 text-right tabular-nums">
+                        {pair.aLines}
+                      </td>
+                      <td className="py-1 pr-3 text-right tabular-nums">
+                        {Math.round(pair.aBottles)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-3 font-mono">{pair.bWCode}</td>
+                      <td className="py-1 pr-3">
+                        {pair.bName}
+                        {pair.bVintage ? ` ${pair.bVintage}` : ''}
+                      </td>
+                      <td className="py-1 pr-3 text-right tabular-nums">
+                        {pair.bLines}
+                      </td>
+                      <td className="py-1 pr-3 text-right tabular-nums">
+                        {Math.round(pair.bBottles)}
+                      </td>
+                    </tr>
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p>

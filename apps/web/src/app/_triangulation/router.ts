@@ -7,6 +7,7 @@ import adminCreatePeriod from './controller/adminCreatePeriod';
 import adminDeleteAlias from './controller/adminDeleteAlias';
 import adminDeleteImport from './controller/adminDeleteImport';
 import adminExtractPackingList from './controller/adminExtractPackingList';
+import adminFindSplitSkus from './controller/adminFindSplitSkus';
 import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
 import adminGetPeriods from './controller/adminGetPeriods';
@@ -44,6 +45,7 @@ const triangulationRouter = createTRPCRouter({
     deleteImport: adminDeleteImport,
     extractPackingList: adminExtractPackingList,
     getSkus: adminGetSkus,
+    findSplitSkus: adminFindSplitSkus,
     upsertSku: adminUpsertSku,
     seedSkusFromWms: adminSeedSkusFromWms,
     repairPackSizes: adminRepairPackSizes,
