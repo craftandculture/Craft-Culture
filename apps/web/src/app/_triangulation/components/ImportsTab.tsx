@@ -425,9 +425,24 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
       </div>
 
       <div>
-        <Typography variant="headingSm" asChild>
-          <h3 className="mb-3">Import history</h3>
-        </Typography>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <Typography variant="headingSm" asChild>
+            <h3>Import history</h3>
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5">
+                <span className="bg-fill-brand size-2 rounded-full" />
+                Craft &amp; Culture
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="bg-fill-info size-2 rounded-full" />
+                City Drinks
+              </span>
+              <span>· hover a heading for what it means</span>
+            </p>
+          </Typography>
+        </div>
 
         {rows.length === 0 ? (
           <Typography variant="bodySm" colorRole="muted">
@@ -439,13 +454,38 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
               <thead className="text-text-muted border-border-primary border-b">
                 <tr>
                   <th className="py-2 pr-3">Input</th>
-                  <th className="py-2 pr-3">As at</th>
+                  <th
+                    className="py-2 pr-3"
+                    title="The date the figures count this data on. For flows it is each line's own document date; for a point-in-time check it is the date it was taken."
+                  >
+                    As at
+                  </th>
                   <th className="py-2 pr-3">File</th>
-                  <th className="py-2 pr-3">Unit</th>
+                  <th
+                    className="py-2 pr-3"
+                    title="How the source stated its quantities, and the pack sizes used to convert cases to bottles"
+                  >
+                    Unit
+                  </th>
                   <th className="py-2 pr-3 text-right">Rows</th>
-                  <th className="py-2 pr-3 text-right">Mapped</th>
-                  <th className="py-2 pr-3 text-right">Bottles</th>
-                  <th className="py-2 pr-3">Status</th>
+                  <th
+                    className="py-2 pr-3 text-right"
+                    title="Rows resolved to a W code. Unmapped rows are excluded from every figure until they are mapped or set aside on the Mapping tab."
+                  >
+                    Mapped
+                  </th>
+                  <th
+                    className="py-2 pr-3 text-right"
+                    title="What this import contributes, in bottles — mapped rows only"
+                  >
+                    Bottles
+                  </th>
+                  <th
+                    className="py-2 pr-3"
+                    title="Drafts are excluded from the figures until committed"
+                  >
+                    Status
+                  </th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -456,7 +496,26 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                   return (
                     <Fragment key={row.id}>
                     <tr className="border-border-primary border-b">
-                      <td className="py-2 pr-3">{importKindLabels[row.kind].label}</td>
+                      <td className="max-w-72 py-2 pr-3">
+                        <span className="flex items-start gap-2">
+                          <span
+                            className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                              importKindLabels[row.kind].side === 'cc'
+                                ? 'bg-fill-brand'
+                                : 'bg-fill-info'
+                            }`}
+                          />
+                          <span>
+                            {importKindLabels[row.kind].label}
+                            <span className="text-text-muted block text-xs">
+                              {importKindLabels[row.kind].effect}
+                              {importKindLabels[row.kind].behaviour === 'snapshot'
+                                ? ' · point in time'
+                                : ' · accumulates'}
+                            </span>
+                          </span>
+                        </span>
+                      </td>
                       <td className="py-2 pr-3 tabular-nums">{row.asOfDate}</td>
                       <td className="text-text-muted py-2 pr-3">
                         {row.fileName ?? row.sourceRef ?? '—'}

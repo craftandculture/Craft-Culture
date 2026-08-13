@@ -11,6 +11,8 @@ export interface ImportKindMeta {
   /** Default unit for files of this kind before column mapping overrides it */
   defaultUnit: 'bottle' | 'case';
   cadence: string;
+  /** What this input does to the figures, in one line */
+  effect: string;
 }
 
 /**
@@ -29,6 +31,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     side: 'cc',
     defaultUnit: 'case',
     cadence: 'Live from the WMS',
+    effect: 'Adds to what C&C has received',
   },
   cc_sales_to_cd: {
     label: 'C&C sales to City Drinks',
@@ -39,6 +42,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     side: 'cc',
     defaultUnit: 'case',
     cadence: 'Live from Zoho',
+    effect: 'Moves bottles out of C&C and into City Drinks',
   },
   cc_count: {
     label: 'C&C stock position',
@@ -49,6 +53,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     side: 'cc',
     defaultUnit: 'case',
     cadence: 'System live · count quarterly',
+    effect: 'Point-in-time check against the calculated C&C position',
   },
   cd_sales: {
     label: 'City Drinks sales to consumers',
@@ -59,6 +64,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     side: 'cd',
     defaultUnit: 'bottle',
     cadence: 'Monthly',
+    effect: 'Reduces what City Drinks hold',
   },
   cd_count: {
     label: 'City Drinks stock on hand',
@@ -69,6 +75,7 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     side: 'cd',
     defaultUnit: 'bottle',
     cadence: 'Monthly',
+    effect: 'Point-in-time check against the calculated City Drinks position',
   },
 };
 
