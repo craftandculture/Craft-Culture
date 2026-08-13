@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import adminGetLandedCostReport from './adminGetLandedCostReport';
+import getLandedCostReport from '../data/getLandedCostReport';
 
 const exportLandedCostSchema = z.object({
   dateFrom: z.date().optional(),
@@ -19,15 +19,9 @@ const exportLandedCostSchema = z.object({
  */
 const adminExportLandedCostExcel = adminProcedure
   .input(exportLandedCostSchema)
-  .mutation(async ({ input, ctx }) => {
-    // Get the report data using the existing query logic
-    const report = await adminGetLandedCostReport._def.query({
-      input,
-      ctx,
-      type: 'query',
-      path: 'logistics.admin.getLandedCostReport',
-      rawInput: input,
-    });
+  .mutation(async ({ input }) => {
+    // same figures as the on-screen report — both call the one data function
+    const report = await getLandedCostReport(input);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Craft & Culture';
