@@ -61,10 +61,9 @@ const adminBackfillLwinFromWms = adminProcedure
       SELECT DISTINCT ON (s.lwin18)
         s.supplier_sku AS "supplierSku",
         s.lwin18,
-        p.name AS "productName",
-        p.vintage
+        s.product_name AS "productName",
+        s.vintage
       FROM wms_stock s
-      LEFT JOIN products p ON p.id = s.product_id
       WHERE s.lwin18 IS NOT NULL
         AND TRIM(s.lwin18) <> ''
         AND NOT EXISTS (

@@ -44,12 +44,16 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
       SELECT
         s.lwin18,
         MIN(s.supplier_sku) AS supplier_sku,
-        MIN(p.name) AS product_name,
-        MIN(p.producer) AS producer,
-        MIN(p.vintage) AS vintage,
-        COALESCE(SUM(s.quantity_bottles), 0)::float8 AS bottles
+        MIN(s.product_name) AS product_name,
+        MIN(s.producer) AS producer,
+        MIN(s.vintage) AS vintage,
+        -- quantity_cases counts sealed cases; open_bottles holds the loose
+        -- bottles from cracked ones. Neither alone is the stock on hand.
+        COALESCE(SUM(
+          s.quantity_cases * COALESCE(NULLIF(s.case_config, 0), 6)
+          + COALESCE(s.open_bottles, 0)
+        ), 0)::float8 AS bottles
       FROM wms_stock s
-      LEFT JOIN products p ON p.id = s.product_id
       WHERE s.lwin18 IS NOT NULL
         AND TRIM(s.lwin18) <> ''
         AND NOT EXISTS (
