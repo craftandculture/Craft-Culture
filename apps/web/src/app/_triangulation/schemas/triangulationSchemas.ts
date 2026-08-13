@@ -123,6 +123,13 @@ export const autoMapSchema = z.object({
   dryRun: z.boolean().default(false),
 });
 
+export const mergeSkusSchema = z.object({
+  /** The duplicate, which is removed */
+  fromSkuId: z.string().uuid(),
+  /** The SKU that keeps the wine's aliases, lines and history */
+  intoSkuId: z.string().uuid(),
+});
+
 export const setCodeIgnoredSchema = z.object({
   normalizedCode: z.string().min(1),
   /** True to exclude the code as not this reconciliation's stock */

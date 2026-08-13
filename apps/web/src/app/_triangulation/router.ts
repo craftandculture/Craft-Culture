@@ -16,6 +16,7 @@ import adminGetSkus from './controller/adminGetSkus';
 import adminGetTriangulation from './controller/adminGetTriangulation';
 import adminGetUnmapped from './controller/adminGetUnmapped';
 import adminMapAlias from './controller/adminMapAlias';
+import adminMergeSkus from './controller/adminMergeSkus';
 import adminRepairPackSizes from './controller/adminRepairPackSizes';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
@@ -47,6 +48,7 @@ const triangulationRouter = createTRPCRouter({
     extractPackingList: adminExtractPackingList,
     getSkus: adminGetSkus,
     findSplitSkus: adminFindSplitSkus,
+    mergeSkus: adminMergeSkus,
     upsertSku: adminUpsertSku,
     seedSkusFromWms: adminSeedSkusFromWms,
     repairPackSizes: adminRepairPackSizes,

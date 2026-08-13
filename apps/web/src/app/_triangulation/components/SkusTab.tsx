@@ -51,6 +51,20 @@ const SkusTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const mergeSkus = useMutation({
+    ...api.triangulation.admin.mergeSkus.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `Merged — ${result.linesMoved} lines and ${result.aliasesMoved} codes moved across, ${result.recalculatedImports} imports recalculated`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.findSplitSkus.queryKey(),
+      });
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const repairPacks = useMutation({
     ...api.triangulation.admin.repairPackSizes.mutationOptions(),
     onSuccess: async (result) => {
@@ -165,6 +179,7 @@ const SkusTab = () => {
                   <th className="py-1 pr-3 font-medium">Product</th>
                   <th className="py-1 pr-3 text-right font-medium">Lines</th>
                   <th className="py-1 pr-3 text-right font-medium">Bottles</th>
+                  <th className="py-1 text-right font-medium">Merge</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,6 +197,22 @@ const SkusTab = () => {
                       <td className="py-1 pr-3 text-right tabular-nums">
                         {Math.round(pair.aBottles)}
                       </td>
+                      <td className="py-1 text-right">
+                        <Button
+                          size="xs"
+                          colorRole="muted"
+                          variant="outline"
+                          isDisabled={mergeSkus.isPending}
+                          onClick={() =>
+                            mergeSkus.mutate({
+                              fromSkuId: pair.bId,
+                              intoSkuId: pair.aId,
+                            })
+                          }
+                        >
+                          Keep this one
+                        </Button>
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-1 pr-3 font-mono">{pair.bWCode}</td>
@@ -194,6 +225,22 @@ const SkusTab = () => {
                       </td>
                       <td className="py-1 pr-3 text-right tabular-nums">
                         {Math.round(pair.bBottles)}
+                      </td>
+                      <td className="py-1 text-right">
+                        <Button
+                          size="xs"
+                          colorRole="muted"
+                          variant="outline"
+                          isDisabled={mergeSkus.isPending}
+                          onClick={() =>
+                            mergeSkus.mutate({
+                              fromSkuId: pair.aId,
+                              intoSkuId: pair.bId,
+                            })
+                          }
+                        >
+                          Keep this one
+                        </Button>
                       </td>
                     </tr>
                   </Fragment>
