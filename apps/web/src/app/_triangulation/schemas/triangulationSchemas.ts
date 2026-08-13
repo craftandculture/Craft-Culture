@@ -67,6 +67,16 @@ export const createImportSchema = z.object({
 
 export const importIdSchema = z.object({ importId: z.string().uuid() });
 
+export const commitImportSchema = z.object({
+  importId: z.string().uuid(),
+  /**
+   * Commit even though lines look like stock already counted. Requires the
+   * warning to have been seen, so a double-counted shipment is a decision
+   * rather than an accident.
+   */
+  acknowledgeDuplicates: z.boolean().default(false),
+});
+
 /**
  * Corrections to an import already uploaded.
  *

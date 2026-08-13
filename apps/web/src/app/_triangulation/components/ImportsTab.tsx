@@ -8,7 +8,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -16,6 +16,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import DuplicatePanel from './DuplicatePanel';
 import EditImportPanel from './EditImportPanel';
 import ImportWizard from './ImportWizard';
 import type { TriImportRow } from '../controller/adminGetImports';
@@ -56,6 +57,8 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
 
   const [activeKind, setActiveKind] = useState<TriImportKind | null>(null);
   const [editing, setEditing] = useState<TriImportRow | null>(null);
+  /** Import whose duplicate warning has been shown and needs a second click */
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   // City Drinks trade in Zoho under a different name, and that is the sort of
   // thing that changes, so it is editable and remembered rather than compiled in.
   const [zohoCustomer, setZohoCustomer] = useState('CD General');
@@ -95,6 +98,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     onSuccess: async (result) => {
       const unmapped = result.rowCount - result.mappedRowCount;
 
+      setConfirmingId(null);
       toast.success(
         unmapped > 0
           ? `Committed — ${unmapped} unmapped rows are excluded from the figures`
@@ -102,7 +106,17 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
       );
       await invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error, variables) => {
+      // A duplicate is a decision, not a dead end: show what collides, then
+      // let a second click go through.
+      if (error.data?.code === 'CONFLICT') {
+        setConfirmingId(variables.importId);
+        toast.warning(error.message);
+        return;
+      }
+
+      toast.error(error.message);
+    },
   });
 
   const syncCount = useMutation({
@@ -430,7 +444,8 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                   const unmapped = row.rowCount - row.mappedRowCount;
 
                   return (
-                    <tr key={row.id} className="border-border-primary border-b">
+                    <Fragment key={row.id}>
+                    <tr className="border-border-primary border-b">
                       <td className="py-2 pr-3">{importKindLabels[row.kind].label}</td>
                       <td className="py-2 pr-3 tabular-nums">{row.asOfDate}</td>
                       <td className="text-text-muted py-2 pr-3">
@@ -472,14 +487,21 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                           {row.status === 'draft' ? (
                             <Button
                               size="xs"
-                              colorRole="brand"
+                              colorRole={
+                                confirmingId === row.id ? 'danger' : 'brand'
+                              }
                               isDisabled={isLocked || commitImport.isPending}
                               onClick={() =>
-                                commitImport.mutate({ importId: row.id })
+                                commitImport.mutate({
+                                  importId: row.id,
+                                  acknowledgeDuplicates: confirmingId === row.id,
+                                })
                               }
                             >
                               <IconCheck className="mr-1 size-3.5" />
-                              Commit
+                              {confirmingId === row.id
+                                ? 'Commit anyway'
+                                : 'Commit'}
                             </Button>
                           ) : null}
                           <Button
@@ -504,6 +526,17 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                         </div>
                       </td>
                     </tr>
+                      {/* The collisions sit under the row they belong to, so
+                          the call is made on the evidence rather than on the
+                          warning alone. */}
+                      {confirmingId === row.id ? (
+                        <tr>
+                          <td colSpan={9} className="pb-3">
+                            <DuplicatePanel importId={row.id} />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>

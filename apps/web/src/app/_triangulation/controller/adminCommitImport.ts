@@ -3,8 +3,9 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import findDuplicateLines from '../data/findDuplicateLines';
 import mapImportLines from '../data/mapImportLines';
-import { importIdSchema } from '../schemas/triangulationSchemas';
+import { commitImportSchema } from '../schemas/triangulationSchemas';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
 
 /**
@@ -16,9 +17,9 @@ import type { TriAliasSource } from '../schemas/triangulationSchemas';
  * hostage to one unknown code helps nobody.
  */
 const adminCommitImport = adminProcedure
-  .input(importIdSchema)
+  .input(commitImportSchema)
   .mutation(async ({ input }) => {
-    const { importId } = input;
+    const { importId, acknowledgeDuplicates } = input;
 
     const [record] = await client<
       { status: string; aliasSource: TriAliasSource; periodStatus: string | null }[]
@@ -39,6 +40,28 @@ const adminCommitImport = adminProcedure
         code: 'BAD_REQUEST',
         message: 'This period is locked. Reopen it before committing imports.',
       });
+    }
+
+    // The same shipment reaches this tool by more than one route, and
+    // committing both silently doubles the receipt — with figures that stay
+    // plausible. Cheap to refuse here, expensive to unpick later.
+    if (!acknowledgeDuplicates) {
+      const duplicates = await findDuplicateLines(importId);
+
+      if (duplicates.length > 0) {
+        const bottles = duplicates.reduce(
+          (sum, line) => sum + line.quantityBottles,
+          0,
+        );
+
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            `${duplicates.length} line${duplicates.length === 1 ? '' : 's'} ` +
+            `(${Math.round(bottles).toLocaleString('en-GB')} bottles) match stock already committed. ` +
+            'Review them, then commit again to confirm they are genuinely separate.',
+        });
+      }
     }
 
     const totals = await mapImportLines(importId, record.aliasSource);
