@@ -28,6 +28,8 @@ import adminRepairPackSizes from './controller/adminRepairPackSizes';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
+import adminSetSkuLwin from './controller/adminSetSkuLwin';
+import adminSuggestLwinFromWms from './controller/adminSuggestLwinFromWms';
 import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminSyncCycleCountFromWms from './controller/adminSyncCycleCountFromWms';
 import adminSyncReceiptsFromWms from './controller/adminSyncReceiptsFromWms';
@@ -68,6 +70,8 @@ const triangulationRouter = createTRPCRouter({
     getZohoLinesForSku: adminGetZohoLinesForSku,
     getZohoCleanup: adminGetZohoCleanup,
     backfillLwinFromWms: adminBackfillLwinFromWms,
+    suggestLwinFromWms: adminSuggestLwinFromWms,
+    setSkuLwin: adminSetSkuLwin,
     syncCountFromWms: adminSyncCountFromWms,
     syncCycleCountFromWms: adminSyncCycleCountFromWms,
     syncReceiptsFromWms: adminSyncReceiptsFromWms,

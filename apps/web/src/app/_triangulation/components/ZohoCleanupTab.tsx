@@ -75,6 +75,30 @@ const ZohoCleanupTab = () => {
 
   const cleanup = useQuery(api.triangulation.admin.getZohoCleanup.queryOptions());
 
+  const suggestions = useQuery({
+    ...api.triangulation.admin.suggestLwinFromWms.queryOptions(),
+    // Only fetched when the blocked list is being worked through: it reads all
+    // of warehouse stock against every SKU and is wasted on the other views.
+    enabled: filter === 'blocked',
+  });
+
+  const setLwin = useMutation({
+    ...api.triangulation.admin.setSkuLwin.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(`${result.wCode} → ${result.lwin18}`);
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.suggestLwinFromWms.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const backfill = useMutation({
     ...api.triangulation.admin.backfillLwinFromWms.mutationOptions(),
     onSuccess: async (result) => {
@@ -398,6 +422,101 @@ const ZohoCleanupTab = () => {
                     </Badge>
                   </div>
                 </button>
+
+                {isOpen && !wine.targetLwin18 ? (
+                  <div className="border-border-primary border-t p-3">
+                    <Typography variant="labelSm">
+                      Pick this wine&rsquo;s LWIN from the warehouse
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" asChild>
+                      <p className="mt-0.5 mb-2">
+                        What the warehouse holds under each code. The bottle
+                        count is the tell — the right one is the one you
+                        actually have.
+                      </p>
+                    </Typography>
+                    {suggestions.isLoading ? (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Reading the warehouse…
+                      </Typography>
+                    ) : (
+                      (() => {
+                        const forWine = suggestions.data?.find(
+                          (entry) => entry.skuId === wine.skuId,
+                        );
+
+                        if (!forWine || forWine.suggestions.length === 0) {
+                          return (
+                            <Typography variant="bodyXs" colorRole="muted">
+                              Nothing in the warehouse resembles this wine. Set
+                              the LWIN by hand on the SKUs tab.
+                            </Typography>
+                          );
+                        }
+
+                        return (
+                          <ul className="space-y-1">
+                            {forWine.suggestions.map((option) => (
+                              <li
+                                key={option.lwin18}
+                                className="border-border-primary flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" asChild>
+                                    <p className="truncate">
+                                      {option.productName ?? '—'}
+                                      {option.vintage
+                                        ? ` · ${option.vintage}`
+                                        : ''}
+                                    </p>
+                                  </Typography>
+                                  <Typography
+                                    variant="bodyXs"
+                                    colorRole="muted"
+                                    asChild
+                                  >
+                                    <p className="font-mono">
+                                      {option.lwin18}
+                                      {option.supplierSku
+                                        ? ` · received as ${option.supplierSku}`
+                                        : ''}
+                                    </p>
+                                  </Typography>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-3">
+                                  <Typography
+                                    variant="bodyXs"
+                                    colorRole="muted"
+                                    asChild
+                                  >
+                                    <span className="tabular-nums">
+                                      {option.bottles.toLocaleString('en-GB')}{' '}
+                                      btl on hand
+                                    </span>
+                                  </Typography>
+                                  <Button
+                                    size="xs"
+                                    colorRole="brand"
+                                    variant="outline"
+                                    isDisabled={setLwin.isPending}
+                                    onClick={() =>
+                                      setLwin.mutate({
+                                        skuId: wine.skuId,
+                                        lwin18: option.lwin18,
+                                      })
+                                    }
+                                  >
+                                    This one
+                                  </Button>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      })()
+                    )}
+                  </div>
+                ) : null}
 
                 {isOpen ? (
                   <table className="border-border-primary w-full border-t text-left text-xs">

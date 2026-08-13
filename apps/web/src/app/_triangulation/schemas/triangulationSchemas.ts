@@ -124,6 +124,12 @@ export const moveCodeToSkuSchema = z.object({
   skuId: z.string().uuid(),
 });
 
+/** Accept one of the warehouse's LWINs for a SKU that has none */
+export const setSkuLwinSchema = z.object({
+  skuId: z.string().uuid(),
+  lwin18: z.string().min(1).max(50),
+});
+
 export const autoMapSchema = z.object({
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),
