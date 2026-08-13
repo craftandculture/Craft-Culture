@@ -1,88 +1,134 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-export interface ZohoCleanupRow {
-  /** The item code as Zoho holds it today */
-  currentCode: string | null;
+export interface ZohoCodeUse {
+  /** The item code as Zoho holds it */
+  code: string | null;
+  normalizedCode: string;
   description: string | null;
-  /** What it should become: the SKU's dashed C&C LWIN */
-  targetLwin18: string | null;
-  wCode: string | null;
-  productName: string | null;
-  /** Invoice lines and bottles riding on this code, so the worst come first */
   lines: number;
   bottles: number;
-  /** Already the dashed LWIN — nothing to do */
+  /** This is the dashed C&C LWIN — the one item that should stay active */
   isStandard: boolean;
-  /** Resolved to a SKU, so a target exists to rename it to */
-  isMapped: boolean;
-  /** Which invoices carry it, for checking against the paper */
+  /** Invoices riding on it, so a change can be checked against the paper */
   docRefs: string[];
 }
 
+export interface ZohoCleanupWine {
+  skuId: string;
+  wCode: string;
+  productName: string;
+  vintage: number | null;
+  /** The dashed C&C LWIN every future invoice should carry */
+  targetLwin18: string | null;
+  codes: ZohoCodeUse[];
+  lines: number;
+  bottles: number;
+  /** An item already carrying the dashed LWIN exists in Zoho */
+  hasStandard: boolean;
+  /** Codes to make inactive once the standard item is in place */
+  legacyCodes: number;
+}
+
 /**
- * The Zoho item codes in use, and what each should become
+ * Zoho's item codes for the Crurated wines, gathered per wine
  *
- * The reconciliation can be made to work on the codes as they are — the alias
- * table absorbs any amount of history. What it cannot do is stop the mess
- * regrowing, because every new invoice is raised against the same Zoho item and
- * carries the same wrong code and the same wrong pack size back in.
+ * Framed around the wine rather than the code, because the safe way through
+ * this is per wine: make sure one item carries the dashed C&C LWIN, then make
+ * the rest inactive. Editing an item that historical invoices point at is the
+ * thing to avoid — deactivating one changes nothing that was already issued,
+ * and the alias table goes on resolving the old codes, so the reconciliation
+ * keeps reading history correctly throughout.
  *
- * So this is the other half of the job: the worksheet for fixing Zoho itself.
- * Every code carrying invoiced bottles, what it resolves to, and whether it is
- * already the dashed C&C LWIN that is meant to be standard. Ordered by bottles,
- * because a code on one bottle and a code on four hundred are not equally worth
- * an afternoon.
- *
- * Rows that are already standard are kept rather than filtered out. Knowing how
- * much of the catalogue is done is what makes the rest finishable, and a list
- * that only ever shows what is broken never visibly shrinks.
+ * Scoped to wines in the triangulation registry. The invoices to City Drinks
+ * carry other wines too, and those are somebody else's clean-up.
  */
 const adminGetZohoCleanup = adminProcedure.query(async () => {
-  const rows = await client<ZohoCleanupRow[]>`
+  const rows = await client<
+    {
+      skuId: string;
+      wCode: string;
+      productName: string;
+      vintage: number | null;
+      targetLwin18: string | null;
+      codes: ZohoCodeUse[];
+    }[]
+  >`
+    WITH uses AS (
+      SELECT
+        l.sku_id,
+        l.normalized_code,
+        MIN(l.raw_code) AS raw_code,
+        MIN(l.raw_description) AS description,
+        COUNT(*)::int AS lines,
+        COALESCE(SUM(l.quantity_bottles), 0)::float8 AS bottles,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.doc_ref), NULL) AS doc_refs
+      FROM tri_import_lines l
+      JOIN tri_imports i ON i.id = l.import_id
+      WHERE i.kind = 'cc_sales_to_cd'
+        AND i.alias_source = 'zoho'
+        AND l.sku_id IS NOT NULL
+        AND COALESCE(l.normalized_code, '') <> ''
+      GROUP BY l.sku_id, l.normalized_code
+    )
     SELECT
-      MIN(l.raw_code) AS "currentCode",
-      MIN(l.raw_description) AS description,
-      MIN(s.lwin18) AS "targetLwin18",
-      MIN(s.w_code) AS "wCode",
-      MIN(s.product_name) AS "productName",
-      COUNT(*)::int AS lines,
-      COALESCE(SUM(l.quantity_bottles), 0)::float8 AS bottles,
-      -- Standard means the code Zoho holds already is the SKU's dashed LWIN,
-      -- compared with punctuation stripped so a dashless copy still counts as
-      -- the same code needing only its dashes back.
-      BOOL_OR(
-        s.lwin18 IS NOT NULL
-        AND UPPER(REGEXP_REPLACE(COALESCE(l.raw_code, ''), '[^A-Za-z0-9]', '', 'g'))
-          = UPPER(REGEXP_REPLACE(s.lwin18, '[^A-Za-z0-9]', '', 'g'))
-      ) AS "isStandard",
-      BOOL_OR(l.sku_id IS NOT NULL) AS "isMapped",
-      ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.doc_ref), NULL) AS "docRefs"
-    FROM tri_import_lines l
-    JOIN tri_imports i ON i.id = l.import_id
-    LEFT JOIN tri_skus s ON s.id = l.sku_id
-    WHERE i.kind = 'cc_sales_to_cd'
-      AND i.alias_source = 'zoho'
-      AND COALESCE(l.normalized_code, '') <> ''
-    GROUP BY l.normalized_code
-    ORDER BY COALESCE(SUM(l.quantity_bottles), 0) DESC
+      s.id AS "skuId",
+      s.w_code AS "wCode",
+      s.product_name AS "productName",
+      s.vintage,
+      s.lwin18 AS "targetLwin18",
+      JSON_AGG(
+        JSON_BUILD_OBJECT(
+          'code', u.raw_code,
+          'normalizedCode', u.normalized_code,
+          'description', u.description,
+          'lines', u.lines,
+          'bottles', u.bottles,
+          -- Compared with punctuation stripped, so a dashless copy of the
+          -- right LWIN counts as standard: it needs its dashes back, not a
+          -- new item.
+          'isStandard', (
+            s.lwin18 IS NOT NULL
+            AND UPPER(REGEXP_REPLACE(s.lwin18, '[^A-Za-z0-9]', '', 'g'))
+              = u.normalized_code
+          ),
+          'docRefs', u.doc_refs
+        )
+        ORDER BY u.bottles DESC
+      ) AS codes
+    FROM uses u
+    JOIN tri_skus s ON s.id = u.sku_id
+    GROUP BY s.id, s.w_code, s.product_name, s.vintage, s.lwin18
+    ORDER BY SUM(u.bottles) DESC
     LIMIT 500
   `;
 
-  const done = rows.filter((row) => row.isStandard);
+  const wines: ZohoCleanupWine[] = rows.map((row) => ({
+    ...row,
+    lines: row.codes.reduce((total, code) => total + code.lines, 0),
+    bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
+    hasStandard: row.codes.some((code) => code.isStandard),
+    legacyCodes: row.codes.filter((code) => !code.isStandard).length,
+  }));
 
   return {
-    rows,
+    wines,
     summary: {
-      total: rows.length,
-      standard: done.length,
-      /** Mapped, so the target LWIN is known and the rename is mechanical */
-      renameable: rows.filter((row) => !row.isStandard && row.isMapped).length,
-      /** No SKU yet, so there is nothing to rename them to until mapped */
-      unresolved: rows.filter((row) => !row.isMapped).length,
-      bottlesOnNonStandard: rows
-        .filter((row) => !row.isStandard)
-        .reduce((total, row) => total + row.bottles, 0),
+      total: wines.length,
+      /** One item carries the dashed LWIN and nothing else is in use */
+      clean: wines.filter((wine) => wine.hasStandard && wine.legacyCodes === 0)
+        .length,
+      /** The right item exists; the others need deactivating */
+      deactivateOnly: wines.filter(
+        (wine) => wine.hasStandard && wine.legacyCodes > 0,
+      ).length,
+      /** No item carries the LWIN yet, so one has to be put right first */
+      needsStandard: wines.filter(
+        (wine) => !wine.hasStandard && wine.targetLwin18,
+      ).length,
+      /** No LWIN on the SKU at all, so there is no target to work towards */
+      noLwin: wines.filter((wine) => !wine.targetLwin18).length,
+      legacyCodes: wines.reduce((total, wine) => total + wine.legacyCodes, 0),
     },
   };
 });
