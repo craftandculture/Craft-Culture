@@ -52,9 +52,37 @@ const adminRepairEncoding = adminProcedure
       }
     }
 
+    // The invoice text is what someone reads to check a suggestion against the
+    // paper, so leaving it garbled defeats the point of showing it.
+    const lines = await client<{ id: string; rawDescription: string }[]>`
+      SELECT id, raw_description AS "rawDescription"
+      FROM tri_import_lines
+      WHERE raw_description IS NOT NULL
+        AND (raw_description LIKE '%â€%' OR raw_description LIKE '%Ã%')
+    `;
+
+    let repairedLines = 0;
+
+    for (const line of lines) {
+      const fixed = repairMojibake(line.rawDescription);
+
+      if (fixed === line.rawDescription) continue;
+
+      repairedLines += 1;
+
+      if (!dryRun) {
+        await client`
+          UPDATE tri_import_lines
+          SET raw_description = ${fixed}, updated_at = NOW()
+          WHERE id = ${line.id}
+        `;
+      }
+    }
+
     return {
       dryRun,
       repaired: repaired.length,
+      repairedLines,
       scanned: rows.length,
       examples: repaired.slice(0, 8),
     };

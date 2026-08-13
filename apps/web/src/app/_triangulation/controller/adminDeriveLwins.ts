@@ -3,6 +3,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { autoMapSchema } from '../schemas/triangulationSchemas';
 import deriveLwinFromCodes from '../utils/deriveLwinFromCodes';
+import wineIdentity from '../utils/wineIdentity';
 
 /**
  * Give every SKU the LWIN its own Zoho codes already imply
@@ -28,6 +29,9 @@ const adminDeriveLwins = adminProcedure
       {
         id: string;
         wCode: string;
+        productName: string;
+        vintage: number | null;
+        bottleSize: string | null;
         packFromInvoice: number | null;
         codes: { code: string; bottles: number }[];
       }[]
@@ -35,6 +39,9 @@ const adminDeriveLwins = adminProcedure
       SELECT
         k.id,
         k.w_code AS "wCode",
+        k.product_name AS "productName",
+        k.vintage,
+        k.bottle_size AS "bottleSize",
         (
           SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\d+)\s*[xX]\s*\d'), '')::int)
           FROM tri_import_lines l
@@ -58,7 +65,17 @@ const adminDeriveLwins = adminProcedure
     const derived: { wCode: string; lwin18: string; reason: string }[] = [];
 
     for (const row of rows) {
-      const result = deriveLwinFromCodes(row.codes, row.packFromInvoice);
+      const identity = wineIdentity(
+        row.productName,
+        row.vintage,
+        row.bottleSize,
+      );
+      const result = deriveLwinFromCodes(
+        row.codes,
+        row.packFromInvoice,
+        identity.vintage,
+        identity.sizeMl,
+      );
 
       if (!result) continue;
 

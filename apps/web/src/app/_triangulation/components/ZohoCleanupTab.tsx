@@ -533,6 +533,75 @@ const ZohoCleanupTab = () => {
                       );
                     })()}
 
+                    {(() => {
+                      const forWine = suggestions.data?.find(
+                        (entry) => entry.skuId === wine.skuId,
+                      );
+
+                      if (!forWine || forWine.reference.length === 0) return null;
+
+                      return (
+                        <div className="mb-3">
+                          <Typography variant="labelSm">
+                            Or take the LWIN from the reference list
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted" asChild>
+                            <p className="mt-0.5 mb-2">
+                              The published LWIN for the wine itself. The
+                              vintage, pack and bottle size below are this
+                              SKU&rsquo;s own — check them, then take the whole
+                              code.
+                            </p>
+                          </Typography>
+                          <ul className="space-y-1">
+                            {forWine.reference.map((option) => (
+                              <li
+                                key={option.lwin7}
+                                className="border-border-primary flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" asChild>
+                                    <p className="truncate">
+                                      {option.displayName}
+                                    </p>
+                                  </Typography>
+                                  <Typography
+                                    variant="bodyXs"
+                                    colorRole="muted"
+                                    asChild
+                                  >
+                                    <p>
+                                      <span className="font-mono">
+                                        {option.lwin18}
+                                      </span>
+                                      {option.region ? ` · ${option.region}` : ''}
+                                      {option.country
+                                        ? `, ${option.country}`
+                                        : ''}
+                                    </p>
+                                  </Typography>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  colorRole="brand"
+                                  variant="outline"
+                                  isDisabled={setLwin.isPending}
+                                  onClick={() =>
+                                    setLwin.mutate({
+                                      skuId: wine.skuId,
+                                      lwin18: option.lwin18,
+                                    })
+                                  }
+                                >
+                                  This one
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
+
                     <Typography variant="labelSm">
                       Or pick it from the warehouse
                     </Typography>
@@ -557,8 +626,7 @@ const ZohoCleanupTab = () => {
                         if (!forWine || forWine.suggestions.length === 0) {
                           return (
                             <Typography variant="bodyXs" colorRole="muted">
-                              Nothing in the warehouse resembles this wine. Set
-                              the LWIN by hand on the SKUs tab.
+                              The warehouse has never held this wine.
                             </Typography>
                           );
                         }

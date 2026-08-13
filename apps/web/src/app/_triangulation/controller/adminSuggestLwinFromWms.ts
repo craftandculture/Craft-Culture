@@ -4,6 +4,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import deriveLwinFromCodes from '../utils/deriveLwinFromCodes';
 import type { DerivedLwin } from '../utils/deriveLwinFromCodes';
 import tokenizeMatch from '../utils/tokenizeMatch';
+import wineIdentity from '../utils/wineIdentity';
 
 export interface LwinSuggestion {
   lwin18: string;
@@ -24,6 +25,8 @@ export interface ReferenceSuggestion {
   region: string | null;
   country: string | null;
   score: number;
+  /** The full code this LWIN7 becomes once the wine's own details are added */
+  lwin18: string;
 }
 
 export interface SkuNeedingLwin {
@@ -184,9 +187,71 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
     LIMIT 300
   `;
 
+  /**
+   * A reference LWIN7 names the wine; the last three fields are the bottle.
+   *
+   * The reference list holds one entry per wine, not per bottling, so a LWIN7
+   * picked from it still needs the vintage, the pack and the size before it is
+   * a code anything can be filed under. All three are already known here — the
+   * vintage from the SKU or its name, the pack from the invoice text, the size
+   * from the name — so the choice put in front of someone is a whole code they
+   * can check, rather than a seven-digit stem they would have to assemble.
+   */
+  const completeLwin7 = (row: SkuNeedingLwin, lwin7: string) => {
+    const identity = wineIdentity(row.productName, row.vintage, row.bottleSize);
+    const vintage = identity.vintage
+      ? String(identity.vintage).padStart(4, '0')
+      : // 1000 is the reference list's own non-vintage marker.
+        '1000';
+    const pack = row.packFromInvoice ?? row.caseConfig ?? 6;
+    const size = identity.sizeMl ?? 750;
+
+    return `${lwin7}-${vintage}-${String(pack).padStart(2, '0')}-${String(size).padStart(5, '0')}`;
+  };
+
   return rows.map((row) => ({
     ...row,
-    derived: deriveLwinFromCodes(row.zohoCodes, row.packFromInvoice),
+    derived: deriveLwinFromCodes(
+      row.zohoCodes,
+      row.packFromInvoice,
+      wineIdentity(row.productName, row.vintage, row.bottleSize).vintage,
+      wineIdentity(row.productName, row.vintage, row.bottleSize).sizeMl,
+    ),
+    // Name similarity alone offered Les Fillottes 2019 against a Terre Elysee
+    // 2021 — same grower, different wine, different year. A stated vintage or
+    // size that contradicts settles it, and it is the same test used
+    // everywhere else. Stock on hand is deliberately not a filter: a wine
+    // received and sold out reads zero and its LWIN is still the right one.
+    suggestions: row.suggestions
+      .filter((entry) => {
+        const wine = wineIdentity(row.productName, row.vintage, row.bottleSize);
+        const candidate = wineIdentity(
+          entry.productName ?? '',
+          entry.vintage,
+          null,
+        );
+
+        if (
+          wine.vintage !== null &&
+          candidate.vintage !== null &&
+          wine.vintage !== candidate.vintage
+        ) {
+          return false;
+        }
+
+        return !(
+          wine.sizeMl !== null &&
+          candidate.sizeMl !== null &&
+          wine.sizeMl !== candidate.sizeMl
+        );
+      })
+      // Stock on hand first: it corroborates, even though its absence proves
+      // nothing.
+      .sort((a, b) => b.bottles - a.bottles),
+    reference: row.reference.map((entry) => ({
+      ...entry,
+      lwin18: completeLwin7(row, entry.lwin7),
+    })),
   }));
 });
 
