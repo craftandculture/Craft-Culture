@@ -31,11 +31,13 @@ export interface DoubleCountRow {
  *
  * Two shapes of this, and both inflate a position silently:
  *
- * A receipt exists in the WMS *and* on the packing list someone uploaded. The
- * feed replaces only its own rows on each refresh, so it never collides with
- * itself — but it has no way to know that the PDF beside it describes the same
- * pallet. Anything that landed after WMS receiving went live is liable to be in
- * both, which is why this affects some lines and not others.
+ * A movement exists in a live feed *and* in a file someone uploaded — a
+ * receipt in both the WMS and a packing list, or a sale in both Zoho and an
+ * uploaded invoice. Each feed replaces only its own rows on refresh, so it
+ * never collides with itself, but it has no way to know that the file beside it
+ * describes the same pallet or the same invoice. Anything dated after the feed
+ * went live is liable to be in both, which is why this affects some lines and
+ * not others.
  *
  * A count date carrying more than one import. A count is a point-in-time
  * statement of what is on the shelf, so two of them on one date cannot be added
@@ -73,7 +75,7 @@ const adminFindDoubleCounts = adminProcedure.query(async () => {
       WHERE i.status = 'committed'
         AND l.sku_id IS NOT NULL
         AND l.status = 'mapped'
-        AND i.kind IN ('cc_opening', 'cc_count', 'cd_count')
+        AND i.kind IN ('cc_opening', 'cc_sales_to_cd', 'cc_count', 'cd_count')
       GROUP BY l.sku_id, i.kind, i.id, i.file_name, i.source_ref, i.as_of_date
       HAVING SUM(l.quantity_bottles) <> 0
     ),
@@ -82,9 +84,11 @@ const adminFindDoubleCounts = adminProcedure.query(async () => {
         c.sku_id,
         c.kind,
         -- A count is point-in-time, so its sources only collide within one
-        -- date. A receipt accumulates, so every source collides with the rest.
-        CASE WHEN c.kind = 'cc_opening' THEN NULL ELSE c.as_of_date END
-          AS group_date,
+        -- date. A flow accumulates, so every source collides with the rest.
+        CASE
+          WHEN c.kind IN ('cc_opening', 'cc_sales_to_cd') THEN NULL
+          ELSE c.as_of_date
+        END AS group_date,
         c.import_id,
         c.file_name,
         c.source_ref,
@@ -98,11 +102,16 @@ const adminFindDoubleCounts = adminProcedure.query(async () => {
         kind,
         group_date,
         COUNT(*)::int AS source_count,
-        -- Receipts are only suspect when a live feed and an upload describe the
-        -- same SKU: two uploaded packing lists are ordinarily two shipments.
-        COUNT(*) FILTER (WHERE source_ref = 'wms-receipts')::int AS feed_sources,
-        COUNT(*) FILTER (WHERE source_ref IS DISTINCT FROM 'wms-receipts')::int
-          AS upload_sources,
+        -- A flow is only suspect when a live feed and an upload describe the
+        -- same SKU: two uploaded packing lists are ordinarily two shipments,
+        -- and the feeds each replace their own rows so they never self-collide.
+        COUNT(*) FILTER (
+          WHERE source_ref IN ('wms-receipts', 'zoho-sales')
+        )::int AS feed_sources,
+        COUNT(*) FILTER (
+          WHERE source_ref IS NULL
+             OR source_ref NOT IN ('wms-receipts', 'zoho-sales')
+        )::int AS upload_sources,
         SUM(bottles)::float8 AS total,
         JSON_AGG(
           JSON_BUILD_OBJECT(
@@ -127,12 +136,21 @@ const adminFindDoubleCounts = adminProcedure.query(async () => {
       CASE
         WHEN g.kind = 'cc_opening'
           THEN 'The WMS receipt and an uploaded packing list may describe the same pallet'
+        WHEN g.kind = 'cc_sales_to_cd'
+          THEN 'The Zoho feed and an uploaded invoice may describe the same sale'
         ELSE 'A count is a point-in-time position, so two on one date cannot be added together'
       END AS reason
     FROM grouped g
     JOIN tri_skus s ON s.id = g.sku_id
-    WHERE (g.kind = 'cc_opening' AND g.feed_sources > 0 AND g.upload_sources > 0)
-       OR (g.kind <> 'cc_opening' AND g.source_count > 1)
+    WHERE (
+        g.kind IN ('cc_opening', 'cc_sales_to_cd')
+        AND g.feed_sources > 0
+        AND g.upload_sources > 0
+      )
+       OR (
+        g.kind NOT IN ('cc_opening', 'cc_sales_to_cd')
+        AND g.source_count > 1
+      )
     ORDER BY g.total DESC
     LIMIT 200
   `;

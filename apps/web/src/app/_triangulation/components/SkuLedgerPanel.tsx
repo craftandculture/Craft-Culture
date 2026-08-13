@@ -90,10 +90,18 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
   const groups = GROUP_ORDER.map((kind) => {
     const forKind = entries.filter((entry) => entry.kind === kind);
 
+    // Only committed lines reach the reconciliation, so only committed lines
+    // may be totalled here — a subtotal including a draft is a different
+    // number from the one on the row that was clicked to get here.
+    const committed = forKind.filter((entry) => entry.importStatus !== 'draft');
+
     return {
       kind,
       entries: forKind,
-      total: forKind.reduce((sum, entry) => sum + entry.quantityBottles, 0),
+      total: committed.reduce((sum, entry) => sum + entry.quantityBottles, 0),
+      draftTotal: forKind
+        .filter((entry) => entry.importStatus === 'draft')
+        .reduce((sum, entry) => sum + entry.quantityBottles, 0),
       fileNames: [
         ...new Set(
           forKind.map((entry) => entry.fileName ?? entry.periodLabel ?? ''),
@@ -324,6 +332,18 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                               : 'accumulates'}
                           </p>
                         </Typography>
+                        {group.draftTotal !== 0 ? (
+                          <Typography
+                            variant="bodyXs"
+                            colorRole="warning"
+                            asChild
+                          >
+                            <p>
+                              + {formatBottles(group.draftTotal)} in draft, not
+                              counted
+                            </p>
+                          </Typography>
+                        ) : null}
                       </div>
                     </div>
                     <table className="w-full text-left text-sm">
@@ -331,7 +351,11 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                         {group.entries.map((entry) => (
                           <tr
                             key={entry.id}
-                            className="border-border-primary border-b last:border-b-0"
+                            className={`border-border-primary border-b last:border-b-0 ${
+                              entry.importStatus === 'draft'
+                                ? 'text-text-muted line-through decoration-1'
+                                : ''
+                            }`}
                           >
                             <td className="text-text-muted py-1.5 pr-3 pl-3 tabular-nums">
                               {entry.effectiveDate}

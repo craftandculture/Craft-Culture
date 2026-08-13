@@ -216,9 +216,11 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
                     <td className="text-text-muted py-1 pr-3">
                       {row.kind === 'cc_opening'
                         ? 'Received into C&C'
-                        : row.kind === 'cc_count'
-                          ? `C&C count ${row.asOfDate ?? ''}`
-                          : `City Drinks count ${row.asOfDate ?? ''}`}
+                        : row.kind === 'cc_sales_to_cd'
+                          ? 'Sold to City Drinks'
+                          : row.kind === 'cc_count'
+                            ? `C&C count ${row.asOfDate ?? ''}`
+                            : `City Drinks count ${row.asOfDate ?? ''}`}
                     </td>
                     <td className="py-1 pr-3">
                       {row.sources.map((source) => (
