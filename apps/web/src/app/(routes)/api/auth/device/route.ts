@@ -1,8 +1,6 @@
-import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 
 import db from '@/database/client';
-import { users } from '@/database/schema';
 import auth from '@/lib/better-auth/server';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
@@ -55,7 +53,7 @@ export const GET = async (request: NextRequest) => {
 
   // Find the user
   const user = await db.query.users.findFirst({
-    where: eq(users.email, serverConfig.wmsDeviceUserEmail),
+    where: { email: serverConfig.wmsDeviceUserEmail },
   });
 
   if (!user) {
