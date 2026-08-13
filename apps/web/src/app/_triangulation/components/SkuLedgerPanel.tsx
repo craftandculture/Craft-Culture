@@ -1,7 +1,8 @@
 'use client';
 
-import { IconX } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconArrowLeft, IconX } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -38,10 +39,30 @@ const isInbound = (kind: TriImportKind) => kind === 'cc_opening';
  */
 const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const ledger = useQuery(
     api.triangulation.admin.getSkuLedger.queryOptions({ skuId, periodId }),
   );
+
+  const moveCode = useMutation({
+    ...api.triangulation.admin.moveCodeToSku.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `${formatBottles(result.bottles)} bottles moved onto ${result.wCode} across ${result.remappedImports} import${result.remappedImports === 1 ? '' : 's'}`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkuLedger.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   const sku = ledger.data?.sku;
   const entries = ledger.data?.entries ?? [];
@@ -117,6 +138,10 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
         bottles: lines.reduce(
           (total, stray) => total + stray.quantityBottles,
           0,
+        ),
+        // A group can hold more than one code, and each moves separately.
+        codes: [...new Set(lines.map((stray) => stray.normalizedCode))].filter(
+          Boolean,
         ),
       };
     })
@@ -355,6 +380,25 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                     </span>
                   </Typography>
                 </div>
+                {group.codes.length > 0 ? (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {group.codes.map((code) => (
+                      <Button
+                        key={code}
+                        size="xs"
+                        colorRole="brand"
+                        variant="outline"
+                        isDisabled={moveCode.isPending}
+                        onClick={() =>
+                          moveCode.mutate({ normalizedCode: code, skuId })
+                        }
+                      >
+                        <IconArrowLeft className="mr-1 size-3.5" />
+                        Move {code} onto {sku?.wCode}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
                 <table className="w-full text-left text-xs">
                   <tbody>
                     {group.lines.map((stray) => (

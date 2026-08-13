@@ -27,6 +27,8 @@ const SkusTab = () => {
 
   const [search, setSearch] = useState('');
   const [packEdits, setPackEdits] = useState<Record<string, number>>({});
+  /** Codes being typed into each SKU's "add a code" box */
+  const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
   /** Pairs judged legitimately separate, and the pair awaiting a second click */
   const [keptBoth, setKeptBoth] = useState<string[]>([]);
   const [confirmingMerge, setConfirmingMerge] = useState<string | null>(null);
@@ -85,6 +87,22 @@ const SkusTab = () => {
       );
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.findSplitSkus.queryKey(),
+      });
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const moveCode = useMutation({
+    ...api.triangulation.admin.moveCodeToSku.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.lines === 0
+          ? `Code mapped to ${result.wCode}, but no imported line carries it yet`
+          : `${result.lines} line${result.lines === 1 ? '' : 's'} moved onto ${result.wCode} — ${result.bottles.toLocaleString('en-GB')} bottles`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
       });
       await invalidate();
     },
@@ -481,6 +499,54 @@ const SkusTab = () => {
                         ))
                       )}
                     </div>
+                    {/* Mapping was only reachable from the unmapped queue, so a
+                        code already sitting on the wrong SKU had no route back
+                        — the commonest case, since both sides are technically
+                        resolved. Typing it here moves it, whatever holds it. */}
+                    <form
+                      className="mt-1.5 flex gap-1"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const code = (codeDrafts[sku.id] ?? '').trim();
+
+                        if (!code) return;
+
+                        moveCode.mutate({
+                          normalizedCode: code
+                            .toUpperCase()
+                            .replace(/[^A-Z0-9]/g, ''),
+                          skuId: sku.id,
+                        });
+                        setCodeDrafts((current) => ({
+                          ...current,
+                          [sku.id]: '',
+                        }));
+                      }}
+                    >
+                      <input
+                        value={codeDrafts[sku.id] ?? ''}
+                        onChange={(event) =>
+                          setCodeDrafts((current) => ({
+                            ...current,
+                            [sku.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Add a code"
+                        aria-label={`Add a code to ${sku.wCode}`}
+                        className="border-border-primary bg-fill-primary min-h-7 w-40 rounded-md border px-2 font-mono text-xs"
+                      />
+                      <Button
+                        size="xs"
+                        colorRole="brand"
+                        variant="outline"
+                        type="submit"
+                        isDisabled={
+                          moveCode.isPending || !(codeDrafts[sku.id] ?? '').trim()
+                        }
+                      >
+                        Map
+                      </Button>
+                    </form>
                   </td>
                 </tr>
               ))}

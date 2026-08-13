@@ -118,6 +118,12 @@ export const mapAliasSchema = z.object({
   applyToExistingLines: z.boolean().default(true),
 });
 
+/** Repoint a code at a different SKU, whether or not it is already mapped */
+export const moveCodeToSkuSchema = z.object({
+  normalizedCode: z.string().min(1).max(200),
+  skuId: z.string().uuid(),
+});
+
 export const autoMapSchema = z.object({
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),

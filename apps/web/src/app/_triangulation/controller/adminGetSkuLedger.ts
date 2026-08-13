@@ -13,6 +13,8 @@ export interface StrayLine {
   /** mapped | unmapped | ignored */
   status: string;
   rawCode: string | null;
+  /** The comparable form of the code, and what a re-map acts on */
+  normalizedCode: string;
   rawDescription: string | null;
   docRef: string | null;
   effectiveDate: string;
@@ -154,6 +156,7 @@ const adminGetSkuLedger = adminProcedure
             i.status AS "importStatus",
             l.status,
             l.raw_code AS "rawCode",
+            l.normalized_code AS "normalizedCode",
             l.raw_description AS "rawDescription",
             l.doc_ref AS "docRef",
             COALESCE(l.doc_date, i.as_of_date)::text AS "effectiveDate",
