@@ -387,18 +387,38 @@ const adminGetTriangulation = adminProcedure
         presentKinds: string[];
       }[]
     >`
+      -- Scoped by the same effective date the figures use. Filtering on the
+      -- import's own date reported a live feed as "not yet received" while its
+      -- lines were contributing to the totals on screen — the banner
+      -- contradicting the number beside it.
+      WITH scoped AS (
+        SELECT
+          i.id,
+          i.kind,
+          i.status,
+          l.id AS line_id,
+          l.status AS line_status,
+          l.normalized_code,
+          (CASE
+            WHEN i.kind IN ('cc_opening', 'cc_sales_to_cd', 'cd_sales')
+              THEN COALESCE(l.doc_date, i.as_of_date)
+            ELSE i.as_of_date
+          END) AS effective_date
+        FROM tri_imports i
+        LEFT JOIN tri_import_lines l ON l.import_id = i.id
+      )
       SELECT
-        COUNT(l.id) FILTER (WHERE l.status = 'unmapped')::int AS "unmappedLines",
-        COUNT(DISTINCT l.normalized_code) FILTER (WHERE l.status = 'unmapped')::int
+        COUNT(line_id) FILTER (WHERE line_status = 'unmapped')::int
+          AS "unmappedLines",
+        COUNT(DISTINCT normalized_code) FILTER (WHERE line_status = 'unmapped')::int
           AS "unmappedCodes",
-        COUNT(DISTINCT i.id) FILTER (WHERE i.status = 'draft')::int AS "draftImports",
+        COUNT(DISTINCT id) FILTER (WHERE status = 'draft')::int AS "draftImports",
         COALESCE(
-          ARRAY_AGG(DISTINCT i.kind::text) FILTER (WHERE i.status = 'committed'),
+          ARRAY_AGG(DISTINCT kind::text) FILTER (WHERE status = 'committed'),
           ARRAY[]::text[]
         ) AS "presentKinds"
-      FROM tri_imports i
-      LEFT JOIN tri_import_lines l ON l.import_id = i.id
-      WHERE i.as_of_date <= ${cutoff}
+      FROM scoped
+      WHERE effective_date <= ${cutoff}
     `;
 
     return {
