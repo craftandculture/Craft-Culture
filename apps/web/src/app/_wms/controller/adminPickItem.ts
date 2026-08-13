@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -14,6 +14,9 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { pickItemSchema } from '../schemas/pickListSchema';
 import convertReservationToPick from '../utils/convertReservationToPick';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
+import parseSkuPack from '../utils/parseSkuPack';
+import rankStockByPack from '../utils/rankStockByPack';
 
 /**
  * Mark a pick list item as picked and update stock
@@ -95,18 +98,60 @@ const adminPickItem = wmsOperatorProcedure
       });
     }
 
-    // Find stock at location for this specific product
-    const [stock] = await db
+    const isBottlePick = pickedBottles != null;
+
+    // Find this wine at the location. The pick line snapshots the LWIN it was
+    // released against, but the shelf moves on — a 6-pack repacked into 3-packs
+    // becomes `…-03-…` and the line's `…-06-…` row is left at zero. Matching the
+    // exact code alone reports "insufficient stock" while the wine is in the
+    // operator's hand, so every pack of the same wine and bottle size at this
+    // bay is a candidate.
+    const packPattern = lwinPackAgnosticPattern(pickListItem.lwin18);
+
+    const candidates = await db
       .select()
       .from(wmsStock)
       .where(
         and(
           eq(wmsStock.locationId, pickedFromLocationId),
-          eq(wmsStock.lwin18, pickListItem.lwin18),
+          packPattern
+            ? like(wmsStock.lwin18, packPattern)
+            : eq(wmsStock.lwin18, pickListItem.lwin18),
         ),
       );
 
-    // Stock must exist at this location
+    if (candidates.length === 0) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: `No stock found at this location for ${pickListItem.productName}`,
+      });
+    }
+
+    const packOf = (row: (typeof candidates)[number]) => row.caseConfig ?? 12;
+
+    // The pack the line was released against — a WHOLE-CASE pick must come from
+    // that same pack, or "1 case" would quietly deliver a different bottle
+    // count. A bottle pick has no such constraint: bottles are bottles.
+    const linePack = parseSkuPack(pickListItem.lwin18)?.pack ?? 0;
+
+    const canSatisfy = (row: (typeof candidates)[number]) => {
+      if (isBottlePick) {
+        const fromOpen = Math.min(pickedBottles, row.openBottles);
+        const casesToCrack = Math.ceil((pickedBottles - fromOpen) / packOf(row));
+        return row.availableCases >= casesToCrack;
+      }
+      if (linePack > 0 && packOf(row) !== linePack) return false;
+      return row.availableCases >= pickedQuantity;
+    };
+
+    // Rank by pack fit, then take the first that can actually satisfy the pick:
+    // for 3 bottles, a 3-pack leaves nothing open where a 6-pack leaves three.
+    const ranked = rankStockByPack(
+      candidates,
+      isBottlePick ? pickedBottles : linePack || 1,
+    );
+    const stock = ranked.find(canSatisfy) ?? ranked[0];
+
     if (!stock) {
       throw new TRPCError({
         code: 'NOT_FOUND',
@@ -114,7 +159,6 @@ const adminPickItem = wmsOperatorProcedure
       });
     }
 
-    const isBottlePick = pickedBottles != null;
     const pack = stock.caseConfig ?? 12;
 
     // How many sealed cases this pick removes, and what to store on the line.
@@ -196,7 +240,9 @@ const adminPickItem = wmsOperatorProcedure
     await db.insert(wmsStockMovements).values({
       movementNumber,
       movementType: 'pick',
-      lwin18: pickListItem.lwin18,
+      // The code actually taken off the shelf, which may be a repacked pack
+      // rather than the one the line was released against.
+      lwin18: stock.lwin18,
       productName: pickListItem.productName,
       quantityCases: casesRemoved,
       fromLocationId: pickedFromLocationId,

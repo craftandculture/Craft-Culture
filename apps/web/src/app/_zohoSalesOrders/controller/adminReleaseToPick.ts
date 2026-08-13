@@ -11,6 +11,7 @@ import { and, eq, gt, ilike, like } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
+import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import rankStockByPack from '@/app/_wms/utils/rankStockByPack';
 import db from '@/database/client';
@@ -23,27 +24,6 @@ import {
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
-
-/**
- * A pack-agnostic LIKE pattern for a dashed LWIN18 — same wine, same vintage,
- * same bottle size, ANY pack (`1109704-2008-%-00750`). Returns null when the
- * code isn't in `LWIN7-VVVV-PP-SSSSS` shape.
- *
- * A 3-pack invoiced off a 6-pack on the shelf (`…-03-…` vs `…-06-…`) is the
- * same wine in the same bay — just a case that gets broken at pick time — so
- * the bay lookup must ignore the pack segment. The bottle size is deliberately
- * kept: a magnum is a different physical thing, not a repack.
- *
- * @example
- *   lwinPackAgnosticPattern('1109704-2008-03-00750'); // '1109704-2008-%-00750'
- */
-const lwinPackAgnosticPattern = (lwin18: string | null | undefined) => {
-  if (!lwin18) return null;
-  const parts = lwin18.split('-');
-  if (parts.length !== 4) return null;
-  const [wine, vintage, , size] = parts;
-  return wine && vintage && size ? `${wine}-${vintage}-%-${size}` : null;
-};
 
 const adminReleaseToPick = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
