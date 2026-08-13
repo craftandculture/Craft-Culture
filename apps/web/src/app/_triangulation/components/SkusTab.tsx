@@ -49,6 +49,29 @@ const SkusTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const repairPacks = useMutation({
+    ...api.triangulation.admin.repairPackSizes.mutationOptions(),
+    onSuccess: async (result) => {
+      if (result.dryRun) {
+        toast.info(
+          result.changed === 0
+            ? 'Every pack size already matches its LWIN'
+            : `${result.changed} pack sizes disagree with their LWIN — e.g. ${result.examples
+                .slice(0, 3)
+                .map((c) => `${c.wCode} ${c.from}→${c.to}`)
+                .join(', ')}. Run it again to apply.`,
+        );
+        return;
+      }
+
+      toast.success(
+        `Corrected ${result.changed} pack sizes · ${result.recalculated} imports recalculated`,
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const upsertSku = useMutation({
     ...api.triangulation.admin.upsertSku.mutationOptions(),
     onSuccess: async (result) => {
@@ -89,15 +112,33 @@ const SkusTab = () => {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <Button
-          colorRole="muted"
-          variant="outline"
-          isDisabled={seedFromWms.isPending}
-          onClick={() => seedFromWms.mutate({ ownerName: 'Crurated' })}
-        >
-          <IconDatabaseImport className="mr-1 size-4" />
-          {seedFromWms.isPending ? 'Importing…' : 'Import W codes from WMS'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            colorRole="muted"
+            variant="outline"
+            isDisabled={repairPacks.isPending}
+            onClick={() => repairPacks.mutate({ dryRun: true })}
+          >
+            Check pack sizes
+          </Button>
+          <Button
+            colorRole="muted"
+            variant="outline"
+            isDisabled={repairPacks.isPending}
+            onClick={() => repairPacks.mutate({ dryRun: false })}
+          >
+            {repairPacks.isPending ? 'Fixing…' : 'Fix pack sizes from LWIN'}
+          </Button>
+          <Button
+            colorRole="muted"
+            variant="outline"
+            isDisabled={seedFromWms.isPending}
+            onClick={() => seedFromWms.mutate({ ownerName: 'Crurated' })}
+          >
+            <IconDatabaseImport className="mr-1 size-4" />
+            {seedFromWms.isPending ? 'Importing…' : 'Import W codes from WMS'}
+          </Button>
+        </div>
       </div>
 
       <Typography variant="bodyXs" colorRole="muted" asChild>
