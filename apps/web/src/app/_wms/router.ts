@@ -13,6 +13,7 @@ import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
 import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
+import adminCorrectPackConfig from './controller/adminCorrectPackConfig';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
 import adminCreateCycleCount from './controller/adminCreateCycleCount';
 import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
@@ -197,6 +198,7 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
+  correctPackConfig: adminCorrectPackConfig,
   syncToZoho: adminSyncStockToZoho,
   clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,

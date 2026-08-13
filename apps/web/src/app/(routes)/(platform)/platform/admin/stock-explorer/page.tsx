@@ -37,7 +37,14 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
@@ -59,7 +66,14 @@ import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
-type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | 'consignment' | 'inbound';
+type QuickFilter =
+  | 'all'
+  | 'lowStock'
+  | 'reserved'
+  | 'expiring'
+  | 'ownStock'
+  | 'consignment'
+  | 'inbound';
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
 type RowDensity = 'compact' | 'normal' | 'relaxed';
 
@@ -119,18 +133,40 @@ const savePreference = (key: string, value: unknown) => {
 const SkeletonRow = ({ density }: { density: RowDensity }) => {
   const cls = DENSITY_CLASSES[density].td;
   return (
-    <tr className="border-b border-border-muted">
-      <td className={cls}><div className="h-4 w-4 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-48 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-28 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-36 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-12 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-8 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-8 animate-pulse rounded bg-surface-muted" /></td>
-      <td className={cls}><div className="h-4 w-16 animate-pulse rounded bg-surface-muted" /></td>
+    <tr className="border-border-muted border-b">
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-4 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-48 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-28 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-36 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-12 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-10 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-10 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-10 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-8 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-8 animate-pulse rounded" />
+      </td>
+      <td className={cls}>
+        <div className="bg-surface-muted h-4 w-16 animate-pulse rounded" />
+      </td>
     </tr>
   );
 };
@@ -142,7 +178,10 @@ interface StatusIndicatorProps {
   availableCases: number;
 }
 
-const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps) => {
+const StatusIndicator = ({
+  expiryStatus,
+  availableCases,
+}: StatusIndicatorProps) => {
   // Priority: expired > expiring (90 days) > stock level
   if (expiryStatus === 'expired') {
     return (
@@ -162,8 +201,8 @@ const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps)
   }
   if (availableCases === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
-        <span className="h-1.5 w-1.5 rounded-full bg-border-muted" />
+      <span className="bg-surface-muted text-text-muted inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium">
+        <span className="bg-border-muted h-1.5 w-1.5 rounded-full" />
         Out
       </span>
     );
@@ -223,7 +262,7 @@ const PaginationButton = ({
   <button
     onClick={onClick}
     disabled={disabled}
-    className="rounded-md p-2.5 text-text-muted transition-colors hover:bg-fill-primary-hover hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
+    className="text-text-muted hover:bg-fill-primary-hover hover:text-text-primary rounded-md p-2.5 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
   >
     {icon}
   </button>
@@ -251,7 +290,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             setQty(initialQty);
             setEditing(true);
           }}
-          className="rounded p-1 text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
+          className="text-text-muted hover:bg-surface-muted hover:text-text-brand rounded p-1 transition-colors"
           title="Print labels"
         >
           <IconPrinter className="h-4 w-4" />
@@ -268,9 +307,11 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
           min={1}
           max={maxQty}
           value={qty}
-          onChange={(e) => setQty(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
+          onChange={(e) =>
+            setQty(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))
+          }
           onClick={(e) => e.stopPropagation()}
-          className="w-12 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-center text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-border-brand w-12 rounded border px-1.5 py-0.5 text-center text-xs tabular-nums focus:outline-none"
         />
         <button
           onClick={(e) => {
@@ -278,7 +319,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             onPrint(qty);
             setEditing(false);
           }}
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Print
         </button>
@@ -287,7 +328,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             e.stopPropagation();
             setEditing(false);
           }}
-          className="rounded p-0.5 text-text-muted hover:text-text-primary"
+          className="text-text-muted hover:text-text-primary rounded p-0.5"
         >
           <IconX className="h-3 w-3" />
         </button>
@@ -298,13 +339,19 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
 
 // ─── BOE Cell (click-to-edit) ────────────────────────────────────────────────
 
-const BoeCell = ({ value, onSave }: { value: string | null; onSave: (v: string) => void }) => {
+const BoeCell = ({
+  value,
+  onSave,
+}: {
+  value: string | null;
+  onSave: (v: string) => void;
+}) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
 
   if (!editing) {
     return (
-      <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
+      <td className="text-text-muted hidden px-3 py-2 font-mono text-xs sm:table-cell">
         <button
           type="button"
           className="cursor-pointer hover:underline"
@@ -337,7 +384,7 @@ const BoeCell = ({ value, onSave }: { value: string | null; onSave: (v: string) 
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className="w-28 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 font-mono text-xs focus:border-border-brand focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-border-brand w-28 rounded border px-1.5 py-0.5 font-mono text-xs focus:outline-none"
           placeholder="RE BOE"
           autoFocus
           onKeyDown={(e) => {
@@ -350,7 +397,7 @@ const BoeCell = ({ value, onSave }: { value: string | null; onSave: (v: string) 
         <button
           type="submit"
           onClick={(e) => e.stopPropagation()}
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Save
         </button>
@@ -378,7 +425,7 @@ const ImportPriceCell = ({
       <td className={`${density} hidden text-right tabular-nums lg:table-cell`}>
         <button
           type="button"
-          className="cursor-pointer text-text-muted hover:text-text-primary hover:underline"
+          className="text-text-muted hover:text-text-primary cursor-pointer hover:underline"
           onClick={(e) => {
             e.stopPropagation();
             setDraft(value?.toFixed(2) ?? '');
@@ -404,12 +451,12 @@ const ImportPriceCell = ({
           setEditing(false);
         }}
       >
-        <span className="text-xs text-text-muted">$</span>
+        <span className="text-text-muted text-xs">$</span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-border-brand w-20 rounded border px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -425,7 +472,7 @@ const ImportPriceCell = ({
         <button
           type="submit"
           onClick={(e) => e.stopPropagation()}
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Save
         </button>
@@ -433,7 +480,6 @@ const ImportPriceCell = ({
     </td>
   );
 };
-
 
 // ─── Product Row ────────────────────────────────────────────────────────────
 
@@ -472,28 +518,77 @@ interface ProductRowProps {
   onToggle: () => void;
   density: RowDensity;
   visibleColumns: Record<string, boolean>;
-  onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
+  onPrintLabels: (
+    product: ProductRowProps['product'],
+    loc: ProductRowProps['product']['locations'][number],
+    qty: number,
+  ) => void;
   onUpdateBoe: (stockId: string, value: string) => void;
   onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
-  onEditName: (lwin18: string, productName: string, producer: string | null) => void;
+  onCorrectPack: (
+    stockId: string,
+    newCaseConfig: number,
+    reason: string,
+  ) => void;
+  onEditName: (
+    lwin18: string,
+    productName: string,
+    producer: string | null,
+  ) => void;
   isAdjusting: boolean;
+  isCorrectingPack: boolean;
   editingLwin18: string | null;
   onStartEditName: (lwin18: string) => void;
   onCancelEditName: () => void;
   importPrice: number | null;
   onSetImportPrice: (lwin18: string, price: number) => void;
-  onTransferOwnership: (stockId: string, newOwnerId: string, qty: number, notes?: string) => void;
+  onTransferOwnership: (
+    stockId: string,
+    newOwnerId: string,
+    qty: number,
+    notes?: string,
+  ) => void;
   isTransferring: boolean;
   partners: { id: string; name: string; type: string }[];
-  /** Names of confusingly-similar wines also in stock (same vintage, near-identical name). */
+  /**
+   * Names of confusingly-similar wines also in stock (same vintage,
+   * near-identical name).
+   */
   lookalikeTwins?: string[];
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice, onTransferOwnership, isTransferring, partners, lookalikeTwins }: ProductRowProps) => {
+const ProductRow = ({
+  product,
+  isExpanded,
+  onToggle,
+  density,
+  visibleColumns,
+  onPrintLabels,
+  onUpdateBoe,
+  onAdjustStock,
+  onCorrectPack,
+  onEditName,
+  isAdjusting,
+  isCorrectingPack,
+  editingLwin18,
+  onStartEditName,
+  onCancelEditName,
+  importPrice,
+  onSetImportPrice,
+  onTransferOwnership,
+  isTransferring,
+  partners,
+  lookalikeTwins,
+}: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
-  const [transferringStockId, setTransferringStockId] = useState<string | null>(null);
+  const [packStockId, setPackStockId] = useState<string | null>(null);
+  const [packConfig, setPackConfig] = useState(0);
+  const [packReason, setPackReason] = useState('');
+  const [transferringStockId, setTransferringStockId] = useState<string | null>(
+    null,
+  );
   const [transferOwnerId, setTransferOwnerId] = useState('');
   const [transferQty, setTransferQty] = useState(0);
   const [transferNotes, setTransferNotes] = useState('');
@@ -512,25 +607,30 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
     <>
       <tr
         onClick={onToggle}
-        className={`cursor-pointer border-b border-border-muted transition-colors even:bg-surface-muted/20 hover:bg-surface-muted/60 ${dc.text}`}
+        className={`border-border-muted even:bg-surface-muted/20 hover:bg-surface-muted/60 cursor-pointer border-b transition-colors ${dc.text}`}
       >
         {/* Expand chevron */}
-        <td className={`${tdClass} w-8 text-text-muted`}>
+        <td className={`${tdClass} text-text-muted w-8`}>
           <IconChevronDown
             className={`h-4 w-4 transition-transform ${isExpanded ? 'text-text-brand' : '-rotate-90'}`}
           />
         </td>
 
         {/* Product name */}
-        <td className={`${tdClass} max-w-[360px] font-medium text-text-primary`}>
+        <td
+          className={`${tdClass} text-text-primary max-w-[360px] font-medium`}
+        >
           {editingName || isSaving ? (
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex flex-col gap-1">
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="h-7 w-full rounded border border-border-muted bg-background-primary px-2 text-sm text-text-primary focus:border-border-brand focus:outline-none"
+                  className="border-border-muted bg-background-primary text-text-primary focus:border-border-brand h-7 w-full rounded border px-2 text-sm focus:outline-none"
                   placeholder="Product name"
                   autoFocus
                 />
@@ -538,20 +638,28 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   type="text"
                   value={editProducer}
                   onChange={(e) => setEditProducer(e.target.value)}
-                  className="h-7 w-full rounded border border-border-muted bg-background-primary px-2 text-xs text-text-muted focus:border-border-brand focus:outline-none"
+                  className="border-border-muted bg-background-primary text-text-muted focus:border-border-brand h-7 w-full rounded border px-2 text-xs focus:outline-none"
                   placeholder="Producer"
                 />
               </div>
               <button
                 onClick={() => {
                   if (editName.trim()) {
-                    void onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
+                    void onEditName(
+                      product.lwin18,
+                      editName.trim(),
+                      editProducer.trim() || null,
+                    );
                   }
                 }}
                 disabled={isSaving || !editName.trim()}
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-emerald-500 text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
-                {isSaving ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconDeviceFloppy className="h-3.5 w-3.5" />}
+                {isSaving ? (
+                  <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <IconDeviceFloppy className="h-3.5 w-3.5" />
+                )}
               </button>
               <button
                 onClick={() => {
@@ -559,7 +667,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   setEditName(product.productName);
                   setEditProducer(product.producer ?? '');
                 }}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-surface-muted text-text-muted transition-colors hover:bg-red-50 hover:text-red-500"
+                className="bg-surface-muted text-text-muted flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors hover:bg-red-50 hover:text-red-500"
               >
                 <IconX className="h-3.5 w-3.5" />
               </button>
@@ -567,7 +675,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
           ) : (
             <div className="group/name flex items-center gap-1.5 truncate">
               <span className="truncate">{product.productName}</span>
-              <PackBadge pack={product.caseConfig} bottleSize={product.bottleSize} />
+              <PackBadge
+                pack={product.caseConfig}
+                bottleSize={product.bottleSize}
+              />
               {lookalikeTwins && lookalikeTwins.length > 0 && (
                 <span
                   title={`Lookalike — easily confused with: ${lookalikeTwins.join(', ')}. Check the LWIN when picking.`}
@@ -583,7 +694,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   setEditProducer(product.producer ?? '');
                   onStartEditName(product.lwin18);
                 }}
-                className="hidden shrink-0 rounded p-0.5 text-text-muted/40 transition-colors hover:bg-surface-muted hover:text-text-brand group-hover/name:inline-flex"
+                className="text-text-muted/40 hover:bg-surface-muted hover:text-text-brand hidden shrink-0 rounded p-0.5 transition-colors group-hover/name:inline-flex"
               >
                 <IconPencil className="h-3.5 w-3.5" />
               </button>
@@ -593,40 +704,48 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
 
         {/* Producer */}
         {visibleColumns.producer && (
-          <td className={`${tdClass} hidden max-w-[160px] truncate text-text-muted lg:table-cell`}>
+          <td
+            className={`${tdClass} text-text-muted hidden max-w-[160px] truncate lg:table-cell`}
+          >
             {product.producer ?? '—'}
           </td>
         )}
 
         {/* LWIN18 */}
         {visibleColumns.lwin18 && (
-          <td className={`${tdClass} hidden font-mono text-xs text-text-muted lg:table-cell`}>
+          <td
+            className={`${tdClass} text-text-muted hidden font-mono text-xs lg:table-cell`}
+          >
             {product.lwin18}
           </td>
         )}
 
         {/* Vintage */}
         {visibleColumns.vintage && (
-          <td className={`${tdClass} text-text-primary`}>{product.vintage ?? '—'}</td>
+          <td className={`${tdClass} text-text-primary`}>
+            {product.vintage ?? '—'}
+          </td>
         )}
 
         {/* Size */}
         {visibleColumns.size && (
-          <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
+          <td className={`${tdClass} text-text-muted hidden xl:table-cell`}>
             {product.bottleSize ?? '75cl'}
           </td>
         )}
 
         {/* Pack */}
         {visibleColumns.pack && (
-          <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
+          <td className={`${tdClass} text-text-muted hidden xl:table-cell`}>
             {product.caseConfig ?? 12}
           </td>
         )}
 
         {/* Cases */}
         {visibleColumns.cases && (
-          <td className={`${tdClassRight} text-base font-bold text-text-primary`}>
+          <td
+            className={`${tdClassRight} text-text-primary text-base font-bold`}
+          >
             {product.totalCases}
           </td>
         )}
@@ -634,7 +753,13 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
         {/* Available */}
         {visibleColumns.available && (
           <td className={tdClassRight}>
-            <span className={product.availableCases > 0 ? 'font-semibold text-text-brand' : 'text-text-muted'}>
+            <span
+              className={
+                product.availableCases > 0
+                  ? 'text-text-brand font-semibold'
+                  : 'text-text-muted'
+              }
+            >
               {product.availableCases}
             </span>
           </td>
@@ -644,7 +769,9 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
         {visibleColumns.reserved && (
           <td className={tdClassRight}>
             {product.reservedCases > 0 ? (
-              <span className="font-medium text-amber-600">{product.reservedCases}</span>
+              <span className="font-medium text-amber-600">
+                {product.reservedCases}
+              </span>
             ) : (
               <span className="text-text-muted">—</span>
             )}
@@ -663,10 +790,17 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
         {/* Import Price per Case (editable — saves as per-bottle) */}
         {visibleColumns.importCasePrice && (
           <ImportPriceCell
-            value={importPrice != null ? importPrice * (product.caseConfig ?? 12) : null}
+            value={
+              importPrice != null
+                ? importPrice * (product.caseConfig ?? 12)
+                : null
+            }
             onSave={(casePrice) => {
               const perBottle = casePrice / (product.caseConfig ?? 12);
-              onSetImportPrice(product.lwin18, parseFloat(perBottle.toFixed(4)));
+              onSetImportPrice(
+                product.lwin18,
+                parseFloat(perBottle.toFixed(4)),
+              );
             }}
             density={tdClass}
           />
@@ -674,21 +808,27 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
 
         {/* Bottles */}
         {visibleColumns.bottles && (
-          <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
+          <td
+            className={`${tdClassRight} text-text-muted hidden md:table-cell`}
+          >
             {product.totalBottles}
           </td>
         )}
 
         {/* Locations */}
         {visibleColumns.locations && (
-          <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
+          <td
+            className={`${tdClassRight} text-text-muted hidden md:table-cell`}
+          >
             {product.locationCount}
           </td>
         )}
 
         {/* Owners */}
         {visibleColumns.owners && (
-          <td className={`${tdClassRight} hidden text-text-muted lg:table-cell`}>
+          <td
+            className={`${tdClassRight} text-text-muted hidden lg:table-cell`}
+          >
             {product.ownerCount}
           </td>
         )}
@@ -708,10 +848,14 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
       {isExpanded && product.locations.length > 0 && (
         <tr>
           <td colSpan={20} className="bg-surface-muted px-0 py-0">
-            <div className="border-b border-border-muted px-4 py-4 sm:px-8">
+            <div className="border-border-muted border-b px-4 py-4 sm:px-8">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-                  Location Breakdown — {product.locations.length} record{product.locations.length !== 1 ? 's' : ''}
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted font-semibold uppercase tracking-wider"
+                >
+                  Location Breakdown — {product.locations.length} record
+                  {product.locations.length !== 1 ? 's' : ''}
                 </Typography>
                 <div className="flex gap-2">
                   <Link
@@ -762,341 +906,549 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                     <IconAdjustments className="mr-1 h-3 w-3" />
                     {adjustingStockId ? 'Cancel' : 'Adjust'}
                   </Button>
+                  <Button
+                    variant={packStockId ? 'default' : 'outline'}
+                    size="xs"
+                    title="Correct the pack size when it was recorded wrongly — keeps the case count, moves the bottle count"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (packStockId) {
+                        setPackStockId(null);
+                        setPackReason('');
+                      } else if (product.locations[0]) {
+                        setPackStockId(product.locations[0].stockId);
+                        setPackConfig(product.caseConfig ?? 0);
+                        setPackReason('');
+                      }
+                    }}
+                  >
+                    <IconPackage className="mr-1 h-3 w-3" />
+                    {packStockId ? 'Cancel' : 'Fix pack'}
+                  </Button>
                 </div>
               </div>
               <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="text-[11px] uppercase tracking-wider text-text-muted">
-                    <th className="px-3 py-1.5 text-left">Location</th>
-                    <th className="px-3 py-1.5 text-left">Storage</th>
-                    <th className="px-3 py-1.5 text-right">Qty</th>
-                    <th className="px-3 py-1.5 text-right">Avail</th>
-                    <th className="w-[100px] px-3 py-1.5 text-left" />
-                    <th className="px-3 py-1.5 text-left">Owner</th>
-                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">Lot</th>
-                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">Expiry</th>
-                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">RE BOE</th>
-                    <th className="hidden px-3 py-1.5 text-center sm:table-cell">Photos</th>
-                    <th className="px-3 py-1.5 text-right">Print</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {product.locations.map((loc) => {
-                    // Availability ratio: how much of this location's stock is available
-                    const availPercent = loc.quantityCases > 0
-                      ? (loc.availableCases / loc.quantityCases) * 100
-                      : 0;
-                    const barColor = availPercent === 100
-                      ? 'bg-emerald-500'
-                      : availPercent >= 50
-                        ? 'bg-fill-brand'
-                        : availPercent > 0
-                          ? 'bg-amber-500'
-                          : 'bg-gray-300';
-                    const storageLabel = loc.storageMethod === 'pallet'
-                      ? 'Pallet'
-                      : loc.storageMethod === 'mixed'
-                        ? 'Mixed'
-                        : 'Shelf';
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="text-text-muted text-[11px] uppercase tracking-wider">
+                      <th className="px-3 py-1.5 text-left">Location</th>
+                      <th className="px-3 py-1.5 text-left">Storage</th>
+                      <th className="px-3 py-1.5 text-right">Qty</th>
+                      <th className="px-3 py-1.5 text-right">Avail</th>
+                      <th className="w-[100px] px-3 py-1.5 text-left" />
+                      <th className="px-3 py-1.5 text-left">Owner</th>
+                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                        Lot
+                      </th>
+                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                        Expiry
+                      </th>
+                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                        RE BOE
+                      </th>
+                      <th className="hidden px-3 py-1.5 text-center sm:table-cell">
+                        Photos
+                      </th>
+                      <th className="px-3 py-1.5 text-right">Print</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.locations.map((loc) => {
+                      // Availability ratio: how much of this location's stock is available
+                      const availPercent =
+                        loc.quantityCases > 0
+                          ? (loc.availableCases / loc.quantityCases) * 100
+                          : 0;
+                      const barColor =
+                        availPercent === 100
+                          ? 'bg-emerald-500'
+                          : availPercent >= 50
+                            ? 'bg-fill-brand'
+                            : availPercent > 0
+                              ? 'bg-amber-500'
+                              : 'bg-gray-300';
+                      const storageLabel =
+                        loc.storageMethod === 'pallet'
+                          ? 'Pallet'
+                          : loc.storageMethod === 'mixed'
+                            ? 'Mixed'
+                            : 'Shelf';
 
-                    const isThisAdjusting = adjustingStockId === loc.stockId;
-                    const isThisTransferring = transferringStockId === loc.stockId;
+                      const isThisAdjusting = adjustingStockId === loc.stockId;
+                      const isThisTransferring =
+                        transferringStockId === loc.stockId;
 
-                    return (
-                      <Fragment key={loc.stockId}>
-                        <tr
-                          className={`border-t border-border-muted ${isThisAdjusting ? 'bg-amber-50' : ''}`}
-                          onClick={adjustingStockId ? (e) => {
-                            e.stopPropagation();
-                            setAdjustingStockId(loc.stockId);
-                            setAdjustQty(loc.quantityCases);
-                            setAdjustReason('');
-                          } : undefined}
-                        >
-                          <td className="px-3 py-2 font-mono text-xs font-medium text-text-brand">
-                            {loc.locationCode}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                              loc.storageMethod === 'pallet'
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-blue-50 text-blue-600'
-                            }`}>
-                              {storageLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
-                            {loc.quantityCases}
-                            {(loc.openBottles ?? 0) > 0 && (
-                              <span
-                                title="Loose bottles from an opened case"
-                                className="ml-1 rounded bg-amber-100 px-1 py-px text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                              >
-                                +{loc.openBottles} loose
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-text-primary">
-                            {loc.availableCases}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-border-muted/40">
-                              <div
-                                className={`h-full rounded-full ${barColor} transition-all`}
-                                style={{ width: `${Math.min(availPercent, 100)}%` }}
-                              />
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="group/owner flex items-center gap-1">
-                              <OwnerBadge name={loc.ownerName} />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setTransferringStockId(loc.stockId);
-                                  setTransferOwnerId('');
-                                  setTransferQty(loc.quantityCases);
-                                  setTransferNotes('');
-                                  setAdjustingStockId(null);
-                                }}
-                                className="hidden shrink-0 rounded p-0.5 text-text-muted/40 transition-colors hover:bg-surface-muted hover:text-text-brand group-hover/owner:inline-flex"
-                                title="Change owner"
-                              >
-                                <IconPencil className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
-                            {loc.lotNumber ?? '—'}
-                          </td>
-                          <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
-                            {loc.expiryDate
-                              ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
-                              : '—'}
-                          </td>
-                          <BoeCell
-                            value={loc.reExportBoeNumber}
-                            onSave={(val) => onUpdateBoe(loc.stockId, val)}
-                          />
-                          <td className="hidden px-3 py-2 text-center sm:table-cell">
-                            {loc.photos && loc.photos.length > 0 && (
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLightboxPhotos(loc.photos!);
-                                  setLightboxIndex(0);
-                                }}
-                              >
-                                <IconCamera className="h-3.5 w-3.5" />
-                                {loc.photos.length}
-                              </button>
-                            )}
-                          </td>
-                          <PrintCell
-                            maxQty={loc.quantityCases}
-                            defaultQty={loc.storageMethod === 'pallet' ? 1 : undefined}
-                            onPrint={(qty) => onPrintLabels(product, loc, qty)}
-                          />
-                        </tr>
-                        {isThisAdjusting && (
-                          <tr className="border-t border-amber-200 bg-amber-50">
-                            <td colSpan={20} className="px-3 py-3">
-                              <div className="flex flex-wrap items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                                <span className="text-xs font-medium text-text-muted">Adjust qty:</span>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
-                                    onClick={() => setAdjustQty((q) => Math.max(0, q - 1))}
-                                  >
-                                    <IconMinus className="h-4 w-4" />
-                                  </button>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={adjustQty}
-                                    onChange={(e) => setAdjustQty(Math.max(0, parseInt(e.target.value) || 0))}
-                                    className="h-8 w-16 rounded border border-border-primary bg-background-primary text-center tabular-nums text-sm font-medium focus:border-border-brand focus:outline-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
-                                    onClick={() => setAdjustQty((q) => q + 1)}
-                                  >
-                                    <IconPlus className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                {adjustQty !== loc.quantityCases && (
-                                  <span className={`text-xs font-medium ${adjustQty > loc.quantityCases ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {adjustQty > loc.quantityCases ? '+' : ''}{adjustQty - loc.quantityCases}
-                                  </span>
-                                )}
-                                <input
-                                  type="text"
-                                  value={adjustReason}
-                                  onChange={(e) => setAdjustReason(e.target.value)}
-                                  placeholder="Reason (required)"
-                                  className="h-8 min-w-[200px] flex-1 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={adjustQty === loc.quantityCases || !adjustReason.trim() || isAdjusting}
-                                  className="flex h-8 items-center gap-1 rounded bg-fill-brand px-3 text-sm font-medium text-white transition-colors hover:bg-fill-brand/90 disabled:opacity-50"
-                                  onClick={() => {
-                                    onAdjustStock(loc.stockId, adjustQty, adjustReason.trim());
-                                    // Close the panel here (this row owns the state);
-                                    // the page handles the toast + refetch on success.
-                                    setAdjustingStockId(null);
-                                    setAdjustQty(0);
+                      return (
+                        <Fragment key={loc.stockId}>
+                          <tr
+                            className={`border-border-muted border-t ${isThisAdjusting ? 'bg-amber-50' : ''}`}
+                            onClick={
+                              adjustingStockId
+                                ? (e) => {
+                                    e.stopPropagation();
+                                    setAdjustingStockId(loc.stockId);
+                                    setAdjustQty(loc.quantityCases);
                                     setAdjustReason('');
-                                  }}
+                                  }
+                                : undefined
+                            }
+                          >
+                            <td className="text-text-brand px-3 py-2 font-mono text-xs font-medium">
+                              {loc.locationCode}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                                  loc.storageMethod === 'pallet'
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : 'bg-blue-50 text-blue-600'
+                                }`}
+                              >
+                                {storageLabel}
+                              </span>
+                            </td>
+                            <td className="text-text-primary px-3 py-2 text-right font-medium tabular-nums">
+                              {loc.quantityCases}
+                              {(loc.openBottles ?? 0) > 0 && (
+                                <span
+                                  title="Loose bottles from an opened case"
+                                  className="ml-1 rounded bg-amber-100 px-1 py-px text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                                 >
-                                  {isAdjusting ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
-                                  Save
+                                  +{loc.openBottles} loose
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-text-primary px-3 py-2 text-right tabular-nums">
+                              {loc.availableCases}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="bg-border-muted/40 h-2 w-full overflow-hidden rounded-full">
+                                <div
+                                  className={`h-full rounded-full ${barColor} transition-all`}
+                                  style={{
+                                    width: `${Math.min(availPercent, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="group/owner flex items-center gap-1">
+                                <OwnerBadge name={loc.ownerName} />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTransferringStockId(loc.stockId);
+                                    setTransferOwnerId('');
+                                    setTransferQty(loc.quantityCases);
+                                    setTransferNotes('');
+                                    setAdjustingStockId(null);
+                                  }}
+                                  className="text-text-muted/40 hover:bg-surface-muted hover:text-text-brand hidden shrink-0 rounded p-0.5 transition-colors group-hover/owner:inline-flex"
+                                  title="Change owner"
+                                >
+                                  <IconPencil className="h-3 w-3" />
                                 </button>
                               </div>
                             </td>
-                          </tr>
-                        )}
-                        {isThisTransferring && (
-                          <tr className="border-t border-purple-200 bg-purple-50">
-                            <td colSpan={20} className="px-3 py-3">
-                              <div className="flex flex-wrap items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                                <span className="text-xs font-medium text-text-muted">Transfer to:</span>
-                                <select
-                                  value={transferOwnerId}
-                                  onChange={(e) => setTransferOwnerId(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-8 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
+                            <td className="text-text-muted hidden px-3 py-2 font-mono text-xs sm:table-cell">
+                              {loc.lotNumber ?? '—'}
+                            </td>
+                            <td className="text-text-muted hidden px-3 py-2 sm:table-cell">
+                              {loc.expiryDate
+                                ? new Date(loc.expiryDate).toLocaleDateString(
+                                    'en-GB',
+                                  )
+                                : '—'}
+                            </td>
+                            <BoeCell
+                              value={loc.reExportBoeNumber}
+                              onSave={(val) => onUpdateBoe(loc.stockId, val)}
+                            />
+                            <td className="hidden px-3 py-2 text-center sm:table-cell">
+                              {loc.photos && loc.photos.length > 0 && (
+                                <button
+                                  type="button"
+                                  className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLightboxPhotos(loc.photos!);
+                                    setLightboxIndex(0);
+                                  }}
                                 >
-                                  <option value="">Select owner...</option>
-                                  {partners
-                                    .filter((p) => p.id !== loc.ownerId)
-                                    .map((p) => (
-                                      <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
-                                <span className="text-xs font-medium text-text-muted">Qty:</span>
-                                <div className="flex items-center gap-1">
+                                  <IconCamera className="h-3.5 w-3.5" />
+                                  {loc.photos.length}
+                                </button>
+                              )}
+                            </td>
+                            <PrintCell
+                              maxQty={loc.quantityCases}
+                              defaultQty={
+                                loc.storageMethod === 'pallet' ? 1 : undefined
+                              }
+                              onPrint={(qty) =>
+                                onPrintLabels(product, loc, qty)
+                              }
+                            />
+                          </tr>
+                          {isThisAdjusting && (
+                            <tr className="border-t border-amber-200 bg-amber-50">
+                              <td colSpan={20} className="px-3 py-3">
+                                <div
+                                  className="flex flex-wrap items-center gap-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="text-text-muted text-xs font-medium">
+                                    Adjust qty:
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      className="border-border-primary bg-background-primary hover:bg-surface-muted flex h-8 w-8 items-center justify-center rounded border text-lg font-bold transition-colors"
+                                      onClick={() =>
+                                        setAdjustQty((q) => Math.max(0, q - 1))
+                                      }
+                                    >
+                                      <IconMinus className="h-4 w-4" />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={adjustQty}
+                                      onChange={(e) =>
+                                        setAdjustQty(
+                                          Math.max(
+                                            0,
+                                            parseInt(e.target.value) || 0,
+                                          ),
+                                        )
+                                      }
+                                      className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="border-border-primary bg-background-primary hover:bg-surface-muted flex h-8 w-8 items-center justify-center rounded border text-lg font-bold transition-colors"
+                                      onClick={() => setAdjustQty((q) => q + 1)}
+                                    >
+                                      <IconPlus className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  {adjustQty !== loc.quantityCases && (
+                                    <span
+                                      className={`text-xs font-medium ${adjustQty > loc.quantityCases ? 'text-emerald-600' : 'text-red-600'}`}
+                                    >
+                                      {adjustQty > loc.quantityCases ? '+' : ''}
+                                      {adjustQty - loc.quantityCases}
+                                    </span>
+                                  )}
+                                  <input
+                                    type="text"
+                                    value={adjustReason}
+                                    onChange={(e) =>
+                                      setAdjustReason(e.target.value)
+                                    }
+                                    placeholder="Reason (required)"
+                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
+                                  />
                                   <button
                                     type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
-                                    onClick={() => setTransferQty((q) => Math.max(1, q - 1))}
+                                    disabled={
+                                      adjustQty === loc.quantityCases ||
+                                      !adjustReason.trim() ||
+                                      isAdjusting
+                                    }
+                                    className="bg-fill-brand hover:bg-fill-brand/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                                    onClick={() => {
+                                      onAdjustStock(
+                                        loc.stockId,
+                                        adjustQty,
+                                        adjustReason.trim(),
+                                      );
+                                      // Close the panel here (this row owns the state);
+                                      // the page handles the toast + refetch on success.
+                                      setAdjustingStockId(null);
+                                      setAdjustQty(0);
+                                      setAdjustReason('');
+                                    }}
                                   >
-                                    <IconMinus className="h-4 w-4" />
+                                    {isAdjusting ? (
+                                      <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <IconCheck className="h-3.5 w-3.5" />
+                                    )}
+                                    Save
                                   </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {packStockId === loc.stockId && (
+                            <tr className="border-t border-sky-200 bg-sky-50">
+                              <td colSpan={20} className="px-3 py-3">
+                                <div
+                                  className="flex flex-wrap items-center gap-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="text-text-muted text-xs font-medium">
+                                    Bottles per case:
+                                  </span>
                                   <input
                                     type="number"
                                     min={1}
-                                    max={loc.quantityCases}
-                                    value={transferQty}
-                                    onChange={(e) => setTransferQty(Math.max(1, Math.min(loc.quantityCases, parseInt(e.target.value) || 1)))}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="h-8 w-16 rounded border border-border-primary bg-background-primary text-center tabular-nums text-sm font-medium focus:border-border-brand focus:outline-none"
+                                    value={packConfig}
+                                    onChange={(e) =>
+                                      setPackConfig(
+                                        Math.max(
+                                          1,
+                                          parseInt(e.target.value) || 1,
+                                        ),
+                                      )
+                                    }
+                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                  />
+                                  {packConfig !== (product.caseConfig ?? 0) && (
+                                    <span className="text-text-muted text-xs font-medium">
+                                      {loc.quantityCases} cases stay &middot;
+                                      bottles{' '}
+                                      <span className="line-through">
+                                        {loc.quantityCases *
+                                          (product.caseConfig ?? 0)}
+                                      </span>{' '}
+                                      <span
+                                        className={
+                                          packConfig > (product.caseConfig ?? 0)
+                                            ? 'font-semibold text-emerald-600'
+                                            : 'font-semibold text-red-600'
+                                        }
+                                      >
+                                        {loc.quantityCases * packConfig}
+                                      </span>
+                                    </span>
+                                  )}
+                                  <input
+                                    type="text"
+                                    value={packReason}
+                                    onChange={(e) =>
+                                      setPackReason(e.target.value)
+                                    }
+                                    placeholder="Reason (required)"
+                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   <button
                                     type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
-                                    onClick={() => setTransferQty((q) => Math.min(loc.quantityCases, q + 1))}
+                                    disabled={
+                                      packConfig ===
+                                        (product.caseConfig ?? 0) ||
+                                      packConfig < 1 ||
+                                      !packReason.trim() ||
+                                      isCorrectingPack
+                                    }
+                                    className="bg-fill-brand hover:bg-fill-brand/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                                    onClick={() => {
+                                      onCorrectPack(
+                                        loc.stockId,
+                                        packConfig,
+                                        packReason.trim(),
+                                      );
+                                      setPackStockId(null);
+                                      setPackReason('');
+                                    }}
                                   >
-                                    <IconPlus className="h-4 w-4" />
+                                    {isCorrectingPack ? (
+                                      <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <IconCheck className="h-3.5 w-3.5" />
+                                    )}
+                                    Save
                                   </button>
                                 </div>
-                                {transferQty !== loc.quantityCases && (
-                                  <span className="text-xs font-medium text-amber-600">
-                                    Partial ({transferQty}/{loc.quantityCases})
-                                  </span>
-                                )}
-                                <input
-                                  type="text"
-                                  value={transferNotes}
-                                  onChange={(e) => setTransferNotes(e.target.value)}
+                              </td>
+                            </tr>
+                          )}
+                          {isThisTransferring && (
+                            <tr className="border-t border-purple-200 bg-purple-50">
+                              <td colSpan={20} className="px-3 py-3">
+                                <div
+                                  className="flex flex-wrap items-center gap-3"
                                   onClick={(e) => e.stopPropagation()}
-                                  placeholder="Notes (optional)"
-                                  className="h-8 min-w-[160px] flex-1 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={!transferOwnerId || isTransferring}
-                                  className="flex h-8 items-center gap-1 rounded bg-purple-600 px-3 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
-                                  onClick={() => {
-                                    onTransferOwnership(loc.stockId, transferOwnerId, transferQty, transferNotes.trim() || undefined);
-                                    setTransferringStockId(null);
-                                  }}
                                 >
-                                  {isTransferring ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
-                                  Transfer
-                                </button>
-                                <button
-                                  type="button"
-                                  className="flex h-8 items-center rounded px-2 text-sm text-text-muted transition-colors hover:text-text-primary"
-                                  onClick={() => setTransferringStockId(null)}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                                  <span className="text-text-muted text-xs font-medium">
+                                    Transfer to:
+                                  </span>
+                                  <select
+                                    value={transferOwnerId}
+                                    onChange={(e) =>
+                                      setTransferOwnerId(e.target.value)
+                                    }
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 rounded border px-2 text-sm focus:outline-none"
+                                  >
+                                    <option value="">Select owner...</option>
+                                    {partners
+                                      .filter((p) => p.id !== loc.ownerId)
+                                      .map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                          {p.name}
+                                        </option>
+                                      ))}
+                                  </select>
+                                  <span className="text-text-muted text-xs font-medium">
+                                    Qty:
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      className="border-border-primary bg-background-primary hover:bg-surface-muted flex h-8 w-8 items-center justify-center rounded border text-lg font-bold transition-colors"
+                                      onClick={() =>
+                                        setTransferQty((q) =>
+                                          Math.max(1, q - 1),
+                                        )
+                                      }
+                                    >
+                                      <IconMinus className="h-4 w-4" />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={loc.quantityCases}
+                                      value={transferQty}
+                                      onChange={(e) =>
+                                        setTransferQty(
+                                          Math.max(
+                                            1,
+                                            Math.min(
+                                              loc.quantityCases,
+                                              parseInt(e.target.value) || 1,
+                                            ),
+                                          ),
+                                        )
+                                      }
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="border-border-primary bg-background-primary hover:bg-surface-muted flex h-8 w-8 items-center justify-center rounded border text-lg font-bold transition-colors"
+                                      onClick={() =>
+                                        setTransferQty((q) =>
+                                          Math.min(loc.quantityCases, q + 1),
+                                        )
+                                      }
+                                    >
+                                      <IconPlus className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  {transferQty !== loc.quantityCases && (
+                                    <span className="text-xs font-medium text-amber-600">
+                                      Partial ({transferQty}/{loc.quantityCases}
+                                      )
+                                    </span>
+                                  )}
+                                  <input
+                                    type="text"
+                                    value={transferNotes}
+                                    onChange={(e) =>
+                                      setTransferNotes(e.target.value)
+                                    }
+                                    onClick={(e) => e.stopPropagation()}
+                                    placeholder="Notes (optional)"
+                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[160px] flex-1 rounded border px-2 text-sm focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      !transferOwnerId || isTransferring
+                                    }
+                                    className="flex h-8 items-center gap-1 rounded bg-purple-600 px-3 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+                                    onClick={() => {
+                                      onTransferOwnership(
+                                        loc.stockId,
+                                        transferOwnerId,
+                                        transferQty,
+                                        transferNotes.trim() || undefined,
+                                      );
+                                      setTransferringStockId(null);
+                                    }}
+                                  >
+                                    {isTransferring ? (
+                                      <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <IconCheck className="h-3.5 w-3.5" />
+                                    )}
+                                    Transfer
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-text-muted hover:text-text-primary flex h-8 items-center rounded px-2 text-sm transition-colors"
+                                    onClick={() => setTransferringStockId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              {showHistory && <ProductMovementHistory lwin18={product.lwin18} />}
+              {showHistory && (
+                <ProductMovementHistory lwin18={product.lwin18} />
+              )}
             </div>
           </td>
         </tr>
       )}
-      {lightboxPhotos && createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-          onClick={() => setLightboxPhotos(null)}
-        >
-          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={lightboxPhotos[lightboxIndex]}
-              alt={`Receiving photo ${lightboxIndex + 1}`}
-              className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
-            />
-            <button
-              type="button"
-              className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-text-primary shadow-lg"
-              onClick={() => setLightboxPhotos(null)}
+      {lightboxPhotos &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+            onClick={() => setLightboxPhotos(null)}
+          >
+            <div
+              className="relative max-h-[90vh] max-w-[90vw]"
+              onClick={(e) => e.stopPropagation()}
             >
-              <IconX className="h-4 w-4" />
-            </button>
-            {lightboxPhotos.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/60 px-4 py-2">
-                <button
-                  type="button"
-                  className="text-white disabled:opacity-30"
-                  disabled={lightboxIndex === 0}
-                  onClick={() => setLightboxIndex((i) => i - 1)}
-                >
-                  <IconChevronLeft className="h-5 w-5" />
-                </button>
-                <span className="text-sm text-white">
-                  {lightboxIndex + 1} / {lightboxPhotos.length}
-                </span>
-                <button
-                  type="button"
-                  className="text-white disabled:opacity-30"
-                  disabled={lightboxIndex === lightboxPhotos.length - 1}
-                  onClick={() => setLightboxIndex((i) => i + 1)}
-                >
-                  <IconChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body,
-      )}
+              <img
+                src={lightboxPhotos[lightboxIndex]}
+                alt={`Receiving photo ${lightboxIndex + 1}`}
+                className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
+              />
+              <button
+                type="button"
+                className="text-text-primary absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg"
+                onClick={() => setLightboxPhotos(null)}
+              >
+                <IconX className="h-4 w-4" />
+              </button>
+              {lightboxPhotos.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/60 px-4 py-2">
+                  <button
+                    type="button"
+                    className="text-white disabled:opacity-30"
+                    disabled={lightboxIndex === 0}
+                    onClick={() => setLightboxIndex((i) => i - 1)}
+                  >
+                    <IconChevronLeft className="h-5 w-5" />
+                  </button>
+                  <span className="text-sm text-white">
+                    {lightboxIndex + 1} / {lightboxPhotos.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-white disabled:opacity-30"
+                    disabled={lightboxIndex === lightboxPhotos.length - 1}
+                    onClick={() => setLightboxIndex((i) => i + 1)}
+                  >
+                    <IconChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 };
@@ -1137,14 +1489,22 @@ interface InboundProductRowProps {
   density: RowDensity;
 }
 
-const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundProductRowProps) => {
+const InboundProductRow = ({
+  product,
+  isExpanded,
+  onToggle,
+  density,
+}: InboundProductRowProps) => {
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
   const tdClassRight = `${dc.td} text-right tabular-nums`;
 
   const formatEta = (date: Date | null) => {
     if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return new Date(date).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    });
   };
 
   const sizeLabel = product.bottleSizeMl
@@ -1157,40 +1517,48 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
     <>
       <tr
         onClick={onToggle}
-        className={`cursor-pointer border-b border-border-muted border-l-2 border-l-blue-400 transition-colors hover:bg-blue-50/30 ${dc.text}`}
+        className={`border-border-muted cursor-pointer border-b border-l-2 border-l-blue-400 transition-colors hover:bg-blue-50/30 ${dc.text}`}
       >
         {/* Expand chevron */}
-        <td className={`${tdClass} w-8 text-text-muted`}>
+        <td className={`${tdClass} text-text-muted w-8`}>
           <IconChevronDown
             className={`h-4 w-4 transition-transform ${isExpanded ? 'text-blue-500' : '-rotate-90'}`}
           />
         </td>
 
         {/* Product name */}
-        <td className={`${tdClass} max-w-[280px] truncate font-medium text-text-primary`}>
+        <td
+          className={`${tdClass} text-text-primary max-w-[280px] truncate font-medium`}
+        >
           {product.productName}
         </td>
 
         {/* Producer */}
-        <td className={`${tdClass} hidden max-w-[160px] truncate text-text-muted lg:table-cell`}>
+        <td
+          className={`${tdClass} text-text-muted hidden max-w-[160px] truncate lg:table-cell`}
+        >
           {product.producer ?? '—'}
         </td>
 
         {/* LWIN */}
-        <td className={`${tdClass} hidden font-mono text-xs text-text-muted xl:table-cell`}>
+        <td
+          className={`${tdClass} text-text-muted hidden font-mono text-xs xl:table-cell`}
+        >
           {product.lwin ?? '—'}
         </td>
 
         {/* Vintage */}
-        <td className={`${tdClass} text-text-primary`}>{product.vintage ?? '—'}</td>
+        <td className={`${tdClass} text-text-primary`}>
+          {product.vintage ?? '—'}
+        </td>
 
         {/* Size */}
-        <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+        <td className={`${tdClass} text-text-muted hidden 2xl:table-cell`}>
           {sizeLabel}
         </td>
 
         {/* Pack */}
-        <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+        <td className={`${tdClass} text-text-muted hidden 2xl:table-cell`}>
           {product.bottlesPerCase ?? 12}
         </td>
 
@@ -1201,7 +1569,9 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
 
         {/* ETA */}
         <td className={tdClassRight}>
-          <span className="text-text-muted">{formatEta(product.earliestEta)}</span>
+          <span className="text-text-muted">
+            {formatEta(product.earliestEta)}
+          </span>
         </td>
 
         {/* Shipments */}
@@ -1210,25 +1580,36 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
         </td>
 
         {/* Import $/btl */}
-        <td className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}>
+        <td
+          className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}
+        >
           {product.costPerBottle != null ? (
-            <span className="text-text-muted">${product.costPerBottle.toFixed(2)}</span>
+            <span className="text-text-muted">
+              ${product.costPerBottle.toFixed(2)}
+            </span>
           ) : (
             <span className="text-text-muted">—</span>
           )}
         </td>
 
         {/* Import $/case */}
-        <td className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}>
+        <td
+          className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}
+        >
           {product.costPerBottle != null ? (
-            <span className="text-text-muted">${(product.costPerBottle * (product.bottlesPerCase ?? 12)).toFixed(2)}</span>
+            <span className="text-text-muted">
+              $
+              {(product.costPerBottle * (product.bottlesPerCase ?? 12)).toFixed(
+                2,
+              )}
+            </span>
           ) : (
             <span className="text-text-muted">—</span>
           )}
         </td>
 
         {/* Bottles (hidden on inbound) */}
-        <td className={`${tdClassRight} hidden md:table-cell text-text-muted`}>
+        <td className={`${tdClassRight} text-text-muted hidden md:table-cell`}>
           {product.expectedBottles}
         </td>
 
@@ -1255,47 +1636,60 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
       {isExpanded && product.shipments.length > 0 && (
         <tr>
           <td colSpan={20} className="bg-blue-50/30 px-0 py-0">
-            <div className="border-b border-border-muted px-4 py-4 sm:px-8">
-              <Typography variant="bodyXs" className="mb-3 font-semibold uppercase tracking-wider text-text-muted">
-                Shipment Breakdown — {product.shipments.length} shipment{product.shipments.length !== 1 ? 's' : ''}
+            <div className="border-border-muted border-b px-4 py-4 sm:px-8">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted mb-3 font-semibold uppercase tracking-wider"
+              >
+                Shipment Breakdown — {product.shipments.length} shipment
+                {product.shipments.length !== 1 ? 's' : ''}
               </Typography>
               <div className="overflow-x-auto">
                 <table className="w-full text-[13px]">
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wider text-text-muted">
+                    <tr className="text-text-muted text-[11px] uppercase tracking-wider">
                       <th className="px-3 py-1.5 text-left">Shipment</th>
                       <th className="px-3 py-1.5 text-left">Status</th>
                       <th className="px-3 py-1.5 text-left">Partner</th>
                       <th className="px-3 py-1.5 text-right">Cases</th>
                       <th className="px-3 py-1.5 text-left">ETA</th>
-                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">Origin</th>
+                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                        Origin
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {product.shipments.map((s) => (
-                      <tr key={s.shipmentId} className="border-t border-border-muted">
+                      <tr
+                        key={s.shipmentId}
+                        className="border-border-muted border-t"
+                      >
                         <td className="px-3 py-2">
                           <Link
                             href={`/platform/admin/logistics/shipments/${s.shipmentId}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="font-medium text-text-brand hover:underline"
+                            className="text-text-brand font-medium hover:underline"
                           >
                             {s.shipmentNumber}
                           </Link>
                         </td>
                         <td className="px-3 py-2">
-                          <ShipmentStatusBadge status={s.shipmentStatus as 'booked'} />
+                          <ShipmentStatusBadge
+                            status={s.shipmentStatus as 'booked'}
+                          />
                         </td>
-                        <td className="px-3 py-2 text-text-muted">
+                        <td className="text-text-muted px-3 py-2">
                           {s.partnerName ?? '—'}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
+                        <td className="text-text-primary px-3 py-2 text-right font-medium tabular-nums">
                           {s.cases}
                         </td>
-                        <td className="px-3 py-2 text-text-muted">
-                          {s.eta ? new Date(s.eta).toLocaleDateString('en-GB') : '—'}
+                        <td className="text-text-muted px-3 py-2">
+                          {s.eta
+                            ? new Date(s.eta).toLocaleDateString('en-GB')
+                            : '—'}
                         </td>
-                        <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
+                        <td className="text-text-muted hidden px-3 py-2 sm:table-cell">
                           {s.originCountry ?? '—'}
                         </td>
                       </tr>
@@ -1355,14 +1749,17 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
         <IconColumns3 className="h-4 w-4" />
       </Button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-border-muted bg-background-primary p-2 shadow-lg">
-          <Typography variant="bodyXs" className="mb-2 px-2 font-semibold uppercase tracking-wider text-text-muted">
+        <div className="border-border-muted bg-background-primary absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border p-2 shadow-lg">
+          <Typography
+            variant="bodyXs"
+            className="text-text-muted mb-2 px-2 font-semibold uppercase tracking-wider"
+          >
             Columns
           </Typography>
           {Object.entries(COLUMN_LABELS).map(([key, label]) => (
             <label
               key={key}
-              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-muted"
+              className="hover:bg-surface-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
             >
               <input
                 type="checkbox"
@@ -1371,7 +1768,7 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
                   const next = { ...columns, [key]: e.target.checked };
                   onChange(next);
                 }}
-                className="rounded border-border-primary accent-fill-brand"
+                className="border-border-primary accent-fill-brand rounded"
               />
               {label}
             </label>
@@ -1385,7 +1782,8 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 /**
- * Stock Explorer — best-in-class warehouse inventory search, filter, and analysis tool
+ * Stock Explorer — best-in-class warehouse inventory search, filter, and
+ * analysis tool
  */
 const StockExplorerPage = () => {
   const api = useTRPC();
@@ -1396,7 +1794,9 @@ const StockExplorerPage = () => {
   const { mutate: updateBoe } = useMutation({
     ...api.wms.admin.stock.updateBoe.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getByProduct.queryKey(),
+      });
       toast.success('RE BOE updated');
     },
     onError: () => {
@@ -1419,11 +1819,15 @@ const StockExplorerPage = () => {
       // lives in ProductRow, not here — resetting it from this scope threw a
       // ReferenceError after the write committed, which surfaced as a false
       // "Failed to adjust" toast. The row closes its own panel on submit.
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getByProduct.queryKey(),
+      });
       if (data.noChange) {
         toast.info('No change needed');
       } else {
-        toast.success(`Stock adjusted: ${data.oldQuantity} → ${data.newQuantity} cases`);
+        toast.success(
+          `Stock adjusted: ${data.oldQuantity} → ${data.newQuantity} cases`,
+        );
       }
     },
     onError: (err) => {
@@ -1439,6 +1843,35 @@ const StockExplorerPage = () => {
     [adjustStock],
   );
 
+  // Correct a mis-recorded pack size (cases stay, bottles follow the new pack)
+  const { mutate: correctPack, isPending: isCorrectingPack } = useMutation({
+    ...api.wms.admin.stock.correctPackConfig.mutationOptions(),
+    onSuccess: (data) => {
+      // Panel state lives in ProductRow — see the adjust note above.
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getByProduct.queryKey(),
+      });
+      if (data.noChange) {
+        toast.info('No change needed');
+      } else {
+        toast.success(
+          `Pack corrected to ${data.caseConfig}×: ${data.cases} cases, ${data.bottlesBefore} → ${data.bottlesAfter} bottles`,
+        );
+      }
+    },
+    onError: (err) => {
+      console.error('correctPack failed:', err);
+      toast.error(`Failed to correct pack: ${err.message}`);
+    },
+  });
+
+  const handleCorrectPack = useCallback(
+    (stockId: string, newCaseConfig: number, reason: string) => {
+      correctPack({ stockId, newCaseConfig, reason });
+    },
+    [correctPack],
+  );
+
   // Update product name across all records
   const trpcClient = useTRPCClient();
   const [editingLwin18, setEditingLwin18] = useState<string | null>(null);
@@ -1447,7 +1880,9 @@ const StockExplorerPage = () => {
     (lwin18: string, productName: string, producer: string | null) => {
       setEditingLwin18(`saving:${lwin18}`);
       // Fire mutation — don't await anything, httpBatchStreamLink hangs promises
-      trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer }).catch(() => {});
+      trpcClient.wms.admin.stock.updateProductName
+        .mutate({ lwin18, productName, producer })
+        .catch(() => {});
       // After 1.5s: close editor, refetch data, show toast
       setTimeout(() => {
         setEditingLwin18(null);
@@ -1486,11 +1921,15 @@ const StockExplorerPage = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   // Persisted preferences
-  const [density, setDensity] = useState<RowDensity>(() => loadPreference('se-density', 'normal'));
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => ({
-    ...DEFAULT_COLUMNS,
-    ...loadPreference('se-columns', DEFAULT_COLUMNS),
-  }));
+  const [density, setDensity] = useState<RowDensity>(() =>
+    loadPreference('se-density', 'normal'),
+  );
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
+    () => ({
+      ...DEFAULT_COLUMNS,
+      ...loadPreference('se-columns', DEFAULT_COLUMNS),
+    }),
+  );
 
   // Debounce search
   useEffect(() => {
@@ -1504,7 +1943,16 @@ const StockExplorerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter, category, showZeroQty]);
+  }, [
+    ownerId,
+    vintageFrom,
+    vintageTo,
+    sortBy,
+    sortOrder,
+    quickFilter,
+    category,
+    showZeroQty,
+  ]);
 
   // Persist preferences
   useEffect(() => {
@@ -1524,11 +1972,12 @@ const StockExplorerPage = () => {
   }, [isInboundView]);
 
   // Map sort fields for inbound view
-  const inboundSortBy = sortBy === 'totalCases'
-    ? 'expectedCases' as const
-    : sortBy === 'receivedAt'
-      ? 'eta' as const
-      : (sortBy as 'productName' | 'vintage');
+  const inboundSortBy =
+    sortBy === 'totalCases'
+      ? ('expectedCases' as const)
+      : sortBy === 'receivedAt'
+        ? ('eta' as const)
+        : (sortBy as 'productName' | 'vintage');
 
   // Fetch stock data (disabled when viewing inbound)
   const { data: stockData, isLoading } = useQuery({
@@ -1537,7 +1986,10 @@ const StockExplorerPage = () => {
       ownerId: ownerId || undefined,
       category: category || undefined,
       includeZeroQty: showZeroQty || undefined,
-      quickFilter: quickFilter !== 'all' && quickFilter !== 'inbound' ? quickFilter : undefined,
+      quickFilter:
+        quickFilter !== 'all' && quickFilter !== 'inbound'
+          ? quickFilter
+          : undefined,
       vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
       vintageTo: vintageTo ? Number(vintageTo) : undefined,
       sortBy,
@@ -1563,7 +2015,9 @@ const StockExplorerPage = () => {
 
   // Fetch overview for KPI cards (scoped to the selected owner)
   const { data: overview } = useQuery({
-    ...api.wms.admin.stock.getOverview.queryOptions({ ownerId: ownerId || undefined }),
+    ...api.wms.admin.stock.getOverview.queryOptions({
+      ownerId: ownerId || undefined,
+    }),
   });
 
   // Lookalike wines in stock (near-identical names) → flag rows so they're
@@ -1631,9 +2085,15 @@ const StockExplorerPage = () => {
   const { mutate: transferOwnership, isPending: isTransferring } = useMutation({
     ...api.wms.admin.ownership.transfer.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.queryKey() });
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByOwner.queryKey() });
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getOverview.queryKey() });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getByProduct.queryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getByOwner.queryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.getOverview.queryKey(),
+      });
       toast.success('Ownership transferred');
     },
     onError: (err) => {
@@ -1642,13 +2102,21 @@ const StockExplorerPage = () => {
   });
 
   const handleTransferOwnership = useCallback(
-    (stockId: string, newOwnerId: string, quantityCases: number, notes?: string) => {
+    (
+      stockId: string,
+      newOwnerId: string,
+      quantityCases: number,
+      notes?: string,
+    ) => {
       transferOwnership({ stockId, newOwnerId, quantityCases, notes });
     },
     [transferOwnership],
   );
 
-  const inboundProducts = useMemo(() => (inboundData?.products ?? []) as InboundProduct[], [inboundData]);
+  const inboundProducts = useMemo(
+    () => (inboundData?.products ?? []) as InboundProduct[],
+    [inboundData],
+  );
   const totalCount = isInboundView
     ? (inboundData?.pagination?.total ?? 0)
     : (stockData?.pagination?.total ?? 0);
@@ -1699,7 +2167,9 @@ const StockExplorerPage = () => {
         category: category || undefined,
         includeZeroQty: showZeroQty || undefined,
         quickFilter:
-          quickFilter !== 'all' && quickFilter !== 'inbound' ? quickFilter : undefined,
+          quickFilter !== 'all' && quickFilter !== 'inbound'
+            ? quickFilter
+            : undefined,
         vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
         vintageTo: vintageTo ? Number(vintageTo) : undefined,
         sortBy,
@@ -1736,7 +2206,9 @@ const StockExplorerPage = () => {
       }
 
       const label =
-        owners.find((o) => o.ownerId === ownerId)?.ownerName ?? category ?? undefined;
+        owners.find((o) => o.ownerId === ownerId)?.ownerName ??
+        category ??
+        undefined;
       exportStockToExcel(allProducts, { priceMap, label });
       toast.success(`Exported ${allProducts.length} products to Excel`);
     } catch (err) {
@@ -1832,7 +2304,13 @@ const StockExplorerPage = () => {
     [print],
   );
 
-  const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo || quickFilter !== 'all' || showZeroQty;
+  const hasActiveFilters =
+    debouncedSearch ||
+    ownerId ||
+    vintageFrom ||
+    vintageTo ||
+    quickFilter !== 'all' ||
+    showZeroQty;
 
   // Find the selected owner name for filter chips
   const selectedOwnerName = useMemo(() => {
@@ -1865,7 +2343,8 @@ const StockExplorerPage = () => {
   ];
 
   // Compute col count for colSpan
-  const visibleColCount = 2 + Object.values(visibleColumns).filter(Boolean).length;
+  const visibleColCount =
+    2 + Object.values(visibleColumns).filter(Boolean).length;
 
   return (
     <div className="container mx-auto max-w-[2000px] px-4 py-6 sm:px-6 sm:py-8">
@@ -1876,11 +2355,11 @@ const StockExplorerPage = () => {
             <div className="mb-2 flex items-center gap-2">
               <Link
                 href="/platform/admin"
-                className="text-text-muted transition-colors hover:text-text-primary"
+                className="text-text-muted hover:text-text-primary transition-colors"
               >
                 <Typography variant="bodySm">Admin</Typography>
               </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
+              <IconChevronRight className="text-text-muted h-4 w-4" />
               <Typography variant="bodySm">Stock Explorer</Typography>
             </div>
             <Typography variant="headingLg" className="mb-1">
@@ -1892,7 +2371,7 @@ const StockExplorerPage = () => {
           </div>
           <div className="flex items-center gap-2">
             {/* Density toggle */}
-            <div className="flex items-center rounded-lg border border-border-muted">
+            <div className="border-border-muted flex items-center rounded-lg border">
               {(['compact', 'normal', 'relaxed'] as RowDensity[]).map((d) => (
                 <button
                   key={d}
@@ -1906,22 +2385,35 @@ const StockExplorerPage = () => {
                 >
                   <IconLayoutRows
                     className="h-4 w-4"
-                    strokeWidth={d === 'compact' ? 2.5 : d === 'normal' ? 2 : 1.5}
+                    strokeWidth={
+                      d === 'compact' ? 2.5 : d === 'normal' ? 2 : 1.5
+                    }
                   />
                 </button>
               ))}
             </div>
 
             {/* Column toggle */}
-            <ColumnToggle columns={visibleColumns} onChange={setVisibleColumns} />
+            <ColumnToggle
+              columns={visibleColumns}
+              onChange={setVisibleColumns}
+            />
 
             {/* Export — all filtered rows to Excel */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleExport}
-              disabled={isExporting || isInboundView || (!products.length && !showZeroQty)}
-              title={isInboundView ? 'Switch off Inbound to export stock' : 'Export all filtered rows to Excel'}
+              disabled={
+                isExporting ||
+                isInboundView ||
+                (!products.length && !showZeroQty)
+              }
+              title={
+                isInboundView
+                  ? 'Switch off Inbound to export stock'
+                  : 'Export all filtered rows to Excel'
+              }
             >
               {isExporting ? (
                 <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -1936,227 +2428,283 @@ const StockExplorerPage = () => {
         {/* KPI Cards */}
         {overview && (
           <>
-          <div className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-9' : 'lg:grid-cols-8'}`}>
-            {/* Total Stock */}
-            <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
-                <IconPackage size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight">{overview.summary.totalCases.toLocaleString()}</div>
-              <div className="text-[11px] text-text-muted">Cases</div>
-              <div className="text-[10px] text-text-muted">{overview.summary.uniqueProducts} products</div>
-            </div>
-
-            {/* Total Bottles */}
-            <div className="rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100/70 text-indigo-500">
-                <IconTags size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight">{overview.summary.totalBottles.toLocaleString()}</div>
-              <div className="text-[11px] text-text-muted">Items</div>
-            </div>
-
-            {/* Available */}
-            <div className="rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100/70 text-emerald-500">
-                <IconCircleCheck size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight text-emerald-600">
-                {overview.summary.availableCases.toLocaleString()}
-              </div>
-              <div className="text-[11px] text-text-muted">Available</div>
-              <div className="text-[10px] text-text-muted">
-                {overview.summary.totalCases > 0
-                  ? `${Math.round((overview.summary.availableCases / overview.summary.totalCases) * 100)}%`
-                  : '—'}
-              </div>
-            </div>
-
-            {/* Reserved */}
-            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
-                overview.summary.reservedCases > 0 ? 'bg-amber-100/70 text-amber-500' : 'bg-surface-muted text-text-muted'
-              }`}>
-                <IconLock size={13} />
-              </div>
-              <div className={`text-lg font-bold leading-tight ${overview.summary.reservedCases > 0 ? 'text-amber-600' : ''}`}>
-                {overview.summary.reservedCases.toLocaleString()}
-              </div>
-              <div className="text-[11px] text-text-muted">Reserved</div>
-              <div className="text-[10px] text-text-muted">
-                {overview.summary.reservedCases > 0 ? 'Allocated' : 'None'}
-              </div>
-            </div>
-
-            {/* Utilization */}
-            <div className="rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-100/70 text-purple-500">
-                <IconBuildingWarehouse size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight">{overview.locations.utilizationPercent}%</div>
-              <div className="text-[11px] text-text-muted">Utilization</div>
-              <div className="mt-1 flex items-center gap-1.5">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-purple-100">
-                  <div
-                    className="h-full rounded-full bg-purple-500 transition-all"
-                    style={{ width: `${overview.locations.utilizationPercent}%` }}
-                  />
-                </div>
-                <span className="text-[10px] tabular-nums text-text-muted">
-                  {overview.locations.occupied}/{overview.locations.active}
-                </span>
-              </div>
-            </div>
-
-            {/* Movements */}
-            <div className="rounded-xl border border-cyan-100 bg-gradient-to-b from-cyan-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-cyan-100/70 text-cyan-500">
-                <IconArrowsExchange size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight">{overview.movements.last7Days}</div>
-              <div className="text-[11px] text-text-muted">Moves (7d)</div>
-              <div className="text-[10px] text-text-muted">{overview.movements.last24Hours} (24h)</div>
-            </div>
-
-            {/* Owners */}
-            <div className="rounded-xl border border-rose-100 bg-gradient-to-b from-rose-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-rose-100/70 text-rose-500">
-                <IconUsers size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight">{overview.summary.uniqueOwners}</div>
-              <div className="text-[11px] text-text-muted">Owners</div>
-              <div className="truncate text-[10px] text-text-muted">
-                {overview.topOwners[0]
-                  ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
-                  : '—'}
-              </div>
-            </div>
-
-            {/* Value */}
-            <button
-              onClick={() => setShowValueDetail((v) => !v)}
-              title="Click for cost / in-bond / PC value breakdown"
-              className={`rounded-xl border px-3 py-2.5 text-center shadow-sm transition-colors ${
-                showValueDetail
-                  ? 'border-green-300 bg-green-50 ring-1 ring-green-200'
-                  : 'border-green-100 bg-gradient-to-b from-green-50/40 to-background-primary hover:border-green-200 hover:bg-green-50/50'
-              }`}
+            <div
+              className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-9' : 'lg:grid-cols-8'}`}
             >
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-green-100/70 text-green-600">
-                <IconCurrencyDollar size={13} />
-              </div>
-              <div className="text-lg font-bold leading-tight text-green-700">
-                {fmtMoney(overview.valuation.totalValue)}
-              </div>
-              <div className="text-[11px] text-text-muted">
-                Value{ownerId ? ' · owner' : ''}
-              </div>
-              {overview.inbound.value > 0 && (
-                <div className="text-[10px] font-medium text-blue-500">
-                  +{fmtMoney(overview.inbound.value)} inbound
+              {/* Total Stock */}
+              <div className="to-background-primary rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
+                  <IconPackage size={13} />
                 </div>
-              )}
-              <div className="text-[10px] text-text-muted">
-                {overview.valuation.pricedProducts}/{overview.valuation.totalProducts} priced
+                <div className="text-lg font-bold leading-tight">
+                  {overview.summary.totalCases.toLocaleString()}
+                </div>
+                <div className="text-text-muted text-[11px]">Cases</div>
+                <div className="text-text-muted text-[10px]">
+                  {overview.summary.uniqueProducts} products
+                </div>
               </div>
-            </button>
 
-            {/* Inbound */}
-            {overview.inbound.cases > 0 && (
+              {/* Total Bottles */}
+              <div className="to-background-primary rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100/70 text-indigo-500">
+                  <IconTags size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight">
+                  {overview.summary.totalBottles.toLocaleString()}
+                </div>
+                <div className="text-text-muted text-[11px]">Items</div>
+              </div>
+
+              {/* Available */}
+              <div className="to-background-primary rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100/70 text-emerald-500">
+                  <IconCircleCheck size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight text-emerald-600">
+                  {overview.summary.availableCases.toLocaleString()}
+                </div>
+                <div className="text-text-muted text-[11px]">Available</div>
+                <div className="text-text-muted text-[10px]">
+                  {overview.summary.totalCases > 0
+                    ? `${Math.round((overview.summary.availableCases / overview.summary.totalCases) * 100)}%`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* Reserved */}
+              <div className="to-background-primary rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div
+                  className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
+                    overview.summary.reservedCases > 0
+                      ? 'bg-amber-100/70 text-amber-500'
+                      : 'bg-surface-muted text-text-muted'
+                  }`}
+                >
+                  <IconLock size={13} />
+                </div>
+                <div
+                  className={`text-lg font-bold leading-tight ${overview.summary.reservedCases > 0 ? 'text-amber-600' : ''}`}
+                >
+                  {overview.summary.reservedCases.toLocaleString()}
+                </div>
+                <div className="text-text-muted text-[11px]">Reserved</div>
+                <div className="text-text-muted text-[10px]">
+                  {overview.summary.reservedCases > 0 ? 'Allocated' : 'None'}
+                </div>
+              </div>
+
+              {/* Utilization */}
+              <div className="to-background-primary rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-100/70 text-purple-500">
+                  <IconBuildingWarehouse size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight">
+                  {overview.locations.utilizationPercent}%
+                </div>
+                <div className="text-text-muted text-[11px]">Utilization</div>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-purple-100">
+                    <div
+                      className="h-full rounded-full bg-purple-500 transition-all"
+                      style={{
+                        width: `${overview.locations.utilizationPercent}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-text-muted text-[10px] tabular-nums">
+                    {overview.locations.occupied}/{overview.locations.active}
+                  </span>
+                </div>
+              </div>
+
+              {/* Movements */}
+              <div className="to-background-primary rounded-xl border border-cyan-100 bg-gradient-to-b from-cyan-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-cyan-100/70 text-cyan-500">
+                  <IconArrowsExchange size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight">
+                  {overview.movements.last7Days}
+                </div>
+                <div className="text-text-muted text-[11px]">Moves (7d)</div>
+                <div className="text-text-muted text-[10px]">
+                  {overview.movements.last24Hours} (24h)
+                </div>
+              </div>
+
+              {/* Owners */}
+              <div className="to-background-primary rounded-xl border border-rose-100 bg-gradient-to-b from-rose-50/40 px-3 py-2.5 text-center shadow-sm">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-rose-100/70 text-rose-500">
+                  <IconUsers size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight">
+                  {overview.summary.uniqueOwners}
+                </div>
+                <div className="text-text-muted text-[11px]">Owners</div>
+                <div className="text-text-muted truncate text-[10px]">
+                  {overview.topOwners[0]
+                    ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* Value */}
               <button
-                onClick={() => setQuickFilter(isInboundView ? 'all' : 'inbound')}
+                onClick={() => setShowValueDetail((v) => !v)}
+                title="Click for cost / in-bond / PC value breakdown"
                 className={`rounded-xl border px-3 py-2.5 text-center shadow-sm transition-colors ${
-                  isInboundView
-                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
-                    : 'border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary hover:border-blue-200 hover:bg-blue-50/50'
+                  showValueDetail
+                    ? 'border-green-300 bg-green-50 ring-1 ring-green-200'
+                    : 'to-background-primary border-green-100 bg-gradient-to-b from-green-50/40 hover:border-green-200 hover:bg-green-50/50'
                 }`}
               >
-                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
-                  <IconShip size={13} />
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-green-100/70 text-green-600">
+                  <IconCurrencyDollar size={13} />
                 </div>
-                <div className="text-lg font-bold leading-tight text-blue-600">
-                  {overview.inbound.cases.toLocaleString()}
+                <div className="text-lg font-bold leading-tight text-green-700">
+                  {fmtMoney(overview.valuation.totalValue)}
                 </div>
-                <div className="text-[11px] text-text-muted">Inbound</div>
-                <div className="text-[10px] text-text-muted">
-                  {overview.inbound.shipments} shipment{overview.inbound.shipments !== 1 ? 's' : ''}
+                <div className="text-text-muted text-[11px]">
+                  Value{ownerId ? ' · owner' : ''}
                 </div>
                 {overview.inbound.value > 0 && (
                   <div className="text-[10px] font-medium text-blue-500">
-                    {fmtMoney(overview.inbound.value)}
+                    +{fmtMoney(overview.inbound.value)} inbound
                   </div>
                 )}
+                <div className="text-text-muted text-[10px]">
+                  {overview.valuation.pricedProducts}/
+                  {overview.valuation.totalProducts} priced
+                </div>
               </button>
-            )}
-          </div>
 
-          {/* Value breakdown panel */}
-          {showValueDetail && (
-            <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="text-sm font-semibold text-text-primary">
-                  Stock Value Breakdown{ownerId ? ' · selected owner' : ''}
-                </div>
+              {/* Inbound */}
+              {overview.inbound.cases > 0 && (
                 <button
-                  onClick={() => setShowValueDetail(false)}
-                  className="text-xs text-text-muted hover:text-text-primary"
+                  onClick={() =>
+                    setQuickFilter(isInboundView ? 'all' : 'inbound')
+                  }
+                  className={`rounded-xl border px-3 py-2.5 text-center shadow-sm transition-colors ${
+                    isInboundView
+                      ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                      : 'to-background-primary border-blue-100 bg-gradient-to-b from-blue-50/40 hover:border-blue-200 hover:bg-blue-50/50'
+                  }`}
                 >
-                  Close
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {[
-                  { label: 'Cost (landed)', v: overview.valuation.costValue, c: 'text-text-primary' },
-                  { label: 'In-Bond (B2B)', v: overview.valuation.inBondValue, c: 'text-blue-600' },
-                  { label: 'Private Client', v: overview.valuation.pcValue, c: 'text-violet-600' },
-                  { label: 'Inbound (in-transit)', v: overview.inbound.value, c: 'text-sky-500' },
-                  {
-                    label: 'Total incl. inbound',
-                    v: overview.valuation.costValue + overview.inbound.value,
-                    c: 'text-green-700',
-                  },
-                ].map((t) => (
-                  <div
-                    key={t.label}
-                    className="rounded-lg border border-border-muted bg-background-primary px-3 py-2"
-                  >
-                    <div className={`text-base font-bold tabular-nums ${t.c}`}>{fmtMoney(t.v)}</div>
-                    <div className="text-[10px] text-text-muted">{t.label}</div>
+                  <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
+                    <IconShip size={13} />
                   </div>
-                ))}
-              </div>
-              {overview.valuation.byOwner.length > 1 && (
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-border-muted text-left text-text-muted">
-                        <th className="py-1 font-medium">Owner</th>
-                        <th className="py-1 text-right font-medium">Cases</th>
-                        <th className="py-1 text-right font-medium">Cost</th>
-                        <th className="py-1 text-right font-medium">In-Bond</th>
-                        <th className="py-1 text-right font-medium">PC</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-muted">
-                      {overview.valuation.byOwner.map((o) => (
-                        <tr key={o.ownerId ?? o.ownerName}>
-                          <td className="py-1">{o.ownerName ?? 'Unknown'}</td>
-                          <td className="py-1 text-right tabular-nums">{o.cases.toLocaleString()}</td>
-                          <td className="py-1 text-right tabular-nums">{fmtMoney(o.costValue)}</td>
-                          <td className="py-1 text-right tabular-nums text-blue-600">
-                            {fmtMoney(o.inBondValue)}
-                          </td>
-                          <td className="py-1 text-right tabular-nums text-violet-600">
-                            {fmtMoney(o.pcValue)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                  <div className="text-lg font-bold leading-tight text-blue-600">
+                    {overview.inbound.cases.toLocaleString()}
+                  </div>
+                  <div className="text-text-muted text-[11px]">Inbound</div>
+                  <div className="text-text-muted text-[10px]">
+                    {overview.inbound.shipments} shipment
+                    {overview.inbound.shipments !== 1 ? 's' : ''}
+                  </div>
+                  {overview.inbound.value > 0 && (
+                    <div className="text-[10px] font-medium text-blue-500">
+                      {fmtMoney(overview.inbound.value)}
+                    </div>
+                  )}
+                </button>
               )}
             </div>
-          )}
+
+            {/* Value breakdown panel */}
+            {showValueDetail && (
+              <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-text-primary text-sm font-semibold">
+                    Stock Value Breakdown{ownerId ? ' · selected owner' : ''}
+                  </div>
+                  <button
+                    onClick={() => setShowValueDetail(false)}
+                    className="text-text-muted hover:text-text-primary text-xs"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  {[
+                    {
+                      label: 'Cost (landed)',
+                      v: overview.valuation.costValue,
+                      c: 'text-text-primary',
+                    },
+                    {
+                      label: 'In-Bond (B2B)',
+                      v: overview.valuation.inBondValue,
+                      c: 'text-blue-600',
+                    },
+                    {
+                      label: 'Private Client',
+                      v: overview.valuation.pcValue,
+                      c: 'text-violet-600',
+                    },
+                    {
+                      label: 'Inbound (in-transit)',
+                      v: overview.inbound.value,
+                      c: 'text-sky-500',
+                    },
+                    {
+                      label: 'Total incl. inbound',
+                      v: overview.valuation.costValue + overview.inbound.value,
+                      c: 'text-green-700',
+                    },
+                  ].map((t) => (
+                    <div
+                      key={t.label}
+                      className="border-border-muted bg-background-primary rounded-lg border px-3 py-2"
+                    >
+                      <div
+                        className={`text-base font-bold tabular-nums ${t.c}`}
+                      >
+                        {fmtMoney(t.v)}
+                      </div>
+                      <div className="text-text-muted text-[10px]">
+                        {t.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {overview.valuation.byOwner.length > 1 && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-border-muted text-text-muted border-b text-left">
+                          <th className="py-1 font-medium">Owner</th>
+                          <th className="py-1 text-right font-medium">Cases</th>
+                          <th className="py-1 text-right font-medium">Cost</th>
+                          <th className="py-1 text-right font-medium">
+                            In-Bond
+                          </th>
+                          <th className="py-1 text-right font-medium">PC</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-border-muted divide-y">
+                        {overview.valuation.byOwner.map((o) => (
+                          <tr key={o.ownerId ?? o.ownerName}>
+                            <td className="py-1">{o.ownerName ?? 'Unknown'}</td>
+                            <td className="py-1 text-right tabular-nums">
+                              {o.cases.toLocaleString()}
+                            </td>
+                            <td className="py-1 text-right tabular-nums">
+                              {fmtMoney(o.costValue)}
+                            </td>
+                            <td className="py-1 text-right tabular-nums text-blue-600">
+                              {fmtMoney(o.inBondValue)}
+                            </td>
+                            <td className="py-1 text-right tabular-nums text-violet-600">
+                              {fmtMoney(o.pcValue)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -2164,13 +2712,13 @@ const StockExplorerPage = () => {
         <div className="space-y-3">
           {/* Search - full width on mobile */}
           <div className="relative">
-            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <IconSearch className="text-text-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search product, producer, LWIN18..."
-              className="w-full rounded-lg border border-border-primary bg-background-primary py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+              className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand focus:ring-border-brand w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1"
             />
           </div>
 
@@ -2180,7 +2728,7 @@ const StockExplorerPage = () => {
             <select
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
-              className="flex-1 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary focus:border-border-brand focus:outline-none sm:flex-none"
+              className="border-border-primary bg-background-primary text-text-primary focus:border-border-brand flex-1 rounded-lg border px-3 py-2.5 text-sm focus:outline-none sm:flex-none"
             >
               <option value="">All Owners</option>
               {owners.map((o) => (
@@ -2199,7 +2747,7 @@ const StockExplorerPage = () => {
                 placeholder="From"
                 min={1900}
                 max={2100}
-                className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
               />
               <span className="text-text-muted">—</span>
               <input
@@ -2209,7 +2757,7 @@ const StockExplorerPage = () => {
                 placeholder="To"
                 min={1900}
                 max={2100}
-                className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -2218,14 +2766,16 @@ const StockExplorerPage = () => {
         {/* Category + Quick Filters */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Category pills */}
-          {([
+          {[
             { key: 'Wine' as const, label: 'Wine' },
             { key: 'Spirits' as const, label: 'Spirits' },
             { key: 'RTD' as const, label: 'RTD' },
-          ]).map((cat) => (
+          ].map((cat) => (
             <button
               key={cat.key}
-              onClick={() => setCategory(category === cat.key ? undefined : cat.key)}
+              onClick={() =>
+                setCategory(category === cat.key ? undefined : cat.key)
+              }
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 category === cat.key
                   ? 'bg-text-primary text-white'
@@ -2237,7 +2787,7 @@ const StockExplorerPage = () => {
           ))}
 
           {/* Divider */}
-          <div className="mx-1 h-4 w-px bg-border-muted" />
+          <div className="bg-border-muted mx-1 h-4 w-px" />
 
           {/* Quick filters */}
           {quickFilters.map((qf) => (
@@ -2259,7 +2809,7 @@ const StockExplorerPage = () => {
           ))}
 
           {/* Divider */}
-          <div className="mx-1 h-4 w-px bg-border-muted" />
+          <div className="bg-border-muted mx-1 h-4 w-px" />
 
           {/* Zero qty toggle */}
           <button
@@ -2278,40 +2828,58 @@ const StockExplorerPage = () => {
         {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-2">
             {debouncedSearch && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+              <span className="border-border-muted bg-background-primary text-text-secondary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 Search: &ldquo;{debouncedSearch}&rdquo;
-                <button onClick={() => { setSearch(''); setDebouncedSearch(''); }} className="text-text-muted hover:text-text-primary">
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                  }}
+                  className="text-text-muted hover:text-text-primary"
+                >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             )}
             {selectedOwnerName && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+              <span className="border-border-muted bg-background-primary text-text-secondary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 Owner: {selectedOwnerName}
-                <button onClick={() => setOwnerId('')} className="text-text-muted hover:text-text-primary">
+                <button
+                  onClick={() => setOwnerId('')}
+                  className="text-text-muted hover:text-text-primary"
+                >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             )}
             {(vintageFrom || vintageTo) && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+              <span className="border-border-muted bg-background-primary text-text-secondary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 Vintage: {vintageFrom || '...'} — {vintageTo || '...'}
-                <button onClick={() => { setVintageFrom(''); setVintageTo(''); }} className="text-text-muted hover:text-text-primary">
+                <button
+                  onClick={() => {
+                    setVintageFrom('');
+                    setVintageTo('');
+                  }}
+                  className="text-text-muted hover:text-text-primary"
+                >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             )}
             {quickFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+              <span className="border-border-muted bg-background-primary text-text-secondary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 Filter: {quickFilters.find((q) => q.key === quickFilter)?.label}
-                <button onClick={() => setQuickFilter('all')} className="text-text-muted hover:text-text-primary">
+                <button
+                  onClick={() => setQuickFilter('all')}
+                  className="text-text-muted hover:text-text-primary"
+                >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             )}
             <button
               onClick={clearFilters}
-              className="text-xs font-medium text-text-muted transition-colors hover:text-text-primary"
+              className="text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
             >
               Clear all
             </button>
@@ -2319,13 +2887,14 @@ const StockExplorerPage = () => {
         )}
 
         {/* Results count + pagination info */}
-        <div className="flex items-center justify-between text-xs text-text-muted">
+        <div className="text-text-muted flex items-center justify-between text-xs">
           <span>
             {activeLoading ? (
               'Loading...'
             ) : (
               <>
-                {totalCount.toLocaleString()} {isInboundView ? 'inbound' : ''} product{totalCount !== 1 ? 's' : ''}
+                {totalCount.toLocaleString()} {isInboundView ? 'inbound' : ''}{' '}
+                product{totalCount !== 1 ? 's' : ''}
                 {debouncedSearch && ` matching "${debouncedSearch}"`}
               </>
             )}
@@ -2342,7 +2911,7 @@ const StockExplorerPage = () => {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className={`w-full ${dc.text}`}>
-                <thead className="sticky top-0 z-10 border-b border-border-muted bg-surface-muted/60">
+                <thead className="border-border-muted bg-surface-muted/60 sticky top-0 z-10 border-b">
                   <tr>
                     <th className={`${dc.td} w-8`} />
                     <th
@@ -2354,12 +2923,16 @@ const StockExplorerPage = () => {
                       </span>
                     </th>
                     {visibleColumns.producer && (
-                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}
+                      >
                         Producer
                       </th>
                     )}
                     {visibleColumns.lwin18 && (
-                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}
+                      >
                         LWIN18
                       </th>
                     )}
@@ -2374,12 +2947,16 @@ const StockExplorerPage = () => {
                       </th>
                     )}
                     {visibleColumns.size && (
-                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}
+                      >
                         Size
                       </th>
                     )}
                     {visibleColumns.pack && (
-                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}
+                      >
                         Pack
                       </th>
                     )}
@@ -2389,7 +2966,8 @@ const StockExplorerPage = () => {
                         onClick={() => handleSort('totalCases')}
                       >
                         <span className="flex items-center justify-end gap-1">
-                          {isInboundView ? 'Expected' : 'Cases'} {renderSortIcon('totalCases')}
+                          {isInboundView ? 'Expected' : 'Cases'}{' '}
+                          {renderSortIcon('totalCases')}
                         </span>
                       </th>
                     )}
@@ -2399,37 +2977,56 @@ const StockExplorerPage = () => {
                       </th>
                     )}
                     {visibleColumns.reserved && (
-                      <th className={`${dc.td} text-right ${thBase}`} title={isInboundView ? 'Number of shipments this product is arriving in' : undefined}>
+                      <th
+                        className={`${dc.td} text-right ${thBase}`}
+                        title={
+                          isInboundView
+                            ? 'Number of shipments this product is arriving in'
+                            : undefined
+                        }
+                      >
                         {isInboundView ? 'Shipments' : 'Rsvd'}
                       </th>
                     )}
                     {visibleColumns.importPrice && (
-                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}
+                      >
                         Import&nbsp;$/btl
                       </th>
                     )}
                     {visibleColumns.importCasePrice && (
-                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}
+                      >
                         Import&nbsp;$/case
                       </th>
                     )}
                     {visibleColumns.bottles && (
-                      <th className={`${dc.td} hidden text-right md:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-right md:table-cell ${thBase}`}
+                      >
                         Btls
                       </th>
                     )}
                     {visibleColumns.locations && (
-                      <th className={`${dc.td} hidden text-right md:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-right md:table-cell ${thBase}`}
+                      >
                         Locs
                       </th>
                     )}
                     {visibleColumns.owners && (
-                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}
+                      >
                         Owners
                       </th>
                     )}
                     {visibleColumns.status && (
-                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
+                      <th
+                        className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}
+                      >
                         Status
                       </th>
                     )}
@@ -2443,17 +3040,28 @@ const StockExplorerPage = () => {
                   ) : isInboundView ? (
                     inboundProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={visibleColCount} className="py-20 text-center">
+                        <td
+                          colSpan={visibleColCount}
+                          className="py-20 text-center"
+                        >
                           <div className="flex flex-col items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
                               <IconShip className="h-6 w-6 text-blue-400" />
                             </div>
                             <div>
-                              <Typography variant="bodySm" className="font-medium">
+                              <Typography
+                                variant="bodySm"
+                                className="font-medium"
+                              >
                                 No inbound shipments
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                Items from booked shipments will appear here automatically
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="muted"
+                                className="mt-1"
+                              >
+                                Items from booked shipments will appear here
+                                automatically
                               </Typography>
                             </div>
                             <Link href="/platform/admin/logistics">
@@ -2482,28 +3090,46 @@ const StockExplorerPage = () => {
                     )
                   ) : products.length === 0 ? (
                     <tr>
-                      <td colSpan={visibleColCount} className="py-20 text-center">
+                      <td
+                        colSpan={visibleColCount}
+                        className="py-20 text-center"
+                      >
                         <div className="flex flex-col items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
-                            <IconSearch className="h-6 w-6 text-text-muted" />
+                          <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-full">
+                            <IconSearch className="text-text-muted h-6 w-6" />
                           </div>
                           <div>
-                            <Typography variant="bodySm" className="font-medium">
-                              {hasActiveFilters ? 'No stock matches your filters' : 'No inventory yet'}
+                            <Typography
+                              variant="bodySm"
+                              className="font-medium"
+                            >
+                              {hasActiveFilters
+                                ? 'No stock matches your filters'
+                                : 'No inventory yet'}
                             </Typography>
-                            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                            <Typography
+                              variant="bodyXs"
+                              colorRole="muted"
+                              className="mt-1"
+                            >
                               {hasActiveFilters
                                 ? 'Try adjusting your search or clearing filters'
                                 : 'Import stock from Zoho or receive a shipment to get started'}
                             </Typography>
                           </div>
                           {hasActiveFilters ? (
-                            <Button variant="outline" size="sm" onClick={clearFilters}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearFilters}
+                            >
                               Clear Filters
                             </Button>
                           ) : (
                             <Link href="/platform/admin/wms/receive">
-                              <Button variant="primary" size="sm">Go to Receiving</Button>
+                              <Button variant="primary" size="sm">
+                                Go to Receiving
+                              </Button>
                             </Link>
                           )}
                         </div>
@@ -2517,9 +3143,9 @@ const StockExplorerPage = () => {
                         <ProductRow
                           key={key}
                           product={product}
-                          lookalikeTwins={lookalikeData?.byLwin18[product.lwin18]?.map(
-                            (t) => t.productName,
-                          )}
+                          lookalikeTwins={lookalikeData?.byLwin18[
+                            product.lwin18
+                          ]?.map((t) => t.productName)}
                           isExpanded={isExpanded}
                           onToggle={() => toggleRow(key)}
                           density={density}
@@ -2527,12 +3153,17 @@ const StockExplorerPage = () => {
                           onPrintLabels={handlePrintLabels}
                           onUpdateBoe={handleUpdateBoe}
                           onAdjustStock={handleAdjustStock}
+                          onCorrectPack={handleCorrectPack}
+                          isCorrectingPack={isCorrectingPack}
                           onEditName={handleEditName}
                           isAdjusting={isAdjustingStock}
                           editingLwin18={editingLwin18}
                           onStartEditName={setEditingLwin18}
                           onCancelEditName={() => setEditingLwin18(null)}
-                          importPrice={bulkPricing?.[product.lwin18]?.importPricePerBottle ?? null}
+                          importPrice={
+                            bulkPricing?.[product.lwin18]
+                              ?.importPricePerBottle ?? null
+                          }
                           onSetImportPrice={handleSetImportPrice}
                           onTransferOwnership={handleTransferOwnership}
                           isTransferring={isTransferring}
@@ -2550,7 +3181,7 @@ const StockExplorerPage = () => {
         {/* Pagination + page size */}
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-text-muted">Show</span>
+            <span className="text-text-muted text-sm">Show</span>
             {[50, 100, 200].map((size) => (
               <button
                 key={size}
@@ -2580,7 +3211,7 @@ const StockExplorerPage = () => {
                 disabled={page === 0}
                 icon={<IconChevronLeft className="h-4 w-4" />}
               />
-              <span className="px-4 text-sm tabular-nums text-text-muted">
+              <span className="text-text-muted px-4 text-sm tabular-nums">
                 {page + 1} / {totalPages}
               </span>
               <PaginationButton
