@@ -130,6 +130,12 @@ export const setSkuLwinSchema = z.object({
   lwin18: z.string().min(1).max(50),
 });
 
+/** Search the published LWIN list for a wine, completed for one SKU */
+export const searchLwinReferenceSchema = z.object({
+  skuId: z.string().uuid(),
+  query: z.string().min(2).max(200),
+});
+
 export const autoMapSchema = z.object({
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),

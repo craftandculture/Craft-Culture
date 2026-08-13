@@ -23,7 +23,7 @@ const stateOf = (wine: ZohoCleanupWine) => {
       label: 'No LWIN yet',
       colorRole: 'danger' as const,
       action:
-        'The SKU has no dashed LWIN, so there is nothing to work towards. Seed it from the WMS or set it on the SKUs tab.',
+        'No LWIN yet, so there is nothing to rename a Zoho item to. Open this row to read one off its own codes, take it from the warehouse or the published list, or paste one in.',
     };
   }
 
@@ -72,6 +72,9 @@ const ZohoCleanupTab = () => {
   const [filter, setFilter] = useState<Filter>('todo');
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  /** What is typed into the open wine's LWIN search, and its manual entry */
+  const [lwinSearch, setLwinSearch] = useState('');
+  const [manualLwin, setManualLwin] = useState('');
 
   const cleanup = useQuery(api.triangulation.admin.getZohoCleanup.queryOptions());
 
@@ -168,6 +171,14 @@ const ZohoCleanupTab = () => {
       });
     },
     onError: (error) => toast.error(error.message),
+  });
+
+  const lwinResults = useQuery({
+    ...api.triangulation.admin.searchLwinReference.queryOptions({
+      skuId: openId ?? '00000000-0000-0000-0000-000000000000',
+      query: lwinSearch.trim(),
+    }),
+    enabled: !!openId && lwinSearch.trim().length >= 2,
   });
 
   const allWines = cleanup.data?.wines ?? [];
@@ -445,7 +456,14 @@ const ZohoCleanupTab = () => {
                 <button
                   type="button"
                   className="hover:bg-fill-muted/20 flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
-                  onClick={() => setOpenId(isOpen ? null : wine.skuId)}
+                  onClick={() => {
+                    setOpenId(isOpen ? null : wine.skuId);
+                    // Results are completed with the open SKU's own vintage
+                    // and pack, so carrying them across would offer the last
+                    // wine's code for this one.
+                    setLwinSearch('');
+                    setManualLwin('');
+                  }}
                 >
                   <div className="min-w-0">
                     <Typography variant="labelSm">
@@ -601,6 +619,127 @@ const ZohoCleanupTab = () => {
                         </div>
                       );
                     })()}
+
+                    <div className="border-border-primary mb-3 rounded-lg border p-3">
+                      <Typography variant="labelSm">
+                        Or find it yourself
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted" asChild>
+                        <p className="mt-0.5 mb-2">
+                          Search the published LWIN list by any part of the
+                          name, or paste a code straight in. Anything picked
+                          here is completed with this SKU&rsquo;s vintage, pack
+                          and bottle size.
+                        </p>
+                      </Typography>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="w-72">
+                          <Input
+                            placeholder="Search the LWIN list…"
+                            value={lwinSearch}
+                            onChange={(event) =>
+                              setLwinSearch(event.target.value)
+                            }
+                          />
+                        </div>
+                        <form
+                          className="flex gap-2"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            const code = manualLwin.trim();
+
+                            if (!code) return;
+
+                            setLwin.mutate({ skuId: wine.skuId, lwin18: code });
+                            setManualLwin('');
+                          }}
+                        >
+                          <input
+                            value={manualLwin}
+                            onChange={(event) =>
+                              setManualLwin(event.target.value)
+                            }
+                            placeholder="Or paste 1234567-2021-06-00750"
+                            aria-label="Paste an LWIN"
+                            className="border-border-primary bg-fill-primary min-h-9 w-64 rounded-md border px-2 font-mono text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            colorRole="brand"
+                            variant="outline"
+                            type="submit"
+                            isDisabled={
+                              setLwin.isPending || !manualLwin.trim()
+                            }
+                          >
+                            Use it
+                          </Button>
+                        </form>
+                      </div>
+
+                      {lwinSearch.trim().length >= 2 ? (
+                        lwinResults.isLoading ? (
+                          <Typography
+                            variant="bodyXs"
+                            colorRole="muted"
+                            asChild
+                          >
+                            <p className="mt-2">Searching…</p>
+                          </Typography>
+                        ) : (lwinResults.data ?? []).length === 0 ? (
+                          <Typography
+                            variant="bodyXs"
+                            colorRole="muted"
+                            asChild
+                          >
+                            <p className="mt-2">
+                              No wine in the list matches that. Try the
+                              producer&rsquo;s name alone.
+                            </p>
+                          </Typography>
+                        ) : (
+                          <ul className="mt-2 max-h-56 space-y-1 overflow-auto">
+                            {(lwinResults.data ?? []).map((option) => (
+                              <li
+                                key={option.lwin7}
+                                className="border-border-primary flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5"
+                              >
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" asChild>
+                                    <p className="truncate">
+                                      {option.displayName}
+                                    </p>
+                                  </Typography>
+                                  <Typography
+                                    variant="bodyXs"
+                                    colorRole="muted"
+                                    asChild
+                                  >
+                                    <p className="font-mono">
+                                      {option.lwin18}
+                                    </p>
+                                  </Typography>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  colorRole="brand"
+                                  variant="outline"
+                                  isDisabled={setLwin.isPending}
+                                  onClick={() =>
+                                    setLwin.mutate({
+                                      skuId: wine.skuId,
+                                      lwin18: option.lwin18,
+                                    })
+                                  }
+                                >
+                                  This one
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      ) : null}
+                    </div>
 
                     <Typography variant="labelSm">
                       Or pick it from the warehouse

@@ -27,6 +27,7 @@ import adminMergeSkus from './controller/adminMergeSkus';
 import adminMoveCodeToSku from './controller/adminMoveCodeToSku';
 import adminRepairEncoding from './controller/adminRepairEncoding';
 import adminRepairPackSizes from './controller/adminRepairPackSizes';
+import adminSearchLwinReference from './controller/adminSearchLwinReference';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
@@ -73,6 +74,7 @@ const triangulationRouter = createTRPCRouter({
     getZohoCleanup: adminGetZohoCleanup,
     backfillLwinFromWms: adminBackfillLwinFromWms,
     suggestLwinFromWms: adminSuggestLwinFromWms,
+    searchLwinReference: adminSearchLwinReference,
     deriveLwins: adminDeriveLwins,
     setSkuLwin: adminSetSkuLwin,
     repairEncoding: adminRepairEncoding,
