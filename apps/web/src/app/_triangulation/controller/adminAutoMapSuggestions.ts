@@ -106,24 +106,34 @@ const adminAutoMapSuggestions = adminProcedure
       wCode: string;
       score: number;
     }[] = [];
-    const declined: { code: string; reason: string }[] = [];
+    const declined: { code: string; description: string | null; reason: string }[] =
+      [];
 
     for (const candidate of candidates) {
       const { bestSkuId, bestScore, runnerUpScore, bestWCode } = candidate;
 
       if (!bestSkuId || bestScore === null || !bestWCode) {
-        declined.push({ code: candidate.normalizedCode, reason: 'no match' });
+        declined.push({
+          code: candidate.normalizedCode,
+          description: candidate.rawDescription,
+          reason: 'no match',
+        });
         continue;
       }
 
       if (bestScore < MIN_SCORE) {
-        declined.push({ code: candidate.normalizedCode, reason: 'match too weak' });
+        declined.push({
+          code: candidate.normalizedCode,
+          description: candidate.rawDescription,
+          reason: 'match too weak',
+        });
         continue;
       }
 
       if (runnerUpScore !== null && bestScore - runnerUpScore < MIN_LEAD) {
         declined.push({
           code: candidate.normalizedCode,
+          description: candidate.rawDescription,
           reason: 'two candidates too close to call',
         });
         continue;
@@ -136,7 +146,11 @@ const adminAutoMapSuggestions = adminProcedure
         candidate.bestVintage &&
         candidate.lineVintage !== candidate.bestVintage
       ) {
-        declined.push({ code: candidate.normalizedCode, reason: 'vintage disagrees' });
+        declined.push({
+          code: candidate.normalizedCode,
+          description: candidate.rawDescription,
+          reason: 'vintage disagrees',
+        });
         continue;
       }
 
@@ -185,6 +199,10 @@ const adminAutoMapSuggestions = adminProcedure
       // Named so a bad automatic mapping can be found and undone, rather than
       // being discovered later as an unexplained variance.
       examples: accepted.slice(0, 8),
+      // Why it stood back matters as much as what it took: "two candidates too
+      // close to call" is the signature of one wine registered twice, which is
+      // a different job from a code that simply has no match.
+      declinedExamples: declined.slice(0, 8),
     };
   });
 

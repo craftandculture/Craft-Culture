@@ -29,6 +29,8 @@ const MappingTab = () => {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
+  /** Narrows the unresolved queue itself, not the SKU list */
+  const [queueSearch, setQueueSearch] = useState('');
   const [selection, setSelection] = useState<Record<string, string>>({});
   /** Reviewing what has been set aside, rather than what still needs a decision */
   const [showIgnored, setShowIgnored] = useState(false);
@@ -37,6 +39,7 @@ const MappingTab = () => {
     api.triangulation.admin.getUnmapped.queryOptions({
       importId: null,
       includeIgnored: showIgnored,
+      search: queueSearch || undefined,
       limit: 200,
     }),
   );
@@ -77,7 +80,11 @@ const MappingTab = () => {
         toast.info(
           result.accepted === 0
             ? `Nothing is confident enough to map automatically — all ${result.declined} need a decision`
-            : `${result.accepted} can be mapped automatically, ${result.declined} still need a decision. Run it again to apply.`,
+            : `${result.accepted} can be mapped automatically, ${result.declined} still need a decision${
+                result.declinedExamples.length > 0
+                  ? ` (e.g. ${result.declinedExamples[0]?.reason})`
+                  : ''
+              }. Run it again to apply.`,
         );
         return;
       }
@@ -170,7 +177,17 @@ const MappingTab = () => {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-64 grow">
+        <div className="min-w-56 grow">
+          <Typography variant="labelXs" colorRole="muted" asChild>
+            <p className="mb-1">Find an unresolved code</p>
+          </Typography>
+          <Input
+            placeholder="Search the queue by wine or code…"
+            value={queueSearch}
+            onChange={(event) => setQueueSearch(event.target.value)}
+          />
+        </div>
+        <div className="min-w-56 grow">
           <Typography variant="labelXs" colorRole="muted" asChild>
             <p className="mb-1">Filter the W code list</p>
           </Typography>

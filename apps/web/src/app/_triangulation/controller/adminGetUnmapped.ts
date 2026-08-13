@@ -29,7 +29,9 @@ export interface TriUnmappedRow {
 const adminGetUnmapped = adminProcedure
   .input(getUnmappedSchema)
   .query(async ({ input }) => {
-    const { importId, includeIgnored, limit } = input;
+    const { importId, includeIgnored, search, limit } = input;
+
+    const term = search?.trim() ? `%${search.trim()}%` : null;
 
     // A write inside a read, deliberately: until every line has a key, this
     // queue shows unrelated wines merged into one group, and mapping that
@@ -52,6 +54,11 @@ const adminGetUnmapped = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE l.status = ${includeIgnored ? 'ignored' : 'unmapped'}
           ${importId ? client`AND l.import_id = ${importId}` : client``}
+          ${
+            term
+              ? client`AND (l.raw_description ILIKE ${term} OR l.raw_code ILIKE ${term})`
+              : client``
+          }
         GROUP BY l.normalized_code
       )
       SELECT

@@ -142,6 +142,8 @@ export const getUnmappedSchema = z.object({
   importId: z.string().uuid().optional().nullable(),
   /** Show codes already set aside as not this reconciliation's stock */
   includeIgnored: z.boolean().default(false),
+  /** Narrow the queue by product name or code */
+  search: z.string().max(200).optional(),
   limit: z.number().int().positive().max(500).default(200),
 });
 
