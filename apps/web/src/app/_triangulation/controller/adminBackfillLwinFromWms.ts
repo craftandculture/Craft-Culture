@@ -3,7 +3,6 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { autoMapSchema } from '../schemas/triangulationSchemas';
-import isCanonicalLwin18 from '../utils/isCanonicalLwin18';
 import tokenizeMatch from '../utils/tokenizeMatch';
 import wineIdentity from '../utils/wineIdentity';
 
@@ -25,6 +24,13 @@ interface WmsCandidate {
  * That empty column is what blocks the Zoho clean-up: without a dashed LWIN
  * there is no target to rename an item to, so every wine reads "no LWIN on the
  * SKU" and the worklist has nothing to say.
+ *
+ * Whatever the warehouse holds is taken, including the codes that are not
+ * published LWINs — `rentW4301023-0000-06-00750` and its like. Those cannot be
+ * corrected in the WMS because case barcodes are built from them, so refusing
+ * them here would leave those wines permanently unresolvable. Zoho carrying
+ * the same code the warehouse does is the agreement being sought, and an odd
+ * code both systems share beats a tidy one only half of them know.
  *
  * Matched on the W code first, since that is what the WMS files stock under.
  * Where no W code matches, the wine's identity is tried — same name once
@@ -85,9 +91,6 @@ const adminBackfillLwinFromWms = adminProcedure
     for (const candidate of candidates) {
       const lwin = normalizeLwin18(candidate.lwin18.trim());
 
-      // The warehouse holds supplier references in the LWIN column. Harmless
-      // there, wrong the moment one is adopted as the code Zoho should carry.
-      if (!isCanonicalLwin18(lwin)) continue;
 
       if (candidate.supplierSku?.trim()) {
         byCode.set(normalize(candidate.supplierSku), lwin);

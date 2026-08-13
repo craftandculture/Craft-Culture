@@ -741,6 +741,58 @@ const ZohoCleanupTab = () => {
                       ) : null}
                     </div>
 
+                    {(() => {
+                      const forWine = suggestions.data?.find(
+                        (entry) => entry.skuId === wine.skuId,
+                      );
+
+                      if (!forWine) return null;
+
+                      return (
+                        <div className="border-border-primary mb-3 rounded-lg border p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <Typography variant="labelSm">
+                                Or give it a house code
+                              </Typography>
+                              <Typography variant="bodySm" asChild>
+                                <p className="mt-0.5 font-mono">
+                                  {forWine.houseCode}
+                                </p>
+                              </Typography>
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="muted"
+                                asChild
+                              >
+                                <p className="mt-0.5">
+                                  For a wine LWIN does not publish — a
+                                  single-vineyard cuvée, an own-label, a small
+                                  grower. The W code in the same shape, so it
+                                  sorts and compares like any other and is
+                                  plainly not a published LWIN.
+                                </p>
+                              </Typography>
+                            </div>
+                            <Button
+                              size="sm"
+                              colorRole="muted"
+                              variant="outline"
+                              isDisabled={setLwin.isPending}
+                              onClick={() =>
+                                setLwin.mutate({
+                                  skuId: wine.skuId,
+                                  lwin18: forWine.houseCode,
+                                })
+                              }
+                            >
+                              Use this
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <Typography variant="labelSm">
                       Or pick it from the warehouse
                     </Typography>

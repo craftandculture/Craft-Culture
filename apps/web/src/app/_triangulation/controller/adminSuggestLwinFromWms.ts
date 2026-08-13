@@ -45,6 +45,8 @@ export interface SkuNeedingLwin {
   zohoCodes: { code: string; bottles: number }[];
   /** The LWIN implied by those codes, which is usually the whole answer */
   derived: DerivedLwin | null;
+  /** A house code in the same shape, for wines LWIN does not publish */
+  houseCode: string;
 }
 
 /**
@@ -79,10 +81,7 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
         ), 0)::float8 AS bottles
       FROM wms_stock s
       WHERE s.lwin18 IS NOT NULL
-        -- Only genuine dashed LWINs are offered. The warehouse holds supplier
-        -- references in this column too, and adopting one would spread a bad
-        -- code into Zoho rather than out of it.
-        AND s.lwin18 ~ '^[0-9]{7}-[0-9]{4}-[0-9]{2}-[0-9]{5}$'
+        AND TRIM(s.lwin18) <> ''
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokenizeMatch('Crurated')}::text[]) AS t(tok)
           WHERE POSITION(
@@ -209,8 +208,34 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
     return `${lwin7}-${vintage}-${String(pack).padStart(2, '0')}-${String(size).padStart(5, '0')}`;
   };
 
+  /**
+   * A code in the LWIN shape built from the W code, for wines LWIN has no
+   * entry for.
+   *
+   * A single-vineyard Pommard or a magnum from a small Campania grower will
+   * not be in the published list, and there has to be an answer for those or
+   * the clean-up stops at the last few. The shape already exists in this data
+   * — `W35100324-2022-06-00750` was written by hand in Zoho years ago — so
+   * this is a convention being made explicit rather than invented.
+   *
+   * It sorts and compares like any other code, and it is unmistakably not a
+   * published LWIN, which is the honest outcome: a made-up seven-digit number
+   * would collide with a real wine sooner or later.
+   */
+  const houseCode = (row: SkuNeedingLwin) => {
+    const identity = wineIdentity(row.productName, row.vintage, row.bottleSize);
+    const vintage = identity.vintage
+      ? String(identity.vintage).padStart(4, '0')
+      : '1000';
+    const pack = row.packFromInvoice ?? row.caseConfig ?? 6;
+    const size = identity.sizeMl ?? 750;
+
+    return `${row.wCode}-${vintage}-${String(pack).padStart(2, '0')}-${String(size).padStart(5, '0')}`;
+  };
+
   return rows.map((row) => ({
     ...row,
+    houseCode: houseCode(row),
     derived: deriveLwinFromCodes(
       row.zohoCodes,
       row.packFromInvoice,
