@@ -36,6 +36,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
 
   const sku = ledger.data?.sku;
   const entries = ledger.data?.entries ?? [];
+  const strays = ledger.data?.strays ?? [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -132,6 +133,60 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
             </table>
           )}
         </div>
+
+        {strays.length > 0 ? (
+          <div className="border-border-warning/40 bg-fill-warning/10 mt-5 rounded-lg border p-3">
+            <Typography variant="labelSm" colorRole="warning">
+              {strays.length} line{strays.length === 1 ? '' : 's'} name this wine
+              but are not counted on it
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-0.5">
+                Bottles that belong here and went somewhere else — mapped to
+                another W code, still unresolved, or set aside. This is usually
+                the whole of an unexplained variance.
+              </p>
+            </Typography>
+            <table className="mt-2 w-full text-left text-xs">
+              <thead className="text-text-muted">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">Where it is</th>
+                  <th className="py-1 pr-3 font-medium">Code</th>
+                  <th className="py-1 pr-3 font-medium">Doc</th>
+                  <th className="py-1 pr-3 text-right font-medium">Qty</th>
+                  <th className="py-1 text-right font-medium">Bottles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strays.map((stray) => (
+                  <tr key={stray.id} className="border-border-warning/20 border-t">
+                    <td className="py-1 pr-3">
+                      {stray.mappedTo
+                        ? `on ${stray.mappedTo}`
+                        : stray.status === 'ignored'
+                          ? 'set aside'
+                          : 'unresolved'}
+                      {stray.importStatus === 'draft' ? ' · draft' : ''}
+                    </td>
+                    <td className="py-1 pr-3 font-mono">{stray.rawCode ?? '—'}</td>
+                    <td className="text-text-muted py-1 pr-3">
+                      {stray.docRef ?? '—'} · {stray.effectiveDate}
+                    </td>
+                    <td className="py-1 pr-3 text-right tabular-nums">
+                      {stray.quantity} {stray.unit === 'case' ? 'cs' : 'btl'}
+                      {stray.unit === 'case' && stray.caseConfig
+                        ? ` × ${stray.caseConfig}`
+                        : ''}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {formatBottles(stray.quantityBottles)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </div>
     </div>
   );

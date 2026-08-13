@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import wineIdentity from '../utils/wineIdentity';
+
 export interface SplitSku {
   aId: string;
   aWCode: string;
@@ -36,7 +38,7 @@ export interface SplitSku {
  * the range can tell which is which.
  */
 const adminFindSplitSkus = adminProcedure.query(async () => {
-  return await client<SplitSku[]>`
+  const pairs = await client<SplitSku[]>`
     WITH activity AS (
       SELECT
         s.id,
@@ -60,14 +62,45 @@ const adminFindSplitSkus = adminProcedure.query(async () => {
       -- a.id < b.id reports each pair once rather than in both directions
       ON b.id > a.id
       AND similarity(a.product_name, b.product_name) > 0.6
-      -- A stated vintage that differs makes them genuinely different wines
-      AND (a.vintage IS NULL OR b.vintage IS NULL OR a.vintage = b.vintage)
+      -- Vintage and size are checked below, from the names: the columns are
+      -- usually empty, so filtering on them here finds nothing.
     -- Only pairs where something actually moved: an unused duplicate in the
     -- registry costs nothing and would bury the ones that are splitting figures.
     WHERE a.lines > 0 OR b.lines > 0
     ORDER BY similarity(a.product_name, b.product_name) DESC
-    LIMIT 100
+    LIMIT 400
   `;
+
+  // Two SKUs are one wine only when the vintage matches, the bottle size
+  // matches, and what is left of the name after removing both is effectively
+  // identical. Name similarity alone flags "2021" against "2020", a magnum
+  // against a bottle, and a village wine against its 1er cru — all of which are
+  // legitimately separate SKUs, and merging any of them destroys real data.
+  return pairs
+    .map((pair) => {
+      const a = wineIdentity(pair.aName, pair.aVintage, null);
+      const b = wineIdentity(pair.bName, pair.bVintage, null);
+
+      return { pair, a, b };
+    })
+    .filter(({ pair, a, b }) => {
+      if (a.vintage !== null && b.vintage !== null && a.vintage !== b.vintage) {
+        return false;
+      }
+
+      if (a.sizeMl !== null && b.sizeMl !== null && a.sizeMl !== b.sizeMl) {
+        return false;
+      }
+
+      // One name containing the other is the village-vs-1er-cru case: the extra
+      // words are what make it a different wine, not noise.
+      if (a.base !== b.base) {
+        return false;
+      }
+
+      return pair.score > 0.6;
+    })
+    .map(({ pair }) => pair);
 });
 
 export default adminFindSplitSkus;

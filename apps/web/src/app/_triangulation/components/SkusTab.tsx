@@ -2,7 +2,7 @@
 
 import { IconDatabaseImport, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -18,12 +18,34 @@ import useTRPC from '@/lib/trpc/browser';
  * case-denominated packing lists and Zoho invoices into the bottles the City
  * Drinks sheets are counted in — get it wrong and both sides drift.
  */
+/** Pairs dismissed as legitimately separate wines, remembered between visits */
+const KEPT_BOTH_KEY = 'triangulation.keptBothPairs';
+
 const SkusTab = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
   const [packEdits, setPackEdits] = useState<Record<string, number>>({});
+  /** Pairs judged legitimately separate, and the pair awaiting a second click */
+  const [keptBoth, setKeptBoth] = useState<string[]>([]);
+  const [confirmingMerge, setConfirmingMerge] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(KEPT_BOTH_KEY);
+
+    if (stored) {
+      setKeptBoth(JSON.parse(stored) as string[]);
+    }
+  }, []);
+
+  const keepBoth = (key: string) => {
+    setKeptBoth((current) => {
+      const next = [...current, key];
+      window.localStorage.setItem(KEPT_BOTH_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const splits = useQuery(api.triangulation.admin.findSplitSkus.queryOptions());
 
@@ -113,6 +135,10 @@ const SkusTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const visibleSplits = (splits.data ?? []).filter(
+    (pair) => !keptBoth.includes(`${pair.aId}-${pair.bId}`),
+  );
+
   const rows = skus.data ?? [];
 
   return (
@@ -157,11 +183,11 @@ const SkusTab = () => {
         </div>
       </div>
 
-      {(splits.data?.length ?? 0) > 0 ? (
+      {visibleSplits.length > 0 ? (
         <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
           <Typography variant="labelSm" colorRole="warning">
-            {splits.data?.length} pair
-            {splits.data?.length === 1 ? '' : 's'} of SKUs look like the same wine
+            {visibleSplits.length} pair
+            {visibleSplits.length === 1 ? '' : 's'} of SKUs look like the same wine
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1">
@@ -183,7 +209,7 @@ const SkusTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {splits.data?.map((pair) => (
+                {visibleSplits.map((pair) => (
                   <Fragment key={`${pair.aId}-${pair.bId}`}>
                     <tr className="border-border-warning/20 border-t">
                       <td className="py-1 pr-3 font-mono">{pair.aWCode}</td>
@@ -200,17 +226,29 @@ const SkusTab = () => {
                       <td className="py-1 text-right">
                         <Button
                           size="xs"
-                          colorRole="muted"
+                          colorRole={
+                            confirmingMerge === `${pair.aId}-keep-a`
+                              ? 'danger'
+                              : 'muted'
+                          }
                           variant="outline"
                           isDisabled={mergeSkus.isPending}
-                          onClick={() =>
+                          onClick={() => {
+                            const key = `${pair.aId}-keep-a`;
+                            if (confirmingMerge !== key) {
+                              setConfirmingMerge(key);
+                              return;
+                            }
                             mergeSkus.mutate({
                               fromSkuId: pair.bId,
                               intoSkuId: pair.aId,
-                            })
-                          }
+                            });
+                            setConfirmingMerge(null);
+                          }}
                         >
-                          Keep this one
+                          {confirmingMerge === `${pair.aId}-keep-a`
+                            ? 'Delete the other?'
+                            : 'Keep only this'}
                         </Button>
                       </td>
                     </tr>
@@ -227,20 +265,42 @@ const SkusTab = () => {
                         {Math.round(pair.bBottles)}
                       </td>
                       <td className="py-1 text-right">
-                        <Button
-                          size="xs"
-                          colorRole="muted"
-                          variant="outline"
-                          isDisabled={mergeSkus.isPending}
-                          onClick={() =>
-                            mergeSkus.mutate({
-                              fromSkuId: pair.aId,
-                              intoSkuId: pair.bId,
-                            })
-                          }
-                        >
-                          Keep this one
-                        </Button>
+                        <span className="flex items-center justify-end gap-1">
+                          <Button
+                            size="xs"
+                            colorRole={
+                              confirmingMerge === `${pair.bId}-keep-b`
+                                ? 'danger'
+                                : 'muted'
+                            }
+                            variant="outline"
+                            isDisabled={mergeSkus.isPending}
+                            onClick={() => {
+                              const key = `${pair.bId}-keep-b`;
+                              if (confirmingMerge !== key) {
+                                setConfirmingMerge(key);
+                                return;
+                              }
+                              mergeSkus.mutate({
+                                fromSkuId: pair.aId,
+                                intoSkuId: pair.bId,
+                              });
+                              setConfirmingMerge(null);
+                            }}
+                          >
+                            {confirmingMerge === `${pair.bId}-keep-b`
+                              ? 'Delete the other?'
+                              : 'Keep only this'}
+                          </Button>
+                          <Button
+                            size="xs"
+                            colorRole="muted"
+                            variant="ghost"
+                            onClick={() => keepBoth(`${pair.aId}-${pair.bId}`)}
+                          >
+                            Keep both
+                          </Button>
+                        </span>
                       </td>
                     </tr>
                   </Fragment>

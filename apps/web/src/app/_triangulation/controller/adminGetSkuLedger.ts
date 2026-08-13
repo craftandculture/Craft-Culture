@@ -4,6 +4,26 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { skuLedgerSchema } from '../schemas/triangulationSchemas';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
 
+export interface StrayLine {
+  id: string;
+  kind: TriImportKind;
+  fileName: string | null;
+  importStatus: 'draft' | 'committed';
+  /** mapped | unmapped | ignored */
+  status: string;
+  rawCode: string | null;
+  rawDescription: string | null;
+  docRef: string | null;
+  effectiveDate: string;
+  quantity: number;
+  unit: string;
+  caseConfig: number | null;
+  quantityBottles: number;
+  /** The W code it went to instead, when it mapped somewhere else */
+  mappedTo: string | null;
+  score: number;
+}
+
 export interface TriLedgerEntry {
   id: string;
   kind: TriImportKind;
@@ -111,7 +131,40 @@ const adminGetSkuLedger = adminProcedure
         END) DESC, i.kind, l.created_at
     `;
 
-    return { sku: sku ?? null, entries };
+    // Lines that name this wine but are not on this SKU. The ledger above can
+    // only show what already mapped here, so a line that *should* be on this
+    // SKU and is not was invisible — which is exactly the case that produces an
+    // unexplained variance: the bottles exist, somewhere else or nowhere.
+    const strays = sku
+      ? await client<StrayLine[]>`
+          SELECT
+            l.id,
+            i.kind,
+            i.file_name AS "fileName",
+            i.status AS "importStatus",
+            l.status,
+            l.raw_code AS "rawCode",
+            l.raw_description AS "rawDescription",
+            l.doc_ref AS "docRef",
+            COALESCE(l.doc_date, i.as_of_date)::text AS "effectiveDate",
+            l.quantity,
+            l.unit,
+            l.case_config AS "caseConfig",
+            l.quantity_bottles AS "quantityBottles",
+            other.w_code AS "mappedTo",
+            similarity(l.raw_description, ${sku.productName})::float8 AS score
+          FROM tri_import_lines l
+          JOIN tri_imports i ON i.id = l.import_id
+          LEFT JOIN tri_skus other ON other.id = l.sku_id
+          WHERE (l.sku_id IS DISTINCT FROM ${skuId})
+            AND l.raw_description IS NOT NULL
+            AND similarity(l.raw_description, ${sku.productName}) > 0.35
+          ORDER BY score DESC
+          LIMIT 25
+        `
+      : [];
+
+    return { sku: sku ?? null, entries, strays };
   });
 
 export default adminGetSkuLedger;
