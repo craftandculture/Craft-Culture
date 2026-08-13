@@ -51,6 +51,10 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
     { code: string; bottles: number; lines: number }[]
   >([]);
 
+  const zohoLines = useQuery(
+    api.triangulation.admin.getZohoLinesForSku.queryOptions({ skuId }),
+  );
+
   const moveCode = useMutation({
     ...api.triangulation.admin.moveCodeToSku.mutationOptions(),
     onSuccess: async (result, variables) => {
@@ -90,9 +94,11 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
   const groups = GROUP_ORDER.map((kind) => {
     const forKind = entries.filter((entry) => entry.kind === kind);
 
-    // Only committed lines reach the reconciliation, so only committed lines
-    // may be totalled here — a subtotal including a draft is a different
-    // number from the one on the row that was clicked to get here.
+    // Only committed imports reach the reconciliation, so only their lines may
+    // be totalled here — a subtotal including an uncommitted import is a
+    // different number from the one on the row that was clicked to get here.
+    // The status is the import's, never the invoice's: a real, sent invoice
+    // sitting in a file nobody has committed yet reads as "draft" otherwise.
     const committed = forKind.filter((entry) => entry.importStatus !== 'draft');
 
     return {
@@ -120,6 +126,10 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
     cc_count: totalFor('cc_count'),
     cd_count: totalFor('cd_count'),
   };
+
+  const uncountedZoho = (zohoLines.data?.lines ?? []).filter(
+    (line) => !line.isCounted,
+  );
 
   // Grouped by where the bottles went, because that is what decides the fix:
   // a line on another W code is a mapping to undo, an unresolved one is a
@@ -339,8 +349,8 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                             asChild
                           >
                             <p>
-                              + {formatBottles(group.draftTotal)} in draft, not
-                              counted
+                              + {formatBottles(group.draftTotal)} in an
+                              uncommitted import
                             </p>
                           </Typography>
                         ) : null}
@@ -366,7 +376,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                               )}
                               {entry.importStatus === 'draft' ? (
                                 <Badge size="xs" colorRole="warning">
-                                  draft
+                                  not committed
                                 </Badge>
                               ) : null}
                             </td>
@@ -411,6 +421,51 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                 </li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {uncountedZoho.length > 0 ? (
+          <div className="border-border-warning/40 bg-fill-warning/10 mt-5 rounded-lg border p-3">
+            <Typography variant="labelSm" colorRole="warning">
+              {uncountedZoho.length} Zoho line
+              {uncountedZoho.length === 1 ? '' : 's'} for this wine are not
+              counted as sold
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-0.5 mb-2">
+                Read straight from Zoho rather than from the sync, so a line the
+                sync dropped still shows here. An order with no invoice against
+                it is not a sale yet — but if the invoice exists, this is where
+                the missing bottles are.
+              </p>
+            </Typography>
+            <table className="w-full text-left text-xs">
+              <tbody>
+                {uncountedZoho.map((line) => (
+                  <tr
+                    key={`${line.salesOrderNumber}-${line.sku}-${line.quantity}`}
+                    className="border-border-warning/20 border-b last:border-b-0"
+                  >
+                    <td className="text-text-muted py-1 pr-3 tabular-nums">
+                      {line.orderDate}
+                    </td>
+                    <td className="py-1 pr-3">
+                      {line.salesOrderNumber}
+                      <span className="text-text-muted block">
+                        {line.customerName}
+                      </span>
+                    </td>
+                    <td className="text-text-muted py-1 pr-3">
+                      {line.countedReason}
+                      {line.zohoStatus ? ` · ${line.zohoStatus}` : ''}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {line.quantity} {line.unit ?? ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : null}
 
