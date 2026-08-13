@@ -1,8 +1,9 @@
 'use client';
 
-import { IconDownload } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconDownload, IconWand } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -66,12 +67,45 @@ const stateOf = (wine: ZohoCleanupWine) => {
  */
 const ZohoCleanupTab = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const [filter, setFilter] = useState<Filter>('todo');
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
 
   const cleanup = useQuery(api.triangulation.admin.getZohoCleanup.queryOptions());
+
+  const backfill = useMutation({
+    ...api.triangulation.admin.backfillLwinFromWms.mutationOptions(),
+    onSuccess: async (result) => {
+      const how = [
+        result.byCode ? `${result.byCode} matched on the W code` : null,
+        result.byName ? `${result.byName} on the wine name` : null,
+      ]
+        .filter(Boolean)
+        .join(', ');
+
+      if (result.dryRun) {
+        toast.info(
+          result.filled === 0
+            ? `Nothing in the WMS matches the ${result.remaining} SKUs without a LWIN`
+            : `${result.filled} SKUs can take a LWIN from the WMS (${how}); ${result.remaining} have no match. Run it again to apply.`,
+        );
+        return;
+      }
+
+      toast.success(
+        `${result.filled} SKUs now carry their dashed LWIN · ${result.remaining} still without one`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   const allWines = cleanup.data?.wines ?? [];
   const summary = cleanup.data?.summary;
@@ -174,6 +208,45 @@ const ZohoCleanupTab = () => {
             though nothing happened.
           </p>
         </Typography>
+
+        {summary && summary.noLwin > 0 ? (
+          <div className="border-border-warning/40 bg-fill-warning/10 mt-3 rounded-lg border p-3">
+            <Typography variant="labelSm" colorRole="warning">
+              {summary.noLwin} of these wines have no LWIN on the SKU, so there
+              is nothing to rename their Zoho items to
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-0.5">
+                Seeding the registry from the WMS leaves existing SKUs alone, so
+                any SKU that arrived another way never received its LWIN. The
+                WMS already holds them. Nothing below is actionable until this
+                is done.
+              </p>
+            </Typography>
+            <div className="mt-2 flex gap-2">
+              <Button
+                size="sm"
+                colorRole="muted"
+                variant="outline"
+                isDisabled={backfill.isPending}
+                onClick={() => backfill.mutate({ dryRun: true })}
+              >
+                Check first
+              </Button>
+              <Button
+                size="sm"
+                colorRole="brand"
+                isDisabled={backfill.isPending}
+                onClick={() => backfill.mutate({ dryRun: false })}
+              >
+                <IconWand className="mr-1 size-4" />
+                {backfill.isPending
+                  ? 'Reading the WMS…'
+                  : 'Take the LWINs from the WMS'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {summary ? (
           <div className="mt-3 flex flex-wrap gap-5">

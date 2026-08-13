@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAutoMapSuggestions from './controller/adminAutoMapSuggestions';
+import adminBackfillLwinFromWms from './controller/adminBackfillLwinFromWms';
 import adminCommitImport from './controller/adminCommitImport';
 import adminCreateImport from './controller/adminCreateImport';
 import adminCreatePeriod from './controller/adminCreatePeriod';
@@ -66,6 +67,7 @@ const triangulationRouter = createTRPCRouter({
     moveCodeToSku: adminMoveCodeToSku,
     getZohoLinesForSku: adminGetZohoLinesForSku,
     getZohoCleanup: adminGetZohoCleanup,
+    backfillLwinFromWms: adminBackfillLwinFromWms,
     syncCountFromWms: adminSyncCountFromWms,
     syncCycleCountFromWms: adminSyncCycleCountFromWms,
     syncReceiptsFromWms: adminSyncReceiptsFromWms,
