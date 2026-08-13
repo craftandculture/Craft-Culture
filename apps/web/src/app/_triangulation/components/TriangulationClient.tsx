@@ -19,6 +19,7 @@ import MappingTab from './MappingTab';
 import OverviewTab from './OverviewTab';
 import SelectField from './SelectField';
 import SkusTab from './SkusTab';
+import ZohoCleanupTab from './ZohoCleanupTab';
 
 /** Month label and bounds for the period one month before `date` */
 const previousMonthPeriod = (date: Date) => {
@@ -178,6 +179,7 @@ const TriangulationClient = () => {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="skus">SKUs</TabsTrigger>
+          <TabsTrigger value="zoho">Fix Zoho</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="pt-6">
@@ -195,6 +197,9 @@ const TriangulationClient = () => {
         </TabsContent>
         <TabsContent value="skus" className="pt-6">
           <SkusTab />
+        </TabsContent>
+        <TabsContent value="zoho" className="pt-6">
+          <ZohoCleanupTab />
         </TabsContent>
       </Tabs>
     </div>
