@@ -2,6 +2,7 @@
 
 import { IconArrowLeft, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -45,9 +46,25 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
     api.triangulation.admin.getSkuLedger.queryOptions({ skuId, periodId }),
   );
 
+  /** What has been moved onto this SKU since the panel opened */
+  const [moved, setMoved] = useState<
+    { code: string; bottles: number; lines: number }[]
+  >([]);
+
   const moveCode = useMutation({
     ...api.triangulation.admin.moveCodeToSku.mutationOptions(),
-    onSuccess: async (result) => {
+    onSuccess: async (result, variables) => {
+      // The group vanishes on success, which reads as the bottles being lost
+      // rather than moved. Say where they went, and leave it said.
+      setMoved((current) => [
+        ...current.filter((entry) => entry.code !== variables.normalizedCode),
+        {
+          code: variables.normalizedCode,
+          bottles: result.bottles,
+          lines: result.lines,
+        },
+      ]);
+
       toast.success(
         `${formatBottles(result.bottles)} bottles moved onto ${result.wCode} across ${result.remappedImports} import${result.remappedImports === 1 ? '' : 's'}`,
       );
@@ -350,6 +367,28 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
             </div>
           )}
         </div>
+
+        {moved.length > 0 ? (
+          <div className="border-border-success/40 bg-fill-success/10 mt-5 rounded-lg border p-3">
+            <Typography variant="labelSm" colorRole="success">
+              Moved onto {sku?.wCode}
+            </Typography>
+            <ul className="mt-1 space-y-0.5">
+              {moved.map((entry) => (
+                <li key={entry.code}>
+                  <Typography variant="bodyXs" colorRole="muted" asChild>
+                    <p>
+                      <span className="font-mono">{entry.code}</span> —{' '}
+                      {entry.lines} line{entry.lines === 1 ? '' : 's'},{' '}
+                      {formatBottles(entry.bottles)} bottles, now counted in the
+                      figures above.
+                    </p>
+                  </Typography>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {strayGroups.length > 0 ? (
           <div className="border-border-warning/40 bg-fill-warning/10 mt-5 rounded-lg border p-3">
