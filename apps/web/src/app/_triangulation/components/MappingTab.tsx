@@ -73,18 +73,45 @@ const MappingTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  /** The last auto-map run, held on screen because its detail matters */
+  const [autoMapReport, setAutoMapReport] = useState<{
+    dryRun: boolean;
+    accepted: number;
+    declined: number;
+    breakdown: string;
+    declinedReason: string | null;
+  } | null>(null);
+
   const autoMap = useMutation({
     ...api.triangulation.admin.autoMapSuggestions.mutationOptions(),
     onSuccess: async (result) => {
+      // How each was reached decides whether the run can be trusted unread:
+      // a code carrying its own W code is arithmetic, a similarity guess is not.
+      const breakdown = [
+        result.byCode > 0 ? `${result.byCode} off a code they carry` : null,
+        result.byIdentity > 0
+          ? `${result.byIdentity} on an exact name, vintage and size match`
+          : null,
+        result.bySimilarity > 0
+          ? `${result.bySimilarity} on a close name — worth reading`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+      setAutoMapReport({
+        dryRun: result.dryRun,
+        accepted: result.accepted,
+        declined: result.declined,
+        breakdown,
+        declinedReason: result.declinedExamples[0]?.reason ?? null,
+      });
+
       if (result.dryRun) {
         toast.info(
           result.accepted === 0
             ? `Nothing is confident enough to map automatically — all ${result.declined} need a decision`
-            : `${result.accepted} can be mapped automatically, ${result.declined} still need a decision${
-                result.declinedExamples.length > 0
-                  ? ` (e.g. ${result.declinedExamples[0]?.reason})`
-                  : ''
-              }. Run it again to apply.`,
+            : `${result.accepted} can be mapped automatically. Run it again to apply.`,
         );
         return;
       }
@@ -228,6 +255,42 @@ const MappingTab = () => {
           </div>
         ) : null}
       </div>
+
+      {autoMapReport ? (
+        <div className="border-border-primary rounded-xl border p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Typography variant="labelSm">
+                {autoMapReport.dryRun
+                  ? `${autoMapReport.accepted} can be mapped without a decision`
+                  : `${autoMapReport.accepted} mapped automatically`}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p className="mt-0.5">
+                  {autoMapReport.breakdown || 'Nothing met the bar.'}
+                </p>
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p className="mt-0.5">
+                  {autoMapReport.declined} left for you
+                  {autoMapReport.declinedReason
+                    ? ` — commonest reason: ${autoMapReport.declinedReason}`
+                    : ''}
+                  .
+                </p>
+              </Typography>
+            </div>
+            <Button
+              size="xs"
+              colorRole="muted"
+              variant="ghost"
+              onClick={() => setAutoMapReport(null)}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {rows.length === 0 ? (
         <div className="border-border-primary rounded-xl border p-8 text-center">

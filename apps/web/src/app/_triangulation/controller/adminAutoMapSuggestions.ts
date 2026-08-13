@@ -4,6 +4,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import mapImportLines from '../data/mapImportLines';
 import { autoMapSchema } from '../schemas/triangulationSchemas';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
+import wineIdentity from '../utils/wineIdentity';
 
 /**
  * Similarity a name match must reach before it is accepted without a human.
@@ -35,16 +36,32 @@ interface Candidate {
 }
 
 /**
- * Map every unmapped code whose best name match is unambiguous
+ * Map every unmapped code that can be resolved without a judgment call
  *
- * Resolving several hundred codes by hand is the difference between this tool
- * being used monthly and not, but a wrong mapping is worse than no mapping — it
- * moves someone else's bottles onto this wine and the figure still looks
- * plausible. So a match is only taken when it clears a high similarity bar,
- * beats its runner-up by a clear margin, and does not contradict a vintage.
+ * The codes are archaeology. This stock shipped before there were systems, so
+ * whatever went on the invoice went into Zoho; then LWIN arrived; then LWIN
+ * with dashes became the standard. Three conventions, none applied backwards,
+ * and no single code column that spans them. What did survive every era is the
+ * name and the invoice.
  *
- * Everything it declines stays in the queue for a human, and everything it does
- * is an ordinary alias that can be deleted.
+ * So the name leads, and it is matched on identity rather than resemblance:
+ * the vintage must agree, the bottle size must agree, and what is left of the
+ * name once both are removed must be the same wine. That is a far stronger
+ * statement than a similarity score, which cannot tell two cuvées from one
+ * grower apart, and it is why an exact identity match is taken outright while a
+ * merely similar name still has to clear the old bars.
+ *
+ * Three passes, in descending order of certainty:
+ *
+ *   1. The code carries a known W code or LWIN inside it — `W35100324` inside
+ *      `W35100324-2022-06-00750`. Arithmetic, not judgment.
+ *   2. Exactly one SKU has the same wine identity as the line's description.
+ *   3. Nothing else fits, so fall back to similarity with its old guards.
+ *
+ * A wrong mapping is worse than no mapping: it moves someone else's bottles
+ * onto this wine and the figure still looks plausible. Everything declined
+ * stays in the queue, and everything taken is an ordinary alias that can be
+ * deleted.
  */
 const adminAutoMapSuggestions = adminProcedure
   .input(autoMapSchema)
@@ -100,17 +117,131 @@ const adminAutoMapSuggestions = adminProcedure
       ) m ON TRUE
     `;
 
+    // Every SKU's identity, and every code that already resolves to one. Held
+    // in memory because each candidate is checked against all of them and the
+    // registry is small — a few hundred rows against a few hundred codes.
+    const skus = await client<
+      {
+        id: string;
+        wCode: string;
+        productName: string;
+        vintage: number | null;
+        bottleSize: string | null;
+        lwin18: string | null;
+      }[]
+    >`
+      SELECT id, w_code AS "wCode", product_name AS "productName",
+             vintage, bottle_size AS "bottleSize", lwin18
+      FROM tri_skus
+    `;
+
+    const normalize = (value: string) =>
+      value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const identities = skus.map((sku) => ({
+      sku,
+      identity: wineIdentity(sku.productName, sku.vintage, sku.bottleSize),
+      keys: [normalize(sku.wCode), normalize(sku.lwin18 ?? '')].filter(
+        (key) => key.length >= 6,
+      ),
+    }));
+
+    /** A code that contains a known W code or LWIN belongs to that SKU. */
+    const byEmbeddedCode = (code: string) => {
+      const hits = identities.filter((entry) =>
+        entry.keys.some((key) => code.startsWith(key)),
+      );
+
+      // Longest key wins: a W code that is a prefix of another must not claim
+      // the longer one's codes.
+      return hits.length === 0
+        ? null
+        : hits.sort(
+            (a, b) =>
+              Math.max(...b.keys.map((key) => key.length)) -
+              Math.max(...a.keys.map((key) => key.length)),
+          )[0];
+    };
+
+    /** Same wine, same vintage, same bottle size — and only one such SKU. */
+    const byIdentity = (description: string | null) => {
+      if (!description) return null;
+
+      const line = wineIdentity(description, null, null);
+
+      if (!line.base) return null;
+
+      const hits = identities.filter((entry) => {
+        if (entry.identity.base !== line.base) return false;
+
+        if (
+          line.vintage !== null &&
+          entry.identity.vintage !== null &&
+          line.vintage !== entry.identity.vintage
+        ) {
+          return false;
+        }
+
+        if (
+          line.sizeMl !== null &&
+          entry.identity.sizeMl !== null &&
+          line.sizeMl !== entry.identity.sizeMl
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      // Two SKUs matching equally well is the split-SKU case. Picking either
+      // is a coin toss that looks like a decision, so it goes to a human.
+      return hits.length === 1 ? hits[0] : null;
+    };
+
     const accepted: {
       code: string;
       description: string | null;
       wCode: string;
       score: number;
+      method: 'code' | 'identity' | 'similarity';
     }[] = [];
     const declined: { code: string; description: string | null; reason: string }[] =
       [];
 
     for (const candidate of candidates) {
       const { bestSkuId, bestScore, runnerUpScore, bestWCode } = candidate;
+
+      const embedded = byEmbeddedCode(candidate.normalizedCode);
+      const identical = embedded ? null : byIdentity(candidate.rawDescription);
+      const certain = embedded ?? identical;
+
+      if (certain) {
+        accepted.push({
+          code: candidate.normalizedCode,
+          description: candidate.rawDescription,
+          wCode: certain.sku.wCode,
+          score: 1,
+          method: embedded ? 'code' : 'identity',
+        });
+
+        if (!dryRun) {
+          await client`
+            INSERT INTO tri_sku_aliases (
+              sku_id, source, alias_code, normalized_code, alias_name, created_by
+            )
+            VALUES (
+              ${certain.sku.id}, ${candidate.aliasSource},
+              ${candidate.rawCode?.trim() || candidate.normalizedCode},
+              ${candidate.normalizedCode}, ${candidate.rawDescription},
+              ${ctx.user.id}
+            )
+            ON CONFLICT (source, normalized_code) DO UPDATE SET
+              sku_id = ${certain.sku.id}, updated_at = NOW()
+          `;
+        }
+
+        continue;
+      }
 
       if (!bestSkuId || bestScore === null || !bestWCode) {
         declined.push({
@@ -159,6 +290,7 @@ const adminAutoMapSuggestions = adminProcedure
         description: candidate.rawDescription,
         wCode: bestWCode,
         score: bestScore,
+        method: 'similarity',
       });
 
       if (dryRun) {
@@ -196,6 +328,13 @@ const adminAutoMapSuggestions = adminProcedure
       dryRun,
       accepted: accepted.length,
       declined: declined.length,
+      // Split by how each was reached: a run that resolves 150 codes off the
+      // W code buried in them is a different event from one that leant on 150
+      // similarity guesses, and only one of those is worth trusting unread.
+      byCode: accepted.filter((entry) => entry.method === 'code').length,
+      byIdentity: accepted.filter((entry) => entry.method === 'identity').length,
+      bySimilarity: accepted.filter((entry) => entry.method === 'similarity')
+        .length,
       // Named so a bad automatic mapping can be found and undone, rather than
       // being discovered later as an unexplained variance.
       examples: accepted.slice(0, 8),
