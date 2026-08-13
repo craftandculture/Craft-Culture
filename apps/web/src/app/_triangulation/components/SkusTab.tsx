@@ -49,6 +49,10 @@ const SkusTab = () => {
 
   const splits = useQuery(api.triangulation.admin.findSplitSkus.queryOptions());
 
+  const assumedPacks = useQuery(
+    api.triangulation.admin.getAssumedPacks.queryOptions(),
+  );
+
   const skus = useQuery(
     api.triangulation.admin.getSkus.queryOptions({ search, limit: 1000 }),
   );
@@ -135,6 +139,16 @@ const SkusTab = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const assumedPackRows = assumedPacks.data ?? [];
+  const assumedPackLines = assumedPackRows.reduce(
+    (total, row) => total + row.lines,
+    0,
+  );
+  const assumedPackBottles = assumedPackRows.reduce(
+    (total, row) => total + row.bottles,
+    0,
+  );
+
   const visibleSplits = (splits.data ?? []).filter(
     (pair) => !keptBoth.includes(`${pair.aId}-${pair.bId}`),
   );
@@ -182,6 +196,63 @@ const SkusTab = () => {
           </Button>
         </div>
       </div>
+
+      {assumedPackRows.length > 0 ? (
+        <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
+          <Typography variant="labelSm" colorRole="warning">
+            {assumedPackBottles.toLocaleString('en-GB')} bottles sold on{' '}
+            {assumedPackLines} invoice line
+            {assumedPackLines === 1 ? '' : 's'} with an assumed pack size
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1 max-w-3xl">
+              A Zoho quantity is cases of the ordered format. These lines print
+              no format and their SKU digits state none either, so there is
+              nothing to multiply by and each unit is counted as a single
+              bottle. If any were really cases, the sale is counted short and
+              your own stock reads high by the difference. The fix is in Zoho:
+              put the format in the item description, or give the item a SKU
+              that carries it.
+            </p>
+          </Typography>
+          <div className="mt-2 max-h-64 overflow-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-text-muted bg-fill-warning/10 sticky top-0">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">Code</th>
+                  <th className="py-1 pr-3 font-medium">Description</th>
+                  <th className="py-1 pr-3 font-medium">Invoices</th>
+                  <th className="py-1 pr-3 text-right font-medium">Lines</th>
+                  <th className="py-1 text-right font-medium">Counted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assumedPackRows.map((row) => (
+                  <tr
+                    key={row.rawDescription}
+                    className="border-border-warning/20 border-t"
+                  >
+                    <td className="text-text-muted py-1 pr-3 font-mono">
+                      {row.rawCode ?? '—'}
+                    </td>
+                    <td className="py-1 pr-3">{row.rawDescription}</td>
+                    <td className="text-text-muted py-1 pr-3">
+                      {row.docRefs.slice(0, 3).join(', ')}
+                      {row.docRefs.length > 3 ? ` +${row.docRefs.length - 3}` : ''}
+                    </td>
+                    <td className="py-1 pr-3 text-right tabular-nums">
+                      {row.lines}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {row.bottles.toLocaleString('en-GB')} btl
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       {visibleSplits.length > 0 ? (
         <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
