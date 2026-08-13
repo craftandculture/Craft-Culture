@@ -24,6 +24,14 @@ import type { TriImportKind } from '../schemas/triangulationSchemas';
 import importKindLabels from '../utils/importKindLabels';
 
 
+/** One feed's outcome from the last refresh, held on screen rather than in a toast */
+interface SyncReportEntry {
+  feed: string;
+  tone: 'ok' | 'warn';
+  summary: string;
+  detail?: string;
+}
+
 export interface ImportsTabProps {
   periodId: string | null;
   periodEnd: string | null;
@@ -63,6 +71,20 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   // thing that changes, so it is editable and remembered rather than compiled in.
   const [zohoCustomer, setZohoCustomer] = useState('CD General');
   const [ownerName, setOwnerName] = useState('Crurated');
+  /**
+   * What the last refresh actually did, per feed.
+   *
+   * Refreshing fires four syncs at once, and their toasts stack and expire
+   * faster than they can be read — which left the one place the tool explains
+   * itself unreadable at exactly the moment it mattered.
+   */
+  const [syncReport, setSyncReport] = useState<SyncReportEntry[]>([]);
+
+  const report = (entry: SyncReportEntry) =>
+    setSyncReport((current) => [
+      ...current.filter((existing) => existing.feed !== entry.feed),
+      entry,
+    ]);
 
   useEffect(() => {
     const storedCustomer = window.localStorage.getItem(ZOHO_CUSTOMER_KEY);
@@ -144,6 +166,13 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
         warnings.push(`matched ${result.matchedOwners.length} owners: ${result.matchedOwners.join(', ')}`);
       }
 
+      report({
+        feed: 'WMS stock position',
+        tone: result.missingWCodes > 0 ? 'warn' : 'ok',
+        summary: `${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles from ${result.matchedOwners[0] ?? 'the WMS'} as at ${result.asOfDate}`,
+        detail: warnings.join(' · ') || undefined,
+      });
+
       toast.success(
         `Synced ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles from ${result.matchedOwners[0] ?? 'the WMS'} as at ${result.asOfDate}` +
           (warnings.length > 0 ? ` — ${warnings.join('; ')}` : ''),
@@ -156,6 +185,21 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const syncReceipts = useMutation({
     ...api.triangulation.admin.syncReceiptsFromWms.mutationOptions(),
     onSuccess: async (result) => {
+      report({
+        feed: 'WMS receipts',
+        tone: result.receipts === 0 ? 'warn' : 'ok',
+        summary:
+          result.receipts === 0
+            ? 'No receipts in the WMS for this owner'
+            : `${result.receipts} receipts · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+        detail:
+          result.receipts === 0
+            ? result.baselineUploads > 0
+              ? `Opening stock rests on ${result.baselineUploads} uploaded import${result.baselineUploads === 1 ? '' : 's'}`
+              : 'No baseline uploaded either — every position will read low'
+            : undefined,
+      });
+
       if (result.receipts === 0) {
         // Expected for stock that landed before WMS receiving existed.
         toast.info(
@@ -177,6 +221,28 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const syncZoho = useMutation({
     ...api.triangulation.admin.syncSalesFromZoho.mutationOptions(),
     onSuccess: async (result) => {
+      report({
+        feed: 'Zoho sales to City Drinks',
+        tone:
+          result.unknownPack > 0 || result.skippedOrders.length > 0
+            ? 'warn'
+            : 'ok',
+        summary: `${result.orderLines} lines from ${result.invoices.length} invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+        detail: [
+          result.unknownPack > 0
+            ? `${result.unknownPack} lines state no pack size, counted as single bottles`
+            : null,
+          result.packDisagreements > 0
+            ? `${result.packDisagreements} where the SKU's pack contradicts the printed format`
+            : null,
+          result.skippedOrders.length > 0
+            ? `Not counted as sold, no invoice on the order: ${result.skippedOrders.join(', ')}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      });
+
       toast.success(
         `Synced ${result.orderLines} lines from ${result.invoices.length} invoices — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
           (result.unknownPack > 0
@@ -201,6 +267,12 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const syncCycleCount = useMutation({
     ...api.triangulation.admin.syncCycleCountFromWms.mutationOptions(),
     onSuccess: async (result) => {
+      report({
+        feed: 'WMS cycle count',
+        tone: 'ok',
+        summary: `Count of ${result.asOfDate} · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+      });
+
       toast.success(
         `Synced the cycle count of ${result.asOfDate} — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles counted`,
       );
@@ -222,6 +294,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
    * a missing Zoho customer should not cost you the WMS refresh.
    */
   const refreshLive = async () => {
+    setSyncReport([]);
     await syncReceipts.mutateAsync({ ownerName }).catch(() => null);
     await syncZoho.mutateAsync({ customerMatch: zohoCustomer }).catch(() => null);
     await syncCount
@@ -300,6 +373,48 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
           </Button>
         </div>
       </div>
+
+      {syncReport.length > 0 ? (
+        <div className="border-border-primary rounded-xl border">
+          <div className="border-border-primary flex items-center justify-between gap-2 border-b px-4 py-2">
+            <Typography variant="labelSm">What the last refresh did</Typography>
+            <Button
+              size="xs"
+              colorRole="muted"
+              variant="ghost"
+              onClick={() => setSyncReport([])}
+            >
+              Dismiss
+            </Button>
+          </div>
+          <ul className="divide-border-primary divide-y">
+            {syncReport.map((entry) => (
+              <li key={entry.feed} className="flex gap-3 px-4 py-2.5">
+                <span
+                  aria-hidden
+                  className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                    entry.tone === 'warn' ? 'bg-fill-warning' : 'bg-fill-success'
+                  }`}
+                />
+                <div className="min-w-0">
+                  <Typography variant="bodySm" asChild>
+                    <p>
+                      <span className="font-medium">{entry.feed}</span>
+                      {' — '}
+                      {entry.summary}
+                    </p>
+                  </Typography>
+                  {entry.detail ? (
+                    <Typography variant="bodyXs" colorRole="muted" asChild>
+                      <p className="mt-0.5">{entry.detail}</p>
+                    </Typography>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {KIND_ORDER.map((kind) => {
