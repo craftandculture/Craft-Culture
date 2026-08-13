@@ -75,6 +75,58 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
     cd_count: totalFor('cd_count'),
   };
 
+  // Grouped by where the bottles went, because that is what decides the fix:
+  // a line on another W code is a mapping to undo, an unresolved one is a
+  // mapping to make, and a set-aside one was a deliberate decision.
+  const strayGroups = [
+    ...new Set(
+      strays.map((stray) =>
+        stray.mappedTo
+          ? `on:${stray.mappedTo}`
+          : stray.status === 'ignored'
+            ? 'ignored'
+            : 'unresolved',
+      ),
+    ),
+  ]
+    .map((key) => {
+      const lines = strays.filter(
+        (stray) =>
+          (stray.mappedTo
+            ? `on:${stray.mappedTo}`
+            : stray.status === 'ignored'
+              ? 'ignored'
+              : 'unresolved') === key,
+      );
+
+      const wCode = key.startsWith('on:') ? key.slice(3) : null;
+
+      return {
+        key,
+        title: wCode
+          ? `Counted on ${wCode} instead`
+          : key === 'ignored'
+            ? 'Set aside as not our stock'
+            : 'Not mapped to any W code yet',
+        action: wCode
+          ? 'If that is the same wine, merge the two on the SKUs tab; if the mapping is wrong, unmap the code.'
+          : key === 'ignored'
+            ? 'Someone marked these as not Crurated lines. Undo it on the Mapping tab if that was wrong.'
+            : 'Map the code on the Mapping tab and these bottles join the figures above.',
+        lines,
+        bottles: lines.reduce(
+          (total, stray) => total + stray.quantityBottles,
+          0,
+        ),
+      };
+    })
+    .sort((a, b) => b.bottles - a.bottles);
+
+  const strayBottles = strayGroups.reduce(
+    (total, group) => total + group.bottles,
+    0,
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button
@@ -274,57 +326,67 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
           )}
         </div>
 
-        {strays.length > 0 ? (
+        {strayGroups.length > 0 ? (
           <div className="border-border-warning/40 bg-fill-warning/10 mt-5 rounded-lg border p-3">
             <Typography variant="labelSm" colorRole="warning">
-              {strays.length} line{strays.length === 1 ? '' : 's'} name this wine
-              but are not counted on it
+              {formatBottles(strayBottles)} bottles of this wine are not counted
+              here
             </Typography>
             <Typography variant="bodyXs" colorRole="muted" asChild>
-              <p className="mt-0.5">
-                Bottles that belong here and went somewhere else — mapped to
-                another W code, still unresolved, or set aside. This is usually
-                the whole of an unexplained variance.
+              <p className="mt-0.5 mb-2">
+                Same wine, same vintage, same bottle size — but sitting
+                somewhere else. This is usually the whole of an unexplained
+                variance.
               </p>
             </Typography>
-            <table className="mt-2 w-full text-left text-xs">
-              <thead className="text-text-muted">
-                <tr>
-                  <th className="py-1 pr-3 font-medium">Where it is</th>
-                  <th className="py-1 pr-3 font-medium">Code</th>
-                  <th className="py-1 pr-3 font-medium">Doc</th>
-                  <th className="py-1 pr-3 text-right font-medium">Qty</th>
-                  <th className="py-1 text-right font-medium">Bottles</th>
-                </tr>
-              </thead>
-              <tbody>
-                {strays.map((stray) => (
-                  <tr key={stray.id} className="border-border-warning/20 border-t">
-                    <td className="py-1 pr-3">
-                      {stray.mappedTo
-                        ? `on ${stray.mappedTo}`
-                        : stray.status === 'ignored'
-                          ? 'set aside'
-                          : 'unresolved'}
-                      {stray.importStatus === 'draft' ? ' · draft' : ''}
-                    </td>
-                    <td className="py-1 pr-3 font-mono">{stray.rawCode ?? '—'}</td>
-                    <td className="text-text-muted py-1 pr-3">
-                      {stray.docRef ?? '—'} · {stray.effectiveDate}
-                    </td>
-                    <td className="py-1 pr-3 text-right tabular-nums">
-                      {stray.quantity} {stray.unit === 'case' ? 'cs' : 'btl'}
-                      {stray.unit === 'case' && stray.caseConfig
-                        ? ` × ${stray.caseConfig}`
-                        : ''}
-                    </td>
-                    <td className="py-1 text-right tabular-nums">
-                      {formatBottles(stray.quantityBottles)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+            {strayGroups.map((group) => (
+              <div key={group.key} className="mt-2">
+                <div className="border-border-warning/30 flex items-baseline justify-between gap-3 border-b pb-1">
+                  <div>
+                    <Typography variant="labelSm">{group.title}</Typography>
+                    <Typography variant="bodyXs" colorRole="muted" asChild>
+                      <p>{group.action}</p>
+                    </Typography>
+                  </div>
+                  <Typography variant="labelSm" asChild>
+                    <span className="shrink-0 tabular-nums">
+                      {formatBottles(group.bottles)} btl
+                    </span>
+                  </Typography>
+                </div>
+                <table className="w-full text-left text-xs">
+                  <tbody>
+                    {group.lines.map((stray) => (
+                      <tr
+                        key={stray.id}
+                        className="border-border-warning/20 border-b last:border-b-0"
+                      >
+                        <td className="text-text-muted py-1 pr-3 tabular-nums">
+                          {stray.effectiveDate}
+                        </td>
+                        <td className="py-1 pr-3 font-mono">
+                          {stray.rawCode ?? '—'}
+                        </td>
+                        <td className="text-text-muted py-1 pr-3">
+                          {stray.docRef ?? '—'}
+                        </td>
+                        <td className="text-text-muted py-1 pr-3 text-right tabular-nums">
+                          {stray.quantity}
+                          {stray.unit === 'case' ? ' cs' : ' btl'}
+                          {stray.unit === 'case' && stray.caseConfig
+                            ? ` × ${stray.caseConfig}`
+                            : ''}
+                        </td>
+                        <td className="py-1 text-right tabular-nums">
+                          {formatBottles(stray.quantityBottles)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

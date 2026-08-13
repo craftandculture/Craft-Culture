@@ -3,6 +3,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { skuLedgerSchema } from '../schemas/triangulationSchemas';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
+import wineIdentity from '../utils/wineIdentity';
 
 export interface StrayLine {
   id: string;
@@ -135,7 +136,16 @@ const adminGetSkuLedger = adminProcedure
     // only show what already mapped here, so a line that *should* be on this
     // SKU and is not was invisible — which is exactly the case that produces an
     // unexplained variance: the bottles exist, somewhere else or nowhere.
-    const strays = sku
+    //
+    // Name similarity alone is useless as the test. At any threshold loose
+    // enough to catch a genuine miss it also catches the neighbouring vintage,
+    // the magnum, and the 1er cru from the same grower — and since the query
+    // always returned its full limit sorted by score, the panel looked equally
+    // alarming whether or not anything was wrong. Similarity is now only a
+    // cheap pre-filter; what decides is the same identity test used to find
+    // split SKUs, which is that the vintage and bottle size do not contradict
+    // and the rest of the name is the same wine.
+    const candidates = sku
       ? await client<StrayLine[]>`
           SELECT
             l.id,
@@ -158,10 +168,43 @@ const adminGetSkuLedger = adminProcedure
           LEFT JOIN tri_skus other ON other.id = l.sku_id
           WHERE (l.sku_id IS DISTINCT FROM ${skuId})
             AND l.raw_description IS NOT NULL
-            AND similarity(l.raw_description, ${sku.productName}) > 0.35
+            AND similarity(l.raw_description, ${sku.productName}) > 0.5
           ORDER BY score DESC
-          LIMIT 25
+          LIMIT 200
         `
+      : [];
+
+    const skuIdentity = sku
+      ? wineIdentity(sku.productName, sku.vintage, null)
+      : null;
+
+    const strays = skuIdentity
+      ? candidates.filter((line) => {
+          const identity = wineIdentity(line.rawDescription ?? '', null, null);
+
+          // A stated vintage or size that differs makes it a different wine,
+          // however close the words are.
+          if (
+            identity.vintage !== null &&
+            skuIdentity.vintage !== null &&
+            identity.vintage !== skuIdentity.vintage
+          ) {
+            return false;
+          }
+
+          if (
+            identity.sizeMl !== null &&
+            skuIdentity.sizeMl !== null &&
+            identity.sizeMl !== skuIdentity.sizeMl
+          ) {
+            return false;
+          }
+
+          // What is left once vintage and size are removed has to be the same
+          // wine. One name containing the other is the village-versus-1er-cru
+          // case: the extra words are the difference, not noise.
+          return identity.base === skuIdentity.base;
+        })
       : [];
 
     return { sku: sku ?? null, entries, strays };
