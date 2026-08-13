@@ -228,6 +228,17 @@ const adminSyncSalesFromZoho = adminProcedure
       orderLines: rows.length,
       unknownPack,
       customers: [...new Set(rows.map((row) => row.customerName))],
+      // Which invoices actually came through. An invoice you know exists and
+      // cannot find here was never synced into the platform — a different
+      // problem from a line that arrived and failed to map, and previously
+      // indistinguishable from it.
+      invoices: [
+        ...new Set(
+          rows
+            .map((row) => row.invoiceNumber ?? row.salesOrderNumber)
+            .filter(Boolean),
+        ),
+      ].sort(),
     };
   });
 

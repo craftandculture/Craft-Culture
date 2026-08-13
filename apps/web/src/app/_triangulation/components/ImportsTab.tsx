@@ -178,11 +178,15 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     ...api.triangulation.admin.syncSalesFromZoho.mutationOptions(),
     onSuccess: async (result) => {
       toast.success(
-        `Synced ${result.orderLines} Zoho lines — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
+        `Synced ${result.orderLines} lines from ${result.invoices.length} invoices — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
           (result.unknownPack > 0
-            ? `; ${result.unknownPack} with no stated pack size, using the SKU's`
+            ? `; ${result.unknownPack} with no stated pack size`
             : ''),
       );
+      // Logged rather than shown: the list is long, and it is only wanted when
+      // a specific invoice is being hunted for.
+       
+      console.info('[Triangulation] Zoho invoices synced:', result.invoices);
       await invalidate();
     },
     onError: (error) => toast.error(error.message),
