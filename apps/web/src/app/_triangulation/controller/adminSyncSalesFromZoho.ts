@@ -28,26 +28,32 @@ interface ZohoSaleRow {
 /**
  * Resolve how many bottles a Zoho line represents
  *
- * A Zoho line quantity is cases of the ordered pack format, so the pack size
- * has to come from somewhere. The WMS rule applies here too: trust the LWIN18
- * SKU when its pack digits are plausible, otherwise read the line description
- * ("6x75cl"). See `parseSkuPack` for why a SKU is not always trustworthy.
+ * A Zoho line quantity is cases of the ordered pack format, so the pack has to
+ * come from somewhere. The description wins over the SKU here, which is the
+ * opposite of the WMS rule — and deliberately so.
  *
- * @returns The pack size, or null when neither source states one
+ * On an invoice the rate is per case, so description × quantity × rate has to
+ * equal the amount the customer was billed. That makes the description the one
+ * field the money already agrees with. A SKU's pack digits are item metadata
+ * nothing reconciles against, and a mistyped LWIN18 sails through: Zoho carried
+ * this rum under `183149819901600700`, whose digits read pack 16 for a wine
+ * sold as `1x70cl`. 16 is wrong but not absurd, so `parseSkuPack` accepts it,
+ * and a 2-case line silently became 32 bottles.
+ *
+ * @returns The pack size and where it came from, or null when neither states one
  */
 const resolvePack = (sku: string | null, description: string | null) => {
-  const fromSku = parseSkuPack(sku);
-
-  if (fromSku) {
-    return fromSku.pack;
-  }
-
   // The pack sits in the line's format ("1 x 70cl", "6 x 75cl") — not always
   // at the start of the string, so this is not anchored.
   const match = /(\d+)\s*[x×]\s*\d/i.exec(description ?? '');
-  const parsed = match?.[1] ? Number(match[1]) : null;
+  const fromDescription = match?.[1] ? Number(match[1]) : null;
+  const fromSku = parseSkuPack(sku)?.pack ?? null;
 
-  return parsed && parsed > 0 && parsed <= 24 ? parsed : null;
+  if (fromDescription && fromDescription > 0 && fromDescription <= 24) {
+    return { pack: fromDescription, disagrees: !!fromSku && fromSku !== fromDescription };
+  }
+
+  return fromSku ? { pack: fromSku, disagrees: false } : null;
 };
 
 /**
@@ -162,6 +168,9 @@ const adminSyncSalesFromZoho = adminProcedure
     }
 
     let unknownPack = 0;
+    // Lines where the SKU's pack digits contradict the printed format. Worth
+    // surfacing: it means an item in Zoho carries a wrong LWIN.
+    let packDisagreements = 0;
 
     const lines = rows.map((row) => {
       // Zoho states the unit on the line. When it says bottles, the quantity
@@ -173,13 +182,17 @@ const adminSyncSalesFromZoho = adminProcedure
         unknownPack += 1;
       }
 
+      if (resolved?.disagrees) {
+        packDisagreements += 1;
+      }
+
       // Always write an explicit pack. Leaving it null let the SKU's default
       // fill the gap later, and that default is wine-shaped — it turned a
       // 6-bottle invoice line of single-bottle rum into 36. An unknown pack
       // falls back to 1, which can only understate: an understated position
       // shows up as a shortfall someone chases, where an overstated one just
       // looks plausible.
-      const pack = isBottles ? 1 : (resolved ?? 1);
+      const pack = isBottles ? 1 : (resolved?.pack ?? 1);
 
       return {
         import_id: importId,
@@ -227,6 +240,7 @@ const adminSyncSalesFromZoho = adminProcedure
       ...totals,
       orderLines: rows.length,
       unknownPack,
+      packDisagreements,
       customers: [...new Set(rows.map((row) => row.customerName))],
       // Which invoices actually came through. An invoice you know exists and
       // cannot find here was never synced into the platform — a different

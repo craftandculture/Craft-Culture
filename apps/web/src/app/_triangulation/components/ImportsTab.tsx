@@ -181,6 +181,9 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
         `Synced ${result.orderLines} lines from ${result.invoices.length} invoices — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
           (result.unknownPack > 0
             ? `; ${result.unknownPack} with no stated pack size`
+            : '') +
+          (result.packDisagreements > 0
+            ? `; ${result.packDisagreements} where the SKU's pack contradicts the printed format — check those items in Zoho`
             : ''),
       );
       // Logged rather than shown: the list is long, and it is only wanted when
