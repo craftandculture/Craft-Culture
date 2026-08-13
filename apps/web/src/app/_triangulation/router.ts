@@ -7,6 +7,7 @@ import adminCreatePeriod from './controller/adminCreatePeriod';
 import adminDeleteAlias from './controller/adminDeleteAlias';
 import adminDeleteImport from './controller/adminDeleteImport';
 import adminExtractPackingList from './controller/adminExtractPackingList';
+import adminFindDoubleCounts from './controller/adminFindDoubleCounts';
 import adminFindMismatchedLines from './controller/adminFindMismatchedLines';
 import adminFindSplitSkus from './controller/adminFindSplitSkus';
 import adminGetAssumedPacks from './controller/adminGetAssumedPacks';
@@ -58,6 +59,7 @@ const triangulationRouter = createTRPCRouter({
     seedSkusFromWms: adminSeedSkusFromWms,
     repairPackSizes: adminRepairPackSizes,
     getAssumedPacks: adminGetAssumedPacks,
+    findDoubleCounts: adminFindDoubleCounts,
     syncCountFromWms: adminSyncCountFromWms,
     syncCycleCountFromWms: adminSyncCycleCountFromWms,
     syncReceiptsFromWms: adminSyncReceiptsFromWms,

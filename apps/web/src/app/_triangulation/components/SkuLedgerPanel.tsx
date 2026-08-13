@@ -18,6 +18,15 @@ export interface SkuLedgerPanelProps {
   onClose: () => void;
 }
 
+/** Movements first in the order they happen, then the stated positions */
+const GROUP_ORDER: TriImportKind[] = [
+  'cc_opening',
+  'cc_sales_to_cd',
+  'cd_sales',
+  'cc_count',
+  'cd_count',
+];
+
 /** Inputs that add to a position render positive; the rest draw stock down */
 const isInbound = (kind: TriImportKind) => kind === 'cc_opening';
 
@@ -37,6 +46,34 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
   const sku = ledger.data?.sku;
   const entries = ledger.data?.entries ?? [];
   const strays = ledger.data?.strays ?? [];
+
+  // Grouping by input does two things a flat list cannot: it puts a subtotal
+  // beside each source, and it says the file name once instead of on every row.
+  const groups = GROUP_ORDER.map((kind) => {
+    const forKind = entries.filter((entry) => entry.kind === kind);
+
+    return {
+      kind,
+      entries: forKind,
+      total: forKind.reduce((sum, entry) => sum + entry.quantityBottles, 0),
+      fileNames: [
+        ...new Set(
+          forKind.map((entry) => entry.fileName ?? entry.periodLabel ?? ''),
+        ),
+      ].filter(Boolean),
+    };
+  }).filter((group) => group.entries.length > 0);
+
+  const totalFor = (kind: TriImportKind) =>
+    groups.find((group) => group.kind === kind)?.total ?? null;
+
+  const totals = {
+    cc_opening: totalFor('cc_opening') ?? 0,
+    cc_sales_to_cd: totalFor('cc_sales_to_cd') ?? 0,
+    cd_sales: totalFor('cd_sales') ?? 0,
+    cc_count: totalFor('cc_count'),
+    cd_count: totalFor('cd_count'),
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -66,6 +103,78 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
           </Button>
         </div>
 
+        {entries.length > 0 ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {([
+              {
+                party: 'Craft & Culture',
+                dot: 'bg-fill-brand',
+                inLabel: 'Received',
+                inValue: totals.cc_opening,
+                outLabel: 'Sold to CD',
+                outValue: totals.cc_sales_to_cd,
+                stated: totals.cc_count,
+                statedLabel: 'Counted',
+              },
+              {
+                party: 'City Drinks',
+                dot: 'bg-fill-info',
+                inLabel: 'Received',
+                inValue: totals.cc_sales_to_cd,
+                outLabel: 'Sold through',
+                outValue: totals.cd_sales,
+                stated: totals.cd_count,
+                statedLabel: 'Declared',
+              },
+            ] as const).map((chain) => {
+              const calculated = chain.inValue - chain.outValue;
+              const variance =
+                chain.stated === null ? null : chain.stated - calculated;
+
+              return (
+                <div
+                  key={chain.party}
+                  className="border-border-primary rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`size-2 rounded-full ${chain.dot}`} />
+                    <Typography variant="labelSm">{chain.party}</Typography>
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1.5 text-sm tabular-nums">
+                    <span>{formatBottles(chain.inValue)}</span>
+                    <span className="text-text-muted">−</span>
+                    <span>{formatBottles(chain.outValue)}</span>
+                    <span className="text-text-muted">=</span>
+                    <span className="font-medium">
+                      {formatBottles(calculated)}
+                    </span>
+                  </div>
+                  <Typography variant="bodyXs" colorRole="muted" asChild>
+                    <p className="mt-0.5">
+                      {chain.inLabel} less {chain.outLabel.toLowerCase()}
+                    </p>
+                  </Typography>
+                  {variance !== null ? (
+                    <div className="border-border-primary mt-2 flex items-center justify-between border-t pt-2">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {chain.statedLabel} {formatBottles(chain.stated ?? 0)}
+                      </Typography>
+                      <Badge
+                        size="xs"
+                        colorRole={variance === 0 ? 'success' : 'danger'}
+                      >
+                        {variance === 0
+                          ? 'agrees'
+                          : `${variance > 0 ? '+' : ''}${formatBottles(variance)}`}
+                      </Badge>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
         <div className="mt-5">
           {ledger.isLoading ? (
             <Typography variant="bodySm" colorRole="muted">
@@ -76,61 +185,92 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
               No import lines reference this SKU yet.
             </Typography>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-text-muted border-border-primary border-b">
-                <tr>
-                  <th className="py-2 pr-3">Input</th>
-                  <th className="py-2 pr-3">As at</th>
-                  <th className="py-2 pr-3">Doc</th>
-                  <th className="py-2 pr-3 text-right">Qty</th>
-                  <th className="py-2 text-right">Bottles</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr key={entry.id} className="border-border-primary border-b">
-                    <td className="py-2 pr-3">
-                      <div className="flex items-center gap-1.5">
-                        {importKindLabels[entry.kind].shortLabel}
-                        {entry.importStatus === 'draft' ? (
-                          <Badge size="xs" colorRole="warning">
-                            draft
-                          </Badge>
-                        ) : null}
+            <div className="space-y-4">
+              {groups.map((group) => {
+                const meta = importKindLabels[group.kind];
+
+                return (
+                  <div
+                    key={group.kind}
+                    className="border-border-primary overflow-hidden rounded-lg border"
+                  >
+                    <div className="border-border-primary bg-fill-muted/20 flex items-center justify-between gap-3 border-b px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={`size-2 shrink-0 rounded-full ${
+                            meta.side === 'cc' ? 'bg-fill-brand' : 'bg-fill-info'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <Typography variant="labelSm">
+                            {meta.label}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted" asChild>
+                            <p className="truncate">
+                              {group.fileNames.join(' · ')}
+                            </p>
+                          </Typography>
+                        </div>
                       </div>
-                      <span className="text-text-muted text-xs">
-                        {entry.fileName ?? entry.periodLabel ?? ''}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">{entry.effectiveDate}</td>
-                    <td className="py-2 pr-3">
-                      {entry.docRef ?? '—'}
-                      {entry.docDate ? (
-                        <span className="text-text-muted block text-xs">
-                          {entry.docDate}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {entry.quantity} {entry.unit === 'case' ? 'cs' : 'btl'}
-                      {entry.unit === 'case' && entry.caseConfig ? (
-                        <span className="text-text-muted block text-xs">
-                          × {entry.caseConfig}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td
-                      className={`py-2 text-right tabular-nums ${
-                        isInbound(entry.kind) ? 'text-text-success' : ''
-                      }`}
-                    >
-                      {isInbound(entry.kind) ? '+' : ''}
-                      {formatBottles(entry.quantityBottles)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <div className="shrink-0 text-right">
+                        <Typography variant="labelSm" asChild>
+                          <span className="tabular-nums">
+                            {meta.behaviour === 'flow' && isInbound(group.kind)
+                              ? '+'
+                              : ''}
+                            {formatBottles(group.total)}
+                          </span>
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted" asChild>
+                          <p>
+                            {group.entries.length} line
+                            {group.entries.length === 1 ? '' : 's'} ·{' '}
+                            {meta.behaviour === 'snapshot'
+                              ? 'stated position'
+                              : 'accumulates'}
+                          </p>
+                        </Typography>
+                      </div>
+                    </div>
+                    <table className="w-full text-left text-sm">
+                      <tbody>
+                        {group.entries.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="border-border-primary border-b last:border-b-0"
+                          >
+                            <td className="text-text-muted py-1.5 pr-3 pl-3 tabular-nums">
+                              {entry.effectiveDate}
+                            </td>
+                            <td className="py-1.5 pr-3">
+                              {entry.docRef ?? (
+                                <span className="text-text-muted">—</span>
+                              )}
+                              {entry.importStatus === 'draft' ? (
+                                <Badge size="xs" colorRole="warning">
+                                  draft
+                                </Badge>
+                              ) : null}
+                            </td>
+                            <td className="text-text-muted py-1.5 pr-3 text-right tabular-nums">
+                              {entry.quantity}
+                              {entry.unit === 'case' ? ' cs' : ' btl'}
+                              {entry.unit === 'case' && entry.caseConfig
+                                ? ` × ${entry.caseConfig}`
+                                : ''}
+                            </td>
+                            <td className="py-1.5 pr-3 text-right tabular-nums">
+                              {isInbound(entry.kind) ? '+' : ''}
+                              {formatBottles(entry.quantityBottles)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 

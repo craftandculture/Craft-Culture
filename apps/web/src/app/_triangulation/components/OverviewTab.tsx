@@ -50,6 +50,10 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
   const [variancesOnly, setVariancesOnly] = useState(false);
   const [openSkuId, setOpenSkuId] = useState<string | null>(null);
 
+  const doubleCounts = useQuery(
+    api.triangulation.admin.findDoubleCounts.queryOptions(),
+  );
+
   const triangulation = useQuery(
     api.triangulation.admin.getTriangulation.queryOptions({
       periodId,
@@ -152,6 +156,13 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
     });
   }
 
+  const doubleCountRows = doubleCounts.data ?? [];
+  // The worst case if every pairing is genuinely the same bottles twice.
+  const doubleCountInflation = doubleCountRows.reduce(
+    (total, row) => total + (row.total - row.largest),
+    0,
+  );
+
   return (
     <div className="space-y-5">
       <SummaryBar
@@ -162,6 +173,78 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
         cdSold={summary?.cdSold ?? 0}
         cdOnHand={summary?.cdOnHandCalc ?? 0}
       />
+
+      {doubleCountRows.length > 0 ? (
+        <div className="border-border-danger/40 bg-fill-danger/10 rounded-xl border p-4">
+          <Typography variant="labelSm" colorRole="danger">
+            {doubleCountRows.length} SKU
+            {doubleCountRows.length === 1 ? '' : 's'} are being counted from two
+            sources at once — up to{' '}
+            {Math.round(doubleCountInflation).toLocaleString('en-GB')} bottles
+            too many
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1 max-w-3xl">
+              A live feed replaces its own rows on every refresh, so it never
+              collides with itself — but it cannot know that the file beside it
+              describes the same pallet. Below, each source and what it
+              contributes. Where two describe the same bottles, delete the
+              redundant import on the Imports tab; where they are genuinely two
+              deliveries, leave both.
+            </p>
+          </Typography>
+          <div className="mt-2 max-h-72 overflow-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-text-muted bg-fill-danger/10 sticky top-0">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">W code</th>
+                  <th className="py-1 pr-3 font-medium">Product</th>
+                  <th className="py-1 pr-3 font-medium">Figure</th>
+                  <th className="py-1 pr-3 font-medium">Sources</th>
+                  <th className="py-1 pr-3 text-right font-medium">Counted</th>
+                  <th className="py-1 text-right font-medium">Largest alone</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doubleCountRows.map((row) => (
+                  <tr
+                    key={`${row.skuId}-${row.kind}-${row.asOfDate ?? 'all'}`}
+                    className="border-border-danger/20 border-t align-top"
+                  >
+                    <td className="py-1 pr-3 font-mono">{row.wCode}</td>
+                    <td className="py-1 pr-3">{row.productName}</td>
+                    <td className="text-text-muted py-1 pr-3">
+                      {row.kind === 'cc_opening'
+                        ? 'Received into C&C'
+                        : row.kind === 'cc_count'
+                          ? `C&C count ${row.asOfDate ?? ''}`
+                          : `City Drinks count ${row.asOfDate ?? ''}`}
+                    </td>
+                    <td className="py-1 pr-3">
+                      {row.sources.map((source) => (
+                        <div key={`${source.fileName}-${source.asOfDate}`}>
+                          {source.fileName}
+                          <span className="text-text-muted">
+                            {' '}
+                            ({source.sourceRef ?? 'uploaded'}) ·{' '}
+                            {source.bottles.toLocaleString('en-GB')} btl
+                          </span>
+                        </div>
+                      ))}
+                    </td>
+                    <td className="py-1 pr-3 text-right tabular-nums">
+                      {row.total.toLocaleString('en-GB')}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {row.largest.toLocaleString('en-GB')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <DataQualityNotice issues={issues} />
 
