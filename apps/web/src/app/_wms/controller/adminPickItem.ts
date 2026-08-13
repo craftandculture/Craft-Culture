@@ -144,13 +144,22 @@ const adminPickItem = wmsOperatorProcedure
       return row.availableCases >= pickedQuantity;
     };
 
-    // Rank by pack fit, then take the first that can actually satisfy the pick:
-    // for 3 bottles, a 3-pack leaves nothing open where a 6-pack leaves three.
+    // Rank by pack fit, then take the first that can actually satisfy the pick.
+    // On a bottle pick, prefer a pack the request divides into exactly: 9
+    // bottles off 3-packs cracks three whole cases, off 6-packs it cracks two
+    // and strands 3 loose bottles on the shelf.
     const ranked = rankStockByPack(
       candidates,
       isBottlePick ? pickedBottles : linePack || 1,
     );
-    const stock = ranked.find(canSatisfy) ?? ranked[0];
+    const usable = ranked.filter(canSatisfy);
+    const cleanest = isBottlePick
+      ? usable.find(
+          (row) =>
+            row.openBottles >= pickedBottles || pickedBottles % packOf(row) === 0,
+        )
+      : undefined;
+    const stock = cleanest ?? usable[0] ?? ranked[0];
 
     if (!stock) {
       throw new TRPCError({

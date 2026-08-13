@@ -26,13 +26,32 @@ const MAX_PLAUSIBLE_PACK = 24;
  *   LWIN18
  */
 const parseSkuPack = (sku: string | null | undefined) => {
-  const digits = String(sku ?? '').replace(/-/g, '');
-  if (!/^\d{18}$/.test(digits)) return null;
+  const code = String(sku ?? '').trim();
+  const digits = code.replace(/-/g, '');
 
-  const pack = Number(digits.slice(11, 13));
+  let packStr: string | undefined;
+  let mlStr: string | undefined;
+
+  if (/^\d{18}$/.test(digits)) {
+    packStr = digits.slice(11, 13);
+    mlStr = digits.slice(13, 18);
+  } else {
+    // Supplier codes carry the same segments behind a non-numeric wine code
+    // (`W12008024-2021-06-00750`). Stock is received under these, so refusing
+    // to read their pack left whole-case picks with no pack to check against.
+    const parts = code.split('-');
+    if (parts.length === 4 && /^\d{1,2}$/.test(parts[2] ?? '') && /^\d+$/.test(parts[3] ?? '')) {
+      packStr = parts[2];
+      mlStr = parts[3];
+    }
+  }
+
+  if (packStr === undefined || mlStr === undefined) return null;
+
+  const pack = Number(packStr);
   if (pack < 1 || pack > MAX_PLAUSIBLE_PACK) return null;
 
-  const ml = Number(digits.slice(13, 18));
+  const ml = Number(mlStr);
   return { pack, bottleSize: ml > 0 ? `${ml / 10}cl` : null };
 };
 

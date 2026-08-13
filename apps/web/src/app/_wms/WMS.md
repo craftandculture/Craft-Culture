@@ -61,6 +61,27 @@ apps/web/src/app/(routes)/(platform)/platform/admin/wms/
 - **Location Barcode**: `LOC-{locationCode}`
   - Example: `LOC-A-01-02`
 
+### Matching an Order Line to Stock (pack drift)
+
+The pack a wine is **ordered** in and the pack it **sits on the shelf** in drift apart constantly: a 3-pack is invoiced off a 6-pack, a case is repacked into 3-packs after a pick list was written, or stock arrives under a supplier code. Any lookup answering *"where is this wine"* must therefore ignore the pack segment of the LWIN-18.
+
+**The rule:** match on wine + vintage + bottle size, **any pack** (`1109704-2008-%-00750`). The bottle size stays in the match — a magnum is a different product, not a repack.
+
+| Helper | Use |
+|---|---|
+| `utils/lwinPackAgnosticPattern.ts` | Builds the `WINE-VVVV-%-SSSSS` LIKE pattern |
+| `utils/rankStockByPack.ts` | Orders candidate bays: exact pack → smallest larger pack (break it) → smaller packs (combine) |
+| `utils/resolveRepackFromStock.ts` | Pure matcher: does this line need a repack, and from which bay |
+| `utils/resolveLineRepack.ts` | DB wrapper around the above for a single line |
+| `utils/parseSkuPack.ts` | Reads the pack off a SKU, rejecting corrupt digits (see below) |
+
+**Guards that must not be relaxed:**
+- **Vintage must agree.** Picking the wrong year of the right label is worse than reporting no stock. LWIN's non-vintage markers are **both** `0000` and `1000` — `Number('1000')` is truthy, so NV must be detected *before* any numeric comparison.
+- **Whole-case picks require the released pack.** Bottles are interchangeable; "1 case" is not — a 3-pack satisfying a case released as a 6-pack ships half the wine.
+- **Implausible packs are corrupt data.** `parseSkuPack` rejects anything over 24 bottles: Zoho SKUs have been seen with `66`/`62` in the pack digits, which turned 4 cases into 264 bottles on screen.
+
+**Name matching is the fallback** when the LWIN drifted (order says `1243561-…`, stock holds `W12008024-…`). It compares every significant word, so it is sensitive to text noise — diacritics are stripped (`François` ↔ `Francois`), underscores are word breaks (`Latour_1993`), and pack suffixes are removed (`(3 pack)`, `(6x)`, `(single bottle)`).
+
 ### Stock Ownership
 Every stock record has an `ownerId` linking to the `partners` table. Stock can be:
 - **Consignment**: C&C sells on behalf of partner, takes commission
@@ -311,10 +332,16 @@ Scan a case barcode to see total stock across all locations.
 **Key Features**:
 - Case label download on pick completion
 - Scanner integration for location and case verification
+- Suggested bay resolved at release (`adminReleaseToPick`) and previewed on the New Pick List screen before release, both through `rankStockByPack` so the bay shown is the bay the operator is sent to
+- Split-case picking: a bottle pick draws from open bottles first, then cracks a sealed case
+- `adminPickItem` matches stock **at the bay** pack-agnostically — the LWIN on the line is a snapshot from release and goes stale the moment someone repacks that bay
 
-**Unknowns**:
-- [ ] Does stock reservation work?
-- [ ] Is suggested location logic correct?
+**Printable sheet**: `GET /api/admin/wms/picking-list/[pickListId]` renders `PickingListPDFTemplate`. The registered Roboto subset has **no arrow or box glyphs** — `→ ↻ □` render as stray punctuation, so keep the sheet to plain ASCII.
+
+**Known gaps**:
+- [ ] `reserveStockForOrderItems` matches the exact LWIN only (prefix fallback fires just for codes shorter than 18), so a pack mismatch reserves nothing and the line reports short
+- [ ] `adminQuickDispatch` has the same exact-LWIN lookup, and silently dispatches without decrementing when it misses
+- [ ] The NUC local server carries its own copy of the pick endpoints; fixes here do not reach it
 
 ---
 
