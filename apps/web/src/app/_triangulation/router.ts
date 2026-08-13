@@ -7,6 +7,7 @@ import adminCreatePeriod from './controller/adminCreatePeriod';
 import adminDeleteAlias from './controller/adminDeleteAlias';
 import adminDeleteImport from './controller/adminDeleteImport';
 import adminExtractPackingList from './controller/adminExtractPackingList';
+import adminFindMismatchedLines from './controller/adminFindMismatchedLines';
 import adminFindSplitSkus from './controller/adminFindSplitSkus';
 import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
@@ -25,6 +26,7 @@ import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminSyncCycleCountFromWms from './controller/adminSyncCycleCountFromWms';
 import adminSyncReceiptsFromWms from './controller/adminSyncReceiptsFromWms';
 import adminSyncSalesFromZoho from './controller/adminSyncSalesFromZoho';
+import adminUnmapCode from './controller/adminUnmapCode';
 import adminUpdateImport from './controller/adminUpdateImport';
 import adminUpsertSku from './controller/adminUpsertSku';
 
@@ -48,6 +50,8 @@ const triangulationRouter = createTRPCRouter({
     extractPackingList: adminExtractPackingList,
     getSkus: adminGetSkus,
     findSplitSkus: adminFindSplitSkus,
+    findMismatchedLines: adminFindMismatchedLines,
+    unmapCode: adminUnmapCode,
     mergeSkus: adminMergeSkus,
     upsertSku: adminUpsertSku,
     seedSkusFromWms: adminSeedSkusFromWms,
