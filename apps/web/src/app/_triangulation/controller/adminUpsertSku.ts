@@ -46,10 +46,6 @@ const adminUpsertSku = adminProcedure
     }
 
     if (skuId) {
-      const [existing] = await client<{ caseConfig: number }[]>`
-        SELECT case_config AS "caseConfig" FROM tri_skus WHERE id = ${skuId} LIMIT 1
-      `;
-
       await client`
         UPDATE tri_skus
         SET w_code = ${trimmedCode},
@@ -64,33 +60,26 @@ const adminUpsertSku = adminProcedure
         WHERE id = ${skuId}
       `;
 
-      // Pack size is what turns a case-denominated line into bottles, so
-      // changing it changes every figure this SKU appears in. Writing the new
-      // value without recomputing left the edit looking like it had done
-      // nothing — the number on screen would not move until some unrelated
-      // action happened to re-map the import.
-      if (existing && existing.caseConfig !== caseConfig) {
-        const affected = await client<
-          { id: string; aliasSource: TriAliasSource }[]
-        >`
-          SELECT DISTINCT i.id, i.alias_source AS "aliasSource"
-          FROM tri_imports i
-          JOIN tri_import_lines l ON l.import_id = i.id
-          WHERE l.sku_id = ${skuId}
-        `;
+      // Recalculate unconditionally, not only when the pack size moves. A SKU
+      // whose pack was corrected while the recalculation was still broken now
+      // holds the right pack over stale lines, and re-saving the same value is
+      // the obvious way to repair that — so it has to actually do something.
+      const affected = await client<{ id: string; aliasSource: TriAliasSource }[]>`
+        SELECT DISTINCT i.id, i.alias_source AS "aliasSource"
+        FROM tri_imports i
+        JOIN tri_import_lines l ON l.import_id = i.id
+        WHERE l.sku_id = ${skuId}
+      `;
 
-        for (const record of affected) {
-          await mapImportLines(record.id, record.aliasSource);
-        }
-
-        return {
-          id: skuId,
-          wCode: trimmedCode,
-          recalculatedImports: affected.length,
-        };
+      for (const record of affected) {
+        await mapImportLines(record.id, record.aliasSource);
       }
 
-      return { id: skuId, wCode: trimmedCode, recalculatedImports: 0 };
+      return {
+        id: skuId,
+        wCode: trimmedCode,
+        recalculatedImports: affected.length,
+      };
     }
 
     const [created] = await client<{ id: string }[]>`

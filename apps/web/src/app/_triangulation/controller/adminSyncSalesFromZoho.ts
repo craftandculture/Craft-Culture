@@ -16,6 +16,7 @@ interface ZohoSaleRow {
   name: string;
   description: string | null;
   quantity: number;
+  unit: string | null;
   rate: number | null;
   currencyCode: string | null;
   invoiceNumber: string | null;
@@ -41,7 +42,9 @@ const resolvePack = (sku: string | null, description: string | null) => {
     return fromSku.pack;
   }
 
-  const match = /^(\d+)\s*[x×]/i.exec(description ?? '');
+  // The pack sits in the line's format ("1 x 70cl", "6 x 75cl") — not always
+  // at the start of the string, so this is not anchored.
+  const match = /(\d+)\s*[x×]\s*\d/i.exec(description ?? '');
   const parsed = match?.[1] ? Number(match[1]) : null;
 
   return parsed && parsed > 0 && parsed <= 24 ? parsed : null;
@@ -87,6 +90,7 @@ const adminSyncSalesFromZoho = adminProcedure
         it.name,
         it.description,
         it.quantity,
+        it.unit,
         it.rate,
         so.currency_code AS "currencyCode",
         so.invoice_number AS "invoiceNumber",
@@ -160,11 +164,22 @@ const adminSyncSalesFromZoho = adminProcedure
     let unknownPack = 0;
 
     const lines = rows.map((row) => {
-      const pack = resolvePack(row.sku ?? row.lwin18, row.description);
+      // Zoho states the unit on the line. When it says bottles, the quantity
+      // is already bottles and multiplying by any pack invents stock.
+      const isBottles = /bottle|btl/i.test(row.unit ?? '');
+      const resolved = resolvePack(row.sku ?? row.lwin18, row.description);
 
-      if (!pack) {
+      if (!isBottles && !resolved) {
         unknownPack += 1;
       }
+
+      // Always write an explicit pack. Leaving it null let the SKU's default
+      // fill the gap later, and that default is wine-shaped — it turned a
+      // 6-bottle invoice line of single-bottle rum into 36. An unknown pack
+      // falls back to 1, which can only understate: an understated position
+      // shows up as a shortfall someone chases, where an overstated one just
+      // looks plausible.
+      const pack = isBottles ? 1 : (resolved ?? 1);
 
       return {
         import_id: importId,
@@ -173,11 +188,9 @@ const adminSyncSalesFromZoho = adminProcedure
         normalized_code: normalizeCode(row.sku ?? row.lwin18),
         raw_description: `${row.name}${row.description ? ` (${row.description})` : ''}`,
         quantity: row.quantity,
-        unit: 'case',
+        unit: isBottles ? 'bottle' : 'case',
         case_config: pack,
-        // Left for recalculateLineBottles when the pack is unknown, so the SKU's
-        // own pack size fills the gap once the line is mapped.
-        quantity_bottles: pack ? row.quantity * pack : row.quantity,
+        quantity_bottles: row.quantity * pack,
         unit_price: row.rate,
         currency: row.currencyCode,
         doc_ref: row.invoiceNumber ?? row.salesOrderNumber,
