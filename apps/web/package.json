@@ -12,6 +12,8 @@
     "test:coverage": "vitest --coverage",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "node scripts/check-types.mjs",
+    "typecheck:update": "node scripts/check-types.mjs --update",
     "lint:fix": "eslint . --fix",
     "studio": "drizzle-kit studio",
     "push": "drizzle-kit push",

@@ -43,6 +43,14 @@ jobs:
       - name: Lint & Test
         run: pnpm turbo run lint
 
+      # Ratchet gate: fails only on NEW type errors, measured against
+      # scripts/typecheck-baseline.json. next.config.ts sets
+      # ignoreBuildErrors, so without this nothing stops a type error
+      # reaching production — which is how two admin reports shipped
+      # returning 500 on every request.
+      - name: Typecheck (no new errors)
+        run: pnpm turbo run typecheck
+
       - name: Semantic Release
         run: pnpm run semantic-release
         env:
