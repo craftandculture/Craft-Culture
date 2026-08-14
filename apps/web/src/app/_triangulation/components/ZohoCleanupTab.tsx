@@ -613,6 +613,27 @@ const ZohoCleanupTab = () => {
                 key={wine.skuId}
                 className="border-border-primary overflow-hidden rounded-xl border"
               >
+                {wine.targetLwin18 &&
+                needed.length > 0 &&
+                !needed.some(
+                  (target) => norm(target.lwin18) === norm(wine.targetLwin18 ?? ''),
+                ) ? (
+                  <div className="border-border-primary border-b px-4 py-2">
+                    <Typography variant="bodyXs" colorRole="muted" asChild>
+                      <p>
+                        The registry holds{' '}
+                        <span className="font-mono">{wine.targetLwin18}</span>{' '}
+                        for this wine, but the invoices sell it in{' '}
+                        {needed.map((target) => target.pack).join(' and ')} to a
+                        case. The warehouse keeps a code for every pack it has
+                        received, and not every pack received is a pack sold —
+                        so what the invoices say wins here. The other code
+                        stays valid for the stock on the shelf.
+                      </p>
+                    </Typography>
+                  </div>
+                ) : null}
+
                 {wine.betterTarget ? (
                   <div className="border-border-warning/40 bg-fill-warning/10 border-b px-4 py-2">
                     <Typography variant="bodyXs" colorRole="warning" asChild>
@@ -663,8 +684,10 @@ const ZohoCleanupTab = () => {
                     <Typography variant="bodyXs" colorRole="muted" asChild>
                       <p className="mt-0.5 font-mono">
                         {wine.wCode}
-                        {wine.targetLwin18
-                          ? ` → keep ${wine.targetLwin18}`
+                        {needed.length > 0
+                          ? ` → keep ${needed
+                              .map((target) => target.lwin18)
+                              .join(', ')}`
                           : ' → no LWIN set'}
                       </p>
                     </Typography>
@@ -1312,9 +1335,32 @@ const ZohoCleanupTab = () => {
                                 );
 
                               if (isNeeded) {
+                                // The code is right; whether Zoho has a live
+                                // item under it is a separate question, and
+                                // saying 'Keep active' about something that
+                                // does not exist is how a wine reads finished
+                                // and stays outstanding.
+                                if (!zohoItems.data) {
+                                  return (
+                                    <Badge size="xs" colorRole="success">
+                                      Keep active
+                                    </Badge>
+                                  );
+                                }
+
+                                if (item?.status === 'active') {
+                                  return (
+                                    <Badge size="xs" colorRole="success">
+                                      Keep active
+                                    </Badge>
+                                  );
+                                }
+
                                 return (
-                                  <Badge size="xs" colorRole="success">
-                                    Keep active
+                                  <Badge size="xs" colorRole="warning">
+                                    {item
+                                      ? 'Right code — reactivate it in Zoho'
+                                      : 'Right code — no item carries it yet'}
                                   </Badge>
                                 );
                               }
