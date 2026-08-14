@@ -613,6 +613,36 @@ const ZohoCleanupTab = () => {
                 key={wine.skuId}
                 className="border-border-primary overflow-hidden rounded-xl border"
               >
+                {wine.betterTarget ? (
+                  <div className="border-border-warning/40 bg-fill-warning/10 border-b px-4 py-2">
+                    <Typography variant="bodyXs" colorRole="warning" asChild>
+                      <p>
+                        This wine is set to keep{' '}
+                        <span className="font-mono">{wine.targetLwin18}</span>,
+                        a house code — but its own invoices carry a real LWIN,{' '}
+                        <span className="font-mono">{wine.betterTarget}</span>.
+                        Standardising on the house code guarantees doing this
+                        again later.
+                      </p>
+                    </Typography>
+                    <Button
+                      size="xs"
+                      colorRole="brand"
+                      variant="outline"
+                      className="mt-1"
+                      isDisabled={setLwin.isPending}
+                      onClick={() =>
+                        setLwin.mutate({
+                          skuId: wine.skuId,
+                          lwin18: wine.betterTarget ?? '',
+                        })
+                      }
+                    >
+                      Keep {wine.betterTarget} instead
+                    </Button>
+                  </div>
+                ) : null}
+
                 <div className="flex items-start justify-between gap-3 px-4 py-3">
                   <button
                     type="button"
@@ -1198,7 +1228,9 @@ const ZohoCleanupTab = () => {
                   <table className="border-border-primary w-full border-t text-left text-xs">
                     <thead className="text-text-muted bg-fill-muted/20">
                       <tr>
-                        <th className="px-4 py-1.5 font-medium">Zoho code</th>
+                        <th className="px-4 py-1.5 font-medium">
+                          Code on the invoices
+                        </th>
                         <th className="px-4 py-1.5 font-medium">
                           What is wrong with it, and how it appears
                         </th>

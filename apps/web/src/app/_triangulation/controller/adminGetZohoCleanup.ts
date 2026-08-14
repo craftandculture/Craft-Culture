@@ -61,6 +61,16 @@ export interface ZohoCleanupWine {
   codes: ZohoCodeUse[];
   lines: number;
   bottles: number;
+  /**
+   * A real published LWIN found among this wine's own codes, when the keeper
+   * is only a house code.
+   *
+   * A house code is the answer of last resort — the W code in the LWIN shape,
+   * for a wine nothing publishes. Adopting one while a genuine LWIN sits on
+   * the wine's own invoices standardises on the weaker of two codes and
+   * guarantees a second clean-up later.
+   */
+  betterTarget: string | null;
   /** An item already carrying the dashed LWIN exists in Zoho */
   hasStandard: boolean;
   /** Codes to make inactive once the standard item is in place */
@@ -232,9 +242,17 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     return `${shape[1]}-${shape[2]}-${String(pack).padStart(2, '0')}-${shape[4]}`;
   };
 
+  /** A genuine LWIN-18: seven digits, then vintage, pack and millilitres */
+  const isRealLwin = (code: string | null | undefined) =>
+    !!code && /^\d{7}-\d{4}-\d{2}-\d{5}$/.test(code.trim());
+
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
     targets: targetsFor(row),
+    betterTarget:
+      !isRealLwin(row.targetLwin18) && row.targetLwin18
+        ? (row.codes.find((code) => isRealLwin(code.code))?.code ?? null)
+        : null,
     codes: row.codes.map((code) => ({
       ...code,
       differs: code.isStandard
