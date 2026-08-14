@@ -105,6 +105,9 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({
+      queryKey: api.triangulation.admin.getSalesCoverage.queryKey(),
+    });
+    await queryClient.invalidateQueries({
       queryKey: api.triangulation.admin.getImports.queryKey(),
     });
     await queryClient.invalidateQueries({
@@ -267,6 +270,19 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     onError: (error) => toast.error(error.message),
   });
 
+  /**
+   * Every City Drinks invoice against what the reconciliation counted for it.
+   *
+   * Checking this wine by wine is how three missing invoices took two days to
+   * surface. One list of documents settles it.
+   */
+  const coverage = useQuery({
+    ...api.triangulation.admin.getSalesCoverage.queryOptions({
+      customerMatch: zohoCustomer,
+    }),
+    enabled: !!zohoCustomer.trim(),
+  });
+
   const syncInvoices = useMutation({
     ...api.triangulation.admin.syncSalesFromInvoices.mutationOptions(),
     onSuccess: async (result) => {
@@ -402,6 +418,57 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
           </Button>
         </div>
       </div>
+
+      {coverage.data && coverage.data.summary.missing > 0 ? (
+        <div className="border-border-warning/40 bg-fill-warning/10 rounded-xl border p-4">
+          <Typography variant="labelSm" colorRole="warning">
+            {coverage.data.summary.missing} of{' '}
+            {coverage.data.summary.invoices} City Drinks invoices contribute
+            nothing to Sold to CD
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1 max-w-3xl">
+              Every invoice issued to them, and whether its lines reached the
+              figures. An invoice counted as nothing understates what was sold,
+              which overstates what C&amp;C still holds — so these are the
+              documents behind any variance that will not explain itself.
+            </p>
+          </Typography>
+          <div className="mt-2 max-h-72 overflow-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-text-muted bg-fill-warning/10 sticky top-0">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">Invoice</th>
+                  <th className="py-1 pr-3 font-medium">Date</th>
+                  <th className="py-1 pr-3 font-medium">Why it counts nothing</th>
+                  <th className="py-1 text-right font-medium">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverage.data.rows
+                  .filter((row) => row.countedLines === 0)
+                  .map((row) => (
+                    <tr
+                      key={row.invoiceNumber}
+                      className="border-border-warning/20 border-t"
+                    >
+                      <td className="py-1 pr-3 font-mono">
+                        {row.invoiceNumber}
+                      </td>
+                      <td className="text-text-muted py-1 pr-3 tabular-nums">
+                        {row.invoiceDate}
+                      </td>
+                      <td className="py-1 pr-3">{row.verdict}</td>
+                      <td className="py-1 text-right tabular-nums">
+                        {Math.round(row.total).toLocaleString('en-GB')}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       {syncReport.length > 0 ? (
         <div className="border-border-primary rounded-xl border">
