@@ -22,6 +22,7 @@ import adminGetSkus from './controller/adminGetSkus';
 import adminGetTriangulation from './controller/adminGetTriangulation';
 import adminGetUnmapped from './controller/adminGetUnmapped';
 import adminGetZohoCleanup from './controller/adminGetZohoCleanup';
+import adminGetZohoItems from './controller/adminGetZohoItems';
 import adminGetZohoLinesForSku from './controller/adminGetZohoLinesForSku';
 import adminMapAlias from './controller/adminMapAlias';
 import adminMergeSkus from './controller/adminMergeSkus';
@@ -33,6 +34,7 @@ import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
 import adminSetSkuLwin from './controller/adminSetSkuLwin';
+import adminSetZohoCleaned from './controller/adminSetZohoCleaned';
 import adminSuggestLwinFromWms from './controller/adminSuggestLwinFromWms';
 import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminSyncCycleCountFromWms from './controller/adminSyncCycleCountFromWms';
@@ -74,11 +76,13 @@ const triangulationRouter = createTRPCRouter({
     getZohoLinesForSku: adminGetZohoLinesForSku,
     getOrdersForSku: adminGetOrdersForSku,
     getZohoCleanup: adminGetZohoCleanup,
+    getZohoItems: adminGetZohoItems,
     backfillLwinFromWms: adminBackfillLwinFromWms,
     suggestLwinFromWms: adminSuggestLwinFromWms,
     searchLwinReference: adminSearchLwinReference,
     deriveLwins: adminDeriveLwins,
     setSkuLwin: adminSetSkuLwin,
+    setZohoCleaned: adminSetZohoCleaned,
     repairEncoding: adminRepairEncoding,
     syncCountFromWms: adminSyncCountFromWms,
     syncCycleCountFromWms: adminSyncCycleCountFromWms,

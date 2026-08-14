@@ -224,6 +224,22 @@ const ZohoCleanupTab = () => {
     }
   };
 
+  /**
+   * What Zoho actually holds. Without it this screen guesses from invoice
+   * history, which never moves when an item is corrected.
+   */
+  const zohoItems = useQuery({
+    ...api.triangulation.admin.getZohoItems.queryOptions(),
+    // Every item in the catalogue, paged out of Zoho — worth doing once, not
+    // on every keystroke elsewhere on the page.
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const itemsBySku = new Map(
+    (zohoItems.data ?? []).map((item) => [item.normalizedSku, item]),
+  );
+
   const lwinResults = useQuery({
     ...api.triangulation.admin.searchLwinReference.queryOptions({
       skuId: openId ?? '00000000-0000-0000-0000-000000000000',
@@ -498,7 +514,29 @@ const ZohoCleanupTab = () => {
       ) : (
         <div className="space-y-2">
           {wines.map((wine) => {
-            const state = stateOf(wine);
+            const liveTarget = wine.targetLwin18
+              ? itemsBySku.get(
+                  wine.targetLwin18.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                )
+              : undefined;
+            const liveLegacy = zohoItems.data
+              ? wine.codes.filter((code) => {
+                  if (code.isStandard) return false;
+
+                  const item = itemsBySku.get(code.normalizedCode);
+
+                  return item?.status === 'active';
+                }).length
+              : wine.legacyCodes;
+            const state = stateOf({
+              ...wine,
+              // Zoho's own answer where we have it, so a wine already put
+              // right stops being listed as outstanding.
+              hasStandard: zohoItems.data
+                ? liveTarget?.status === 'active'
+                : wine.hasStandard,
+              legacyCodes: liveLegacy,
+            });
             const isOpen = openId === wine.skuId;
 
             return (
@@ -1003,16 +1041,56 @@ const ZohoCleanupTab = () => {
                             {code.bottles.toLocaleString('en-GB')}
                           </td>
                           <td className="px-4 py-1.5">
-                            <Badge
-                              size="xs"
-                              colorRole={code.isStandard ? 'success' : 'muted'}
-                            >
-                              {code.isStandard
-                                ? 'Keep active'
-                                : wine.targetLwin18
-                                  ? 'Make inactive'
-                                  : 'Set the LWIN first'}
-                            </Badge>
+                            {(() => {
+                              const item = itemsBySku.get(code.normalizedCode);
+
+                              if (code.isStandard) {
+                                return (
+                                  <Badge size="xs" colorRole="success">
+                                    Keep active
+                                  </Badge>
+                                );
+                              }
+
+                              if (!wine.targetLwin18) {
+                                return (
+                                  <Badge size="xs" colorRole="muted">
+                                    Set the LWIN first
+                                  </Badge>
+                                );
+                              }
+
+                              // Only Zoho can say whether there is anything
+                              // left to deactivate. An old code on an old
+                              // invoice line is a record, not an item.
+                              if (!zohoItems.data) {
+                                return (
+                                  <Badge size="xs" colorRole="muted">
+                                    {zohoItems.isError
+                                      ? 'Check Zoho'
+                                      : 'Reading Zoho…'}
+                                  </Badge>
+                                );
+                              }
+
+                              if (!item) {
+                                return (
+                                  <Badge size="xs" colorRole="success">
+                                    Gone from Zoho
+                                  </Badge>
+                                );
+                              }
+
+                              return item.status === 'inactive' ? (
+                                <Badge size="xs" colorRole="success">
+                                  Already inactive
+                                </Badge>
+                              ) : (
+                                <Badge size="xs" colorRole="warning">
+                                  Make inactive
+                                </Badge>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))}

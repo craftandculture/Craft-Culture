@@ -136,6 +136,12 @@ export const searchLwinReferenceSchema = z.object({
   query: z.string().min(2).max(200),
 });
 
+/** Mark a wine's Zoho item master as corrected, or undo that */
+export const setZohoCleanedSchema = z.object({
+  skuId: z.string().uuid(),
+  cleaned: z.boolean(),
+});
+
 export const autoMapSchema = z.object({
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),

@@ -5158,6 +5158,14 @@ export const triSkus = pgTable(
     // Bottles per case, used to convert case-denominated import lines to bottles
     caseConfig: integer('case_config').notNull().default(6),
     ownerName: text('owner_name').default('Crurated'),
+    /**
+     * When the Zoho item master was put right for this wine.
+     *
+     * Cannot be inferred: a sales order line keeps the SKU it was raised
+     * under, so correcting an item never shows up in the history the
+     * reconciliation reads. Someone has to say it was done.
+     */
+    zohoCleanedAt: timestamp('zoho_cleaned_at', { mode: 'date' }),
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     ...timestamps,

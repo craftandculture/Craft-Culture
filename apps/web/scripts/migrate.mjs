@@ -293,6 +293,12 @@ const runMigrations = async () => {
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "tri_skus_product_name_idx" ON "tri_skus"("product_name")`,
     );
+    // Added after the table shipped: whether the Zoho item master has been put
+    // right for this wine. Cannot be inferred, because a sales order line
+    // keeps the SKU it was raised under and never picks up an item rename.
+    await client.unsafe(
+      `ALTER TABLE "tri_skus" ADD COLUMN IF NOT EXISTS "zoho_cleaned_at" timestamp`,
+    );
 
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS "tri_sku_aliases" (
