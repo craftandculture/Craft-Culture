@@ -47,7 +47,7 @@ const adminSearchLwinReference = adminProcedure
         k.bottle_size AS "bottleSize",
         k.case_config AS "caseConfig",
         (
-          SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\d+)\s*[xX]\s*\d'), '')::int)
+          SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\\d+)\\s*[xX]\\s*\\d'), '')::int)
           FROM tri_import_lines l
           WHERE l.sku_id = k.id AND l.raw_description IS NOT NULL
         ) AS "packFromInvoice"

@@ -101,7 +101,7 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
       -- SKU carries nothing but a default. Reading it there is the only source
       -- for a wine the warehouse never received.
       (
-        SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\d+)\s*[xX]\s*\d'), '')::int)
+        SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\\d+)\\s*[xX]\\s*\\d'), '')::int)
         FROM tri_import_lines l
         WHERE l.sku_id = k.id
           AND l.raw_description IS NOT NULL

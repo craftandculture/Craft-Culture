@@ -126,7 +126,7 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
       s.lwin18 AS "targetLwin18",
       JSON_AGG(
         JSON_BUILD_OBJECT(
-          'pack', NULLIF(SUBSTRING(u.description FROM '(\d+)\s*[xX]\s*\d'), '')::int,
+          'pack', NULLIF(SUBSTRING(u.description FROM '(\\d+)\\s*[xX]\\s*\\d'), '')::int,
           'code', u.raw_code,
           'normalizedCode', u.normalized_code,
           'description', u.description,

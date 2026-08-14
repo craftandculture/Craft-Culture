@@ -43,7 +43,7 @@ const adminDeriveLwins = adminProcedure
         k.vintage,
         k.bottle_size AS "bottleSize",
         (
-          SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\d+)\s*[xX]\s*\d'), '')::int)
+          SELECT MAX(NULLIF(SUBSTRING(l.raw_description FROM '(\\d+)\\s*[xX]\\s*\\d'), '')::int)
           FROM tri_import_lines l
           WHERE l.sku_id = k.id AND l.raw_description IS NOT NULL
         ) AS "packFromInvoice",
