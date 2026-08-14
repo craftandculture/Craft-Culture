@@ -206,14 +206,54 @@ const adminSyncSalesFromZoho = adminProcedure
     // surfacing: it means an item in Zoho carries a wrong LWIN.
     let packDisagreements = 0;
 
+    /**
+     * The pack each product is sold in, learned from the lines that state one.
+     *
+     * A Zoho line carries its format in the description — "3 x 75cl" — but not
+     * every order fills that in, and a line without it was counted as single
+     * bottles. Poggio di Sotto went out as two cases of three on INV-000168
+     * and was counted as two bottles, while INV-000212 for the same wine read
+     * its format correctly. The wine's own paperwork answers it.
+     *
+     * Only where every line that states a pack agrees. A wine genuinely sold
+     * in two formats must not have one of them imposed on the other, and that
+     * is exactly the case a silent guess would ruin.
+     */
+    const packByCode = new Map<string, number | null>();
+
+    for (const row of rows) {
+      const code = normalizeCode(row.sku ?? row.lwin18);
+      const stated = resolvePack(row.sku ?? row.lwin18, row.description);
+
+      if (!code || !stated) continue;
+
+      const seen = packByCode.get(code);
+
+      packByCode.set(
+        code,
+        seen === undefined ? stated.pack : seen === stated.pack ? seen : null,
+      );
+    }
+
+    /** Lines given a pack from the same product's other invoices */
+    let packFromSibling = 0;
+
     const lines = rows.map((row) => {
       // Zoho states the unit on the line. When it says bottles, the quantity
       // is already bottles and multiplying by any pack invents stock.
       const isBottles = /bottle|btl/i.test(row.unit ?? '');
       const resolved = resolvePack(row.sku ?? row.lwin18, row.description);
 
+      const fromSibling = resolved
+        ? null
+        : (packByCode.get(normalizeCode(row.sku ?? row.lwin18)) ?? null);
+
       if (!isBottles && !resolved) {
-        unknownPack += 1;
+        if (fromSibling) {
+          packFromSibling += 1;
+        } else {
+          unknownPack += 1;
+        }
       }
 
       if (resolved?.disagrees) {
@@ -226,7 +266,7 @@ const adminSyncSalesFromZoho = adminProcedure
       // falls back to 1, which can only understate: an understated position
       // shows up as a shortfall someone chases, where an overstated one just
       // looks plausible.
-      const pack = isBottles ? 1 : (resolved?.pack ?? 1);
+      const pack = isBottles ? 1 : (resolved?.pack ?? fromSibling ?? 1);
 
       return {
         import_id: importId,
@@ -274,6 +314,7 @@ const adminSyncSalesFromZoho = adminProcedure
       ...totals,
       orderLines: rows.length,
       unknownPack,
+      packFromSibling,
       packDisagreements,
       customers: [...new Set(rows.map((row) => row.customerName))],
       // Named, so an order left out is a fact on screen rather than a gap to

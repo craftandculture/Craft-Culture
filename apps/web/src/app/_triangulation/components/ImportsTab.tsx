@@ -232,6 +232,9 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
           result.unknownPack > 0
             ? `${result.unknownPack} lines state no pack size, counted as single bottles`
             : null,
+          result.packFromSibling > 0
+            ? `${result.packFromSibling} lines took their pack from the same wine's other invoices`
+            : null,
           result.packDisagreements > 0
             ? `${result.packDisagreements} where the SKU's pack contradicts the printed format`
             : null,
