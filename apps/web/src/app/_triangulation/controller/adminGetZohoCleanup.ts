@@ -2,6 +2,7 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import lwinDifferences from '../utils/lwinDifferences';
+import wineIdentity from '../utils/wineIdentity';
 
 export interface ZohoCodeUse {
   /** The item code as Zoho holds it */
@@ -19,9 +20,16 @@ export interface ZohoCodeUse {
   /**
    * A different wine altogether, not a legacy code for this one.
    *
-   * A differing seven-digit stem is not a typo — it names another wine. These
-   * are mapping errors: someone else's bottles counted here. Retiring the Zoho
-   * item would be destroying a live product to hide a bad mapping.
+   * A differing seven-digit stem names another wine — but only when the
+   * invoice text agrees. Zoho holds the right wine under a wrong LWIN7 often
+   * enough that the stem alone convicts the innocent: Etienne Calsac Les
+   * Revenants sat under 1186465 against a registry saying 2024996, on an
+   * invoice line reading Etienne Calsac Les Revenants. That is a bad code, and
+   * its bottles belong here.
+   *
+   * So both have to disagree. When they do it is a mapping error — someone
+   * else's bottles counted here — and retiring the Zoho item would destroy a
+   * live product to hide it.
    */
   isDifferentWine: boolean;
 }
@@ -115,6 +123,33 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     LIMIT 500
   `;
 
+  /**
+   * Whether a code belongs to a different wine, on the evidence of both the
+   * code and the words printed beside it on the invoice.
+   */
+  const isAnotherWine = (
+    code: { code: string | null; description: string | null },
+    row: { productName: string; vintage: number | null; targetLwin18: string | null },
+  ) => {
+    const stemDiffers = lwinDifferences(code.code, row.targetLwin18).some(
+      (note) => note.startsWith('wine '),
+    );
+
+    if (!stemDiffers) return false;
+
+    // The invoice text is the second opinion. Without a description there is
+    // only the stem, and convicting on that alone is what put Calsac's own
+    // bottles up for removal.
+    if (!code.description) return false;
+
+    const wine = wineIdentity(row.productName, row.vintage, null);
+    const line = wineIdentity(code.description, null, null);
+
+    if (!wine.base || !line.base) return false;
+
+    return wine.base !== line.base;
+  };
+
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
     codes: row.codes.map((code) => ({
@@ -122,21 +157,13 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
       differs: code.isStandard
         ? []
         : lwinDifferences(code.code, row.targetLwin18),
-      isDifferentWine: !code.isStandard
-        ? lwinDifferences(code.code, row.targetLwin18).some((note) =>
-            note.startsWith('wine '),
-          )
-        : false,
+      isDifferentWine: !code.isStandard && isAnotherWine(code, row),
     })),
     lines: row.codes.reduce((total, code) => total + code.lines, 0),
     bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
     hasStandard: row.codes.some((code) => code.isStandard),
     legacyCodes: row.codes.filter(
-      (code) =>
-        !code.isStandard &&
-        !lwinDifferences(code.code, row.targetLwin18).some((note) =>
-          note.startsWith('wine '),
-        ),
+      (code) => !code.isStandard && !isAnotherWine(code, row),
     ).length,
   }));
 
