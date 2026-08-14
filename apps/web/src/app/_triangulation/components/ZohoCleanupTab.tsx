@@ -212,6 +212,11 @@ const ZohoCleanupTab = () => {
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
       });
+      // The catalogue is cached for minutes at a time, so without this the
+      // item just corrected in Zoho goes on reading as it did before.
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoItems.queryKey(),
+      });
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.getTriangulation.queryKey(),
       });
@@ -486,6 +491,19 @@ const ZohoCleanupTab = () => {
           size="sm"
           colorRole="muted"
           variant="outline"
+          isDisabled={zohoItems.isFetching}
+          onClick={() => void zohoItems.refetch()}
+        >
+          {zohoItems.isFetching
+            ? 'Reading Zoho…'
+            : `Re-read Zoho items${
+                zohoItems.data ? ` (${zohoItems.data.length})` : ''
+              }`}
+        </Button>
+        <Button
+          size="sm"
+          colorRole="muted"
+          variant="outline"
           isDisabled={wines.length === 0}
           onClick={download}
         >
@@ -606,6 +624,96 @@ const ZohoCleanupTab = () => {
                     </Button>
                   </div>
                 </div>
+
+                {isOpen &&
+                wine.targetLwin18 &&
+                zohoItems.data &&
+                !liveTarget ? (
+                  <div className="border-border-primary border-t p-3">
+                    <Typography variant="labelSm">
+                      Zoho has no item with SKU{' '}
+                      <span className="font-mono">{wine.targetLwin18}</span>
+                    </Typography>
+                    {(() => {
+                      const target = wine.targetLwin18
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]/g, '');
+                      const stem = target.slice(0, 7);
+                      // Anything sharing the wine's seven-digit stem: a typo
+                      // in the vintage, pack or size shows up here rather than
+                      // as an unexplained absence.
+                      const near = (zohoItems.data ?? []).filter(
+                        (item) =>
+                          item.normalizedSku.startsWith(stem) &&
+                          item.normalizedSku !== target,
+                      );
+
+                      if (near.length === 0) {
+                        return (
+                          <Typography variant="bodyXs" colorRole="muted" asChild>
+                            <p className="mt-1">
+                              Nothing in Zoho begins with {stem} either, so the
+                              item has not been created yet — or the catalogue
+                              was read before you saved it. Re-read Zoho items
+                              above.
+                            </p>
+                          </Typography>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <Typography variant="bodyXs" colorRole="muted" asChild>
+                            <p className="mt-1 mb-2">
+                              These items are the same wine with a different
+                              code. If one of them is what you meant to type,
+                              the SKU in Zoho is a character out.
+                            </p>
+                          </Typography>
+                          <ul className="space-y-1">
+                            {near.slice(0, 6).map((item) => (
+                              <li
+                                key={item.itemId}
+                                className="border-border-primary flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5"
+                              >
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" asChild>
+                                    <p className="truncate font-mono">
+                                      {item.sku}
+                                    </p>
+                                  </Typography>
+                                  <Typography
+                                    variant="bodyXs"
+                                    colorRole="muted"
+                                    asChild
+                                  >
+                                    <p className="truncate">
+                                      {item.name} · {item.status}
+                                    </p>
+                                  </Typography>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  colorRole="muted"
+                                  variant="outline"
+                                  isDisabled={setLwin.isPending}
+                                  onClick={() =>
+                                    setLwin.mutate({
+                                      skuId: wine.skuId,
+                                      lwin18: item.sku,
+                                    })
+                                  }
+                                >
+                                  Keep this one instead
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : null}
 
                 {isOpen && !wine.targetLwin18 ? (
                   <div className="border-border-primary border-t p-3">
