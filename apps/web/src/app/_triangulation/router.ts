@@ -15,6 +15,7 @@ import adminFindSplitSkus from './controller/adminFindSplitSkus';
 import adminGetAssumedPacks from './controller/adminGetAssumedPacks';
 import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
+import adminGetOrdersForSku from './controller/adminGetOrdersForSku';
 import adminGetPeriods from './controller/adminGetPeriods';
 import adminGetSkuLedger from './controller/adminGetSkuLedger';
 import adminGetSkus from './controller/adminGetSkus';
@@ -71,6 +72,7 @@ const triangulationRouter = createTRPCRouter({
     findDoubleCounts: adminFindDoubleCounts,
     moveCodeToSku: adminMoveCodeToSku,
     getZohoLinesForSku: adminGetZohoLinesForSku,
+    getOrdersForSku: adminGetOrdersForSku,
     getZohoCleanup: adminGetZohoCleanup,
     backfillLwinFromWms: adminBackfillLwinFromWms,
     suggestLwinFromWms: adminSuggestLwinFromWms,

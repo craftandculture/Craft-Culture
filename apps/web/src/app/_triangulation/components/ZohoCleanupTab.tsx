@@ -9,7 +9,7 @@ import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { ZohoCleanupWine } from '../controller/adminGetZohoCleanup';
 
@@ -67,7 +67,10 @@ const stateOf = (wine: ZohoCleanupWine) => {
  */
 const ZohoCleanupTab = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
+  /** The wine whose orders are being re-read from Zoho */
+  const [refreshing, setRefreshing] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<Filter>('todo');
   const [search, setSearch] = useState('');
@@ -172,6 +175,54 @@ const ZohoCleanupTab = () => {
     },
     onError: (error) => toast.error(error.message),
   });
+
+  /**
+   * Re-read this wine's orders from Zoho, then rebuild the sales feed.
+   *
+   * Correcting an item leaves the sales order's last-modified time alone, so
+   * the ordinary sync short-circuits and the tool reports the old code
+   * indefinitely. Naming the orders is the only way past it, and until now
+   * there was nothing in this screen that could.
+   */
+  const refreshWine = async (skuId: string, wCode: string) => {
+    setRefreshing(skuId);
+
+    try {
+      const { orderNumbers } =
+        await trpcClient.triangulation.admin.getOrdersForSku.query({ skuId });
+
+      if (orderNumbers.length === 0) {
+        toast.info(`No Zoho sales orders carry ${wCode}`);
+        return;
+      }
+
+      await trpcClient.zohoSalesOrders.sync.mutate({
+        forceRefreshOrderNumbers: orderNumbers,
+      });
+
+      const result =
+        await trpcClient.triangulation.admin.syncSalesFromZoho.mutate({
+          customerMatch: 'CD General',
+        });
+
+      toast.success(
+        `Re-read ${orderNumbers.length} order${orderNumbers.length === 1 ? '' : 's'} — ${result.orderLines} lines back from Zoho`,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not re-read Zoho',
+      );
+    } finally {
+      setRefreshing(null);
+    }
+  };
 
   const lwinResults = useQuery({
     ...api.triangulation.admin.searchLwinReference.queryOptions({
@@ -455,19 +506,20 @@ const ZohoCleanupTab = () => {
                 key={wine.skuId}
                 className="border-border-primary overflow-hidden rounded-xl border"
               >
-                <button
-                  type="button"
-                  className="hover:bg-fill-muted/20 flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
-                  onClick={() => {
-                    setOpenId(isOpen ? null : wine.skuId);
-                    // Results are completed with the open SKU's own vintage
-                    // and pack, so carrying them across would offer the last
-                    // wine's code for this one.
-                    setLwinSearch('');
-                    setManualLwin('');
-                  }}
-                >
-                  <div className="min-w-0">
+                <div className="flex items-start justify-between gap-3 px-4 py-3">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    className="hover:bg-fill-muted/20 -m-1 min-w-0 grow rounded p-1 text-left"
+                    onClick={() => {
+                      setOpenId(isOpen ? null : wine.skuId);
+                      // Results are completed with the open SKU's own vintage
+                      // and pack, so carrying them across would offer the last
+                      // wine's code for this one.
+                      setLwinSearch('');
+                      setManualLwin('');
+                    }}
+                  >
                     <Typography variant="labelSm">
                       {wine.productName}
                     </Typography>
@@ -482,7 +534,7 @@ const ZohoCleanupTab = () => {
                     <Typography variant="bodyXs" colorRole="muted" asChild>
                       <p className="mt-0.5">{state.action}</p>
                     </Typography>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 items-center gap-3">
                     <div className="text-right">
                       <Typography variant="labelSm" asChild>
@@ -500,8 +552,22 @@ const ZohoCleanupTab = () => {
                     <Badge size="xs" colorRole={state.colorRole}>
                       {state.label}
                     </Badge>
+                    <Button
+                      size="xs"
+                      colorRole="muted"
+                      variant="outline"
+                      isDisabled={refreshing === wine.skuId}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void refreshWine(wine.skuId, wine.wCode);
+                      }}
+                    >
+                      {refreshing === wine.skuId
+                        ? 'Re-reading…'
+                        : 'Re-read from Zoho'}
+                    </Button>
                   </div>
-                </button>
+                </div>
 
                 {isOpen && !wine.targetLwin18 ? (
                   <div className="border-border-primary border-t p-3">
