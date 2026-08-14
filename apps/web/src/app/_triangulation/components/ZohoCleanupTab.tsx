@@ -252,7 +252,11 @@ const ZohoCleanupTab = () => {
       toast.success(
         result.action === 'deactivate'
           ? 'Item made inactive in Zoho'
-          : `Zoho item now carries ${result.sku}`,
+          : result.action === 'activate'
+            ? 'Item made active again in Zoho'
+            : result.action === 'create'
+              ? `Created ${result.sku} in Zoho — set its price there`
+              : `Zoho item now carries ${result.sku}`,
       );
       await queryClient.invalidateQueries({
         queryKey: api.triangulation.admin.getZohoItems.queryKey(),
@@ -742,6 +746,63 @@ const ZohoCleanupTab = () => {
                         {missing.map((target) => target.lwin18).join(', ')}
                       </span>
                     </Typography>
+                    <ul className="mt-2 mb-2 space-y-1">
+                      {missing.map((target) => (
+                        <li
+                          key={target.lwin18}
+                          className="border-border-primary flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <Typography variant="bodySm" asChild>
+                              <p className="font-mono">{target.lwin18}</p>
+                            </Typography>
+                            <Typography
+                              variant="bodyXs"
+                              colorRole="muted"
+                              asChild
+                            >
+                              <p>
+                                {target.pack
+                                  ? `${target.pack} to a case`
+                                  : 'this wine'}
+                                {target.bottles
+                                  ? ` · ${target.bottles.toLocaleString('en-GB')} bottles invoiced`
+                                  : ''}
+                                {target.item
+                                  ? ' · item exists but is inactive'
+                                  : ''}
+                              </p>
+                            </Typography>
+                          </div>
+                          <Button
+                            size="xs"
+                            colorRole="brand"
+                            isDisabled={fixItem.isPending}
+                            onClick={() =>
+                              fixItem.mutate(
+                                target.item
+                                  ? {
+                                      itemId: target.item.itemId,
+                                      action: 'activate',
+                                      sku: target.lwin18,
+                                    }
+                                  : {
+                                      action: 'create',
+                                      sku: target.lwin18,
+                                      name: wine.productName,
+                                      pack: target.pack || undefined,
+                                    },
+                              )
+                            }
+                          >
+                            {target.item
+                              ? 'Reactivate in Zoho'
+                              : 'Create it in Zoho'}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+
                     {needed.length > 1 ? (
                       <Typography variant="bodyXs" colorRole="muted" asChild>
                         <p className="mt-1">

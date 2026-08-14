@@ -146,10 +146,15 @@ export const setZohoCleanedSchema = z.object({
 
 /** Rename a Zoho item's SKU, or make it inactive */
 export const fixZohoItemSchema = z.object({
-  itemId: z.string().min(1),
-  action: z.enum(['rename', 'deactivate']),
-  /** Required when renaming; ignored otherwise */
+  /** The Zoho item to act on; absent when creating one */
+  itemId: z.string().min(1).optional(),
+  action: z.enum(['rename', 'deactivate', 'create', 'activate']),
+  /** Required when renaming or creating */
   sku: z.string().min(1).max(100).optional(),
+  /** The item's name, required when creating */
+  name: z.string().min(1).max(300).optional(),
+  /** Bottles per case, written as the unit so invoices read sensibly */
+  pack: z.number().int().min(1).max(24).optional(),
 });
 
 export const autoMapSchema = z.object({
