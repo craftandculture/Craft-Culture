@@ -91,9 +91,14 @@ const adminSyncSalesFromInvoices = adminProcedure
     const invoiceNumbers: string[] = [];
     let skippedLines = 0;
 
+    // Both feeds describe the same sales, so the order-based one goes with
+    // this one's own previous run. Leaving it would double Sold to City
+    // Drinks — and halve what C&C appears to hold — while looking like the
+    // fix had worked.
     await client`
       DELETE FROM tri_imports
-      WHERE kind = 'cc_sales_to_cd' AND source_ref = 'zoho-invoices'
+      WHERE kind = 'cc_sales_to_cd'
+        AND source_ref IN ('zoho-invoices', 'zoho-sales')
     `;
 
     const [created] = await client<{ id: string }[]>`

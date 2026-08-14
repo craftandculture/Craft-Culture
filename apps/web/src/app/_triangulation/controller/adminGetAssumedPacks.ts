@@ -42,7 +42,7 @@ const adminGetAssumedPacks = adminProcedure.query(async () => {
     JOIN tri_imports i ON i.id = l.import_id
     LEFT JOIN tri_skus s ON s.id = l.sku_id
     WHERE i.kind = 'cc_sales_to_cd'
-      AND i.source_ref = 'zoho-sales'
+      AND i.source_ref IN ('zoho-sales', 'zoho-invoices')
       -- unit 'case' with a pack of 1 is the signature of the fallback: a line
       -- genuinely sold by the bottle is written as unit 'bottle'.
       AND l.unit = 'case'

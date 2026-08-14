@@ -172,9 +172,12 @@ const adminSyncSalesFromZoho = adminProcedure
       });
     }
 
+    // The invoice feed describes the same sales from the better source, so
+    // the two must never both be present.
     await client`
       DELETE FROM tri_imports
-      WHERE kind = 'cc_sales_to_cd' AND source_ref = 'zoho-sales'
+      WHERE kind = 'cc_sales_to_cd'
+        AND source_ref IN ('zoho-sales', 'zoho-invoices')
     `;
 
     const [created] = await client<{ id: string }[]>`
