@@ -515,6 +515,7 @@ const SkusTab = () => {
                           normalizedCode: code
                             .toUpperCase()
                             .replace(/[^A-Z0-9]/g, ''),
+                          rawCode: code,
                           skuId: sku.id,
                         });
                         setCodeDrafts((current) => ({

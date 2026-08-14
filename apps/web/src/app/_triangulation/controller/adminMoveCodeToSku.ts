@@ -29,6 +29,9 @@ const adminMoveCodeToSku = adminProcedure
   .input(moveCodeToSkuSchema)
   .mutation(async ({ input, ctx }) => {
     const { normalizedCode, skuId } = input;
+    // Whatever was typed, so a dashed LWIN is not stored stripped of its
+    // dashes and then shown back looking like a different code.
+    const written = input.rawCode?.trim() || normalizedCode;
 
     const [sku] = await client<{ id: string; wCode: string }[]>`
       SELECT id, w_code AS "wCode" FROM tri_skus WHERE id = ${skuId} LIMIT 1
@@ -51,14 +54,25 @@ const adminMoveCodeToSku = adminProcedure
       GROUP BY i.alias_source
     `;
 
-    if (sources.length === 0) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `No imported lines carry the code ${normalizedCode}`,
-      });
-    }
+    // A code nobody has invoiced yet is the normal case when someone is
+    // mapping ahead of the paperwork — a Zoho item just corrected, a format
+    // about to be sold. Refusing it made the one obvious way to record a
+    // mapping fail exactly when it was most wanted; the alias is written under
+    // every party instead, so the code resolves whoever writes it first.
+    const targets: { aliasSource: TriAliasSource; rawCode: string }[] =
+      sources.length > 0
+        ? sources
+        : (
+            [
+              'zoho',
+              'city_drinks',
+              'crurated',
+              'packing_list',
+              'other',
+            ] as const
+          ).map((aliasSource) => ({ aliasSource, rawCode: written }));
 
-    for (const source of sources) {
+    for (const source of targets) {
       await client`
         INSERT INTO tri_sku_aliases (
           sku_id, source, alias_code, normalized_code, created_by

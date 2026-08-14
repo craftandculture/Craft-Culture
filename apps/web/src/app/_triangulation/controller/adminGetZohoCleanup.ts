@@ -41,6 +41,14 @@ export interface ZohoCleanupWine {
   vintage: number | null;
   /** The dashed C&C LWIN every future invoice should carry */
   targetLwin18: string | null;
+  /**
+   * Every code this wine legitimately needs, one per pack format sold.
+   *
+   * LWIN-18 encodes the pack, so a wine sold in sixes and twelves is two
+   * codes and two live Zoho items — not one keeper and one thing to retire.
+   * Read from the packs the invoices actually state.
+   */
+  targets: { lwin18: string; pack: number; bottles: number }[];
   codes: ZohoCodeUse[];
   lines: number;
   bottles: number;
@@ -99,6 +107,7 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
       s.lwin18 AS "targetLwin18",
       JSON_AGG(
         JSON_BUILD_OBJECT(
+          'pack', NULLIF(SUBSTRING(u.description FROM '(\d+)\s*[xX]\s*\d'), '')::int,
           'code', u.raw_code,
           'normalizedCode', u.normalized_code,
           'description', u.description,
@@ -150,8 +159,51 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     return wine.base !== line.base;
   };
 
+  /**
+   * The codes a wine actually needs, one per pack format its invoices state.
+   *
+   * Assuming a single keeper turned a legitimate second format into something
+   * to deactivate: Lafouge Auxey-Duresses sells in sixes and in twelves, and
+   * both are real products with codes of their own.
+   */
+  const targetsFor = (row: {
+    targetLwin18: string | null;
+    codes: (ZohoCodeUse & { pack?: number | null })[];
+  }) => {
+    if (!row.targetLwin18) return [];
+
+    const shape = /^(.+)-(\d{4})-(\d{2})-(\d{5})$/.exec(row.targetLwin18);
+
+    if (!shape) return [{ lwin18: row.targetLwin18, pack: 0, bottles: 0 }];
+
+    const packs = new Map<number, number>();
+
+    for (const code of row.codes) {
+      // Only a pack the invoice states in words. The digits inside a code are
+      // exactly what is under suspicion here.
+      const pack = code.pack ?? null;
+
+      if (!pack || pack < 1 || pack > 24) continue;
+
+      packs.set(pack, (packs.get(pack) ?? 0) + code.bottles);
+    }
+
+    if (packs.size === 0) {
+      return [{ lwin18: row.targetLwin18, pack: Number(shape[3]), bottles: 0 }];
+    }
+
+    return [...packs.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([pack, bottles]) => ({
+        lwin18: `${shape[1]}-${shape[2]}-${String(pack).padStart(2, '0')}-${shape[4]}`,
+        pack,
+        bottles,
+      }));
+  };
+
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
+    targets: targetsFor(row),
     codes: row.codes.map((code) => ({
       ...code,
       differs: code.isStandard
@@ -162,6 +214,7 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     lines: row.codes.reduce((total, code) => total + code.lines, 0),
     bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
     hasStandard: row.codes.some((code) => code.isStandard),
+
     legacyCodes: row.codes.filter(
       (code) => !code.isStandard && !isAnotherWine(code, row),
     ).length,

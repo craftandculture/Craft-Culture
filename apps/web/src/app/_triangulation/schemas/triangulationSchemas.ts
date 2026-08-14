@@ -122,6 +122,8 @@ export const mapAliasSchema = z.object({
 export const moveCodeToSkuSchema = z.object({
   normalizedCode: z.string().min(1).max(200),
   skuId: z.string().uuid(),
+  /** The code as it was written, kept for display when nothing carries it yet */
+  rawCode: z.string().max(200).optional(),
 });
 
 /** Accept one of the warehouse's LWINs for a SKU that has none */

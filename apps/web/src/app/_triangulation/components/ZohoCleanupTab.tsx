@@ -570,11 +570,23 @@ const ZohoCleanupTab = () => {
       ) : (
         <div className="space-y-2">
           {wines.map((wine) => {
-            const liveTarget = wine.targetLwin18
-              ? itemsBySku.get(
-                  wine.targetLwin18.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                )
-              : undefined;
+            const norm = (code: string) =>
+              code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            // One item per pack format, since LWIN-18 encodes the pack and a
+            // wine sold in sixes and twelves is two real products.
+            const needed = (
+              wine.targets.length > 0
+                ? wine.targets
+                : wine.targetLwin18
+                  ? [{ lwin18: wine.targetLwin18, pack: 0, bottles: 0 }]
+                  : []
+            ).map((target) => ({
+              ...target,
+              item: itemsBySku.get(norm(target.lwin18)),
+            }));
+            const missing = needed.filter(
+              (target) => target.item?.status !== 'active',
+            );
             const liveLegacy = zohoItems.data
               ? wine.codes.filter((code) => {
                   if (code.isStandard) return false;
@@ -587,9 +599,10 @@ const ZohoCleanupTab = () => {
             const state = stateOf({
               ...wine,
               // Zoho's own answer where we have it, so a wine already put
-              // right stops being listed as outstanding.
+              // right stops being listed as outstanding. Every format it sells
+              // in has to exist, not just the first.
               hasStandard: zohoItems.data
-                ? liveTarget?.status === 'active'
+                ? needed.length > 0 && missing.length === 0
                 : wine.hasStandard,
               legacyCodes: liveLegacy,
             });
@@ -666,12 +679,27 @@ const ZohoCleanupTab = () => {
                 {isOpen &&
                 wine.targetLwin18 &&
                 zohoItems.data &&
-                !liveTarget ? (
+                missing.length > 0 ? (
                   <div className="border-border-primary border-t p-3">
                     <Typography variant="labelSm">
-                      Zoho has no item with SKU{' '}
-                      <span className="font-mono">{wine.targetLwin18}</span>
+                      {missing.length === 1
+                        ? 'Zoho has no item with SKU '
+                        : `Zoho is missing ${missing.length} of this wine's codes: `}
+                      <span className="font-mono">
+                        {missing.map((target) => target.lwin18).join(', ')}
+                      </span>
                     </Typography>
+                    {needed.length > 1 ? (
+                      <Typography variant="bodyXs" colorRole="muted" asChild>
+                        <p className="mt-1">
+                          This wine is invoiced in{' '}
+                          {needed.map((target) => target.pack).join(' and ')} to
+                          a case. LWIN encodes the pack, so each format is its
+                          own code and its own live item — neither replaces the
+                          other.
+                        </p>
+                      </Typography>
+                    ) : null}
                     {(() => {
                       const target = wine.targetLwin18
                         .toUpperCase()
@@ -1244,7 +1272,14 @@ const ZohoCleanupTab = () => {
                                 );
                               }
 
-                              if (code.isStandard) {
+                              const isNeeded =
+                                code.isStandard ||
+                                needed.some(
+                                  (target) =>
+                                    norm(target.lwin18) === code.normalizedCode,
+                                );
+
+                              if (isNeeded) {
                                 return (
                                   <Badge size="xs" colorRole="success">
                                     Keep active
