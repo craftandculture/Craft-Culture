@@ -142,6 +142,14 @@ export const setZohoCleanedSchema = z.object({
   cleaned: z.boolean(),
 });
 
+/** Rename a Zoho item's SKU, or make it inactive */
+export const fixZohoItemSchema = z.object({
+  itemId: z.string().min(1),
+  action: z.enum(['rename', 'deactivate']),
+  /** Required when renaming; ignored otherwise */
+  sku: z.string().min(1).max(100).optional(),
+});
+
 export const autoMapSchema = z.object({
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),

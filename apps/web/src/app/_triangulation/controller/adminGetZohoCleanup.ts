@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import lwinDifferences from '../utils/lwinDifferences';
+
 export interface ZohoCodeUse {
   /** The item code as Zoho holds it */
   code: string | null;
@@ -14,6 +16,14 @@ export interface ZohoCodeUse {
   docRefs: string[];
   /** What this code gets wrong, field by field, against the keeper */
   differs: string[];
+  /**
+   * A different wine altogether, not a legacy code for this one.
+   *
+   * A differing seven-digit stem is not a typo — it names another wine. These
+   * are mapping errors: someone else's bottles counted here. Retiring the Zoho
+   * item would be destroying a live product to hide a bad mapping.
+   */
+  isDifferentWine: boolean;
 }
 
 export interface ZohoCleanupWine {
@@ -105,58 +115,29 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     LIMIT 500
   `;
 
-  /**
-   * What a code gets wrong, stated field by field.
-   *
-   * "Make inactive" beside a code that looks like a perfectly good LWIN reads
-   * as an instruction to destroy something valid. `1063145-2020-66-00750`
-   * against a 2022 wine is wrong twice over — the vintage, and a pack of 66
-   * that no case has ever held — but neither is visible until the two codes
-   * are set side by side and compared digit by digit, which is not work to
-   * hand to someone seventy times.
-   */
-  const differences = (code: string | null, target: string | null) => {
-    const shape = /^(.+)-(\d{4})-(\d{2})-(\d{5})$/;
-    const from = code ? shape.exec(code.trim()) : null;
-    const to = target ? shape.exec(target.trim()) : null;
-
-    if (!from || !to) {
-      return code && target ? ['not in the standard shape'] : [];
-    }
-
-    const notes: string[] = [];
-
-    if (from[1] !== to[1]) notes.push(`wine ${from[1]} not ${to[1]}`);
-    if (from[2] !== to[2]) notes.push(`vintage ${from[2]} not ${to[2]}`);
-
-    if (from[3] !== to[3]) {
-      const pack = Number(from[3]);
-      notes.push(
-        pack > 24
-          ? `pack ${from[3]} — no case holds that many, ${to[3]} is meant`
-          : `pack ${from[3]} not ${to[3]}`,
-      );
-    }
-
-    if (from[4] !== to[4]) {
-      notes.push(`${Number(from[4])}ml not ${Number(to[4])}ml`);
-    }
-
-    return notes;
-  };
-
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
     codes: row.codes.map((code) => ({
       ...code,
       differs: code.isStandard
         ? []
-        : differences(code.code, row.targetLwin18),
+        : lwinDifferences(code.code, row.targetLwin18),
+      isDifferentWine: !code.isStandard
+        ? lwinDifferences(code.code, row.targetLwin18).some((note) =>
+            note.startsWith('wine '),
+          )
+        : false,
     })),
     lines: row.codes.reduce((total, code) => total + code.lines, 0),
     bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
     hasStandard: row.codes.some((code) => code.isStandard),
-    legacyCodes: row.codes.filter((code) => !code.isStandard).length,
+    legacyCodes: row.codes.filter(
+      (code) =>
+        !code.isStandard &&
+        !lwinDifferences(code.code, row.targetLwin18).some((note) =>
+          note.startsWith('wine '),
+        ),
+    ).length,
   }));
 
   return {

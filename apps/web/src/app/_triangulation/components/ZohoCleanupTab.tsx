@@ -12,6 +12,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { ZohoCleanupWine } from '../controller/adminGetZohoCleanup';
+import lwinDifferences from '../utils/lwinDifferences';
 
 /** Which wines are worth showing while the work is being done */
 type Filter = 'todo' | 'blocked' | 'all';
@@ -244,6 +245,43 @@ const ZohoCleanupTab = () => {
   const itemsBySku = new Map(
     (zohoItems.data ?? []).map((item) => [item.normalizedSku, item]),
   );
+
+  const fixItem = useMutation({
+    ...api.triangulation.admin.fixZohoItem.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.action === 'deactivate'
+          ? 'Item made inactive in Zoho'
+          : `Zoho item now carries ${result.sku}`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoItems.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const unmapCode = useMutation({
+    ...api.triangulation.admin.unmapCode.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `${result.linesReturned} lines taken off this wine and returned to the mapping queue`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getZohoCleanup.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   const lwinResults = useQuery({
     ...api.triangulation.admin.searchLwinReference.queryOptions({
@@ -684,6 +722,18 @@ const ZohoCleanupTab = () => {
                                   </Typography>
                                   <Typography
                                     variant="bodyXs"
+                                    colorRole="warning"
+                                    asChild
+                                  >
+                                    <p>
+                                      {lwinDifferences(
+                                        item.sku,
+                                        wine.targetLwin18,
+                                      ).join(' · ')}
+                                    </p>
+                                  </Typography>
+                                  <Typography
+                                    variant="bodyXs"
                                     colorRole="muted"
                                     asChild
                                   >
@@ -692,20 +742,36 @@ const ZohoCleanupTab = () => {
                                     </p>
                                   </Typography>
                                 </div>
-                                <Button
-                                  size="xs"
-                                  colorRole="muted"
-                                  variant="outline"
-                                  isDisabled={setLwin.isPending}
-                                  onClick={() =>
-                                    setLwin.mutate({
-                                      skuId: wine.skuId,
-                                      lwin18: item.sku,
-                                    })
-                                  }
-                                >
-                                  Keep this one instead
-                                </Button>
+                                <div className="flex shrink-0 gap-2">
+                                  <Button
+                                    size="xs"
+                                    colorRole="brand"
+                                    isDisabled={fixItem.isPending}
+                                    onClick={() =>
+                                      fixItem.mutate({
+                                        itemId: item.itemId,
+                                        action: 'rename',
+                                        sku: wine.targetLwin18 ?? '',
+                                      })
+                                    }
+                                  >
+                                    Set it to {wine.targetLwin18}
+                                  </Button>
+                                  <Button
+                                    size="xs"
+                                    colorRole="muted"
+                                    variant="outline"
+                                    isDisabled={setLwin.isPending}
+                                    onClick={() =>
+                                      setLwin.mutate({
+                                        skuId: wine.skuId,
+                                        lwin18: item.sku,
+                                      })
+                                    }
+                                  >
+                                    Or keep Zoho&rsquo;s
+                                  </Button>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -1152,6 +1218,32 @@ const ZohoCleanupTab = () => {
                             {(() => {
                               const item = itemsBySku.get(code.normalizedCode);
 
+                              // A different wine is a mapping error, never a
+                              // code to retire: the Zoho item is a live
+                              // product that someone sells.
+                              if (code.isDifferentWine) {
+                                return (
+                                  <div className="flex flex-col items-start gap-1">
+                                    <Badge size="xs" colorRole="danger">
+                                      Different wine
+                                    </Badge>
+                                    <Button
+                                      size="xs"
+                                      colorRole="muted"
+                                      variant="outline"
+                                      isDisabled={unmapCode.isPending}
+                                      onClick={() =>
+                                        unmapCode.mutate({
+                                          normalizedCode: code.normalizedCode,
+                                        })
+                                      }
+                                    >
+                                      Take it off this wine
+                                    </Button>
+                                  </div>
+                                );
+                              }
+
                               if (code.isStandard) {
                                 return (
                                   <Badge size="xs" colorRole="success">
@@ -1194,9 +1286,20 @@ const ZohoCleanupTab = () => {
                                   Already inactive
                                 </Badge>
                               ) : (
-                                <Badge size="xs" colorRole="warning">
-                                  Make inactive
-                                </Badge>
+                                <Button
+                                  size="xs"
+                                  colorRole="muted"
+                                  variant="outline"
+                                  isDisabled={fixItem.isPending}
+                                  onClick={() =>
+                                    fixItem.mutate({
+                                      itemId: item.itemId,
+                                      action: 'deactivate',
+                                    })
+                                  }
+                                >
+                                  Make inactive in Zoho
+                                </Button>
                               );
                             })()}
                           </td>

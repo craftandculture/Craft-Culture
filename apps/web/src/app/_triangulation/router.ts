@@ -12,6 +12,7 @@ import adminExtractPackingList from './controller/adminExtractPackingList';
 import adminFindDoubleCounts from './controller/adminFindDoubleCounts';
 import adminFindMismatchedLines from './controller/adminFindMismatchedLines';
 import adminFindSplitSkus from './controller/adminFindSplitSkus';
+import adminFixZohoItem from './controller/adminFixZohoItem';
 import adminGetAssumedPacks from './controller/adminGetAssumedPacks';
 import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
@@ -77,6 +78,7 @@ const triangulationRouter = createTRPCRouter({
     getOrdersForSku: adminGetOrdersForSku,
     getZohoCleanup: adminGetZohoCleanup,
     getZohoItems: adminGetZohoItems,
+    fixZohoItem: adminFixZohoItem,
     backfillLwinFromWms: adminBackfillLwinFromWms,
     suggestLwinFromWms: adminSuggestLwinFromWms,
     searchLwinReference: adminSearchLwinReference,
