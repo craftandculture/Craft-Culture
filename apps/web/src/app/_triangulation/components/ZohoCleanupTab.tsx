@@ -224,6 +224,7 @@ const ZohoCleanupTab = () => {
         'Bottles on it',
         'Invoice lines',
         'Action',
+        'What is wrong with it',
         'Invoices',
       ].join(','),
       ...wines.flatMap((wine) =>
@@ -241,6 +242,7 @@ const ZohoCleanupTab = () => {
               : wine.targetLwin18
                 ? 'Make inactive'
                 : 'No LWIN on the SKU yet',
+            code.differs.join('; '),
             code.docRefs.join(' '),
           ]
             .map(escape)
@@ -892,7 +894,7 @@ const ZohoCleanupTab = () => {
                       <tr>
                         <th className="px-4 py-1.5 font-medium">Zoho code</th>
                         <th className="px-4 py-1.5 font-medium">
-                          As it appears on the invoice
+                          What is wrong with it, and how it appears
                         </th>
                         <th className="px-4 py-1.5 text-right font-medium">
                           Bottles
@@ -909,16 +911,27 @@ const ZohoCleanupTab = () => {
                           <td className="px-4 py-1.5 font-mono">
                             {code.code ?? '—'}
                           </td>
-                          <td className="text-text-muted px-4 py-1.5">
-                            {code.description ?? '—'}
-                            {code.docRefs.length > 0 ? (
-                              <span className="block">
-                                {code.docRefs.slice(0, 4).join(', ')}
-                                {code.docRefs.length > 4
-                                  ? ` +${code.docRefs.length - 4}`
-                                  : ''}
-                              </span>
+                          <td className="px-4 py-1.5">
+                            {code.differs.length > 0 ? (
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="warning"
+                                asChild
+                              >
+                                <p>{code.differs.join(' · ')}</p>
+                              </Typography>
                             ) : null}
+                            <span className="text-text-muted">
+                              {code.description ?? '—'}
+                              {code.docRefs.length > 0 ? (
+                                <span className="block">
+                                  {code.docRefs.slice(0, 4).join(', ')}
+                                  {code.docRefs.length > 4
+                                    ? ` +${code.docRefs.length - 4}`
+                                    : ''}
+                                </span>
+                              ) : null}
+                            </span>
                           </td>
                           <td className="px-4 py-1.5 text-right tabular-nums">
                             {code.bottles.toLocaleString('en-GB')}

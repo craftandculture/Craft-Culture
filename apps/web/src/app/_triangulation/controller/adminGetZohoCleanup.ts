@@ -12,6 +12,8 @@ export interface ZohoCodeUse {
   isStandard: boolean;
   /** Invoices riding on it, so a change can be checked against the paper */
   docRefs: string[];
+  /** What this code gets wrong, field by field, against the keeper */
+  differs: string[];
 }
 
 export interface ZohoCleanupWine {
@@ -103,8 +105,54 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
     LIMIT 500
   `;
 
+  /**
+   * What a code gets wrong, stated field by field.
+   *
+   * "Make inactive" beside a code that looks like a perfectly good LWIN reads
+   * as an instruction to destroy something valid. `1063145-2020-66-00750`
+   * against a 2022 wine is wrong twice over — the vintage, and a pack of 66
+   * that no case has ever held — but neither is visible until the two codes
+   * are set side by side and compared digit by digit, which is not work to
+   * hand to someone seventy times.
+   */
+  const differences = (code: string | null, target: string | null) => {
+    const shape = /^(.+)-(\d{4})-(\d{2})-(\d{5})$/;
+    const from = code ? shape.exec(code.trim()) : null;
+    const to = target ? shape.exec(target.trim()) : null;
+
+    if (!from || !to) {
+      return code && target ? ['not in the standard shape'] : [];
+    }
+
+    const notes: string[] = [];
+
+    if (from[1] !== to[1]) notes.push(`wine ${from[1]} not ${to[1]}`);
+    if (from[2] !== to[2]) notes.push(`vintage ${from[2]} not ${to[2]}`);
+
+    if (from[3] !== to[3]) {
+      const pack = Number(from[3]);
+      notes.push(
+        pack > 24
+          ? `pack ${from[3]} — no case holds that many, ${to[3]} is meant`
+          : `pack ${from[3]} not ${to[3]}`,
+      );
+    }
+
+    if (from[4] !== to[4]) {
+      notes.push(`${Number(from[4])}ml not ${Number(to[4])}ml`);
+    }
+
+    return notes;
+  };
+
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
+    codes: row.codes.map((code) => ({
+      ...code,
+      differs: code.isStandard
+        ? []
+        : differences(code.code, row.targetLwin18),
+    })),
     lines: row.codes.reduce((total, code) => total + code.lines, 0),
     bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
     hasStandard: row.codes.some((code) => code.isStandard),
