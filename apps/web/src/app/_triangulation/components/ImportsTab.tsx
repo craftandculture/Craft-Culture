@@ -267,6 +267,27 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     onError: (error) => toast.error(error.message),
   });
 
+  const syncInvoices = useMutation({
+    ...api.triangulation.admin.syncSalesFromInvoices.mutationOptions(),
+    onSuccess: async (result) => {
+      report({
+        feed: 'Zoho sales to City Drinks',
+        tone: result.skippedLines > 0 ? 'warn' : 'ok',
+        summary: `${result.orderLines} lines from ${result.invoices.length} invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+        detail:
+          result.skippedLines > 0
+            ? `${result.skippedLines} invoice lines carry no item code and cannot be filed against a wine`
+            : 'Read from the invoices themselves, so sales with no sales order behind them are included',
+      });
+
+      toast.success(
+        `Read ${result.invoices.length} invoices — ${result.orderLines} lines, ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+      );
+      await invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const syncCycleCount = useMutation({
     ...api.triangulation.admin.syncCycleCountFromWms.mutationOptions(),
     onSuccess: async (result) => {
@@ -288,6 +309,7 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
     syncCount.isPending ||
     syncReceipts.isPending ||
     syncZoho.isPending ||
+    syncInvoices.isPending ||
     syncCycleCount.isPending;
 
   /**
@@ -299,7 +321,11 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const refreshLive = async () => {
     setSyncReport([]);
     await syncReceipts.mutateAsync({ ownerName }).catch(() => null);
-    await syncZoho.mutateAsync({ customerMatch: zohoCustomer }).catch(() => null);
+    // Invoices are the sale, and reading them directly picks up the legacy
+    // ones that never had a sales order behind them.
+    await syncInvoices
+      .mutateAsync({ customerMatch: zohoCustomer })
+      .catch(() => null);
     await syncCount
       .mutateAsync({ ownerName, periodId })
       .catch(() => null);

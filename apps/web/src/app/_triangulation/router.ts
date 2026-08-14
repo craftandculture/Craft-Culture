@@ -18,6 +18,7 @@ import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
 import adminGetOrdersForSku from './controller/adminGetOrdersForSku';
 import adminGetPeriods from './controller/adminGetPeriods';
+import adminGetSalesCoverage from './controller/adminGetSalesCoverage';
 import adminGetSkuLedger from './controller/adminGetSkuLedger';
 import adminGetSkus from './controller/adminGetSkus';
 import adminGetTriangulation from './controller/adminGetTriangulation';
@@ -40,6 +41,7 @@ import adminSuggestLwinFromWms from './controller/adminSuggestLwinFromWms';
 import adminSyncCountFromWms from './controller/adminSyncCountFromWms';
 import adminSyncCycleCountFromWms from './controller/adminSyncCycleCountFromWms';
 import adminSyncReceiptsFromWms from './controller/adminSyncReceiptsFromWms';
+import adminSyncSalesFromInvoices from './controller/adminSyncSalesFromInvoices';
 import adminSyncSalesFromZoho from './controller/adminSyncSalesFromZoho';
 import adminUnmapCode from './controller/adminUnmapCode';
 import adminUpdateImport from './controller/adminUpdateImport';
@@ -90,6 +92,8 @@ const triangulationRouter = createTRPCRouter({
     syncCycleCountFromWms: adminSyncCycleCountFromWms,
     syncReceiptsFromWms: adminSyncReceiptsFromWms,
     syncSalesFromZoho: adminSyncSalesFromZoho,
+    syncSalesFromInvoices: adminSyncSalesFromInvoices,
+    getSalesCoverage: adminGetSalesCoverage,
     getUnmapped: adminGetUnmapped,
     mapAlias: adminMapAlias,
     setCodeIgnored: adminSetCodeIgnored,

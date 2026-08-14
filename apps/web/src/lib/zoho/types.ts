@@ -87,6 +87,8 @@ export interface ZohoContactResponse {
  */
 export interface ZohoLineItem {
   item_id?: string;
+  /** The item's code, which carries the LWIN on wine lines */
+  sku?: string;
   name: string;
   description?: string;
   rate: number;
