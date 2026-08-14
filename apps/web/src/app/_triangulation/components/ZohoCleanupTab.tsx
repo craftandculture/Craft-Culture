@@ -1316,25 +1316,56 @@ const ZohoCleanupTab = () => {
                                 );
                               }
 
-                              return item.status === 'inactive' ? (
-                                <Badge size="xs" colorRole="success">
-                                  Already inactive
-                                </Badge>
-                              ) : (
-                                <Button
-                                  size="xs"
-                                  colorRole="muted"
-                                  variant="outline"
-                                  isDisabled={fixItem.isPending}
-                                  onClick={() =>
-                                    fixItem.mutate({
-                                      itemId: item.itemId,
-                                      action: 'deactivate',
-                                    })
-                                  }
-                                >
-                                  Make inactive in Zoho
-                                </Button>
+                              if (item.status === 'inactive') {
+                                return (
+                                  <Badge size="xs" colorRole="success">
+                                    Already inactive
+                                  </Badge>
+                                );
+                              }
+
+                              // Renaming keeps a real format in the catalogue;
+                              // deactivating is for a code the wine genuinely
+                              // no longer needs. Both are offered because only
+                              // someone who knows the range can say which.
+                              return (
+                                <div className="flex flex-col items-start gap-1">
+                                  {code.suggestedLwin18 &&
+                                  !needed.some(
+                                    (target) =>
+                                      norm(target.lwin18) ===
+                                      code.normalizedCode,
+                                  ) ? (
+                                    <Button
+                                      size="xs"
+                                      colorRole="brand"
+                                      isDisabled={fixItem.isPending}
+                                      onClick={() =>
+                                        fixItem.mutate({
+                                          itemId: item.itemId,
+                                          action: 'rename',
+                                          sku: code.suggestedLwin18 ?? '',
+                                        })
+                                      }
+                                    >
+                                      Rename to {code.suggestedLwin18}
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    size="xs"
+                                    colorRole="muted"
+                                    variant="outline"
+                                    isDisabled={fixItem.isPending}
+                                    onClick={() =>
+                                      fixItem.mutate({
+                                        itemId: item.itemId,
+                                        action: 'deactivate',
+                                      })
+                                    }
+                                  >
+                                    Or make inactive
+                                  </Button>
+                                </div>
                               );
                             })()}
                           </td>

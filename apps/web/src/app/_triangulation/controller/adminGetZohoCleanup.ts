@@ -18,6 +18,15 @@ export interface ZohoCodeUse {
   /** What this code gets wrong, field by field, against the keeper */
   differs: string[];
   /**
+   * The code this item should carry, for its own pack format.
+   *
+   * A legacy code is not always something to retire. `W11600324 - 6` and
+   * `W11600324 - 12` are the same wine in two real formats, and both belong in
+   * the catalogue — each simply under the LWIN for the pack its own invoices
+   * state, rather than one being renamed and the other killed.
+   */
+  suggestedLwin18: string | null;
+  /**
    * A different wine altogether, not a legacy code for this one.
    *
    * A differing seven-digit stem names another wine — but only when the
@@ -201,6 +210,28 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
       }));
   };
 
+  /**
+   * The keeper for this code's own pack, so a second format is renamed rather
+   * than retired. Falls back to the wine's default when the invoice states no
+   * pack, since one code is better than none.
+   */
+  const forThisPack = (
+    code: ZohoCodeUse & { pack?: number | null },
+    row: { targetLwin18: string | null },
+  ) => {
+    if (!row.targetLwin18) return null;
+
+    const shape = /^(.+)-(\d{4})-(\d{2})-(\d{5})$/.exec(row.targetLwin18);
+
+    if (!shape) return row.targetLwin18;
+
+    const pack = code.pack ?? null;
+
+    if (!pack || pack < 1 || pack > 24) return row.targetLwin18;
+
+    return `${shape[1]}-${shape[2]}-${String(pack).padStart(2, '0')}-${shape[4]}`;
+  };
+
   const wines: ZohoCleanupWine[] = rows.map((row) => ({
     ...row,
     targets: targetsFor(row),
@@ -210,6 +241,10 @@ const adminGetZohoCleanup = adminProcedure.query(async () => {
         ? []
         : lwinDifferences(code.code, row.targetLwin18),
       isDifferentWine: !code.isStandard && isAnotherWine(code, row),
+      suggestedLwin18:
+        code.isStandard || isAnotherWine(code, row)
+          ? null
+          : forThisPack(code, row),
     })),
     lines: row.codes.reduce((total, code) => total + code.lines, 0),
     bottles: row.codes.reduce((total, code) => total + code.bottles, 0),
