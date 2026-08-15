@@ -76,6 +76,8 @@ const ZohoCleanupTab = () => {
   const [filter, setFilter] = useState<Filter>('todo');
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  /** The explanation is worth reading once and in the way after that */
+  const [showHow, setShowHow] = useState(false);
   /** What is typed into the open wine's LWIN search, and its manual entry */
   const [lwinSearch, setLwinSearch] = useState('');
   const [manualLwin, setManualLwin] = useState('');
@@ -381,23 +383,34 @@ const ZohoCleanupTab = () => {
         <Typography variant="labelSm">
           Fixing Zoho at source, without touching history
         </Typography>
-        <Typography variant="bodyXs" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Per wine: make sure one item carries the dashed C&amp;C LWIN, then
-            make the others inactive. Never edit an item that issued invoices
-            point at — deactivating changes nothing already sent, and the alias
-            table goes on resolving the old codes, so the reconciliation keeps
-            reading history correctly the whole way through.
-          </p>
-        </Typography>
-        <Typography variant="bodyXs" colorRole="warning" asChild>
-          <p className="mt-2 max-w-3xl">
-            After changing an item in Zoho, run a forced sync. An item-master
-            edit does not bump the sales order&rsquo;s last-modified date, so an
-            ordinary sync will keep reading the old code and it will look as
-            though nothing happened.
-          </p>
-        </Typography>
+        <button
+          type="button"
+          className="text-text-muted hover:text-text-primary mt-1 text-xs underline underline-offset-2"
+          onClick={() => setShowHow((current) => !current)}
+        >
+          {showHow ? 'Hide how this works' : 'How this works'}
+        </button>
+        {showHow ? (
+          <>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-2 max-w-3xl">
+                Per wine: make sure one item carries the dashed C&amp;C LWIN,
+                then make the others inactive. Deactivating changes nothing
+                already sent, and the alias table goes on resolving the old
+                codes, so the reconciliation keeps reading history correctly
+                throughout.
+              </p>
+            </Typography>
+            <Typography variant="bodyXs" colorRole="warning" asChild>
+              <p className="mt-2 max-w-3xl">
+                After changing an item in Zoho, use Re-read from Zoho on that
+                wine. An item-master edit does not bump the sales
+                order&rsquo;s last-modified date, so an ordinary sync keeps
+                reading the old code and it looks as though nothing happened.
+              </p>
+            </Typography>
+          </>
+        ) : null}
 
         {summary && summary.noLwin > 0 ? (
           <div className="border-border-warning/40 bg-fill-warning/10 mt-3 rounded-lg border p-3">
@@ -460,43 +473,81 @@ const ZohoCleanupTab = () => {
         ) : null}
 
         {summary ? (
-          <div className="mt-3 flex flex-wrap gap-5">
-            {[
-              { label: 'Done', value: summary.clean, hint: 'one clean item' },
-              {
-                label: 'To deactivate',
-                value: summary.deactivateOnly,
-                hint: 'right item exists',
-              },
-              {
-                label: 'Need the LWIN set on an item',
-                value: summary.needsStandard,
-                hint: 'no standard item yet',
-              },
-              {
-                label: 'Blocked',
-                value: summary.noLwin,
-                hint: 'no LWIN on the SKU',
-              },
-              {
-                label: 'Legacy codes in all',
-                value: summary.legacyCodes,
-                hint: 'to make inactive',
-              },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <Typography variant="headingSm" asChild>
-                  <p className="tabular-nums">
-                    {stat.value.toLocaleString('en-GB')}
-                  </p>
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" asChild>
-                  <p>
-                    {stat.label} · {stat.hint}
-                  </p>
-                </Typography>
-              </div>
-            ))}
+          <div className="mt-3">
+            {/* One bar rather than five numbers: the question this screen is
+                opened with is how much is left, and a row of counts answers
+                it only after arithmetic. */}
+            <div className="bg-fill-muted/40 flex h-2 overflow-hidden rounded-full">
+              {[
+                { key: 'clean', value: summary.clean, className: 'bg-fill-success' },
+                {
+                  key: 'deactivate',
+                  value: summary.deactivateOnly,
+                  className: 'bg-fill-warning',
+                },
+                {
+                  key: 'create',
+                  value: summary.needsStandard,
+                  className: 'bg-fill-brand',
+                },
+                {
+                  key: 'blocked',
+                  value: summary.noLwin,
+                  className: 'bg-fill-danger',
+                },
+              ].map((band) =>
+                band.value > 0 ? (
+                  <div
+                    key={band.key}
+                    className={band.className}
+                    style={{
+                      width: `${(band.value / Math.max(summary.total, 1)) * 100}%`,
+                    }}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+              {[
+                {
+                  label: 'done',
+                  value: summary.clean,
+                  dot: 'bg-fill-success',
+                },
+                {
+                  label: 'to deactivate',
+                  value: summary.deactivateOnly,
+                  dot: 'bg-fill-warning',
+                },
+                {
+                  label: 'need an item',
+                  value: summary.needsStandard,
+                  dot: 'bg-fill-brand',
+                },
+                {
+                  label: 'blocked',
+                  value: summary.noLwin,
+                  dot: 'bg-fill-danger',
+                },
+              ].map((stat) => (
+                <span key={stat.label} className="flex items-center gap-1.5">
+                  <span className={`size-2 rounded-full ${stat.dot}`} />
+                  <Typography variant="bodyXs" colorRole="muted" asChild>
+                    <span>
+                      <span className="text-text-primary font-medium tabular-nums">
+                        {stat.value}
+                      </span>{' '}
+                      {stat.label}
+                    </span>
+                  </Typography>
+                </span>
+              ))}
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <span>
+                  {summary.total} wines · {summary.legacyCodes} legacy codes
+                </span>
+              </Typography>
+            </div>
           </div>
         ) : null}
       </div>

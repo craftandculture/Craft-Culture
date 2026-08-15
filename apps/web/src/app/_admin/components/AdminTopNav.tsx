@@ -75,7 +75,9 @@ const getSectionFromPathname = (pathname: string) => {
   // Finance
   if (
     pathname.startsWith('/platform/admin/commissions') ||
-    pathname.startsWith('/platform/admin/pricing')
+    pathname.startsWith('/platform/admin/pricing') ||
+    pathname.startsWith('/platform/admin/quote-builder') ||
+    pathname.startsWith('/platform/admin/triangulation')
   )
     return 'finance';
 

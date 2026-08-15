@@ -390,8 +390,8 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
           <Typography variant="labelSm">In-house inputs</Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1 max-w-xl">
-              WMS receipts, Zoho sales and WMS stock, read from our own systems.
-              Closed periods stay put — refreshing only adds what happened since.
+              WMS receipts, Zoho invoices and WMS stock, read from our own
+              systems. Closed periods stay put.
             </p>
           </Typography>
         </div>

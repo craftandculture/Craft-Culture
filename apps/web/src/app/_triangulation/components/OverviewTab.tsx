@@ -185,12 +185,9 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1 max-w-3xl">
-              A live feed replaces its own rows on every refresh, so it never
-              collides with itself — but it cannot know that the file beside it
-              describes the same pallet. Below, each source and what it
-              contributes. Where two describe the same bottles, delete the
-              redundant import on the Imports tab; where they are genuinely two
-              deliveries, leave both.
+              Each source and what it contributes. Where two describe the same
+              bottles, delete the redundant import on the Imports tab; where
+              they are two genuine deliveries, leave both.
             </p>
           </Typography>
           <div className="mt-2 max-h-72 overflow-auto">

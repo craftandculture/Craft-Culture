@@ -16,6 +16,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 import ImportsTab from './ImportsTab';
 import MappingTab from './MappingTab';
+import NextStep from './NextStep';
 import OverviewTab from './OverviewTab';
 import SelectField from './SelectField';
 import SkusTab from './SkusTab';
@@ -46,6 +47,18 @@ const TriangulationClient = () => {
   const queryClient = useQueryClient();
 
   const [periodId, setPeriodId] = useState<string | null>(null);
+  /** Controlled so the next-step strip can send someone to the right tab */
+  const [tab, setTab] = useState('overview');
+
+  // On the tab rather than inside it: work you cannot see is work nobody does,
+  // and this one is finite, so the count falling is the point of it.
+  const zohoCleanup = useQuery(
+    api.triangulation.admin.getZohoCleanup.queryOptions(),
+  );
+  const zohoOutstanding =
+    (zohoCleanup.data?.summary.deactivateOnly ?? 0) +
+    (zohoCleanup.data?.summary.needsStandard ?? 0) +
+    (zohoCleanup.data?.summary.noLwin ?? 0);
 
   const periods = useQuery(api.triangulation.admin.getPeriods.queryOptions());
 
@@ -166,7 +179,9 @@ const TriangulationClient = () => {
         </Typography>
       ) : null}
 
-      <Tabs defaultValue="overview">
+      <NextStep periodId={periodId} onGo={setTab} />
+
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="overview">Reconciliation</TabsTrigger>
           <TabsTrigger value="imports">Imports</TabsTrigger>
@@ -179,7 +194,14 @@ const TriangulationClient = () => {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="skus">SKUs</TabsTrigger>
-          <TabsTrigger value="zoho">Fix Zoho</TabsTrigger>
+          <TabsTrigger value="zoho">
+            Fix Zoho
+            {zohoOutstanding > 0 ? (
+              <span className="text-text-warning ml-1">
+                ({zohoOutstanding})
+              </span>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="pt-6">
