@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
-import { zohoSalesOrders } from '@/database/schema';
+import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { getSalesOrder } from '@/lib/zoho/salesOrders';
 
 interface ZohoOrderSummary {
@@ -25,6 +25,68 @@ const PRE_PICK_STATUSES = new Set(['synced', 'approved']);
 
 /** Statuses where a pick list already snapshots the lines. */
 const RELEASED_STATUSES = new Set(['picking', 'picked']);
+
+/** The line fields a pick depends on — a change to any must be reviewed. */
+const lineFingerprint = (line: {
+  zohoLineItemId: string | null;
+  sku: string | null;
+  quantity: number | null;
+}) => `${line.zohoLineItemId ?? ''}|${line.sku ?? ''}|${line.quantity ?? 0}`;
+
+/**
+ * Have the order's pick-relevant lines actually changed?
+ *
+ * Compares the stored lines against what Zoho just returned, on line id, SKU
+ * and quantity only. Rate and description drift constantly and never alter what
+ * comes off the shelf, so they are ignored — otherwise a forced pass would flag
+ * every released order for review on a price edit.
+ *
+ * @param orderId - Local sales order id
+ * @param zohoLineItems - `line_items` from the Zoho detail payload
+ * @param db - Drizzle db handle
+ * @returns True when a line was added, removed, re-SKU'd or re-quantified
+ */
+const linesChanged = async ({
+  orderId,
+  zohoLineItems,
+  db,
+}: {
+  orderId: string;
+  zohoLineItems: {
+    line_item_id: string;
+    sku?: string | null;
+    quantity: number;
+  }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any;
+}) => {
+  const stored: { zohoLineItemId: string; sku: string | null; quantity: number }[] =
+    await db
+      .select({
+        zohoLineItemId: zohoSalesOrderItems.zohoLineItemId,
+        sku: zohoSalesOrderItems.sku,
+        quantity: zohoSalesOrderItems.quantity,
+      })
+      .from(zohoSalesOrderItems)
+      .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
+
+  const before = new Set(stored.map(lineFingerprint));
+  const after = new Set(
+    zohoLineItems.map((line) =>
+      lineFingerprint({
+        zohoLineItemId: line.line_item_id,
+        sku: line.sku ?? null,
+        quantity: line.quantity,
+      }),
+    ),
+  );
+
+  if (before.size !== after.size) return true;
+  for (const fingerprint of after) {
+    if (!before.has(fingerprint)) return true;
+  }
+  return false;
+};
 
 /**
  * Sync an already-synced Zoho sales order so a later Zoho edit (e.g. the client
@@ -81,10 +143,14 @@ const syncExistingSalesOrder = async ({
     .where(eq(zohoSalesOrders.id, existing.id))
     .limit(1);
 
-  // A forced pass only overrides the short-circuit pre-pick, where it results in
-  // a line reconcile. On a released order it would raise
-  // `soModifiedAfterRelease` for an order Zoho says never changed.
-  const forceDetailFetch = force && PRE_PICK_STATUSES.has(status);
+  // A forced pass overrides the short-circuit in both states. Pre-pick it
+  // results in a line reconcile; on a released order it fetches the detail so
+  // the lines can be COMPARED — the flag is then raised only if they really
+  // differ (see below), never merely because the pass was forced. Item-master
+  // edits (fixing a SKU's pack digits) don't bump the order's last-modified
+  // time, so a released pick would otherwise be stranded on the old SKU with no
+  // way to refresh it.
+  const forceDetailFetch = force;
 
   const unchanged =
     !forceDetailFetch &&
@@ -128,10 +194,27 @@ const syncExistingSalesOrder = async ({
     return { outcome: 'reconciled' as const, reconciled };
   }
 
-  // Released to picking/picked — the order changed in Zoho (unchanged already
-  // returned above). Refresh the header so the total is truthful, and raise the flag so the pick
-  // screen can prompt a review. We deliberately do NOT rewrite the pick's lines
-  // here — that is an explicit "re-sync pick" action, not a silent mutation.
+  // Released to picking/picked. Refresh the header so the total is truthful,
+  // and raise the flag so the pick screen can prompt a review. We deliberately
+  // do NOT rewrite the pick's lines here — that is an explicit "re-sync pick"
+  // action, not a silent mutation under an operator mid-pick.
+  //
+  // Zoho reporting a newer last-modified time is enough on its own. A forced
+  // pass on an order Zoho says is unchanged must prove the lines moved before
+  // flagging, so a routine force-refresh doesn't mark every released pick for
+  // review.
+  const zohoReportsChange =
+    !(current?.zohoLastModifiedTime instanceof Date) ||
+    current.zohoLastModifiedTime.getTime() !== zohoModifiedAt.getTime();
+
+  const shouldFlag =
+    zohoReportsChange ||
+    (await linesChanged({
+      orderId: existing.id,
+      zohoLineItems: fullOrder.line_items ?? [],
+      db,
+    }));
+
   await db
     .update(zohoSalesOrders)
     .set({
@@ -140,13 +223,16 @@ const syncExistingSalesOrder = async ({
       total: fullOrder.total,
       subTotal: fullOrder.sub_total,
       ...invoiceUpdate,
-      soModifiedAfterRelease: true,
-      soModifiedAt: new Date(),
+      ...(shouldFlag
+        ? { soModifiedAfterRelease: true, soModifiedAt: new Date() }
+        : {}),
       lastSyncAt: new Date(),
     })
     .where(eq(zohoSalesOrders.id, existing.id));
 
-  return { outcome: 'flagged' as const };
+  return shouldFlag
+    ? ({ outcome: 'flagged' } as const)
+    : ({ outcome: 'unchanged' } as const);
 };
 
 export default syncExistingSalesOrder;

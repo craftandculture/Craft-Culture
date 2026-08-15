@@ -166,6 +166,34 @@ const WMSPickListDetailPage = () => {
     },
   });
 
+  // Forced pull of THIS order from Zoho, run before the re-sync below.
+  const syncOrderMutation = useMutation({
+    ...api.zohoSalesOrders.sync.mutationOptions(),
+  });
+
+  /**
+   * Refresh from Zoho, then rebuild the unpicked lines.
+   *
+   * The forced pull matters: correcting a SKU on the Zoho item master does not
+   * bump the sales order's last-modified time, so the routine poll skips it and
+   * a re-sync alone would rebuild from the same stale SKU. If Zoho is
+   * unreachable we still re-sync from stored lines rather than block the pick.
+   */
+  const handleResync = async () => {
+    if (data?.orderNumber) {
+      try {
+        await syncOrderMutation.mutateAsync({
+          forceRefreshOrderNumbers: [data.orderNumber],
+        });
+      } catch {
+        toast.error('Could not reach Zoho — re-syncing from stored lines');
+      }
+    }
+    resyncMutation.mutate({ pickListId });
+  };
+
+  const isResyncing = syncOrderMutation.isPending || resyncMutation.isPending;
+
   // Location lookup mutation — routes through local NUC when available
   const { mutateAsync: lookupLocation } = useMutation({
     ...wmsApi.scanLocationMutationOptions(),
@@ -450,37 +478,57 @@ const WMSPickListDetailPage = () => {
         </a>
       )}
 
-      {/* Order edited in Zoho after release — offer a safe re-sync */}
-      {data.soModifiedAfterRelease && !isComplete && (
-        <div className="mb-3 flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-900/20">
-          <Icon
-            icon={IconAlertTriangle}
-            size="sm"
-            className="mt-0.5 shrink-0 text-amber-600"
-          />
+      {/* Re-sync to the current Zoho order. Shown on any unfinished pick, not
+          just flagged ones: a SKU corrected on the Zoho item master never
+          raises the flag, because that edit doesn't bump the order's
+          last-modified time. Amber when Zoho reported a real change. */}
+      {!isComplete && (
+        <div
+          className={
+            data.soModifiedAfterRelease
+              ? 'mb-3 flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-900/20'
+              : 'mb-3 flex items-start gap-3 rounded-lg border border-border-primary bg-surface-muted px-4 py-3'
+          }
+        >
+          {data.soModifiedAfterRelease && (
+            <Icon
+              icon={IconAlertTriangle}
+              size="sm"
+              className="mt-0.5 shrink-0 text-amber-600"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <Typography
               variant="bodySm"
-              className="font-semibold text-amber-800 dark:text-amber-300"
+              className={
+                data.soModifiedAfterRelease
+                  ? 'font-semibold text-amber-800 dark:text-amber-300'
+                  : 'font-semibold'
+              }
             >
-              Order changed in Zoho after release
+              {data.soModifiedAfterRelease
+                ? 'Order changed in Zoho after release'
+                : 'Lines not matching stock?'}
             </Typography>
             <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-              This pick may be out of date. Re-sync to match the current order —
-              already-picked lines are kept.
+              {data.soModifiedAfterRelease
+                ? 'This pick may be out of date. Re-sync to match the current order — already-picked lines are kept.'
+                : 'Pull the latest from Zoho and rebuild the unpicked lines. Use this after correcting a SKU. Already-picked lines are kept.'}
             </Typography>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="h-9 shrink-0 border-amber-400 text-amber-700"
-            onClick={() => resyncMutation.mutate({ pickListId })}
-            disabled={resyncMutation.isPending}
+            className={
+              data.soModifiedAfterRelease
+                ? 'h-9 shrink-0 border-amber-400 text-amber-700'
+                : 'h-9 shrink-0'
+            }
+            onClick={() => void handleResync()}
+            disabled={isResyncing}
           >
-            <ButtonContent
-              iconLeft={resyncMutation.isPending ? IconLoader2 : IconRefresh}
-            >
-              {resyncMutation.isPending ? 'Syncing…' : 'Re-sync'}
+            <ButtonContent iconLeft={isResyncing ? IconLoader2 : IconRefresh}>
+              {isResyncing ? 'Syncing…' : 'Re-sync'}
             </ButtonContent>
           </Button>
         </div>

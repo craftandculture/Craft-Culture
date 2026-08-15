@@ -61,6 +61,11 @@ const adminResyncPickList = wmsOperatorProcedure
       });
     }
 
+    // NOTE: the caller is responsible for refreshing the order from Zoho first
+    // (a forced `zohoSalesOrders.sync`). An item-master edit — correcting a
+    // SKU's pack digits from `06` to `01` — does not bump the sales order's
+    // last-modified time, so without that forced pass this rebuilds faithfully
+    // from stale lines and the operator hits the same "no stock found" wall.
     const orderItems = await db
       .select()
       .from(zohoSalesOrderItems)
