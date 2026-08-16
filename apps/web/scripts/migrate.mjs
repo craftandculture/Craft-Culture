@@ -457,6 +457,21 @@ const runMigrations = async () => {
     );
     console.log('✅ sales_quotes table ready');
 
+    // --- wms_stock_movements.quantity_bottles -----------------------------
+    // A split-case pick moves bottles, not cases, so the ledger showed "0".
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "quantity_bottles" integer`,
+    );
+    // Backfill the split-case picks already recorded — their bottle count only
+    // ever survived in the note text ("... — 3 bottle(s) (split-case)").
+    await client.unsafe(
+      `UPDATE "wms_stock_movements"
+         SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
+       WHERE "quantity_bottles" IS NULL
+         AND "notes" ~ '[0-9]+ bottle'`,
+    );
+    console.log('✅ wms_stock_movements.quantity_bottles ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

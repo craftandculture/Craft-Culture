@@ -51,6 +51,21 @@ const vintageFromLwin18 = (lwin18: string | null | undefined) => {
   return v && v !== '0000' ? v : null;
 };
 
+/**
+ * Describe where stock moved. Picks and dispatches have no destination bin and
+ * receipts have no source, so rendering a bare "A-01-01 -> —" reads as a broken
+ * record rather than "it left the building".
+ */
+const describeMove = (
+  from: string | null | undefined,
+  to: string | null | undefined,
+) => {
+  if (from && to && from === to) return { from, to: null, note: 'in place' };
+  if (from && !to) return { from, to: null, note: 'out' };
+  if (!from && to) return { from: null, to, note: 'in' };
+  return { from: from ?? null, to: to ?? null, note: null };
+};
+
 /** Extract pack config from an LWIN18 (dash-stripped digits 12-13 = pack, 14-18 = size). */
 const packFromLwin18 = (lwin18: string | null | undefined) => {
   const d = (lwin18 ?? '').replace(/\D/g, '');
@@ -228,16 +243,17 @@ const WMSMovementsPage = () => {
                 key={stat.movementType}
                 className="flex items-center gap-2 rounded-lg bg-fill-secondary px-3 py-2"
               >
+                {/* Labelled: six unlabelled icons is a quiz, not a summary. */}
                 <MovementTypeBadge
                   movementType={stat.movementType as MovementType}
                   size="sm"
-                  showLabel={false}
                 />
                 <Typography variant="bodySm" className="font-medium">
                   {stat.count}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  ({stat.totalCases} cs)
+                  ({stat.totalCases} cs
+                  {stat.totalBottles ? ` · ${stat.totalBottles} btl` : ''})
                 </Typography>
               </div>
             ))}
@@ -277,7 +293,7 @@ const WMSMovementsPage = () => {
                       <th className="px-3 py-2 font-medium">Ref</th>
                       <th className="px-3 py-2 font-medium">Product</th>
                       <th className="px-3 py-2 font-medium">Move</th>
-                      <th className="px-3 py-2 text-right font-medium">Cases</th>
+                      <th className="px-3 py-2 text-right font-medium">Qty</th>
                       <th className="px-3 py-2 font-medium">When</th>
                       <th className="px-3 py-2 font-medium">By</th>
                     </tr>
@@ -316,12 +332,49 @@ const WMSMovementsPage = () => {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs">
-                          {movement.fromLocationCode ?? '—'}
-                          <span className="mx-1 text-text-muted">→</span>
-                          {movement.toLocationCode ?? '—'}
+                          {(() => {
+                            const move = describeMove(
+                              movement.fromLocationCode,
+                              movement.toLocationCode,
+                            );
+                            return (
+                              <span className="flex items-center gap-1">
+                                {move.from && <span>{move.from}</span>}
+                                {move.from && move.to && (
+                                  <span className="text-text-muted">→</span>
+                                )}
+                                {move.to && <span>{move.to}</span>}
+                                {move.note && (
+                                  <span className="rounded bg-fill-secondary px-1 py-px font-sans text-[10px] uppercase tracking-wide text-text-muted">
+                                    {move.note}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums text-blue-600">
-                          {movement.quantityCases}
+                        <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                          {movement.quantityCases > 0 && (
+                            <span className="font-semibold text-blue-600">
+                              {movement.quantityCases} cs
+                            </span>
+                          )}
+                          {movement.quantityBottles != null &&
+                            movement.quantityBottles > 0 && (
+                              <span
+                                className={
+                                  movement.quantityCases > 0
+                                    ? 'ml-1.5 text-[11px] text-text-muted'
+                                    : 'font-semibold text-blue-600'
+                                }
+                              >
+                                {movement.quantityBottles} btl
+                              </span>
+                            )}
+                          {movement.quantityCases === 0 &&
+                            !movement.quantityBottles && (
+                              <span className="text-text-muted">—</span>
+                            )}
                         </td>
                         <td
                           className="whitespace-nowrap px-3 py-1.5 text-xs text-text-muted"
@@ -424,14 +477,31 @@ const WMSMovementsPage = () => {
                           )}
                         </div>
 
-                        {/* Quantity */}
+                        {/* Quantity — a split-case pick moves 0 cases, so lead
+                            with whichever unit actually moved. */}
                         <div className="text-right">
-                          <Typography variant="headingSm" className="text-blue-600">
-                            {movement.quantityCases}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            cases
-                          </Typography>
+                          {movement.quantityCases > 0 ? (
+                            <>
+                              <Typography variant="headingSm" className="text-blue-600">
+                                {movement.quantityCases}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {movement.quantityCases === 1 ? 'case' : 'cases'}
+                                {movement.quantityBottles
+                                  ? ` · ${movement.quantityBottles} btl`
+                                  : ''}
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <Typography variant="headingSm" className="text-blue-600">
+                                {movement.quantityBottles ?? 0}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {movement.quantityBottles === 1 ? 'bottle' : 'bottles'}
+                              </Typography>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

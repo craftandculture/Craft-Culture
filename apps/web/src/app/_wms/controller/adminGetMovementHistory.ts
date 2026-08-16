@@ -54,6 +54,7 @@ const adminGetMovementHistory = wmsOperatorProcedure
         lwin18: wmsStockMovements.lwin18,
         productName: wmsStockMovements.productName,
         quantityCases: wmsStockMovements.quantityCases,
+        quantityBottles: wmsStockMovements.quantityBottles,
         fromLocationId: wmsStockMovements.fromLocationId,
         toLocationId: wmsStockMovements.toLocationId,
         lotNumber: wmsStockMovements.lotNumber,
@@ -119,6 +120,7 @@ const adminGetMovementHistory = wmsOperatorProcedure
         movementType: wmsStockMovements.movementType,
         count: sql<number>`COUNT(*)::int`,
         totalCases: sql<number>`SUM(${wmsStockMovements.quantityCases})::int`,
+        totalBottles: sql<number>`COALESCE(SUM(${wmsStockMovements.quantityBottles}), 0)::int`,
       })
       .from(wmsStockMovements)
       .where(conditions.length > 0 ? and(...conditions) : undefined)

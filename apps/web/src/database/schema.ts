@@ -4149,6 +4149,10 @@ export const wmsStockMovements = pgTable(
     supplierSku: text('supplier_sku'), // Supplier's own reference code
     productName: text('product_name').notNull(),
     quantityCases: integer('quantity_cases').notNull(),
+    // Bottles actually moved. A split-case pick moves bottles without moving a
+    // whole case, so cases alone records it as "0" — true but useless in a
+    // ledger. Null on rows written before this column existed.
+    quantityBottles: integer('quantity_bottles'),
     fromLocationId: uuid('from_location_id').references(() => wmsLocations.id),
     toLocationId: uuid('to_location_id').references(() => wmsLocations.id),
     fromOwnerId: uuid('from_owner_id').references(() => partners.id),

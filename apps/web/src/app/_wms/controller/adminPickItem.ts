@@ -254,6 +254,9 @@ const adminPickItem = wmsOperatorProcedure
       lwin18: stock.lwin18,
       productName: pickListItem.productName,
       quantityCases: casesRemoved,
+      // What physically left the shelf. A split-case pick removes 0 whole
+      // cases, so cases alone reads as nothing having moved.
+      quantityBottles: isBottlePick ? pickedBottles : casesRemoved * pack,
       fromLocationId: pickedFromLocationId,
       orderId: pickList.orderId,
       notes: isBottlePick
