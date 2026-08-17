@@ -77,6 +77,27 @@ const getCatalogueRows = async (
     );
   }
 
+  /**
+   * Pack-agnostic key — wine + vintage + bottle size, pack segment dropped.
+   * Repacking a priced 6-pack into singles mints a `…-01-…` stock row that the
+   * old exact-code join could not price, so the split silently vanished from
+   * both portals while the full case stayed listed. Prices here are all PER
+   * BOTTLE, so inheriting them across packs is dimensionally sound.
+   */
+  const pakOf = (col: typeof wmsStock.lwin18 | typeof wmsProductPricing.lwin18) =>
+    sql`split_part(${col}, '-', 1) || '-' || split_part(${col}, '-', 2) || '-' || split_part(${col}, '-', 4)`;
+
+  /**
+   * Exact code first, any sibling pack second. A price set specifically on the
+   * single must beat the case price it was cut from — MAX() alone would let the
+   * (usually higher) case price override a deliberate single-bottle rate.
+   */
+  const preferExact = (col: typeof wmsProductPricing.importPricePerBottle) =>
+    sql`COALESCE(
+      MAX(CASE WHEN ${wmsProductPricing.lwin18} = ${wmsStock.lwin18} THEN ${col} END),
+      MAX(${col})
+    )`;
+
   const rows = await db
     .select({
       lwin18: wmsStock.lwin18,
@@ -88,28 +109,31 @@ const getCatalogueRows = async (
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
-      importPrice: sql<
-        number | null
-      >`MAX(${wmsProductPricing.importPricePerBottle})`,
-      logistics: sql<
-        number | null
-      >`MAX(${wmsProductPricing.logisticsPerBottle})`,
-      transfer: sql<
-        number | null
-      >`MAX(${wmsProductPricing.transferPricePerBottle})`,
-      override: sql<
-        number | null
-      >`MAX(${wmsProductPricing.costOverridePerBottle})`,
-      selling: sql<
-        number | null
-      >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+      importPrice: sql<number | null>`${preferExact(
+        wmsProductPricing.importPricePerBottle,
+      )}`,
+      logistics: sql<number | null>`${preferExact(
+        wmsProductPricing.logisticsPerBottle,
+      )}`,
+      transfer: sql<number | null>`${preferExact(
+        wmsProductPricing.transferPricePerBottle,
+      )}`,
+      override: sql<number | null>`${preferExact(
+        wmsProductPricing.costOverridePerBottle,
+      )}`,
+      selling: sql<number | null>`${preferExact(
+        wmsProductPricing.sellingPricePerBottle,
+      )}`,
       inbondPct: sql<
         number | null
       >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
       pcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
     })
     .from(wmsStock)
-    .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+    .leftJoin(
+      wmsProductPricing,
+      sql`${pakOf(wmsProductPricing.lwin18)} = ${pakOf(wmsStock.lwin18)}`,
+    )
     .leftJoin(
       wmsOwnerPricingSettings,
       eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
