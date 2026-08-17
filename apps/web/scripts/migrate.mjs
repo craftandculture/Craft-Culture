@@ -17,6 +17,33 @@ const runMigrations = async () => {
 
   const client = postgres(dbUrl, { max: 1 });
 
+  /** Data backfills that failed, reported together at the end. */
+  const dataFixFailures = [];
+
+  /**
+   * Run a one-off DATA backfill without letting it block the deploy.
+   *
+   * This script runs as `postbuild`, so anything that throws here exits 1 and
+   * fails the whole Vercel deployment — a historical data patch once wedged the
+   * pipeline for hours, holding back every unrelated fix behind it. Schema DDL
+   * stays fatal (the app's code expects those columns to exist), but a backfill
+   * correcting past rows is not something the new build depends on: log it
+   * loudly, keep going, and fix it in a follow-up.
+   *
+   * @param label - What the backfill does, for the log
+   * @param run - Async thunk performing the work
+   */
+  const dataFix = async (label, run) => {
+    try {
+      await run();
+      console.log(`✅ ${label}`);
+    } catch (error) {
+      dataFixFailures.push(label);
+      console.error(`⚠️  DATA BACKFILL FAILED (deploy continues): ${label}`);
+      console.error(error);
+    }
+  };
+
   try {
     // Check if source_customer_pos table exists
     const tableCheck = await client`
@@ -479,7 +506,8 @@ const runMigrations = async () => {
     // in every bottle total. Singles are recorded the way the warehouse already
     // records them — a row whose pack is 1. Quantity-preserving and idempotent:
     // each source row is zeroed as it is converted.
-    await client.unsafe(`
+    await dataFix('loose bottles converted to single-bottle stock', () =>
+      client.unsafe(`
       DO $$
       DECLARE r RECORD;
               singles_lwin text;
@@ -537,8 +565,8 @@ const runMigrations = async () => {
           UPDATE wms_stock SET open_bottles = 0, updated_at = now() WHERE id = r.id;
         END LOOP;
       END $$;
-    `);
-    console.log('✅ loose bottles converted to single-bottle stock');
+    `),
+    );
 
     // --- ledger entries for the converted loose bottles ---------------------
     // The conversion above moved bottles into single-bottle rows without
@@ -546,7 +574,8 @@ const runMigrations = async () => {
     // never arrived — and its "Fix Now" DELETES stock with no receive or
     // repack_in movement. Those bottles are real; the arrival just needs
     // writing down. Idempotent via the reason_code check.
-    await client.unsafe(`
+    await dataFix('ledger entries written for converted single bottles', () =>
+      client.unsafe(`
       INSERT INTO wms_stock_movements (
         movement_number, movement_type, lwin18, product_name, quantity_cases,
         quantity_bottles, to_location_id, notes, reason_code, performed_by, performed_at
@@ -594,8 +623,15 @@ const runMigrations = async () => {
           SELECT 1 FROM wms_stock_movements m
            WHERE m.lwin18 = s.lwin18 AND m.reason_code = 'split_case_backfill'
         );
-    `);
-    console.log('✅ ledger entries written for converted single bottles');
+    `),
+    );
+
+    if (dataFixFailures.length > 0) {
+      console.error(
+        `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,
+      );
+      dataFixFailures.forEach((label) => console.error(`   • ${label}`));
+    }
 
     await client.end();
     process.exit(0);
