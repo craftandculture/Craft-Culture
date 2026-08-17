@@ -540,6 +540,63 @@ const runMigrations = async () => {
     `);
     console.log('✅ loose bottles converted to single-bottle stock');
 
+    // --- ledger entries for the converted loose bottles ---------------------
+    // The conversion above moved bottles into single-bottle rows without
+    // recording a movement, so the reconciliation reads them as stock that
+    // never arrived — and its "Fix Now" DELETES stock with no receive or
+    // repack_in movement. Those bottles are real; the arrival just needs
+    // writing down. Idempotent via the reason_code check.
+    await client.unsafe(`
+      INSERT INTO wms_stock_movements (
+        movement_number, movement_type, lwin18, product_name, quantity_cases,
+        quantity_bottles, to_location_id, notes, reason_code, performed_by, performed_at
+      )
+      SELECT
+        'MOV-SPLITFIX-' || left(md5(s.lwin18), 10),
+        'repack_in',
+        s.lwin18,
+        s.product_name,
+        s.shortfall,
+        s.shortfall,
+        s.location_id,
+        'Bottles from a cracked case, recorded when single bottles became stock rows',
+        'split_case_backfill',
+        (SELECT performed_by FROM wms_stock_movements ORDER BY performed_at DESC LIMIT 1),
+        now()
+      FROM (
+        SELECT st.lwin18,
+               MAX(st.product_name) AS product_name,
+               MIN(st.location_id)  AS location_id,
+               SUM(st.quantity_cases) - COALESCE(MAX(led.expected), 0) AS shortfall
+          FROM wms_stock st
+          LEFT JOIN (
+            SELECT lwin18, SUM(CASE movement_type
+              WHEN 'receive' THEN quantity_cases WHEN 'count' THEN quantity_cases
+              WHEN 'repack_in' THEN quantity_cases
+              WHEN 'adjust' THEN CASE WHEN reason_code IS DISTINCT FROM 'stock_correction' THEN quantity_cases ELSE 0 END
+              WHEN 'pick' THEN -quantity_cases WHEN 'repack_out' THEN -quantity_cases
+              ELSE 0 END) AS expected
+              FROM wms_stock_movements GROUP BY lwin18
+          ) led ON led.lwin18 = st.lwin18
+         WHERE st.case_config = 1
+           -- only where the wine also exists in a bigger pack, i.e. a case was cracked
+           AND EXISTS (
+             SELECT 1 FROM wms_stock c
+              WHERE split_part(c.lwin18, '-', 1) = split_part(st.lwin18, '-', 1)
+                AND split_part(c.lwin18, '-', 2) = split_part(st.lwin18, '-', 2)
+                AND split_part(c.lwin18, '-', 4) = split_part(st.lwin18, '-', 4)
+                AND c.case_config > 1
+           )
+         GROUP BY st.lwin18
+      ) s
+      WHERE s.shortfall > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM wms_stock_movements m
+           WHERE m.lwin18 = s.lwin18 AND m.reason_code = 'split_case_backfill'
+        );
+    `);
+    console.log('✅ ledger entries written for converted single bottles');
+
     await client.end();
     process.exit(0);
   } catch (error) {
