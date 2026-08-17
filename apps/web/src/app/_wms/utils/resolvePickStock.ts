@@ -1,4 +1,4 @@
-import { and, eq, gt, ilike, like } from 'drizzle-orm';
+import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
 
 import { wmsStock } from '@/database/schema';
 
@@ -18,6 +18,7 @@ interface StockRow {
   locationId: string | null;
   availableCases: number | null;
   quantityCases: number | null;
+  openBottles?: number | null;
   caseConfig: number | null;
   lwin18: string;
 }
@@ -52,6 +53,7 @@ const resolvePickStock = async ({
     locationId: wmsStock.locationId,
     availableCases: wmsStock.availableCases,
     quantityCases: wmsStock.quantityCases,
+    openBottles: wmsStock.openBottles,
     caseConfig: wmsStock.caseConfig,
     lwin18: wmsStock.lwin18,
   };
@@ -59,7 +61,11 @@ const resolvePickStock = async ({
   // Rank in-stock rows: exact ordered pack first, then enough available, then
   // the most available. Never returns a zero-quantity row.
   const pick = (rows: StockRow[]) => {
-    const inStock = rows.filter((s) => (s.quantityCases ?? 0) > 0);
+    // Loose bottles from a cracked case are stock too — a single-bottle line
+    // is filled from them without touching a sealed case.
+    const inStock = rows.filter(
+      (s) => (s.quantityCases ?? 0) > 0 || (s.openBottles ?? 0) > 0,
+    );
     if (inStock.length === 0) return null;
     const exact =
       orderedPack > 0 ? inStock.filter((s) => s.caseConfig === orderedPack) : [];
@@ -80,7 +86,7 @@ const resolvePickStock = async ({
       .where(
         and(
           like(wmsStock.lwin18, `${lwin7}-${vintageStr}-%`),
-          gt(wmsStock.quantityCases, 0),
+          or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
     const best = pick(rows);
@@ -112,7 +118,7 @@ const resolvePickStock = async ({
         and(
           ...terms.map((t) => ilike(wmsStock.productName, `%${t}%`)),
           eq(wmsStock.vintage, vintage),
-          gt(wmsStock.quantityCases, 0),
+          or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
     const distinctWines = new Set(

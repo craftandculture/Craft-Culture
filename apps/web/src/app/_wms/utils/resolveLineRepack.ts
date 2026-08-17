@@ -104,11 +104,17 @@ const resolveLineRepack = async ({
       caseConfig: wmsStock.caseConfig,
       quantityCases: wmsStock.quantityCases,
       availableCases: wmsStock.availableCases,
+      openBottles: wmsStock.openBottles,
       locationCode: wmsLocations.locationCode,
     })
     .from(wmsStock)
     .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-    .where(and(gt(wmsStock.quantityCases, 0), or(...conditions)));
+    .where(
+      and(
+        or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+        or(...conditions),
+      ),
+    );
 
   return resolveRepackFromStock(rows, { name, sku, description, quantity, unit });
 };

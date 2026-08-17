@@ -7,7 +7,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, ilike, like } from 'drizzle-orm';
+import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -142,7 +142,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           .where(
             and(
               like(wmsStock.lwin18, packPattern),
-              gt(wmsStock.quantityCases, 0),
+              or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
             ),
           )
           .orderBy(wmsStock.availableCases);
@@ -161,7 +161,12 @@ const adminReleaseToPick = wmsOperatorProcedure
             .select(stockSelect)
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-            .where(and(eq(wmsStock.lwin18, code), gt(wmsStock.quantityCases, 0)))
+            .where(
+              and(
+                eq(wmsStock.lwin18, code),
+                or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+              ),
+            )
             .orderBy(wmsStock.availableCases);
           if (availableStock.length > 0) break;
         }
@@ -209,7 +214,12 @@ const adminReleaseToPick = wmsOperatorProcedure
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-            .where(and(...conditions, gt(wmsStock.quantityCases, 0)))
+            .where(
+              and(
+                ...conditions,
+                or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+              ),
+            )
             .orderBy(wmsStock.availableCases);
         }
       }

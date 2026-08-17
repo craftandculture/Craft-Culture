@@ -176,11 +176,14 @@ const SkeletonRow = ({ density }: { density: RowDensity }) => {
 interface StatusIndicatorProps {
   expiryStatus: string;
   availableCases: number;
+  /** Loose bottles left after a case was cracked — stock, just not in cases. */
+  openBottles?: number;
 }
 
 const StatusIndicator = ({
   expiryStatus,
   availableCases,
+  openBottles = 0,
 }: StatusIndicatorProps) => {
   // Priority: expired > expiring (90 days) > stock level
   if (expiryStatus === 'expired') {
@@ -196,6 +199,15 @@ const StatusIndicator = ({
       <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600">
         <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
         Expiring
+      </span>
+    );
+  }
+  if (availableCases === 0 && openBottles > 0) {
+    // Not "Out" — there are bottles on the shelf, they just aren't a case.
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        {openBottles} loose
       </span>
     );
   }
@@ -838,6 +850,10 @@ const ProductRow = ({
           <td className={`${tdClass} hidden lg:table-cell`}>
             <StatusIndicator
               expiryStatus={product.expiryStatus}
+              openBottles={(product.locations ?? []).reduce(
+                (sum, l) => sum + (l.openBottles ?? 0),
+                0,
+              )}
               availableCases={product.availableCases}
             />
           </td>

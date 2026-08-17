@@ -7,7 +7,7 @@
  * sync backfills the invoice_number column onto the order).
  */
 
-import { desc, eq, gt, inArray } from 'drizzle-orm';
+import { desc, eq, gt, inArray, or } from 'drizzle-orm';
 
 import resolveRepackFromStock from '@/app/_wms/utils/resolveRepackFromStock';
 import type { RepackStockRow } from '@/app/_wms/utils/resolveRepackFromStock';
@@ -68,11 +68,12 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
           caseConfig: wmsStock.caseConfig,
           quantityCases: wmsStock.quantityCases,
           availableCases: wmsStock.availableCases,
+          openBottles: wmsStock.openBottles,
           locationCode: wmsLocations.locationCode,
         })
         .from(wmsStock)
         .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-        .where(gt(wmsStock.quantityCases, 0))
+        .where(or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)))
     : [];
 
   // Fetch item counts for each order

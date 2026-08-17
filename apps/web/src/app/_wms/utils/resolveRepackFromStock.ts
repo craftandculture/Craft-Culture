@@ -9,6 +9,8 @@ export interface RepackStockRow {
   caseConfig: number | null;
   quantityCases: number;
   availableCases: number;
+  /** Loose bottles left in the bay after a case was cracked. */
+  openBottles?: number | null;
   locationCode: string | null;
 }
 
@@ -111,7 +113,7 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
   // Gate on physical stock (quantityCases), NOT availableCases: a reserved
   // 6-pack is still a 6-pack that must be broken to fill a single.
   const candidates = stock.filter((row) => {
-    if (row.quantityCases <= 0) return false;
+    if (row.quantityCases <= 0 && (row.openBottles ?? 0) <= 0) return false;
     if (lwinPrefix && row.lwin18.startsWith(lwinPrefix)) return true;
     if (terms.length === 0) return false;
     // Vintage must agree before a name match is trusted — picking the wrong

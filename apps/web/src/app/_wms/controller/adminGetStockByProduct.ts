@@ -39,9 +39,15 @@ const adminGetStockByProduct = wmsOperatorProcedure
     } = input;
 
     // Exclude zero-quantity stock records unless explicitly requested
-    const conditions = includeZeroQty
-      ? []
-      : [gt(wmsStock.quantityCases, 0)];
+    // A cracked case leaves loose bottles with quantityCases 0 — filtering on
+    // cases alone made those wines vanish from the explorer entirely, which
+    // reads as "we don't have it" when five bottles are sitting in the bay.
+    const conditions = [];
+    if (!includeZeroQty) {
+      conditions.push(
+        sql`(${wmsStock.quantityCases} > 0 OR ${wmsStock.openBottles} > 0)`,
+      );
+    }
 
     if (search) {
       // Searching by a code has to survive the two ways a code differs from the
