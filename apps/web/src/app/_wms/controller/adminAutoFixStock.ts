@@ -5,6 +5,7 @@ import { wmsStock, wmsStockMovements } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
+import planLedgerReconcile from '../utils/planLedgerReconcile';
 
 /**
  * Reconcile the ledger to the stock that is physically on the shelf.
@@ -23,7 +24,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  */
 const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
   const fixes: Array<{
-    type: 'recorded_orphan' | 'merged_duplicate' | 'recorded_repack';
+    type: 'recorded_orphan' | 'merged_duplicate' | 'recorded_repack' | 'needs_count';
     lwin18: string;
     productName: string;
     casesBefore: number;
@@ -31,12 +32,8 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
     detail: string;
   }> = [];
 
-  // 0. A wine over on one code and under by exactly the same on another is one
-  // event, not two: its pack was re-designated and the stock row's LWIN was
-  // rewritten while the ledger kept crediting the old code. Recording the
-  // repack pair clears BOTH lines and tells the truth about what happened —
-  // whereas treating the over-count alone as a fresh arrival would leave the
-  // old code permanently short.
+  // Reconcile the ledger to the shelf. planLedgerReconcile decides WHAT to
+  // record (and is unit-tested); this block writes it.
   const ledgerVsStock = await db.execute(sql`
     SELECT COALESCE(m.lwin18, s.lwin18) AS lwin18,
            COALESCE(s.product_name, '') AS product_name,
@@ -56,7 +53,6 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
                MAX(product_name) AS product_name, MIN(location_id) AS location_id
         FROM wms_stock GROUP BY lwin18
       ) s ON s.lwin18 = m.lwin18
-     WHERE COALESCE(s.actual_cases, 0) - COALESCE(m.expected_cases, 0) <> 0
   `);
 
   const diffRows = (
@@ -70,130 +66,98 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
     location_id: string | null;
   }>;
 
-  /** Same wine, vintage and bottle size — the pack segment is what moved. */
-  const wineKey = (lwin18: string) => {
-    const parts = String(lwin18).split('-');
-    return parts.length === 4
-      ? `${parts[0]}-${parts[1]}-${parts[3]}`
-      : String(lwin18);
-  };
+  const plan = planLedgerReconcile(
+    diffRows.map((row) => ({
+      lwin18: String(row.lwin18),
+      productName: String(row.product_name ?? ''),
+      diff: Number(row.diff),
+      locationId: row.location_id,
+    })),
+  );
 
-  const pairedLwins = new Set<string>();
-  const byWine = new Map<string, typeof diffRows>();
-  for (const row of diffRows) {
-    const key = wineKey(row.lwin18);
-    byWine.set(key, [...(byWine.get(key) ?? []), row]);
-  }
+  const reconciled = new Set<string>();
 
-  for (const rows of byWine.values()) {
-    const over = rows.filter((r) => Number(r.diff) > 0);
-    const under = rows.filter((r) => Number(r.diff) < 0);
+  // A pack re-designation: out of the old code, into the new.
+  for (const repack of plan.repacks) {
+    reconciled.add(repack.from.lwin18);
+    reconciled.add(repack.to.lwin18);
 
-    for (const gained of over) {
-      const cases = Number(gained.diff);
-      const lost = under.find(
-        (u) => Math.abs(Number(u.diff)) === cases && !pairedLwins.has(u.lwin18),
-      );
-      if (!lost || pairedLwins.has(gained.lwin18)) continue;
-
-      pairedLwins.add(gained.lwin18);
-      pairedLwins.add(lost.lwin18);
-
-      await db.insert(wmsStockMovements).values({
-        movementNumber: await generateMovementNumber(),
-        movementType: 'repack_out',
-        lwin18: lost.lwin18,
-        productName: lost.product_name || gained.product_name,
-        quantityCases: cases,
-        fromLocationId: gained.location_id ?? undefined,
-        notes: `RECONCILE: pack re-designated to ${gained.lwin18} — recorded as a repack, stock untouched`,
-        reasonCode: 'pack_change',
-        performedBy: ctx.user.id,
-        performedAt: new Date(),
-      });
-
-      await db.insert(wmsStockMovements).values({
-        movementNumber: await generateMovementNumber(),
-        movementType: 'repack_in',
-        lwin18: gained.lwin18,
-        productName: gained.product_name || lost.product_name,
-        quantityCases: cases,
-        toLocationId: gained.location_id ?? undefined,
-        notes: `RECONCILE: pack re-designated from ${lost.lwin18} — recorded as a repack, stock untouched`,
-        reasonCode: 'pack_change',
-        performedBy: ctx.user.id,
-        performedAt: new Date(),
-      });
-
-      fixes.push({
-        type: 'recorded_repack',
-        lwin18: gained.lwin18,
-        productName: gained.product_name || lost.product_name,
-        casesBefore: cases,
-        casesAfter: cases,
-        detail: `Recorded ${cases} case(s) moving from ${lost.lwin18} to ${gained.lwin18} (pack re-designation) — CHECK the bottle count, the pack size changed`,
-      });
-    }
-  }
-
-  // 1. Find orphan stock records (stock with no matching receive movement)
-  const orphanStock = await db
-    .select({
-      id: wmsStock.id,
-      lwin18: wmsStock.lwin18,
-      productName: wmsStock.productName,
-      locationId: wmsStock.locationId,
-      quantityCases: wmsStock.quantityCases,
-      shipmentId: wmsStock.shipmentId,
-    })
-    .from(wmsStock)
-    .where(
-      sql`NOT EXISTS (
-        SELECT 1 FROM ${wmsStockMovements} m
-        WHERE m.lwin18 = ${wmsStock.lwin18}
-        AND m.movement_type IN ('receive', 'repack_in')
-        AND (m.shipment_id = ${wmsStock.shipmentId} OR (m.shipment_id IS NULL AND ${wmsStock.shipmentId} IS NULL))
-      )`,
-    );
-
-  for (const orphan of orphanStock) {
-    // Record the arrival the ledger is missing. It does NOT delete the stock.
-    //
-    // This used to delete any stock row with no matching receive movement,
-    // which is backwards: the shelf is the truth and the ledger is derived from
-    // it. A gap means the paperwork is incomplete, not that the wine is
-    // imaginary — and a missing movement is exactly what a repack, a pack
-    // correction or a split case leaves behind. Pressed once, it would have
-    // destroyed 18 cases of San Polo sitting in A-02-01.
-    //
-    // The reason code must NOT be 'stock_correction': the reconciliation
-    // excludes those from the ledger, so the discrepancy would never clear.
-    if (orphan.quantityCases <= 0) continue;
-    // Already accounted for by the repack pair above.
-    if (pairedLwins.has(orphan.lwin18)) continue;
-
-    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
-      movementNumber,
-      movementType: 'adjust',
-      lwin18: orphan.lwin18,
-      productName: orphan.productName,
-      quantityCases: orphan.quantityCases,
-      toLocationId: orphan.locationId,
-      notes:
-        'RECONCILE: stock counted in the bay with no arrival on the ledger — arrival recorded, stock left alone',
-      reasonCode: 'reconciliation',
+      movementNumber: await generateMovementNumber(),
+      movementType: 'repack_out',
+      lwin18: repack.from.lwin18,
+      productName: repack.from.productName || repack.to.productName,
+      quantityCases: repack.cases,
+      fromLocationId: repack.to.locationId ?? undefined,
+      notes: `RECONCILE: pack re-designated to ${repack.to.lwin18} — recorded as a repack, stock untouched`,
+      reasonCode: 'pack_change',
+      performedBy: ctx.user.id,
+      performedAt: new Date(),
+    });
+
+    await db.insert(wmsStockMovements).values({
+      movementNumber: await generateMovementNumber(),
+      movementType: 'repack_in',
+      lwin18: repack.to.lwin18,
+      productName: repack.to.productName || repack.from.productName,
+      quantityCases: repack.cases,
+      toLocationId: repack.to.locationId ?? undefined,
+      notes: `RECONCILE: pack re-designated from ${repack.from.lwin18} — recorded as a repack, stock untouched`,
+      reasonCode: 'pack_change',
+      performedBy: ctx.user.id,
+      performedAt: new Date(),
+    });
+
+    fixes.push({
+      type: 'recorded_repack',
+      lwin18: repack.to.lwin18,
+      productName: repack.to.productName || repack.from.productName,
+      casesBefore: repack.cases,
+      casesAfter: repack.cases,
+      detail: `Recorded ${repack.cases} case(s) moving from ${repack.from.lwin18} to ${repack.to.lwin18} (pack re-designation) — CHECK the bottle count, the pack size changed`,
+    });
+  }
+
+  // Stock the ledger never saw arrive. Sized by the GAP, not by what is left in
+  // the bay: bottles from a cracked case may since have been picked, leaving a
+  // row at zero that a stock-sized entry could never close.
+  for (const topUp of plan.topUps) {
+    reconciled.add(topUp.row.lwin18);
+
+    await db.insert(wmsStockMovements).values({
+      movementNumber: await generateMovementNumber(),
+      movementType: topUp.fromCrackedCase ? 'repack_in' : 'adjust',
+      lwin18: topUp.row.lwin18,
+      productName: topUp.row.productName,
+      quantityCases: topUp.cases,
+      quantityBottles: topUp.fromCrackedCase ? topUp.cases : undefined,
+      toLocationId: topUp.row.locationId ?? undefined,
+      notes: topUp.fromCrackedCase
+        ? 'RECONCILE: bottles from a cracked case, arrival never recorded — stock untouched'
+        : 'RECONCILE: stock counted in the bay with no arrival on the ledger — arrival recorded, stock left alone',
+      reasonCode: topUp.fromCrackedCase ? 'split_case' : 'reconciliation',
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
     fixes.push({
       type: 'recorded_orphan',
-      lwin18: orphan.lwin18,
-      productName: orphan.productName,
-      casesBefore: orphan.quantityCases,
-      casesAfter: orphan.quantityCases,
-      detail: `Recorded ${orphan.quantityCases} case(s) onto the ledger (stock untouched)`,
+      lwin18: topUp.row.lwin18,
+      productName: topUp.row.productName,
+      casesBefore: topUp.cases,
+      casesAfter: topUp.cases,
+      detail: `Recorded ${topUp.cases} case(s) onto the ledger (stock untouched)`,
+    });
+  }
+
+  for (const row of plan.needsCount) {
+    fixes.push({
+      type: 'needs_count',
+      lwin18: row.lwin18,
+      productName: row.productName,
+      casesBefore: Math.abs(row.diff),
+      casesAfter: Math.abs(row.diff),
+      detail: `Ledger records ${Math.abs(row.diff)} case(s) more than the bay holds — count this wine, it cannot be fixed automatically`,
     });
   }
 
