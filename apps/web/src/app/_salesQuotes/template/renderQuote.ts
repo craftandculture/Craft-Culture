@@ -47,6 +47,7 @@ const renderQuote = (quote: RenderableQuote) => {
     whLabel: options.whLabel || 'UAE Warehouse',
     ibLabel: options.ibLabel || 'Inbound',
     extraCol: options.extraCol,
+    gpScenarios: options.gpScenarios,
   };
 
   const orderUnit = options.orderUnit === 'case' ? 'case' : 'bottle';
@@ -70,7 +71,7 @@ const renderQuote = (quote: RenderableQuote) => {
 
   let rows = '';
   for (const region of regions) {
-    rows += `<tr class="reg" data-reg="${escapeHtml(region)}"><td colspan="${labels.extraCol ? 9 : 8}">${escapeHtml(region)}</td></tr>\n`;
+    rows += `<tr class="reg" data-reg="${escapeHtml(region)}"><td colspan="${8 + (labels.extraCol ? 1 : 0) + (labels.gpScenarios?.length ? 2 : 0)}">${escapeHtml(region)}</td></tr>\n`;
     const inRegion = items
       .filter((item) => item.region === region)
       .sort(
@@ -164,6 +165,20 @@ const renderQuote = (quote: RenderableQuote) => {
     '{{UNIT_HEAD}}': perBottle ? 'Bottles' : 'Cases',
     '{{XCOL_TH}}': labels.extraCol
       ? `<th class="r xc" id="hX">${escapeHtml(labels.extraCol.label)}</th>`
+      : '',
+    '{{GPCOL_TH}}': labels.gpScenarios?.length
+      ? '<th class="r sc" id="hS">Sell</th><th class="r sc" id="hG">Profit</th>'
+      : '',
+    '{{GP_TOGGLE}}': labels.gpScenarios?.length
+      ? '<div class="toggle" title="Sales scenario — your sell price and profit at a target GP">' +
+        '<button class="gpb on" data-gp="0" onclick="setGp(0)">GP off</button>' +
+        labels.gpScenarios
+          .map(
+            (gp) =>
+              `<button class="gpb" data-gp="${gp}" onclick="setGp(${gp})">${Math.round(gp * 100)}% GP</button>`,
+          )
+          .join('') +
+        '</div>'
       : '',
   };
 

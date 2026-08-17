@@ -5387,6 +5387,12 @@ export interface SalesQuoteOptions {
    * Standard on The Bottle Store quotes: { label: 'TBS UAE', multiplier: 1.18 }.
    */
   extraCol?: { label: string; multiplier: number };
+  /**
+   * Client-side sales-scenario toggle, e.g. [0.2, 0.25]. Adds "Sell @ N% GP"
+   * and the cash profit at that GP, computed off `extraCol` (the client's cost)
+   * where present. Off by default so a quote is not cluttered.
+   */
+  gpScenarios?: number[];
 }
 
 export const salesQuotes = pgTable(

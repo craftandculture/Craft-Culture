@@ -10,6 +10,7 @@ export interface QuoteLabels {
   whLabel: string;
   ibLabel: string;
   extraCol?: { label: string; multiplier: number };
+  gpScenarios?: number[];
 }
 
 /** A quote line with every display decision already resolved. */
@@ -90,4 +91,6 @@ export interface QuoteFormState {
   /** blank label = no extra column */
   extraColLabel: string;
   extraColMultiplier: number;
+  /** comma-separated GP percentages, e.g. "20, 25"; blank = no toggle */
+  gpScenarios: string;
 }

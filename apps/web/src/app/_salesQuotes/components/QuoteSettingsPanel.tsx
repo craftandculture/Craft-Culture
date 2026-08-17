@@ -242,6 +242,17 @@ const QuoteSettingsPanel = ({ form, onChange }: QuoteSettingsPanelProps) => (
             onChange={(event) => onChange({ extraColLabel: event.target.value })}
           />
         </Field>
+        <Field
+          label="Sales-scenario GP toggle"
+          hint="e.g. “20, 25”. Off by default; the client switches it on."
+        >
+          <Input
+            placeholder="e.g. 20, 25"
+            value={form.gpScenarios}
+            onChange={(event) => onChange({ gpScenarios: event.target.value })}
+          />
+        </Field>
+
         {form.extraColLabel.trim() ? (
           <Field
             label="Multiplier"

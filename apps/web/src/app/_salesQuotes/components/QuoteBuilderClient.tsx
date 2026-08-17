@@ -41,6 +41,7 @@ const emptyForm = (): QuoteFormState => ({
   title: '',
   extraColLabel: '',
   extraColMultiplier: 1.18,
+  gpScenarios: '',
 });
 
 /**
@@ -131,6 +132,9 @@ const QuoteBuilderClient = () => {
       title: options.title ?? '',
       extraColLabel: options.extraCol?.label ?? '',
       extraColMultiplier: options.extraCol?.multiplier ?? 1.18,
+      gpScenarios: (options.gpScenarios ?? [])
+        .map((gp) => String(Math.round(gp * 100)))
+        .join(', '),
     });
     setLines(quote.lines as QuoteLineDraft[]);
     setIsEditing(true);
@@ -150,6 +154,13 @@ const QuoteBuilderClient = () => {
     // sections keep the order they first appear in, so the builder's ordering
     // is what the client sees
     const regionOrder = [...new Set(lines.map((line) => line.region))];
+
+    // "20, 25" -> [0.2, 0.25]; anything not a sane percentage is dropped
+    const gpScenarios = form.gpScenarios
+      .split(',')
+      .map((part) => Number(part.trim().replace('%', '')))
+      .filter((pct) => pct > 0 && pct < 100)
+      .map((pct) => Math.round(pct) / 100);
 
     save.mutate({
       id: form.id,
@@ -181,6 +192,7 @@ const QuoteBuilderClient = () => {
               multiplier: form.extraColMultiplier || 1,
             }
           : undefined,
+        gpScenarios: gpScenarios.length ? gpScenarios : undefined,
         regionOrder,
       },
     });

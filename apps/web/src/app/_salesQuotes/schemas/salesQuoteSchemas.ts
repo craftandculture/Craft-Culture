@@ -42,6 +42,8 @@ export const salesQuoteOptionsSchema = z.object({
   extraCol: z
     .object({ label: z.string().min(1), multiplier: z.number().positive() })
     .optional(),
+  /** sales-scenario GP fractions offered as a client-side toggle, e.g. [0.2, 0.25] */
+  gpScenarios: z.array(z.number().gt(0).lt(1)).max(4).optional(),
 });
 
 /**

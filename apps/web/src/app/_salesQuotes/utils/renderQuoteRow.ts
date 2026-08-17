@@ -19,6 +19,10 @@ import largeFormatLabel from './largeFormatLabel';
  * @param labels - Resolved label set for this quote
  * @returns The `<tr>` markup
  */
+/** How many optional columns sit after Total. */
+const trailingCols = (labels: QuoteLabels) =>
+  (labels.extraCol ? 1 : 0) + (labels.gpScenarios?.length ? 2 : 0);
+
 const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
   const format = labels.bottlesOnly
     ? line.size
@@ -76,7 +80,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
       `<tr class="oosrow" data-reg="${escapeHtml(line.region)}" data-s="${search}"><td class="cb"></td>` +
       `<td class="w" data-label="Wine"><s>${escapeHtml(line.wine)}</s>${noteLine}</td>` +
       `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
-      `<td class="c" data-label="Avail">0</td><td class="status" colspan="${labels.extraCol ? 4 : 3}"><span class="oos-badge"><span class="oos-dot"></span>Out of Stock</span></td></tr>\n`
+      `<td class="c" data-label="Avail">0</td><td class="status" colspan="${3 + trailingCols(labels)}"><span class="oos-badge"><span class="oos-dot"></span>Out of Stock</span></td></tr>\n`
     );
   }
 
@@ -136,6 +140,17 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
       `data-aed="${extraAed}" data-usd="${extraUsd}"></td>`;
   }
 
+  let scenarioCells = '';
+  if (labels.gpScenarios?.length) {
+    const multiplier = labels.extraCol?.multiplier ?? 1;
+    const baseAed = Math.round(unitAed * multiplier);
+    const baseUsd = Math.round(unitUsd * multiplier);
+    extraAttrs += ` data-saed="${baseAed}" data-susd="${baseUsd}"`;
+    scenarioCells =
+      '<td class="sc sell first" data-label="Sell"></td>' +
+      '<td class="sc prof" data-label="Profit"></td>';
+  }
+
   return (
     `<tr class="item" data-reg="${escapeHtml(line.region)}" data-s="${search}" data-maxc="${units}" data-unit="${line.unit}" ` +
     `data-wine="${escapeHtml(line.wine)}" data-vtg="${escapeHtml(line.vintage)}" data-fmt="${escapeHtml(formatText)}" data-note="${escapeHtml(note)}" data-avail="${units}" ` +
@@ -145,7 +160,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
     `<button class="qb" onclick="event.stopPropagation();chg(event,1)">+</button></div></td>` +
     `<td class="w" data-label="Wine">${escapeHtml(line.wine)}${stockChip}${promoChip}${pcChip}${repackChip}${noteLine}</td>` +
     `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
-    `<td class="c" data-label="Avail">${availCell}</td>${bottleCell}${caseCell}<td class="tp r" data-label="Total"></td>${extraCell}</tr>\n`
+    `<td class="c" data-label="Avail">${availCell}</td>${bottleCell}${caseCell}<td class="tp r" data-label="Total"></td>${extraCell}${scenarioCells}</tr>\n`
   );
 };
 
