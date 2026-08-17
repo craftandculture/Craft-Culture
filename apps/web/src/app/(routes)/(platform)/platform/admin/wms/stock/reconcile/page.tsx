@@ -114,14 +114,18 @@ const ReconcilePage = () => {
                 variant="default"
                 size="sm"
                 onClick={() => {
-                  if (confirm('Auto-fix will delete orphan records and merge duplicates. Continue?')) {
+                  if (
+                    confirm(
+                      'Reconcile records the movements the ledger is missing — a pack re-designation as a repack, and stock that arrived without paperwork as an arrival.\n\nIt never changes a stock quantity and never deletes stock. Under-counts are listed for you to count, not fixed.\n\nContinue?',
+                    )
+                  ) {
                     autoFixMutation.mutate({});
                   }
                 }}
                 disabled={autoFixMutation.isPending}
               >
                 <ButtonContent iconLeft={IconWand}>
-                  {autoFixMutation.isPending ? 'Fixing...' : 'Auto-Fix'}
+                  {autoFixMutation.isPending ? 'Reconciling…' : 'Reconcile'}
                 </ButtonContent>
               </Button>
             )}
@@ -192,12 +196,14 @@ const ReconcilePage = () => {
           </Card>
         )}
 
-        {/* Auto-Fix Results */}
+        {/* Reconcile results */}
         {autoFixMutation.data && (
           <Card className="border-blue-200 bg-blue-50">
             <CardContent className="p-4">
               <Typography variant="headingSm" className="mb-2 text-blue-800">
-                Auto-Fix Complete: {autoFixMutation.data.totalFixes} fixes applied
+                Reconciled — {autoFixMutation.data.totalFixes} entr
+                {autoFixMutation.data.totalFixes === 1 ? 'y' : 'ies'} recorded
+                (no stock was changed)
               </Typography>
               {autoFixMutation.data.fixes.length > 0 ? (
                 <div className="space-y-2">

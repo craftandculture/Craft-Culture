@@ -24,7 +24,10 @@ import planLedgerReconcile from '../utils/planLedgerReconcile';
  */
 const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
   const fixes: Array<{
-    type: 'recorded_orphan' | 'merged_duplicate' | 'recorded_repack' | 'needs_count';
+    type:       | 'recorded_orphan'
+      | 'merged_duplicate'
+      | 'recorded_pack_correction'
+      | 'needs_count';
     lwin18: string;
     productName: string;
     casesBefore: number;
@@ -77,44 +80,46 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
 
   const reconciled = new Set<string>();
 
-  // A pack re-designation: out of the old code, into the new.
-  for (const repack of plan.repacks) {
+  // Booked under the wrong pack code. The wine never changed — San Polo's cases
+  // are labelled "3 bottles" and were received as 6-packs — so this corrects the
+  // ledger on both codes rather than claiming a repack that never happened.
+  for (const repack of plan.packCorrections) {
     reconciled.add(repack.from.lwin18);
     reconciled.add(repack.to.lwin18);
 
     await db.insert(wmsStockMovements).values({
       movementNumber: await generateMovementNumber(),
-      movementType: 'repack_out',
+      movementType: 'adjust',
       lwin18: repack.from.lwin18,
       productName: repack.from.productName || repack.to.productName,
-      quantityCases: repack.cases,
+      quantityCases: -repack.cases,
       fromLocationId: repack.to.locationId ?? undefined,
-      notes: `RECONCILE: pack re-designated to ${repack.to.lwin18} — recorded as a repack, stock untouched`,
-      reasonCode: 'pack_change',
+      notes: `RECONCILE: received under the wrong pack code — these cases are ${repack.to.lwin18}. Ledger corrected, stock untouched`,
+      reasonCode: 'pack_correction',
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
     await db.insert(wmsStockMovements).values({
       movementNumber: await generateMovementNumber(),
-      movementType: 'repack_in',
+      movementType: 'adjust',
       lwin18: repack.to.lwin18,
       productName: repack.to.productName || repack.from.productName,
       quantityCases: repack.cases,
       toLocationId: repack.to.locationId ?? undefined,
-      notes: `RECONCILE: pack re-designated from ${repack.from.lwin18} — recorded as a repack, stock untouched`,
-      reasonCode: 'pack_change',
+      notes: `RECONCILE: these cases were received under ${repack.from.lwin18} but are this pack. Ledger corrected, stock untouched`,
+      reasonCode: 'pack_correction',
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
     fixes.push({
-      type: 'recorded_repack',
+      type: 'recorded_pack_correction',
       lwin18: repack.to.lwin18,
       productName: repack.to.productName || repack.from.productName,
       casesBefore: repack.cases,
       casesAfter: repack.cases,
-      detail: `Recorded ${repack.cases} case(s) moving from ${repack.from.lwin18} to ${repack.to.lwin18} (pack re-designation) — CHECK the bottle count, the pack size changed`,
+      detail: `Corrected ${repack.cases} case(s) from ${repack.from.lwin18} to ${repack.to.lwin18} — received under the wrong pack code`,
     });
   }
 

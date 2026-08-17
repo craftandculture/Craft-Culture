@@ -7,8 +7,11 @@ export interface LedgerDiff {
 }
 
 export interface ReconcilePlan {
-  /** One wine re-designated from one pack to another: out of A, into B. */
-  repacks: { from: LedgerDiff; to: LedgerDiff; cases: number }[];
+  /**
+   * One wine booked under the wrong pack code: the cases were always the pack
+   * the stock row now states, so the ledger is moved, not the wine.
+   */
+  packCorrections: { from: LedgerDiff; to: LedgerDiff; cases: number }[];
   /** Stock the ledger never saw arrive — record the arrival, keep the stock. */
   topUps: { row: LedgerDiff; cases: number; fromCrackedCase: boolean }[];
   /** Ledger claims more than the bay holds — a person has to count these. */
@@ -32,10 +35,11 @@ const packOf = (lwin18: string) => {
  * The bay is the truth. Every entry below records something that physically
  * happened but was never written down; none of them changes a stock quantity.
  *
- * - A wine over on one pack code and under by the SAME amount on another is one
- *   event — its pack was re-designated — so it is recorded as a repack pair.
- *   Treating the over-count alone as an arrival would leave the old code short
- *   for good.
+ * - A wine over on one pack code and under by the SAME amount on another was
+ *   booked under the wrong pack: San Polo was received as a 6-pack when the
+ *   cases are labelled "3 bottles". Nothing was re-packed, so the ledger is
+ *   corrected on both codes. Treating the over-count alone as an arrival would
+ *   leave the old code short for good.
  * - Anything still over gets its arrival recorded, for the size of the GAP, not
  *   the size of the stock: bottles from a cracked case may since have been
  *   picked, leaving a row at zero with a negative ledger. Sizing by stock would
@@ -49,13 +53,13 @@ const packOf = (lwin18: string) => {
  *     { lwin18: '1103034-2019-03-00750', productName: 'San Polo', diff: 18, locationId: 'a' },
  *     { lwin18: '1103034-2019-06-00750', productName: 'San Polo', diff: -18, locationId: null },
  *   ]);
- *   // one repack: 18 cases from …-06-… into …-03-…
+ *   // one pack correction: 18 cases from …-06-… to …-03-…
  *
  * @param rows - Every wine whose ledger and stock disagree
  * @returns What to record, split by kind
  */
 const planLedgerReconcile = (rows: LedgerDiff[]): ReconcilePlan => {
-  const plan: ReconcilePlan = { repacks: [], topUps: [], needsCount: [] };
+  const plan: ReconcilePlan = { packCorrections: [], topUps: [], needsCount: [] };
 
   // Group EVERY row, including ones that balance: a 6-pack row that agrees with
   // its ledger is still the evidence that the matching single-bottle row came
@@ -79,7 +83,7 @@ const planLedgerReconcile = (rows: LedgerDiff[]): ReconcilePlan => {
       if (!lost) continue;
       paired.add(gained.lwin18);
       paired.add(lost.lwin18);
-      plan.repacks.push({ from: lost, to: gained, cases: gained.diff });
+      plan.packCorrections.push({ from: lost, to: gained, cases: gained.diff });
     }
 
     for (const row of wineRows) {
