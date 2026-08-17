@@ -17,7 +17,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  */
 const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
   const fixes: Array<{
-    type: 'deleted_orphan' | 'merged_duplicate';
+    type: 'recorded_orphan' | 'merged_duplicate';
     lwin18: string;
     productName: string;
     casesBefore: number;
@@ -46,31 +46,41 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
     );
 
   for (const orphan of orphanStock) {
-    // Create adjustment movement for audit trail
+    // Record the arrival the ledger is missing. It does NOT delete the stock.
+    //
+    // This used to delete any stock row with no matching receive movement,
+    // which is backwards: the shelf is the truth and the ledger is derived from
+    // it. A gap means the paperwork is incomplete, not that the wine is
+    // imaginary — and a missing movement is exactly what a repack, a pack
+    // correction or a split case leaves behind. Pressed once, it would have
+    // destroyed 18 cases of San Polo sitting in A-02-01.
+    //
+    // The reason code must NOT be 'stock_correction': the reconciliation
+    // excludes those from the ledger, so the discrepancy would never clear.
+    if (orphan.quantityCases <= 0) continue;
+
     const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
       movementNumber,
       movementType: 'adjust',
       lwin18: orphan.lwin18,
       productName: orphan.productName,
-      quantityCases: -orphan.quantityCases,
-      fromLocationId: orphan.locationId,
-      notes: 'AUTO-FIX: Deleted orphan stock record (no matching receive movement)',
-      reasonCode: 'stock_correction',
+      quantityCases: orphan.quantityCases,
+      toLocationId: orphan.locationId,
+      notes:
+        'RECONCILE: stock counted in the bay with no arrival on the ledger — arrival recorded, stock left alone',
+      reasonCode: 'reconciliation',
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
-    // Delete the orphan
-    await db.delete(wmsStock).where(eq(wmsStock.id, orphan.id));
-
     fixes.push({
-      type: 'deleted_orphan',
+      type: 'recorded_orphan',
       lwin18: orphan.lwin18,
       productName: orphan.productName,
       casesBefore: orphan.quantityCases,
-      casesAfter: 0,
-      detail: `Deleted ${orphan.quantityCases} cases (no receive movement found)`,
+      casesAfter: orphan.quantityCases,
+      detail: `Recorded ${orphan.quantityCases} case(s) onto the ledger (stock untouched)`,
     });
   }
 

@@ -260,10 +260,11 @@ const WMSDashboardContent = () => {
         {hasReconcileIssues &&
           (() => {
             const disc = reconcileData?.summary.discrepancy ?? 0;
-            // Over-count = physical stock exceeds the ledger → "Fix Now"
-            // (delete orphans / merge duplicates) is the right tool. An
-            // under-count means the LEDGER over-records; Fix Now can't help, so
-            // point the user at the offending wines instead of a dead-end button.
+            // Over-count = the bay holds more than the ledger accounts for,
+            // which is a paperwork gap: reconciling RECORDS the arrival and
+            // leaves the wine alone (it used to delete the stock). An
+            // under-count means the ledger over-records, which reconciling
+            // can't decide on its own — point at the wines instead.
             const isOver = disc > 0;
             const culprits = reconcileData?.topDiscrepancies ?? [];
             return (
@@ -318,16 +319,18 @@ const WMSDashboardContent = () => {
                             variant="bodyXs"
                             className="mt-2 block text-red-600/80 dark:text-red-400/70"
                           >
-                            &ldquo;Fix Now&rdquo; only clears orphan/duplicate stock (for
-                            over-counts). An under-count means the ledger over-records —
-                            review the wines above.
+                            Reconciling records missing arrivals for an over-count. An
+                            under-count means the ledger over-records — that needs a
+                            count of the wines above, not an automatic fix.
                           </Typography>
                         )}
                       </div>
                     </div>
                     <Button colorRole="danger" size="sm" asChild>
                       <Link href="/platform/admin/wms/stock/reconcile">
-                        <ButtonContent>{isOver ? 'Fix Now' : 'Review'}</ButtonContent>
+                        <ButtonContent>
+                          {isOver ? 'Reconcile' : 'Review'}
+                        </ButtonContent>
                       </Link>
                     </Button>
                   </div>
