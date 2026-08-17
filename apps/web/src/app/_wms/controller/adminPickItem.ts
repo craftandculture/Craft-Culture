@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like, sql } from 'drizzle-orm';
+import { and, eq, ilike, like, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -108,7 +108,7 @@ const adminPickItem = wmsOperatorProcedure
     // bay is a candidate.
     const packPattern = lwinPackAgnosticPattern(pickListItem.lwin18);
 
-    const candidates = await db
+    let candidates = await db
       .select()
       .from(wmsStock)
       .where(
@@ -119,6 +119,45 @@ const adminPickItem = wmsOperatorProcedure
             : eq(wmsStock.lwin18, pickListItem.lwin18),
         ),
       );
+
+    // Last resort: the product name AT THIS BAY. Lines released before their
+    // wine had a usable code carry an empty or drifted LWIN, and no code can
+    // ever match — the operator is standing at the right bay being told the
+    // stock doesn't exist. Only trusted when every significant word matches and
+    // the hits are all the same wine, so a lookalike cuvée is never picked.
+    if (candidates.length === 0) {
+      const terms = pickListItem.productName
+        .replace(/_/g, ' ')
+        .replace(
+          /\(\s*(?:single bottle|single|\d+\s*(?:x|pack|packs|bottles?|btl))\s*\)/gi,
+          ' ',
+        )
+        .split(/[\s,\-]+/)
+        .filter((term) => term.length > 2 && !/^(19|20)\d{2}$/.test(term))
+        .slice(0, 8);
+
+      if (terms.length > 0) {
+        const byName = await db
+          .select()
+          .from(wmsStock)
+          .where(
+            and(
+              eq(wmsStock.locationId, pickedFromLocationId),
+              ...terms.map((term) =>
+                ilike(
+                  wmsStock.productName,
+                  `%${term.replace(/[^\x20-\x7E]/g, '%')}%`,
+                ),
+              ),
+            ),
+          );
+
+        const distinctWines = new Set(
+          byName.map((row) => row.lwin18.split('-')[0]).filter(Boolean),
+        );
+        if (distinctWines.size === 1) candidates = byName;
+      }
+    }
 
     if (candidates.length === 0) {
       throw new TRPCError({

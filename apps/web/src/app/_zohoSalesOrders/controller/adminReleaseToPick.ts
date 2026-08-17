@@ -258,11 +258,16 @@ const adminReleaseToPick = wmsOperatorProcedure
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          // Only store an authoritative LWIN: the matched stock's LWIN, or the
-          // normalized order LWIN. Never store the raw Zoho SKU — an unmatched
-          // SKU produces a pick line that can't be found and fails cryptically
-          // on the warehouse floor.
-          lwin18: suggestedStock?.lwin18 ?? itemLwin18 ?? '',
+          // Prefer the matched stock's LWIN, then the order's own lwin18
+          // column, then the SKU normalised to LWIN18 shape. That last fallback
+          // matters: zohoSalesOrderItems.lwin18 is usually null (the code lives
+          // in `sku`), so without it an unmatched line was released with an
+          // EMPTY code — and an empty code can never find stock at the bay,
+          // which reads on the scanner as "No stock found at this location".
+          lwin18:
+            suggestedStock?.lwin18 ??
+            itemLwin18 ??
+            (item.sku ? normalizeLwin18(item.sku) : ''),
           productName: item.name,
           quantityCases: casesNeeded,
           quantityBottles,
