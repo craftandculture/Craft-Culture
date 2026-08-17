@@ -166,6 +166,7 @@ const renderQuote = (quote: RenderableQuote) => {
     '{{XCOL_TH}}': labels.extraCol
       ? `<th class="r xc" id="hX">${escapeHtml(labels.extraCol.label)}</th>`
       : '',
+    '{{GP_LIST}}': `[${(labels.gpScenarios ?? []).join(',')}]`,
     '{{GPCOL_TH}}': labels.gpScenarios?.length
       ? '<th class="r sc" id="hS">Sell</th><th class="r sc" id="hG">Profit</th>'
       : '',

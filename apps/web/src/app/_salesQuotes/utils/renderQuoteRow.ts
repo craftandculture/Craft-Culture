@@ -56,6 +56,18 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
     ...(line.note ? [`Note: ${line.note}`] : []),
   ].join(' | ');
 
+  // separate columns in the CSV export beat one blended string
+  const flags = [
+    ...(line.promo ? ['Discount Promo'] : []),
+    ...(line.pc ? [labels.pcLabel] : []),
+    ...(line.repack ? ['Repack'] : []),
+  ].join('; ');
+
+  const exportAttrs =
+    ` data-sect="${escapeHtml(line.region)}" data-loc="${escapeHtml(labels.stockStatus ? stockLabel : '')}"` +
+    ` data-flags="${escapeHtml(flags)}" data-pack="${line.pack}" data-size="${escapeHtml(line.size)}"` +
+    ` data-note2="${escapeHtml(line.note)}"`;
+
   const formatText =
     (labels.bottlesOnly ? line.size : `${line.pack} x ${line.size}`) +
     (line.mag ? ` ${largeFormatLabel(line.sizeCl)}` : '');
@@ -154,7 +166,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
   return (
     `<tr class="item" data-reg="${escapeHtml(line.region)}" data-s="${search}" data-maxc="${units}" data-unit="${line.unit}" ` +
     `data-wine="${escapeHtml(line.wine)}" data-vtg="${escapeHtml(line.vintage)}" data-fmt="${escapeHtml(formatText)}" data-note="${escapeHtml(note)}" data-avail="${units}" ` +
-    `data-baed="${line.bottleAed}" data-busd="${line.bottleUsd}" data-caed="${unitAed}" data-cusd="${unitUsd}"${extraAttrs} onclick="rowClick(event,this)">` +
+    `data-baed="${line.bottleAed}" data-busd="${line.bottleUsd}" data-caed="${unitAed}" data-cusd="${unitUsd}"${extraAttrs}${exportAttrs} onclick="rowClick(event,this)">` +
     `<td class="cb"><div class="qty"><button class="qb" onclick="event.stopPropagation();chg(event,-1)">&minus;</button>` +
     `<input class="qi" type="number" min="0" max="${units}" value="${line.qty}" onclick="event.stopPropagation()" oninput="clampQ(this);upd()">` +
     `<button class="qb" onclick="event.stopPropagation();chg(event,1)">+</button></div></td>` +
