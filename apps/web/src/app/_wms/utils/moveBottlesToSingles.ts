@@ -1,12 +1,16 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
-import { wmsStock } from '@/database/schema';
+import { wmsStock, wmsStockMovements } from '@/database/schema';
+
+import generateMovementNumber from './generateMovementNumber';
 
 interface MoveBottlesParams {
   /** The stock row the case was cracked from. */
   sourceStockId: string;
   /** Bottles left over once the pick was taken. */
   bottles: number;
+  /** Who cracked the case — the movement needs an author. */
+  performedBy: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }
@@ -42,6 +46,7 @@ interface MoveBottlesParams {
 const moveBottlesToSingles = async ({
   sourceStockId,
   bottles,
+  performedBy,
   db,
 }: MoveBottlesParams) => {
   if (bottles <= 0) return null;
@@ -77,6 +82,26 @@ const moveBottlesToSingles = async ({
       ),
     );
 
+  // The ledger has to see these bottles arrive. Without a movement they are an
+  // "orphan" stock record — and the reconciliation's auto-fix DELETES those.
+  const recordArrival = async () => {
+    await db.insert(wmsStockMovements).values({
+      movementNumber: await generateMovementNumber(),
+      movementType: 'repack_in' as const,
+      lwin18: singlesLwin18,
+      productName: singlesName,
+      quantityCases: bottles,
+      quantityBottles: bottles,
+      toLocationId: source.locationId,
+      lotNumber: source.lotNumber,
+      shipmentId: source.shipmentId,
+      notes: `Loose bottles from a cracked ${source.caseConfig ?? '?'}-pack of ${source.lwin18}`,
+      reasonCode: 'split_case',
+      performedBy,
+      performedAt: new Date(),
+    });
+  };
+
   if (existing) {
     await db
       .update(wmsStock)
@@ -86,6 +111,7 @@ const moveBottlesToSingles = async ({
         updatedAt: new Date(),
       })
       .where(eq(wmsStock.id, existing.id));
+    await recordArrival();
     return existing.id;
   }
 
@@ -116,6 +142,8 @@ const moveBottlesToSingles = async ({
       reExportBoeNumber: source.reExportBoeNumber,
     })
     .returning({ id: wmsStock.id });
+
+  await recordArrival();
 
   return created?.id ?? null;
 };

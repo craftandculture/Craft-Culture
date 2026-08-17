@@ -697,9 +697,13 @@ const WMSPickListDetailPage = () => {
                       ? isCrackPick(currentItem)
                         ? `loose bottle${currentItem.quantityBottles === 1 ? '' : 's'} — not a case`
                         : 'bottles'
-                      : currentItem.caseConfig
-                        ? `sealed case of ${currentItem.caseConfig}`
-                        : 'cases'}
+                      : currentItem.caseConfig === 1
+                        ? // A "case" of one is a bottle. Calling it a sealed
+                          // case of 1 reads as a mistake on the scanner.
+                          `single bottle${currentItem.quantityCases === 1 ? '' : 's'}`
+                        : currentItem.caseConfig
+                          ? `sealed case${currentItem.quantityCases === 1 ? '' : 's'} of ${currentItem.caseConfig}`
+                          : 'cases'}
                   </span>
                 </div>
                 <div className="bg-fill-secondary px-4 py-3 text-center">

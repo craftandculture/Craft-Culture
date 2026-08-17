@@ -21,6 +21,7 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import parseSkuPack from '../utils/parseSkuPack';
 import resolvePickStock from '../utils/resolvePickStock';
 
 /**
@@ -84,14 +85,31 @@ const adminResyncPickList = wmsOperatorProcedure
       (i) => !i.isPicked && (i.pickedQuantity ?? 0) === 0,
     );
 
-    // Cases already picked per LWIN, so we only regenerate the remainder.
-    const pickedCasesByLwin = new Map<string, number>();
+    // Bottles already picked per WINE — keyed pack-agnostically and counted in
+    // bottles, because neither the code nor the unit is stable across a rebuild.
+    // A bottle picked from a 6-pack is recorded against `…-06-…`, while the
+    // rebuilt line resolves to the singles row `…-01-…`; keying on the exact
+    // code made the two look like different wines and the line was added again,
+    // so an operator saw every remaining wine twice.
+    const wineKey = (lwin18: string | null | undefined) => {
+      const parts = String(lwin18 ?? '').split('-');
+      return parts.length === 4
+        ? `${parts[0]}-${parts[1]}-${parts[3]}`
+        : String(lwin18 ?? '');
+    };
+    const packOfCode = (lwin18: string | null | undefined) =>
+      parseSkuPack(lwin18)?.pack ?? 1;
+
+    const pickedBottlesByWine = new Map<string, number>();
     for (const p of pickedItems) {
-      pickedCasesByLwin.set(
-        p.lwin18,
-        (pickedCasesByLwin.get(p.lwin18) ?? 0) +
-          (p.pickedQuantity ?? p.quantityCases),
-      );
+      // A bottle pick records bottles in pickedQuantity; a case pick records
+      // cases, which are worth `pack` bottles each.
+      const bottles =
+        p.quantityBottles != null
+          ? (p.pickedQuantity ?? p.quantityBottles)
+          : (p.pickedQuantity ?? p.quantityCases) * packOfCode(p.lwin18);
+      const key = wineKey(p.lwin18);
+      pickedBottlesByWine.set(key, (pickedBottlesByWine.get(key) ?? 0) + bottles);
     }
 
     const result = await db.transaction(async (tx) => {
@@ -118,9 +136,16 @@ const adminResyncPickList = wmsOperatorProcedure
             : '';
         orderLwins.add(resolvedLwin18);
 
-        const alreadyPicked = pickedCasesByLwin.get(resolvedLwin18) ?? 0;
-        const remaining = item.quantity - alreadyPicked;
-        if (remaining <= 0) continue;
+        // Compare like with like: everything in bottles, then back to the
+        // ordered pack for the line we write.
+        const orderedPack =
+          parseSkuPack(item.sku ?? resolvedLwin18)?.pack ??
+          (Number(/^(\d+)\s*[x×]/i.exec(item.description ?? '')?.[1]) || 1);
+        const orderedBottles = item.quantity * orderedPack;
+        const alreadyPicked = pickedBottlesByWine.get(wineKey(resolvedLwin18)) ?? 0;
+        const remainingBottles = orderedBottles - alreadyPicked;
+        if (remainingBottles <= 0) continue;
+        const remaining = Math.ceil(remainingBottles / orderedPack);
 
         // Pack-agnostic, in-stock-only match by LWIN7+vintage (safe name
         // fallback) — never pins an empty pack or a lookalike cuvée.
@@ -149,8 +174,9 @@ const adminResyncPickList = wmsOperatorProcedure
 
       // Flag any already-picked line the order no longer contains.
       let orphanedPicked = 0;
+      const orderWines = new Set([...orderLwins].map(wineKey));
       for (const p of pickedItems) {
-        if (!orderLwins.has(p.lwin18)) {
+        if (!orderWines.has(wineKey(p.lwin18))) {
           await tx
             .update(wmsPickListItems)
             .set({

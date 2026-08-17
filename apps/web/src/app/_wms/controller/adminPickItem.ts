@@ -286,6 +286,7 @@ const adminPickItem = wmsOperatorProcedure
           ? await moveBottlesToSingles({
               sourceStockId: stock.id,
               bottles: leftover,
+              performedBy: userId,
               db,
             })
           : null;
