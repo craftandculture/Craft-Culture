@@ -234,7 +234,7 @@ const QuoteSettingsPanel = ({ form, onChange }: QuoteSettingsPanelProps) => (
       <div className="grid gap-3 md:grid-cols-2">
         <Field
           label="Extra price column"
-          hint="Leave blank for none. TBS quotes use “TBS UAE”."
+          hint="Leave blank for none. TBS quotes use “TBS UAE × 1.18”."
         >
           <Input
             placeholder="e.g. TBS UAE"
