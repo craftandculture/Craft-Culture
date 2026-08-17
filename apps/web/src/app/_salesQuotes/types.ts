@@ -9,6 +9,7 @@ export interface QuoteLabels {
   pcLabel: string;
   whLabel: string;
   ibLabel: string;
+  extraCol?: { label: string; multiplier: number };
 }
 
 /** A quote line with every display decision already resolved. */
@@ -86,4 +87,7 @@ export interface QuoteFormState {
   ibLabel: string;
   priceBasis: string;
   title: string;
+  /** blank label = no extra column */
+  extraColLabel: string;
+  extraColMultiplier: number;
 }

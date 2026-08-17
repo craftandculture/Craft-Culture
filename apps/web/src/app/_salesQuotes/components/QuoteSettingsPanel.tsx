@@ -230,6 +230,37 @@ const QuoteSettingsPanel = ({ form, onChange }: QuoteSettingsPanelProps) => (
           onChange={(event) => onChange({ priceBasis: event.target.value })}
         />
       </Field>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field
+          label="Extra price column"
+          hint="Leave blank for none. TBS quotes use “TBS UAE”."
+        >
+          <Input
+            placeholder="e.g. TBS UAE"
+            value={form.extraColLabel}
+            onChange={(event) => onChange({ extraColLabel: event.target.value })}
+          />
+        </Field>
+        {form.extraColLabel.trim() ? (
+          <Field
+            label="Multiplier"
+            hint={`Unit price × ${form.extraColMultiplier || 1}`}
+          >
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={String(form.extraColMultiplier)}
+              onChange={(event) =>
+                onChange({
+                  extraColMultiplier: Number(event.target.value) || 0,
+                })
+              }
+            />
+          </Field>
+        ) : null}
+      </div>
     </div>
   </div>
 );

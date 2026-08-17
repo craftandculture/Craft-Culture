@@ -38,6 +38,10 @@ export const salesQuoteOptionsSchema = z.object({
   priceBasis: z.string().optional(),
   leadNote: z.string().optional(),
   title: z.string().optional(),
+  /** trailing derived price column, e.g. { label: 'TBS UAE', multiplier: 1.18 } */
+  extraCol: z
+    .object({ label: z.string().min(1), multiplier: z.number().positive() })
+    .optional(),
 });
 
 /**

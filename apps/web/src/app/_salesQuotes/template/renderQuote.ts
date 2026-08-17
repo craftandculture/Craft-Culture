@@ -46,6 +46,7 @@ const renderQuote = (quote: RenderableQuote) => {
     pcLabel: options.pcLabel || 'Private Client',
     whLabel: options.whLabel || 'UAE Warehouse',
     ibLabel: options.ibLabel || 'Inbound',
+    extraCol: options.extraCol,
   };
 
   const orderUnit = options.orderUnit === 'case' ? 'case' : 'bottle';
@@ -69,7 +70,7 @@ const renderQuote = (quote: RenderableQuote) => {
 
   let rows = '';
   for (const region of regions) {
-    rows += `<tr class="reg" data-reg="${escapeHtml(region)}"><td colspan="8">${escapeHtml(region)}</td></tr>\n`;
+    rows += `<tr class="reg" data-reg="${escapeHtml(region)}"><td colspan="${labels.extraCol ? 9 : 8}">${escapeHtml(region)}</td></tr>\n`;
     const inRegion = items
       .filter((item) => item.region === region)
       .sort(
@@ -161,6 +162,9 @@ const renderQuote = (quote: RenderableQuote) => {
     '{{AVAIL_HEAD}}': labels.offered ? 'Offered' : 'Available',
     '{{LEAD_NOTE}}': leadNote,
     '{{UNIT_HEAD}}': perBottle ? 'Bottles' : 'Cases',
+    '{{XCOL_TH}}': labels.extraCol
+      ? `<th class="r xc" id="hX">${escapeHtml(labels.extraCol.label)}</th>`
+      : '',
   };
 
   let html = STANDARD_TEMPLATE;

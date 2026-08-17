@@ -5382,6 +5382,11 @@ export interface SalesQuoteOptions {
   leadNote?: string;
   /** browser/OG title; defaults to "<h1> — Craft & Culture" */
   title?: string;
+  /**
+   * A trailing derived price column, e.g. the client's own onward UAE price.
+   * Standard on The Bottle Store quotes: { label: 'TBS UAE', multiplier: 1.18 }.
+   */
+  extraCol?: { label: string; multiplier: number };
 }
 
 export const salesQuotes = pgTable(

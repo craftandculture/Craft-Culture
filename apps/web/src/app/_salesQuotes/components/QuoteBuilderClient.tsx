@@ -39,6 +39,8 @@ const emptyForm = (): QuoteFormState => ({
   ibLabel: 'Inbound',
   priceBasis: 'In Bond, UAE',
   title: '',
+  extraColLabel: '',
+  extraColMultiplier: 1.18,
 });
 
 /**
@@ -127,6 +129,8 @@ const QuoteBuilderClient = () => {
       ibLabel: options.ibLabel ?? 'Inbound',
       priceBasis: options.priceBasis ?? 'In Bond, UAE',
       title: options.title ?? '',
+      extraColLabel: options.extraCol?.label ?? '',
+      extraColMultiplier: options.extraCol?.multiplier ?? 1.18,
     });
     setLines(quote.lines as QuoteLineDraft[]);
     setIsEditing(true);
@@ -171,6 +175,12 @@ const QuoteBuilderClient = () => {
         ibLabel: form.ibLabel,
         priceBasis: form.priceBasis,
         title: form.title || undefined,
+        extraCol: form.extraColLabel.trim()
+          ? {
+              label: form.extraColLabel.trim(),
+              multiplier: form.extraColMultiplier || 1,
+            }
+          : undefined,
         regionOrder,
       },
     });

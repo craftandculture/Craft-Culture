@@ -76,7 +76,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
       `<tr class="oosrow" data-reg="${escapeHtml(line.region)}" data-s="${search}"><td class="cb"></td>` +
       `<td class="w" data-label="Wine"><s>${escapeHtml(line.wine)}</s>${noteLine}</td>` +
       `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
-      `<td class="c" data-label="Avail">0</td><td class="status" colspan="3"><span class="oos-badge"><span class="oos-dot"></span>Out of Stock</span></td></tr>\n`
+      `<td class="c" data-label="Avail">0</td><td class="status" colspan="${labels.extraCol ? 4 : 3}"><span class="oos-badge"><span class="oos-dot"></span>Out of Stock</span></td></tr>\n`
     );
   }
 
@@ -123,16 +123,29 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
     caseCell = `<td class="p" data-label="Case" data-aed="${line.caseAed}" data-usd="${line.caseUsd}"></td>`;
   }
 
+  // derived reference price on the ordering unit, so it tracks the same figure
+  // the Total column multiplies
+  let extraCell = '';
+  let extraAttrs = '';
+  if (labels.extraCol) {
+    const extraAed = Math.round(unitAed * labels.extraCol.multiplier);
+    const extraUsd = Math.round(unitUsd * labels.extraCol.multiplier);
+    extraAttrs = ` data-xaed="${extraAed}" data-xusd="${extraUsd}"`;
+    extraCell =
+      `<td class="p xc" data-label="${escapeHtml(labels.extraCol.label)}" ` +
+      `data-aed="${extraAed}" data-usd="${extraUsd}"></td>`;
+  }
+
   return (
     `<tr class="item" data-reg="${escapeHtml(line.region)}" data-s="${search}" data-maxc="${units}" data-unit="${line.unit}" ` +
     `data-wine="${escapeHtml(line.wine)}" data-vtg="${escapeHtml(line.vintage)}" data-fmt="${escapeHtml(formatText)}" data-note="${escapeHtml(note)}" data-avail="${units}" ` +
-    `data-baed="${line.bottleAed}" data-busd="${line.bottleUsd}" data-caed="${unitAed}" data-cusd="${unitUsd}" onclick="rowClick(event,this)">` +
+    `data-baed="${line.bottleAed}" data-busd="${line.bottleUsd}" data-caed="${unitAed}" data-cusd="${unitUsd}"${extraAttrs} onclick="rowClick(event,this)">` +
     `<td class="cb"><div class="qty"><button class="qb" onclick="event.stopPropagation();chg(event,-1)">&minus;</button>` +
     `<input class="qi" type="number" min="0" max="${units}" value="${line.qty}" onclick="event.stopPropagation()" oninput="clampQ(this);upd()">` +
     `<button class="qb" onclick="event.stopPropagation();chg(event,1)">+</button></div></td>` +
     `<td class="w" data-label="Wine">${escapeHtml(line.wine)}${stockChip}${promoChip}${pcChip}${repackChip}${noteLine}</td>` +
     `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
-    `<td class="c" data-label="Avail">${availCell}</td>${bottleCell}${caseCell}<td class="tp r" data-label="Total"></td></tr>\n`
+    `<td class="c" data-label="Avail">${availCell}</td>${bottleCell}${caseCell}<td class="tp r" data-label="Total"></td>${extraCell}</tr>\n`
   );
 };
 
