@@ -1,10 +1,12 @@
-import { and, asc, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByProductSchema } from '../schemas/stockQuerySchema';
+import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
+import normalizeLwin18 from '../utils/normalizeLwin18';
 
 /**
  * Get stock grouped by product (LWIN) with location breakdown
@@ -42,13 +44,27 @@ const adminGetStockByProduct = wmsOperatorProcedure
       : [gt(wmsStock.quantityCases, 0)];
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(wmsStock.productName, `%${search}%`),
-          ilike(wmsStock.producer, `%${search}%`),
-          ilike(wmsStock.lwin18, `%${search}%`),
-        ),
+      // Searching by a code has to survive the two ways a code differs from the
+      // stock row that holds the wine:
+      //   - shape: a Zoho SKU is often compact (110469520150100750) while stock
+      //     is dashed (1104695-2015-01-00750)
+      //   - pack: a single-bottle order line is `…-01-…` but the wine sits on
+      //     the shelf as a 6-pack, `…-06-…`
+      // Without this, pasting a SKU that IS in the warehouse returns nothing.
+      const trimmed = search.trim();
+      const normalized = normalizeLwin18(trimmed);
+      const packPattern = lwinPackAgnosticPattern(normalized);
+
+      const searchMatch = or(
+        ilike(wmsStock.productName, `%${search}%`),
+        ilike(wmsStock.producer, `%${search}%`),
+        ilike(wmsStock.lwin18, `%${search}%`),
+        ...(normalized !== trimmed
+          ? [ilike(wmsStock.lwin18, `%${normalized}%`)]
+          : []),
+        ...(packPattern ? [like(wmsStock.lwin18, packPattern)] : []),
       );
+      if (searchMatch) conditions.push(searchMatch);
     }
 
     if (ownerId) {
