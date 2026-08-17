@@ -40,8 +40,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Lint & Test
+      - name: Lint
         run: pnpm turbo run lint
+
+      # The step above was called "Lint & Test" but only ever ran the linter,
+      # so the unit tests never ran anywhere — not in CI, and not locally
+      # (the lockfile's native binaries are Linux-only). A week of WMS picking
+      # regressions reached the warehouse floor through that gap.
+      - name: Test
+        run: pnpm turbo run test:ci
 
       # Ratchet gate: fails only on NEW type errors, measured against
       # scripts/typecheck-baseline.json. next.config.ts sets

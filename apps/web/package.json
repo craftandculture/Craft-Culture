@@ -8,6 +8,7 @@
     "build": "next build",
     "postbuild": "node scripts/migrate.mjs",
     "test": "vitest",
+    "test:ci": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "start": "next start",

@@ -8,6 +8,7 @@ import {
   wmsPickLists,
   wmsStock,
   wmsStockMovements,
+  wmsStockReservations,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
@@ -217,7 +218,8 @@ const adminPickItem = wmsOperatorProcedure
         return row.availableCases >= casesToCrack;
       }
       if (linePack > 0 && packOf(row) !== linePack) return false;
-      return row.availableCases >= pickedQuantity;
+      // Physical cases, not unreserved ones — see the whole-case branch below.
+      return row.quantityCases >= pickedQuantity;
     };
 
     // Rank by pack fit, then take the first that can actually satisfy the pick.
@@ -258,10 +260,10 @@ const adminPickItem = wmsOperatorProcedure
       const shortfallBottles = pickedBottles - takeFromOpen;
       casesRemoved = Math.ceil(shortfallBottles / pack);
 
-      if (stock.availableCases < casesRemoved) {
+      if (stock.quantityCases < casesRemoved) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Insufficient stock to pick ${pickedBottles} bottle(s). Open bottles: ${stock.openBottles}, sealed cases: ${stock.availableCases}`,
+          message: `Not enough at ${location.locationCode} to pick ${pickedBottles} bottle(s). On the shelf: ${stock.quantityCases} case(s), ${stock.openBottles} loose bottle(s).`,
         });
       }
 
@@ -309,11 +311,41 @@ const adminPickItem = wmsOperatorProcedure
         (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
         (singlesId ? `; ${leftover} single bottle(s) back on the shelf` : '');
     } else {
-      // --- Whole-case pick (unchanged behaviour) ---
-      if (stock.availableCases < pickedQuantity) {
+      // --- Whole-case pick ---
+      // Gate on what is PHYSICALLY in the bay. availableCases excludes reserved
+      // cases — including the ones reserved for THIS order when it was
+      // approved — so checking it meant an operator could never pick the stock
+      // that had been set aside for the order they were picking. The
+      // reservation is converted below rather than blocking the pick.
+      if (stock.quantityCases < pickedQuantity) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Insufficient stock. Available: ${stock.availableCases}, requested: ${pickedQuantity}`,
+          message: `Insufficient stock at ${location.locationCode}. On the shelf: ${stock.quantityCases} case(s), requested: ${pickedQuantity}.`,
+        });
+      }
+
+      // Cases held for THIS order are pickable; cases held for another order
+      // are not. convertReservationToPick caps the unreserved portion at
+      // availableCases, so without this check the line would be marked picked
+      // and a movement recorded while the stock was never decremented.
+      const [heldForThisOrder] = await db
+        .select({
+          cases: sql<number>`COALESCE(SUM(${wmsStockReservations.quantityCases}), 0)::int`,
+        })
+        .from(wmsStockReservations)
+        .where(
+          and(
+            eq(wmsStockReservations.stockId, stock.id),
+            eq(wmsStockReservations.orderId, pickList.orderId ?? ''),
+            eq(wmsStockReservations.status, 'active'),
+          ),
+        );
+
+      const pickable = stock.availableCases + (heldForThisOrder?.cases ?? 0);
+      if (pickable < pickedQuantity) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `${stock.quantityCases} case(s) are at ${location.locationCode} but reserved for another order. Free them there, or pick from a different bay.`,
         });
       }
 
