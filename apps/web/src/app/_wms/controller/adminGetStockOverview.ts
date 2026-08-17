@@ -42,7 +42,8 @@ const adminGetStockOverview = wmsOperatorProcedure
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
       ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle}, 0)
     END)`;
-    const btl = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
+    // Loose bottles from cracked cases count too — see wms/WMS.md.
+    const btl = sql`(${wmsStock.quantityCases} * ${wmsStock.caseConfig} + COALESCE(${wmsStock.openBottles}, 0))`;
 
     // Prepare date constants for queries (as ISO strings for SQL compatibility)
     const now = new Date();
@@ -68,7 +69,7 @@ const adminGetStockOverview = wmsOperatorProcedure
       db
         .select({
           totalCases: sql<number>`COALESCE(SUM(${wmsStock.quantityCases}), 0)::int`,
-          totalBottles: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig}), 0)::int`,
+          totalBottles: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} + COALESCE(${wmsStock.openBottles}, 0)), 0)::int`,
           totalAvailable: sql<number>`COALESCE(SUM(${wmsStock.availableCases}), 0)::int`,
           totalReserved: sql<number>`COALESCE(SUM(${wmsStock.reservedCases}), 0)::int`,
           uniqueProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,

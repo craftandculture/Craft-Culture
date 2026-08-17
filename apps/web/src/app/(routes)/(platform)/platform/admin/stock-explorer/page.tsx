@@ -592,6 +592,13 @@ const ProductRow = ({
   partners,
   lookalikeTwins,
 }: ProductRowProps) => {
+  // Bottles left loose in a bay after a case was cracked. They are stock, but
+  // the case count cannot express them — 0 cases, 5 bottles.
+  const looseBottles = (product.locations ?? []).reduce(
+    (sum, location) => sum + (location.openBottles ?? 0),
+    0,
+  );
+
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
@@ -753,12 +760,18 @@ const ProductRow = ({
           </td>
         )}
 
-        {/* Cases */}
+        {/* Cases — with any loose bottles, which are stock the case count
+            cannot express (a cracked case leaves 0 cases and 5 bottles). */}
         {visibleColumns.cases && (
           <td
             className={`${tdClassRight} text-text-primary text-base font-bold`}
           >
             {product.totalCases}
+            {looseBottles > 0 && (
+              <span className="ml-1 rounded bg-amber-100 px-1 py-px align-middle text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                +{looseBottles} loose
+              </span>
+            )}
           </td>
         )}
 
@@ -850,10 +863,7 @@ const ProductRow = ({
           <td className={`${tdClass} hidden lg:table-cell`}>
             <StatusIndicator
               expiryStatus={product.expiryStatus}
-              openBottles={(product.locations ?? []).reduce(
-                (sum, l) => sum + (l.openBottles ?? 0),
-                0,
-              )}
+              openBottles={looseBottles}
               availableCases={product.availableCases}
             />
           </td>

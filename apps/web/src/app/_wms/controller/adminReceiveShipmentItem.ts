@@ -197,6 +197,10 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
           .set({
             quantityCases: sql`${wmsStock.quantityCases} + ${assignmentCases}`,
             availableCases: sql`${wmsStock.availableCases} + ${assignmentCases}`,
+            // This row already holds stock from another shipment, so its BOE is
+            // only unambiguous while it has none — never overwrite an existing one
+            reExportBoeNumber:
+              existingStock.reExportBoeNumber ?? shipment.reExportBoeNumber,
             updatedAt: new Date(),
           })
           .where(eq(wmsStock.id, existingStock.id))
@@ -222,6 +226,7 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
             lotNumber,
             receivedAt: new Date(),
             shipmentId,
+            reExportBoeNumber: shipment.reExportBoeNumber,
             salesArrangement: 'consignment',
             expiryDate: receivedItem.expiryDate,
             isPerishable: !!receivedItem.expiryDate,

@@ -249,11 +249,20 @@ const adminGetStockByProduct = wmsOperatorProcedure
           expiryStatus = 'ok';
         }
 
+        const totalOpenBottles = locations.reduce(
+          (sum, location) => sum + (location.openBottles ?? 0),
+          0,
+        );
+
         return {
           ...product,
           locations,
           expiryStatus,
-          totalBottles: product.totalCases * (product.caseConfig ?? 1),
+          // Cases in bottles PLUS the loose bottles left by cracked cases —
+          // counting only cases reported 0 bottles for a bay holding five.
+          totalBottles:
+            product.totalCases * (product.caseConfig ?? 1) + totalOpenBottles,
+          totalOpenBottles,
         };
       }),
     );
