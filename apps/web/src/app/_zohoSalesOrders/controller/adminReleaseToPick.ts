@@ -109,6 +109,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         locationId: string;
         locationCode: string;
         availableCases: number;
+        quantityCases: number;
         lwin18: string;
         productName: string;
         caseConfig: number | null;
@@ -119,6 +120,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         locationId: wmsStock.locationId,
         locationCode: wmsLocations.locationCode,
         availableCases: wmsStock.availableCases,
+        quantityCases: wmsStock.quantityCases,
         lwin18: wmsStock.lwin18,
         productName: wmsStock.productName,
         caseConfig: wmsStock.caseConfig,
@@ -140,7 +142,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           .where(
             and(
               like(wmsStock.lwin18, packPattern),
-              gt(wmsStock.availableCases, 0),
+              gt(wmsStock.quantityCases, 0),
             ),
           )
           .orderBy(wmsStock.availableCases);
@@ -159,7 +161,7 @@ const adminReleaseToPick = wmsOperatorProcedure
             .select(stockSelect)
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-            .where(and(eq(wmsStock.lwin18, code), gt(wmsStock.availableCases, 0)))
+            .where(and(eq(wmsStock.lwin18, code), gt(wmsStock.quantityCases, 0)))
             .orderBy(wmsStock.availableCases);
           if (availableStock.length > 0) break;
         }
@@ -200,13 +202,14 @@ const adminReleaseToPick = wmsOperatorProcedure
               locationId: wmsStock.locationId,
               locationCode: wmsLocations.locationCode,
               availableCases: wmsStock.availableCases,
+              quantityCases: wmsStock.quantityCases,
               lwin18: wmsStock.lwin18,
               productName: wmsStock.productName,
               caseConfig: wmsStock.caseConfig,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-            .where(and(...conditions, gt(wmsStock.availableCases, 0)))
+            .where(and(...conditions, gt(wmsStock.quantityCases, 0)))
             .orderBy(wmsStock.availableCases);
         }
       }
@@ -239,11 +242,19 @@ const adminReleaseToPick = wmsOperatorProcedure
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
       availableStock = rankStockByPack(availableStock, orderedPack);
 
-      // Find first location with enough stock (in cases of ITS pack)
+      // Prefer a bay with enough UNRESERVED stock; fall back to one that
+      // physically holds the wine. Gating the search on availableCases meant a
+      // fully-reserved wine looked like no stock at all — including stock
+      // reserved for THIS order at approval — and the line was released with no
+      // bay and no LWIN, which is what strands an operator at the shelf.
       const suggestedStock =
         availableStock.find(
           (s) => s.availableCases >= casesNeededFor(packOf(s.caseConfig)),
-        ) ?? availableStock[0]; // Fall back to any available stock if none has enough
+        ) ??
+        availableStock.find(
+          (s) => s.quantityCases >= casesNeededFor(packOf(s.caseConfig)),
+        ) ??
+        availableStock[0];
 
       const stockPack = packOf(suggestedStock?.caseConfig ?? null);
       const wholeCase = !isBottleUnit && orderedPack === stockPack;
@@ -273,9 +284,11 @@ const adminReleaseToPick = wmsOperatorProcedure
           quantityBottles,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
-          notes: suggestedStock
-            ? null
-            : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking',
+          notes: !suggestedStock
+            ? 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
+            : suggestedStock.availableCases < casesNeeded
+              ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
+              : null,
         })
         .returning();
 
