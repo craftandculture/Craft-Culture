@@ -60,15 +60,18 @@ const linesChanged = async ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }) => {
-  const stored: { zohoLineItemId: string; sku: string | null; quantity: number }[] =
-    await db
-      .select({
-        zohoLineItemId: zohoSalesOrderItems.zohoLineItemId,
-        sku: zohoSalesOrderItems.sku,
-        quantity: zohoSalesOrderItems.quantity,
-      })
-      .from(zohoSalesOrderItems)
-      .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
+  const stored: {
+    zohoLineItemId: string;
+    sku: string | null;
+    quantity: number;
+  }[] = await db
+    .select({
+      zohoLineItemId: zohoSalesOrderItems.zohoLineItemId,
+      sku: zohoSalesOrderItems.sku,
+      quantity: zohoSalesOrderItems.quantity,
+    })
+    .from(zohoSalesOrderItems)
+    .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
 
   const before = new Set(stored.map(lineFingerprint));
   const after = new Set(
@@ -138,7 +141,10 @@ const syncExistingSalesOrder = async ({
   // requests when orders are idle (previously every pre-pick order was fetched
   // and reconciled each cycle — heavy on Zoho's rate limit).
   const [current] = await db
-    .select({ zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime })
+    .select({
+      zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime,
+      zohoStatus: zohoSalesOrders.zohoStatus,
+    })
     .from(zohoSalesOrders)
     .where(eq(zohoSalesOrders.id, existing.id))
     .limit(1);
@@ -152,8 +158,18 @@ const syncExistingSalesOrder = async ({
   // way to refresh it.
   const forceDetailFetch = force;
 
+  // Raising an invoice in Zoho flips the order open -> invoiced without always
+  // bumping its last-modified time, and that status is exactly what gates
+  // "Ready for Release". Short-circuiting on the timestamp alone stranded such
+  // orders in Pending Invoice with no way out: the sales-orders page syncs
+  // without force, and the new-pick screen only force-refreshes orders already
+  // listed as ready. The status is already in the cheap list payload, so
+  // comparing it costs nothing and closes that trap.
+  const statusChanged = current?.zohoStatus !== zohoOrder.status;
+
   const unchanged =
     !forceDetailFetch &&
+    !statusChanged &&
     current?.zohoLastModifiedTime instanceof Date &&
     current.zohoLastModifiedTime.getTime() === zohoModifiedAt.getTime();
 
