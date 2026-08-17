@@ -12,6 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -47,6 +48,11 @@ const ReconcilePage = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
       void refetch();
+    },
+    // Without this the button 500s in silence and reads as "nothing happened",
+    // which is exactly how it behaved for an hour.
+    onError: (error) => {
+      toast.error(`Reconcile failed: ${error.message}`);
     },
   });
 
@@ -192,6 +198,19 @@ const ReconcilePage = () => {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {autoFixMutation.isError && (
+          <Card className="border-red-300 bg-red-50">
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-1 text-red-800">
+                Reconcile failed — nothing was written
+              </Typography>
+              <Typography variant="bodySm" className="text-red-700">
+                {autoFixMutation.error.message}
+              </Typography>
             </CardContent>
           </Card>
         )}

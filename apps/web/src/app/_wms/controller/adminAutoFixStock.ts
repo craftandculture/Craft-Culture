@@ -53,7 +53,9 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
       ) m
       FULL OUTER JOIN (
         SELECT lwin18, SUM(quantity_cases) AS actual_cases,
-               MAX(product_name) AS product_name, MIN(location_id) AS location_id
+               MAX(product_name) AS product_name,
+               -- Postgres has no min(uuid); compare as text and cast back.
+               MIN(location_id::text)::uuid AS location_id
         FROM wms_stock GROUP BY lwin18
       ) s ON s.lwin18 = m.lwin18
   `);
