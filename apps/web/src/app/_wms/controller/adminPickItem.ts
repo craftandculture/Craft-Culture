@@ -160,6 +160,42 @@ const adminPickItem = wmsOperatorProcedure
     }
 
     if (candidates.length === 0) {
+      // Say what the system DOES know. "No stock found here" leaves an operator
+      // holding a bottle with nowhere to go; "it's at C-02-00" or "the system
+      // thinks there are none of these anywhere" tells them what to do next.
+      // Deliberately informational — nothing below is ever picked from.
+      const elsewhere = packPattern
+        ? await db
+            .select({
+              productName: wmsStock.productName,
+              quantityCases: wmsStock.quantityCases,
+              locationCode: wmsLocations.locationCode,
+            })
+            .from(wmsStock)
+            .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(like(wmsStock.lwin18, packPattern))
+        : [];
+
+      const withStock = elsewhere.filter((row) => row.quantityCases > 0);
+
+      if (withStock.length > 0) {
+        const where = withStock
+          .map((row) => `${row.locationCode ?? '—'} (${row.quantityCases} cs)`)
+          .join(', ');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `${pickListItem.productName} is not at ${location.locationCode}. The system holds it at ${where}.`,
+        });
+      }
+
+      if (elsewhere.length > 0) {
+        const last = elsewhere[0];
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `The system shows 0 cases of ${last?.productName ?? pickListItem.productName} anywhere (last held at ${last?.locationCode ?? 'an unknown bay'}). The count needs correcting before this line can be picked.`,
+        });
+      }
+
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: `No stock found at this location for ${pickListItem.productName}`,
