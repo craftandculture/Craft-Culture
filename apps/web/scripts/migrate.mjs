@@ -472,6 +472,74 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_stock_movements.quantity_bottles ready');
 
+    // --- loose bottles become real single-bottle stock ---------------------
+    // open_bottles was a counter nothing else read: stock is modelled in CASES,
+    // so bottles left by a cracked case had no case count, vanished from the
+    // stock explorer, could not be matched to an order line and counted as zero
+    // in every bottle total. Singles are recorded the way the warehouse already
+    // records them — a row whose pack is 1. Quantity-preserving and idempotent:
+    // each source row is zeroed as it is converted.
+    await client.unsafe(`
+      DO $$
+      DECLARE r RECORD;
+              singles_lwin text;
+              singles_id uuid;
+      BEGIN
+        FOR r IN
+          SELECT * FROM wms_stock
+          WHERE COALESCE(open_bottles, 0) > 0
+            AND array_length(string_to_array(lwin18, '-'), 1) = 4
+        LOOP
+          singles_lwin := split_part(r.lwin18, '-', 1) || '-'
+                       || split_part(r.lwin18, '-', 2) || '-01-'
+                       || split_part(r.lwin18, '-', 4);
+
+          IF singles_lwin = r.lwin18 THEN
+            UPDATE wms_stock
+               SET quantity_cases = quantity_cases + r.open_bottles,
+                   available_cases = available_cases + r.open_bottles,
+                   open_bottles = 0,
+                   updated_at = now()
+             WHERE id = r.id;
+            CONTINUE;
+          END IF;
+
+          SELECT id INTO singles_id FROM wms_stock
+           WHERE location_id = r.location_id
+             AND lwin18 = singles_lwin
+             AND owner_id = r.owner_id
+             AND lot_number IS NOT DISTINCT FROM r.lot_number
+           LIMIT 1;
+
+          IF singles_id IS NULL THEN
+            INSERT INTO wms_stock (
+              location_id, owner_id, owner_name, lwin18, product_name, producer,
+              vintage, bottle_size, case_config, quantity_cases, reserved_cases,
+              available_cases, open_bottles, lot_number, received_at, shipment_id,
+              sales_arrangement, consignment_commission_percent, category,
+              expiry_date, is_perishable, re_export_boe_number
+            ) VALUES (
+              r.location_id, r.owner_id, r.owner_name, singles_lwin,
+              regexp_replace(r.product_name, ' \\(\\d+x\\)$', '') || ' (1x)',
+              r.producer, r.vintage, r.bottle_size, 1, r.open_bottles, 0,
+              r.open_bottles, 0, r.lot_number, r.received_at, r.shipment_id,
+              r.sales_arrangement, r.consignment_commission_percent, r.category,
+              r.expiry_date, r.is_perishable, r.re_export_boe_number
+            );
+          ELSE
+            UPDATE wms_stock
+               SET quantity_cases = quantity_cases + r.open_bottles,
+                   available_cases = available_cases + r.open_bottles,
+                   updated_at = now()
+             WHERE id = singles_id;
+          END IF;
+
+          UPDATE wms_stock SET open_bottles = 0, updated_at = now() WHERE id = r.id;
+        END LOOP;
+      END $$;
+    `);
+    console.log('✅ loose bottles converted to single-bottle stock');
+
     await client.end();
     process.exit(0);
   } catch (error) {

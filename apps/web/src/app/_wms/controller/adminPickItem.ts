@@ -15,6 +15,7 @@ import { pickItemSchema } from '../schemas/pickListSchema';
 import convertReservationToPick from '../utils/convertReservationToPick';
 import generateMovementNumber from '../utils/generateMovementNumber';
 import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
+import moveBottlesToSingles from '../utils/moveBottlesToSingles';
 import parseSkuPack from '../utils/parseSkuPack';
 import rankStockByPack from '../utils/rankStockByPack';
 
@@ -264,25 +265,48 @@ const adminPickItem = wmsOperatorProcedure
         });
       }
 
-      // New open count: existing open + bottles freed by cracking − bottles picked.
-      const newOpenBottles =
-        stock.openBottles + casesRemoved * pack - pickedBottles;
+      // Bottles left over once this pick is taken. They become REAL single
+      // bottle stock rather than an open_bottles counter nothing else reads —
+      // see moveBottlesToSingles for why that counter made stock invisible.
+      const leftover = stock.openBottles + casesRemoved * pack - pickedBottles;
 
       await db
         .update(wmsStock)
         .set({
           quantityCases: sql`${wmsStock.quantityCases} - ${casesRemoved}`,
           availableCases: sql`${wmsStock.availableCases} - ${casesRemoved}`,
-          openBottles: newOpenBottles,
+          // Whatever this row was carrying loose has been moved into singles.
+          openBottles: 0,
           updatedAt: new Date(),
         })
         .where(eq(wmsStock.id, stock.id));
+
+      const singlesId =
+        pack > 1
+          ? await moveBottlesToSingles({
+              sourceStockId: stock.id,
+              bottles: leftover,
+              db,
+            })
+          : null;
+
+      // A pick straight off a singles row leaves nothing over to move.
+      if (!singlesId && leftover > 0 && pack === 1) {
+        await db
+          .update(wmsStock)
+          .set({
+            quantityCases: sql`${wmsStock.quantityCases} + ${leftover}`,
+            availableCases: sql`${wmsStock.availableCases} + ${leftover}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsStock.id, stock.id));
+      }
 
       recordedPickedQuantity = pickedBottles;
       resultMessage =
         `Picked ${pickedBottles} bottle(s) from ${location.locationCode}` +
         (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
-        `; ${newOpenBottles} open bottle(s) remain`;
+        (singlesId ? `; ${leftover} single bottle(s) back on the shelf` : '');
     } else {
       // --- Whole-case pick (unchanged behaviour) ---
       if (stock.availableCases < pickedQuantity) {

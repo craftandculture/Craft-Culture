@@ -61,6 +61,14 @@ apps/web/src/app/(routes)/(platform)/platform/admin/wms/
 - **Location Barcode**: `LOC-{locationCode}`
   - Example: `LOC-A-01-02`
 
+### Single Bottles Are Stock Rows, Not a Counter
+
+Stock is modelled in **cases** (`quantity_cases`, `available_cases`, `reserved_cases`). Single-bottle selling breaks that model: cracking a 6-pack to fill a one-bottle order leaves five bottles that are not a case.
+
+Those five are recorded as a **stock row whose pack is 1** — `…-01-…`, `caseConfig` 1 — at the same bay, owner and lot as the case they came from (`utils/moveBottlesToSingles.ts`, called from `adminPickItem` when a case is cracked). This is the shape the warehouse already used for singles arriving from a repack, so every case-based query, view, reservation and pick works on them unchanged.
+
+**Do not reintroduce `open_bottles` as the home for loose stock.** It was a counter on the case row that nothing else read, and the consequences were: the wine vanished from the stock explorer, showed as "Out", could not be matched to an order line, counted as zero in every bottle total, and could not be reserved — while the bottles sat in the bay. The column is retained only so pre-conversion rows still read correctly; a migration in `scripts/migrate.mjs` converts any it finds.
+
 ### Matching an Order Line to Stock (pack drift)
 
 The pack a wine is **ordered** in and the pack it **sits on the shelf** in drift apart constantly: a 3-pack is invoiced off a 6-pack, a case is repacked into 3-packs after a pick list was written, or stock arrives under a supplier code. Any lookup answering *"where is this wine"* must therefore ignore the pack segment of the LWIN-18.
