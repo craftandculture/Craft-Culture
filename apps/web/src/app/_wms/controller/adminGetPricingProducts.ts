@@ -16,6 +16,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
+import lwinPakKey from '../utils/lwinPakKey';
 
 /**
  * Get products with stock and pricing data for the Pricing Manager page
@@ -134,7 +135,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         ownerPcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
       .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
@@ -302,7 +303,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         lwin18: wmsStock.lwin18,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
       .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
@@ -373,7 +374,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         belowCostCount: sql<number>`COUNT(DISTINCT CASE WHEN ${pcExpr} > 0 AND ${pcExpr} <= ${landedExpr} THEN ${wmsStock.lwin18} END)::int`,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
       .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
       .leftJoin(
         wmsOwnerPricing,
@@ -467,7 +468,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         })
         .from(logisticsShipmentItems)
         .innerJoin(logisticsShipments, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
-        .leftJoin(wmsProductPricing, eq(wmsProductPricing.lwin18, logisticsShipmentItems.lwin))
+        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`)
         .where(and(...inboundConditions))
         .groupBy(groupKey)
         .orderBy(asc(sql`MAX(${logisticsShipmentItems.productName})`))

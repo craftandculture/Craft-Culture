@@ -11,6 +11,9 @@ import {
 } from '@/database/schema';
 
 import type { CatalogueRow } from './getCatalogueRows';
+import lwinPakKey from '../utils/lwinPakKey';
+
+
 
 export interface CatalogueInboundRow extends CatalogueRow {
   /** Earliest ETA across the shipments carrying this wine, if known */
@@ -152,7 +155,7 @@ const getCatalogueInboundRows = async (
     .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
     .leftJoin(
       wmsProductPricing,
-      eq(wmsProductPricing.lwin18, logisticsShipmentItems.lwin),
+      sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`,
     )
     .leftJoin(
       wmsOwnerPricingSettings,

@@ -14,6 +14,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
+import lwinPakKey from '../utils/lwinPakKey';
 
 /**
  * Get comprehensive WMS dashboard overview with KPIs and alerts
@@ -175,7 +176,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           pricedProducts: sql<number>`COUNT(DISTINCT CASE WHEN ${impFb} > 0 THEN ${wmsStock.lwin18} END)::int`,
         })
         .from(wmsStock)
-        .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
         .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
         .leftJoin(
           wmsOwnerPricing,
@@ -195,7 +196,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           cases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         })
         .from(wmsStock)
-        .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
         .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
         .leftJoin(
           wmsOwnerPricing,

@@ -9,6 +9,8 @@ import {
   wmsStock,
 } from '@/database/schema';
 
+import lwinPakKey from '../utils/lwinPakKey';
+
 export interface CatalogueRow {
   lwin18: string;
   product: string;
@@ -78,16 +80,6 @@ const getCatalogueRows = async (
   }
 
   /**
-   * Pack-agnostic key — wine + vintage + bottle size, pack segment dropped.
-   * Repacking a priced 6-pack into singles mints a `…-01-…` stock row that the
-   * old exact-code join could not price, so the split silently vanished from
-   * both portals while the full case stayed listed. Prices here are all PER
-   * BOTTLE, so inheriting them across packs is dimensionally sound.
-   */
-  const pakOf = (col: typeof wmsStock.lwin18 | typeof wmsProductPricing.lwin18) =>
-    sql`split_part(${col}, '-', 1) || '-' || split_part(${col}, '-', 2) || '-' || split_part(${col}, '-', 4)`;
-
-  /**
    * Exact code first, any sibling pack second. A price set specifically on the
    * single must beat the case price it was cut from — MAX() alone would let the
    * (usually higher) case price override a deliberate single-bottle rate.
@@ -132,7 +124,7 @@ const getCatalogueRows = async (
     .from(wmsStock)
     .leftJoin(
       wmsProductPricing,
-      sql`${pakOf(wmsProductPricing.lwin18)} = ${pakOf(wmsStock.lwin18)}`,
+      sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
     )
     .leftJoin(
       wmsOwnerPricingSettings,
