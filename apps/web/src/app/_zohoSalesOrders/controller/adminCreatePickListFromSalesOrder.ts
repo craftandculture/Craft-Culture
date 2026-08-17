@@ -20,6 +20,8 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import resolvePickQuantities from '../../_wms/utils/resolvePickQuantities';
+
 /**
  * Convert a raw SKU (18 digits, no dashes) to LWIN18 format (with dashes)
  *
@@ -115,13 +117,24 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
         db,
       });
 
+      // Bottles vs cases — shared with release-to-pick and the re-sync so a
+      // single-bottle line can never become "1 case" of a 6-pack again.
+      const quantities = resolvePickQuantities({
+        quantity: item.quantity,
+        unit: item.unit,
+        description: item.description,
+        sku: item.sku ?? resolvedLwin18,
+        stockCaseConfig: suggestedStock?.caseConfig,
+      });
+
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
           lwin18: suggestedStock?.lwin18 ?? resolvedLwin18,
           productName: item.name,
-          quantityCases: item.quantity,
+          quantityCases: quantities.casesNeeded,
+          quantityBottles: quantities.quantityBottles,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes:

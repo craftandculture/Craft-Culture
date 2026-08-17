@@ -95,6 +95,9 @@ const resolvePickStock = async ({
         stockId: best.stockId,
         locationId: best.locationId,
         lwin18: best.lwin18,
+        // The pack the wine is shelved in — the caller needs it to tell a
+        // whole-case pick from cracking a case for bottles.
+        caseConfig: best.caseConfig,
         matchedBy: 'lwin' as const,
       };
     }
@@ -131,6 +134,7 @@ const resolvePickStock = async ({
           stockId: best.stockId,
           locationId: best.locationId,
           lwin18: best.lwin18,
+          caseConfig: best.caseConfig,
           matchedBy: 'name' as const,
         };
       }

@@ -22,6 +22,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import parseSkuPack from '../utils/parseSkuPack';
+import resolvePickQuantities from '../utils/resolvePickQuantities';
 import resolvePickStock from '../utils/resolvePickStock';
 
 /**
@@ -156,11 +157,20 @@ const adminResyncPickList = wmsOperatorProcedure
           db: tx,
         });
 
+        const quantities = resolvePickQuantities({
+          quantity: remaining,
+          unit: item.unit,
+          description: item.description,
+          sku: item.sku ?? resolvedLwin18,
+          stockCaseConfig: suggestedStock?.caseConfig,
+        });
+
         await tx.insert(wmsPickListItems).values({
           pickListId,
           lwin18: suggestedStock?.lwin18 ?? resolvedLwin18,
           productName: item.name,
-          quantityCases: remaining,
+          quantityCases: quantities.casesNeeded,
+          quantityBottles: quantities.quantityBottles,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: suggestedStock
