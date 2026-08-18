@@ -1,4 +1,5 @@
 import { and, desc, eq, gt, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import db from '@/database/client';
 import {
@@ -84,7 +85,7 @@ const getCatalogueRows = async (
    * single must beat the case price it was cut from — MAX() alone would let the
    * (usually higher) case price override a deliberate single-bottle rate.
    */
-  const preferExact = (col: typeof wmsProductPricing.importPricePerBottle) =>
+  const preferExact = (col: AnyPgColumn) =>
     sql`COALESCE(
       MAX(CASE WHEN ${wmsProductPricing.lwin18} = ${wmsStock.lwin18} THEN ${col} END),
       MAX(${col})
