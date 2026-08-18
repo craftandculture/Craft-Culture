@@ -5393,6 +5393,10 @@ export interface SalesQuoteOptions {
    * where present. Off by default so a quote is not cluttered.
    */
   gpScenarios?: number[];
+  /** overrides the default "30 days from date of invoice" payment line */
+  paymentTerms?: string;
+  /** extra free-text terms appended to the generated ones */
+  extraTerms?: string[];
 }
 
 export const salesQuotes = pgTable(

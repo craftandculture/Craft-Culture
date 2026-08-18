@@ -127,7 +127,8 @@ const renderQuote = (quote: RenderableQuote) => {
       : '') +
     (inbound
       ? `<li><b>${escapeHtml(INBOUND)}</b> &mdash; purchased and in transit to our UAE bonded warehouse; reserve now against the incoming parcel.</li>`
-      : '');
+      : '') +
+    (options.extraTerms ?? []).map((term) => `<li>${term}</li>`).join('');
 
   const bodyClass = [
     perBottle ? 'bottle-mode' : '',
@@ -142,6 +143,15 @@ const renderQuote = (quote: RenderableQuote) => {
     '{{TITLE}}': options.title || `${quote.h1} — Craft & Culture`,
     '{{OG_DESC}}': `${subtitle} · ${inStock} fine wines, prices ${priceBasis}.`,
     '{{PRICE_BASIS}}': priceBasis,
+    // default reproduces the previously hardcoded line exactly
+    '{{PAYMENT_TERMS}}':
+      options.paymentTerms ||
+      '<b>Payment terms:</b> 30 days from date of invoice.',
+    // only claim a promo when a line actually carries one
+    '{{PROMO_TERM}}': items.some((item) => item.promo)
+      ? '<li><b style="color:#f0b429">Discount Promo</b> &mdash; promotional pricing on the ' +
+        `highlighted items is valid until <b>${quote.promoUntil ? formatQuoteDate(quote.promoUntil) : validUntil}</b>.</li>`
+      : '',
     '{{PRICE_TERMS}}':
       'All prices are <b>In Bond, UAE</b> &mdash; exclusive of duty, tax &amp; delivery. ' +
       `Quotation valid until ${validUntil} and subject to availability.`,
