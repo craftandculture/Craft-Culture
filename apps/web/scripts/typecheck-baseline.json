@@ -57,7 +57,6 @@
   "src/app/_wms/controller/adminDissolvePallet.ts|TS2769": 1,
   "src/app/_wms/controller/adminGetPricingProducts.ts|TS2345": 2,
   "src/app/_wms/controller/adminGetProductPricing.ts|TS2339": 1,
-  "src/app/_wms/controller/adminGetStockByProduct.ts|TS2345": 2,
   "src/app/_wms/controller/adminImportStock.ts|TS2345": 1,
   "src/app/_wms/controller/adminImportStock.ts|TS2769": 1,
   "src/app/_wms/controller/adminMovePallet.ts|TS2769": 1,
@@ -151,6 +150,5 @@
   "src/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob.ts|TS2559": 2,
   "src/trigger/jobs/logistics-document-extraction/logisticsDocumentExtractionJob.ts|TS2559": 1,
   "src/trigger/jobs/zoho-sync/zohoCreateInvoiceJob.ts|TS2339": 2,
-  "src/trigger/jobs/zoho-sync/zohoSalesOrderSyncJob.ts|TS18048": 5,
-  "src/trigger/jobs/zoho-sync/zohoSalesOrderSyncJob.ts|TS2339": 2
+  "src/trigger/jobs/zoho-sync/zohoSalesOrderSyncJob.ts|TS18048": 5
 }

@@ -56,7 +56,7 @@ export const zohoSalesOrderSyncJob = schedules.task({
 
       results.fetched = salesOrders.length;
       logger.info(
-        `Fetched ${salesOrders.length} sales orders from Zoho (${openOrders.salesOrders.length} open, ${invoicedOrders.salesOrders.length} invoiced)`,
+        `Fetched ${salesOrders.length} sales orders from Zoho (${openOrders.length} open, ${invoicedOrders.length} invoiced)`,
       );
 
       for (const zohoOrder of salesOrders) {
