@@ -593,10 +593,12 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
                       colorRole="brand"
                       className="justify-center"
                       isDisabled={isLocked || isSyncing || !zohoCustomer.trim()}
-                      onClick={() => syncZoho.mutate({ customerMatch: zohoCustomer })}
+                      onClick={() =>
+                        syncInvoices.mutate({ customerMatch: zohoCustomer })
+                      }
                     >
                       <IconRefresh className="mr-1 size-4" />
-                      {syncZoho.isPending ? 'Syncing…' : 'Sync Zoho'}
+                      {syncInvoices.isPending ? 'Syncing…' : 'Sync Zoho'}
                     </Button>
                   </div>
                 ) : null}
