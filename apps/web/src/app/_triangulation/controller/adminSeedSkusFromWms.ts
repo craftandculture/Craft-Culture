@@ -79,7 +79,7 @@ const adminSeedSkusFromWms = adminProcedure
         'owner_name',
       ],
       rows,
-      { onConflict: '(w_code) DO NOTHING', returning: 'id' },
+      { onConflict: '(programme_id, w_code) DO NOTHING', returning: 'id' },
     );
 
     return {

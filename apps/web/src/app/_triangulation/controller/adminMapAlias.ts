@@ -48,7 +48,7 @@ const adminMapAlias = adminProcedure
         ${skuId}, ${source}, ${aliasCode.trim()}, ${normalizedCode},
         ${aliasName ?? null}, ${ctx.user.id}
       )
-      ON CONFLICT (source, normalized_code) DO UPDATE SET
+      ON CONFLICT (programme_id, source, normalized_code) DO UPDATE SET
         sku_id = ${skuId},
         alias_code = ${aliasCode.trim()},
         alias_name = ${aliasName ?? null},

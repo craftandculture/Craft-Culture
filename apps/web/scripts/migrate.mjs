@@ -626,6 +626,88 @@ const runMigrations = async () => {
     `),
     );
 
+    // --- triangulation becomes multi-client ---------------------------------
+    // The tool was built for Crurated alone, with the parties baked in: W codes
+    // globally unique, one period calendar for everyone, and the WMS owner and
+    // Zoho customer names living in browser localStorage. None of that admits a
+    // second client. This adds the tenancy key and moves the three uniqueness
+    // rules inside it, without changing a single figure — every existing row is
+    // Crurated's, and the column default keeps the untouched controllers
+    // inserting valid rows while the rest of the work lands around them.
+    const CRURATED_PROGRAMME_ID = '11111111-1111-1111-1111-111111111111';
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "tri_programmes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL,
+        "slug" text NOT NULL UNIQUE,
+        "consignor_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "custodian_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "outlet_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "wms_owner_match" text,
+        "zoho_customer_match" text,
+        "identity_strategy" text NOT NULL DEFAULT 'lwin',
+        "is_active" boolean NOT NULL DEFAULT true,
+        "notes" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_programmes_consignor_id_idx" ON "tri_programmes"("consignor_id")`,
+    );
+
+    // Seeded before the columns that default to it, and with the same match
+    // values the browser was holding, so the live figures are unchanged.
+    await client.unsafe(`
+      INSERT INTO "tri_programmes"
+        ("id", "name", "slug", "wms_owner_match", "zoho_customer_match", "identity_strategy", "notes")
+      VALUES (
+        '${CRURATED_PROGRAMME_ID}', 'Crurated', 'crurated', 'CRURATED', 'CD General', 'w_code',
+        'Crurated stock in the C&C warehouse, sold through City Drinks. The programme the tool was originally built for.'
+      )
+      ON CONFLICT ("id") DO NOTHING
+    `);
+
+    // ADD COLUMN with a DEFAULT backfills existing rows in one pass, so the
+    // NOT NULL below is safe without a separate UPDATE.
+    for (const table of ['tri_skus', 'tri_sku_aliases', 'tri_periods', 'tri_imports']) {
+      await client.unsafe(
+        `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "programme_id" uuid
+           NOT NULL DEFAULT '${CRURATED_PROGRAMME_ID}'
+           REFERENCES "tri_programmes"("id") ON DELETE CASCADE`,
+      );
+      await client.unsafe(
+        `CREATE INDEX IF NOT EXISTS "${table}_programme_id_idx" ON "${table}"("programme_id")`,
+      );
+    }
+
+    // New scoped rules first: they must build cleanly against the current data
+    // before the old ones are given up. On single-tenant data they are the same
+    // rule, so this is a no-op that proves itself.
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "tri_skus_programme_w_code_unique" ON "tri_skus"("programme_id", "w_code")`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "tri_sku_aliases_programme_source_code_unique" ON "tri_sku_aliases"("programme_id", "source", "normalized_code")`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "tri_periods_programme_label_unique" ON "tri_periods"("programme_id", "label")`,
+    );
+
+    // Only now drop the global ones, which would otherwise stop Cru Wine using
+    // a code Crurated already use, or a second client opening "2026-08".
+    await client.unsafe(
+      `ALTER TABLE "tri_skus" DROP CONSTRAINT IF EXISTS "tri_skus_w_code_key"`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "tri_periods" DROP CONSTRAINT IF EXISTS "tri_periods_label_key"`,
+    );
+    await client.unsafe(
+      `DROP INDEX IF EXISTS "tri_sku_aliases_source_code_unique"`,
+    );
+    console.log('✅ tri_* multi-client tenancy ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

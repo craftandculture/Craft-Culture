@@ -235,7 +235,7 @@ const adminAutoMapSuggestions = adminProcedure
               ${candidate.normalizedCode}, ${candidate.rawDescription},
               ${ctx.user.id}
             )
-            ON CONFLICT (source, normalized_code) DO UPDATE SET
+            ON CONFLICT (programme_id, source, normalized_code) DO UPDATE SET
               sku_id = ${certain.sku.id}, updated_at = NOW()
           `;
         }
@@ -306,7 +306,7 @@ const adminAutoMapSuggestions = adminProcedure
           ${candidate.rawCode?.trim() || candidate.normalizedCode},
           ${candidate.normalizedCode}, ${candidate.rawDescription}, ${ctx.user.id}
         )
-        ON CONFLICT (source, normalized_code) DO UPDATE SET
+        ON CONFLICT (programme_id, source, normalized_code) DO UPDATE SET
           sku_id = ${bestSkuId}, updated_at = NOW()
       `;
     }

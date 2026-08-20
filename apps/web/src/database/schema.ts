@@ -5142,6 +5142,73 @@ export const triImportStatus = pgEnum('tri_import_status', ['draft', 'committed'
 export const triPeriodStatus = pgEnum('tri_period_status', ['open', 'locked']);
 
 /**
+ * The consignment programme every triangulated row belongs to.
+ *
+ * Fixed so it can be a column default: the tool was built for Crurated alone,
+ * and every existing row is theirs. Defaulting the tenancy key means the
+ * controllers keep inserting valid rows untouched while the multi-client work
+ * lands around them, rather than needing all forty of them changed at once.
+ */
+export const CRURATED_PROGRAMME_ID = '11111111-1111-1111-1111-111111111111';
+
+/**
+ * One consignor's stock, held by a custodian, sold through an outlet.
+ *
+ * The reconciliation was written for exactly one of these — Crurated's stock,
+ * in C&C's warehouse, sold by City Drinks — with the parties named in enum
+ * values and pinned in browser localStorage. Naming them here is what lets a
+ * second client exist, and what lets C&C be the consignor on its own
+ * programmes rather than only ever the custodian.
+ *
+ * The partner references are nullable because a consignor may be trading long
+ * before anyone creates a `partners` row for them; `name` carries the identity
+ * until one exists.
+ */
+export const triProgrammes = pgTable(
+  'tri_programmes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(),
+    /** Whose stock it is — Crurated, Cru Wine, Cult Wines, or C&C itself */
+    consignorId: uuid('consignor_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    /** Who physically holds it — normally C&C */
+    custodianId: uuid('custodian_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    /** Who sells it on — City Drinks, or another retailer */
+    outletId: uuid('outlet_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * How this programme's stock is identified in the WMS and in Zoho.
+     *
+     * Both were per-browser localStorage values, so two people could read the
+     * same page and get different figures, and neither was recoverable if the
+     * browser was cleared.
+     */
+    wmsOwnerMatch: text('wms_owner_match'),
+    zohoCustomerMatch: text('zoho_customer_match'),
+    /**
+     * Which code is canonical for this programme: `w_code` or `lwin`.
+     *
+     * Only Crurated issue W codes. Everyone else is identified by LWIN, which
+     * is what the WMS falls back to already — `wms_stock.supplier_sku` is empty
+     * on every row today.
+     */
+    identityStrategy: text('identity_strategy').notNull().default('lwin'),
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [index('tri_programmes_consignor_id_idx').on(table.consignorId)],
+);
+
+export type TriProgramme = typeof triProgrammes.$inferSelect;
+
+/**
  * Canonical SKU registry for triangulation, keyed on the internal W code.
  *
  * Every other party's product code (City Drinks' CD codes, Zoho item codes)
@@ -5152,8 +5219,12 @@ export const triSkus = pgTable(
   'tri_skus',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // Internal W code — the canonical identity for a triangulated product
-    wCode: text('w_code').notNull().unique(),
+    programmeId: uuid('programme_id')
+      .references(() => triProgrammes.id, { onDelete: 'cascade' })
+      .notNull()
+      .default(CRURATED_PROGRAMME_ID),
+    // Internal W code — canonical for Crurated, an ordinary alias for everyone else
+    wCode: text('w_code').notNull(),
     lwin18: text('lwin18'),
     productName: text('product_name').notNull(),
     producer: text('producer'),
@@ -5177,6 +5248,12 @@ export const triSkus = pgTable(
   (table) => [
     index('tri_skus_lwin18_idx').on(table.lwin18),
     index('tri_skus_product_name_idx').on(table.productName),
+    index('tri_skus_programme_id_idx').on(table.programmeId),
+    // Was globally unique, which would have let one client's code block another's
+    uniqueIndex('tri_skus_programme_w_code_unique').on(
+      table.programmeId,
+      table.wCode,
+    ),
   ],
 );
 
@@ -5192,6 +5269,10 @@ export const triSkuAliases = pgTable(
   'tri_sku_aliases',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    programmeId: uuid('programme_id')
+      .references(() => triProgrammes.id, { onDelete: 'cascade' })
+      .notNull()
+      .default(CRURATED_PROGRAMME_ID),
     skuId: uuid('sku_id')
       .references(() => triSkus.id, { onDelete: 'cascade' })
       .notNull(),
@@ -5205,7 +5286,9 @@ export const triSkuAliases = pgTable(
   },
   (table) => [
     index('tri_sku_aliases_sku_id_idx').on(table.skuId),
-    uniqueIndex('tri_sku_aliases_source_code_unique').on(
+    // Scoped to the programme: two clients can each use "ABC123" for their own wine
+    uniqueIndex('tri_sku_aliases_programme_source_code_unique').on(
+      table.programmeId,
       table.source,
       table.normalizedCode,
     ),
@@ -5222,7 +5305,11 @@ export const triPeriods = pgTable(
   'tri_periods',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    label: text('label').notNull().unique(),
+    programmeId: uuid('programme_id')
+      .references(() => triProgrammes.id, { onDelete: 'cascade' })
+      .notNull()
+      .default(CRURATED_PROGRAMME_ID),
+    label: text('label').notNull(),
     periodStart: date('period_start').notNull(),
     periodEnd: date('period_end').notNull(),
     status: triPeriodStatus('status').notNull().default('open'),
@@ -5231,7 +5318,14 @@ export const triPeriods = pgTable(
     lockedBy: uuid('locked_by').references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
-  (table) => [index('tri_periods_period_end_idx').on(table.periodEnd)],
+  (table) => [
+    index('tri_periods_period_end_idx').on(table.periodEnd),
+    // Each programme keeps its own calendar, and locks it on its own schedule
+    uniqueIndex('tri_periods_programme_label_unique').on(
+      table.programmeId,
+      table.label,
+    ),
+  ],
 );
 
 export type TriPeriod = typeof triPeriods.$inferSelect;
@@ -5246,6 +5340,14 @@ export const triImports = pgTable(
   'tri_imports',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    /**
+     * Carried on the import rather than the line: an import is one file or one
+     * sync from one party, so every line in it belongs to the same programme.
+     */
+    programmeId: uuid('programme_id')
+      .references(() => triProgrammes.id, { onDelete: 'cascade' })
+      .notNull()
+      .default(CRURATED_PROGRAMME_ID),
     periodId: uuid('period_id').references(() => triPeriods.id, {
       onDelete: 'set null',
     }),
@@ -5273,6 +5375,7 @@ export const triImports = pgTable(
     index('tri_imports_period_id_idx').on(table.periodId),
     index('tri_imports_kind_idx').on(table.kind),
     index('tri_imports_as_of_date_idx').on(table.asOfDate),
+    index('tri_imports_programme_id_idx').on(table.programmeId),
   ],
 );
 

@@ -17,7 +17,7 @@ interface WmsCandidate {
  * Give every SKU the dashed LWIN the WMS already holds for it
  *
  * Seeding the registry from the WMS inserts what is missing and leaves what
- * exists alone — `ON CONFLICT (w_code) DO NOTHING` — which is right for names
+ * exists alone — `ON CONFLICT (programme_id, w_code) DO NOTHING` — right for names
  * and pack sizes someone has since corrected by hand. The cost is that a SKU
  * created any other way never receives its LWIN, and almost all of them were.
  *

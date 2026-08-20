@@ -81,7 +81,7 @@ const adminMoveCodeToSku = adminProcedure
           ${skuId}, ${source.aliasSource}, ${source.rawCode},
           ${normalizedCode}, ${ctx.user.id}
         )
-        ON CONFLICT (source, normalized_code) DO UPDATE SET
+        ON CONFLICT (programme_id, source, normalized_code) DO UPDATE SET
           sku_id = ${skuId},
           created_by = ${ctx.user.id},
           updated_at = NOW()
