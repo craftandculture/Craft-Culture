@@ -90,6 +90,8 @@ const adminSyncSalesFromInvoices = adminProcedure
     const rows: Record<string, unknown>[] = [];
     const invoiceNumbers: string[] = [];
     let skippedLines = 0;
+    /** Kept, but only nameable by description until Zoho gives the item a SKU */
+    let codelessLines = 0;
 
     // Both feeds describe the same sales, so the order-based one goes with
     // this one's own previous run. Leaving it would double Sold to City
@@ -134,10 +136,23 @@ const adminSyncSalesFromInvoices = adminProcedure
         if (!line.quantity) continue;
 
         const code = line.sku ?? '';
+        const normalized = normalizeCode(code);
+        const description = `${line.name}${line.description ? ` (${line.description})` : ''}`;
 
-        if (!normalizeCode(code)) {
-          // Nothing to file it under. Counted here so a wine that never
-          // reaches the figures is a number someone can see.
+        // An item with no SKU in Zoho used to be dropped here, and dropping it
+        // put the line beyond reach of every diagnostic the tool has: absent
+        // from the figures, absent from the mapping queue, and visible only as
+        // a number in a toast nobody keeps. INV-000260 carried one such line
+        // and its 12 bottles simply were not in the report.
+        //
+        // A line with a name can still be identified — uploads have always
+        // keyed codeless rows on their description, and `mapImportLines` runs
+        // that same backfill over this feed. So it is kept and left unmapped,
+        // which puts it in the queue where someone can name the wine.
+        if (!normalized) codelessLines += 1;
+
+        if (!normalized && !description.trim()) {
+          // Neither a code nor a name. Nothing could file this one.
           skippedLines += 1;
           continue;
         }
@@ -152,9 +167,9 @@ const adminSyncSalesFromInvoices = adminProcedure
 
         rows.push({
           import_id: importId,
-          raw_code: code,
-          normalized_code: normalizeCode(code),
-          raw_description: `${line.name}${line.description ? ` (${line.description})` : ''}`,
+          raw_code: normalized ? code : null,
+          normalized_code: normalized || null,
+          raw_description: description,
           quantity: line.quantity,
           unit: isBottles ? 'bottle' : 'case',
           case_config: pack,
@@ -197,6 +212,7 @@ const adminSyncSalesFromInvoices = adminProcedure
       asOfDate,
       invoices: invoiceNumbers,
       orderLines: rows.length,
+      codelessLines,
       skippedLines,
       mappedRowCount: mapped.mappedRowCount,
       totalBottles: mapped.totalBottles,
