@@ -42,6 +42,41 @@ const adminCommitImport = adminProcedure
       });
     }
 
+    // A whole file already committed under another name is a different claim
+    // from a few colliding lines, and it needs refusing rather than warning.
+    // City Drinks' sales sheet was uploaded twice — once dated to each month's
+    // start, once to its end — and the per-line warning fired on every one of
+    // the nine months, so it was acknowledged nine times and every bottle was
+    // counted twice. A warning that appears that often is training, not a
+    // guard, which is why this one has no acknowledgement.
+    const [twin] = await client<
+      { fileName: string | null; asOfDate: string }[]
+    >`
+      SELECT o.file_name AS "fileName", o.as_of_date::text AS "asOfDate"
+      FROM tri_imports o
+      JOIN tri_imports self ON self.id = ${importId}
+      WHERE o.id <> self.id
+        AND o.programme_id = self.programme_id
+        AND o.kind = self.kind
+        AND o.status = 'committed'
+        AND o.row_count = self.row_count
+        AND o.row_count > 0
+        AND ABS(o.total_bottles - self.total_bottles) < 0.001
+        AND o.total_bottles <> 0
+      LIMIT 1
+    `;
+
+    if (twin) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          `This is already committed as "${twin.fileName ?? 'another import'}" ` +
+          `(as at ${twin.asOfDate}) — same number of rows and the same bottle ` +
+          `total. Committing it again would count every bottle twice. Delete ` +
+          `one of them rather than acknowledging this.`,
+      });
+    }
+
     // The same shipment reaches this tool by more than one route, and
     // committing both silently doubles the receipt — with figures that stay
     // plausible. Cheap to refuse here, expensive to unpick later.
