@@ -16,7 +16,8 @@ const TriangulationPage = () => {
         </Typography>
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p className="mt-1">
-            Crurated stock reconciled across C&amp;C and City Drinks, in bottles.
+            Consignment stock reconciled between C&amp;C and the outlet holding
+            it, one client at a time, in bottles.
           </p>
         </Typography>
       </div>

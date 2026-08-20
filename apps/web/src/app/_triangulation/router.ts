@@ -5,6 +5,7 @@ import adminBackfillLwinFromWms from './controller/adminBackfillLwinFromWms';
 import adminCommitImport from './controller/adminCommitImport';
 import adminCreateImport from './controller/adminCreateImport';
 import adminCreatePeriod from './controller/adminCreatePeriod';
+import adminCreateProgramme from './controller/adminCreateProgramme';
 import adminDeleteAlias from './controller/adminDeleteAlias';
 import adminDeleteImport from './controller/adminDeleteImport';
 import adminDeriveLwins from './controller/adminDeriveLwins';
@@ -57,6 +58,7 @@ import adminUpsertSku from './controller/adminUpsertSku';
 const triangulationRouter = createTRPCRouter({
   admin: createTRPCRouter({
     getProgrammes: adminGetProgrammes,
+    createProgramme: adminCreateProgramme,
     getPeriods: adminGetPeriods,
     createPeriod: adminCreatePeriod,
     setPeriodStatus: adminSetPeriodStatus,

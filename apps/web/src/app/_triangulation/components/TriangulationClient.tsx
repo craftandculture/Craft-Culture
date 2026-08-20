@@ -14,6 +14,7 @@ import TabsTrigger from '@/app/_ui/components/Tabs/TabsTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+
 import ImportsTab from './ImportsTab';
 import MappingTab from './MappingTab';
 import NextStep from './NextStep';
@@ -21,6 +22,7 @@ import OverviewTab from './OverviewTab';
 import SelectField from './SelectField';
 import SkusTab from './SkusTab';
 import ZohoCleanupTab from './ZohoCleanupTab';
+import { CRURATED_PROGRAMME_ID } from '../utils/programmeId';
 
 /** Month label and bounds for the period one month before `date` */
 const previousMonthPeriod = (date: Date) => {
@@ -52,7 +54,10 @@ const TriangulationClient = () => {
    * Null means Crurated, the programme every existing figure belongs to, so a
    * fresh load reads exactly as it did before there was more than one.
    */
-  const [programmeId, setProgrammeId] = useState<string | null>(null);
+  const [programmeId, setProgrammeId] = useState<string>(CRURATED_PROGRAMME_ID);
+  /** Whether the partner picker for adding a client is open */
+  const [addingClient, setAddingClient] = useState(false);
+  const [newPartnerId, setNewPartnerId] = useState('');
   const [periodId, setPeriodId] = useState<string | null>(null);
   /** Controlled so the next-step strip can send someone to the right tab */
   const [tab, setTab] = useState('overview');
@@ -70,6 +75,30 @@ const TriangulationClient = () => {
   const programmes = useQuery(
     api.triangulation.admin.getProgrammes.queryOptions(),
   );
+  // Every active partner, so a client is picked from the record their orders
+  // and invoices already hang off rather than typed in a second time.
+  const partnerOptions = useQuery({
+    ...api.partners.list.queryOptions({}),
+    enabled: addingClient,
+  });
+
+  const createProgramme = useMutation({
+    ...api.triangulation.admin.createProgramme.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        result.created
+          ? `${result.name} added`
+          : `${result.name} already had a programme`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getProgrammes.queryKey(),
+      });
+      setProgrammeId(result.id);
+      setAddingClient(false);
+      setNewPartnerId('');
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const periods = useQuery(
     api.triangulation.admin.getPeriods.queryOptions({ programmeId }),
   );
@@ -138,20 +167,60 @@ const TriangulationClient = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
-          {(programmes.data?.length ?? 0) > 1 ? (
-            <SelectField
-              label="Programme"
-              value={programmeId ?? ''}
-              onChange={(event) => setProgrammeId(event.target.value || null)}
+          <SelectField
+            label="Client"
+            value={programmeId}
+            onChange={(event) => setProgrammeId(event.target.value)}
+          >
+            {programmes.data?.map((programme) => (
+              <option key={programme.id} value={programme.id}>
+                {programme.name}
+                {programme.skuCount === 0 ? ' · no wines yet' : ''}
+              </option>
+            ))}
+          </SelectField>
+          {addingClient ? (
+            <>
+              <SelectField
+                label="Add a client"
+                value={newPartnerId}
+                onChange={(event) => setNewPartnerId(event.target.value)}
+              >
+                <option value="">— choose a partner —</option>
+                {partnerOptions.data?.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </option>
+                ))}
+              </SelectField>
+              <Button
+                size="sm"
+                colorRole="brand"
+                isDisabled={!newPartnerId || createProgramme.isPending}
+                onClick={() =>
+                  createProgramme.mutate({ partnerId: newPartnerId })
+                }
+              >
+                {createProgramme.isPending ? 'Adding…' : 'Add'}
+              </Button>
+              <Button
+                size="sm"
+                colorRole="muted"
+                onClick={() => setAddingClient(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              colorRole="muted"
+              onClick={() => setAddingClient(true)}
             >
-              {programmes.data?.map((programme) => (
-                <option key={programme.id} value={programme.id}>
-                  {programme.name}
-                  {programme.skuCount === 0 ? ' · no wines yet' : ''}
-                </option>
-              ))}
-            </SelectField>
-          ) : null}
+              <IconPlus className="mr-1 size-4" />
+              Add client
+            </Button>
+          )}
           <SelectField
             label="Reporting period"
             value={periodId ?? ''}

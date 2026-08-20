@@ -736,6 +736,28 @@ const runMigrations = async () => {
       )
       ON CONFLICT ("slug") DO NOTHING
     `);
+    // The clients to test against, seeded rather than added by hand so they
+    // exist before anyone needs them. C&C is one of them: we consign our own
+    // stock too, and a programme where C&C is the consignor is the same five
+    // inputs with a different party in the first column, not a special case.
+    //
+    // consignor_id is matched to the partner record where one exists, so the
+    // programme hangs off the same row their orders and invoices do rather
+    // than becoming a second spelling of the same company.
+    for (const [name, slug] of [
+      ['Cult Wines', 'cult-wines'],
+      ['Craft & Culture', 'craft-culture'],
+    ]) {
+      await client.unsafe(
+        `INSERT INTO "tri_programmes" ("name", "slug", "identity_strategy", "consignor_id")
+         SELECT $1, $2, 'lwin',
+                (SELECT id FROM partners
+                  WHERE lower(business_name) = lower($1) AND status = 'active'
+                  LIMIT 1)
+         WHERE NOT EXISTS (SELECT 1 FROM tri_programmes WHERE slug = $2)`,
+        [name, slug],
+      );
+    }
     console.log('✅ tri_skus LWIN-first identity ready');
 
     if (dataFixFailures.length > 0) {
