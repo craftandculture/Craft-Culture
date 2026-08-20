@@ -24,7 +24,12 @@ import importKindLabels from '../utils/importKindLabels';
  * with no W code behind it. Mapping one writes an alias, which then resolves
  * that code in every import that already used it, past months included.
  */
-const MappingTab = () => {
+export interface MappingTabProps {
+  /** Only this programme's codes are unresolved, and only its wines can fix them */
+  programmeId: string | null;
+}
+
+const MappingTab = ({ programmeId }: MappingTabProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -37,6 +42,7 @@ const MappingTab = () => {
 
   const unmapped = useQuery(
     api.triangulation.admin.getUnmapped.queryOptions({
+      programmeId,
       importId: null,
       includeIgnored: showIgnored,
       search: queueSearch || undefined,
@@ -45,7 +51,8 @@ const MappingTab = () => {
   );
 
   const skus = useQuery(
-    api.triangulation.admin.getSkus.queryOptions({ search, limit: 500 }),
+    api.triangulation.admin.getSkus.queryOptions({
+      programmeId, search, limit: 500 }),
   );
 
   const mapAlias = useMutation({

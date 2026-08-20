@@ -2,6 +2,8 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getTriangulationSchema } from '../schemas/triangulationSchemas';
+import resolveProgrammeId from '../utils/programmeId';
+
 
 export interface TriangulationRow {
   skuId: string;
@@ -76,11 +78,14 @@ const adminGetTriangulation = adminProcedure
   .input(getTriangulationSchema)
   .query(async ({ input }) => {
     const { periodId, search, variancesOnly } = input;
+    const programmeId = resolveProgrammeId(input.programmeId);
 
     const [period] = periodId
       ? await client<{ label: string; periodEnd: string }[]>`
           SELECT label, period_end::text AS "periodEnd"
-          FROM tri_periods WHERE id = ${periodId} LIMIT 1
+          FROM tri_periods
+           WHERE id = ${periodId} AND programme_id = ${programmeId}
+           LIMIT 1
         `
       : [];
 
@@ -111,12 +116,14 @@ const adminGetTriangulation = adminProcedure
           (
             SELECT MAX(as_of_date)::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
+              AND programme_id = ${programmeId}
               AND source_ref IN ('wms-stock', 'wms-sync')
               AND as_of_date <= ${cutoff}
           ),
           (
             SELECT MIN(as_of_date)::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
+              AND programme_id = ${programmeId}
               AND source_ref IN ('wms-stock', 'wms-sync')
           )
         ) AS "ccSystemDate",
@@ -124,18 +131,21 @@ const adminGetTriangulation = adminProcedure
           (
             SELECT MAX(as_of_date)::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
+              AND programme_id = ${programmeId}
               AND (source_ref IS NULL OR source_ref NOT IN ('wms-stock', 'wms-sync'))
               AND as_of_date <= ${cutoff}
           ),
           (
             SELECT MIN(as_of_date)::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
+              AND programme_id = ${programmeId}
               AND (source_ref IS NULL OR source_ref NOT IN ('wms-stock', 'wms-sync'))
           )
         ) AS "ccCountDate",
         (
           SELECT MAX(as_of_date)::text FROM tri_imports
-          WHERE kind = 'cd_count' AND status = 'committed' AND as_of_date <= ${cutoff}
+          WHERE kind = 'cd_count' AND status = 'committed'
+            AND programme_id = ${programmeId} AND as_of_date <= ${cutoff}
         ) AS "cdCountDate"
     `;
 
@@ -160,6 +170,7 @@ const adminGetTriangulation = adminProcedure
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.status = 'committed'
+          AND i.programme_id = ${programmeId}
           AND l.sku_id IS NOT NULL
           AND i.kind IN ('cc_opening', 'cc_sales_to_cd', 'cd_sales')
       ),
@@ -194,6 +205,7 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cc_count'
           AND i.status = 'committed'
+          AND i.programme_id = ${programmeId}
           AND (i.source_ref IS NULL OR i.source_ref NOT IN ('wms-stock', 'wms-sync'))
           AND i.as_of_date = ${ccCountDate}
           AND l.sku_id IS NOT NULL
@@ -205,6 +217,7 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cc_count'
           AND i.status = 'committed'
+          AND i.programme_id = ${programmeId}
           AND i.source_ref IN ('wms-stock', 'wms-sync')
           AND i.as_of_date = ${ccSystemDate}
           AND l.sku_id IS NOT NULL
@@ -216,6 +229,7 @@ const adminGetTriangulation = adminProcedure
         JOIN tri_imports i ON i.id = l.import_id
         WHERE i.kind = 'cd_count'
           AND i.status = 'committed'
+          AND i.programme_id = ${programmeId}
           AND i.as_of_date = ${cdCountDate}
           AND l.sku_id IS NOT NULL
         GROUP BY l.sku_id
@@ -274,7 +288,8 @@ const adminGetTriangulation = adminProcedure
         LEFT JOIN cc_counts cc ON cc.sku_id = s.id
         LEFT JOIN cc_system sys ON sys.sku_id = s.id
         LEFT JOIN cd_counts cd ON cd.sku_id = s.id
-        WHERE (
+        WHERE s.programme_id = ${programmeId}
+          AND (
             f.sku_id IS NOT NULL OR cc.sku_id IS NOT NULL
             OR sys.sku_id IS NOT NULL OR cd.sku_id IS NOT NULL
           )
@@ -361,15 +376,18 @@ const adminGetTriangulation = adminProcedure
       SELECT
         COUNT(DISTINCT i.id) FILTER (
           WHERE i.status = 'committed'
+          AND i.programme_id = ${programmeId}
             AND i.source_ref IN ('wms-stock', 'wms-sync')
         )::int AS "systemImports",
         COUNT(l.id) FILTER (
           WHERE i.status = 'committed'
+          AND i.programme_id = ${programmeId}
             AND i.source_ref IN ('wms-stock', 'wms-sync')
             AND l.status = 'mapped'
         )::int AS "systemMappedLines",
         COUNT(DISTINCT i.id) FILTER (
           WHERE i.status = 'committed'
+          AND i.programme_id = ${programmeId}
             AND (i.source_ref IS NULL OR i.source_ref NOT IN ('wms-stock', 'wms-sync'))
         )::int AS "countImports",
         COUNT(DISTINCT i.id) FILTER (WHERE i.status = 'draft')::int

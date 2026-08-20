@@ -4,6 +4,8 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import type { TriImportKind } from '../schemas/triangulationSchemas';
+import resolveProgrammeId from '../utils/programmeId';
+
 
 export interface TriImportRow {
   id: string;
@@ -37,12 +39,14 @@ export interface TriImportRow {
 const adminGetImports = adminProcedure
   .input(
     z.object({
+      programmeId: z.string().uuid().optional().nullable(),
       periodId: z.string().uuid().optional().nullable(),
       limit: z.number().int().positive().max(500).default(100),
     }),
   )
   .query(async ({ input }) => {
     const { periodId, limit } = input;
+    const programmeId = resolveProgrammeId(input.programmeId);
 
     const rows = await client<TriImportRow[]>`
       SELECT
@@ -74,7 +78,8 @@ const adminGetImports = adminProcedure
       FROM tri_imports i
       LEFT JOIN tri_periods p ON p.id = i.period_id
       LEFT JOIN users u ON u.id = i.uploaded_by
-      ${periodId ? client`WHERE i.period_id = ${periodId}` : client``}
+      WHERE i.programme_id = ${programmeId}
+      ${periodId ? client`AND i.period_id = ${periodId}` : client``}
       ORDER BY i.as_of_date DESC, i.created_at DESC
       LIMIT ${limit}
     `;

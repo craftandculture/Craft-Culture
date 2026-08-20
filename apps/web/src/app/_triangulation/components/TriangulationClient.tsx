@@ -46,6 +46,13 @@ const TriangulationClient = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
+  /**
+   * Which consignment programme is on screen.
+   *
+   * Null means Crurated, the programme every existing figure belongs to, so a
+   * fresh load reads exactly as it did before there was more than one.
+   */
+  const [programmeId, setProgrammeId] = useState<string | null>(null);
   const [periodId, setPeriodId] = useState<string | null>(null);
   /** Controlled so the next-step strip can send someone to the right tab */
   const [tab, setTab] = useState('overview');
@@ -60,7 +67,12 @@ const TriangulationClient = () => {
     (zohoCleanup.data?.summary.needsStandard ?? 0) +
     (zohoCleanup.data?.summary.noLwin ?? 0);
 
-  const periods = useQuery(api.triangulation.admin.getPeriods.queryOptions());
+  const programmes = useQuery(
+    api.triangulation.admin.getProgrammes.queryOptions(),
+  );
+  const periods = useQuery(
+    api.triangulation.admin.getPeriods.queryOptions({ programmeId }),
+  );
 
   const createPeriod = useMutation({
     ...api.triangulation.admin.createPeriod.mutationOptions(),
@@ -86,6 +98,13 @@ const TriangulationClient = () => {
   });
 
   const rows = useMemo(() => periods.data ?? [], [periods.data]);
+
+  // Periods belong to a programme. Carrying one across would ask for a period
+  // the new programme does not have, and the reconciliation would answer for
+  // all time while the selector still named a month.
+  useEffect(() => {
+    setPeriodId(null);
+  }, [programmeId]);
   const selected = rows.find((row) => row.id === periodId) ?? null;
 
   // Land on the most recent period the first time the list arrives.
@@ -119,6 +138,20 @@ const TriangulationClient = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
+          {(programmes.data?.length ?? 0) > 1 ? (
+            <SelectField
+              label="Programme"
+              value={programmeId ?? ''}
+              onChange={(event) => setProgrammeId(event.target.value || null)}
+            >
+              {programmes.data?.map((programme) => (
+                <option key={programme.id} value={programme.id}>
+                  {programme.name}
+                  {programme.skuCount === 0 ? ' · no wines yet' : ''}
+                </option>
+              ))}
+            </SelectField>
+          ) : null}
           <SelectField
             label="Reporting period"
             value={periodId ?? ''}
@@ -179,7 +212,7 @@ const TriangulationClient = () => {
         </Typography>
       ) : null}
 
-      <NextStep periodId={periodId} onGo={setTab} />
+      <NextStep programmeId={programmeId} periodId={periodId} onGo={setTab} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
@@ -205,20 +238,21 @@ const TriangulationClient = () => {
         </TabsList>
 
         <TabsContent value="overview" className="pt-6">
-          <OverviewTab periodId={periodId} />
+          <OverviewTab programmeId={programmeId} periodId={periodId} />
         </TabsContent>
         <TabsContent value="imports" className="pt-6">
           <ImportsTab
+            programmeId={programmeId}
             periodId={periodId}
             periodEnd={selected?.periodEnd ?? null}
             isLocked={selected?.status === 'locked'}
           />
         </TabsContent>
         <TabsContent value="mapping" className="pt-6">
-          <MappingTab />
+          <MappingTab programmeId={programmeId} />
         </TabsContent>
         <TabsContent value="skus" className="pt-6">
-          <SkusTab />
+          <SkusTab programmeId={programmeId} />
         </TabsContent>
         <TabsContent value="zoho" className="pt-6">
           <ZohoCleanupTab />

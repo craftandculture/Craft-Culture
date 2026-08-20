@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import { programmeIdSchema } from '../utils/programmeId';
+
 export interface TriSkuAliasRow {
   id: string;
   source: string;
@@ -34,12 +36,13 @@ export interface TriSkuRow {
 const adminGetSkus = adminProcedure
   .input(
     z.object({
+      programmeId: programmeIdSchema,
       search: z.string().max(200).optional(),
       limit: z.number().int().positive().max(2000).default(500),
     }),
   )
   .query(async ({ input }) => {
-    const { search, limit } = input;
+    const { programmeId, search, limit } = input;
     const term = search?.trim() ? `%${search.trim()}%` : null;
 
     const rows = await client<TriSkuRow[]>`
@@ -71,16 +74,17 @@ const adminGetSkus = adminProcedure
           '[]'::json
         ) AS aliases
       FROM tri_skus s
+      WHERE s.programme_id = ${programmeId}
       ${
         term
-          ? client`WHERE s.w_code ILIKE ${term}
+          ? client`AND (s.w_code ILIKE ${term}
               OR s.product_name ILIKE ${term}
               OR s.producer ILIKE ${term}
               OR s.lwin18 ILIKE ${term}
               OR EXISTS (
                 SELECT 1 FROM tri_sku_aliases a2
                 WHERE a2.sku_id = s.id AND a2.alias_code ILIKE ${term}
-              )`
+              ))`
           : client``
       }
       ORDER BY s.product_name, s.vintage

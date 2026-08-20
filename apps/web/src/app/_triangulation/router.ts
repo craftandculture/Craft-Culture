@@ -18,6 +18,7 @@ import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
 import adminGetOrdersForSku from './controller/adminGetOrdersForSku';
 import adminGetPeriods from './controller/adminGetPeriods';
+import adminGetProgrammes from './controller/adminGetProgrammes';
 import adminGetSalesCoverage from './controller/adminGetSalesCoverage';
 import adminGetSkuLedger from './controller/adminGetSkuLedger';
 import adminGetSkus from './controller/adminGetSkus';
@@ -55,6 +56,7 @@ import adminUpsertSku from './controller/adminUpsertSku';
  */
 const triangulationRouter = createTRPCRouter({
   admin: createTRPCRouter({
+    getProgrammes: adminGetProgrammes,
     getPeriods: adminGetPeriods,
     createPeriod: adminCreatePeriod,
     setPeriodStatus: adminSetPeriodStatus,

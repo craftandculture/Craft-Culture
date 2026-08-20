@@ -33,6 +33,7 @@ interface SyncReportEntry {
 }
 
 export interface ImportsTabProps {
+  programmeId: string | null;
   periodId: string | null;
   periodEnd: string | null;
   isLocked: boolean;
@@ -59,7 +60,7 @@ const KIND_ORDER: TriImportKind[] = [
  * unresolved product codes out of the reconciliation until someone has looked
  * at it.
  */
-const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
+const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -100,7 +101,11 @@ const ImportsTab = ({ periodId, periodEnd, isLocked }: ImportsTabProps) => {
   }, []);
 
   const imports = useQuery(
-    api.triangulation.admin.getImports.queryOptions({ periodId, limit: 200 }),
+    api.triangulation.admin.getImports.queryOptions({
+      programmeId,
+      periodId,
+      limit: 200,
+    }),
   );
 
   const invalidate = async () => {

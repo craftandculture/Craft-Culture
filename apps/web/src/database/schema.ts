@@ -5223,8 +5223,15 @@ export const triSkus = pgTable(
       .references(() => triProgrammes.id, { onDelete: 'cascade' })
       .notNull()
       .default(CRURATED_PROGRAMME_ID),
-    // Internal W code — canonical for Crurated, an ordinary alias for everyone else
-    wCode: text('w_code').notNull(),
+    /**
+     * Internal W code — canonical for Crurated, absent for everyone else.
+     *
+     * Only Crurated issue them. A programme on the `lwin` strategy identifies
+     * its wines by LWIN instead, so this is nullable and the unique index below
+     * treats those NULLs as distinct, which is what lets a client exist without
+     * inventing house codes for them.
+     */
+    wCode: text('w_code'),
     lwin18: text('lwin18'),
     productName: text('product_name').notNull(),
     producer: text('producer'),
@@ -5254,6 +5261,11 @@ export const triSkus = pgTable(
       table.programmeId,
       table.wCode,
     ),
+    // The identity a `lwin` programme is looked up by. Deliberately not unique:
+    // Crurated already carry duplicate-LWIN pairs (the Masseria Alfano split
+    // SKU among them), and a constraint that fails to build would take the
+    // deploy down with it. Uniqueness here is a clean-up goal, not a gate.
+    index('tri_skus_programme_lwin18_idx').on(table.programmeId, table.lwin18),
   ],
 );
 

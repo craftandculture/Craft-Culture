@@ -1,5 +1,9 @@
+import { z } from 'zod';
+
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import { CRURATED_PROGRAMME_ID, programmeIdSchema } from '../utils/programmeId';
 
 export interface TriPeriodRow {
   id: string;
@@ -20,8 +24,12 @@ export interface TriPeriodRow {
  * reconciliation read before all five inputs are in is misleading, so the UI
  * needs to say so up front.
  */
-const adminGetPeriods = adminProcedure.query(async () => {
-  const rows = await client<TriPeriodRow[]>`
+const adminGetPeriods = adminProcedure
+  .input(z.object({ programmeId: programmeIdSchema }).optional())
+  .query(async ({ input }) => {
+    const programmeId = input?.programmeId ?? CRURATED_PROGRAMME_ID;
+
+    const rows = await client<TriPeriodRow[]>`
     SELECT
       p.id,
       p.label,
@@ -44,10 +52,11 @@ const adminGetPeriods = adminProcedure.query(async () => {
       LEFT JOIN tri_import_lines l ON l.import_id = imp.id
       GROUP BY imp.period_id
     ) i ON i.period_id = p.id
+    WHERE p.programme_id = ${programmeId}
     ORDER BY p.period_end DESC
   `;
 
-  return rows;
-});
+    return rows;
+  });
 
 export default adminGetPeriods;

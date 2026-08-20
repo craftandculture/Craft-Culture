@@ -1,9 +1,11 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+
 import backfillDescriptionKeys from '../data/backfillDescriptionKeys';
 import { getUnmappedSchema } from '../schemas/triangulationSchemas';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
+import resolveProgrammeId from '../utils/programmeId';
 
 export interface TriUnmappedRow {
   normalizedCode: string;
@@ -30,6 +32,7 @@ const adminGetUnmapped = adminProcedure
   .input(getUnmappedSchema)
   .query(async ({ input }) => {
     const { importId, includeIgnored, search, limit } = input;
+    const programmeId = resolveProgrammeId(input.programmeId);
 
     const term = search?.trim() ? `%${search.trim()}%` : null;
 
@@ -53,6 +56,7 @@ const adminGetUnmapped = adminProcedure
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
         WHERE l.status = ${includeIgnored ? 'ignored' : 'unmapped'}
+          AND i.programme_id = ${programmeId}
           ${importId ? client`AND l.import_id = ${importId}` : client``}
           ${
             term
@@ -81,7 +85,8 @@ const adminGetUnmapped = adminProcedure
                 s.vintage,
                 similarity(s.product_name, COALESCE(u.raw_description, '')) AS score
               FROM tri_skus s
-              WHERE u.raw_description IS NOT NULL
+              WHERE s.programme_id = ${programmeId}
+                AND u.raw_description IS NOT NULL
                 AND similarity(s.product_name, u.raw_description) > 0.25
               ORDER BY score DESC
               LIMIT 5

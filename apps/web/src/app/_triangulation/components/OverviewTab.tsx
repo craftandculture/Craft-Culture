@@ -20,6 +20,7 @@ import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 
 
 export interface OverviewTabProps {
+  programmeId: string | null;
   periodId: string | null;
 }
 
@@ -43,7 +44,7 @@ const actualOf = (row: TriangulationRow) =>
  * their consumers — with each party's calculated position set beside the count
  * they declared, and the gap between the two called out.
  */
-const OverviewTab = ({ periodId }: OverviewTabProps) => {
+const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
   const api = useTRPC();
 
   const [search, setSearch] = useState('');
@@ -56,6 +57,7 @@ const OverviewTab = ({ periodId }: OverviewTabProps) => {
 
   const triangulation = useQuery(
     api.triangulation.admin.getTriangulation.queryOptions({
+      programmeId,
       periodId,
       search: search || undefined,
       variancesOnly,

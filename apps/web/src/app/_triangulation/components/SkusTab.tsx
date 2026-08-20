@@ -21,7 +21,12 @@ import useTRPC from '@/lib/trpc/browser';
 /** Pairs dismissed as legitimately separate wines, remembered between visits */
 const KEPT_BOTH_KEY = 'triangulation.keptBothPairs';
 
-const SkusTab = () => {
+export interface SkusTabProps {
+  /** The programme whose registry is on screen */
+  programmeId: string | null;
+}
+
+const SkusTab = ({ programmeId }: SkusTabProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -56,7 +61,8 @@ const SkusTab = () => {
   );
 
   const skus = useQuery(
-    api.triangulation.admin.getSkus.queryOptions({ search, limit: 1000 }),
+    api.triangulation.admin.getSkus.queryOptions({
+      programmeId, search, limit: 1000 }),
   );
 
   const invalidate = async () => {

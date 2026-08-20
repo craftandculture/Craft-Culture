@@ -708,6 +708,36 @@ const runMigrations = async () => {
     );
     console.log('✅ tri_* multi-client tenancy ready');
 
+    // --- LWIN-first identity -----------------------------------------------
+    // Only Crurated issue W codes. Requiring one meant a client without them
+    // could not have a SKU at all, so the column becomes optional and the
+    // scoped unique index treats the resulting NULLs as distinct. Nothing is
+    // lost for Crurated: their codes stay, and stay unique within a programme.
+    await client.unsafe(
+      `ALTER TABLE "tri_skus" ALTER COLUMN "w_code" DROP NOT NULL`,
+    );
+    // The identity a `lwin` programme is looked up by. Not unique on purpose —
+    // Crurated already hold duplicate-LWIN pairs, and an index that fails to
+    // build is a failed deploy.
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_skus_programme_lwin18_idx" ON "tri_skus"("programme_id", "lwin18")`,
+    );
+
+    // Cru Wine, ready to receive its first inputs. Seeded rather than created
+    // through the UI so the onboarding steps that follow have something real
+    // to point at, and so the second programme exists before anyone relies on
+    // there only ever being one.
+    await client.unsafe(`
+      INSERT INTO "tri_programmes"
+        ("name", "slug", "identity_strategy", "notes")
+      VALUES (
+        'Cru Wine', 'cru-wine', 'lwin',
+        'Consignment programme for Cru Wine. Identified by LWIN — no W codes. Needs its WMS owner and Zoho customer strings set before the live feeds will find anything.'
+      )
+      ON CONFLICT ("slug") DO NOTHING
+    `);
+    console.log('✅ tri_skus LWIN-first identity ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

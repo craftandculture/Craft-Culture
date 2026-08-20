@@ -8,6 +8,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 export interface NextStepProps {
+  /** Which consignment programme's work to advise on */
+  programmeId: string | null;
   periodId: string | null;
   /** Move to another tab, so the advice is one click from being followed */
   onGo: (tab: string) => void;
@@ -25,11 +27,14 @@ export interface NextStepProps {
  * nothing counts until it is committed, nothing reconciles until it is mapped,
  * and no figure means anything while a wine is counted twice.
  */
-const NextStep = ({ periodId, onGo }: NextStepProps) => {
+const NextStep = ({ programmeId, periodId, onGo }: NextStepProps) => {
   const api = useTRPC();
 
   const triangulation = useQuery(
-    api.triangulation.admin.getTriangulation.queryOptions({ periodId }),
+    api.triangulation.admin.getTriangulation.queryOptions({
+      programmeId,
+      periodId,
+    }),
   );
   const doubleCounts = useQuery(
     api.triangulation.admin.findDoubleCounts.queryOptions(),
