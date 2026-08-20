@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { uuidLike } from '../utils/programmeId';
+
 export const triImportKindSchema = z.enum([
   'cc_opening',
   'cc_sales_to_cd',
@@ -26,7 +28,7 @@ export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
 });
 
 export const createPeriodSchema = z.object({
-  programmeId: z.string().uuid().optional().nullable(),
+  programmeId: uuidLike.optional().nullable(),
   label: z.string().min(1).max(40),
   periodStart: isoDateSchema,
   periodEnd: isoDateSchema,
@@ -179,7 +181,7 @@ export const setCodeIgnoredSchema = z.object({
 export const deleteAliasSchema = z.object({ aliasId: z.string().uuid() });
 
 export const getTriangulationSchema = z.object({
-  programmeId: z.string().uuid().optional().nullable(),
+  programmeId: uuidLike.optional().nullable(),
   periodId: z.string().uuid().optional().nullable(),
   search: z.string().max(200).optional(),
   /** Show only rows with a count variance or an impossible negative position */
@@ -187,7 +189,7 @@ export const getTriangulationSchema = z.object({
 });
 
 export const getUnmappedSchema = z.object({
-  programmeId: z.string().uuid().optional().nullable(),
+  programmeId: uuidLike.optional().nullable(),
   importId: z.string().uuid().optional().nullable(),
   /** Show codes already set aside as not this reconciliation's stock */
   includeIgnored: z.boolean().default(false),

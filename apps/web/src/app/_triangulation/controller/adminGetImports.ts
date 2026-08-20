@@ -4,7 +4,7 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import type { TriImportKind } from '../schemas/triangulationSchemas';
-import resolveProgrammeId from '../utils/programmeId';
+import resolveProgrammeId, { uuidLike } from '../utils/programmeId';
 
 
 export interface TriImportRow {
@@ -39,7 +39,7 @@ export interface TriImportRow {
 const adminGetImports = adminProcedure
   .input(
     z.object({
-      programmeId: z.string().uuid().optional().nullable(),
+      programmeId: uuidLike.optional().nullable(),
       periodId: z.string().uuid().optional().nullable(),
       limit: z.number().int().positive().max(500).default(100),
     }),
