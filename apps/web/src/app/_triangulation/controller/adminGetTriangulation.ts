@@ -81,8 +81,8 @@ const adminGetTriangulation = adminProcedure
     const programmeId = resolveProgrammeId(input.programmeId);
 
     const [period] = periodId
-      ? await client<{ label: string; periodEnd: string }[]>`
-          SELECT label, period_end::text AS "periodEnd"
+      ? await client<{ label: string; periodEnd: string; status: string }[]>`
+          SELECT label, period_end::text AS "periodEnd", status
           FROM tri_periods
            WHERE id = ${periodId} AND programme_id = ${programmeId}
            LIMIT 1
@@ -91,6 +91,25 @@ const adminGetTriangulation = adminProcedure
 
     // With no period selected, reconcile everything recorded to date.
     const cutoff = period?.periodEnd ?? '9999-12-31';
+
+    /**
+     * Which snapshot to fall back on when none was taken by the cut-off.
+     *
+     * The WMS can only be read *now*, so a period that ended before today has
+     * nothing on or before its cut-off and has to reach past it. Which way it
+     * reaches is the whole question.
+     *
+     * A locked period is a signed-off answer, so it wants the reading nearest
+     * its own end — the earliest one after it — and must not drift as more
+     * snapshots are taken.
+     *
+     * An open period is the one being worked, and there the earliest reading
+     * after the cut-off is a trap: MIN never advances, so the column pins
+     * itself to the first snapshot ever taken and every later sync is ignored.
+     * That is how a fresh count of 126 bottles kept reporting the 90 it held
+     * five days earlier, and why the variance looked like missing stock.
+     */
+    const isOpen = !period || period.status !== 'locked';
 
     // Two different things arrive as a C&C snapshot and they must not be mixed.
     // `wms-stock` is what the system believes it holds; a cycle count or an
@@ -121,7 +140,7 @@ const adminGetTriangulation = adminProcedure
               AND as_of_date <= ${cutoff}
           ),
           (
-            SELECT MIN(as_of_date)::text FROM tri_imports
+            SELECT ${isOpen ? client`MAX(as_of_date)` : client`MIN(as_of_date)`}::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
               AND programme_id = ${programmeId}
               AND source_ref IN ('wms-stock', 'wms-sync')
@@ -136,7 +155,7 @@ const adminGetTriangulation = adminProcedure
               AND as_of_date <= ${cutoff}
           ),
           (
-            SELECT MIN(as_of_date)::text FROM tri_imports
+            SELECT ${isOpen ? client`MAX(as_of_date)` : client`MIN(as_of_date)`}::text FROM tri_imports
             WHERE kind = 'cc_count' AND status = 'committed'
               AND programme_id = ${programmeId}
               AND (source_ref IS NULL OR source_ref NOT IN ('wms-stock', 'wms-sync'))

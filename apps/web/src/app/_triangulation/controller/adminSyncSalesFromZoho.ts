@@ -8,6 +8,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncSalesFromZohoSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import resolveProgrammeId from '../utils/programmeId';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface ZohoSaleRow {
@@ -71,6 +72,7 @@ const resolvePack = (sku: string | null, description: string | null) => {
 const adminSyncSalesFromZoho = adminProcedure
   .input(syncSalesFromZohoSchema)
   .mutation(async ({ input, ctx }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     const { customerMatch } = input;
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
@@ -178,14 +180,16 @@ const adminSyncSalesFromZoho = adminProcedure
       DELETE FROM tri_imports
       WHERE kind = 'cc_sales_to_cd'
         AND source_ref IN ('zoho-sales', 'zoho-invoices')
+      AND programme_id = ${programmeId}
     `;
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_imports (
-        period_id, kind, status, file_name, source_ref, alias_source,
+        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
         as_of_date, notes, uploaded_by, committed_at
       )
       VALUES (
+        ${programmeId},
         NULL, 'cc_sales_to_cd', 'committed',
         ${`Zoho invoiced orders — ${customerMatch}`}, 'zoho-sales', 'zoho',
         ${asOfDate},

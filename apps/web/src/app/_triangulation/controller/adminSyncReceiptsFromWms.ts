@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import resolveProgrammeId from '../utils/programmeId';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface WmsReceiptRow {
@@ -36,6 +37,7 @@ interface WmsReceiptRow {
 const adminSyncReceiptsFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     const { ownerName } = input;
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
@@ -80,6 +82,7 @@ const adminSyncReceiptsFromWms = adminProcedure
       await client`
         DELETE FROM tri_imports
         WHERE kind = 'cc_opening' AND source_ref = 'wms-receipts'
+        AND programme_id = ${programmeId}
       `;
 
       const [baseline] = await client<{ uploads: number; bottles: number }[]>`
@@ -109,14 +112,16 @@ const adminSyncReceiptsFromWms = adminProcedure
     await client`
       DELETE FROM tri_imports
       WHERE kind = 'cc_opening' AND source_ref = 'wms-receipts'
+      AND programme_id = ${programmeId}
     `;
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_imports (
-        period_id, kind, status, file_name, source_ref, alias_source,
+        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
         as_of_date, notes, uploaded_by, committed_at
       )
       VALUES (
+        ${programmeId},
         NULL, 'cc_opening', 'committed',
         ${`WMS receipts — ${ownerName}`}, 'wms-receipts', 'crurated',
         ${asOfDate},

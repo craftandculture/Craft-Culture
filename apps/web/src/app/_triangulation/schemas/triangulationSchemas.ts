@@ -217,6 +217,8 @@ export const extractPackingListSchema = z.object({
 });
 
 export const syncSalesFromZohoSchema = z.object({
+  /** Whose feed this is. A feed rebuilds its own import and no one else's. */
+  programmeId: uuidLike.optional().nullable(),
   /**
    * Matched against the Zoho customer name word by word, ignoring spacing and
    * punctuation. City Drinks trade as "C D General Trading L.L.C".
@@ -227,6 +229,7 @@ export const syncSalesFromZohoSchema = z.object({
 });
 
 export const syncCountFromWmsSchema = z.object({
+  programmeId: uuidLike.optional().nullable(),
   ownerName: z.string().min(1).max(200).default('Crurated'),
   periodId: z.string().uuid().nullable().optional(),
   /** Snapshot date; defaults to today on the server when omitted */

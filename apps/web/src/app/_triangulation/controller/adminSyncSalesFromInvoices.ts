@@ -9,6 +9,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncSalesFromZohoSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import resolveProgrammeId from '../utils/programmeId';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -33,6 +34,7 @@ const MAX_PAGES = 40;
 const adminSyncSalesFromInvoices = adminProcedure
   .input(syncSalesFromZohoSchema)
   .mutation(async ({ input, ctx }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     if (!isZohoConfigured()) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
@@ -101,14 +103,16 @@ const adminSyncSalesFromInvoices = adminProcedure
       DELETE FROM tri_imports
       WHERE kind = 'cc_sales_to_cd'
         AND source_ref IN ('zoho-invoices', 'zoho-sales')
+      AND programme_id = ${programmeId}
     `;
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_imports (
-        period_id, kind, status, file_name, source_ref, alias_source,
+        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
         as_of_date, notes, uploaded_by, committed_at
       )
       VALUES (
+        ${programmeId},
         NULL, 'cc_sales_to_cd', 'committed',
         ${`Zoho invoices — ${customerMatch}`}, 'zoho-invoices', 'zoho',
         ${asOfDate},

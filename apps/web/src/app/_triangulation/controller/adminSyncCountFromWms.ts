@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import resolveProgrammeId from '../utils/programmeId';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 interface WmsCountRow {
@@ -38,6 +39,7 @@ interface WmsCountRow {
 const adminSyncCountFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     const { ownerName, periodId } = input;
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
@@ -144,14 +146,16 @@ const adminSyncCountFromWms = adminProcedure
       WHERE kind = 'cc_count'
         AND as_of_date = ${asOfDate}
         AND source_ref = 'wms-stock'
+      AND programme_id = ${programmeId}
     `;
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_imports (
-        period_id, kind, status, file_name, source_ref, alias_source,
+        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
         as_of_date, notes, uploaded_by, committed_at
       )
       VALUES (
+        ${programmeId},
         ${periodId ?? null}, 'cc_count', 'committed',
         ${`WMS stock — ${ownerName}`}, 'wms-stock', 'crurated',
         ${asOfDate}, ${'Synced live from wms_stock. Bottles = sealed cases x pack size + loose bottles.'},
