@@ -34,6 +34,7 @@ import adminMoveCodeToSku from './controller/adminMoveCodeToSku';
 import adminRepairEncoding from './controller/adminRepairEncoding';
 import adminRepairPackSizes from './controller/adminRepairPackSizes';
 import adminSearchLwinReference from './controller/adminSearchLwinReference';
+import adminSeedSkusFromImports from './controller/adminSeedSkusFromImports';
 import adminSeedSkusFromWms from './controller/adminSeedSkusFromWms';
 import adminSetCodeIgnored from './controller/adminSetCodeIgnored';
 import adminSetPeriodStatus from './controller/adminSetPeriodStatus';
@@ -76,6 +77,7 @@ const triangulationRouter = createTRPCRouter({
     mergeSkus: adminMergeSkus,
     upsertSku: adminUpsertSku,
     seedSkusFromWms: adminSeedSkusFromWms,
+    seedSkusFromImports: adminSeedSkusFromImports,
     repairPackSizes: adminRepairPackSizes,
     getAssumedPacks: adminGetAssumedPacks,
     findDoubleCounts: adminFindDoubleCounts,

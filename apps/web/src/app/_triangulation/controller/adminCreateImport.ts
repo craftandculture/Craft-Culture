@@ -7,6 +7,7 @@ import insertRows from '../data/insertRows';
 import mapImportLines from '../data/mapImportLines';
 import { createImportSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
+import resolveProgrammeId from '../utils/programmeId';
 import toBottles from '../utils/toBottles';
 
 /**
@@ -21,6 +22,7 @@ import toBottles from '../utils/toBottles';
 const adminCreateImport = adminProcedure
   .input(createImportSchema)
   .mutation(async ({ input, ctx }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     const { periodId, kind, fileName, sourceRef, asOfDate, notes, aliasSource, lines } =
       input;
 
@@ -43,10 +45,11 @@ const adminCreateImport = adminProcedure
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_imports (
-        period_id, kind, file_name, source_ref, alias_source,
+        programme_id, period_id, kind, file_name, source_ref, alias_source,
         as_of_date, notes, uploaded_by
       )
       VALUES (
+        ${programmeId},
         ${periodId ?? null}, ${kind}, ${fileName ?? null}, ${sourceRef ?? null},
         ${aliasSource}, ${asOfDate}, ${notes ?? null}, ${ctx.user.id}
       )

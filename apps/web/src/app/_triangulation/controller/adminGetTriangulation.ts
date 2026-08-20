@@ -390,11 +390,14 @@ const adminGetTriangulation = adminProcedure
           AND i.programme_id = ${programmeId}
             AND (i.source_ref IS NULL OR i.source_ref NOT IN ('wms-stock', 'wms-sync'))
         )::int AS "countImports",
-        COUNT(DISTINCT i.id) FILTER (WHERE i.status = 'draft')::int
-          AS "draftSnapshots"
+        COUNT(DISTINCT i.id) FILTER (
+          WHERE i.status = 'draft'
+          AND i.programme_id = ${programmeId}
+        )::int AS "draftSnapshots"
       FROM tri_imports i
       LEFT JOIN tri_import_lines l ON l.import_id = i.id
       WHERE i.kind = 'cc_count'
+        AND i.programme_id = ${programmeId}
     `;
 
     const [dataQuality] = await client<
@@ -424,6 +427,7 @@ const adminGetTriangulation = adminProcedure
           END) AS effective_date
         FROM tri_imports i
         LEFT JOIN tri_import_lines l ON l.import_id = i.id
+        WHERE i.programme_id = ${programmeId}
       )
       SELECT
         COUNT(line_id) FILTER (WHERE line_status = 'unmapped')::int

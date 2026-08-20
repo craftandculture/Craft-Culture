@@ -89,6 +89,32 @@ const MappingTab = ({ programmeId }: MappingTabProps) => {
     declinedReason: string | null;
   } | null>(null);
 
+  /**
+   * Only offered when the registry is empty. A client we hold no stock for has
+   * no warehouse to seed from, so until the wines exist there is nothing for
+   * the queue below to resolve against — and once they do exist, creating more
+   * from the same documents would only make duplicates.
+   */
+  const seedFromImports = useMutation({
+    ...api.triangulation.admin.seedSkusFromImports.mutationOptions(),
+    onSuccess: async (result) => {
+      toast.success(
+        `${result.skusCreated} wines added — ${result.mappedRowCount} lines now mapped`,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getUnmapped.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getSkus.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: api.triangulation.admin.getTriangulation.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const autoMap = useMutation({
     ...api.triangulation.admin.autoMapSuggestions.mutationOptions(),
     onSuccess: async (result) => {
@@ -243,6 +269,17 @@ const MappingTab = ({ programmeId }: MappingTabProps) => {
         </Button>
         {rows.length > 0 ? (
           <div className="flex items-center gap-2">
+            {(skus.data?.length ?? 0) === 0 ? (
+              <Button
+                colorRole="brand"
+                isDisabled={seedFromImports.isPending}
+                onClick={() => seedFromImports.mutate({ programmeId })}
+              >
+                {seedFromImports.isPending
+                  ? 'Reading the documents…'
+                  : 'Create wines from these documents'}
+              </Button>
+            ) : null}
             <Button
               colorRole="muted"
               variant="outline"

@@ -57,6 +57,8 @@ export const importLineInputSchema = z.object({
 export type ImportLineInput = z.infer<typeof importLineInputSchema>;
 
 export const createImportSchema = z.object({
+  /** Whose consignment this upload belongs to. Defaults to Crurated. */
+  programmeId: uuidLike.optional().nullable(),
   periodId: z.string().uuid().optional().nullable(),
   kind: triImportKindSchema,
   fileName: z.string().max(300).optional().nullable(),
