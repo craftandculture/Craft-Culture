@@ -68,7 +68,10 @@ const adminCorrectPackConfig = wmsOperatorProcedure
       });
     }
 
-    const oldCaseConfig = stock.caseConfig ?? 0;
+    // Falling back to zero made the audit note read "bottles 0 -> 72", which
+    // reads as stock having appeared from nowhere. An unset pack is unknown,
+    // not none.
+    const oldCaseConfig = stock.caseConfig ?? null;
     if (oldCaseConfig === newCaseConfig) {
       return {
         success: true,
@@ -81,7 +84,7 @@ const adminCorrectPackConfig = wmsOperatorProcedure
     const newLwin18 = buildLwin18WithConfig(stock.lwin18, newCaseConfig);
     const newProductName = withPackSuffix(stock.productName, newCaseConfig);
     const cases = stock.quantityCases;
-    const oldBottles = cases * oldCaseConfig;
+    const oldBottles = oldCaseConfig === null ? null : cases * oldCaseConfig;
     const newBottles = cases * newCaseConfig;
 
     // Generated before the transaction: on Neon serverless, running the number
@@ -186,7 +189,7 @@ const adminCorrectPackConfig = wmsOperatorProcedure
         quantityCases: 0, // cases unchanged — only the pack size was wrong
         fromLocationId: stock.locationId,
         toLocationId: stock.locationId,
-        notes: `PACK CORRECTION: ${reason} (${stock.lwin18} ${oldCaseConfig}-pack → ${newLwin18} ${newCaseConfig}-pack; ${cases} cases unchanged, bottles ${oldBottles} → ${newBottles})`,
+        notes: `PACK CORRECTION: ${reason} (${stock.lwin18} ${oldCaseConfig ?? 'unset'}-pack → ${newLwin18} ${newCaseConfig}-pack; ${cases} cases unchanged, bottles ${oldBottles ?? 'unknown'} → ${newBottles})`,
         reasonCode: 'pack_correction',
         performedBy: ctx.user.id,
         performedAt: new Date(),

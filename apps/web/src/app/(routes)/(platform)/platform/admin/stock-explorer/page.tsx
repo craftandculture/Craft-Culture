@@ -1881,7 +1881,7 @@ const StockExplorerPage = () => {
         toast.info('No change needed');
       } else {
         toast.success(
-          `Pack corrected to ${data.caseConfig}×: ${data.cases} cases, ${data.bottlesBefore} → ${data.bottlesAfter} bottles`,
+          `Pack corrected to ${data.caseConfig}×: ${data.cases} cases, ${data.bottlesBefore ?? 'unknown'} → ${data.bottlesAfter} bottles`,
         );
       }
     },

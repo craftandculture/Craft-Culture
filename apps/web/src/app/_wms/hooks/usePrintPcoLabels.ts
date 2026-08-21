@@ -57,7 +57,12 @@ const usePrintPcoLabels = () => {
         );
         const bottleSizeCl = bottleSizeNum > 200 ? bottleSizeNum / 10 : bottleSizeNum;
         const qty = item.quantity ?? 1;
-        const packSize = `${item.caseConfig ?? 12}x${bottleSizeCl}cl | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
+        // A label is physical and travels with the goods, so an assumed pack
+        // becomes a wrong fact on a case in a warehouse. Where the pack is not
+        // known, say so rather than assert twelve.
+        const packSize = item.caseConfig
+          ? `${item.caseConfig}x${bottleSizeCl}cl | ${qty} ${qty === 1 ? 'case' : 'cases'}`
+          : `pack not set | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
         return {
           showBarcode: false,
           productName: item.productName || 'Unknown Product',

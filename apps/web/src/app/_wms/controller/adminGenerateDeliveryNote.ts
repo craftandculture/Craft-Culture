@@ -127,13 +127,29 @@ const adminGenerateDeliveryNote = wmsOperatorProcedure
           .from(zohoSalesOrderItems)
           .where(eq(zohoSalesOrderItems.salesOrderId, order.id));
 
-        const totalCases = items.reduce((sum, item) => sum + item.quantity, 0);
+        // The line's unit was selected and then ignored, so a line of three
+        // bottles added three to the case count on the note the driver hands
+        // over. Cases and bottles are different things and only one of them
+        // belongs in a case total.
+        const isBottleLine = (unit: string | null) =>
+          /^bottle|btl/i.test((unit ?? '').trim());
+
+        const totalCases = items.reduce(
+          (sum, item) => sum + (isBottleLine(item.unit) ? 0 : item.quantity),
+          0,
+        );
+        const looseBottles = items.reduce(
+          (sum, item) => sum + (isBottleLine(item.unit) ? item.quantity : 0),
+          0,
+        );
 
         return {
           orderNumber: invoiceMap.get(order.salesOrderNumber) ?? order.salesOrderNumber,
           customerName: order.customerName,
           itemCount: items.length,
           totalCases,
+          /** Bottle-unit lines, kept apart so the case count stays a case count */
+          looseBottles,
           items,
         };
       }),
