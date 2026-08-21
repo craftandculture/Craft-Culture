@@ -135,6 +135,14 @@ export async function GET(
           const returnBottles = caseConfig - bottlesFromCrackedCase;
           // No arrows: the PDF font subset renders them as stray punctuation.
           repackInstruction = `Break one ${caseConfig}x${bottleSizeCl}cl case: pick ${bottlesFromCrackedCase} btl, return ${returnBottles} btl to ${bin}`;
+        } else if (caseConfig > 1 && row.quantityBottles > 0) {
+          // Expressed in bottles, but they come out as whole sealed cases.
+          // Saying so on the sheet stops a sealed case being opened and
+          // counted out by hand, which is how PL-2026-0048 shipped one bottle
+          // against three.
+          const cases = row.quantityBottles / caseConfig;
+
+          repackInstruction = `Pick ${cases} sealed ${caseConfig}x${bottleSizeCl}cl case${cases === 1 ? '' : 's'} - do not open`;
         }
       } else {
         qtyToPick = row.quantityCases;

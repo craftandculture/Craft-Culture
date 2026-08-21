@@ -381,13 +381,41 @@ const WMSPickListDetailPage = () => {
     return `${item.caseConfig}x${item.bottleSize ?? '75cl'}`;
   };
 
-  // A "crack" pick = pulling loose bottles out of a sealed multi-pack (stock is
-  // a 6-pack but fewer bottles are needed). Surfaced loudly so the picker breaks
-  // the case and takes only what's required instead of grabbing the whole case.
+  // A "crack" pick = pulling loose bottles out of a sealed multi-pack, and it
+  // is only a crack when the bottles wanted do not come out as whole cases.
+  //
+  // This used to fire whenever a line was expressed in bottles at all, so a
+  // pick of three bottles from a three-pack read "Break open a 3x75cl case —
+  // take 3 bottles, return 0 to the shelf". That is one sealed case and no
+  // break, and telling someone to open it and hand-count is exactly how three
+  // bottles leave as one. PL-2026-0048 went out that way.
+  const looseBottles = (item: {
+    quantityBottles?: number | null;
+    caseConfig: number | null;
+  }) => {
+    const pack = item.caseConfig ?? 1;
+
+    if (item.quantityBottles == null || pack <= 1) return 0;
+
+    return item.quantityBottles % pack;
+  };
+
+  /** Whole sealed cases this line is made of, before any remainder */
+  const wholeCases = (item: {
+    quantityBottles?: number | null;
+    caseConfig: number | null;
+  }) => {
+    const pack = item.caseConfig ?? 1;
+
+    if (item.quantityBottles == null || pack <= 1) return 0;
+
+    return Math.floor(item.quantityBottles / pack);
+  };
+
   const isCrackPick = (item: {
     quantityBottles?: number | null;
     caseConfig: number | null;
-  }) => item.quantityBottles != null && (item.caseConfig ?? 1) > 1;
+  }) => looseBottles(item) > 0;
 
   return (
     <div className="mx-auto max-w-lg px-3 py-4 sm:px-4 md:max-w-2xl">
@@ -675,10 +703,13 @@ const WMSPickListDetailPage = () => {
                 <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
                   <Icon icon={IconPackage} size="sm" className="shrink-0 text-amber-600" />
                   <Typography variant="bodyXs" className="font-semibold text-amber-800 dark:text-amber-300">
-                    Break open a {formatCaseConfig(currentItem)} case — take{' '}
-                    {currentItem.quantityBottles} bottle
-                    {(currentItem.quantityBottles ?? 0) === 1 ? '' : 's'}, return{' '}
-                    {(currentItem.caseConfig ?? 0) - (currentItem.quantityBottles ?? 0)} to the shelf
+                    {wholeCases(currentItem) > 0
+                      ? `Take ${wholeCases(currentItem)} sealed ${formatCaseConfig(currentItem)} case${wholeCases(currentItem) === 1 ? '' : 's'}, then break one more — `
+                      : `Break open a ${formatCaseConfig(currentItem)} case — `}
+                    take {looseBottles(currentItem)} loose bottle
+                    {looseBottles(currentItem) === 1 ? '' : 's'}, return{' '}
+                    {(currentItem.caseConfig ?? 0) - looseBottles(currentItem)} to
+                    the shelf. {currentItem.quantityBottles} bottles in total.
                   </Typography>
                 </div>
               )}
@@ -696,7 +727,12 @@ const WMSPickListDetailPage = () => {
                     {currentItem.quantityBottles != null
                       ? isCrackPick(currentItem)
                         ? `loose bottle${currentItem.quantityBottles === 1 ? '' : 's'} — not a case`
-                        : 'bottles'
+                        : // Expressed in bottles but they come out as whole
+                          // cases. Saying so stops a sealed case being opened
+                          // and counted out by hand.
+                          wholeCases(currentItem) > 0
+                          ? `bottles — ${wholeCases(currentItem)} sealed case${wholeCases(currentItem) === 1 ? '' : 's'} of ${currentItem.caseConfig}, do not open`
+                          : 'bottles'
                       : currentItem.caseConfig === 1
                         ? // A "case" of one is a bottle. Calling it a sealed
                           // case of 1 reads as a mistake on the scanner.
@@ -1051,7 +1087,11 @@ const WMSPickListDetailPage = () => {
                         className={`text-[10px] ${isCrackPick(item) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-text-muted'}`}
                       >
                         {item.quantityBottles != null
-                          ? `${item.quantityBottles} btl`
+                          ? `${item.quantityBottles} btl${
+                              !isCrackPick(item) && wholeCases(item) > 0
+                                ? ` = ${wholeCases(item)} sealed cs`
+                                : ''
+                            }`
                           : `${item.quantityCases} cs`}
                       </span>
                       {formatCaseConfig(item) &&

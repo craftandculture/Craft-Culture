@@ -559,10 +559,12 @@ const PickingListPDFTemplate = ({
                         </View>
                       </View>
 
-                      {item.isRepack && item.repackInstruction ? (
+                      {item.repackInstruction ? (
                         <View style={styles.repackRow}>
                           <Text style={styles.repackText}>
-                            <Text style={styles.repackBold}>REPACK: </Text>
+                            <Text style={styles.repackBold}>
+                              {item.isRepack ? 'REPACK: ' : 'SEALED: '}
+                            </Text>
                             {item.repackInstruction}
                           </Text>
                         </View>
