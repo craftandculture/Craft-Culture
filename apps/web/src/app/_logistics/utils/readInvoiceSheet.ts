@@ -49,7 +49,10 @@ const looksLikeHeader = (row: unknown[]) => {
  * @returns The header labels and every row beneath them
  */
 const readInvoiceSheet = (base64: string): InvoiceSheet => {
-  const workbook = XLSX.read(Buffer.from(base64, 'base64'), { type: 'buffer' });
+  // The browser hands over a data URL; the decoder wants only the payload.
+  const payload = base64.includes(',') ? base64.slice(base64.indexOf(',') + 1) : base64;
+
+  const workbook = XLSX.read(Buffer.from(payload, 'base64'), { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
 
   if (!sheetName) {

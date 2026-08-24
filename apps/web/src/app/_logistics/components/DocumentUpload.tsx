@@ -118,7 +118,11 @@ const documentTypeLabels: Record<DocumentType, string> = {
  * Supports drag-and-drop upload of shipping documents.
  */
 // Document types that support AI extraction
-const extractableTypes: DocumentType[] = ['commercial_invoice', 'packing_list'];
+const extractableTypes: DocumentType[] = [
+  'commercial_invoice',
+  'commercial_invoice_excel',
+  'packing_list',
+];
 
 const LogisticsDocumentUpload = ({
   shipmentId,
@@ -204,6 +208,39 @@ const LogisticsDocumentUpload = ({
             : doc.documentType === 'packing_list'
               ? 'packing_list'
               : 'general';
+
+        /*
+          A spreadsheet takes the sheet route, whatever it was filed as.
+          Asking a model to reproduce every row is what makes a long invoice
+          fail — 163 lines is minutes of generation and does not fit the
+          function's five-minute budget. The sheet route asks only which
+          heading means what and parses the rows in code, so it finishes in
+          seconds however many rows there are.
+        */
+        const isSpreadsheet =
+          /sheet|excel|csv/i.test(doc.mimeType ?? '') ||
+          /\.(xlsx|xls|csv)$/i.test(doc.fileName ?? '');
+
+        if (isSpreadsheet) {
+          const sheet = await trpcClient.logistics.admin.extractSheet.mutate({
+            file: base64,
+            fileName: doc.fileName ?? undefined,
+          });
+
+          setExtractionResult({
+            currency: sheet.currency,
+            lineItems: sheet.items,
+          } as ExtractionResult);
+
+          toast.success(
+            `${sheet.items.length} lines from ${sheet.sheetName} · ${sheet.totalBottles} bottles` +
+              (sheet.skippedNonItemRows > 0
+                ? ` · ${sheet.skippedNonItemRows} charge rows skipped`
+                : ''),
+          );
+
+          return;
+        }
 
         // Call extraction API
         const result = await trpcClient.logistics.admin.extractDocument.mutate({
@@ -421,7 +458,7 @@ const LogisticsDocumentUpload = ({
                   {isDragActive ? 'Drop file here' : 'Drag & drop or click to upload'}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  PDF, PNG, or JPG (max 10MB)
+                  PDF, image, or Excel/CSV (max 10MB)
                 </Typography>
               </div>
             </div>

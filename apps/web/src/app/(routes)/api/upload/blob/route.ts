@@ -30,6 +30,10 @@ export const POST = async (request: Request) => {
             'image/png',
             'image/gif',
             'image/webp',
+            // Suppliers send the workbook of an invoice alongside its PDF.
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'text/csv',
           ],
           maximumSizeInBytes: 10 * 1024 * 1024, // 10MB
           tokenPayload: JSON.stringify({ userId: user.id }),

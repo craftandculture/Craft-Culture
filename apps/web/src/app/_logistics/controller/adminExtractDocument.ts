@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
-import { streamObject } from 'ai';
+import { generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
@@ -374,7 +374,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         },
       ];
 
-      const result = streamObject({
+      const result = await generateObject({
         model: anthropic('claude-sonnet-4-6'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
@@ -382,7 +382,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         messages,
       });
 
-      extractedData = await result.object;
+      extractedData = result.object;
     } else if (fileType === 'application/pdf') {
       // Try to extract text from PDF using pdf-parse first (works for digital PDFs)
       const pdfBuffer = Buffer.from(file, 'base64');
@@ -405,7 +405,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
 
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 500) {
-        const result = streamObject({
+        const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
@@ -417,7 +417,7 @@ ${pdfText}
 --- END DOCUMENT ---`,
         });
 
-        extractedData = await result.object;
+        extractedData = result.object;
       } else {
         // For scanned PDFs or PDFs with minimal text, use Claude's vision capability
         // Claude can process PDFs directly as images
@@ -442,7 +442,7 @@ ${pdfText}
           },
         ];
 
-        const result = streamObject({
+        const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
@@ -450,7 +450,7 @@ ${pdfText}
           messages,
         });
 
-        extractedData = await result.object;
+        extractedData = result.object;
       }
     } else {
       throw new TRPCError({
