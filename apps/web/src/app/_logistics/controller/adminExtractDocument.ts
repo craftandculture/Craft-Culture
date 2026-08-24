@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
-import { generateObject } from 'ai';
+import { streamObject } from 'ai';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
@@ -85,7 +85,6 @@ const extractedLogisticsDataSchema = z.object({
           .describe(
             'Total litres for the LINE, from a "Total Size (L)" column. Do not compute it — only report it if the document prints it.',
           ),
-        quantity: z.number().optional().describe('DEPRECATED - use bottles or cases'),
         cases: z
           .number()
           .optional()
@@ -98,13 +97,7 @@ const extractedLogisticsDataSchema = z.object({
           .number()
           .optional()
           .describe(
-            'Unit price exactly as printed, in the document\'s own currency. Never convert it. Say whether it is per bottle or per case in unitPriceBasis.',
-          ),
-        unitPriceBasis: z
-          .enum(['bottle', 'case'])
-          .optional()
-          .describe(
-            'What the unit price is per. A column headed "PricePerBottle" is `bottle`.',
+            'Unit price exactly as printed, in the document\'s own currency, per BOTTLE where the document prices per bottle. Never convert it.',
           ),
         total: z
           .number()
@@ -381,15 +374,15 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         },
       ];
 
-      const result = await generateObject({
+      const result = streamObject({
         model: anthropic('claude-sonnet-4-6'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
-        maxTokens: 16384,
+        maxTokens: 64000,
         messages,
       });
 
-      extractedData = result.object;
+      extractedData = await result.object;
     } else if (fileType === 'application/pdf') {
       // Try to extract text from PDF using pdf-parse first (works for digital PDFs)
       const pdfBuffer = Buffer.from(file, 'base64');
@@ -412,11 +405,11 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
 
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 500) {
-        const result = await generateObject({
+        const result = streamObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          maxTokens: 16384,
+          maxTokens: 64000,
           prompt: `${extractionPrompt}
 
 --- DOCUMENT TEXT ---
@@ -424,7 +417,7 @@ ${pdfText}
 --- END DOCUMENT ---`,
         });
 
-        extractedData = result.object;
+        extractedData = await result.object;
       } else {
         // For scanned PDFs or PDFs with minimal text, use Claude's vision capability
         // Claude can process PDFs directly as images
@@ -449,15 +442,15 @@ ${pdfText}
           },
         ];
 
-        const result = await generateObject({
+        const result = streamObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          maxTokens: 16384,
+          maxTokens: 64000,
           messages,
         });
 
-        extractedData = result.object;
+        extractedData = await result.object;
       }
     } else {
       throw new TRPCError({
