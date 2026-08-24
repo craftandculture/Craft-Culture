@@ -48,7 +48,24 @@ const columnMapSchema = z.object({
   lineTotal: z.string().optional().describe('Heading holding the line total'),
   hsCode: z.string().optional().describe('Heading holding the HS/commodity code'),
   countryOfOrigin: z.string().optional().describe('Heading holding the origin'),
-  lwin: z.string().optional().describe('Heading holding a LWIN or product code'),
+  lwin: z
+    .string()
+    .optional()
+    .describe(
+      'Heading holding a LWIN — a 7- or 11-digit wine number, or an 18-character LWIN. Not a supplier reference.',
+    ),
+  supplierSku: z
+    .string()
+    .optional()
+    .describe(
+      "Heading holding the supplier's OWN product reference, e.g. a W-code like W3200124",
+    ),
+  caseCount: z
+    .string()
+    .optional()
+    .describe(
+      'Heading holding the number of physical cases or cartons, e.g. "Nombre de colis"',
+    ),
   currency: z
     .string()
     .length(3)
@@ -62,6 +79,28 @@ const columnMapSchema = z.object({
       'A word appearing in the product column of rows that are charges rather than wine, e.g. "Shipping"',
     ),
 });
+
+/**
+ * The currency a supplier prints in their own headings.
+ *
+ * "TotalPrice (€)" says euros more reliably than any inference, so the symbol
+ * in the headings wins over the model's reading. Getting this wrong is how a
+ * euro invoice ends up stored as dollars with nothing recording the swap.
+ */
+const currencyFromHeaders = (headers: string[]) => {
+  const text = headers.join(' ');
+
+  if (/€|\bEUR\b/i.test(text)) return 'EUR';
+  if (/£|\bGBP\b/i.test(text)) return 'GBP';
+  if (/\bCHF\b/i.test(text)) return 'CHF';
+  if (/\bAED\b/i.test(text)) return 'AED';
+  if (/\$|\bUSD\b/.test(text)) return 'USD';
+
+  return null;
+};
+
+/** A LWIN is digits — a supplier reference like "W3200124" is not one */
+const looksLikeLwin = (value: string) => /^\d{7}(\d{4}\d{2}\d{5})?$/.test(value.replace(/[-\s]/g, ''));
 
 /** Cell → number, tolerating currency symbols, thousands separators and commas */
 const toNumber = (value: unknown): number | undefined => {
@@ -165,10 +204,23 @@ const adminExtractSheet = adminProcedure
           ? Math.round(totalSizeL / productSizeL)
           : undefined);
 
+      // A supplier reference in the LWIN column is a reference, not a LWIN.
+      // Writing "W3200124" into lwin would look mapped while matching nothing.
+      const rawCode = pick(row, map.lwin)
+        ? String(pick(row, map.lwin)).trim()
+        : '';
+      const rawSku = pick(row, map.supplierSku)
+        ? String(pick(row, map.supplierSku)).trim()
+        : '';
+
+      const lwin = rawCode && looksLikeLwin(rawCode) ? rawCode : undefined;
+      const supplierSku = rawSku || (rawCode && !lwin ? rawCode : undefined);
+
       return [
         {
           productName: rawName,
-          lwin: pick(row, map.lwin) ? String(pick(row, map.lwin)) : undefined,
+          lwin,
+          supplierSku,
           vintage: parsed.vintage ?? undefined,
           bottleSize: parsed.bottleSizeMl
             ? `${parsed.bottleSizeMl}ml`
@@ -178,7 +230,7 @@ const adminExtractSheet = adminProcedure
           bottles,
           productSizeL,
           totalSizeL,
-          cases: toNumber(pick(row, map.cases)),
+          cases: toNumber(pick(row, map.cases)) ?? toNumber(pick(row, map.caseCount)),
           bottlesPerCase: toNumber(pick(row, map.bottlesPerCase)),
           unitPrice: toNumber(pick(row, map.unitPrice)),
           total: toNumber(pick(row, map.lineTotal)),
@@ -192,9 +244,12 @@ const adminExtractSheet = adminProcedure
       ];
     });
 
+    const headerCurrency = currencyFromHeaders(sheet.headers);
+
     return {
       sheetName: sheet.sheetName,
-      currency: map.currency?.toUpperCase() ?? 'USD',
+      currency: headerCurrency ?? map.currency?.toUpperCase() ?? 'USD',
+      currencySource: headerCurrency ? 'headings' : map.currency ? 'read' : 'assumed',
       headers: sheet.headers,
       columnMap: map,
       rowsRead: sheet.rows.length,

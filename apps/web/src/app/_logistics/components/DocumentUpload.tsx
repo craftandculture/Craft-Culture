@@ -35,11 +35,17 @@ interface ExtractedLineItem {
   description?: string;
   productName?: string;
   lwin?: string;
+  /** The supplier's own reference — a W-code, not a LWIN */
+  supplierSku?: string;
   producer?: string;
   vintage?: number;
   bottleSize?: string;
   bottlesPerCase?: number;
   cases?: number;
+  /** What the document actually billed, where it bills bottles */
+  bottles?: number;
+  productSizeL?: number;
+  totalSizeL?: number;
   hsCode?: string;
   countryOfOrigin?: string;
   unitPrice?: number;
@@ -51,6 +57,8 @@ interface ExtractionResult {
   lineItems?: ExtractedLineItem[];
   totalCases?: number;
   totalWeight?: number;
+  /** The currency the document is written in, carried through to import */
+  currency?: string;
 }
 
 type DocumentType =
@@ -233,10 +241,8 @@ const LogisticsDocumentUpload = ({
           } as ExtractionResult);
 
           toast.success(
-            `${sheet.items.length} lines from ${sheet.sheetName} · ${sheet.totalBottles} bottles` +
-              (sheet.skippedNonItemRows > 0
-                ? ` · ${sheet.skippedNonItemRows} charge rows skipped`
-                : ''),
+            `${sheet.items.length} lines from ${sheet.sheetName} · ` +
+              `${sheet.totalBottles} bottles · priced in ${sheet.currency}`,
           );
 
           return;
@@ -283,15 +289,23 @@ const LogisticsDocumentUpload = ({
     try {
       const result = await trpcClient.logistics.admin.importExtractedItems.mutate({
         shipmentId,
+        // Every field the extractor found travels. Dropping the bottle count
+        // here is what left the importer to guess from cases, and dropping the
+        // currency is what let a euro invoice arrive labelled as dollars.
+        currency: extractionResult.currency,
         items: extractionResult.lineItems.map((item) => ({
           productName: item.productName,
           description: item.description,
           lwin: item.lwin,
+          supplierSku: item.supplierSku,
           producer: item.producer,
           vintage: item.vintage,
           bottleSize: item.bottleSize,
           bottlesPerCase: item.bottlesPerCase,
           cases: item.cases,
+          bottles: item.bottles,
+          productSizeL: item.productSizeL,
+          totalSizeL: item.totalSizeL,
           hsCode: item.hsCode,
           countryOfOrigin: item.countryOfOrigin,
           unitPrice: item.unitPrice,
@@ -593,9 +607,11 @@ const LogisticsDocumentUpload = ({
                   <th className="pb-2 pr-3">Product</th>
                   <th className="pb-2 pr-3">Vintage</th>
                   <th className="pb-2 pr-3 text-center">Pack</th>
-                  <th className="pb-2 pr-3 text-right">Cases</th>
+                  <th className="pb-2 pr-3 text-right">Bottles</th>
                   <th className="pb-2 pr-3">HS Code</th>
-                  <th className="pb-2 text-right">Value</th>
+                  <th className="pb-2 text-right">
+                    Value ({extractionResult.currency ?? 'USD'})
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-muted">
@@ -613,12 +629,21 @@ const LogisticsDocumentUpload = ({
                     </td>
                     <td className="py-2 pr-3">{item.vintage || '-'}</td>
                     <td className="py-2 pr-3 text-center">
-                      {item.bottlesPerCase || 12}x{item.bottleSize || '750ml'}
+                      {/*
+                        An unstated pack shows as unstated. Printing 12x here
+                        was the ×12 default wearing a different hat — it read
+                        as a fact about the wine when nothing had said it.
+                      */}
+                      {item.bottlesPerCase
+                        ? `${item.bottlesPerCase}x${item.bottleSize ?? '750ml'}`
+                        : (item.bottleSize ?? '-')}
                     </td>
-                    <td className="py-2 pr-3 text-right font-medium">{item.cases || 1}</td>
+                    <td className="py-2 pr-3 text-right font-medium">
+                      {item.bottles ?? '-'}
+                    </td>
                     <td className="py-2 pr-3 font-mono text-xs">{item.hsCode || '-'}</td>
                     <td className="py-2 text-right">
-                      {item.total ? `$${item.total.toFixed(2)}` : '-'}
+                      {item.total != null ? item.total.toFixed(2) : '-'}
                     </td>
                   </tr>
                 ))}

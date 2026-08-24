@@ -160,10 +160,32 @@ const adminImportExtractedItems = adminProcedure
        * fixed manually on this shipment came out as one case of the billed
        * quantity.
        */
-      const bottlesPerCase =
-        packFromDocument ?? (totalBottles > 0 ? totalBottles : 1);
-      const cases =
-        item.cases ?? (bottlesPerCase > 0 ? totalBottles / bottlesPerCase : 1);
+      const statedCases = item.cases ?? null;
+
+      /*
+        Where the document states both, they have to agree, and when they do
+        not the bottle count is the one that was billed. This invoice bills two
+        bottles of a wine whose pack is printed as six: honouring the pack
+        would store six, three times what was paid for. So a pack that cannot
+        be reconciled is dropped rather than trusted, and the line becomes one
+        case of what was actually billed — the same shape as every line
+        corrected by hand on this shipment.
+      */
+      const packAgrees =
+        packFromDocument != null &&
+        totalBottles > 0 &&
+        totalBottles % packFromDocument === 0 &&
+        (statedCases == null || statedCases * packFromDocument === totalBottles);
+
+      const bottlesPerCase = packAgrees
+        ? (packFromDocument as number)
+        : totalBottles > 0
+          ? totalBottles
+          : 1;
+
+      const cases = packAgrees
+        ? (statedCases ?? totalBottles / (packFromDocument as number))
+        : 1;
 
       // Prices stay in the currency they were billed in. Converting here was
       // how a rate of roughly 1.1666 came to be applied to a euro invoice with
