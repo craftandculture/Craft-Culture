@@ -19,6 +19,7 @@ const adminImportExtractedItems = adminProcedure
   .input(importExtractedItemsSchema)
   .mutation(async ({ input }) => {
     const { shipmentId, items, cargoSummary, overwriteCargoData } = input;
+    const documentCurrency = (input.currency ?? 'USD').toUpperCase();
 
     logger.info('[ImportExtractedItems] Starting import:', {
       shipmentId,
@@ -105,8 +106,15 @@ const adminImportExtractedItems = adminProcedure
         continue;
       }
 
-      // Determine cases - ONLY use cases field, never quantity (quantity is bottle count, not case count)
-      const cases = item.cases ?? 1;
+      // What the document counts in decides everything downstream, so it is
+      // read rather than assumed. A bottle count is taken as given; where the
+      // document prints total litres it proves itself, since total ÷ size is
+      // the bottle count and disagreement means the line was misread.
+      const statedBottles = item.bottles ?? null;
+      const impliedBottles =
+        item.productSizeL && item.totalSizeL && item.productSizeL > 0
+          ? Math.round(item.totalSizeL / item.productSizeL)
+          : null;
 
       // Parse bottle size from string like "750ml" or "1.5L" to integer ml
       let bottleSizeMl = 750; // Default
@@ -120,19 +128,50 @@ const adminImportExtractedItems = adminProcedure
         }
       }
 
-      // Determine bottles per case
-      const bottlesPerCase = item.bottlesPerCase || 12;
+      /**
+       * The pack is only ever what the document said it was.
+       *
+       * This used to fall back to 12, which is invisible and wrong on any
+       * invoice that does not state a pack — and a supplier shipping 464
+       * bottles as 97 mixed cases cannot state one per line. Every figure
+       * built on an invented pack is wrong by a factor nobody chose.
+       *
+       * Unknown is recorded as 1, so cases × pack still equals the bottles
+       * that were actually billed. The real pack arrives with the LWIN, which
+       * carries it in its own digits.
+       */
+      const packFromDocument =
+        item.bottlesPerCase && item.bottlesPerCase > 0
+          ? item.bottlesPerCase
+          : null;
 
-      // Calculate total bottles
-      const totalBottles = cases * bottlesPerCase;
+      const totalBottles =
+        statedBottles ??
+        impliedBottles ??
+        (item.cases != null ? item.cases * (packFromDocument ?? 1) : null) ??
+        0;
 
-      // Calculate cost per bottle if we have total and cases
-      let productCostPerBottle: number | undefined;
-      if (item.total && totalBottles) {
-        productCostPerBottle = item.total / totalBottles;
-      } else if (item.unitPrice) {
-        productCostPerBottle = item.unitPrice;
-      }
+      const bottlesPerCase = packFromDocument ?? 1;
+      const cases =
+        item.cases ?? (bottlesPerCase > 0 ? totalBottles / bottlesPerCase : 0);
+
+      // Prices stay in the currency they were billed in. Converting here was
+      // how a rate of roughly 1.1666 came to be applied to a euro invoice with
+      // nothing recording that it had happened, or at what rate. The shipment
+      // is priced in USD later, once, at a rate someone chose.
+      const sourceCurrency = documentCurrency;
+
+      const sourceUnitPrice =
+        item.unitPriceBasis === 'case' && item.unitPrice && bottlesPerCase > 0
+          ? item.unitPrice / bottlesPerCase
+          : (item.unitPrice ??
+            (item.total && totalBottles ? item.total / totalBottles : undefined));
+
+      const sourceTotal =
+        item.total ??
+        (sourceUnitPrice != null && totalBottles
+          ? sourceUnitPrice * totalBottles
+          : undefined);
 
       sortOrder += 1;
 
@@ -146,15 +185,21 @@ const adminImportExtractedItems = adminProcedure
           producer: item.producer,
           vintage: item.vintage,
           region: item.region,
-          cases,
+          cases: Math.max(1, Math.round(cases)),
           bottlesPerCase,
           bottleSizeMl,
-          totalBottles,
+          totalBottles: Math.round(totalBottles),
           hsCode: item.hsCode,
           countryOfOrigin: item.countryOfOrigin,
           grossWeightKg: item.weight,
-          declaredValueUsd: item.total,
-          productCostPerBottle,
+          sourceCurrency,
+          sourceUnitPrice,
+          sourceTotal,
+          // Left unpriced until a rate is set, rather than quietly labelling
+          // euros as dollars.
+          declaredValueUsd: sourceCurrency === 'USD' ? sourceTotal : null,
+          productCostPerBottle:
+            sourceCurrency === 'USD' ? sourceUnitPrice : null,
           sortOrder,
         })
         .returning();

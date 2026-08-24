@@ -17,9 +17,15 @@ const extractedItemSchema = z.object({
   hsCode: z.string().optional(),
   quantity: z.number().optional(),
   cases: z.number().optional(),
+  /** Bottle count, where the document counts bottles rather than cases */
+  bottles: z.number().optional(),
+  /** Litres per bottle, and printed litres for the line — the line's own check */
+  productSizeL: z.number().optional(),
+  totalSizeL: z.number().optional(),
   weight: z.number().optional(),
   volume: z.number().optional(),
   unitPrice: z.number().optional(),
+  unitPriceBasis: z.enum(['bottle', 'case']).optional(),
   total: z.number().optional(),
   countryOfOrigin: z.string().optional(),
 });
@@ -39,6 +45,13 @@ const cargoSummarySchema = z.object({
  */
 const importExtractedItemsSchema = z.object({
   shipmentId: z.string().uuid(),
+  /**
+   * The currency the document is written in.
+   *
+   * Carried so prices can be stored as billed and converted once, at a rate
+   * someone chose, rather than arriving pre-converted at a rate nobody saw.
+   */
+  currency: z.string().min(3).max(3).optional(),
   items: z.array(extractedItemSchema).min(1, 'At least one item is required'),
   // Optional cargo summary data to update on shipment
   cargoSummary: cargoSummarySchema.optional(),

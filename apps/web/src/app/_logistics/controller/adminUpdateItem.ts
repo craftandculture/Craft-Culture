@@ -7,6 +7,7 @@ import db from '@/database/client';
 import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import packFromLwin from '../utils/packFromLwin';
 import recalcShipmentTotals from '../utils/recalcShipmentTotals';
 
 const updateItemSchema = z.object({
@@ -73,10 +74,48 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
     updateData.lwin = normalizeLwin18(updateData.lwin);
   }
 
+  /**
+   * Latching a LWIN settles the pack, because the LWIN already states it.
+   *
+   * `1148811-0000-02-00750` is a two-bottle pack of 75cl. Reading that off by
+   * eye and typing it back in was the manual pass over this shipment — 163
+   * lines of transcribing a number the code already carried.
+   *
+   * The bottle count is held and the cases recomputed, not the other way
+   * round: the supplier billed bottles, so bottles are the fact. Anything the
+   * caller set explicitly wins, since a correction should not be undone by
+   * the code it is correcting.
+   */
+  const derived =
+    updateFields.lwin !== undefined ? packFromLwin(updateData.lwin) : null;
+
+  if (derived) {
+    if (updateFields.bottlesPerCase === undefined) {
+      updateData.bottlesPerCase = derived.bottlesPerCase;
+    }
+
+    if (updateFields.bottleSizeMl === undefined) {
+      updateData.bottleSizeMl = derived.bottleSizeMl;
+    }
+
+    const bottles = existingItem.totalBottles ?? 0;
+    const pack = updateData.bottlesPerCase ?? derived.bottlesPerCase;
+
+    if (bottles > 0 && pack > 0 && updateFields.cases === undefined) {
+      // A pack that does not divide the billed bottles is a real finding —
+      // either the LWIN is the wrong format or the invoice was misread — so
+      // the cases round up and the bottles stay untouched for someone to see.
+      updateData.cases = Math.max(1, Math.ceil(bottles / pack));
+    }
+  }
+
   // Recalculate totalBottles if cases or bottlesPerCase changed
   const newCases = updateFields.cases ?? existingItem.cases;
   const newBpc = updateFields.bottlesPerCase ?? existingItem.bottlesPerCase ?? 12;
-  if (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined) {
+  if (
+    !derived &&
+    (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined)
+  ) {
     updateData.totalBottles = newCases * newBpc;
   }
 

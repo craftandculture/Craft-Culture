@@ -2737,6 +2737,20 @@ export const logisticsShipments = pgTable(
     shipmentNumber: text('shipment_number').notNull().unique(),
     name: text('name'),
 
+    /**
+     * The rate this shipment's goods were priced at, and where it came from.
+     *
+     * One rate for the document rather than a rate per line: a supplier
+     * invoice is settled at a single rate, and converting each line
+     * separately is how 163 lines become 163 manual calculations. Recorded so
+     * a landed cost written months ago can still be explained.
+     */
+    sourceCurrency: text('source_currency'),
+    fxRateToUsd: doublePrecision('fx_rate_to_usd'),
+    fxRateDate: date('fx_rate_date'),
+    /** usd | pegged | live | agreed | unresolved */
+    fxRateSource: text('fx_rate_source'),
+
     // Shipment type and mode
     type: logisticsShipmentType('type').notNull(),
     transportMode: logisticsTransportMode('transport_mode').notNull(),
@@ -3018,6 +3032,17 @@ export const logisticsShipmentItems = pgTable(
     // Value
     declaredValueUsd: doublePrecision('declared_value_usd'),
     productCostPerBottle: doublePrecision('product_cost_per_bottle'),
+
+    /**
+     * What the supplier's document actually said, before any conversion.
+     *
+     * Kept so the USD figures can be recomputed when the rate is agreed or
+     * corrected. Without it a conversion is one-way: the euros are overwritten
+     * and the only way back is re-reading the invoice.
+     */
+    sourceCurrency: text('source_currency'),
+    sourceUnitPrice: doublePrecision('source_unit_price'),
+    sourceTotal: doublePrecision('source_total'),
 
     // Landed cost allocation (calculated from shipment costs)
     freightAllocated: doublePrecision('freight_allocated'),
@@ -5199,6 +5224,21 @@ export const triProgrammes = pgTable(
      * on every row today.
      */
     identityStrategy: text('identity_strategy').notNull().default('lwin'),
+    /**
+     * Which inputs this programme has, and therefore what its figures mean.
+     *
+     * `warehouse` is Crurated's shape: five inputs, because C&C physically
+     * hold the stock, so there is an opening position and a count to check the
+     * calculation against.
+     *
+     * `consignment` is two: what was invoiced out to distributors, and what
+     * those distributors report as sold. Unsold is the difference. There is no
+     * warehouse leg to reconcile — we are tracking the stock, not holding it —
+     * so demanding five inputs would leave the client permanently short of
+     * three that will never exist, and the Received / On hand / WMS columns
+     * would be answering a question nobody asked.
+     */
+    inputProfile: text('input_profile').notNull().default('warehouse'),
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     ...timestamps,

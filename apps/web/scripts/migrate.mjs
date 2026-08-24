@@ -760,6 +760,34 @@ const runMigrations = async () => {
     }
     console.log('✅ tri_skus LWIN-first identity ready');
 
+    // --- goods priced in the currency they were billed in --------------------
+    // A euro invoice arrived with its prices already multiplied by roughly
+    // 1.1666 and written into a column named USD, with nothing recording that
+    // a conversion had happened or at what rate. Keeping what the document
+    // said is what lets the shipment be priced once, at a rate someone chose,
+    // and re-priced when that rate is corrected.
+    for (const [column, type] of [
+      ['source_currency', 'text'],
+      ['source_unit_price', 'double precision'],
+      ['source_total', 'double precision'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipment_items" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+
+    for (const [column, type] of [
+      ['source_currency', 'text'],
+      ['fx_rate_to_usd', 'double precision'],
+      ['fx_rate_date', 'date'],
+      ['fx_rate_source', 'text'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ shipment goods currency ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

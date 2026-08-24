@@ -67,12 +67,51 @@ const extractedLogisticsDataSchema = z.object({
         alcoholPercent: z.number().optional().describe('Alcohol % from "ABV %" column (e.g., 12.5, 14.0, 14.5)'),
         region: z.string().optional().describe('Wine region/appellation extracted from product name (e.g., "Saint-Emilion Grand Cru", "Margaux", "Pomerol")'),
         hsCode: z.string().optional().describe('HS/Commodity code from "Commodity Code" column. Extract ALL digits exactly (e.g., "2204214290", "2204214210")'),
-        quantity: z.number().optional().describe('DEPRECATED - use cases instead'),
-        cases: z.number().optional().describe('Number of CASES from "Qty" column. This is the case count, NOT bottle count. E.g., Qty=1 means 1 case'),
+        bottles: z
+          .number()
+          .optional()
+          .describe(
+            'Number of BOTTLES, when the document counts in bottles. A column headed "Product Quantity", "Bottles" or "Units" alongside a per-bottle price is a bottle count. Leave empty if the document counts in cases.',
+          ),
+        productSizeL: z
+          .number()
+          .optional()
+          .describe(
+            'Size of ONE bottle in litres, from a "ProductSize (L)" or "Size" column (0.75, 1.5, 3).',
+          ),
+        totalSizeL: z
+          .number()
+          .optional()
+          .describe(
+            'Total litres for the LINE, from a "Total Size (L)" column. Do not compute it — only report it if the document prints it.',
+          ),
+        quantity: z.number().optional().describe('DEPRECATED - use bottles or cases'),
+        cases: z
+          .number()
+          .optional()
+          .describe(
+            'Number of CASES, only when the document actually states cases (a "Qty" column beside a size like "6x75cl"). If the document never mentions cases, leave this empty rather than inferring one.',
+          ),
         weight: z.number().optional().describe('Weight in kg'),
         volume: z.number().optional().describe('Volume in m³'),
-        unitPrice: z.number().optional().describe('Unit price per case from "Unit Price USD" column'),
-        total: z.number().optional().describe('Line total from "Total Price USD" column'),
+        unitPrice: z
+          .number()
+          .optional()
+          .describe(
+            'Unit price exactly as printed, in the document\'s own currency. Never convert it. Say whether it is per bottle or per case in unitPriceBasis.',
+          ),
+        unitPriceBasis: z
+          .enum(['bottle', 'case'])
+          .optional()
+          .describe(
+            'What the unit price is per. A column headed "PricePerBottle" is `bottle`.',
+          ),
+        total: z
+          .number()
+          .optional()
+          .describe(
+            'Line total exactly as printed, in the document\'s own currency. Never convert it.',
+          ),
         countryOfOrigin: z.string().optional().describe('Country from "Origin" column (e.g., "France", "Italy", "Spain")'),
       }),
     )
