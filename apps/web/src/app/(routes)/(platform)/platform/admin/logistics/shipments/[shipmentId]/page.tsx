@@ -122,6 +122,8 @@ const ShipmentDetailPage = () => {
   const _queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  /** Blank means take today's market rate rather than a negotiated one */
+  const [agreedRate, setAgreedRate] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isEditingTransitBoe, setIsEditingTransitBoe] = useState(false);
@@ -256,6 +258,37 @@ const ShipmentDetailPage = () => {
     api.logistics.admin.autoAssignHsCodes.mutationOptions({
       onSuccess: (result) => {
         toast.success(`HS codes assigned: ${result.updated} updated, ${result.skipped} skipped`);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: autoMatchLwins, isPending: isMatchingLwins } = useMutation(
+    api.logistics.admin.autoMatchLwins.mutationOptions({
+      onSuccess: (result) => {
+        // The ones it declined to guess are the actual work, so they lead.
+        toast.success(
+          result.needsReview > 0
+            ? `${result.applied} matched · ${result.needsReview} need a decision`
+            : `All ${result.applied} matched`,
+        );
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: setShipmentFx, isPending: isPricing } = useMutation(
+    api.logistics.admin.setShipmentFx.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.itemsPriced} lines priced at ${result.rate.toFixed(4)} ${result.currency}/USD (${result.rateSource})`,
+        );
         void refetch();
       },
       onError: (error) => {
@@ -1049,7 +1082,19 @@ const ShipmentDetailPage = () => {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <Typography variant="bodyXs" className="font-medium">LWIN Mapping</Typography>
-                        <Typography variant="bodyXs" colorRole="muted">{mappedCount}/{totalItems}</Typography>
+                        <div className="flex items-center gap-2">
+                          {mappedCount < totalItems && (
+                            <button
+                              onClick={() => autoMatchLwins({ shipmentId, dryRun: false })}
+                              disabled={isMatchingLwins}
+                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            >
+                              <Icon icon={IconWand} size="sm" />
+                              {isMatchingLwins ? 'Matching...' : 'Match all'}
+                            </button>
+                          )}
+                          <Typography variant="bodyXs" colorRole="muted">{mappedCount}/{totalItems}</Typography>
+                        </div>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-fill-secondary">
                         <div
@@ -1082,6 +1127,53 @@ const ShipmentDetailPage = () => {
                         />
                       </div>
                     </div>
+
+                    {/*
+                      A supplier invoice is settled at one rate, so it converts
+                      at one rate. Doing it per line is what turns 163 lines
+                      into 163 calculations.
+                    */}
+                    {shipment.sourceCurrency &&
+                    shipment.sourceCurrency !== 'USD' ? (
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-primary pt-3">
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Billed in {shipment.sourceCurrency}
+                          {shipment.fxRateToUsd
+                            ? ` · priced at ${shipment.fxRateToUsd.toFixed(4)} (${shipment.fxRateSource}${shipment.fxRateDate ? `, ${shipment.fxRateDate}` : ''})`
+                            : ' · not yet priced in USD'}
+                        </Typography>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.0001"
+                            min="0"
+                            placeholder="Agreed rate"
+                            value={agreedRate}
+                            onChange={(event) => setAgreedRate(event.target.value)}
+                            className="border-border-primary bg-fill-primary text-text-primary h-8 w-32 rounded-md border px-2 text-sm"
+                          />
+                          <button
+                            onClick={() =>
+                              setShipmentFx({
+                                shipmentId,
+                                agreedRate: agreedRate
+                                  ? Number(agreedRate)
+                                  : undefined,
+                              })
+                            }
+                            disabled={isPricing}
+                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                          >
+                            <Icon icon={IconWand} size="sm" />
+                            {isPricing
+                              ? 'Pricing...'
+                              : agreedRate
+                                ? 'Apply rate'
+                                : "Use today's rate"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               )}
