@@ -92,6 +92,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
   // Grouping by input does two things a flat list cannot: it puts a subtotal
   // beside each source, and it says the file name once instead of on every row.
   const groups = GROUP_ORDER.map((kind) => {
+    const meta = importKindLabels[kind];
     const forKind = entries.filter((entry) => entry.kind === kind);
 
     // Only committed imports reach the reconciliation, so only their lines may
@@ -101,13 +102,35 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
     // sitting in a file nobody has committed yet reads as "draft" otherwise.
     const committed = forKind.filter((entry) => entry.importStatus !== 'draft');
 
+    // A stated position is point-in-time: a later count REPLACES an earlier
+    // one rather than adding to it. Summing them read four monthly counts of
+    // 55 bottles as 220. Flows genuinely accumulate, so they still sum.
+    const latestDate =
+      meta.behaviour === 'snapshot'
+        ? committed.reduce<string | null>(
+            (max, entry) =>
+              !max || entry.effectiveDate > max ? entry.effectiveDate : max,
+            null,
+          )
+        : null;
+
+    const counts = (rows: typeof committed) => {
+      const relevant =
+        meta.behaviour === 'snapshot'
+          ? rows.filter((entry) => entry.effectiveDate === latestDate)
+          : rows;
+      return relevant.reduce((sum, entry) => sum + entry.quantityBottles, 0);
+    };
+
     return {
       kind,
       entries: forKind,
-      total: committed.reduce((sum, entry) => sum + entry.quantityBottles, 0),
-      draftTotal: forKind
-        .filter((entry) => entry.importStatus === 'draft')
-        .reduce((sum, entry) => sum + entry.quantityBottles, 0),
+      /** the snapshot the total is taken from; null for flows */
+      latestDate,
+      total: counts(committed),
+      draftTotal: counts(
+        forKind.filter((entry) => entry.importStatus === 'draft'),
+      ),
       fileNames: [
         ...new Set(
           forKind.map((entry) => entry.fileName ?? entry.periodLabel ?? ''),
@@ -338,7 +361,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                             {group.entries.length} line
                             {group.entries.length === 1 ? '' : 's'} ·{' '}
                             {meta.behaviour === 'snapshot'
-                              ? 'stated position'
+                              ? `stated position${group.latestDate ? ` at ${group.latestDate}` : ''}`
                               : 'accumulates'}
                           </p>
                         </Typography>
