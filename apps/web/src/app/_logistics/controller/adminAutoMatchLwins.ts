@@ -114,17 +114,30 @@ const adminAutoMatchLwins = adminProcedure
           displayName: lwinWines.displayName,
           score: sql<number>`GREATEST(
             similarity(${lwinWines.displayName}, ${parsed.searchName}),
-            similarity(COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, ''), ${parsed.searchName})
+            similarity(
+              (COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, '')),
+              ${parsed.searchName}
+            )
           )`.as('score'),
         })
         .from(lwinWines)
         .where(
           and(
             eq(lwinWines.status, 'live'),
-            sql`(
-              ${lwinWines.displayName} % ${parsed.searchName}
-              OR COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, '') % ${parsed.searchName}
-            )`,
+            /*
+              Narrowed by the trigram index on display_name alone.
+
+              The second half of this used to be `producer || ' ' || wine %
+              $1`, which is two bugs in one line. Postgres binds `%` tighter
+              than `||`, so it read as `producer || ' ' || (wine % $1)` — a
+              text value handed to OR, which is the error it raised. And the
+              expression has no index, so every line would have scanned all
+              208k records to find out.
+
+              Producer and wine are still scored, above; they just no longer
+              decide which rows are looked at.
+            */
+            sql`${lwinWines.displayName} % ${parsed.searchName}`,
           ),
         )
         .orderBy(sql`score DESC`)
