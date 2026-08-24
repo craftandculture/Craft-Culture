@@ -50,6 +50,7 @@ const statusIcons: Record<string, typeof IconCheck> = {
 const documentTypeLabels: Record<string, string> = {
   bill_of_lading: 'Bill of Lading',
   commercial_invoice: 'Commercial Invoice',
+  commercial_invoice_excel: 'Commercial Invoice (Excel)',
   packing_list: 'Packing List',
   certificate_of_origin: 'Certificate of Origin',
   phytosanitary_certificate: 'Phytosanitary Certificate',

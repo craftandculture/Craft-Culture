@@ -4,6 +4,7 @@ const documentTypes = [
   'bill_of_lading',
   'airway_bill',
   'commercial_invoice',
+  'commercial_invoice_excel',
   'packing_list',
   'certificate_of_origin',
   'customs_declaration',
@@ -21,7 +22,18 @@ const documentTypes = [
   'other',
 ] as const;
 
-const mimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'] as const;
+const mimeTypes = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  // The supplier's own workbook of an invoice. Kept alongside the PDF rather
+  // than instead of it — they are the same content from different sources, and
+  // the figures come cleaner off the sheet.
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'text/csv',
+] as const;
 
 /**
  * Schema for uploading a document to a logistics shipment

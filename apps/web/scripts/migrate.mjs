@@ -798,6 +798,14 @@ const runMigrations = async () => {
     );
     console.log('✅ LWIN trigram matching ready');
 
+    // Suppliers often send the workbook alongside the PDF of the same invoice.
+    // It gets its own document type so both can sit on the shipment, and
+    // because the sheet is the better source to read figures from.
+    await client.unsafe(
+      `ALTER TYPE "public"."logistics_document_type" ADD VALUE IF NOT EXISTS 'commercial_invoice_excel'`,
+    );
+    console.log('✅ commercial_invoice_excel document type ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

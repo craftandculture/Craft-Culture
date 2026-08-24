@@ -11,6 +11,7 @@ const documentTypeLabels: Record<string, string> = {
   bill_of_lading: 'Bill of Lading',
   airway_bill: 'Airway Bill',
   commercial_invoice: 'Commercial Invoice',
+  commercial_invoice_excel: 'Commercial Invoice (Excel)',
   packing_list: 'Packing List',
   certificate_of_origin: 'Certificate of Origin',
   customs_declaration: 'Customs Declaration',

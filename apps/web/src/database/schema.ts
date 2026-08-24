@@ -2701,6 +2701,15 @@ export const logisticsDocumentType = pgEnum('logistics_document_type', [
   'bill_of_lading',
   'airway_bill',
   'commercial_invoice',
+  /**
+   * The supplier's own spreadsheet of the commercial invoice.
+   *
+   * Same content as the PDF, different source. It is kept as its own type so
+   * both can sit on the shipment — and because the spreadsheet is the better
+   * one to read figures from: exact numbers, and rows that can be parsed in
+   * code rather than reproduced by a model.
+   */
+  'commercial_invoice_excel',
   'packing_list',
   'certificate_of_origin',
   'customs_declaration',

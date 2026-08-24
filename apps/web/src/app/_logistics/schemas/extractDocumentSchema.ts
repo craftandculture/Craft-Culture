@@ -13,6 +13,7 @@ const extractDocumentSchema = z.object({
       'bill_of_lading',
       'airway_bill',
       'commercial_invoice',
+      'commercial_invoice_excel',
       'customs_document',
       'general',
     ])

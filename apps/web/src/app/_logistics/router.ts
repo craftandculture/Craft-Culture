@@ -24,6 +24,7 @@ import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
+import adminExtractSheet from './controller/adminExtractSheet';
 import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoice';
 import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
@@ -92,6 +93,7 @@ const adminRouter = createTRPCRouter({
 
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,
+  extractSheet: adminExtractSheet,
   extractShipmentInvoice: adminExtractShipmentInvoice,
   addShipmentCostLine: adminAddShipmentCostLine,
   deleteShipmentCostLine: adminDeleteShipmentCostLine,

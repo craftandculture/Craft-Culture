@@ -57,6 +57,7 @@ type DocumentType =
   | 'bill_of_lading'
   | 'airway_bill'
   | 'commercial_invoice'
+  | 'commercial_invoice_excel'
   | 'packing_list'
   | 'certificate_of_origin'
   | 'customs_declaration'
@@ -79,10 +80,21 @@ interface DocumentUploadProps {
   onUploadComplete?: () => void;
 }
 
+/** Everything the dropzone accepts, including the supplier's own workbook */
+type UploadFileType =
+  | 'application/pdf'
+  | 'image/png'
+  | 'image/jpeg'
+  | 'image/jpg'
+  | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  | 'application/vnd.ms-excel'
+  | 'text/csv';
+
 const documentTypeLabels: Record<DocumentType, string> = {
   bill_of_lading: 'Bill of Lading',
   airway_bill: 'Airway Bill',
   commercial_invoice: 'Commercial Invoice',
+  commercial_invoice_excel: 'Commercial Invoice (Excel)',
   packing_list: 'Packing List',
   certificate_of_origin: 'Certificate of Origin',
   customs_declaration: 'Customs Declaration',
@@ -135,7 +147,7 @@ const LogisticsDocumentUpload = ({
         documentType: selectedType,
         blobUrl: data.blobUrl,
         filename: data.filename,
-        fileType: data.fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+        fileType: data.fileType as UploadFileType,
         fileSize: data.fileSize,
         notes: selectedType === 'other' && customTitle.trim() ? customTitle.trim() : undefined,
       });
@@ -196,7 +208,11 @@ const LogisticsDocumentUpload = ({
         // Call extraction API
         const result = await trpcClient.logistics.admin.extractDocument.mutate({
           file: base64,
-          fileType: doc.mimeType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+          fileType: doc.mimeType as
+            | 'application/pdf'
+            | 'image/png'
+            | 'image/jpeg'
+            | 'image/jpg',
           documentType: extractionType,
         });
 
@@ -314,6 +330,13 @@ const LogisticsDocumentUpload = ({
       'application/pdf': ['.pdf'],
       'image/png': ['.png'],
       'image/jpeg': ['.jpg', '.jpeg'],
+      // The supplier's own workbook of the same invoice — exact figures, and
+      // rows that can be parsed rather than read off a page.
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
+        '.xlsx',
+      ],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv'],
     },
     maxFiles: 1,
     disabled: isUploading,

@@ -378,7 +378,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         model: anthropic('claude-sonnet-4-6'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
-        maxTokens: 64000,
+        maxOutputTokens: 64000,
         messages,
       });
 
@@ -409,7 +409,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          maxTokens: 64000,
+          maxOutputTokens: 64000,
           prompt: `${extractionPrompt}
 
 --- DOCUMENT TEXT ---
@@ -446,7 +446,7 @@ ${pdfText}
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          maxTokens: 64000,
+          maxOutputTokens: 64000,
           messages,
         });
 
