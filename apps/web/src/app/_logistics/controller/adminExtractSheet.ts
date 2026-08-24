@@ -99,6 +99,17 @@ const currencyFromHeaders = (headers: string[]) => {
   return null;
 };
 
+/**
+ * Labels that mark a row as a summary or a charge rather than a wine.
+ *
+ * The model is asked for a hint too, but this does not depend on it. One
+ * supplier put "TOTAL" in the product column and the whole invoice arrived as
+ * a 66th line carrying 145 bottles and EUR 53,492.61 — the shipment's own
+ * total, counted twice. A foot row is structural, so it is caught in code.
+ */
+const SUMMARY_ROW =
+  /^(sub[-\s]?total|totals?|totaux|grand total|invoice total|somme|balance|vat|tva|taxes?|shipping|freight|transport|carriage|insurance|handling|discount|deposit)\b/i;
+
 /** A LWIN is digits — a supplier reference like "W3200124" is not one */
 const looksLikeLwin = (value: string) => /^\d{7}(\d{4}\d{2}\d{5})?$/.test(value.replace(/[-\s]/g, ''));
 
@@ -188,7 +199,7 @@ const adminExtractSheet = adminProcedure
       if (!rawName) return [];
 
       // Shipping and totals sit in the same column as the wines.
-      if (skipHint && rawName.toLowerCase().includes(skipHint)) {
+      if (SUMMARY_ROW.test(rawName) || (skipHint && rawName.toLowerCase().includes(skipHint))) {
         skipped += 1;
 
         return [];
