@@ -788,6 +788,16 @@ const runMigrations = async () => {
     }
     console.log('✅ shipment goods currency ready');
 
+    // Trigram similarity is what lets a supplier's product name be matched
+    // against 208k LWIN records without a person reading a result list per
+    // line. Guarded so a database that already has it is untouched.
+    await client.unsafe(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "lwin_wines_display_name_trgm_idx"
+         ON "lwin_wines" USING gin ("display_name" gin_trgm_ops)`,
+    );
+    console.log('✅ LWIN trigram matching ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

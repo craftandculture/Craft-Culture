@@ -151,9 +151,19 @@ const adminImportExtractedItems = adminProcedure
         (item.cases != null ? item.cases * (packFromDocument ?? 1) : null) ??
         0;
 
-      const bottlesPerCase = packFromDocument ?? 1;
+      /**
+       * A bottle-billed line is one pack of that many bottles.
+       *
+       * The supplier ships six bottles of a wine boxed together, so that is
+       * how it is received and how it clears customs — 1 × 6, not 6 × 1. It is
+       * also the shape someone correcting these by hand arrives at: every line
+       * fixed manually on this shipment came out as one case of the billed
+       * quantity.
+       */
+      const bottlesPerCase =
+        packFromDocument ?? (totalBottles > 0 ? totalBottles : 1);
       const cases =
-        item.cases ?? (bottlesPerCase > 0 ? totalBottles / bottlesPerCase : 0);
+        item.cases ?? (bottlesPerCase > 0 ? totalBottles / bottlesPerCase : 1);
 
       // Prices stay in the currency they were billed in. Converting here was
       // how a rate of roughly 1.1666 came to be applied to a euro invoice with

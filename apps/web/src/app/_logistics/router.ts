@@ -6,6 +6,7 @@ import adminAddItem from './controller/adminAddItem';
 import adminAddShipmentCostLine from './controller/adminAddShipmentCostLine';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
+import adminAutoMatchLwins from './controller/adminAutoMatchLwins';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCalculateShipmentGroup from './controller/adminCalculateShipmentGroup';
 import adminCompareQuotes from './controller/adminCompareQuotes';
@@ -76,6 +77,7 @@ const adminRouter = createTRPCRouter({
 
   // Items
   addItem: adminAddItem,
+  autoMatchLwins: adminAutoMatchLwins,
   setShipmentFx: adminSetShipmentFx,
   updateItem: adminUpdateItem,
   removeItem: adminRemoveItem,
