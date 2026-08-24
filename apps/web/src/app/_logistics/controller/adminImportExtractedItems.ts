@@ -8,6 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import importExtractedItemsSchema from '../schemas/importExtractedItemsSchema';
+import priceShipmentInUsd from '../utils/priceShipmentInUsd';
 
 /**
  * Import extracted line items from a document into a shipment
@@ -241,6 +242,30 @@ const adminImportExtractedItems = adminProcedure
       }
     }
 
+    /*
+      Priced immediately, at today's rate, rather than left blank.
+
+      Leaving 165 lines unpriced to avoid an unrecorded conversion solved the
+      wrong half of the problem: it protected the figures by making them
+      absent, which still leaves someone converting a euro invoice by hand.
+      The conversion is safe because it is recorded — rate, source and date sit
+      on the shipment — and because it always recomputes from what the document
+      stated, so entering the rate actually agreed with the supplier afterwards
+      corrects these figures rather than compounding them.
+    */
+    let pricing = null;
+
+    if (createdItems.length > 0 && documentCurrency !== 'USD') {
+      pricing = await priceShipmentInUsd(shipmentId, { currency: documentCurrency });
+
+      if (pricing.rateSource === 'unresolved') {
+        logger.warn('[ImportExtractedItems] No rate found, goods left unpriced:', {
+          shipmentId,
+          currency: documentCurrency,
+        });
+      }
+    }
+
     logger.info('[ImportExtractedItems] Import complete:', {
       shipmentId,
       itemsImported: createdItems.length,
@@ -254,6 +279,7 @@ const adminImportExtractedItems = adminProcedure
       itemsSkipped: items.length - createdItems.length,
       items: createdItems,
       cargoSummaryUpdated: !!cargoSummary,
+      pricing,
     };
   });
 

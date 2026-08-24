@@ -1038,6 +1038,18 @@ const ShipmentDetailPage = () => {
 
         {activeTab === 'items' && (() => {
           const items = shipment.items ?? [];
+
+          /*
+            The lines know what they were billed in even when the shipment
+            has not been stamped — anything imported before the importer
+            recorded it would otherwise have no way to reach the rate control
+            at all, which is how 165 euro lines came to sit with no cost and
+            no button.
+          */
+          const billedCurrency =
+            shipment.sourceCurrency ??
+            items.find((item) => item.sourceCurrency)?.sourceCurrency ??
+            null;
           const mappedCount = items.filter((i) => i.lwin).length;
           const hsCount = items.filter((i) => i.hsCode).length;
           const totalItems = items.length;
@@ -1145,11 +1157,10 @@ const ShipmentDetailPage = () => {
                       at one rate. Doing it per line is what turns 163 lines
                       into 163 calculations.
                     */}
-                    {shipment.sourceCurrency &&
-                    shipment.sourceCurrency !== 'USD' ? (
+                    {billedCurrency && billedCurrency !== 'USD' ? (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-primary pt-3">
                         <Typography variant="bodyXs" colorRole="muted">
-                          Billed in {shipment.sourceCurrency}
+                          Billed in {billedCurrency}
                           {shipment.fxRateToUsd
                             ? ` · priced at ${shipment.fxRateToUsd.toFixed(4)} (${shipment.fxRateSource}${shipment.fxRateDate ? `, ${shipment.fxRateDate}` : ''})`
                             : ' · not yet priced in USD'}
