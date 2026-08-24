@@ -297,6 +297,18 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: clearItems, isPending: isClearingItems } = useMutation(
+    api.logistics.admin.clearShipmentItems.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.removed} items removed`);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
   const { mutate: calculateLandedCost, isPending: isCalculating } = useMutation(
     api.logistics.admin.calculateLandedCost.mutationOptions({
       onSuccess: (result) => {
@@ -1183,6 +1195,34 @@ const ShipmentDetailPage = () => {
                   <div className="flex items-center justify-between mb-4">
                     <Typography variant="headingSm">Items</Typography>
                     <div className="flex gap-2">
+                      {/*
+                        A mis-imported document is a whole list of wrong lines.
+                        Undoing that one trash icon at a time is the problem the
+                        import had, not a fix for it.
+                      */}
+                      {totalItems > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorRole="danger"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Remove all ${totalItems} items from this shipment? The invoice can be re-imported from Documents.`,
+                              )
+                            ) {
+                              clearItems({ shipmentId, expectedCount: totalItems });
+                            }
+                          }}
+                          disabled={isClearingItems}
+                        >
+                          <ButtonContent
+                            iconLeft={isClearingItems ? IconLoader2 : IconTrash}
+                          >
+                            {isClearingItems ? 'Removing...' : 'Clear all'}
+                          </ButtonContent>
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"

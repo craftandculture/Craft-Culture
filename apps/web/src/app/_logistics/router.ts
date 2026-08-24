@@ -9,6 +9,7 @@ import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
 import adminAutoMatchLwins from './controller/adminAutoMatchLwins';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCalculateShipmentGroup from './controller/adminCalculateShipmentGroup';
+import adminClearShipmentItems from './controller/adminClearShipmentItems';
 import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminCreate from './controller/adminCreate';
 import adminCreateQuote from './controller/adminCreateQuote';
@@ -78,6 +79,7 @@ const adminRouter = createTRPCRouter({
   // Items
   addItem: adminAddItem,
   autoMatchLwins: adminAutoMatchLwins,
+  clearShipmentItems: adminClearShipmentItems,
   setShipmentFx: adminSetShipmentFx,
   updateItem: adminUpdateItem,
   removeItem: adminRemoveItem,
