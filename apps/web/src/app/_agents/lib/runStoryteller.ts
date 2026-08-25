@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
-import { desc, eq, gt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -104,7 +104,9 @@ const runStoryteller = async () => {
         bottleSize: wmsStock.bottleSize,
       })
       .from(wmsStock)
-      .where(gt(wmsStock.availableCases, 0))
+      .where(
+        and(gt(wmsStock.availableCases, 0), eq(wmsStock.notForSale, false)),
+      )
       .orderBy(desc(wmsStock.availableCases))
       .limit(30);
 

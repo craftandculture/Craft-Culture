@@ -250,7 +250,9 @@ const runPricer = async () => {
         totalCases: sql<number>`SUM(${wmsStock.availableCases})`,
       })
       .from(wmsStock)
-      .where(gt(wmsStock.availableCases, 0))
+      .where(
+        and(gt(wmsStock.availableCases, 0), eq(wmsStock.notForSale, false)),
+      )
       .groupBy(wmsStock.lwin18, wmsStock.productName)
       .limit(200);
 

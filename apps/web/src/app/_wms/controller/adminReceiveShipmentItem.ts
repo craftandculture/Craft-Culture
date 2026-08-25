@@ -228,6 +228,13 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
             shipmentId,
             reExportBoeNumber: shipment.reExportBoeNumber,
             salesArrangement: 'consignment',
+            /*
+              The line decides, falling back to the shipment. Receiving is the
+              last point where the distinction is still recorded anywhere — a
+              stock row that arrives without it is indistinguishable from
+              goods we bought to sell.
+            */
+            notForSale: shipmentItem.notForSale ?? shipment.notForSale,
             expiryDate: receivedItem.expiryDate,
             isPerishable: !!receivedItem.expiryDate,
             category: getCategoryFromHsCode(hsCode),

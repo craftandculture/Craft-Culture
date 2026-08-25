@@ -232,6 +232,8 @@ const adminReceiveShipment = wmsOperatorProcedure
               receivedAt: new Date(),
               shipmentId,
               salesArrangement: 'consignment',
+              // The line decides, falling back to the shipment.
+              notForSale: shipmentItem.notForSale ?? shipment.notForSale,
               expiryDate: receivedItem.expiryDate,
               isPerishable: !!receivedItem.expiryDate,
               category: getCategoryFromHsCode(hsCode),

@@ -788,6 +788,27 @@ const runMigrations = async () => {
     }
     console.log('✅ shipment goods currency ready');
 
+    // --- stock held for its owner rather than offered for sale ---------------
+    // A client's cellar in storage is physically identical to bought stock and
+    // was therefore listed for sale by every price surface, which read nothing
+    // but "availableCases > 0". The line-level column is deliberately nullable
+    // so it can inherit the shipment; the other two default false, which is
+    // what every existing row already is.
+    await client.unsafe(
+      `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "not_for_sale" boolean NOT NULL DEFAULT false`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "logistics_shipment_items" ADD COLUMN IF NOT EXISTS "not_for_sale" boolean`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_stock" ADD COLUMN IF NOT EXISTS "not_for_sale" boolean NOT NULL DEFAULT false`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "wms_stock_not_for_sale_idx"
+         ON "wms_stock" ("not_for_sale") WHERE "not_for_sale" = true`,
+    );
+    console.log('✅ not-for-sale stock ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

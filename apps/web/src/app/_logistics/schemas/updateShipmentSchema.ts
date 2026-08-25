@@ -66,6 +66,9 @@ const updateShipmentSchema = z.object({
   // Notes
   internalNotes: z.string().optional(),
   partnerNotes: z.string().optional(),
+
+  /** Goods held for their owner rather than offered for sale */
+  notForSale: z.boolean().optional(),
 });
 
 export default updateShipmentSchema;

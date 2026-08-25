@@ -152,6 +152,8 @@ const adminTransferStock = wmsOperatorProcedure
           receivedAt: sourceStock.receivedAt,
           shipmentId: sourceStock.shipmentId,
           salesArrangement: sourceStock.salesArrangement,
+          // Moving wine to another bay does not make it ours to sell.
+          notForSale: sourceStock.notForSale,
           consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
           category: sourceStock.category,
           expiryDate: sourceStock.expiryDate,

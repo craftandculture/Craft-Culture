@@ -2760,6 +2760,17 @@ export const logisticsShipments = pgTable(
     /** usd | pegged | live | agreed | unresolved */
     fxRateSource: text('fx_rate_source'),
 
+    /**
+     * Whether this shipment's goods are ours to sell.
+     *
+     * A client's own cellar coming into storage is physically identical to
+     * bought stock — same receiving, same locations, same picking — but it
+     * must never reach a price sheet. Set here it covers the usual case,
+     * where a whole shipment belongs to one owner; individual lines can still
+     * differ.
+     */
+    notForSale: boolean('not_for_sale').notNull().default(false),
+
     // Shipment type and mode
     type: logisticsShipmentType('type').notNull(),
     transportMode: logisticsTransportMode('transport_mode').notNull(),
@@ -3052,6 +3063,15 @@ export const logisticsShipmentItems = pgTable(
     sourceCurrency: text('source_currency'),
     sourceUnitPrice: doublePrecision('source_unit_price'),
     sourceTotal: doublePrecision('source_total'),
+
+    /**
+     * Whether this line is ours to sell.
+     *
+     * Null inherits the shipment, which is what makes a mixed shipment
+     * workable: set the shipment once, then correct the handful of lines that
+     * differ, rather than ticking a box 165 times.
+     */
+    notForSale: boolean('not_for_sale'),
 
     // Landed cost allocation (calculated from shipment costs)
     freightAllocated: doublePrecision('freight_allocated'),
@@ -4141,6 +4161,16 @@ export const wmsStock = pgTable(
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     reExportBoeNumber: text('re_export_boe_number'), // Re-Export BOE for customs clearance tracking
     salesArrangement: text('sales_arrangement').default('consignment'),
+    /**
+     * Held for its owner, not offered for sale.
+     *
+     * Distinct from salesArrangement, which says how a sale is settled —
+     * consignment and purchased are both for sale. This says there is no sale
+     * to settle. Carried down from the shipment at receiving and honoured by
+     * every surface that offers stock: the catalogue, the price lists, quote
+     * lines, and reservation, so it cannot be sold by accident either.
+     */
+    notForSale: boolean('not_for_sale').notNull().default(false),
     consignmentCommissionPercent: doublePrecision('consignment_commission_percent'),
     expiryDate: timestamp('expiry_date', { mode: 'date' }),
     isPerishable: boolean('is_perishable').default(false),

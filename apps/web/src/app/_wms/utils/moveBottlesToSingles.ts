@@ -135,6 +135,8 @@ const moveBottlesToSingles = async ({
       receivedAt: source.receivedAt,
       shipmentId: source.shipmentId,
       salesArrangement: source.salesArrangement,
+      // Repacking wine does not make it ours to sell.
+      notForSale: source.notForSale,
       consignmentCommissionPercent: source.consignmentCommissionPercent,
       category: source.category,
       expiryDate: source.expiryDate,

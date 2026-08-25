@@ -61,7 +61,16 @@ const isZeroTransferOwner = (owner: string | null) =>
 const getCatalogueRows = async (
   filters: CatalogueFilters = {},
 ): Promise<CatalogueRow[]> => {
-  const where = [gt(wmsStock.availableCases, 0)];
+  /*
+    Stock held for its owner never reaches a price surface. It sits in the
+    warehouse like anything else, so availability alone cannot tell them
+    apart — which is why a client's cellar in storage used to appear here
+    with an in-bond and a private-client price computed for it.
+  */
+  const where = [
+    gt(wmsStock.availableCases, 0),
+    eq(wmsStock.notForSale, false),
+  ];
   if (filters.category) {
     where.push(
       filters.category === 'Wine'

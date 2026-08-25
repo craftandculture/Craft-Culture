@@ -88,6 +88,13 @@ const getCatalogueInboundRows = async (
     // starts being received its stock is in wms_stock, so including those here
     // would list the same bottles twice across the two feeds.
     inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
+    /*
+      A line inherits its shipment unless it says otherwise, so a whole
+      storage shipment is one setting and a mixed one is a handful of
+      corrections. Caught here as well as at receiving, because in-transit
+      goods are offered on the price lists before they ever become stock.
+    */
+    sql`COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false`,
   ];
   if (filters.search) {
     const q = `%${filters.search}%`;

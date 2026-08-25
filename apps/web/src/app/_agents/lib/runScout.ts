@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
-import { eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -183,7 +183,9 @@ const runScout = async () => {
         totalCases: sql<number>`SUM(${wmsStock.availableCases})`,
       })
       .from(wmsStock)
-      .where(gt(wmsStock.availableCases, 0))
+      .where(
+        and(gt(wmsStock.availableCases, 0), eq(wmsStock.notForSale, false)),
+      )
       .groupBy(wmsStock.lwin18, wmsStock.productName)
       .limit(100);
 

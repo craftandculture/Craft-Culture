@@ -134,6 +134,13 @@ const adminTransferOwnership = wmsOperatorProcedure
             receivedAt: sourceStock.receivedAt,
             shipmentId: sourceStock.shipmentId,
             salesArrangement: salesArrangement ?? 'consignment',
+            /*
+              Carried, not cleared. Changing who owns wine is the moment it
+              might genuinely become ours to sell, but that has to be said out
+              loud — inferring it here would quietly list a client's cellar the
+              first time it moved between owners.
+            */
+            notForSale: sourceStock.notForSale,
             consignmentCommissionPercent: consignmentCommissionPercent ?? null,
             category: sourceStock.category,
             expiryDate: sourceStock.expiryDate,

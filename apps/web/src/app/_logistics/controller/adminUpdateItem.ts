@@ -26,6 +26,8 @@ const updateItemSchema = z.object({
   productCostPerBottle: z.number().nullable().optional(),
   overrideOwnerId: z.string().uuid().nullable().optional(),
   overrideOwnerName: z.string().nullable().optional(),
+  /** Null inherits the shipment's setting rather than forcing a choice */
+  notForSale: z.boolean().nullable().optional(),
 });
 
 /**
@@ -58,7 +60,7 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
   const fieldMap = [
     'productName', 'lwin', 'supplierSku', 'hsCode', 'countryOfOrigin',
     'producer', 'vintage', 'region', 'bottlesPerCase', 'bottleSizeMl', 'cases', 'productCostPerBottle',
-    'overrideOwnerId', 'overrideOwnerName',
+    'overrideOwnerId', 'overrideOwnerName', 'notForSale',
   ] as const;
 
   for (const key of fieldMap) {

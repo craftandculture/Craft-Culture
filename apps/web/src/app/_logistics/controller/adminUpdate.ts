@@ -1,8 +1,13 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
+import {
+  logisticsShipmentActivityLogs,
+  logisticsShipmentItems,
+  logisticsShipments,
+  wmsStock,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -93,6 +98,29 @@ const adminUpdate = adminProcedure
         })
         .where(eq(logisticsShipments.id, id))
         .returning();
+
+      /*
+        Stock already received has to follow, or the setting only works if you
+        remember it before the goods land. Lines that state their own answer
+        are left alone; everything else inherits the shipment it came in on.
+      */
+      if (
+        updates.notForSale !== undefined &&
+        updates.notForSale !== existing.notForSale
+      ) {
+        await db
+          .update(wmsStock)
+          .set({ notForSale: updates.notForSale, updatedAt: new Date() })
+          .where(
+            sql`${wmsStock.shipmentId} = ${id}
+                AND NOT EXISTS (
+                  SELECT 1 FROM ${logisticsShipmentItems}
+                  WHERE ${logisticsShipmentItems.shipmentId} = ${id}
+                    AND ${logisticsShipmentItems.lwin} = ${wmsStock.lwin18}
+                    AND ${logisticsShipmentItems.notForSale} IS NOT NULL
+                )`,
+          );
+      }
 
       if (!shipment) {
         throw new TRPCError({

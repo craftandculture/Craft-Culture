@@ -86,12 +86,24 @@ const reserveStockForOrderItems = async ({
     let remaining = item.quantityCases;
     let totalReserved = 0;
 
+    /*
+      Stock held for its owner is never reservable, whatever an order says.
+
+      The catalogue and the quote screens already exclude it, but those are
+      lists someone reads; this is the point where wine is actually committed
+      to a buyer. A client's cellar being sold out from under them is not a
+      mistake worth leaving to the correctness of a filter three screens away.
+    */
     // Strategy 1: Exact LWIN18 match (using normalized format)
     const stockRecords: Array<typeof wmsStockTable.$inferSelect> = await db
       .select()
       .from(wmsStock)
       .where(
-        and(eq(wmsStock.lwin18, normalizedLwin), gt(wmsStock.availableCases, 0)),
+        and(
+          eq(wmsStock.lwin18, normalizedLwin),
+          gt(wmsStock.availableCases, 0),
+          eq(wmsStock.notForSale, false),
+        ),
       )
       .orderBy(desc(wmsStock.availableCases));
 
@@ -104,6 +116,7 @@ const reserveStockForOrderItems = async ({
           and(
             like(wmsStock.lwin18, `${normalizedLwin}%`),
             gt(wmsStock.availableCases, 0),
+            eq(wmsStock.notForSale, false),
           ),
         )
         .orderBy(desc(wmsStock.availableCases));

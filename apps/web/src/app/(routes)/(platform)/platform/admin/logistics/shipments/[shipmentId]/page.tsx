@@ -7,6 +7,7 @@ import {
   IconCloud,
   IconFileText,
   IconLoader2,
+  IconLock,
   IconPackage,
   IconPencil,
   IconPlus,
@@ -151,6 +152,8 @@ const ShipmentDetailPage = () => {
     countryOfOrigin: '', hsCode: '', lwin: '', cases: '', bottlesPerCase: '',
     bottleSizeMl: '', productCostPerBottle: '',
     overrideOwnerId: '' as string | null, overrideOwnerName: '' as string | null,
+    /** null inherits the shipment */
+    notForSale: null as boolean | null,
   });
 
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
@@ -1074,6 +1077,7 @@ const ShipmentDetailPage = () => {
               productCostPerBottle: item.productCostPerBottle ? String(item.productCostPerBottle) : '',
               overrideOwnerId: item.overrideOwnerId ?? null,
               overrideOwnerName: item.overrideOwnerName ?? null,
+              notForSale: item.notForSale ?? null,
             });
           };
 
@@ -1094,6 +1098,7 @@ const ShipmentDetailPage = () => {
               productCostPerBottle: sheetForm.productCostPerBottle ? parseFloat(sheetForm.productCostPerBottle) : null,
               overrideOwnerId: sheetForm.overrideOwnerId || null,
               overrideOwnerName: sheetForm.overrideOwnerName || null,
+              notForSale: sheetForm.notForSale,
             });
           };
 
@@ -1157,6 +1162,33 @@ const ShipmentDetailPage = () => {
                       at one rate. Doing it per line is what turns 163 lines
                       into 163 calculations.
                     */}
+                    {/*
+                      Whether the goods are ours to sell at all. A client's
+                      cellar coming into storage receives, locates and picks
+                      like anything else, so nothing downstream can tell it
+                      apart — it has to be said here, once, for the shipment.
+                    */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-primary pt-3">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {shipment.notForSale
+                          ? 'Held for owner — kept out of the catalogue, price lists and quotes'
+                          : 'For sale — listed once received'}
+                      </Typography>
+                      <button
+                        onClick={() =>
+                          updateShipment({
+                            id: shipmentId,
+                            notForSale: !shipment.notForSale,
+                          })
+                        }
+                        disabled={isUpdatingShipment}
+                        className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                      >
+                        <Icon icon={IconLock} size="sm" />
+                        {shipment.notForSale ? 'Mark for sale' : 'Hold for owner'}
+                      </button>
+                    </div>
+
                     {billedCurrency && billedCurrency !== 'USD' ? (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-primary pt-3">
                         <Typography variant="bodyXs" colorRole="muted">
@@ -1722,6 +1754,38 @@ const ShipmentDetailPage = () => {
                                 {p.name}
                               </option>
                             ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-text-muted">
+                            Availability
+                          </label>
+                          <select
+                            value={
+                              sheetForm.notForSale === null
+                                ? ''
+                                : sheetForm.notForSale
+                                  ? 'held'
+                                  : 'sale'
+                            }
+                            onChange={(event) =>
+                              setSheetForm((f) => ({
+                                ...f,
+                                notForSale:
+                                  event.target.value === ''
+                                    ? null
+                                    : event.target.value === 'held',
+                              }))
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          >
+                            <option value="">
+                              {shipment.notForSale
+                                ? 'Held for owner (shipment default)'
+                                : 'For sale (shipment default)'}
+                            </option>
+                            <option value="sale">For sale</option>
+                            <option value="held">Held for owner — never listed</option>
                           </select>
                         </div>
                         <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>

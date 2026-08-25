@@ -52,6 +52,7 @@ const findOrCreateStock = async (
     receivedAt: Date | null;
     shipmentId: string | null;
     salesArrangement: string | null;
+    notForSale: boolean;
     consignmentCommissionPercent: number | null;
     category: string | null;
     expiryDate: Date | null;
@@ -107,6 +108,8 @@ const findOrCreateStock = async (
       receivedAt: sourceStock.receivedAt,
       shipmentId: sourceStock.shipmentId,
       salesArrangement: sourceStock.salesArrangement,
+      // Repacking wine does not make it ours to sell.
+      notForSale: sourceStock.notForSale,
       consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
       category: sourceStock.category,
       expiryDate: sourceStock.expiryDate,
