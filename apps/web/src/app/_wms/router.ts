@@ -29,6 +29,7 @@ import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
 import adminDispatchPallet from './controller/adminDispatchPallet';
 import adminDissolvePallet from './controller/adminDissolvePallet';
 import adminFinalizeReceiving from './controller/adminFinalizeReceiving';
+import adminFindPackMismatches from './controller/adminFindPackMismatches';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayDetails from './controller/adminGetBayDetails';
@@ -199,6 +200,7 @@ const stockRouter = createTRPCRouter({
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
   correctPackConfig: adminCorrectPackConfig,
+  findPackMismatches: adminFindPackMismatches,
   syncToZoho: adminSyncStockToZoho,
   clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,

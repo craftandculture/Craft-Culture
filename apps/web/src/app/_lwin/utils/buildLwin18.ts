@@ -48,13 +48,14 @@ export const BOTTLE_SIZES = [
  * Common case configurations
  */
 export const CASE_SIZES = [
-  { size: 1, label: '1 bottle' },
-  { size: 2, label: '2 bottles' },
-  { size: 3, label: '3 bottles' },
-  { size: 6, label: '6 bottles' },
-  { size: 12, label: '12 bottles' },
+  ...Array.from({ length: 12 }, (_, index) => ({
+    size: index + 1,
+    label: `${index + 1} bottle${index === 0 ? '' : 's'}`,
+  })),
+  { size: 15, label: '15 bottles' },
+  { size: 18, label: '18 bottles' },
   { size: 24, label: '24 bottles' },
-] as const;
+]
 
 const buildLwin18 = (components: Lwin18Components): Lwin18Result => {
   const { lwin7, vintage, caseSize, bottleSizeMl } = components;

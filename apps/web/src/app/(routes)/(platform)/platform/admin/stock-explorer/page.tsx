@@ -2046,6 +2046,12 @@ const StockExplorerPage = () => {
     }),
   });
 
+  // Stock whose pack contradicts its own LWIN. Picking uses the row's pack, so
+  // this is the reading that decides how many cases get cracked.
+  const { data: packMismatches } = useQuery(
+    api.wms.admin.stock.findPackMismatches.queryOptions(),
+  );
+
   // Lookalike wines in stock (near-identical names) → flag rows so they're
   // reviewed before a picking mix-up (the Talenti vs Talenti Piero trap).
   const { data: lookalikeData } = useQuery({
@@ -2450,6 +2456,46 @@ const StockExplorerPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* A stock row's LWIN states the pack in its own digits, so it can be
+            checked against the row. When they disagree the pick engine cracks
+            the wrong number of cases and the order ships short — which is what
+            this whole sweep started from. */}
+        {packMismatches && packMismatches.length > 0 && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {packMismatches.length} stock row
+              {packMismatches.length === 1 ? '' : 's'} disagree with their own
+              LWIN
+            </p>
+            <p className="mt-0.5 text-xs text-text-muted">
+              Picking uses the row&rsquo;s pack, so where it is wrong the order
+              ships short or long. Correct the pack on the row, or the LWIN,
+              against what is physically in the bay.
+            </p>
+            <div className="mt-2 max-h-40 space-y-1 overflow-auto">
+              {packMismatches.slice(0, 25).map((row) => (
+                <div key={row.stockId} className="text-xs">
+                  <span className="font-medium">{row.productName}</span>
+                  <span className="text-text-muted ml-1 font-mono">
+                    {row.lwin18}
+                  </span>
+                  {row.locationCode ? (
+                    <span className="text-text-muted ml-1 font-mono">
+                      @ {row.locationCode}
+                    </span>
+                  ) : null}
+                  <span className="block text-amber-700 dark:text-amber-400">
+                    {row.differs.join(' · ')}
+                    {row.bottlesByRow !== row.bottlesByLwin
+                      ? ` — ${row.bottlesByRow} bottles by the row, ${row.bottlesByLwin} by the LWIN`
+                      : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* KPI Cards */}
         {overview && (
