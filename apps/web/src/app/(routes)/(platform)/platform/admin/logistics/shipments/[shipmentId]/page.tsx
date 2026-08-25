@@ -269,6 +269,24 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: backfillDetails, isPending: isBackfilling } = useMutation(
+    api.logistics.admin.backfillItemDetails.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.regionsFilled} regions and ${result.hsFilled} HS codes filled` +
+            (result.hsFlagged > 0
+              ? ` · ${result.hsFlagged} named like a spirit, check: ${result.flaggedExamples.slice(0, 3).join(', ')}`
+              : ''),
+          { duration: result.hsFlagged > 0 ? 12000 : 5000 },
+        );
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
   const { data: lwinMismatches } = useQuery(
     api.logistics.admin.findLwinMismatches.queryOptions(),
   );
@@ -1188,6 +1206,23 @@ const ShipmentDetailPage = () => {
                               {isAutoAssigningHs ? 'Assigning...' : 'Auto-assign'}
                             </button>
                           )}
+                          {/* The auto-assign above only touches LWIN-mapped
+                              lines, which is why half a shipment stays blank.
+                              This fills the region from the LWIN reference
+                              first, then codes every line as wine or
+                              sparkling. */}
+                          <button
+                            onClick={() =>
+                              backfillDetails({ shipmentId, dryRun: false })
+                            }
+                            disabled={isBackfilling}
+                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                          >
+                            <Icon icon={IconWand} size="sm" />
+                            {isBackfilling
+                              ? 'Filling...'
+                              : 'Fill regions & HS codes'}
+                          </button>
                           <Typography variant="bodyXs" colorRole="muted">{hsCount}/{totalItems}</Typography>
                         </div>
                       </div>

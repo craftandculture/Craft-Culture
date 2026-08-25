@@ -7,6 +7,7 @@ import adminAddShipmentCostLine from './controller/adminAddShipmentCostLine';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
 import adminAutoMatchLwins from './controller/adminAutoMatchLwins';
+import adminBackfillItemDetails from './controller/adminBackfillItemDetails';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCalculateShipmentGroup from './controller/adminCalculateShipmentGroup';
 import adminClearShipmentItems from './controller/adminClearShipmentItems';
@@ -88,6 +89,7 @@ const adminRouter = createTRPCRouter({
   removeItem: adminRemoveItem,
   syncItemsToZoho: adminSyncItemsToZoho,
   autoAssignHsCodes: adminAutoAssignHsCodes,
+  backfillItemDetails: adminBackfillItemDetails,
 
   // Documents
   uploadDocument: adminUploadDocument,
