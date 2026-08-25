@@ -29,6 +29,7 @@ import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload'
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
+import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -68,6 +69,24 @@ const HS_CODES = [
 ];
 
 const hsLabel = (code: string | null) => HS_CODES.find((h) => h.value === code)?.label ?? null;
+
+/**
+ * The standard codes, plus whatever this line already carries.
+ *
+ * HS_CODES lists eleven. Real lines carry national subheadings — 22042142,
+ * 22042143, 22041011 — which are not among them, so the select had no matching
+ * option and rendered "Not set" against a line that plainly had a code. Saving
+ * that sheet then wiped a valid customs code with an empty one.
+ */
+const hsOptionsFor = (current: string | null | undefined) => {
+  const code = (current ?? '').trim();
+
+  if (!code || HS_CODES.some((option) => option.value === code)) {
+    return HS_CODES;
+  }
+
+  return [...HS_CODES, { value: code, label: `${code} — on this line` }];
+};
 
 type ShipmentStatus = LogisticsShipment['status'];
 
@@ -272,13 +291,29 @@ const ShipmentDetailPage = () => {
   const { mutate: backfillDetails, isPending: isBackfilling } = useMutation(
     api.logistics.admin.backfillItemDetails.mutationOptions({
       onSuccess: (result) => {
+        const d = result.diagnostics;
+
         toast.success(
           `${result.regionsFilled} regions and ${result.hsFilled} HS codes filled` +
             (result.hsFlagged > 0
               ? ` · ${result.hsFlagged} named like a spirit, check: ${result.flaggedExamples.slice(0, 3).join(', ')}`
               : ''),
-          { duration: result.hsFlagged > 0 ? 12000 : 5000 },
+          { duration: 8000 },
         );
+
+        // Says what it saw, so a run that fills nothing is explicable rather
+        // than just disappointing.
+        if (result.regionsFilled === 0 || result.hsFilled === 0) {
+          toast.info(
+            `${d.total} lines · ${d.withLwin} have a LWIN, ${d.withNumericLwin} of those are numeric and can be looked up · ` +
+              `${d.referenceMatches} found in the LWIN reference · ${d.hsAlreadySet} already had a valid HS code` +
+              (d.hsInvalid > 0
+                ? `, ${d.hsInvalid} held something that is not a code`
+                : '') +
+              ` · ${d.regionAlreadySet} already had a region`,
+            { duration: 15000 },
+          );
+        }
         void refetch();
       },
       onError: (error) => {
@@ -1080,7 +1115,9 @@ const ShipmentDetailPage = () => {
             items.find((item) => item.sourceCurrency)?.sourceCurrency ??
             null;
           const mappedCount = items.filter((i) => i.lwin).length;
-          const hsCount = items.filter((i) => i.hsCode).length;
+          // Any non-empty string used to count, so lines reading "Wine"
+          // showed as complete while customs would reject them.
+          const hsCount = items.filter((i) => isValidHsCode(i.hsCode)).length;
           const totalItems = items.length;
           const allHsSet = totalItems > 0 && hsCount === totalItems;
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
@@ -1753,7 +1790,7 @@ const ShipmentDetailPage = () => {
                             className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                           >
                             <option value="">Not set</option>
-                            {HS_CODES.map((hs) => (
+                            {hsOptionsFor(sheetForm.hsCode).map((hs) => (
                               <option key={hs.value} value={hs.value}>
                                 {hs.value} — {hs.label}
                               </option>

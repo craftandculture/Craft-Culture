@@ -5,6 +5,8 @@ import db from '@/database/client';
 import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import isValidHsCode from '../utils/isValidHsCode';
+
 /** Terms that make a wine sparkling wherever they appear */
 const SPARKLING_TERMS = [
   'champagne',
@@ -148,7 +150,10 @@ const adminBackfillItemDetails = adminProcedure
     const skippedExamples: string[] = [];
 
     for (const item of items) {
-      if (item.hsCode && item.hsCode.trim() !== '') continue;
+      // A word in this column is not a code. "Wine" counted as filled and
+      // turned the progress bar green over lines customs would reject, so
+      // anything that is not digits is replaced rather than respected.
+      if (isValidHsCode(item.hsCode)) continue;
 
       const text = `${item.productName} ${item.region ?? ''}`.toLowerCase();
 
@@ -177,8 +182,43 @@ const adminBackfillItemDetails = adminProcedure
       }
     }
 
+    // A bare count of what changed cannot explain a run that changed nothing,
+    // and "0 filled" against a progress bar reading half is exactly the case
+    // where someone needs to know which of several reasons applied.
+    const withLwin = items.filter(
+      (item) => (item.lwin ?? '').trim() !== '',
+    ).length;
+    const withNumericLwin = items.filter((item) =>
+      /^[0-9]{7}/.test((item.lwin ?? '').trim()),
+    ).length;
+    const hsAlreadySet = items.filter((item) =>
+      isValidHsCode(item.hsCode),
+    ).length;
+    /** Non-empty but not a code — "Wine" and its like */
+    const hsInvalid = items.filter(
+      (item) =>
+        (item.hsCode ?? '').trim() !== '' && !isValidHsCode(item.hsCode),
+    ).length;
+    const regionAlreadySet = items.filter(
+      (item) => (item.region ?? '').trim() !== '',
+    ).length;
+
     return {
       dryRun,
+      diagnostics: {
+        /** Lines on this shipment */
+        total: items.length,
+        /** Lines carrying any LWIN at all */
+        withLwin,
+        /** Lines whose LWIN starts with seven digits, the only ones the
+            reference can be joined on — a supplier code cannot be */
+        withNumericLwin,
+        /** Lines the reference actually had a row for */
+        referenceMatches: referenceRows.length,
+        hsAlreadySet,
+        hsInvalid,
+        regionAlreadySet,
+      },
       regionsFilled,
       hsFilled,
       /** Given a wine code but worth checking — the name suggests otherwise */
