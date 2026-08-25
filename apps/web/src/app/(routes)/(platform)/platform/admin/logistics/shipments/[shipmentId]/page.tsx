@@ -1810,6 +1810,11 @@ const ShipmentDetailPage = () => {
                           </div>
                         )}
                         <LwinLookup
+                          // Remounted per line: the vintage, pack and bottle
+                          // size are seeded from props on first render only,
+                          // so without this the panel keeps the previous
+                          // line's pack while showing the new line's name.
+                          key={lwinSheetItem.id}
                           productName={lwinSheetItem.productName}
                           defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
                           defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}

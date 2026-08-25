@@ -75,6 +75,33 @@ const LwinLookup = ({
   const [caseSize, setCaseSize] = useState(defaultCaseSize);
   const [bottleSizeMl, setBottleSizeMl] = useState(defaultBottleSize);
 
+  /**
+   * The standard packs, plus whatever this line is actually cased in.
+   *
+   * CASE_SIZES lists 1, 2, 3, 6, 12 and 24. A four-pack is none of those, so
+   * the select had no option matching its value and the browser fell back to
+   * showing the first — "1 bottle" — against a line that was plainly 4x75cl,
+   * with the real value of 4 still in state. Reading it was misleading and
+   * touching it silently changed the pack to one.
+   */
+  const caseOptions = CASE_SIZES.some((size) => size.size === caseSize)
+    ? CASE_SIZES
+    : [
+        ...CASE_SIZES,
+        {
+          size: caseSize,
+          label: `${caseSize} bottle${caseSize === 1 ? '' : 's'}`,
+        },
+      ].sort((a, b) => a.size - b.size);
+
+  /** The same trap: 700ml is a spirits bottle and is not in the standard list */
+  const bottleOptions = BOTTLE_SIZES.some((size) => size.ml === bottleSizeMl)
+    ? BOTTLE_SIZES
+    : [
+        ...BOTTLE_SIZES,
+        { ml: bottleSizeMl, label: `${bottleSizeMl}ml` },
+      ].sort((a, b) => a.ml - b.ml);
+
   // Debounce search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -386,7 +413,7 @@ const LwinLookup = ({
               onChange={(e) => setCaseSize(parseInt(e.target.value, 10))}
               className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             >
-              {CASE_SIZES.map((size) => (
+              {caseOptions.map((size) => (
                 <option key={size.size} value={size.size}>
                   {size.label}
                 </option>
@@ -402,7 +429,7 @@ const LwinLookup = ({
               onChange={(e) => setBottleSizeMl(parseInt(e.target.value, 10))}
               className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             >
-              {BOTTLE_SIZES.map((size) => (
+              {bottleOptions.map((size) => (
                 <option key={size.ml} value={size.ml}>
                   {size.label}
                 </option>
