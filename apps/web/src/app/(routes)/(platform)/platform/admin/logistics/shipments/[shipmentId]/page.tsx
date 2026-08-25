@@ -269,6 +269,14 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { data: lwinMismatches } = useQuery(
+    api.logistics.admin.findLwinMismatches.queryOptions(),
+  );
+
+  const mismatchesForShipment = (lwinMismatches ?? []).filter(
+    (row) => row.shipmentId === shipmentId,
+  );
+
   const { mutate: autoMatchLwins, isPending: isMatchingLwins } = useMutation(
     api.logistics.admin.autoMatchLwins.mutationOptions({
       onSuccess: (result) => {
@@ -1104,6 +1112,40 @@ const ShipmentDetailPage = () => {
 
           return (
             <div className="space-y-4">
+              {/* A generated LWIN carries the pack, vintage and bottle size in
+                  its own digits, so it can be checked against the line it came
+                  from. They disagree when the pack selector could not show the
+                  line's real pack and quietly committed a different one. */}
+              {mismatchesForShipment.length > 0 && (
+                <Card className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+                  <CardContent className="px-6 py-4">
+                    <Typography variant="bodySm" className="font-semibold text-amber-800 dark:text-amber-300">
+                      {mismatchesForShipment.length} line
+                      {mismatchesForShipment.length === 1 ? '' : 's'} carry a
+                      LWIN that contradicts the line itself
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                      Check each against the supplier invoice and correct
+                      whichever is wrong — the LWIN travels into the WMS as the
+                      pack, onto case labels, and into picking.
+                    </Typography>
+                    <div className="mt-2 space-y-1">
+                      {mismatchesForShipment.map((row) => (
+                        <div key={row.itemId} className="text-xs">
+                          <span className="font-medium">{row.productName}</span>
+                          <span className="ml-1 font-mono text-text-muted">
+                            {row.lwin}
+                          </span>
+                          <span className="block text-amber-700 dark:text-amber-400">
+                            {row.differs.join(' · ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Progress Bars */}
               {totalItems > 0 && (
                 <Card>

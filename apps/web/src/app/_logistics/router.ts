@@ -26,6 +26,7 @@ import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel'
 import adminExtractDocument from './controller/adminExtractDocument';
 import adminExtractSheet from './controller/adminExtractSheet';
 import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoice';
+import adminFindLwinMismatches from './controller/adminFindLwinMismatches';
 import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
@@ -80,6 +81,7 @@ const adminRouter = createTRPCRouter({
   // Items
   addItem: adminAddItem,
   autoMatchLwins: adminAutoMatchLwins,
+  findLwinMismatches: adminFindLwinMismatches,
   clearShipmentItems: adminClearShipmentItems,
   setShipmentFx: adminSetShipmentFx,
   updateItem: adminUpdateItem,
