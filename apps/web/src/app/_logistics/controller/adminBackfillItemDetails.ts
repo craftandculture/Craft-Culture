@@ -7,6 +7,21 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import isValidHsCode from '../utils/isValidHsCode';
 
+/** The codes the HS menu offers — the only ones a line should end on */
+const MENU_CODES = new Set([
+  '22042100',
+  '22041000',
+  '22084000',
+  '22083000',
+  '22030000',
+  '22082000',
+  '22089090',
+  '22085000',
+  '22087000',
+  '22086000',
+  '22060000',
+]);
+
 /** Terms that make a wine sparkling wherever they appear */
 const SPARKLING_TERMS = [
   'champagne',
@@ -62,14 +77,15 @@ const NOT_WINE_TERMS = [
  * Region is filled first because the HS rules read it: "Champagne" in a region
  * settles sparkling where the product name alone does not.
  *
- * The HS code copies whatever the shipment already uses for that kind of line
- * rather than defaulting to the generic heading. The document extractor warns
- * against defaulting everything to 22042100 because national subheadings —
- * 22042143 and its like — are what customs actually want, and a shipment whose
- * invoice carried them has already answered the question for its own lines.
+ * Every line ends on one of the codes in the HS menu. Those eleven are what
+ * this business declares on, and a column mixing them with an invoice's
+ * national subheadings — 22042143, 22041011 — cannot be read at a glance or
+ * matched against a rate card.
  *
- * Where the shipment offers no precedent the generic heading is used and said
- * so, since a blank helps nobody and a stated assumption can be corrected.
+ * So a subheading is pulled back to its heading rather than kept: the first
+ * five digits say which of the menu's codes it belongs under, which is a
+ * stronger signal than the product name and survives a wine whose name gives
+ * nothing away.
  */
 const adminBackfillItemDetails = adminProcedure
   .input(
@@ -148,62 +164,27 @@ const adminBackfillItemDetails = adminProcedure
       .from(logisticsShipmentItems)
       .where(eq(logisticsShipmentItems.shipmentId, shipmentId));
 
-    /**
-     * The codes this shipment already uses, by kind.
-     *
-     * A line without a code sits among lines that have one, and those came off
-     * the supplier's own invoice. Copying the subheading already in use beats
-     * inventing the generic heading, which the extractor is explicit about not
-     * doing.
-     */
-    const precedent = { sparkling: '', still: '' };
-
-    for (const item of items) {
-      if (!isValidHsCode(item.hsCode)) continue;
-
-      const text = `${item.productName} ${item.region ?? ''}`.toLowerCase();
-      const kind = SPARKLING_TERMS.some((term) => text.includes(term))
-        ? 'sparkling'
-        : 'still';
-
-      // The most specific wins: an eight-digit subheading says more than a
-      // six-digit heading, and a generic 22042100 says least of all.
-      const current = precedent[kind];
-      const candidate = item.hsCode!.trim();
-
-      if (
-        !current ||
-        (current === '22042100' && candidate !== '22042100') ||
-        candidate.length > current.length
-      ) {
-        precedent[kind] = candidate;
-      }
-    }
-
     let hsFilled = 0;
     let hsSkipped = 0;
-    let hsFromPrecedent = 0;
-    /** Generic headings replaced by the shipment's own subheading */
-    let upgraded = 0;
+    /** Subheadings pulled back onto one of the menu's codes */
+    let normalised = 0;
     const skippedExamples: string[] = [];
 
     for (const item of items) {
       const existing = (item.hsCode ?? '').trim();
 
-      // A word in this column is not a code. Anything that is not digits is
-      // replaced rather than respected.
+      // The eleven codes in the menu are the ones this business declares on.
+      // An invoice's national subheading — 22042143, 22041011 — is more
+      // specific than anything anyone here will maintain, and a column mixing
+      // both cannot be read at a glance or matched against a rate card.
       //
-      // A generic 22042100 is also replaced where the shipment's own invoice
-      // used a subheading, because that is the code customs want and an
-      // earlier run of this pass wrote the generic before it knew better.
-      const isGenericOverPrecedent =
-        existing === '22042100' &&
-        !!precedent.still &&
-        precedent.still !== '22042100';
+      // A subheading is pulled back to its heading rather than left alone: the
+      // first five digits say which of the menu's codes it belongs under.
+      const isOffMenu = isValidHsCode(existing) && !MENU_CODES.has(existing);
 
-      if (isValidHsCode(item.hsCode) && !isGenericOverPrecedent) continue;
+      if (isValidHsCode(item.hsCode) && !isOffMenu) continue;
 
-      if (isGenericOverPrecedent) upgraded += 1;
+      if (isOffMenu) normalised += 1;
 
       const text = `${item.productName} ${item.region ?? ''}`.toLowerCase();
 
@@ -218,13 +199,19 @@ const adminBackfillItemDetails = adminProcedure
         if (skippedExamples.length < 8) skippedExamples.push(item.productName);
       }
 
-      const isSparkling = SPARKLING_TERMS.some((term) => text.includes(term));
-      const fromShipment = isSparkling
-        ? precedent.sparkling
-        : precedent.still;
-      const hsCode = fromShipment || (isSparkling ? '22041000' : '22042100');
+      // A code already on the line says more than its name does: 22041011 is
+      // a sparkling subheading whatever the product is called.
+      const fromExisting = existing.startsWith('22041')
+        ? '22041000'
+        : existing.startsWith('22042')
+          ? '22042100'
+          : '';
 
-      if (fromShipment) hsFromPrecedent += 1;
+      const hsCode =
+        fromExisting ||
+        (SPARKLING_TERMS.some((term) => text.includes(term))
+          ? '22041000'
+          : '22042100');
 
       hsFilled += 1;
 
@@ -275,12 +262,8 @@ const adminBackfillItemDetails = adminProcedure
       },
       regionsFilled,
       hsFilled,
-      /** Of those, taken from a code the shipment already used */
-      hsFromPrecedent,
-      /** Generic 22042100 replaced by the shipment's own subheading */
-      upgraded,
-      /** The codes copied, so an assumption is visible rather than implied */
-      precedent,
+      /** Of those, off-menu subheadings pulled back onto a menu code */
+      normalised,
       /** Given a wine code but worth checking — the name suggests otherwise */
       hsFlagged: hsSkipped,
       flaggedExamples: skippedExamples,

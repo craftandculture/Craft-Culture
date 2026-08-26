@@ -297,11 +297,8 @@ const ShipmentDetailPage = () => {
 
         toast.success(
           `${result.regionsFilled} regions and ${result.hsFilled} HS codes filled` +
-            (result.upgraded > 0
-              ? ` · ${result.upgraded} generic codes upgraded to this shipment's subheading`
-              : '') +
-            (result.hsFromPrecedent > 0
-              ? ` (${result.hsFromPrecedent} copied from codes this shipment already uses: ${[result.precedent.still, result.precedent.sparkling].filter(Boolean).join(', ')})`
+            (result.normalised > 0
+              ? ` · ${result.normalised} off-menu subheadings pulled back onto a menu code`
               : '') +
             (result.hsFlagged > 0
               ? ` · ${result.hsFlagged} named like a spirit, check: ${result.flaggedExamples.slice(0, 3).join(', ')}`
