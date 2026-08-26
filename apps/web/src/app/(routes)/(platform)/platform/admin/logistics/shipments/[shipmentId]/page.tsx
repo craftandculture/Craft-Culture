@@ -71,6 +71,16 @@ const HS_CODES = [
 const hsLabel = (code: string | null) => HS_CODES.find((h) => h.value === code)?.label ?? null;
 
 /**
+ * Whether a value is a complete LWIN, and so safe to show as mapped.
+ *
+ * A seven-digit stem names the wine but not the bottling, and an account
+ * number from an invoice names nothing at all. Both used to carry the green
+ * tick, which staff read as a line already dealt with.
+ */
+const isCompleteLwin = (value: string | null | undefined) =>
+  /^\d{7}-\d{4}-\d{2}-\d{5}$/.test((value ?? '').trim());
+
+/**
  * The standard codes, plus whatever this line already carries.
  *
  * HS_CODES lists eleven. Real lines carry national subheadings — 22042142,
@@ -1135,7 +1145,9 @@ const ShipmentDetailPage = () => {
             shipment.sourceCurrency ??
             items.find((item) => item.sourceCurrency)?.sourceCurrency ??
             null;
-          const mappedCount = items.filter((i) => i.lwin).length;
+          // A partial code is not a mapping. Staff read the green tick as
+          // work already done, so only a complete LWIN counts towards it.
+          const mappedCount = items.filter((i) => isCompleteLwin(i.lwin)).length;
           // Any non-empty string used to count, so lines reading "Wine"
           // showed as complete while customs would reject them.
           const hsCount = items.filter((i) => isValidHsCode(i.hsCode)).length;
@@ -1585,7 +1597,11 @@ const ShipmentDetailPage = () => {
 
                                 {/* LWIN / SKU */}
                                 <td className="py-3 pr-4">
-                                  {item.lwin ? (
+                                  {/* A partial or junk code must not carry the
+                                      tick: it is read as a wine identified,
+                                      and the line is then received and picked
+                                      against nothing. */}
+                                  {isCompleteLwin(item.lwin) ? (
                                     <button
                                       onClick={() => openSheet(item)}
                                       className="group flex items-center gap-1.5"

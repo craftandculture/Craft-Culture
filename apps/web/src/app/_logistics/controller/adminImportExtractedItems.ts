@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
-import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -10,6 +9,7 @@ import logger from '@/utils/logger';
 import importExtractedItemsSchema from '../schemas/importExtractedItemsSchema';
 import priceShipmentInUsd from '../utils/priceShipmentInUsd';
 import toMenuHsCode from '../utils/toMenuHsCode';
+import toValidLwin from '../utils/toValidLwin';
 
 /**
  * Import extracted line items from a document into a shipment
@@ -214,7 +214,11 @@ const adminImportExtractedItems = adminProcedure
         .values({
           shipmentId,
           productName,
-          lwin: normalizeLwin18(item.lwin),
+          // Only a complete LWIN is kept. The extractor takes whatever sits
+          // in the column it was told to read, and on an invoice with no
+          // product code that was an account number written to every line —
+          // nine different wines all showing as matched to 121084.
+          lwin: toValidLwin(item.lwin),
           supplierSku: item.supplierSku,
           producer: item.producer,
           vintage: item.vintage,
