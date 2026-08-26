@@ -85,7 +85,9 @@ const hsOptionsFor = (current: string | null | undefined) => {
     return HS_CODES;
   }
 
-  return [...HS_CODES, { value: code, label: `${code} — on this line` }];
+  // The option renders as "value — label", so the label must not repeat the
+  // code or it reads "22042143 — 22042143 — on this line".
+  return [...HS_CODES, { value: code, label: 'already on this line' }];
 };
 
 type ShipmentStatus = LogisticsShipment['status'];
@@ -295,6 +297,9 @@ const ShipmentDetailPage = () => {
 
         toast.success(
           `${result.regionsFilled} regions and ${result.hsFilled} HS codes filled` +
+            (result.hsFromPrecedent > 0
+              ? ` (${result.hsFromPrecedent} copied from codes this shipment already uses: ${[result.precedent.still, result.precedent.sparkling].filter(Boolean).join(', ')})`
+              : '') +
             (result.hsFlagged > 0
               ? ` · ${result.hsFlagged} named like a spirit, check: ${result.flaggedExamples.slice(0, 3).join(', ')}`
               : ''),

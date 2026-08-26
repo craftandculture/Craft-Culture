@@ -62,11 +62,14 @@ const NOT_WINE_TERMS = [
  * Region is filled first because the HS rules read it: "Champagne" in a region
  * settles sparkling where the product name alone does not.
  *
- * Every line gets a code, because on these shipments everything is wine or
- * sparkling and a blank helps nobody. A line whose name suggests a spirit or a
- * fortified wine still gets the wine code but is named in the result, since
- * those attract different duty and are worth a second look rather than a
- * silent omission.
+ * The HS code copies whatever the shipment already uses for that kind of line
+ * rather than defaulting to the generic heading. The document extractor warns
+ * against defaulting everything to 22042100 because national subheadings —
+ * 22042143 and its like — are what customs actually want, and a shipment whose
+ * invoice carried them has already answered the question for its own lines.
+ *
+ * Where the shipment offers no precedent the generic heading is used and said
+ * so, since a blank helps nobody and a stated assumption can be corrected.
  */
 const adminBackfillItemDetails = adminProcedure
   .input(
@@ -145,8 +148,41 @@ const adminBackfillItemDetails = adminProcedure
       .from(logisticsShipmentItems)
       .where(eq(logisticsShipmentItems.shipmentId, shipmentId));
 
+    /**
+     * The codes this shipment already uses, by kind.
+     *
+     * A line without a code sits among lines that have one, and those came off
+     * the supplier's own invoice. Copying the subheading already in use beats
+     * inventing the generic heading, which the extractor is explicit about not
+     * doing.
+     */
+    const precedent = { sparkling: '', still: '' };
+
+    for (const item of items) {
+      if (!isValidHsCode(item.hsCode)) continue;
+
+      const text = `${item.productName} ${item.region ?? ''}`.toLowerCase();
+      const kind = SPARKLING_TERMS.some((term) => text.includes(term))
+        ? 'sparkling'
+        : 'still';
+
+      // The most specific wins: an eight-digit subheading says more than a
+      // six-digit heading, and a generic 22042100 says least of all.
+      const current = precedent[kind];
+      const candidate = item.hsCode!.trim();
+
+      if (
+        !current ||
+        (current === '22042100' && candidate !== '22042100') ||
+        candidate.length > current.length
+      ) {
+        precedent[kind] = candidate;
+      }
+    }
+
     let hsFilled = 0;
     let hsSkipped = 0;
+    let hsFromPrecedent = 0;
     const skippedExamples: string[] = [];
 
     for (const item of items) {
@@ -168,9 +204,13 @@ const adminBackfillItemDetails = adminProcedure
         if (skippedExamples.length < 8) skippedExamples.push(item.productName);
       }
 
-      const hsCode = SPARKLING_TERMS.some((term) => text.includes(term))
-        ? '22041000'
-        : '22042100';
+      const isSparkling = SPARKLING_TERMS.some((term) => text.includes(term));
+      const fromShipment = isSparkling
+        ? precedent.sparkling
+        : precedent.still;
+      const hsCode = fromShipment || (isSparkling ? '22041000' : '22042100');
+
+      if (fromShipment) hsFromPrecedent += 1;
 
       hsFilled += 1;
 
@@ -221,6 +261,10 @@ const adminBackfillItemDetails = adminProcedure
       },
       regionsFilled,
       hsFilled,
+      /** Of those, taken from a code the shipment already used */
+      hsFromPrecedent,
+      /** The codes copied, so an assumption is visible rather than implied */
+      precedent,
       /** Given a wine code but worth checking — the name suggests otherwise */
       hsFlagged: hsSkipped,
       flaggedExamples: skippedExamples,
