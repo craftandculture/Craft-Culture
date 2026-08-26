@@ -21,7 +21,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
@@ -297,6 +297,9 @@ const ShipmentDetailPage = () => {
 
         toast.success(
           `${result.regionsFilled} regions and ${result.hsFilled} HS codes filled` +
+            (result.upgraded > 0
+              ? ` · ${result.upgraded} generic codes upgraded to this shipment's subheading`
+              : '') +
             (result.hsFromPrecedent > 0
               ? ` (${result.hsFromPrecedent} copied from codes this shipment already uses: ${[result.precedent.still, result.precedent.sparkling].filter(Boolean).join(', ')})`
               : '') +
@@ -365,6 +368,22 @@ const ShipmentDetailPage = () => {
       },
     }),
   );
+
+  /**
+   * Whether Clear all is armed.
+   *
+   * Resets itself shortly after arming, so a button left in the dangerous
+   * state cannot be fired by someone returning to the tab later.
+   */
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  useEffect(() => {
+    if (!confirmClear) return;
+
+    const timer = setTimeout(() => setConfirmClear(false), 6000);
+
+    return () => clearTimeout(timer);
+  }, [confirmClear]);
 
   const { mutate: clearItems, isPending: isClearingItems } = useMutation(
     api.logistics.admin.clearShipmentItems.mutationOptions({
@@ -1363,27 +1382,51 @@ const ShipmentDetailPage = () => {
                         import had, not a fix for it.
                       */}
                       {totalItems > 0 && (
+                        <>
                         <Button
                           size="sm"
                           variant="outline"
                           colorRole="danger"
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                `Remove all ${totalItems} items from this shipment? The invoice can be re-imported from Documents.`,
-                              )
-                            ) {
-                              clearItems({ shipmentId, expectedCount: totalItems });
+                            // A browser confirm is suppressible — after a few
+                            // dismissals Chrome offers to stop the page
+                            // showing them, and from then on this button
+                            // deletes the whole shipment on one click. The
+                            // confirmation is in the page instead, where
+                            // nothing can turn it off.
+                            if (confirmClear) {
+                              clearItems({
+                                shipmentId,
+                                expectedCount: totalItems,
+                              });
+                              setConfirmClear(false);
+                              return;
                             }
+
+                            setConfirmClear(true);
                           }}
                           disabled={isClearingItems}
                         >
                           <ButtonContent
                             iconLeft={isClearingItems ? IconLoader2 : IconTrash}
                           >
-                            {isClearingItems ? 'Removing...' : 'Clear all'}
+                            {isClearingItems
+                              ? 'Removing...'
+                              : confirmClear
+                                ? `Delete all ${totalItems}? Tap again`
+                                : 'Clear all'}
                           </ButtonContent>
                         </Button>
+                        {confirmClear && !isClearingItems && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setConfirmClear(false)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                        </>
                       )}
                       <Button
                         size="sm"

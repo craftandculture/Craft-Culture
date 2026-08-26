@@ -183,13 +183,27 @@ const adminBackfillItemDetails = adminProcedure
     let hsFilled = 0;
     let hsSkipped = 0;
     let hsFromPrecedent = 0;
+    /** Generic headings replaced by the shipment's own subheading */
+    let upgraded = 0;
     const skippedExamples: string[] = [];
 
     for (const item of items) {
-      // A word in this column is not a code. "Wine" counted as filled and
-      // turned the progress bar green over lines customs would reject, so
-      // anything that is not digits is replaced rather than respected.
-      if (isValidHsCode(item.hsCode)) continue;
+      const existing = (item.hsCode ?? '').trim();
+
+      // A word in this column is not a code. Anything that is not digits is
+      // replaced rather than respected.
+      //
+      // A generic 22042100 is also replaced where the shipment's own invoice
+      // used a subheading, because that is the code customs want and an
+      // earlier run of this pass wrote the generic before it knew better.
+      const isGenericOverPrecedent =
+        existing === '22042100' &&
+        !!precedent.still &&
+        precedent.still !== '22042100';
+
+      if (isValidHsCode(item.hsCode) && !isGenericOverPrecedent) continue;
+
+      if (isGenericOverPrecedent) upgraded += 1;
 
       const text = `${item.productName} ${item.region ?? ''}`.toLowerCase();
 
@@ -263,6 +277,8 @@ const adminBackfillItemDetails = adminProcedure
       hsFilled,
       /** Of those, taken from a code the shipment already used */
       hsFromPrecedent,
+      /** Generic 22042100 replaced by the shipment's own subheading */
+      upgraded,
       /** The codes copied, so an assumption is visible rather than implied */
       precedent,
       /** Given a wine code but worth checking — the name suggests otherwise */
