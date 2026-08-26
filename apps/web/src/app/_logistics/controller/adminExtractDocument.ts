@@ -59,7 +59,7 @@ const extractedLogisticsDataSchema = z.object({
       z.object({
         description: z.string().optional().describe('Item description'),
         productName: z.string().optional().describe('Product name'),
-        lwin: z.string().optional().describe('LWIN-18 code - found in "Product Code" column. Format is 18 digits like "100604520190600750"'),
+        lwin: z.string().optional().describe('LWIN-18 code from a "Product Code" or "SKU" column. Exactly 18 digits, like "100604520190600750". Leave EMPTY unless the value is 18 digits — an invoice number or account reference repeated down the page is not a product code.'),
         producer: z.string().optional().describe('Producer/winery name (e.g., "Chateau Angelus", "Domaine de la Romanee-Conti")'),
         vintage: z.number().optional().describe('Vintage year from "Vintage" column (e.g., 2015, 2018, 2021)'),
         bottleSize: z.string().optional().describe('Bottle size in ml. Parse from "Size" column: "6x75cl"→"750ml", "12x75cl"→"750ml", "1x150cl"→"1500ml", "3x75cl"→"750ml"'),
@@ -103,7 +103,13 @@ const extractedLogisticsDataSchema = z.object({
           .number()
           .optional()
           .describe(
-            'Line total exactly as printed, in the document\'s own currency. Never convert it.',
+            'Line total exactly as printed, in the document\'s own currency. Never convert it. This is the most important price field: it is unambiguous where a unit price is not.',
+          ),
+        unitPriceBasis: z
+          .enum(['bottle', 'case'])
+          .optional()
+          .describe(
+            'Whether unitPrice is per bottle or per case. Read the column heading: "Price/Case" or "Per Case" means case; "Price/Bottle" or "Unit Price" usually means bottle. Say which rather than guessing a value.',
           ),
         countryOfOrigin: z.string().optional().describe('Country from "Origin" column (e.g., "France", "Italy", "Spain")'),
       }),
@@ -183,7 +189,9 @@ COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
 | Description of Goods | productName + producer + region | Full wine name |
 | Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
 | Vintage | vintage | 4-digit year |
-| Unit Price USD | unitPrice | Price per case |
+| Unit Price USD | unitPrice | The unit price as printed — set unitPriceBasis to say whether it is per case or per bottle |
+| Price/Case | unitPrice | Per CASE — set unitPriceBasis to "case" |
+| Total Price | total | The line total, the one price that needs no interpretation |
 | Total Price USD | total | Line total |
 | Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
 
@@ -298,6 +306,9 @@ COLUMN MAPPING - CRITICAL:
 - "Vintage" column → vintage
 - "Commodity Code" column → hsCode
 - "Unit Price USD" column → unitPrice
+- "Price/Case" or "Per Case" column → unitPrice, with unitPriceBasis = "case"
+- "Total Price" or "Amount" column → total (always capture this; it is what the
+  per-bottle cost is worked out from)
 - "Total Price USD" column → total
 
 PARSING "Size" COLUMN - EXAMPLES:

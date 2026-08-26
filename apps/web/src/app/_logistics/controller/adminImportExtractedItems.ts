@@ -195,11 +195,22 @@ const adminImportExtractedItems = adminProcedure
       // is priced in USD later, once, at a rate someone chose.
       const sourceCurrency = documentCurrency;
 
-      const sourceUnitPrice =
+      // The line total divided by its bottles is the one unambiguous reading.
+      // A price column can be per case or per bottle and the document rarely
+      // says which — Wilkinson head theirs "Price/Case" and the extractor took
+      // £3,960 as the price of one Opus One, which is the price of twelve.
+      //
+      // unitPriceBasis is only trusted when there is no total to check against;
+      // nothing has ever populated it, so it cannot be relied on alone.
+      const fromTotal =
+        item.total && totalBottles ? item.total / totalBottles : undefined;
+
+      const fromUnit =
         item.unitPriceBasis === 'case' && item.unitPrice && bottlesPerCase > 0
           ? item.unitPrice / bottlesPerCase
-          : (item.unitPrice ??
-            (item.total && totalBottles ? item.total / totalBottles : undefined));
+          : item.unitPrice;
+
+      const sourceUnitPrice = fromTotal ?? fromUnit;
 
       const sourceTotal =
         item.total ??
