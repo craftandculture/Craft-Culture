@@ -342,7 +342,10 @@ const ShipmentDetailPage = () => {
       onSuccess: (result) => {
         toast.success(
           `${result.corrected} lines re-costed from their invoice totals` +
-            (result.unchanged > 0 ? ` · ${result.unchanged} already correct` : '') +
+            (result.circular > 0
+              ? ` · ${result.circular} cannot be checked — their total was calculated from the price, so the invoice must be re-imported`
+              : '') +
+            (result.unchanged > 0 ? ` · ${result.unchanged} left alone` : '') +
             (result.withoutTotal > 0
               ? ` · ${result.withoutTotal} have no stated total and were left`
               : '') +

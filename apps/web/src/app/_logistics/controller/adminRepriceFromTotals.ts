@@ -56,6 +56,16 @@ const adminRepriceFromTotals = adminProcedure
 
     let corrected = 0;
     let unchanged = 0;
+    /**
+     * Lines whose total was derived from the unit price rather than read off
+     * the document.
+     *
+     * At import a missing total is filled in as unitPrice x bottles, so
+     * dividing it back by bottles returns the unit price it came from. Those
+     * lines cannot be checked at all, and reporting them as "already correct"
+     * is the tool vouching for a number it has never seen.
+     */
+    let circular = 0;
 
     for (const item of items) {
       const bottles =
@@ -74,6 +84,14 @@ const adminRepriceFromTotals = adminProcedure
         item.sourceUnitPrice != null &&
         Math.abs(item.sourceUnitPrice - perBottle) < 0.005
       ) {
+        // An exact match is the signature of a derived total. A real invoice
+        // total rarely divides back to the stored price to the penny, and one
+        // that was calculated from it always does.
+        circular += 1;
+        continue;
+      }
+
+      if (item.sourceUnitPrice == null) {
         unchanged += 1;
         continue;
       }
@@ -93,6 +111,8 @@ const adminRepriceFromTotals = adminProcedure
     return {
       corrected,
       unchanged,
+      /** Cannot be checked: their total was calculated from the price */
+      circular,
       /** Lines with no stated total, which this cannot repair */
       withoutTotal: Math.max((totals?.count ?? 0) - items.length, 0),
       rate: priced.rate,
