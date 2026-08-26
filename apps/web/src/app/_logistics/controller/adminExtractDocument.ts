@@ -71,7 +71,7 @@ const extractedLogisticsDataSchema = z.object({
           .number()
           .optional()
           .describe(
-            'Number of BOTTLES, when the document counts in bottles. A column headed "Product Quantity", "Bottles" or "Units" alongside a per-bottle price is a bottle count. Leave empty if the document counts in cases.',
+            'Number of BOTTLES, when the document counts in bottles. A column headed "Product Quantity", "Bottles" or "Units" alongside a per-bottle price is a bottle count. Where a Quantity heading is split into two sub-columns "cs" and "bt", read the figure under "bt" here. Every row has a figure in exactly one of the two: never fill both from the same row, and never move a "bt" figure into cases — three bottles of a twelve-pack is three bottles, not three cases.',
           ),
         productSizeL: z
           .number()
@@ -89,7 +89,7 @@ const extractedLogisticsDataSchema = z.object({
           .number()
           .optional()
           .describe(
-            'Number of CASES, only when the document actually states cases (a "Qty" column beside a size like "6x75cl"). If the document never mentions cases, leave this empty rather than inferring one.',
+            'Number of CASES, only when the document actually states cases (a "Qty" column beside a size like "6x75cl"). If the document never mentions cases, leave this empty rather than inferring one. Where a Quantity heading is split into two sub-columns "cs" and "bt", read ONLY the figure under "cs" — a row with a figure under "bt" and nothing under "cs" has no cases at all and this must be left empty.',
           ),
         weight: z.number().optional().describe('Weight in kg'),
         volume: z.number().optional().describe('Volume in m³'),
@@ -183,6 +183,7 @@ COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
 | Column | Maps to | Description |
 |--------|---------|-------------|
 | Qty | cases | NUMBER OF CASES (NOT bottles!) |
+| Quantity: cs / bt | cases / bottles | A SPLIT column. The figure under "cs" is cases, the figure under "bt" is bottles. Each row uses one or the other, never both. A row reading "3" under bt with 12x75cl is THREE BOTTLES out of a twelve-pack — not three cases, not thirty-six bottles. |
 | Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
 | ABV % | alcoholPercent | Alcohol percentage |
 | Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
@@ -309,6 +310,11 @@ COLUMN MAPPING - CRITICAL:
 - "Price/Case" or "Per Case" column → unitPrice, with unitPriceBasis = "case"
 - "Total Price" or "Amount" column → total (always capture this; it is what the
   per-bottle cost is worked out from)
+- A "Quantity" heading split into "cs" and "bt" sub-columns → cs to cases, bt to
+  bottles. Check which sub-column each figure sits under before assigning it:
+  putting a bottle count into cases multiplies the line by the pack size, and
+  every downstream figure — bottles received, cost per bottle, landed cost — is
+  then wrong by that factor.
 - "Total Price USD" column → total
 
 PARSING "Size" COLUMN - EXAMPLES:
