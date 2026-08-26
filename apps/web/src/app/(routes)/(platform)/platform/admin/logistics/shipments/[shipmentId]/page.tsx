@@ -337,6 +337,26 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: repriceFromTotals, isPending: isRepricing } = useMutation(
+    api.logistics.admin.repriceFromTotals.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.corrected} lines re-costed from their invoice totals` +
+            (result.unchanged > 0 ? ` · ${result.unchanged} already correct` : '') +
+            (result.withoutTotal > 0
+              ? ` · ${result.withoutTotal} have no stated total and were left`
+              : '') +
+            ` · priced at ${result.rate} ${result.currency}/USD`,
+          { duration: 10000 },
+        );
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
   const { data: lwinMismatches } = useQuery(
     api.logistics.admin.findLwinMismatches.queryOptions(),
   );
@@ -1372,6 +1392,28 @@ const ShipmentDetailPage = () => {
                               : agreedRate
                                 ? 'Apply rate'
                                 : "Use today's rate"}
+                          </button>
+                          {/* A shipment imported before the price fix holds a
+                              per-case figure in the per-bottle column. The
+                              line totals were captured correctly, so it can be
+                              repaired in place rather than cleared and
+                              re-imported. */}
+                          <button
+                            onClick={() =>
+                              repriceFromTotals({
+                                shipmentId,
+                                agreedRate: agreedRate
+                                  ? Number(agreedRate)
+                                  : undefined,
+                              })
+                            }
+                            disabled={isRepricing}
+                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                          >
+                            <Icon icon={IconWand} size="sm" />
+                            {isRepricing
+                              ? 'Re-costing...'
+                              : 'Re-cost from invoice totals'}
                           </button>
                         </div>
                       </div>

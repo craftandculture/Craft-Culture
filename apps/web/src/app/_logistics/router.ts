@@ -47,6 +47,7 @@ import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
@@ -90,6 +91,7 @@ const adminRouter = createTRPCRouter({
   syncItemsToZoho: adminSyncItemsToZoho,
   autoAssignHsCodes: adminAutoAssignHsCodes,
   backfillItemDetails: adminBackfillItemDetails,
+  repriceFromTotals: adminRepriceFromTotals,
 
   // Documents
   uploadDocument: adminUploadDocument,
