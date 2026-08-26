@@ -223,6 +223,8 @@ ABSOLUTE RULES - VIOLATION IS UNACCEPTABLE:
 8. HS/COMMODITY CODES - CRITICAL:
    - Each row has its OWN commodity code in the rightmost column
    - Codes vary by product: 22042109, 22042132, 22041000, 22042142, 22042198, etc.
+   - Read what the document says. It is normalised to our own list after import,
+     so do not round it or substitute a heading yourself.
    - DO NOT default everything to 22042100 - that is INCORRECT
    - Read each code digit-by-digit from the document
    - If you cannot read a code, leave it EMPTY (do not guess 22042100)

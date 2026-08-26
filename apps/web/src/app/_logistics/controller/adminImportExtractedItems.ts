@@ -9,6 +9,7 @@ import logger from '@/utils/logger';
 
 import importExtractedItemsSchema from '../schemas/importExtractedItemsSchema';
 import priceShipmentInUsd from '../utils/priceShipmentInUsd';
+import toMenuHsCode from '../utils/toMenuHsCode';
 
 /**
  * Import extracted line items from a document into a shipment
@@ -222,7 +223,11 @@ const adminImportExtractedItems = adminProcedure
           bottlesPerCase,
           bottleSizeMl,
           totalBottles: Math.round(totalBottles),
-          hsCode: item.hsCode,
+          // The invoice carries national subheadings — 2204214290 and its
+          // like. We declare on the codes in the HS menu, so a line lands on
+          // one of those rather than bringing a fresh subheading in with every
+          // import.
+          hsCode: toMenuHsCode(item.hsCode),
           countryOfOrigin: item.countryOfOrigin,
           grossWeightKg: item.weight,
           sourceCurrency,

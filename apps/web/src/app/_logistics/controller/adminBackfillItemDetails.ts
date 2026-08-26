@@ -6,21 +6,8 @@ import { logisticsShipmentItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import isValidHsCode from '../utils/isValidHsCode';
+import toMenuHsCode from '../utils/toMenuHsCode';
 
-/** The codes the HS menu offers — the only ones a line should end on */
-const MENU_CODES = new Set([
-  '22042100',
-  '22041000',
-  '22084000',
-  '22083000',
-  '22030000',
-  '22082000',
-  '22089090',
-  '22085000',
-  '22087000',
-  '22086000',
-  '22060000',
-]);
 
 /** Terms that make a wine sparkling wherever they appear */
 const SPARKLING_TERMS = [
@@ -180,7 +167,8 @@ const adminBackfillItemDetails = adminProcedure
       //
       // A subheading is pulled back to its heading rather than left alone: the
       // first five digits say which of the menu's codes it belongs under.
-      const isOffMenu = isValidHsCode(existing) && !MENU_CODES.has(existing);
+      const isOffMenu =
+        isValidHsCode(existing) && toMenuHsCode(existing) !== existing;
 
       if (isValidHsCode(item.hsCode) && !isOffMenu) continue;
 
@@ -201,14 +189,8 @@ const adminBackfillItemDetails = adminProcedure
 
       // A code already on the line says more than its name does: 22041011 is
       // a sparkling subheading whatever the product is called.
-      const fromExisting = existing.startsWith('22041')
-        ? '22041000'
-        : existing.startsWith('22042')
-          ? '22042100'
-          : '';
-
       const hsCode =
-        fromExisting ||
+        toMenuHsCode(existing) ??
         (SPARKLING_TERMS.some((term) => text.includes(term))
           ? '22041000'
           : '22042100');
