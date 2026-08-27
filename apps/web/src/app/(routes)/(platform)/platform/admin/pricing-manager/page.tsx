@@ -2054,7 +2054,13 @@ const PricingManagerPage = () => {
                     const isExpanded = expandedLwin === product.lwin18;
 
                     return (
-                      <Fragment key={`${isInbound ? 'inb-' : ''}${product.lwin18}`}>
+                      <Fragment
+                        key={`${isInbound ? 'inb-' : ''}${product.lwin18}${
+                          isInbound
+                            ? `-${(product as { shipmentNumber?: string | null }).shipmentNumber ?? ''}`
+                            : ''
+                        }`}
+                      >
                       <tr
                         className={`transition-colors ${
                           isInbound
@@ -2105,7 +2111,17 @@ const PricingManagerPage = () => {
                                   : shortOwner(ownerCue.fullName)}
                               </span>
                             )}
-                            {isInbound && (
+                            {isInbound &&
+                            (product as { shipmentNumber?: string | null })
+                              .shipmentNumber && (
+                              <span className="ml-1 rounded bg-fill-secondary px-1 py-px font-mono text-[10px] text-text-muted">
+                                {
+                                  (product as { shipmentNumber?: string | null })
+                                    .shipmentNumber
+                                }
+                              </span>
+                            )}
+                          {isInbound && (
                               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
                                 Inbound
                               </span>

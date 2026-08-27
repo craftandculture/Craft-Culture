@@ -482,12 +482,18 @@ const adminGetPricingProducts = wmsOperatorProcedure
       /** True while that figure is the estimate rather than a real invoice. */
       logisticsIsEstimate: boolean;
       earliestEta: Date | null;
+      /** Which consignment this line arrived on — two can hold the same wine. */
+      shipmentNumber: string | null;
       isInbound: true;
     };
     let inbound: InboundRow[] = [];
 
     if (includeInbound) {
-      const groupKey = sql`COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
+      // Grouped by SHIPMENT as well as wine and pack. The same wine arriving on
+      // two consignments has two different costs, and merging them showed one
+      // line at MAX(cost) — so half the bottles were priced off the wrong cost
+      // and the cheaper consignment's margin was invisible.
+      const groupKey = sql`${logisticsShipmentItems.shipmentId}::text || '|' || COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
       const inboundConditions = [
         eq(logisticsShipments.type, 'inbound'),
         inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
@@ -519,7 +525,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
           caseConfig: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})::int`,
           bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
           totalCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
-          costPerBottle: sql<number | null>`MAX(${logisticsShipmentItems.productCostPerBottle})`,
+          // A manually corrected import price wins over the shipment's own
+          // figure — it was being ignored, so an edit saved and the row went on
+          // showing the old cost.
+          costPerBottle: sql<number | null>`COALESCE(NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0), MAX(${logisticsShipmentItems.productCostPerBottle}))`,
           sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
           // Overrides ARE saved against in-transit wine — keyed by LWIN like any
           // other — but none of them were selected here, so the cell a user had
@@ -535,6 +544,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           // until the freight invoice is loaded against the consolidation group.
           allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
           earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
+          shipmentNumber: sql<string | null>`MAX(${logisticsShipments.shipmentNumber})`,
           category: sql<string | null>`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
         })
         .from(logisticsShipmentItems)
@@ -587,6 +597,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           r.lineLogistics == null &&
           !(r.allocatedFreight && r.allocatedFreight > 0),
         earliestEta: r.earliestEta,
+        shipmentNumber: r.shipmentNumber,
         isInbound: true as const,
       }));
     }
