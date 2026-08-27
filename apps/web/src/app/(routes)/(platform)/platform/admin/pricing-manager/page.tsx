@@ -712,8 +712,15 @@ const PricingManagerPage = () => {
   // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
   const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
     if (typeof window === 'undefined') return IN_BOND_MARKUP * 100;
-    const stored = Number(localStorage.getItem('pm-inbond-markup-pct'));
-    return Number.isFinite(stored) && stored >= 0 ? stored : IN_BOND_MARKUP * 100;
+    // Read the KEY, not Number() of it. localStorage.getItem returns null when
+    // the key was never written, and Number(null) is 0 — which passed the
+    // `>= 0` guard and set the B2B markup to ZERO. Every wine with no owner
+    // margin of its own (all in-transit stock) then priced at landed cost, and
+    // a quote built from this screen went out at cost.
+    const raw = localStorage.getItem('pm-inbond-markup-pct');
+    if (raw === null || raw.trim() === '') return IN_BOND_MARKUP * 100;
+    const stored = Number(raw);
+    return Number.isFinite(stored) && stored > 0 ? stored : IN_BOND_MARKUP * 100;
   });
   useEffect(() => {
     localStorage.setItem('pm-inbond-markup-pct', String(inBondMarkupPct));
