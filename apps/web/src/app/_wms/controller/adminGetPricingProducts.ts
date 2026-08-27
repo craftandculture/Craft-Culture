@@ -474,6 +474,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
       lineLogistics: number | null;
       transferPricePerBottle: number | null;
       sellMarginPct: number | null;
+      b2bMarginPct: number | null;
+      pcMarginPct: number | null;
       pricingReleasedAt: Date | null;
       /** Per-line override, else allocated freight, else the air estimate. */
       systemLogistics: number;
@@ -526,6 +528,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
           lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
           transferPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
           sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
+          b2bMarginPct: sql<number | null>`MAX(${wmsProductPricing.b2bMarginPct})`,
+          pcMarginPct: sql<number | null>`MAX(${wmsProductPricing.pcMarginPct})`,
           pricingReleasedAt: sql<Date | null>`MAX(${wmsProductPricing.pricingReleasedAt})`,
           // Freight actually allocated to the shipment line, per bottle. Zero
           // until the freight invoice is loaded against the consolidation group.
@@ -563,6 +567,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         lineLogistics: r.lineLogistics,
         transferPricePerBottle: r.transferPricePerBottle,
         sellMarginPct: r.sellMarginPct,
+        b2bMarginPct: r.b2bMarginPct,
+        pcMarginPct: r.pcMarginPct,
         pricingReleasedAt: r.pricingReleasedAt,
         /*
           Logistics for in-transit wine: a per-line override, else the freight

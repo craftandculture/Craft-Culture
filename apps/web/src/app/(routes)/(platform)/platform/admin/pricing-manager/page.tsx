@@ -108,6 +108,7 @@ const PriceCell = ({
   suggested,
   variant = 'muted',
   tdClassName = '',
+  hintFor,
 }: {
   value: number | null;
   onSave: (v: number) => void;
@@ -118,6 +119,12 @@ const PriceCell = ({
   suggested?: boolean;
   variant?: 'muted' | 'prominent';
   tdClassName?: string;
+  /**
+   * Shown under the input as the price is typed — used to say what margin the
+   * number being entered actually represents, so nobody types a price that
+   * quietly sells at a loss.
+   */
+  hintFor?: (price: number) => string | null;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
@@ -192,6 +199,15 @@ const PriceCell = ({
           Save
         </button>
       </form>
+      {hintFor &&
+        (() => {
+          const hint = hintFor(parseFloat(draft));
+          return hint ? (
+            <div className="mt-0.5 text-right text-[10px] tabular-nums text-text-muted">
+              {hint}
+            </div>
+          ) : null;
+        })()}
     </td>
   );
 };
@@ -1892,13 +1908,23 @@ const PricingManagerPage = () => {
                         ? 0
                         : 2.5;
                     const rowTransfer = transferStored ?? transferDefault;
-                    const rowInbondPct = ownerId
-                      ? effInbondPct
-                      : (orow.ownerInbondPct ?? inBondMarkupPct);
+                    // A margin typed on THIS row wins over the owner's rate and
+                    // the toolbar default — otherwise saving one changed the
+                    // stored value and nothing on screen, which reads as the
+                    // save having failed.
+                    const lineB2bPct =
+                      (product as { b2bMarginPct?: number | null }).b2bMarginPct ?? null;
+                    const linePcPct =
+                      (product as { pcMarginPct?: number | null }).pcMarginPct ?? null;
+                    const rowInbondPct =
+                      lineB2bPct ??
+                      (ownerId ? effInbondPct : (orow.ownerInbondPct ?? inBondMarkupPct));
                     const rowInbondDivisor = rowInbondPct < 100 ? 1 - rowInbondPct / 100 : null;
-                    const rowPcPct = ownerId
-                      ? effPcPct
-                      : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
+                    const rowPcPct =
+                      linePcPct ??
+                      (ownerId
+                        ? effPcPct
+                        : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null)));
                     const rowPcDivisor =
                       rowPcPct != null && rowPcPct < 100 ? 1 - rowPcPct / 100 : null;
                     // Landed = import (paid) + logistics + transfer + manual override
@@ -2182,16 +2208,35 @@ const PricingManagerPage = () => {
                         </td>
 
                         {/* In Bond — B2B group */}
-                        <td className="border-l-2 border-blue-300 px-3 py-2.5 text-right tabular-nums">
-                          <div className="font-medium text-blue-700">
-                            {inBondPrice != null ? `$${inBondPrice.toFixed(2)}` : '—'}
-                          </div>
-                          {inBondPrice != null && (
-                            <div className="text-[10px] text-text-muted/60">
-                              ${(inBondPrice * caseConfig).toFixed(0)}/cs
-                            </div>
-                          )}
-                        </td>
+                        {/* In Bond — type a price and the MARGIN it implies is
+                            what gets stored, so the price tracks cost instead of
+                            detaching from it when freight lands. The hint says
+                            what margin the number represents as it is typed. */}
+                        <PriceCell
+                          value={inBondPrice}
+                          variant="prominent"
+                          tdClassName="border-l-2 border-blue-300"
+                          sub={
+                            inBondPrice != null
+                              ? `$${(inBondPrice * caseConfig).toFixed(0)}/cs`
+                              : undefined
+                          }
+                          hintFor={(price) =>
+                            landed != null && landed > 0 && price > 0
+                              ? price <= landed
+                                ? `below cost — landed is $${landed.toFixed(2)}`
+                                : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
+                              : null
+                          }
+                          onSave={(price) => {
+                            if (landed == null || landed <= 0) return;
+                            const pct = ((price - landed) / price) * 100;
+                            setLineMarginsMut.mutate({
+                              lwin18s: [product.lwin18],
+                              b2bMarginPct: Math.max(0, Math.min(99, Number(pct.toFixed(2)))),
+                            });
+                          }}
+                        />
 
                         {/* PC Price (editable) — Private Client group */}
                         <PriceCell
