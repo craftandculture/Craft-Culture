@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import parseDeclaredTotals from '../utils/parseDeclaredTotals';
 import parsePackFormat from '../utils/parsePackFormat';
 import parseWineName from '../utils/parseWineName';
 import readInvoiceSheet from '../utils/readInvoiceSheet';
@@ -216,6 +217,15 @@ const adminExtractSheet = adminProcedure
     const skipHint = map.nonItemRowHint?.trim().toLowerCase();
     let skipped = 0;
     /**
+     * The rows that are not wine.
+     *
+     * They were counted and thrown away, which discarded the supplier's own
+     * totals — the one figure in the file that can check everything parsed out
+     * of it. A totals row usually has nothing in the name column at all, so
+     * both kinds are kept: the labelled "TOTAL" and the unlabelled foot.
+     */
+    const summaryRows: Record<string, unknown>[] = [];
+    /**
      * Rows carrying nothing in the column mapped as the product name.
      *
      * "0 lines" on a workbook full of wine is almost always this: the mapper
@@ -231,6 +241,7 @@ const adminExtractSheet = adminProcedure
 
       if (!rawName) {
         unnamed += 1;
+        summaryRows.push(row);
 
         return [];
       }
@@ -238,6 +249,7 @@ const adminExtractSheet = adminProcedure
       // Shipping and totals sit in the same column as the wines.
       if (SUMMARY_ROW.test(rawName) || (skipHint && rawName.toLowerCase().includes(skipHint))) {
         skipped += 1;
+        summaryRows.push(row);
 
         return [];
       }
@@ -379,16 +391,74 @@ const adminExtractSheet = adminProcedure
 
     const headerCurrency = currencyFromHeaders(sheet.headers);
 
+    /*
+      What the money is in, said rather than assumed.
+
+      The cell format is the sheet's own statement and outranks everything: a
+      Wilkinson invoice heads its columns "Price/Case" and "Total Price" and
+      names no currency anywhere on its face, so the model was left to guess
+      and guessed dollars — £31,018.30 of wine was imported as $31,018.30, the
+      FX row never appeared because the shipment looked American, and every
+      landed cost built on it was a quarter light.
+
+      Where nothing states it, the currency is returned as null. Defaulting to
+      USD is what made that failure silent, and a blank the importer refuses is
+      better than a figure nobody chose.
+    */
+    const currency =
+      sheet.formatCurrency ?? headerCurrency ?? map.currency?.toUpperCase() ?? null;
+
+    const currencySource = sheet.formatCurrency
+      ? 'cell format'
+      : headerCurrency
+        ? 'headings'
+        : map.currency
+          ? 'read from the sheet'
+          : 'unknown';
+
+    const declared = parseDeclaredTotals({
+      summaryRows,
+      notes: sheet.notes,
+      columns: {
+        cases: map.cases ?? map.caseCount,
+        bottles: map.bottles,
+        value: map.lineTotal,
+      },
+      toNumber,
+    });
+
+    const totalBottles = items.reduce((sum, item) => sum + (item.bottles ?? 0), 0);
+
     return {
       sheetName: sheet.sheetName,
-      currency: headerCurrency ?? map.currency?.toUpperCase() ?? 'USD',
-      currencySource: headerCurrency ? 'headings' : map.currency ? 'read' : 'assumed',
+      currency,
+      currencySource,
       headers: sheet.headers,
       columnMap: map,
       rowsRead: sheet.rows.length,
       skippedNonItemRows: skipped,
       items,
-      totalBottles: items.reduce((sum, item) => sum + (item.bottles ?? 0), 0),
+      totalBottles,
+      /** What the supplier says they shipped, to be set beside what we read */
+      declared,
+      /** The same figures as we parsed them, so the two can be compared */
+      computed: {
+        cases: items.reduce((sum, item) => sum + (item.cases ?? 0), 0),
+        /**
+         * Bottles billed loose, which is what a "bt" column totals.
+         *
+         * Compared against the document's own loose-bottle total, not against
+         * every bottle in the shipment — those are different quantities and
+         * setting them side by side would report a disagreement on a correct
+         * invoice.
+         */
+        looseBottles: items.reduce(
+          (sum, item) => sum + (item.cases ? 0 : (item.bottles ?? 0)),
+          0,
+        ),
+        bottles: totalBottles,
+        value: items.reduce((sum, item) => sum + (item.total ?? 0), 0),
+      },
       /**
        * What the mapper decided, so a run that finds nothing can be argued
        * with rather than merely repeated.

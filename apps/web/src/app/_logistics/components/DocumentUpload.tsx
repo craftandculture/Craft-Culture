@@ -1,8 +1,10 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconCheck,
   IconCloudUpload,
+  IconCoins,
   IconFile,
   IconFileText,
   IconLoader2,
@@ -31,6 +33,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsDocument } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+import DeclaredComparison from './DeclaredComparison';
+
 interface ExtractedLineItem {
   description?: string;
   productName?: string;
@@ -54,14 +58,44 @@ interface ExtractedLineItem {
   warnings?: string[];
 }
 
+/** The document's own totals row and shipping note */
+interface DeclaredTotals {
+  cases?: number | null;
+  bottles?: number | null;
+  cartons?: number | null;
+  pallets?: number | null;
+  value?: number | null;
+  source?: string | null;
+}
+
 interface ExtractionResult {
   documentType?: string;
   lineItems?: ExtractedLineItem[];
   totalCases?: number;
   totalWeight?: number;
-  /** The currency the document is written in, carried through to import */
-  currency?: string;
+  /**
+   * The currency the document is written in, carried through to import.
+   *
+   * Null where nothing in the file states one. It used to fall back to USD,
+   * which is how a Wilkinson invoice — whose columns read "Price/Case" and
+   * "Total Price" and name no currency at all — imported £31,018.30 of wine as
+   * dollars, with the FX prompt staying hidden because the shipment then
+   * looked American.
+   */
+  currency?: string | null;
+  /** How that currency was arrived at: read, or not stated at all */
+  currencySource?: string;
+  declared?: DeclaredTotals;
+  computed?: {
+    cases?: number;
+    looseBottles?: number;
+    bottles?: number;
+    value?: number;
+  };
 }
+
+/** The currencies suppliers actually bill C&C in */
+const CURRENCIES = ['GBP', 'EUR', 'USD', 'CHF', 'AED', 'HKD', 'JPY'] as const;
 
 type DocumentType =
   | 'bill_of_lading'
@@ -152,6 +186,14 @@ const LogisticsDocumentUpload = ({
   const [extractingDocId, setExtractingDocId] = useState<string | null>(null);
   const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  /**
+   * The currency to import in, once a person has settled it.
+   *
+   * Separate from the extraction so that choosing one is an act rather than a
+   * default: where the document names no currency there is nothing here, and
+   * the import will not run.
+   */
+  const [importCurrency, setImportCurrency] = useState<string | null>(null);
 
   // Upload mutation — creates DB record after file is uploaded to Blob
   const { mutateAsync: createDocumentRecord } = useMutation({
@@ -239,8 +281,22 @@ const LogisticsDocumentUpload = ({
 
           setExtractionResult({
             currency: sheet.currency,
+            currencySource: sheet.currencySource,
+            declared: sheet.declared,
+            computed: sheet.computed,
             lineItems: sheet.items,
           } as ExtractionResult);
+
+          setImportCurrency(sheet.currency);
+
+          if (!sheet.currency) {
+            // Nothing in the file says what the money is. Asked for rather
+            // than assumed: assuming is what booked pounds as dollars.
+            toast.warning(
+              `Nothing in "${sheet.sheetName}" states a currency — choose one before importing.`,
+              { duration: 30000 },
+            );
+          }
 
           const d = sheet.diagnostics;
 
@@ -273,7 +329,8 @@ const LogisticsDocumentUpload = ({
 
           toast.success(
             `${sheet.items.length} lines from ${sheet.sheetName} · ` +
-              `${sheet.totalBottles} bottles · priced in ${sheet.currency} · ` +
+              `${sheet.totalBottles} bottles · ` +
+              `${sheet.currency ? `${sheet.currency} (${sheet.currencySource})` : 'currency not stated'} · ` +
               `names from "${d.mappedTo.productName}"` +
               (d.mappedTo.cases ? `, cases from "${d.mappedTo.cases}"` : '') +
               (d.mappedTo.bottles ? `, bottles from "${d.mappedTo.bottles}"` : ''),
@@ -296,6 +353,9 @@ const LogisticsDocumentUpload = ({
 
         if (result.success && result.data) {
           setExtractionResult(result.data);
+          // A PDF names its currency in prose or not at all, so the same rule
+          // applies: what was read is offered, and what was not read is asked.
+          setImportCurrency(result.data.currency ?? null);
           const itemCount = result.data.lineItems?.length ?? 0;
           toast.success(`Extracted ${itemCount} items from document`);
         } else {
@@ -319,6 +379,22 @@ const LogisticsDocumentUpload = ({
       return;
     }
 
+    /*
+      No currency, no import.
+
+      This is the guard that was missing. Prices used to arrive labelled USD
+      whatever they were, so a pound invoice looked like a dollar one all the
+      way through to landed cost — and since the shipment read as USD, the
+      screen that offers to convert never appeared to be needed.
+    */
+    if (!importCurrency) {
+      toast.error(
+        'Say what currency this document is billed in before importing — its prices are stored as billed and converted once, at a rate you can see.',
+      );
+
+      return;
+    }
+
     setIsImporting(true);
 
     try {
@@ -327,7 +403,10 @@ const LogisticsDocumentUpload = ({
         // Every field the extractor found travels. Dropping the bottle count
         // here is what left the importer to guess from cases, and dropping the
         // currency is what let a euro invoice arrive labelled as dollars.
-        currency: extractionResult.currency,
+        currency: importCurrency,
+        // What the supplier says they shipped, kept beside what we read so the
+        // two can be reconciled after import as well as before it.
+        declared: extractionResult.declared,
         items: extractionResult.lineItems.map((item) => ({
           productName: item.productName,
           description: item.description,
@@ -354,8 +433,33 @@ const LogisticsDocumentUpload = ({
           : undefined,
       });
 
-      toast.success(`Imported ${result.itemsImported} items to shipment`);
+      toast.success(
+        `Imported ${result.itemsImported} items to shipment, billed in ${importCurrency}`,
+      );
+
+      /*
+        A conversion that did not happen has to say so.
+
+        Lines billed in a foreign currency are stored as billed and priced in
+        USD at import. When no rate can be found they stay unpriced, which is
+        correct and was also completely silent — the import reported success
+        and the costs simply were not there.
+      */
+      if (result.pricing?.rateSource === 'unresolved') {
+        toast.warning(
+          `No ${importCurrency} rate could be found, so these lines are not yet priced in USD. ` +
+            'Set a rate on the shipment before the landed cost is used.',
+          { duration: 30000 },
+        );
+      } else if (result.pricing?.rate) {
+        toast.info(
+          `Priced in USD at ${result.pricing.rate.toFixed(4)} (${result.pricing.rateSource})`,
+          { duration: 12000 },
+        );
+      }
+
       setExtractionResult(null);
+      setImportCurrency(null);
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
       onUploadComplete?.();
     } catch (err) {
@@ -364,7 +468,14 @@ const LogisticsDocumentUpload = ({
     } finally {
       setIsImporting(false);
     }
-  }, [extractionResult, shipmentId, trpcClient, queryClient, onUploadComplete]);
+  }, [
+    extractionResult,
+    importCurrency,
+    shipmentId,
+    trpcClient,
+    queryClient,
+    onUploadComplete,
+  ]);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -604,13 +715,114 @@ const LogisticsDocumentUpload = ({
               <Button variant="ghost" size="sm" onClick={() => setExtractionResult(null)}>
                 <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
               </Button>
-              <Button size="sm" onClick={handleImport} isDisabled={isImporting}>
+              <Button
+                size="sm"
+                onClick={handleImport}
+                isDisabled={isImporting || !importCurrency}
+              >
                 <ButtonContent iconLeft={isImporting ? IconLoader2 : IconPackageImport}>
                   {isImporting ? 'Importing...' : 'Import to Shipment'}
                 </ButtonContent>
               </Button>
             </div>
           </div>
+
+          {/*
+            What the money is in, before anything is imported.
+
+            Shown whether or not it was read, because the failure this prevents
+            is silent by nature: a pound invoice imported as dollars looks
+            entirely normal on every screen afterwards.
+          */}
+          <div
+            className={`mb-4 flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 ${
+              importCurrency
+                ? 'border-border-muted bg-fill-muted/30'
+                : 'border-border-warning bg-fill-warning/10'
+            }`}
+          >
+            <Icon
+              icon={importCurrency ? IconCoins : IconAlertTriangle}
+              size="sm"
+              colorRole={importCurrency ? 'muted' : 'warning'}
+            />
+            <div className="flex-1">
+              <Typography variant="bodySm" className="font-medium">
+                {importCurrency
+                  ? `Billed in ${importCurrency}`
+                  : 'This document does not state a currency'}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {importCurrency
+                  ? extractionResult.currencySource
+                    ? `Read from the ${extractionResult.currencySource}. Change it if that is wrong — every price imported depends on it.`
+                    : 'Prices import as billed and convert once, at a rate you can see.'
+                  : 'Choose one. Prices import as billed, so a wrong currency is a wrong landed cost on every line.'}
+              </Typography>
+            </div>
+            <Select
+              value={importCurrency ?? ''}
+              onValueChange={(value) => setImportCurrency(value)}
+            >
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/*
+            The document checking our reading of it. Every extraction fault
+            this flow has had would have shown here as one number out of place.
+          */}
+          {extractionResult.declared && extractionResult.computed ? (
+            <div className="mb-4">
+              <DeclaredComparison
+                source={extractionResult.declared.source}
+                rows={[
+                  {
+                    label: 'Cases billed',
+                    declared: extractionResult.declared.cases,
+                    ours: extractionResult.computed.cases,
+                  },
+                  {
+                    label: 'Loose bottles billed',
+                    declared: extractionResult.declared.bottles,
+                    ours: extractionResult.computed.looseBottles,
+                    note: 'Bottles sold out of a pack, not every bottle on the invoice',
+                  },
+                  {
+                    label: `Value (${importCurrency ?? '—'})`,
+                    declared: extractionResult.declared.value,
+                    ours: extractionResult.computed.value,
+                    tolerance: 0.005,
+                    format: (value) =>
+                      value.toLocaleString('en-GB', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }),
+                  },
+                  {
+                    label: 'Cartons shipped',
+                    declared: extractionResult.declared.cartons,
+                    ours: null,
+                    note: 'Physical boxes — confirmed on the shipment, never summed from the lines',
+                  },
+                  {
+                    label: 'Pallets',
+                    declared: extractionResult.declared.pallets,
+                    ours: null,
+                  },
+                ]}
+              />
+            </div>
+          ) : null}
 
           {/* Cargo Summary */}
           {(extractionResult.totalCases || extractionResult.totalWeight) && (
@@ -697,12 +909,22 @@ const LogisticsDocumentUpload = ({
           {/* Import confirmation */}
           <div className="mt-4 pt-4 border-t border-border-muted flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Icon icon={IconCheck} size="sm" colorRole="success" />
+              <Icon
+                icon={importCurrency ? IconCheck : IconAlertTriangle}
+                size="sm"
+                colorRole={importCurrency ? 'success' : 'warning'}
+              />
               <Typography variant="bodySm" colorRole="muted">
-                Ready to import {extractionResult.lineItems.length} items
+                {importCurrency
+                  ? `Ready to import ${extractionResult.lineItems.length} items, billed in ${importCurrency}`
+                  : 'Choose a currency above before importing'}
               </Typography>
             </div>
-            <Button size="sm" onClick={handleImport} isDisabled={isImporting}>
+            <Button
+              size="sm"
+              onClick={handleImport}
+              isDisabled={isImporting || !importCurrency}
+            >
               <ButtonContent iconLeft={isImporting ? IconLoader2 : IconPackageImport}>
                 {isImporting ? 'Importing...' : 'Import Items'}
               </ButtonContent>

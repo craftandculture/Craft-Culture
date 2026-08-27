@@ -134,6 +134,14 @@ const PdfExtractPage = () => {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string>('');
+  /**
+   * The currency the document is billed in, stated rather than assumed.
+   *
+   * The import used to send none and the server defaulted to USD, so a pound
+   * invoice imported as dollars and every landed cost built on it was a
+   * quarter light — with nothing on any screen saying so.
+   */
+  const [importCurrency, setImportCurrency] = useState<string>('');
 
   // Fetch shipments for import dropdown
   const {
@@ -342,8 +350,19 @@ const PdfExtractPage = () => {
     // Only include cargo summary if at least one field has a value
     const hasCargoData = Object.values(cargoSummary).some((v) => v !== undefined && v !== null);
 
+    const currency = (importCurrency || extractedData.currency || '').toUpperCase();
+
+    if (currency.length !== 3) {
+      toast.error(
+        'Say what currency this document is billed in before importing — prices are stored as billed and converted once.',
+      );
+
+      return;
+    }
+
     importItems({
       shipmentId: selectedShipmentId,
+      currency,
       items: extractedData.lineItems,
       ...(hasCargoData && { cargoSummary }),
     });
@@ -482,6 +501,37 @@ const PdfExtractPage = () => {
                           <div className="py-2 px-3 text-center text-sm text-text-muted">
                             No shipments found
                           </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/*
+                    What the money is in. Asked for every time, because a PDF
+                    names its currency in prose or not at all, and a wrong
+                    answer here is a wrong cost on every line of the shipment.
+                  */}
+                  <div>
+                    <Typography variant="bodySm" colorRole="muted" className="mb-2">
+                      Billed in
+                      {extractedData?.currency
+                        ? ` — the document reads ${extractedData.currency}`
+                        : ' — the document does not say'}
+                    </Typography>
+                    <Select
+                      value={importCurrency || extractedData?.currency || ''}
+                      onValueChange={setImportCurrency}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select currency..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['GBP', 'EUR', 'USD', 'CHF', 'AED', 'HKD', 'JPY'].map(
+                          (code) => (
+                            <SelectItem key={code} value={code}>
+                              {code}
+                            </SelectItem>
+                          ),
                         )}
                       </SelectContent>
                     </Select>

@@ -1,10 +1,27 @@
 import * as XLSX from 'xlsx';
 
+import currencyFromNumberFormat from './currencyFromNumberFormat';
+
 export interface InvoiceSheet {
   /** Header labels exactly as the supplier wrote them */
   headers: string[];
   /** One record per data row, keyed by header */
   rows: Record<string, unknown>[];
+  /**
+   * Text sitting below the table in rows too sparse to be line items.
+   *
+   * "12 cases on 1 pallet" is one cell on its own row, so the line-item filter
+   * drops it — and with it the only statement of how many physical cartons
+   * were shipped. Kept apart from the rows rather than thrown away.
+   */
+  notes: string[];
+  /**
+   * The currency the money cells are formatted in, where they say.
+   *
+   * The single most reliable denominator in the file, and the one thing that
+   * would have stopped a pound invoice importing as dollars.
+   */
+  formatCurrency: string | null;
   sheetName: string;
 }
 
@@ -75,7 +92,12 @@ const readInvoiceSheet = (base64: string): InvoiceSheet => {
   // The browser hands over a data URL; the decoder wants only the payload.
   const payload = base64.includes(',') ? base64.slice(base64.indexOf(',') + 1) : base64;
 
-  const workbook = XLSX.read(Buffer.from(payload, 'base64'), { type: 'buffer' });
+  // cellNF keeps each cell's number format, which is where a workbook states
+  // its currency when its headings do not.
+  const workbook = XLSX.read(Buffer.from(payload, 'base64'), {
+    type: 'buffer',
+    cellNF: true,
+  });
   const sheetName = workbook.SheetNames[0];
 
   if (!sheetName) {
@@ -156,21 +178,61 @@ const readInvoiceSheet = (base64: string): InvoiceSheet => {
 
   const firstDataIndex = headerIndex + (isSubHeader ? 2 : 1);
 
-  const rows = grid
+  /** How many cells a row has to fill before it can be a line item */
+  const filled = (row: Record<string, unknown>) =>
+    Object.values(row).filter(
+      (value) => value !== null && String(value).trim() !== '',
+    ).length;
+
+  const below = grid
     .slice(firstDataIndex)
     .map((row) =>
       Object.fromEntries(headers.map((header, index) => [header, row[index]])),
-    )
-    // Totals and blank spacers sit below the table; a row with almost nothing
-    // in it is not a line item.
-    .filter(
-      (row) =>
-        Object.values(row).filter(
-          (value) => value !== null && String(value).trim() !== '',
-        ).length >= 2,
     );
 
-  return { headers, rows, sheetName };
+  // Totals and blank spacers sit below the table; a row with almost nothing
+  // in it is not a line item.
+  const rows = below.filter((row) => filled(row) >= 2);
+
+  // The rest is not noise. A supplier's shipping note — "12 cases on 1 pallet"
+  // — is the only place the physical carton count is stated, and it is exactly
+  // the figure our own count has to be reconciled against.
+  const notes = below
+    .filter((row) => filled(row) > 0 && filled(row) < 2)
+    .map((row) =>
+      Object.values(row)
+        .filter((value) => value !== null && String(value).trim() !== '')
+        .map((value) => String(value).trim())
+        .join(' '),
+    );
+
+  /*
+    The currency the money is formatted in, taken from the commonest
+    denominated cell.
+
+    One cell could be a stray; the column is the sheet's own statement. This is
+    the only signal on a Wilkinson invoice — their headings read "Price/Case"
+    and "Total Price" and name no currency at all, which is how £31,018.30 came
+    to be imported as $31,018.30.
+  */
+  const tally = new Map<string, number>();
+
+  for (const address of Object.keys(sheet)) {
+    if (address.startsWith('!')) continue;
+
+    const cell = sheet[address] as XLSX.CellObject | undefined;
+
+    if (!cell || cell.t !== 'n') continue;
+
+    const code = currencyFromNumberFormat(cell.z as string | undefined);
+
+    if (code) tally.set(code, (tally.get(code) ?? 0) + 1);
+  }
+
+  const formatCurrency =
+    [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  return { headers, rows, notes, formatCurrency, sheetName };
 };
 
 export default readInvoiceSheet;

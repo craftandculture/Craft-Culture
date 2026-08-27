@@ -2822,6 +2822,34 @@ export const logisticsShipments = pgTable(
     totalWeightKg: doublePrecision('total_weight_kg'),
     totalVolumeM3: doublePrecision('total_volume_m3'),
 
+    /**
+     * What the supplier's own paperwork says it shipped.
+     *
+     * Kept apart from our figures rather than merged into them, because the
+     * whole use of it is the disagreement. Every extraction fault this flow
+     * has had — a 75,000ml bottle, a pack read as 675, six cartons invented
+     * out of loose bottles — showed up as one number differing from one the
+     * supplier had already written down, and none of them was caught, because
+     * the document's totals were parsed and then thrown away.
+     *
+     * Cases and cartons are deliberately separate: eleven cases were billed
+     * and twelve cartons travelled, the twelfth being the mixed box holding
+     * the ten loose bottles. Neither figure is derivable from the other.
+     */
+    declaredCases: integer('declared_cases'),
+    declaredBottles: integer('declared_bottles'),
+    declaredCartons: integer('declared_cartons'),
+    declaredPallets: integer('declared_pallets'),
+    declaredValue: doublePrecision('declared_value'),
+    declaredCurrency: text('declared_currency'),
+    /** Where on the document these were read, so a wrong reading is arguable */
+    declaredSource: text('declared_source'),
+    /** Someone has set the two side by side and accepted them */
+    declaredConfirmedAt: timestamp('declared_confirmed_at', { mode: 'date' }),
+    declaredConfirmedBy: uuid('declared_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
     // Cost tracking (what C&C pays)
     freightCostUsd: doublePrecision('freight_cost_usd'),
     insuranceCostUsd: doublePrecision('insurance_cost_usd'),

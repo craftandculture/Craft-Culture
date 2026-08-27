@@ -12,6 +12,7 @@ import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCalculateShipmentGroup from './controller/adminCalculateShipmentGroup';
 import adminClearShipmentItems from './controller/adminClearShipmentItems';
 import adminCompareQuotes from './controller/adminCompareQuotes';
+import adminConfirmDeclaredTotals from './controller/adminConfirmDeclaredTotals';
 import adminCreate from './controller/adminCreate';
 import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
@@ -142,6 +143,8 @@ const adminRouter = createTRPCRouter({
   // Tools
   extractDocument: adminExtractDocument,
   importExtractedItems: adminImportExtractedItems,
+  // Reconcile what we read against what the paperwork declares
+  confirmDeclaredTotals: adminConfirmDeclaredTotals,
   fixShipmentItemCases: adminFixShipmentItemCases,
 
   // Quotes

@@ -827,6 +827,28 @@ const runMigrations = async () => {
     );
     console.log('✅ commercial_invoice_excel document type ready');
 
+    // --- what the supplier's paperwork says it shipped ----------------------
+    // Held apart from our own totals because the point of it is the
+    // disagreement: a shipment that reads 6 cartons against a document saying
+    // 12 is a shipment somebody has to look at, and until now nothing recorded
+    // the document's side of that at all.
+    for (const [column, type] of [
+      ['declared_cases', 'integer'],
+      ['declared_bottles', 'integer'],
+      ['declared_cartons', 'integer'],
+      ['declared_pallets', 'integer'],
+      ['declared_value', 'double precision'],
+      ['declared_currency', 'text'],
+      ['declared_source', 'text'],
+      ['declared_confirmed_at', 'timestamp'],
+      ['declared_confirmed_by', 'uuid'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ declared shipment totals ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

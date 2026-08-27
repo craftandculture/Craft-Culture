@@ -20,8 +20,8 @@ import toValidLwin from '../utils/toValidLwin';
 const adminImportExtractedItems = adminProcedure
   .input(importExtractedItemsSchema)
   .mutation(async ({ input }) => {
-    const { shipmentId, items, cargoSummary, overwriteCargoData } = input;
-    const documentCurrency = (input.currency ?? 'USD').toUpperCase();
+    const { shipmentId, items, cargoSummary, declared, overwriteCargoData } = input;
+    const documentCurrency = input.currency.toUpperCase();
 
     logger.info('[ImportExtractedItems] Starting import:', {
       shipmentId,
@@ -41,6 +41,40 @@ const adminImportExtractedItems = adminProcedure
         code: 'NOT_FOUND',
         message: 'Shipment not found',
       });
+    }
+
+    /*
+      The document's own totals, recorded whether or not they agree with ours.
+
+      Written before the items so they survive an import that half-succeeds —
+      the disagreement is most useful precisely when something went wrong. The
+      confirmation is deliberately cleared: figures that have changed have not
+      been checked by anyone, whatever was accepted last time.
+    */
+    {
+      await db
+        .update(logisticsShipments)
+        .set({
+          /*
+            What the shipment is billed in, stamped on the way in.
+
+            It was only ever written by the conversion step, which runs solely
+            for non-USD documents — so a shipment imported as USD carried no
+            statement of its currency at all, and the screen that offers to
+            price a foreign invoice had nothing to trigger on.
+          */
+          sourceCurrency: documentCurrency,
+          declaredCases: declared?.cases ?? null,
+          declaredBottles: declared?.bottles ?? null,
+          declaredCartons: declared?.cartons ?? null,
+          declaredPallets: declared?.pallets ?? null,
+          declaredValue: declared?.value ?? null,
+          declaredCurrency: declared?.value != null ? documentCurrency : null,
+          declaredSource: declared?.source ?? null,
+          declaredConfirmedAt: null,
+          declaredConfirmedBy: null,
+        })
+        .where(eq(logisticsShipments.id, shipmentId));
     }
 
     // Update shipment cargo summary if provided

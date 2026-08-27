@@ -82,6 +82,11 @@ const priceShipmentInUsd = async (
   const updated = await db
     .update(logisticsShipmentItems)
     .set({
+      // The lines carry the currency they were billed in, so correcting a
+      // shipment stamped with the wrong one has to reach them too — otherwise
+      // the header says GBP while every line still reads USD, and the next
+      // person to look cannot tell which is true.
+      sourceCurrency: currency,
       productCostPerBottle: sql`ROUND((${logisticsShipmentItems.sourceUnitPrice} * ${resolved.rate})::numeric, 4)`,
       declaredValueUsd: sql`ROUND((${logisticsShipmentItems.sourceTotal} * ${resolved.rate})::numeric, 2)`,
     })

@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
+import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconciliation';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
@@ -156,6 +157,8 @@ const ShipmentDetailPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   /** Blank means take today's market rate rather than a negotiated one */
   const [agreedRate, setAgreedRate] = useState('');
+  /** What the shipment is really billed in, where the import got it wrong */
+  const [fxCurrency, setFxCurrency] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isEditingTransitBoe, setIsEditingTransitBoe] = useState(false);
@@ -1272,6 +1275,41 @@ const ShipmentDetailPage = () => {
                 </Card>
               )}
 
+              {/*
+                What the supplier's own paperwork says, beside what we hold.
+
+                The document is the check on the import, not the other way
+                round: every extraction fault this flow has had would have
+                shown here as one number out of place.
+              */}
+              <ShipmentReconciliation
+                shipmentId={shipmentId}
+                declared={{
+                  cases: shipment.declaredCases ?? null,
+                  bottles: shipment.declaredBottles ?? null,
+                  cartons: shipment.declaredCartons ?? null,
+                  pallets: shipment.declaredPallets ?? null,
+                  value: shipment.declaredValue ?? null,
+                  currency: shipment.declaredCurrency ?? null,
+                  source: shipment.declaredSource ?? null,
+                  confirmedAt: shipment.declaredConfirmedAt ?? null,
+                }}
+                ours={{
+                  cases: totalCases,
+                  // Bottles billed loose, which is what a supplier's "bt"
+                  // column totals — not every bottle in the shipment.
+                  looseBottles: items.reduce(
+                    (sum, i) => sum + (i.cases ? 0 : (i.totalBottles ?? 0)),
+                    0,
+                  ),
+                  value: items.reduce(
+                    (sum, i) => sum + (i.sourceTotal ?? 0),
+                    0,
+                  ),
+                  currency: billedCurrency,
+                }}
+              />
+
               {/* Progress Bars */}
               {totalItems > 0 && (
                 <Card>
@@ -1374,15 +1412,48 @@ const ShipmentDetailPage = () => {
                       </button>
                     </div>
 
-                    {billedCurrency && billedCurrency !== 'USD' ? (
+                    {/*
+                      Shown for every shipment, not only the foreign ones.
+
+                      It used to appear only when the currency read as non-USD,
+                      which hid it in precisely the case that needs it: a
+                      Wilkinson invoice names no currency, so a pound shipment
+                      was stamped USD, looked domestic, and offered no way to
+                      say otherwise. The prices stored are always the ones the
+                      document billed, so naming the right currency here and
+                      applying a rate repairs the figures rather than
+                      compounding them.
+                    */}
+                    {totalItems > 0 ? (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-primary pt-3">
                         <Typography variant="bodyXs" colorRole="muted">
-                          Billed in {billedCurrency}
-                          {shipment.fxRateToUsd
-                            ? ` · priced at ${shipment.fxRateToUsd.toFixed(4)} (${shipment.fxRateSource}${shipment.fxRateDate ? `, ${shipment.fxRateDate}` : ''})`
-                            : ' · not yet priced in USD'}
+                          {billedCurrency
+                            ? `Billed in ${billedCurrency}`
+                            : 'No currency recorded'}
+                          {billedCurrency === 'USD'
+                            ? ' · change it if this invoice was not in dollars'
+                            : shipment.fxRateToUsd
+                              ? ` · priced at ${shipment.fxRateToUsd.toFixed(4)} (${shipment.fxRateSource}${shipment.fxRateDate ? `, ${shipment.fxRateDate}` : ''})`
+                              : ' · not yet priced in USD'}
                         </Typography>
                         <div className="flex items-center gap-2">
+                          <Select
+                            value={fxCurrency || billedCurrency || ''}
+                            onValueChange={setFxCurrency}
+                          >
+                            <SelectTrigger className="h-8 w-24">
+                              <SelectValue placeholder="Currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['GBP', 'EUR', 'USD', 'CHF', 'AED', 'HKD', 'JPY'].map(
+                                (code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {code}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
                           <input
                             type="number"
                             step="0.0001"
@@ -1399,6 +1470,10 @@ const ShipmentDetailPage = () => {
                                 agreedRate: agreedRate
                                   ? Number(agreedRate)
                                   : undefined,
+                                // What it is actually billed in, which is not
+                                // always what the import recorded.
+                                currency:
+                                  fxCurrency || billedCurrency || undefined,
                               })
                             }
                             disabled={isPricing}
