@@ -179,15 +179,39 @@ const adminImportExtractedItems = adminProcedure
         totalBottles % packFromDocument === 0 &&
         (statedCases == null || statedCases * packFromDocument === totalBottles);
 
-      const bottlesPerCase = packAgrees
-        ? (packFromDocument as number)
-        : totalBottles > 0
-          ? totalBottles
-          : 1;
+      /**
+       * A case is the packaging bottles travel in, so it counts BOXES.
+       *
+       * Where a document bills loose bottles out of a pack — Wilkinson's "bt"
+       * column against their "cs" — those bottles carry no case of their own:
+       * several such lines are consolidated into one mixed carton, and only
+       * the document knows how many. Recording one case per line invented six
+       * cartons on a fourteen-line invoice and made the shipment
+       * irreconcilable with its own "12 cases on 1 pallet".
+       *
+       * So a bottle-billed line stores 0 cases and keeps the REAL pack it came
+       * out of — 3 bottles of a twelve, not a three-bottle case that does not
+       * exist. Physical cartons are declared on the shipment, never summed
+       * from the lines.
+       */
+      const bottleBilled =
+        (statedCases == null || statedCases === 0) &&
+        statedBottles != null &&
+        statedBottles > 0;
 
-      const cases = packAgrees
-        ? (statedCases ?? totalBottles / (packFromDocument as number))
-        : 1;
+      const bottlesPerCase = bottleBilled
+        ? (packFromDocument ?? 1)
+        : packAgrees
+          ? (packFromDocument as number)
+          : totalBottles > 0
+            ? totalBottles
+            : 1;
+
+      const cases = bottleBilled
+        ? 0
+        : packAgrees
+          ? (statedCases ?? totalBottles / (packFromDocument as number))
+          : 1;
 
       // Prices stay in the currency they were billed in. Converting here was
       // how a rate of roughly 1.1666 came to be applied to a euro invoice with
@@ -234,7 +258,7 @@ const adminImportExtractedItems = adminProcedure
           producer: item.producer,
           vintage: item.vintage,
           region: item.region,
-          cases: Math.max(1, Math.round(cases)),
+          cases: Math.max(0, Math.round(cases)),
           bottlesPerCase,
           bottleSizeMl,
           totalBottles: Math.round(totalBottles),
