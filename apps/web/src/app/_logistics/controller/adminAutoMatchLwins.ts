@@ -101,6 +101,11 @@ const adminAutoMatchLwins = adminProcedure
         bottleSizeMl: logisticsShipmentItems.bottleSizeMl,
         bottlesPerCase: logisticsShipmentItems.bottlesPerCase,
         totalBottles: logisticsShipmentItems.totalBottles,
+        // Read so they are only filled where they are empty — a matcher
+        // should not overwrite what a person has typed
+        producer: logisticsShipmentItems.producer,
+        region: logisticsShipmentItems.region,
+        countryOfOrigin: logisticsShipmentItems.countryOfOrigin,
       })
       .from(logisticsShipmentItems)
       .where(
@@ -278,12 +283,35 @@ const adminAutoMatchLwins = adminProcedure
       });
 
       if (!dryRun) {
+        /*
+          The record is already in hand, so the wine's identity goes with it.
+
+          Matching wrote the code, the vintage and the size and stopped there,
+          which left every automatically-matched line with a green LWIN and no
+          producer, region or country — the fields the catalogue, the stock
+          explorer and every quote actually read. Two Chambolle lines matched
+          cleanly and still arrived as a name and a number.
+
+          Filling it here costs nothing: these columns were fetched to score
+          the candidates. Only blanks are written, because a matcher has no
+          business correcting a person.
+        */
+        const producer = [best.producerTitle, best.producerName]
+          .filter(Boolean)
+          .join(' ');
+        const region = best.subRegion ?? best.region;
+
         await db
           .update(logisticsShipmentItems)
           .set({
             lwin: lwin18,
             vintage: vintage ?? undefined,
             bottleSizeMl: sizeMl,
+            ...(producer && !item.producer?.trim() ? { producer } : {}),
+            ...(region && !item.region?.trim() ? { region } : {}),
+            ...(best.country && !item.countryOfOrigin?.trim()
+              ? { countryOfOrigin: best.country }
+              : {}),
           })
           .where(eq(logisticsShipmentItems.id, item.id));
 
