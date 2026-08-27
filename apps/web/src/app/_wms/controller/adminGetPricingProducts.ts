@@ -25,6 +25,12 @@ import lwinPakKey from '../utils/lwinPakKey';
  * for KPI cards (total products, avg margin, unpriced count, total values).
  * Falls back to shipment landed cost when no explicit import price exists.
  */
+/**
+ * Standing air-freight estimate per bottle, used for in-transit wine until the
+ * freight invoice is allocated against the shipment. Most C&C stock flies.
+ */
+const DEFAULT_AIR_FREIGHT_PER_BOTTLE = 20;
+
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
@@ -464,6 +470,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
       ownerCount: number;
       importPricePerBottle: number | null;
       sellingPricePerBottle: number | null;
+      costOverridePerBottle: number | null;
+      lineLogistics: number | null;
+      transferPricePerBottle: number | null;
+      sellMarginPct: number | null;
+      pricingReleasedAt: Date | null;
+      /** Per-line override, else allocated freight, else the air estimate. */
+      systemLogistics: number;
+      /** True while that figure is the estimate rather than a real invoice. */
+      logisticsIsEstimate: boolean;
       earliestEta: Date | null;
       isInbound: true;
     };
@@ -504,6 +519,17 @@ const adminGetPricingProducts = wmsOperatorProcedure
           totalCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
           costPerBottle: sql<number | null>`MAX(${logisticsShipmentItems.productCostPerBottle})`,
           sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+          // Overrides ARE saved against in-transit wine — keyed by LWIN like any
+          // other — but none of them were selected here, so the cell a user had
+          // just edited came back empty and the edit looked lost.
+          costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
+          lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
+          transferPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
+          sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
+          pricingReleasedAt: sql<Date | null>`MAX(${wmsProductPricing.pricingReleasedAt})`,
+          // Freight actually allocated to the shipment line, per bottle. Zero
+          // until the freight invoice is loaded against the consolidation group.
+          allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
           earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
           category: sql<string | null>`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
         })
@@ -533,6 +559,27 @@ const adminGetPricingProducts = wmsOperatorProcedure
         ownerCount: 0,
         importPricePerBottle: r.costPerBottle,
         sellingPricePerBottle: r.sellingPricePerBottle,
+        costOverridePerBottle: r.costOverridePerBottle,
+        lineLogistics: r.lineLogistics,
+        transferPricePerBottle: r.transferPricePerBottle,
+        sellMarginPct: r.sellMarginPct,
+        pricingReleasedAt: r.pricingReleasedAt,
+        /*
+          Logistics for in-transit wine: a per-line override, else the freight
+          actually allocated to the shipment, else the standing air-freight
+          estimate. Most stock flies, and until the freight invoice is loaded
+          the alternative is showing $0.00 — which understates landed cost and
+          is how a price barely above the buy price reached a price list.
+          The estimate gives way to the actuals the moment they arrive.
+        */
+        systemLogistics:
+          r.lineLogistics ??
+          (r.allocatedFreight && r.allocatedFreight > 0
+            ? r.allocatedFreight
+            : DEFAULT_AIR_FREIGHT_PER_BOTTLE),
+        logisticsIsEstimate:
+          r.lineLogistics == null &&
+          !(r.allocatedFreight && r.allocatedFreight > 0),
         earliestEta: r.earliestEta,
         isInbound: true as const,
       }));
