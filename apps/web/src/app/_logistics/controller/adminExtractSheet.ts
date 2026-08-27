@@ -312,16 +312,34 @@ const adminExtractSheet = adminProcedure
         toNumber(pick(row, map.vintage)) ?? parsed.vintage ?? undefined;
       if (vintageOnRow == null) rowWarnings.push('no vintage');
 
-      // A line total that is not its own parts is the clearest signal that a
-      // quantity or a price came from the wrong column.
+      /*
+        A line total that is not its own parts suggests a quantity or a price
+        came from the wrong column — but only if we know which basis the price
+        is on, and the document rarely says. Wilkinson head theirs "Price/Case"
+        while others quote per bottle, so the total is checked against BOTH and
+        flagged only when it matches neither. Checking one basis alone flagged
+        thirteen lines of a fourteen-line invoice that was entirely correct,
+        and a warning that cries wolf is worse than none.
+      */
       const lineTotal = toNumber(pick(row, map.lineTotal));
       const unitPrice = toNumber(pick(row, map.unitPrice));
-      if (lineTotal != null && unitPrice != null && bottles) {
-        const implied = unitPrice * bottles;
-        const off = Math.abs(implied - lineTotal);
-        if (lineTotal > 0 && off / lineTotal > 0.02) {
+      if (lineTotal != null && lineTotal > 0 && unitPrice != null) {
+        const bases = [
+          bottles ? unitPrice * bottles : null,
+          casesOnRow ? unitPrice * casesOnRow : null,
+          // a per-case price billed for loose bottles out of that case, which
+          // is how every bottle-billed line on a Wilkinson invoice reads
+          bottles && perCase ? (unitPrice / perCase) * bottles : null,
+          unitPrice,
+        ].filter((v): v is number => v != null && v > 0);
+
+        const matches = bases.some(
+          (v) => Math.abs(v - lineTotal) / lineTotal <= 0.02,
+        );
+
+        if (bases.length > 0 && !matches) {
           rowWarnings.push(
-            `value ${lineTotal} does not match ${bottles} x ${unitPrice}`,
+            `value ${lineTotal} matches neither ${unitPrice} per bottle nor per case`,
           );
         }
       }
