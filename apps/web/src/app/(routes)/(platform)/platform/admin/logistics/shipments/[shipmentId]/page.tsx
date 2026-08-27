@@ -52,7 +52,7 @@ import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import type { LogisticsShipment } from '@/database/schema';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 const HS_CODES = [
@@ -151,6 +151,8 @@ const ShipmentDetailPage = () => {
   const params = useParams();
   const shipmentId = params.shipmentId as string;
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
+  const [isApplyingTwins, setIsApplyingTwins] = useState(false);
   const router = useRouter();
   const _queryClient = useQueryClient();
 
@@ -567,6 +569,50 @@ const ShipmentDetailPage = () => {
       bottleSizeMl: parseInt(newItem.bottleSizeMl, 10) || 750,
       productCostPerBottle: newItem.productCostPerBottle ? parseFloat(newItem.productCostPerBottle) : undefined,
     });
+  };
+
+  /**
+   * Map every line whose wine another line has already settled
+   *
+   * Called imperatively rather than through the mutation hook so the whole set
+   * is one action: one refetch and one message at the end, instead of a toast
+   * and a reload per line. The lines are only ever ones whose names agree
+   * exactly with something already mapped, so there is no judgement in here to
+   * take away from anyone.
+   */
+  const applyTwins = async (
+    rows: { item: { id: string; productName: string }; twin: { lwin18: string } }[],
+  ) => {
+    setIsApplyingTwins(true);
+
+    let mapped = 0;
+    const failed: string[] = [];
+
+    for (const row of rows) {
+      try {
+        await trpcClient.logistics.admin.updateItem.mutate({
+          itemId: row.item.id,
+          lwin: row.twin.lwin18,
+        });
+        mapped += 1;
+      } catch {
+        failed.push(row.item.productName);
+      }
+    }
+
+    setIsApplyingTwins(false);
+    void refetch();
+
+    if (failed.length > 0) {
+      toast.warning(
+        `Mapped ${mapped}, but ${failed.length} would not take: ${failed.join(', ')}`,
+        { duration: 15000 },
+      );
+
+      return;
+    }
+
+    toast.success(`Mapped ${mapped} line${mapped === 1 ? '' : 's'} from wines already mapped`);
   };
 
   const handleLwinSelect = (_itemId: string, result: LwinLookupResult) => {
@@ -1248,20 +1294,64 @@ const ShipmentDetailPage = () => {
           const twinFor = (item: (typeof items)[number]) => {
             if (isCompleteLwin(item.lwin)) return null;
 
-            const twin = mappedByWine.get(wineKey(item.productName));
+            const key = wineKey(item.productName);
+            const exact = mappedByWine.get(key);
 
-            if (!twin) return null;
+            /*
+              A supplier names the same wine at different lengths.
+
+              This invoice bills "Sassicaia, Tenuta San Guido" once and
+              "Sassicaia, Tenuta San Guido, Bolgheri" four times — one wine,
+              one LWIN, five lines that do not key alike. So a name whose words
+              begin another name is taken as the same wine, provided the
+              shorter one is specific enough to mean something: at least four
+              words. "Opus One" is two, which is exactly why it must not match
+              "Opus One, Overture" — a different wine that happens to start the
+              same way.
+
+              A near match is offered, never applied in bulk. Only names that
+              agree exactly are safe to map without someone reading them.
+            */
+            const words = key.split(' ');
+
+            const near =
+              exact ??
+              (words.length >= 4
+                ? [...mappedByWine.entries()].find(([other]) => {
+                    const otherWords = other.split(' ');
+                    const shorter =
+                      words.length < otherWords.length ? words : otherWords;
+                    const longer =
+                      words.length < otherWords.length ? otherWords : words;
+
+                    return (
+                      shorter.length >= 4 &&
+                      shorter.every((word, index) => longer[index] === word)
+                    );
+                  })?.[1]
+                : undefined);
+
+            if (!near) return null;
 
             return {
-              from: twin.from,
+              from: near.from,
+              exact: Boolean(exact),
               lwin18: [
-                twin.lwin7,
+                near.lwin7,
                 String(item.vintage ?? 0).padStart(4, '0'),
                 String(item.bottlesPerCase ?? item.totalBottles ?? 1).padStart(2, '0'),
                 String(item.bottleSizeMl ?? 750).padStart(5, '0'),
               ].join('-'),
             };
           };
+
+          /** Every line whose wine is already mapped under exactly the same name */
+          const twinnable = items
+            .map((item) => ({ item, twin: twinFor(item) }))
+            .filter(
+              (row): row is { item: (typeof items)[number]; twin: { from: string; exact: boolean; lwin18: string } } =>
+                Boolean(row.twin?.exact),
+            );
 
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
@@ -1402,6 +1492,26 @@ const ShipmentDetailPage = () => {
                       <div className="flex items-center justify-between mb-1">
                         <Typography variant="bodyXs" className="font-medium">LWIN Mapping</Typography>
                         <div className="flex items-center gap-2">
+                          {/*
+                            Wines already settled, applied to the rest of their
+                            lines at once. Four Sassicaia vintages share one
+                            LWIN, and mapping the first told us everything
+                            needed for the other three — leaving them as four
+                            separate sheet visits was asking for the same
+                            decision four times.
+                          */}
+                          {twinnable.length > 0 && (
+                            <button
+                              onClick={() => void applyTwins(twinnable)}
+                              disabled={isApplyingTwins || isUpdatingItem}
+                              className="flex items-center gap-1 text-xs font-medium text-text-brand hover:underline disabled:opacity-50"
+                            >
+                              <Icon icon={IconWand} size="sm" />
+                              {isApplyingTwins
+                                ? 'Mapping...'
+                                : `Map ${twinnable.length} from wines already mapped`}
+                            </button>
+                          )}
                           {mappedCount < totalItems && (
                             <button
                               onClick={() => autoMatchLwins({ shipmentId, dryRun: false })}
@@ -1870,6 +1980,7 @@ const ShipmentDetailPage = () => {
                                             className="rounded border border-border-brand bg-fill-brand/10 px-1.5 py-0.5 text-xs font-medium text-text-brand hover:bg-fill-brand/20 disabled:opacity-50"
                                           >
                                             Same wine as {twin.from} — map it
+                                            {twin.exact ? '' : ' (check)'}
                                           </button>
                                         ) : null;
                                       })()}
