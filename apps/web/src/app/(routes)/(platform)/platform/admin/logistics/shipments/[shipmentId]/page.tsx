@@ -157,6 +157,16 @@ const ShipmentDetailPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   /** Blank means take today's market rate rather than a negotiated one */
   const [agreedRate, setAgreedRate] = useState('');
+  /**
+   * What the LWIN matcher said about each line it could not settle.
+   *
+   * Kept because the reasoning is the useful part: a refusal reported as a
+   * number tells you seven lines need work, where the verdict and its
+   * shortlist tell you which seven and what the choice is.
+   */
+  const [matchRows, setMatchRows] = useState<
+    Record<string, { verdict: string; candidates: { lwin18: string; displayName: string; score: number }[] }>
+  >({});
   /** What the shipment is really billed in, where the import got it wrong */
   const [fxCurrency, setFxCurrency] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -374,10 +384,20 @@ const ShipmentDetailPage = () => {
   const { mutate: autoMatchLwins, isPending: isMatchingLwins } = useMutation(
     api.logistics.admin.autoMatchLwins.mutationOptions({
       onSuccess: (result) => {
+        setMatchRows(
+          Object.fromEntries(
+            result.rows
+              .filter((row) => !row.lwin)
+              .map((row) => [
+                row.itemId,
+                { verdict: row.verdict, candidates: row.candidates },
+              ]),
+          ),
+        );
         // The ones it declined to guess are the actual work, so they lead.
         toast.success(
           result.needsReview > 0
-            ? `${result.applied} matched · ${result.needsReview} need a decision`
+            ? `${result.applied} matched · ${result.needsReview} need a decision — each shows why and what it was choosing between`
             : `All ${result.applied} matched`,
         );
         void refetch();
@@ -1753,18 +1773,50 @@ const ShipmentDetailPage = () => {
                                       />
                                     </button>
                                   ) : (
-                                    <button
-                                      onClick={() => openSheet(item)}
-                                      className="group flex items-center gap-1.5"
-                                    >
-                                      <Badge colorRole="warning" size="xs">
-                                        Not mapped
-                                      </Badge>
-                                      <span className="flex items-center gap-0.5 text-xs text-text-brand opacity-0 transition-opacity group-hover:opacity-100">
-                                        <Icon icon={IconSearch} size="sm" />
-                                        Map
-                                      </span>
-                                    </button>
+                                    <div className="flex flex-col items-start gap-1">
+                                      <button
+                                        onClick={() => openSheet(item)}
+                                        className="group flex items-center gap-1.5"
+                                      >
+                                        <Badge colorRole="warning" size="xs">
+                                          Not mapped
+                                        </Badge>
+                                        <span className="flex items-center gap-0.5 text-xs text-text-brand opacity-0 transition-opacity group-hover:opacity-100">
+                                          <Icon icon={IconSearch} size="sm" />
+                                          Map
+                                        </span>
+                                      </button>
+                                      {/*
+                                        Why the matcher declined, and what it
+                                        was choosing between. It knew both and
+                                        reported neither, so "7 need a decision"
+                                        meant searching 208k records by hand for
+                                        wines it had already shortlisted.
+                                      */}
+                                      {matchRows[item.id] ? (
+                                        <div className="flex flex-col items-start gap-0.5">
+                                          <Typography variant="bodyXs" colorRole="muted">
+                                            {matchRows[item.id]?.verdict}
+                                          </Typography>
+                                          {matchRows[item.id]?.candidates.map((candidate) => (
+                                            <button
+                                              key={candidate.lwin18}
+                                              onClick={() =>
+                                                updateItem({
+                                                  itemId: item.id,
+                                                  lwin: candidate.lwin18,
+                                                })
+                                              }
+                                              disabled={isUpdatingItem}
+                                              title={`Map to ${candidate.displayName} — ${candidate.lwin18}`}
+                                              className="max-w-[15rem] truncate text-left text-xs text-text-brand hover:underline disabled:opacity-50"
+                                            >
+                                              ＋ {candidate.displayName}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      ) : null}
+                                    </div>
                                   )}
                                 </td>
 
@@ -1952,14 +2004,86 @@ const ShipmentDetailPage = () => {
               {/* Item Editor Sheet */}
               <Sheet open={!!lwinSheetItem} onOpenChange={(open) => { if (!open) setSheetItemId(null); }}>
                 <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
-                  <SheetTitle className="mb-1">Edit Item</SheetTitle>
+                  {/* The wine, not "Item" — it is what the whole panel is about */}
+                  <SheetTitle className="mb-1">
+                    {lwinSheetItem?.productName ?? 'Edit Item'}
+                  </SheetTitle>
                   <SheetDescription className="mb-4 text-sm text-text-muted">
-                    Update product details and LWIN mapping
+                    {lwinSheetItem
+                      ? [
+                          lwinSheetItem.vintage ?? 'NV',
+                          `${lwinSheetItem.bottlesPerCase} × ${lwinSheetItem.bottleSizeMl}ml`,
+                          lwinSheetItem.lwin ? 'mapped' : 'not yet mapped',
+                        ].join(' · ')
+                      : 'Update product details and LWIN mapping'}
                   </SheetDescription>
 
                   {lwinSheetItem && (
                     <div className="space-y-5">
-                      {/* Editable Fields */}
+                      {/*
+                        Mapping first, because it is why this sheet is open.
+
+                        The LWIN panel sat below nine fields of product detail,
+                        so every line meant scrolling down to search and back up
+                        to save — on a fourteen-line invoice that is twenty-eight
+                        scrolls to do one job. The details have not gone
+                        anywhere; they are simply no longer in the way.
+                      */}
+                      {/* LWIN Mapping */}
+                      <div>
+                        <Typography variant="bodySm" className="font-medium mb-3">
+                          LWIN Mapping
+                        </Typography>
+                        {(sheetForm.lwin || lwinSheetItem.lwin) && (
+                          <div className="mb-3 rounded-lg bg-green-50 p-2 dark:bg-green-900/20">
+                            <Typography variant="bodyXs" className="font-mono text-green-700 dark:text-green-400">
+                              {sheetForm.lwin && sheetForm.lwin !== lwinSheetItem.lwin
+                                ? `New: ${sheetForm.lwin}`
+                                : `Current: ${lwinSheetItem.lwin}`}
+                            </Typography>
+                          </div>
+                        )}
+                        <LwinLookup
+                          // Remounted per line: the vintage, pack and bottle
+                          // size are seeded from props on first render only,
+                          // so without this the panel keeps the previous
+                          // line's pack while showing the new line's name.
+                          key={lwinSheetItem.id}
+                          productName={lwinSheetItem.productName}
+                          defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
+                          defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}
+                          defaultVintage={lwinSheetItem.vintage ?? undefined}
+                          onSelect={(result) => handleLwinSelect(lwinSheetItem.id, result)}
+                          disabled={isUpdatingItem}
+                        />
+                        {lwinSheetItem.supplierSku && !lwinSheetItem.lwin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-3 w-full"
+                            onClick={() => handleUseSupplierSku(lwinSheetItem.id, lwinSheetItem.supplierSku!)}
+                            disabled={isUpdatingItem}
+                          >
+                            Use SKU: {lwinSheetItem.supplierSku}
+                          </Button>
+                        )}
+                      </div>
+                      {/*
+                        Open when the line is already mapped: the mapping is
+                        then settled and the details are what is left to do.
+                      */}
+                      <details
+                        key={`details-${lwinSheetItem.id}`}
+                        open={!!lwinSheetItem.lwin}
+                        className="border-t border-border-muted pt-4"
+                      >
+                        <summary className="cursor-pointer list-none text-sm font-medium text-text-primary marker:content-['']">
+                          Product details
+                          <span className="ml-2 text-xs font-normal text-text-muted">
+                            name, pack, HS code, cost, owner
+                          </span>
+                        </summary>
+                        <div className="pt-3">
                       <div className="space-y-3">
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-text-muted">Product Name</label>
@@ -2023,11 +2147,18 @@ const ShipmentDetailPage = () => {
                         <div className="grid grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-text-muted">Cases</label>
+                            {/*
+                              Zero is a real answer. Bottles billed loose out
+                              of a pack travel in a mixed carton and have no
+                              case of their own, so a minimum of one made every
+                              such line unsaveable — the browser blocked the
+                              form on a figure the importer had put there.
+                            */}
                             <Input
                               type="number"
                               value={sheetForm.cases}
                               onChange={(e) => setSheetForm((f) => ({ ...f, cases: e.target.value }))}
-                              min={1}
+                              min={0}
                             />
                           </div>
                           <div className="space-y-1">
@@ -2125,51 +2256,22 @@ const ShipmentDetailPage = () => {
                             <option value="held">Held for owner — never listed</option>
                           </select>
                         </div>
+                      </div>
+
+                        </div>
+                      </details>
+
+                      {/*
+                        Save stays in reach. It used to sit halfway up a
+                        scrolling column, so the button was hunted for rather
+                        than found.
+                      */}
+                      <div className="sticky bottom-0 -mx-6 -mb-6 border-t border-border-muted bg-fill-primary px-6 py-3">
                         <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>
                           <ButtonContent iconLeft={isUpdatingItem ? IconLoader2 : IconCheck}>
                             {isUpdatingItem ? 'Saving...' : 'Save Changes'}
                           </ButtonContent>
                         </Button>
-                      </div>
-
-                      {/* LWIN Mapping */}
-                      <div className="border-t border-border-muted pt-4">
-                        <Typography variant="bodySm" className="font-medium mb-3">
-                          LWIN Mapping
-                        </Typography>
-                        {(sheetForm.lwin || lwinSheetItem.lwin) && (
-                          <div className="mb-3 rounded-lg bg-green-50 p-2 dark:bg-green-900/20">
-                            <Typography variant="bodyXs" className="font-mono text-green-700 dark:text-green-400">
-                              {sheetForm.lwin && sheetForm.lwin !== lwinSheetItem.lwin
-                                ? `New: ${sheetForm.lwin}`
-                                : `Current: ${lwinSheetItem.lwin}`}
-                            </Typography>
-                          </div>
-                        )}
-                        <LwinLookup
-                          // Remounted per line: the vintage, pack and bottle
-                          // size are seeded from props on first render only,
-                          // so without this the panel keeps the previous
-                          // line's pack while showing the new line's name.
-                          key={lwinSheetItem.id}
-                          productName={lwinSheetItem.productName}
-                          defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
-                          defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}
-                          defaultVintage={lwinSheetItem.vintage ?? undefined}
-                          onSelect={(result) => handleLwinSelect(lwinSheetItem.id, result)}
-                          disabled={isUpdatingItem}
-                        />
-                        {lwinSheetItem.supplierSku && !lwinSheetItem.lwin && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-3 w-full"
-                            onClick={() => handleUseSupplierSku(lwinSheetItem.id, lwinSheetItem.supplierSku!)}
-                            disabled={isUpdatingItem}
-                          >
-                            Use SKU: {lwinSheetItem.supplierSku}
-                          </Button>
-                        )}
                       </div>
                     </div>
                   )}

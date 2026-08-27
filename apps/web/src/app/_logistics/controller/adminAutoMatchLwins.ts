@@ -12,6 +12,13 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import parseWineName from '../utils/parseWineName';
 
+export interface AutoMatchCandidate {
+  /** Ready to write — wine, vintage, pack and size already composed */
+  lwin18: string;
+  displayName: string;
+  score: number;
+}
+
 export interface AutoMatchRow {
   itemId: string;
   productName: string;
@@ -21,6 +28,15 @@ export interface AutoMatchRow {
   score: number;
   /** Why it was taken or left, in a phrase */
   verdict: string;
+  /**
+   * What it was choosing between, composed and ready to apply.
+   *
+   * Declining to guess is right — two close names are a judgement — but a
+   * refusal that keeps its reasoning to itself just leaves someone searching
+   * 208k records by hand for a wine the matcher already had in front of it.
+   * "Too close to choose" is a question, and a question needs its options.
+   */
+  candidates: AutoMatchCandidate[];
 }
 
 /** Below this the runner-up is close enough that picking one is a guess. */
@@ -102,6 +118,7 @@ const adminAutoMatchLwins = adminProcedure
           matchedName: null,
           score: 0,
           verdict: 'Nothing searchable in the product name',
+          candidates: [],
         });
         continue;
       }
@@ -148,6 +165,36 @@ const adminAutoMatchLwins = adminProcedure
       const score = Number(best?.score ?? 0);
       const margin = score - Number(runnerUp?.score ?? 0);
 
+      // LWIN18 is wine-vintage-pack-size, and the invoice supplied the last
+      // three: the vintage is in the name, the pack is what was billed, and
+      // the size is stated per bottle.
+      const vintage = parsed.vintage ?? item.vintage;
+      const sizeMl = parsed.bottleSizeMl ?? item.bottleSizeMl ?? 750;
+      const pack = item.bottlesPerCase ?? item.totalBottles ?? 1;
+
+      const compose = (wineLwin: string) =>
+        [
+          wineLwin,
+          String(vintage ?? 0).padStart(4, '0'),
+          String(pack).padStart(2, '0'),
+          String(sizeMl).padStart(5, '0'),
+        ].join('-');
+
+      /*
+        Every row carries what it was choosing between, composed and ready.
+
+        A line left unmatched is a question — "is this Chateau Margaux or one
+        of the forty other wines with Margaux in the name?" — and the matcher
+        had the shortlist in hand when it declined to answer. Returning only
+        the refusal sent someone back to search 208k records for a wine it had
+        already found.
+      */
+      const options = candidates.slice(0, 3).map((candidate) => ({
+        lwin18: compose(candidate.lwin),
+        displayName: candidate.displayName,
+        score: Number(candidate.score),
+      }));
+
       if (!best || score < MIN_SCORE) {
         rows.push({
           itemId: item.id,
@@ -156,6 +203,7 @@ const adminAutoMatchLwins = adminProcedure
           matchedName: best?.displayName ?? null,
           score,
           verdict: 'No wine resembles this closely enough',
+          candidates: options,
         });
         continue;
       }
@@ -168,23 +216,12 @@ const adminAutoMatchLwins = adminProcedure
           matchedName: best.displayName,
           score,
           verdict: `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose`,
+          candidates: options,
         });
         continue;
       }
 
-      // LWIN18 is wine-vintage-pack-size, and the invoice supplied the last
-      // three: the vintage is in the name, the pack is what was billed, and
-      // the size is stated per bottle.
-      const vintage = parsed.vintage ?? item.vintage;
-      const sizeMl = parsed.bottleSizeMl ?? item.bottleSizeMl ?? 750;
-      const pack = item.bottlesPerCase ?? item.totalBottles ?? 1;
-
-      const lwin18 = [
-        best.lwin,
-        String(vintage ?? 0).padStart(4, '0'),
-        String(pack).padStart(2, '0'),
-        String(sizeMl).padStart(5, '0'),
-      ].join('-');
+      const lwin18 = compose(best.lwin);
 
       rows.push({
         itemId: item.id,
@@ -193,6 +230,7 @@ const adminAutoMatchLwins = adminProcedure
         matchedName: best.displayName,
         score,
         verdict: vintage ? 'Matched' : 'Matched, but no vintage in the name',
+        candidates: options,
       });
 
       if (!dryRun) {
