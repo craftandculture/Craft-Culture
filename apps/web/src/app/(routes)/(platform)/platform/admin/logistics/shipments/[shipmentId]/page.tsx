@@ -1179,6 +1179,21 @@ const ShipmentDetailPage = () => {
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
+          // Goods value, for checking against the invoice total. The column is
+          // a per-bottle cost, so a column sum would be meaningless — it has to
+          // be re-multiplied by the bottles on each line.
+          const totalGoodsValue = items.reduce(
+            (sum, i) => sum + (i.totalBottles ?? 0) * (i.productCostPerBottle ?? 0),
+            0,
+          );
+          const pricedItems = items.filter((i) => i.productCostPerBottle != null).length;
+          // The header figures are entered against the document; the lines are
+          // what was actually imported. Silent disagreement between them is how
+          // a mis-read invoice reaches landed cost unnoticed.
+          const casesDiffer =
+            shipment.totalCases != null && shipment.totalCases !== totalCases;
+          const bottlesDiffer =
+            shipment.totalBottles != null && shipment.totalBottles !== totalBottles;
 
           const openSheet = (item: typeof items[number]) => {
             setSheetItemId(item.id);
@@ -1823,8 +1838,35 @@ const ShipmentDetailPage = () => {
                             <td className="pb-1 pr-4 pt-3 text-right tabular-nums font-semibold text-text-primary">
                               {totalBottles}
                             </td>
-                            <td className="pb-1 pr-4 pt-3" colSpan={4}></td>
+                            <td className="pb-1 pr-4 pt-3 text-right tabular-nums font-semibold text-text-primary">
+                              {totalGoodsValue > 0
+                                ? `$${totalGoodsValue.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}`
+                                : ''}
+                            </td>
+                            <td className="pb-1 pr-4 pt-3" colSpan={3}></td>
                           </tr>
+                          {casesDiffer || bottlesDiffer || pricedItems < totalItems ? (
+                            <tr className="text-xs text-text-warning">
+                              <td className="pb-3 pl-6 pr-4" colSpan={10}>
+                                {[
+                                  casesDiffer
+                                    ? `header says ${shipment.totalCases} cases, lines total ${totalCases}`
+                                    : null,
+                                  bottlesDiffer
+                                    ? `header says ${shipment.totalBottles} bottles, lines total ${totalBottles}`
+                                    : null,
+                                  pricedItems < totalItems
+                                    ? `${totalItems - pricedItems} line${totalItems - pricedItems === 1 ? '' : 's'} with no price, so the value above is understated`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </td>
+                            </tr>
+                          ) : null}
                         </tfoot>
                       </table>
                     </div>
