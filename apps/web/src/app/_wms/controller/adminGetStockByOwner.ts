@@ -1,7 +1,12 @@
-import { and, desc, eq, gt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNotNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, wmsStock } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  partners,
+  wmsStock,
+} from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByOwnerSchema } from '../schemas/stockQuerySchema';
@@ -100,6 +105,51 @@ const adminGetStockByOwner = wmsOperatorProcedure
       .where(gt(wmsStock.quantityCases, 0))
       .groupBy(wmsStock.ownerId)
       .orderBy(desc(sql`SUM(${wmsStock.quantityCases})`));
+
+    /*
+      Partners whose wine is still in transit own no warehouse stock yet, so
+      they were absent from this list — and the owner filter is built from it.
+      That made it impossible to filter to a new partner's consignment on any
+      screen until their first case was received.
+    */
+    const inboundOwners = await db
+      .select({
+        ownerId: logisticsShipments.partnerId,
+        ownerName: sql<string>`MAX(${partners.businessName})`,
+        inboundCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+      })
+      .from(logisticsShipmentItems)
+      .innerJoin(
+        logisticsShipments,
+        eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
+      )
+      .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
+      .where(
+        and(
+          eq(logisticsShipments.type, 'inbound'),
+          isNotNull(logisticsShipments.partnerId),
+          gt(logisticsShipmentItems.cases, 0),
+        ),
+      )
+      .groupBy(logisticsShipments.partnerId);
+
+    const known = new Set(owners.map((o) => o.ownerId));
+    for (const inbound of inboundOwners) {
+      if (!inbound.ownerId || known.has(inbound.ownerId)) continue;
+      owners.push({
+        ownerId: inbound.ownerId,
+        ownerName: inbound.ownerName,
+        totalCases: 0,
+        availableCases: 0,
+        reservedCases: 0,
+        productCount: 0,
+        locationCount: 0,
+        consignmentCount: 0,
+        purchasedCount: 0,
+        // Nothing landed yet — shown so the partner can be filtered to.
+        inboundCases: inbound.inboundCases,
+      } as (typeof owners)[number]);
+    }
 
     // Calculate grand totals
     const grandTotals = {

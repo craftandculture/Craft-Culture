@@ -4,6 +4,7 @@ import db from '@/database/client';
 import {
   logisticsShipmentItems,
   logisticsShipments,
+  partners,
   privateClientOrderItems,
   privateClientOrders,
   wmsOwnerPricing,
@@ -468,6 +469,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
       category: string | null;
       ownerNames: string[];
       ownerCount: number;
+      /** The shipment's partner — who owns this wine while it is in transit. */
+      ownerId: string | null;
+      ownerLogistics: number | null;
+      ownerInbondPct: number | null;
+      ownerPcPct: number | null;
       importPricePerBottle: number | null;
       sellingPricePerBottle: number | null;
       costOverridePerBottle: number | null;
@@ -496,6 +502,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
       const groupKey = sql`${logisticsShipmentItems.shipmentId}::text || '|' || COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
       const inboundConditions = [
         eq(logisticsShipments.type, 'inbound'),
+        // Filtering by owner used to drop in-transit wine entirely, because it
+        // had no owner to match on.
+        ...(ownerId ? [eq(logisticsShipments.partnerId, ownerId)] : []),
         inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
       ];
       if (search) {
@@ -545,10 +554,23 @@ const adminGetPricingProducts = wmsOperatorProcedure
           allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
           earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
           shipmentNumber: sql<string | null>`MAX(${logisticsShipments.shipmentNumber})`,
+          // In-transit wine has an owner — the shipment's partner — it was just
+          // never joined, so the row showed no owner and quietly took the house
+          // rates instead of that partner's.
+          ownerId: sql<string | null>`MAX(${logisticsShipments.partnerId}::text)`,
+          ownerName: sql<string | null>`MAX(${partners.businessName})`,
+          ownerLogistics: sql<number | null>`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
+          ownerInbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+          ownerPcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
           category: sql<string | null>`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
         })
         .from(logisticsShipmentItems)
         .innerJoin(logisticsShipments, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
+        .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
+        .leftJoin(
+          wmsOwnerPricingSettings,
+          eq(wmsOwnerPricingSettings.ownerId, logisticsShipments.partnerId),
+        )
         .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`)
         .where(and(...inboundConditions))
         .groupBy(groupKey)
@@ -568,9 +590,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
         bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
         totalCases: r.totalCases,
         category: r.category,
-        // Inbound stock isn't owner-attributed yet (in transit) — no badge.
-        ownerNames: [],
-        ownerCount: 0,
+        ownerNames: r.ownerName ? [r.ownerName] : [],
+        ownerCount: r.ownerName ? 1 : 0,
+        ownerId: r.ownerId,
+        ownerLogistics: r.ownerLogistics,
+        ownerInbondPct: r.ownerInbondPct,
+        ownerPcPct: r.ownerPcPct,
         importPricePerBottle: r.costPerBottle,
         sellingPricePerBottle: r.sellingPricePerBottle,
         costOverridePerBottle: r.costOverridePerBottle,
