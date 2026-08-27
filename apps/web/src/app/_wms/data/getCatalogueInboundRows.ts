@@ -77,6 +77,12 @@ const CATEGORY_CASE = sql<string | null>`MAX(CASE
  * @param filters - Optional category / search narrowing
  * @returns One row per wine in transit, with its earliest ETA
  */
+/**
+ * The first shipment the release gate applies to. Everything numbered below
+ * this was already on the price lists and is deliberately left alone.
+ */
+const FIRST_GATED_SHIPMENT = 'SHP-2026-0012';
+
 const getCatalogueInboundRows = async (
   filters: CatalogueInboundFilters = {},
 ): Promise<CatalogueInboundRow[]> => {
@@ -96,6 +102,28 @@ const getCatalogueInboundRows = async (
       goods are offered on the price lists before they ever become stock.
     */
     sql`COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false`,
+    /*
+      Shipments from SHP-2026-0012 onwards stay off the price lists until their
+      pricing is released. Before that number the book is left exactly as it
+      was: an earlier attempt at this gated EVERY wine and required a backfill
+      to re-release the standing book, which missed wines that had no pricing
+      row at all and took a third of the live list offline.
+
+      Framed as a positive rule — "these shipments need releasing" — nothing
+      already published can disappear, whatever the state of the pricing table.
+
+      Until it is released, in-transit wine carries no allocated freight and no
+      agreed margin, so what would publish is the buy price plus a token
+      markup.
+    */
+    sql`(
+      ${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}
+      OR EXISTS (
+        SELECT 1 FROM wms_product_pricing rel
+         WHERE rel.lwin18 = ${logisticsShipmentItems.lwin}
+           AND rel.pricing_released_at IS NOT NULL
+      )
+    )`,
   ];
   if (filters.search) {
     const q = `%${filters.search}%`;
