@@ -1744,10 +1744,19 @@ const PricingManagerPage = () => {
                   <th className="border-l-2 border-blue-300 px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     <span className="flex items-center justify-end gap-1">
                       In Bond
-                      <span className="text-[10px] font-normal text-text-muted/60">
-                        {ownerId ? `${effInbondPct}% mgn` : 'per owner'}
-                      </span>
-                      <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − In-Bond%). The In-Bond% is set per owner (or globally when no owner is selected)." />
+                      {/* The margin was only changeable from a chip in this
+                          header or a panel that appears when an owner is
+                          picked — neither of which reads as "change the
+                          margin". Make it a button that says so. */}
+                      <button
+                        type="button"
+                        onClick={() => setShowBands(true)}
+                        title="Set the margin tiers"
+                        className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
+                      >
+                        {ownerId ? `${effInbondPct}% ▾` : 'set margins ▾'}
+                      </button>
+                      <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − margin). The margin comes from the tiers (by landed cost), an owner's own rate, or a per-wine override." />
                     </span>
                   </th>
                   <th
@@ -1756,7 +1765,18 @@ const PricingManagerPage = () => {
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
-                      <HeaderInfo text="Private Client price = In-Bond / (1 − PC%). Click a cell to edit, or set a PC% to auto-suggest it." />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowBands(true);
+                        }}
+                        title="Set the margin tiers"
+                        className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100"
+                      >
+                        set margins ▾
+                      </button>
+                      <HeaderInfo text="Private Client price = Landed / (1 − PC margin), taken over landed cost in its own right rather than stacked on the B2B price. Click a cell to type a fixed price instead." />
                     </span>
                   </th>
                   <th
