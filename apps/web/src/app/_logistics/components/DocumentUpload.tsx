@@ -50,6 +50,8 @@ interface ExtractedLineItem {
   countryOfOrigin?: string;
   unitPrice?: number;
   total?: number;
+  /** Anything the parse could not vouch for, for a human to adjudicate */
+  warnings?: string[];
 }
 
 interface ExtractionResult {
@@ -254,6 +256,19 @@ const LogisticsDocumentUpload = ({
             );
 
             return;
+          }
+
+          const flagged = sheet.items.filter(
+            (i) => (i as ExtractedLineItem).warnings?.length,
+          ).length;
+
+          if (flagged > 0) {
+            // Loud, separate and persistent: a parse that half-worked is more
+            // dangerous than one that failed, because it gets imported.
+            toast.warning(
+              `${flagged} of ${sheet.items.length} lines need checking before import — see the flags in the table.`,
+              { duration: 30000 },
+            );
           }
 
           toast.success(
@@ -657,6 +672,14 @@ const LogisticsDocumentUpload = ({
                       {item.bottlesPerCase
                         ? `${item.bottlesPerCase}x${item.bottleSize ?? '750ml'}`
                         : (item.bottleSize ?? '-')}
+                      {item.warnings?.length ? (
+                        <span
+                          className="ml-1 cursor-help text-text-warning"
+                          title={item.warnings.join('\n')}
+                        >
+                          ⚠
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-2 pr-3 text-right font-medium">
                       {item.bottles ?? '-'}

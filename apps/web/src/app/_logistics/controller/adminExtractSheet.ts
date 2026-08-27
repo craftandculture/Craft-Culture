@@ -244,6 +244,23 @@ const adminExtractSheet = adminProcedure
 
       const parsed = parseWineName(rawName);
       const packFormat = parsePackFormat(pick(row, map.format));
+      const rowWarnings: string[] = [];
+
+      /**
+       * A size no bottle has is not a size.
+       *
+       * 187ml (piccolo) to 15,000ml (Nebuchadnezzar) covers everything wine is
+       * sold in. Anything outside it came from a misread column — 75cl read as
+       * 75 litres gave 75,000ml — and storing it silently is how an absurd
+       * figure reaches landed cost. Refuse it and say so.
+       */
+      const plausibleSize = (ml: number | null | undefined) => {
+        if (ml == null) return undefined;
+        if (ml >= 187 && ml <= 15000) return ml;
+        rowWarnings.push(`bottle size read as ${ml}ml — ignored, no bottle is that size`);
+
+        return undefined;
+      };
       const productSizeL = toNumber(pick(row, map.productSizeL));
       // The size column is labelled litres but suppliers write centilitres (75,
       // 150) or millilitres (750, 1500) just as often. Taking it literally read
@@ -287,27 +304,51 @@ const adminExtractSheet = adminProcedure
       const lwin = rawCode && looksLikeLwin(rawCode) ? rawCode : undefined;
       const supplierSku = rawSku || (rawCode && !lwin ? rawCode : undefined);
 
+      if (perCase != null && (perCase < 1 || perCase > 24)) {
+        rowWarnings.push(`pack of ${perCase} — outside 1-24, check the column`);
+      }
+
+      const vintageOnRow =
+        toNumber(pick(row, map.vintage)) ?? parsed.vintage ?? undefined;
+      if (vintageOnRow == null) rowWarnings.push('no vintage');
+
+      // A line total that is not its own parts is the clearest signal that a
+      // quantity or a price came from the wrong column.
+      const lineTotal = toNumber(pick(row, map.lineTotal));
+      const unitPrice = toNumber(pick(row, map.unitPrice));
+      if (lineTotal != null && unitPrice != null && bottles) {
+        const implied = unitPrice * bottles;
+        const off = Math.abs(implied - lineTotal);
+        if (lineTotal > 0 && off / lineTotal > 0.02) {
+          rowWarnings.push(
+            `value ${lineTotal} does not match ${bottles} x ${unitPrice}`,
+          );
+        }
+      }
+
       return [
         {
           productName: rawName,
+          warnings: rowWarnings.length ? rowWarnings : undefined,
           lwin,
           supplierSku,
           // the sheet's own column beats a year guessed out of the wine name
-          vintage: toNumber(pick(row, map.vintage)) ?? parsed.vintage ?? undefined,
-          bottleSize: packFormat.bottleSizeMl
-            ? `${packFormat.bottleSizeMl}ml`
-            : parsed.bottleSizeMl
-              ? `${parsed.bottleSizeMl}ml`
-              : sizeMl
-                ? `${sizeMl}ml`
-                : undefined,
+          vintage: vintageOnRow,
+          bottleSize: (() => {
+            const ml =
+              plausibleSize(packFormat.bottleSizeMl) ??
+              plausibleSize(parsed.bottleSizeMl) ??
+              plausibleSize(sizeMl);
+
+            return ml ? `${ml}ml` : undefined;
+          })(),
           bottles,
           productSizeL,
           totalSizeL,
           cases: casesOnRow,
           bottlesPerCase: perCase,
-          unitPrice: toNumber(pick(row, map.unitPrice)),
-          total: toNumber(pick(row, map.lineTotal)),
+          unitPrice,
+          total: lineTotal,
           hsCode: pick(row, map.hsCode)
             ? String(pick(row, map.hsCode)).replace(/\D/g, '')
             : undefined,
