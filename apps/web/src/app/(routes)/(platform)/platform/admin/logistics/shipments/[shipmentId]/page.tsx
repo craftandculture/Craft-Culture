@@ -2074,7 +2074,20 @@ const ShipmentDetailPage = () => {
 
               {/* Item Editor Sheet */}
               <Sheet open={!!lwinSheetItem} onOpenChange={(open) => { if (!open) setSheetItemId(null); }}>
-                <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
+                {/*
+                  Three bands, not one scrolling column.
+
+                  Making the whole panel the scroll box and pinning the save
+                  button inside it left the details disclosure trapped under
+                  that button with nothing able to scroll past it. The header
+                  and the footer hold their own ground, and only the middle
+                  moves.
+                */}
+                <SheetContent
+                  side="right"
+                  className="flex h-full flex-col gap-0 p-0 sm:max-w-lg"
+                >
+                  <div className="shrink-0 px-6 pt-6">
                   {/* The wine, not "Item" — it is what the whole panel is about */}
                   <SheetTitle className="mb-1">
                     {lwinSheetItem?.productName ?? 'Edit Item'}
@@ -2088,9 +2101,10 @@ const ShipmentDetailPage = () => {
                         ].join(' · ')
                       : 'Update product details and LWIN mapping'}
                   </SheetDescription>
+                  </div>
 
                   {lwinSheetItem && (
-                    <div className="space-y-5">
+                    <div className="flex-1 space-y-5 overflow-y-auto px-6 pb-4">
                       {/*
                         Mapping first, because it is why this sheet is open.
 
@@ -2332,18 +2346,17 @@ const ShipmentDetailPage = () => {
                         </div>
                       </details>
 
-                      {/*
-                        Save stays in reach. It used to sit halfway up a
-                        scrolling column, so the button was hunted for rather
-                        than found.
-                      */}
-                      <div className="sticky bottom-0 -mx-6 -mb-6 border-t border-border-muted bg-fill-primary px-6 py-3">
-                        <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>
-                          <ButtonContent iconLeft={isUpdatingItem ? IconLoader2 : IconCheck}>
-                            {isUpdatingItem ? 'Saving...' : 'Save Changes'}
-                          </ButtonContent>
-                        </Button>
-                      </div>
+                    </div>
+                  )}
+
+                  {/* Save sits outside the scroll, so it is always in reach */}
+                  {lwinSheetItem && (
+                    <div className="border-border-muted bg-surface-primary shrink-0 border-t px-6 py-4">
+                      <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>
+                        <ButtonContent iconLeft={isUpdatingItem ? IconLoader2 : IconCheck}>
+                          {isUpdatingItem ? 'Saving...' : 'Save Changes'}
+                        </ButtonContent>
+                      </Button>
                     </div>
                   )}
                 </SheetContent>
