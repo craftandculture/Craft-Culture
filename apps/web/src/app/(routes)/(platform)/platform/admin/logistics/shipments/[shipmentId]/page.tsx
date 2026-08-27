@@ -1353,6 +1353,39 @@ const ShipmentDetailPage = () => {
                 Boolean(row.twin?.exact),
             );
 
+          /*
+            The fields a line has to carry before it is worth anything
+            downstream.
+
+            A LWIN and an HS code get a shipment through customs; they do not
+            get a wine onto a price sheet. Producer, region, country and
+            vintage are what the catalogue, the stock explorer and every quote
+            read, and a line missing them arrives in the warehouse as a name
+            and a number — findable by nobody looking for a Bordeaux, a 2003,
+            or anything by that producer.
+
+            They are almost all derivable from the LWIN, which is why "Fill
+            regions & HS codes" exists. What was missing was anything saying
+            they were absent.
+          */
+          const DETAIL_FIELDS = [
+            { label: 'producer', has: (i: (typeof items)[number]) => Boolean(i.producer?.trim()) },
+            { label: 'region', has: (i: (typeof items)[number]) => Boolean(i.region?.trim()) },
+            { label: 'country', has: (i: (typeof items)[number]) => Boolean(i.countryOfOrigin?.trim()) },
+            { label: 'vintage', has: (i: (typeof items)[number]) => i.vintage != null },
+          ];
+
+          const missingFor = (item: (typeof items)[number]) =>
+            DETAIL_FIELDS.filter((field) => !field.has(item)).map((field) => field.label);
+
+          const detailedCount = items.filter((i) => missingFor(i).length === 0).length;
+
+          /** Named per field, so it is obvious which repair is wanted */
+          const missingByField = DETAIL_FIELDS.map((field) => ({
+            label: field.label,
+            count: items.filter((i) => !field.has(i)).length,
+          })).filter((entry) => entry.count > 0);
+
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
           // Goods value, for checking against the invoice total. The column is
@@ -1572,6 +1605,60 @@ const ShipmentDetailPage = () => {
                           style={{ width: `${(hsCount / totalItems) * 100}%` }}
                         />
                       </div>
+                    </div>
+
+                    {/*
+                      Whether these wines can be found once they are stock.
+
+                      Customs is satisfied by a LWIN and an HS code; a price
+                      sheet is not. Without producer, region, country and
+                      vintage a line reaches the warehouse as a name and a
+                      number, invisible to anyone browsing by producer, region
+                      or year — and nothing anywhere said so.
+                    */}
+                    <div>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <Typography variant="bodyXs" className="font-medium">
+                          Product details
+                          {missingByField.length > 0 ? (
+                            <span className="ml-2 font-normal text-text-warning">
+                              {missingByField
+                                .map((entry) => `${entry.count} without ${entry.label}`)
+                                .join(' · ')}
+                            </span>
+                          ) : null}
+                        </Typography>
+                        <div className="flex items-center gap-2">
+                          {detailedCount < totalItems && (
+                            <button
+                              onClick={() =>
+                                backfillDetails({ shipmentId, dryRun: false })
+                              }
+                              disabled={isBackfilling}
+                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            >
+                              <Icon icon={IconWand} size="sm" />
+                              {isBackfilling ? 'Filling...' : 'Fill from LWIN'}
+                            </button>
+                          )}
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {detailedCount}/{totalItems}
+                          </Typography>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-fill-secondary">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${detailedCount === totalItems ? 'bg-green-500' : 'bg-amber-400'}`}
+                          style={{ width: `${(detailedCount / totalItems) * 100}%` }}
+                        />
+                      </div>
+                      {detailedCount < totalItems ? (
+                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                          These are what the catalogue, stock explorer and quotes
+                          read. Most fill in from the LWIN; a line with no LWIN
+                          has to be told by hand.
+                        </Typography>
+                      ) : null}
                     </div>
 
                     {/*
@@ -1896,6 +1983,7 @@ const ShipmentDetailPage = () => {
                             const metadata = [item.producer, showVintage ? vintageStr : null, item.region]
                               .filter(Boolean)
                               .join(' \u00b7 ');
+                            const missing = missingFor(item);
 
                             return (
                               <tr
@@ -1914,6 +2002,12 @@ const ShipmentDetailPage = () => {
                                     {metadata && (
                                       <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
                                         {metadata}
+                                      </Typography>
+                                    )}
+                                    {/* The gap named against the wine that has it */}
+                                    {missing.length > 0 && (
+                                      <Typography variant="bodyXs" className="text-text-warning mt-0.5">
+                                        No {missing.join(', ')}
                                       </Typography>
                                     )}
                                     {item.overrideOwnerName && (
