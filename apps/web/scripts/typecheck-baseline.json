@@ -35,7 +35,7 @@
   "src/app/_logistics/controller/adminExportCompliancePdf.ts|TS2339": 1,
   "src/app/_logistics/controller/adminExportCompliancePdf.ts|TS7006": 3,
   "src/app/_logistics/controller/adminUploadQuoteRequestAttachment.ts|TS18048": 1,
-  "src/app/_lwin/components/LwinLookup.tsx|TS2322": 3,
+  "src/app/_lwin/components/LwinLookup.tsx|TS2322": 1,
   "src/app/_lwin/utils/buildLwin18.ts|TS2322": 2,
   "src/app/_lwin/utils/buildLwin18.ts|TS2345": 6,
   "src/app/_partners/controllers/partnersListSimple.ts|TS2769": 1,

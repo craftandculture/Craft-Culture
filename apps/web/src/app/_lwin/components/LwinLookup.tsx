@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -478,17 +479,24 @@ const LwinLookup = ({
         </Card>
       )}
 
-      {/* Confirm Button (database mode) */}
+      {/*
+        The step that actually applies the mapping.
+
+        It asked for `variant="primary"`, which is not one of this button's
+        variants — default, ghost and outline are — so tailwind-variants
+        matched nothing and it rendered as bare text. The one control that
+        commits the work looked like a caption, and was missed.
+      */}
       {selectedLwin && lwin18Preview && !manualMode && (
-        <Button variant="primary" className="w-full" onClick={handleConfirm}>
-          Use This LWIN
+        <Button size="lg" className="w-full" onClick={handleConfirm}>
+          <ButtonContent iconLeft={IconCheck}>Use this LWIN</ButtonContent>
         </Button>
       )}
 
       {/* Confirm Button (manual mode) */}
       {manualMode && manualSkuPreview && (
-        <Button variant="primary" className="w-full" onClick={handleConfirm}>
-          Use Custom LWIN
+        <Button size="lg" className="w-full" onClick={handleConfirm}>
+          <ButtonContent iconLeft={IconCheck}>Use custom LWIN</ButtonContent>
         </Button>
       )}
     </div>

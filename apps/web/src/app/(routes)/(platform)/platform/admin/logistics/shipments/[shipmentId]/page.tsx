@@ -165,7 +165,7 @@ const ShipmentDetailPage = () => {
    * shortlist tell you which seven and what the choice is.
    */
   const [matchRows, setMatchRows] = useState<
-    Record<string, { verdict: string; candidates: { lwin18: string; displayName: string; score: number }[] }>
+    Record<string, { verdict: string; candidates: { lwin18: string; displayName: string; detail: string; score: number }[] }>
   >({});
   /** What the shipment is really billed in, where the import got it wrong */
   const [fxCurrency, setFxCurrency] = useState('');
@@ -1200,6 +1200,56 @@ const ShipmentDetailPage = () => {
           const totalItems = items.length;
           const allHsSet = totalItems > 0 && hsCount === totalItems;
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
+          /*
+            A wine mapped once is mapped for every line of it.
+
+            This invoice carries Margaux three times and Opus One three times,
+            differing only in vintage and format, and each was being searched
+            for and chosen again from a list of five identically-named records.
+            The LWIN7 identifies the wine; the vintage, pack and size come from
+            the line itself, so the second and third lines are a click.
+          */
+          const wineKey = (name: string) =>
+            name
+              .toLowerCase()
+              .replace(/\b(19|20)\d{2}\b/g, '')
+              .replace(/[^a-z0-9]+/g, ' ')
+              .trim();
+
+          const mappedByWine = new Map<string, { lwin7: string; from: string }>();
+
+          for (const item of items) {
+            if (!isCompleteLwin(item.lwin) || !item.lwin) continue;
+
+            const key = wineKey(item.productName);
+
+            if (!mappedByWine.has(key)) {
+              mappedByWine.set(key, {
+                lwin7: item.lwin.slice(0, 7),
+                from: item.vintage ? String(item.vintage) : item.productName,
+              });
+            }
+          }
+
+          /** The same wine's LWIN, recomposed for this line's own vintage and pack */
+          const twinFor = (item: (typeof items)[number]) => {
+            if (isCompleteLwin(item.lwin)) return null;
+
+            const twin = mappedByWine.get(wineKey(item.productName));
+
+            if (!twin) return null;
+
+            return {
+              from: twin.from,
+              lwin18: [
+                twin.lwin7,
+                String(item.vintage ?? 0).padStart(4, '0'),
+                String(item.bottlesPerCase ?? item.totalBottles ?? 1).padStart(2, '0'),
+                String(item.bottleSizeMl ?? 750).padStart(5, '0'),
+              ].join('-'),
+            };
+          };
+
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
           // Goods value, for checking against the invoice total. The column is
@@ -1793,6 +1843,22 @@ const ShipmentDetailPage = () => {
                                         meant searching 208k records by hand for
                                         wines it had already shortlisted.
                                       */}
+                                      {(() => {
+                                        const twin = twinFor(item);
+
+                                        return twin ? (
+                                          <button
+                                            onClick={() =>
+                                              updateItem({ itemId: item.id, lwin: twin.lwin18 })
+                                            }
+                                            disabled={isUpdatingItem}
+                                            title={twin.lwin18}
+                                            className="rounded border border-border-brand bg-fill-brand/10 px-1.5 py-0.5 text-xs font-medium text-text-brand hover:bg-fill-brand/20 disabled:opacity-50"
+                                          >
+                                            Same wine as {twin.from} — map it
+                                          </button>
+                                        ) : null;
+                                      })()}
                                       {matchRows[item.id] ? (
                                         <div className="flex flex-col items-start gap-0.5">
                                           <Typography variant="bodyXs" colorRole="muted">
@@ -1809,9 +1875,14 @@ const ShipmentDetailPage = () => {
                                               }
                                               disabled={isUpdatingItem}
                                               title={`Map to ${candidate.displayName} — ${candidate.lwin18}`}
-                                              className="max-w-[15rem] truncate text-left text-xs text-text-brand hover:underline disabled:opacity-50"
+                                              className="max-w-[16rem] text-left text-xs text-text-brand hover:underline disabled:opacity-50"
                                             >
                                               ＋ {candidate.displayName}
+                                              {candidate.detail ? (
+                                                <span className="block truncate pl-3 text-text-muted">
+                                                  {candidate.detail}
+                                                </span>
+                                              ) : null}
                                             </button>
                                           ))}
                                         </div>
