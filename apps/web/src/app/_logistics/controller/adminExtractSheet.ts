@@ -23,12 +23,14 @@ const columnMapSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Heading holding a BOTTLE count. A quantity column beside a per-bottle price is a bottle count.',
+      'Heading holding a BOTTLE count. A quantity column beside a per-bottle price is a bottle count. Where a sheet splits quantity into two adjacent columns headed "cs" and "bt" — or "Cases" and "Bottles" — this is the "bt" one: a row with a figure there is loose bottles out of a pack, not cases.',
     ),
   cases: z
     .string()
     .optional()
-    .describe('Heading holding a CASE count, only if the sheet states cases'),
+    .describe(
+      'Heading holding a CASE count, only if the sheet states cases. Where quantity is split into "cs" and "bt" columns this is the "cs" one, and a row with a figure only under "bt" has no cases at all.',
+    ),
   productSizeL: z
     .string()
     .optional()
