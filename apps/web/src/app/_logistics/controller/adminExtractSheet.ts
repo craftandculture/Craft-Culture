@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import parsePackFormat from '../utils/parsePackFormat';
 import parseWineName from '../utils/parseWineName';
 import readInvoiceSheet from '../utils/readInvoiceSheet';
 
@@ -43,6 +44,18 @@ const columnMapSchema = z.object({
     .string()
     .optional()
     .describe('Heading holding bottles per case, if the sheet states a pack'),
+  format: z
+    .string()
+    .optional()
+    .describe(
+      'Heading holding the pack as text — "6x75cl", "12 x 750ml", "1x300cl". This states BOTH bottles per case and the bottle size; map it here rather than as a size or a quantity.',
+    ),
+  vintage: z
+    .string()
+    .optional()
+    .describe(
+      'Heading holding the vintage year. Map it whenever the sheet has one, even though many wine names also carry a year.',
+    ),
   unitPrice: z
     .string()
     .optional()
@@ -120,7 +133,15 @@ const toNumber = (value: unknown): number | undefined => {
   if (value === null || value === undefined || value === '') return undefined;
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
 
-  const cleaned = String(value)
+  const text = String(value).trim();
+
+  // A cell holding TWO numbers is not a quantity. Stripping the letters from
+  // "6x75cl" yields 675, which then reads as a bottle size — the pack string
+  // has to be rejected here and parsed properly elsewhere.
+  const groups = text.replace(/[,\s]/g, '').match(/\d+(?:\.\d+)?/g) ?? [];
+  if (groups.length !== 1) return undefined;
+
+  const cleaned = text
     .replace(/[^\d.,-]/g, '')
     .replace(/,(?=\d{3}\b)/g, '')
     .replace(',', '.');
@@ -222,6 +243,7 @@ const adminExtractSheet = adminProcedure
       }
 
       const parsed = parseWineName(rawName);
+      const packFormat = parsePackFormat(pick(row, map.format));
       const productSizeL = toNumber(pick(row, map.productSizeL));
       // The size column is labelled litres but suppliers write centilitres (75,
       // 150) or millilitres (750, 1500) just as often. Taking it literally read
@@ -239,7 +261,10 @@ const adminExtractSheet = adminProcedure
 
       const casesOnRow =
         toNumber(pick(row, map.cases)) ?? toNumber(pick(row, map.caseCount));
-      const perCase = toNumber(pick(row, map.bottlesPerCase));
+      const perCase =
+        toNumber(pick(row, map.bottlesPerCase)) ??
+        packFormat.bottlesPerCase ??
+        undefined;
 
       // Cases carry bottles too. Counting only the loose-bottle column reported
       // a 14-line shipment as 10 bottles, because every full case read as zero.
@@ -267,12 +292,15 @@ const adminExtractSheet = adminProcedure
           productName: rawName,
           lwin,
           supplierSku,
-          vintage: parsed.vintage ?? undefined,
-          bottleSize: parsed.bottleSizeMl
-            ? `${parsed.bottleSizeMl}ml`
-            : sizeMl
-              ? `${sizeMl}ml`
-              : undefined,
+          // the sheet's own column beats a year guessed out of the wine name
+          vintage: toNumber(pick(row, map.vintage)) ?? parsed.vintage ?? undefined,
+          bottleSize: packFormat.bottleSizeMl
+            ? `${packFormat.bottleSizeMl}ml`
+            : parsed.bottleSizeMl
+              ? `${parsed.bottleSizeMl}ml`
+              : sizeMl
+                ? `${sizeMl}ml`
+                : undefined,
           bottles,
           productSizeL,
           totalSizeL,
