@@ -1363,7 +1363,11 @@ const PricingManagerPage = () => {
           <option value="">All Owners</option>
           {owners.map((o) => (
             <option key={o.ownerId} value={o.ownerId}>
-              {o.ownerName ?? 'Unknown'} ({o.totalCases} cases)
+              {o.ownerName ?? 'Unknown'} (
+              {o.totalCases > 0
+                ? `${o.totalCases} cases`
+                : `${(o as { inboundCases?: number }).inboundCases ?? 0} inbound`}
+              )
             </option>
           ))}
         </select>
@@ -1674,7 +1678,19 @@ const PricingManagerPage = () => {
             'Loading...'
           ) : (
             <>
-              {totalCount.toLocaleString()} product{totalCount !== 1 ? 's' : ''}
+              {(
+                totalCount + (includeInbound ? (data?.inbound?.length ?? 0) : 0)
+              ).toLocaleString()}{' '}
+              product
+              {totalCount + (includeInbound ? (data?.inbound?.length ?? 0) : 0) !== 1
+                ? 's'
+                : ''}
+              {includeInbound && (data?.inbound?.length ?? 0) > 0 && (
+                <span className="text-text-muted/70">
+                  {' '}
+                  ({data?.inbound?.length} in transit)
+                </span>
+              )}
               {debouncedSearch && ` matching "${debouncedSearch}"`}
             </>
           )}
