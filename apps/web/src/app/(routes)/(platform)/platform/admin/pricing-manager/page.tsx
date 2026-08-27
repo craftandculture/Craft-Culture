@@ -34,6 +34,7 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -708,6 +709,7 @@ const PricingManagerPage = () => {
   // import + flat logistics for manual-import SKUs). Landed on the table itself
   // uses the live per-line breakdown, so this is no longer user-editable.
   const [logisticsPerBottle] = useState<number>(25);
+  const [showBands, setShowBands] = useState(false);
 
   // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
   const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
@@ -1375,6 +1377,23 @@ const PricingManagerPage = () => {
               />
             </div>
           </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowBands(true)}
+          className="whitespace-nowrap rounded-lg border border-border-muted px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-fill-secondary"
+          title="Set the margin taken over landed cost, by what the bottle cost"
+        >
+          Margin tiers…
+        </button>
+
+        {showBands && (
+          <PricingBandsEditor
+            ownerId={ownerId || null}
+            ownerName={owners.find((o) => o.ownerId === ownerId)?.ownerName ?? null}
+            onClose={() => setShowBands(false)}
+          />
         )}
 
         {/* Per-owner rates (when an owner is selected) — saved to that owner */}

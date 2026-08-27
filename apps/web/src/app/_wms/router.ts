@@ -59,6 +59,7 @@ import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetPickList from './controller/adminGetPickList';
 import adminGetPickLists from './controller/adminGetPickLists';
+import adminGetPricingBands from './controller/adminGetPricingBands';
 import adminGetPricingProducts from './controller/adminGetPricingProducts';
 import adminGetProductPricing from './controller/adminGetProductPricing';
 import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
@@ -100,6 +101,7 @@ import adminSetImportPrice from './controller/adminSetImportPrice';
 import adminSetLineLogistics from './controller/adminSetLineLogistics';
 import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
 import adminSetOwnerPricingSettings from './controller/adminSetOwnerPricingSettings';
+import adminSetPricingBands from './controller/adminSetPricingBands';
 import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
@@ -176,6 +178,8 @@ const stockPricingRouter = createTRPCRouter({
   getOwnerPricing: adminGetOwnerPricing,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
+  getBands: adminGetPricingBands,
+  setBands: adminSetPricingBands,
   bulkApplyMargin: adminBulkApplyMargin,
   getOwnerSettings: adminGetOwnerPricingSettings,
   setOwnerSettings: adminSetOwnerPricingSettings,
