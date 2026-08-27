@@ -59,6 +59,16 @@ const verdict = ({ declared, ours, tolerance = 0 }: ComparisonRow) => {
 const DeclaredComparison = ({ rows, source }: DeclaredComparisonProps) => {
   const stated = rows.filter((row) => row.declared != null);
   const differing = stated.filter((row) => verdict(row) === 'differs');
+  /*
+    Only the rows with a figure on both sides were actually checked.
+
+    Counting the rest as agreement claimed more than had been done: cartons
+    and pallets have nothing on our side to compare against, so a panel
+    reporting "all 5 agree" was vouching for two figures it had never looked
+    at. The ones awaiting a count are said out loud instead.
+  */
+  const compared = stated.filter((row) => verdict(row) !== 'unstated');
+  const awaiting = stated.length - compared.length;
 
   if (stated.length === 0) {
     return (
@@ -88,8 +98,11 @@ const DeclaredComparison = ({ rows, source }: DeclaredComparisonProps) => {
         />
         <Typography variant="labelSm">
           {differing.length > 0
-            ? `${differing.length} of ${stated.length} figures disagree with the document`
-            : `Agrees with the document on all ${stated.length} figures`}
+            ? `${differing.length} of ${compared.length} checked figures disagree with the document`
+            : `Agrees with the document on ${compared.length === 1 ? 'the one figure' : `all ${compared.length} figures`} we can check`}
+          {awaiting > 0
+            ? ` · ${awaiting} more declared, awaiting a count`
+            : ''}
         </Typography>
       </div>
 
