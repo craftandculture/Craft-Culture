@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
-import { logisticsShipmentItems } from '@/database/schema';
+import { logisticsShipmentItems, lwinWines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import packFromLwin from '../utils/packFromLwin';
@@ -126,6 +126,71 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
       */
       updateData.cases =
         existingItem.cases === 0 ? 0 : Math.max(1, Math.ceil(bottles / pack));
+    }
+
+    /*
+      A LWIN carries the wine's identity, so latching one fills it in.
+
+      Only the sheet's own search did this, because it had the record in hand
+      and passed the producer and region along with the code. Every other way
+      of setting a LWIN — the matcher's shortlist, "same wine as the 2003" —
+      sends the code alone, so lines mapped that way sat with the right LWIN
+      and no producer, region or country, and looked less mapped than their
+      neighbours.
+
+      Only blanks are filled. A person who has typed a producer is not
+      corrected by a lookup.
+    */
+    const wineLwin = updateData.lwin?.slice(0, 7);
+
+    if (wineLwin && /^\d{7}$/.test(wineLwin)) {
+      const [record] = await db
+        .select({
+          producerTitle: lwinWines.producerTitle,
+          producerName: lwinWines.producerName,
+          region: lwinWines.region,
+          subRegion: lwinWines.subRegion,
+          country: lwinWines.country,
+        })
+        .from(lwinWines)
+        .where(eq(lwinWines.lwin, wineLwin))
+        .limit(1);
+
+      if (record) {
+        const producer = [record.producerTitle, record.producerName]
+          .filter(Boolean)
+          .join(' ');
+
+        if (producer && !existingItem.producer && updateFields.producer === undefined) {
+          updateData.producer = producer;
+        }
+
+        const region = record.subRegion ?? record.region;
+
+        if (region && !existingItem.region && updateFields.region === undefined) {
+          updateData.region = region;
+        }
+
+        if (
+          record.country &&
+          !existingItem.countryOfOrigin &&
+          updateFields.countryOfOrigin === undefined
+        ) {
+          updateData.countryOfOrigin = record.country;
+        }
+      }
+    }
+
+    // The vintage is in the code's second field, and a line without one is
+    // unsellable — it cannot be matched to stock or priced.
+    const codedVintage = Number(updateData.lwin?.split('-')[1] ?? 0);
+
+    if (
+      codedVintage > 1000 &&
+      !existingItem.vintage &&
+      updateFields.vintage === undefined
+    ) {
+      updateData.vintage = codedVintage;
     }
   }
 
