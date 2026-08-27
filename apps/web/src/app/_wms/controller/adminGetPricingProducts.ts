@@ -343,16 +343,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Logistics = per-line override if set; else live freight; else $22.50
     // fallback for C&C-owned wine with no freight profile (old imports).
     // Non-C&C / non-wine with no freight = 0.
-    // Logistics = per-line override; else live group freight; else the owner's
-    // own $/btl default; else the C&C wine fallback. Partner-owned stock used to
-    // fall through to ZERO here, so an imported wine's landed cost was import +
-    // transfer only and every price built on it came out low.
-    const logisticsExpr = sql`COALESCE(
-      ${wmsProductPricing.logisticsPerBottle},
-      NULLIF(${freightExpr}, 0),
-      ${wmsOwnerPricingSettings.logisticsPerBottle},
-      (CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END)
-    )`;
+    // Logistics = per-line override; else live group freight; else the $22.50
+    // fallback for C&C-owned wine with no freight profile (old imports).
+    //
+    // ZERO IS CORRECT for partner-owned stock: on those consignments the PARTNER
+    // pays the freight, so C&C has no logistics cost to recover and landed is
+    // import + transfer. Do not "fix" this by defaulting to the owner's
+    // logistics rate — that inflates landed cost, and every price built on it,
+    // on exactly the stock C&C ships for free.
+    const logisticsExpr = sql`COALESCE(${wmsProductPricing.logisticsPerBottle}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
     const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
     const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
     const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
