@@ -726,6 +726,11 @@ const PricingManagerPage = () => {
   // uses the live per-line breakdown, so this is no longer user-editable.
   const [logisticsPerBottle] = useState<number>(25);
   const [showBands, setShowBands] = useState(false);
+  // Lines ticked for a bulk action. Keyed by LWIN, which is what margin and
+  // release are stored against.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkB2b, setBulkB2b] = useState('');
+  const [bulkPc, setBulkPc] = useState('');
 
   // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
   const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
@@ -916,6 +921,13 @@ const PricingManagerPage = () => {
   const products = data?.products ?? [];
   const pagination = data?.pagination;
   const summary = data?.summary;
+  // Every line on screen — the "select all" target, so a filter or search
+  // narrows what a bulk action touches.
+  const visibleLwins = [
+    ...(includeInbound ? (data?.inbound ?? []) : []),
+    ...products,
+  ].map((p) => p.lwin18);
+
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -1702,6 +1714,91 @@ const PricingManagerPage = () => {
         )}
       </div>
 
+      {/* Bulk actions — appears once anything is ticked. One margin and one
+          release for a whole shipment, instead of 165 trips through a sheet. */}
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 shadow-sm">
+          <span className="text-sm font-semibold text-brand-800">
+            {selected.size} selected
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-text-muted">B2B&nbsp;%</label>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              step="0.5"
+              value={bulkB2b}
+              onChange={(e) => setBulkB2b(e.target.value)}
+              placeholder="—"
+              className="w-16 rounded border border-border-muted bg-background-primary px-1.5 py-1 text-right text-sm tabular-nums"
+            />
+            <label className="text-xs text-text-muted">PC&nbsp;%</label>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              step="0.5"
+              value={bulkPc}
+              onChange={(e) => setBulkPc(e.target.value)}
+              placeholder="—"
+              className="w-16 rounded border border-border-muted bg-background-primary px-1.5 py-1 text-right text-sm tabular-nums"
+            />
+            <button
+              type="button"
+              disabled={
+                (bulkB2b === '' && bulkPc === '') || setLineMarginsMut.isPending
+              }
+              onClick={() => {
+                setLineMarginsMut.mutate(
+                  {
+                    lwin18s: [...selected],
+                    ...(bulkB2b !== '' ? { b2bMarginPct: Number(bulkB2b) } : {}),
+                    ...(bulkPc !== '' ? { pcMarginPct: Number(bulkPc) } : {}),
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.success(`Margin set on ${selected.size} wines`),
+                  },
+                );
+              }}
+              className="rounded bg-brand-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              Apply margin
+            </button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setReleaseMut.mutate({ lwin18s: [...selected], released: true })
+              }
+              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              Release to price list
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setReleaseMut.mutate({ lwin18s: [...selected], released: false })
+              }
+              className="rounded border border-border-muted px-3 py-1 text-xs font-semibold text-text-muted hover:bg-fill-secondary"
+            >
+              Hold back
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-xs text-text-muted hover:text-text-primary"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <Card className="shadow-sm">
         <CardContent className="p-0">
@@ -1710,7 +1807,7 @@ const PricingManagerPage = () => {
               <thead className="sticky top-0 z-10 bg-surface-muted shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
-                  <th className="px-3 pb-1.5 pt-2.5" colSpan={3} />
+                  <th className="px-3 pb-1.5 pt-2.5" colSpan={4} />
                   <th
                     title="Cost build-up per bottle: Import + Logistics + Transfer + Override = Landed"
                     className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500"
@@ -1739,6 +1836,19 @@ const PricingManagerPage = () => {
                 </tr>
                 {/* Column row */}
                 <tr className="border-b border-border-muted">
+                  <th className="w-8 px-2 pb-2.5 pt-1">
+                    <input
+                      type="checkbox"
+                      title="Select every line shown"
+                      checked={selected.size > 0 && selected.size >= visibleLwins.length}
+                      onChange={(e) =>
+                        setSelected(
+                          e.target.checked ? new Set(visibleLwins) : new Set(),
+                        )
+                      }
+                      className="h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </th>
                   <th
                     className={`px-3 pb-2.5 pt-1 text-left ${thBase}`}
                     onClick={() => handleSort('productName')}
@@ -1887,7 +1997,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={10} className="py-20 text-center text-text-muted">
+                    <td colSpan={11} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -2101,6 +2211,22 @@ const PricingManagerPage = () => {
                               : 'even:bg-surface-muted/40 hover:bg-surface-muted/60'
                         }`}
                       >
+                        <td className="w-8 px-2 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(product.lwin18)}
+                            onChange={(e) =>
+                              setSelected((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(product.lwin18);
+                                else next.delete(product.lwin18);
+                                return next;
+                              })
+                            }
+                            className="h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </td>
+
                         {/* Product */}
                         <td
                           className={`border-l-4 px-3 py-2.5 ${
@@ -2405,7 +2531,7 @@ const PricingManagerPage = () => {
                       </tr>
                       {isExpanded && (
                         <tr className="bg-surface-muted/40">
-                          <td colSpan={11} className="border-l-4 border-l-transparent px-3 py-3">
+                          <td colSpan={12} className="border-l-4 border-l-transparent px-3 py-3">
                             {lastSold ? (
                               <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs">
                                 <span className="font-semibold uppercase tracking-wide text-text-muted">
