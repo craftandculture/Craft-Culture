@@ -80,7 +80,7 @@ const columnMapSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Heading holding the number of physical cases or cartons, e.g. "Nombre de colis"',
+      'Heading holding the number of physical cases or cartons, e.g. "Nombre de colis". A COUNT, never a reference: a column headed "Case #", "Release #", "Bin" or the like holds identifiers, not quantities, and must be left unmapped even though its heading contains the word case.',
     ),
   currency: z
     .string()
@@ -288,8 +288,19 @@ const adminExtractSheet = adminProcedure
               : Math.round(productSizeL);
       const totalSizeL = toNumber(pick(row, map.totalSizeL));
 
+      /*
+        A package count is a last resort, not a second opinion.
+
+        Wilkinson head a column "Case #" holding the bin the wine came out of —
+        one of its values is "00-005" — and the mapper read it as a count of
+        cases. Where the sheet has a case column of its own, that column is the
+        answer and nothing stands in for it: consulting both turned an
+        eleven-case invoice into eighty-two, and made every bottle-billed line
+        look like a full case.
+      */
+      const statedCases = toNumber(pick(row, map.cases));
       const casesOnRow =
-        toNumber(pick(row, map.cases)) ?? toNumber(pick(row, map.caseCount));
+        statedCases ?? (map.cases ? undefined : toNumber(pick(row, map.caseCount)));
       const perCase =
         toNumber(pick(row, map.bottlesPerCase)) ??
         packFormat.bottlesPerCase ??
@@ -297,12 +308,36 @@ const adminExtractSheet = adminProcedure
 
       // Cases carry bottles too. Counting only the loose-bottle column reported
       // a 14-line shipment as 10 bottles, because every full case read as zero.
-      const bottles =
+      const countedBottles =
         toNumber(pick(row, map.bottles)) ??
         (casesOnRow && perCase ? casesOnRow * perCase : undefined) ??
         (productSizeL && totalSizeL && productSizeL > 0
           ? Math.round(totalSizeL / productSizeL)
           : undefined);
+
+      /*
+        Cases, bottles and pack have to make one arithmetic.
+
+        Three cases of twelve is thirty-six bottles or it is not three cases,
+        and a figure that fails that is a reference number in a column headed
+        like a quantity. The line keeps the bottles — those were billed and are
+        rarely in doubt — and loses the case count, which is what a
+        bottle-billed line has anyway.
+      */
+      const casesReconcile =
+        casesOnRow == null ||
+        countedBottles == null ||
+        perCase == null ||
+        casesOnRow * perCase === countedBottles;
+
+      if (!casesReconcile) {
+        rowWarnings.push(
+          `${casesOnRow} in the case column cannot be ${countedBottles} bottles at ${perCase} per case — read as loose bottles instead`,
+        );
+      }
+
+      const cases = casesReconcile ? casesOnRow : undefined;
+      const bottles = countedBottles;
 
       // A supplier reference in the LWIN column is a reference, not a LWIN.
       // Writing "W3200124" into lwin would look mapped while matching nothing.
@@ -338,7 +373,7 @@ const adminExtractSheet = adminProcedure
       if (lineTotal != null && lineTotal > 0 && unitPrice != null) {
         const bases = [
           bottles ? unitPrice * bottles : null,
-          casesOnRow ? unitPrice * casesOnRow : null,
+          cases ? unitPrice * cases : null,
           // a per-case price billed for loose bottles out of that case, which
           // is how every bottle-billed line on a Wilkinson invoice reads
           bottles && perCase ? (unitPrice / perCase) * bottles : null,
@@ -375,7 +410,7 @@ const adminExtractSheet = adminProcedure
           bottles,
           productSizeL,
           totalSizeL,
-          cases: casesOnRow,
+          cases,
           bottlesPerCase: perCase,
           unitPrice,
           total: lineTotal,
