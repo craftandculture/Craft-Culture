@@ -34,6 +34,29 @@ const looksLikeHeader = (row: unknown[]) => {
 };
 
 /**
+ * How much a row looks like the table's headings rather than letterhead.
+ *
+ * Taking the first row that passes is what broke this: "Reference: | CRA064 /
+ * SI18342 | Tel: +44 …" is three short distinct labels six rows above the
+ * table, so every column was keyed to a phone number and the workbook read as
+ * nothing at all.
+ *
+ * A real heading row is wide and made of words. An address block is narrow and
+ * carries values — a date, a reference, a number — so counting labelled columns
+ * and penalising numeric cells separates the two without needing to know any
+ * supplier's layout.
+ */
+const headerScore = (row: unknown[]) => {
+  const cells = row.filter((cell) => cell !== null && String(cell).trim() !== '');
+  const numeric = cells.filter((cell) => typeof cell === 'number').length;
+  const wordy = cells.filter(
+    (cell) => typeof cell === 'string' && cell.trim().length <= 30,
+  ).length;
+
+  return wordy - numeric * 2;
+};
+
+/**
  * Read a supplier's spreadsheet into headers and rows
  *
  * A spreadsheet of the same invoice is a better source than the PDF of it: the
@@ -71,9 +94,16 @@ const readInvoiceSheet = (base64: string): InvoiceSheet => {
     defval: null,
   });
 
+  // The best candidate, not the first: letterhead sits above the table and
+  // often passes the same test.
   const headerIndex = grid
     .slice(0, MAX_HEADER_SEARCH)
-    .findIndex((row) => looksLikeHeader(row));
+    .reduce<number>((best, row, index) => {
+      if (!looksLikeHeader(row)) return best;
+      if (best === -1) return index;
+
+      return headerScore(row) > headerScore(grid[best] ?? []) ? index : best;
+    }, -1);
 
   if (headerIndex === -1) {
     throw new Error(
@@ -82,15 +112,52 @@ const readInvoiceSheet = (base64: string): InvoiceSheet => {
   }
 
   const headerRow = grid[headerIndex] ?? [];
+
+  /**
+   * Whether the row below the headings is a second header rather than data.
+   *
+   * A shipping invoice heads one column "Quantity" and splits it into "cs" and
+   * "bt" beneath, so the sub-labels sit a row lower than everything else. Taking
+   * a single header row leaves the bottle column with no name at all, every row
+   * then reads blank, and the workbook imports as nothing — which is what
+   * "0 lines from Worksheet" was.
+   *
+   * A sub-header is all short text and no numbers; a data row has the
+   * quantities and prices in it.
+   */
+  const subRow = grid[headerIndex + 1] ?? [];
+  const subCells = subRow.filter(
+    (cell) => cell !== null && String(cell).trim() !== '',
+  );
+
+  const isSubHeader =
+    subCells.length >= 2 &&
+    subCells.length < headerRow.filter((cell) => cell !== null).length &&
+    subCells.every(
+      (cell) => typeof cell !== 'number' && String(cell).trim().length <= 12,
+    );
+
   const headers = headerRow.map((cell, index) => {
     const label = String(cell ?? '').trim();
+    const sub = isSubHeader ? String(subRow[index] ?? '').trim() : '';
+
+    // "Quantity" + "cs" reads as one heading the mapper can tell from its
+    // neighbour, where two columns both called "Quantity" could not be. A
+    // sub-label repeating its own heading — "Litres" under "Litres" — is the
+    // sheet carrying the label down, not a second level.
+    const combined =
+      sub && sub.toLowerCase() !== label.toLowerCase()
+        ? [label, sub].filter(Boolean).join(' ')
+        : label || sub;
 
     // An unlabelled column still has to be addressable by the mapper.
-    return label.length > 0 ? label : `column_${index + 1}`;
+    return combined.length > 0 ? combined : `column_${index + 1}`;
   });
 
+  const firstDataIndex = headerIndex + (isSubHeader ? 2 : 1);
+
   const rows = grid
-    .slice(headerIndex + 1)
+    .slice(firstDataIndex)
     .map((row) =>
       Object.fromEntries(headers.map((header, index) => [header, row[index]])),
     )
