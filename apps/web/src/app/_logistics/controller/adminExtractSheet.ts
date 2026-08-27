@@ -223,10 +223,29 @@ const adminExtractSheet = adminProcedure
 
       const parsed = parseWineName(rawName);
       const productSizeL = toNumber(pick(row, map.productSizeL));
+      // The size column is labelled litres but suppliers write centilitres (75,
+      // 150) or millilitres (750, 1500) just as often. Taking it literally read
+      // a 75cl bottle as 75 LITRES and stamped it 75000ml. Judge by magnitude:
+      // no wine bottle is 20-600 litres, and none is under 100ml.
+      const sizeMl =
+        productSizeL == null || productSizeL <= 0
+          ? null
+          : productSizeL <= 6
+            ? Math.round(productSizeL * 1000)
+            : productSizeL <= 600
+              ? Math.round(productSizeL * 10)
+              : Math.round(productSizeL);
       const totalSizeL = toNumber(pick(row, map.totalSizeL));
 
+      const casesOnRow =
+        toNumber(pick(row, map.cases)) ?? toNumber(pick(row, map.caseCount));
+      const perCase = toNumber(pick(row, map.bottlesPerCase));
+
+      // Cases carry bottles too. Counting only the loose-bottle column reported
+      // a 14-line shipment as 10 bottles, because every full case read as zero.
       const bottles =
         toNumber(pick(row, map.bottles)) ??
+        (casesOnRow && perCase ? casesOnRow * perCase : undefined) ??
         (productSizeL && totalSizeL && productSizeL > 0
           ? Math.round(totalSizeL / productSizeL)
           : undefined);
@@ -251,14 +270,14 @@ const adminExtractSheet = adminProcedure
           vintage: parsed.vintage ?? undefined,
           bottleSize: parsed.bottleSizeMl
             ? `${parsed.bottleSizeMl}ml`
-            : productSizeL
-              ? `${Math.round(productSizeL * 1000)}ml`
+            : sizeMl
+              ? `${sizeMl}ml`
               : undefined,
           bottles,
           productSizeL,
           totalSizeL,
-          cases: toNumber(pick(row, map.cases)) ?? toNumber(pick(row, map.caseCount)),
-          bottlesPerCase: toNumber(pick(row, map.bottlesPerCase)),
+          cases: casesOnRow,
+          bottlesPerCase: perCase,
           unitPrice: toNumber(pick(row, map.unitPrice)),
           total: toNumber(pick(row, map.lineTotal)),
           hsCode: pick(row, map.hsCode)
