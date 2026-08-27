@@ -16,6 +16,15 @@ export interface AutoMatchCandidate {
   /** Ready to write — wine, vintage, pack and size already composed */
   lwin18: string;
   displayName: string;
+  /**
+   * What tells this record apart from the others offered.
+   *
+   * Three candidates all reading "Margaux" is not a choice. LWIN's display
+   * name is often just the wine, so the producer, the appellation and the
+   * classification are what actually separate Chateau Margaux from every other
+   * record carrying the name — and the LWIN itself separates the rest.
+   */
+  detail: string;
   score: number;
 }
 
@@ -129,6 +138,13 @@ const adminAutoMatchLwins = adminProcedure
         .select({
           lwin: lwinWines.lwin,
           displayName: lwinWines.displayName,
+          producerTitle: lwinWines.producerTitle,
+          producerName: lwinWines.producerName,
+          wine: lwinWines.wine,
+          region: lwinWines.region,
+          subRegion: lwinWines.subRegion,
+          country: lwinWines.country,
+          classification: lwinWines.classification,
           score: sql<number>`GREATEST(
             similarity(${lwinWines.displayName}, ${parsed.searchName}),
             similarity(
@@ -189,11 +205,35 @@ const adminAutoMatchLwins = adminProcedure
         the refusal sent someone back to search 208k records for a wine it had
         already found.
       */
-      const options = candidates.slice(0, 3).map((candidate) => ({
-        lwin18: compose(candidate.lwin),
-        displayName: candidate.displayName,
-        score: Number(candidate.score),
-      }));
+      const options = candidates.slice(0, 3).map((candidate) => {
+        const producer = [candidate.producerTitle, candidate.producerName]
+          .filter(Boolean)
+          .join(' ');
+
+        // Only the parts that say something the display name has not already
+        const detail = [
+          producer,
+          candidate.wine,
+          candidate.subRegion ?? candidate.region,
+          candidate.country,
+          candidate.classification,
+          candidate.lwin,
+        ]
+          .filter((part): part is string => Boolean(part))
+          .filter(
+            (part, index, all) =>
+              all.indexOf(part) === index &&
+              part.toLowerCase() !== candidate.displayName.toLowerCase(),
+          )
+          .join(' · ');
+
+        return {
+          lwin18: compose(candidate.lwin),
+          displayName: candidate.displayName,
+          detail,
+          score: Number(candidate.score),
+        };
+      });
 
       if (!best || score < MIN_SCORE) {
         rows.push({
@@ -215,7 +255,11 @@ const adminAutoMatchLwins = adminProcedure
           lwin: null,
           matchedName: best.displayName,
           score,
-          verdict: `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose`,
+          verdict:
+            runnerUp?.displayName?.toLowerCase() ===
+            best.displayName.toLowerCase()
+              ? `${candidates.length} records share the name "${best.displayName}"`
+              : `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose`,
           candidates: options,
         });
         continue;

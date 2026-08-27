@@ -20,7 +20,13 @@ const updateItemSchema = z.object({
   producer: z.string().nullable().optional(),
   vintage: z.number().nullable().optional(),
   region: z.string().nullable().optional(),
-  cases: z.number().int().min(1).optional(),
+  /**
+   * Zero is meaningful: a line billed as loose bottles has no case of its own.
+   *
+   * A minimum of one made the shape unsettable, so every correction to such a
+   * line was rejected by the schema before it reached the table.
+   */
+  cases: z.number().int().min(0).optional(),
   bottlesPerCase: z.number().int().min(1).nullable().optional(),
   bottleSizeMl: z.number().int().min(1).nullable().optional(),
   productCostPerBottle: z.number().nullable().optional(),
@@ -104,10 +110,22 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
     const pack = updateData.bottlesPerCase ?? derived.bottlesPerCase;
 
     if (bottles > 0 && pack > 0 && updateFields.cases === undefined) {
-      // A pack that does not divide the billed bottles is a real finding —
-      // either the LWIN is the wrong format or the invoice was misread — so
-      // the cases round up and the bottles stay untouched for someone to see.
-      updateData.cases = Math.max(1, Math.ceil(bottles / pack));
+      /*
+        A line carrying no case keeps none.
+
+        Three bottles out of a twelve-pack travel in a mixed carton shared with
+        other lines, and only the packer knows how many cartons that makes — so
+        the line records zero and the cartons are declared on the shipment.
+        Rounding up to one here re-invented exactly the boxes that were removed
+        this morning, and did it invisibly: mapping two wines to their LWINs
+        walked a reconciled shipment from 11 cases to 13.
+
+        Where the line does have cases, a pack that fails to divide the billed
+        bottles is a real finding — a wrong LWIN format or a misread invoice —
+        so it rounds up and leaves the bottles alone for someone to see.
+      */
+      updateData.cases =
+        existingItem.cases === 0 ? 0 : Math.max(1, Math.ceil(bottles / pack));
     }
   }
 
@@ -116,7 +134,10 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
   const newBpc = updateFields.bottlesPerCase ?? existingItem.bottlesPerCase ?? 12;
   if (
     !derived &&
-    (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined)
+    (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined) &&
+    // Cases times pack is zero for a line billed as loose bottles, and the
+    // bottles on it were the one thing the invoice was certain about.
+    newCases > 0
   ) {
     updateData.totalBottles = newCases * newBpc;
   }
