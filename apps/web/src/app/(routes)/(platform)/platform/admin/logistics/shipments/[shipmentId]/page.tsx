@@ -169,6 +169,17 @@ const ShipmentDetailPage = () => {
   >({});
   /** What the shipment is really billed in, where the import got it wrong */
   const [fxCurrency, setFxCurrency] = useState('');
+  /**
+   * Whether the item sheet's detail fields are showing.
+   *
+   * Controlled rather than left to the browser, because the moment they need
+   * to be open is not something markup can know: latching a LWIN fills in the
+   * producer, vintage, region, country, HS code and pack, and every one of
+   * those landed in a collapsed section. "Review fields and save" was asking
+   * for a review of fields nobody could see, so the way through was to save,
+   * close the panel and open it again.
+   */
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isEditingTransitBoe, setIsEditingTransitBoe] = useState(false);
@@ -576,7 +587,9 @@ const ShipmentDetailPage = () => {
       bottlesPerCase: String(result.caseSize),
       bottleSizeMl: String(result.bottleSizeMl),
     }));
-    toast.success('LWIN matched — review fields and save');
+    // It has just written six fields; showing them is the review it asks for
+    setDetailsOpen(true);
+    toast.success('LWIN matched — review the details below and save');
   };
 
   const handleSavePack = (itemId: string) => {
@@ -1270,6 +1283,7 @@ const ShipmentDetailPage = () => {
 
           const openSheet = (item: typeof items[number]) => {
             setSheetItemId(item.id);
+            setDetailsOpen(!!item.lwin);
             setSheetForm({
               productName: item.productName,
               producer: item.producer ?? '',
@@ -2158,8 +2172,10 @@ const ShipmentDetailPage = () => {
                         then settled and the details are what is left to do.
                       */}
                       <details
-                        key={`details-${lwinSheetItem.id}`}
-                        open={!!lwinSheetItem.lwin}
+                        open={detailsOpen}
+                        onToggle={(event) =>
+                          setDetailsOpen(event.currentTarget.open)
+                        }
                         className="border-t border-border-muted pt-4"
                       >
                         <summary className="cursor-pointer list-none text-sm font-medium text-text-primary marker:content-['']">
