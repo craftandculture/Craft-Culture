@@ -5139,6 +5139,10 @@ export const wmsProductPricing = pgTable(
     sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
     /** Bespoke per-line margin % over landed (Spirits/RTD only): sell = landed / (1 - pct/100) */
     sellMarginPct: doublePrecision('sell_margin_pct'),
+    /** Per-line B2B margin %, overriding the band for this wine. */
+    b2bMarginPct: doublePrecision('b2b_margin_pct'),
+    /** Per-line Private Client margin %, overriding the band for this wine. */
+    pcMarginPct: doublePrecision('pc_margin_pct'),
     importPriceSource: importPriceSource('import_price_source')
       .notNull()
       .default('manual'),
@@ -5190,6 +5194,43 @@ export type WmsOwnerPricing = typeof wmsOwnerPricing.$inferSelect;
  * Per-owner pricing settings — logistics cost, in-bond margin and PC margin
  * applied to that owner's stock in the Pricing Manager (e.g. Crurated vs Cru).
  */
+/**
+ * Margin bands: the margin to take on a wine, chosen by what it cost.
+ *
+ * A single flat percentage priced a $60 Kirwan and a $700 Margaux the same way,
+ * which is neither how the trade prices fine wine nor how C&C wants to sell it.
+ * A band applies to every wine whose landed cost per bottle falls in its range;
+ * a per-line override on wms_product_pricing always wins over the band.
+ *
+ * `ownerId` null = the house band, used when an owner has none of its own.
+ * `maxLandedPerBottle` null = no upper limit.
+ */
+export const wmsPricingBands = pgTable(
+  'wms_pricing_bands',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => partners.id, {
+      onDelete: 'cascade',
+    }),
+    minLandedPerBottle: doublePrecision('min_landed_per_bottle')
+      .notNull()
+      .default(0),
+    maxLandedPerBottle: doublePrecision('max_landed_per_bottle'),
+    b2bMarginPct: doublePrecision('b2b_margin_pct').notNull(),
+    pcMarginPct: doublePrecision('pc_margin_pct').notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_pricing_bands_owner_idx').on(table.ownerId),
+    index('wms_pricing_bands_min_idx').on(table.minLandedPerBottle),
+  ],
+);
+
+export type WmsPricingBand = typeof wmsPricingBands.$inferSelect;
+
 export const wmsOwnerPricingSettings = pgTable('wms_owner_pricing_settings', {
   ownerId: uuid('owner_id')
     .primaryKey()

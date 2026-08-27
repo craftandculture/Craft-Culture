@@ -856,6 +856,53 @@ const runMigrations = async () => {
       dataFixFailures.forEach((label) => console.error(`   • ${label}`));
     }
 
+    // --- variable pricing: margin bands + per-line overrides -----------------
+    // Schema is fatal (the pricing query reads these); the seed is a data fix.
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_pricing_bands" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid REFERENCES "partners"("id") ON DELETE CASCADE,
+        "min_landed_per_bottle" double precision NOT NULL DEFAULT 0,
+        "max_landed_per_bottle" double precision,
+        "b2b_margin_pct" double precision NOT NULL,
+        "pc_margin_pct" double precision NOT NULL,
+        "updated_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now()
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "wms_pricing_bands_owner_idx" ON "wms_pricing_bands"("owner_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "wms_pricing_bands_min_idx" ON "wms_pricing_bands"("min_landed_per_bottle")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_pricing_bands" DISABLE ROW LEVEL SECURITY`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "b2b_margin_pct" double precision`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "pc_margin_pct" double precision`,
+    );
+    console.log('✅ wms_pricing_bands ready');
+
+    // House bands, only when none exist — never overwrite tuned figures.
+    await dataFix('seed house pricing bands', async () => {
+      await client.unsafe(`
+        INSERT INTO "wms_pricing_bands"
+          ("owner_id", "min_landed_per_bottle", "max_landed_per_bottle", "b2b_margin_pct", "pc_margin_pct")
+        SELECT * FROM (VALUES
+          (NULL::uuid, 0::double precision, 50::double precision, 30::double precision, 45::double precision),
+          (NULL::uuid, 50, 200, 20, 35),
+          (NULL::uuid, 200, 500, 14, 25),
+          (NULL::uuid, 500, NULL, 10, 18)
+        ) AS seed
+        WHERE NOT EXISTS (SELECT 1 FROM "wms_pricing_bands" WHERE "owner_id" IS NULL)
+      `);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {

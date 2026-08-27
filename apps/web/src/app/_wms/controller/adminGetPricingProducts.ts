@@ -343,17 +343,59 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Logistics = per-line override if set; else live freight; else $22.50
     // fallback for C&C-owned wine with no freight profile (old imports).
     // Non-C&C / non-wine with no freight = 0.
-    const logisticsExpr = sql`COALESCE(${wmsProductPricing.logisticsPerBottle}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
+    // Logistics = per-line override; else live group freight; else the owner's
+    // own $/btl default; else the C&C wine fallback. Partner-owned stock used to
+    // fall through to ZERO here, so an imported wine's landed cost was import +
+    // transfer only and every price built on it came out low.
+    const logisticsExpr = sql`COALESCE(
+      ${wmsProductPricing.logisticsPerBottle},
+      NULLIF(${freightExpr}, 0),
+      ${wmsOwnerPricingSettings.logisticsPerBottle},
+      (CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END)
+    )`;
     const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
     const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
     const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
+    // The margin for each book, most specific source first: a per-line override,
+    // then the band matching this wine's landed cost (the owner's own band
+    // before the house one, and a narrower band before a wider one), then the
+    // owner's flat rate, then 10%. Mirrors resolvePricingMargins, which holds
+    // the same precedence in testable form.
+    const bandPick = (column: 'b2b_margin_pct' | 'pc_margin_pct') => sql`(
+      SELECT b.${sql.raw(column)} FROM wms_pricing_bands b
+       WHERE (b.owner_id = ${wmsStock.ownerId} OR b.owner_id IS NULL)
+         AND ${landedExpr} >= b.min_landed_per_bottle
+         AND (b.max_landed_per_bottle IS NULL OR ${landedExpr} < b.max_landed_per_bottle)
+         AND b.${sql.raw(column)} < 100
+       ORDER BY (b.owner_id IS NULL),
+                COALESCE(b.max_landed_per_bottle - b.min_landed_per_bottle, 1e9)
+       LIMIT 1
+    )`;
+
+    const b2bMarginExpr = sql`COALESCE(
+      NULLIF(${wmsProductPricing.b2bMarginPct}, 100),
+      ${bandPick('b2b_margin_pct')},
+      ${wmsOwnerPricingSettings.inbondMarginPct},
+      10
+    )`;
+    const pcMarginExpr = sql`COALESCE(
+      NULLIF(${wmsProductPricing.pcMarginPct}, 100),
+      ${bandPick('pc_margin_pct')},
+      ${wmsOwnerPricingSettings.pcMarginPct},
+      10
+    )`;
+
+    // In-bond (B2B) price = landed / (1 - b2b%). C&C's profit = in-bond - landed.
+    const inBondExpr = sql`(${landedExpr} / (1 - ${b2bMarginExpr} / 100.0))`;
+    // PC = landed / (1 - pc%). A margin over LANDED in its own right: it no
+    // longer compounds on top of the B2B price, so moving one book cannot
+    // silently move the other. A hand-typed PC price still wins.
     const pcExpr = sql`(CASE
-      WHEN ${wmsOwnerPricingSettings.pcMarginPct} IS NOT NULL AND ${wmsOwnerPricingSettings.pcMarginPct} < 100
-      THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
-      ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle})
+      WHEN COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, 0) > 0
+      THEN ${wmsOwnerPricing.pcSellingPricePerBottle}
+      WHEN ${landedExpr} > 0 THEN ${landedExpr} / (1 - ${pcMarginExpr} / 100.0)
+      ELSE COALESCE(${wmsProductPricing.sellingPricePerBottle}, 0)
     END)`;
-    // In-bond (B2B) price = landed / (1 - inbond%). C&C's profit = in-bond - landed.
-    const inBondExpr = sql`(${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0))`;
     const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
 
     const [summaryResult] = await db
