@@ -779,6 +779,17 @@ const PricingManagerPage = () => {
     }
   }, [ownerSettings]);
 
+  // A margin typed on a row, or implied by a price typed into In Bond. Stored
+  // as a MARGIN so it keeps working when the cost moves — a stored price goes
+  // stale the moment freight lands.
+  const setLineMarginsMut = useMutation({
+    ...api.wms.admin.stock.pricing.setLineMargins.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries();
+    },
+    onError: (error) => toast.error(`Could not set margin: ${error.message}`),
+  });
+
   const setOwnerSettingsMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
     retry: 2,
@@ -2210,8 +2221,24 @@ const PricingManagerPage = () => {
                           }}
                         />
 
-                        {/* Margin — editable bespoke margin for Spirits/RTD, read-only for Wine */}
-                        {isSpiritOrRtd && !isInbound ? (
+                        {/* Margin — type a % on any row and the price follows.
+                            It was read-only for wine, so the only way to move a
+                            price was a cost override, which is the wrong lever:
+                            it falsifies the cost to reach a price. */}
+                        {!isSpiritOrRtd ? (
+                          <MarginEditCell
+                            value={displayMargin}
+                            tdClassName="border-l-2 border-emerald-300"
+                            onSave={(pct) =>
+                              setLineMarginsMut.mutate({
+                                lwin18s: [product.lwin18],
+                                ...(marginBasis === 'pcIb'
+                                  ? { pcMarginPct: pct }
+                                  : { b2bMarginPct: pct }),
+                              })
+                            }
+                          />
+                        ) : isSpiritOrRtd && !isInbound ? (
                           <MarginEditCell
                             value={bespokeMargin}
                             tdClassName="border-l-2 border-emerald-300"
