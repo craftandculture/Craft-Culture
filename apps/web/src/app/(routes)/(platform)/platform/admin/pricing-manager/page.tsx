@@ -806,6 +806,21 @@ const PricingManagerPage = () => {
     onError: (error) => toast.error(`Could not set margin: ${error.message}`),
   });
 
+  // The gate's trigger: a wine held off the price lists until someone with the
+  // commercial call says it is priced. Without this the gate has no way out.
+  const setReleaseMut = useMutation({
+    ...api.wms.admin.stock.pricing.setRelease.mutationOptions(),
+    onSuccess: (r) => {
+      toast.success(
+        r.released
+          ? `${r.count} wine${r.count === 1 ? '' : 's'} released to the price lists`
+          : `${r.count} wine${r.count === 1 ? '' : 's'} held back`,
+      );
+      void queryClient.invalidateQueries();
+    },
+    onError: (error) => toast.error(`Could not release: ${error.message}`),
+  });
+
   const setOwnerSettingsMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
     retry: 2,
@@ -2126,6 +2141,47 @@ const PricingManagerPage = () => {
                                 Inbound
                               </span>
                             )}
+                          {/* Whether this wine is on the price lists, and the
+                              one control that changes it. */}
+                          {(() => {
+                            const released = (
+                              product as { pricingReleasedAt?: Date | string | null }
+                            ).pricingReleasedAt;
+                            const gated =
+                              isInbound &&
+                              ((product as { shipmentNumber?: string | null })
+                                .shipmentNumber ?? '') >= 'SHP-2026-0012';
+                            if (!gated && !released) return null;
+                            return released ? (
+                              <button
+                                type="button"
+                                title="On the price lists — click to hold it back"
+                                onClick={() =>
+                                  setReleaseMut.mutate({
+                                    lwin18s: [product.lwin18],
+                                    released: false,
+                                  })
+                                }
+                                className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700 hover:bg-emerald-200"
+                              >
+                                On price list
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                title="Held off the price lists until you release it"
+                                onClick={() =>
+                                  setReleaseMut.mutate({
+                                    lwin18s: [product.lwin18],
+                                    released: true,
+                                  })
+                                }
+                                className="rounded bg-red-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-700 hover:bg-red-200"
+                              >
+                                Release
+                              </button>
+                            );
+                          })()}
                           </div>
                           {product.producer && (
                             <p className="text-xs text-text-muted">{product.producer}</p>
