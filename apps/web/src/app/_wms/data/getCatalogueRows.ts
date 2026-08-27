@@ -70,18 +70,6 @@ const getCatalogueRows = async (
   const where = [
     gt(wmsStock.availableCases, 0),
     eq(wmsStock.notForSale, false),
-    /*
-      Only wines the commercial team has RELEASED reach a price surface. Stock
-      used to appear the moment it was inbounded — before freight was allocated
-      or a margin set — which published a price barely above the buy price and
-      then moved it once the real costs landed. An unreleased wine is simply
-      absent until someone has priced it and said so.
-    */
-    sql`EXISTS (
-      SELECT 1 FROM ${wmsProductPricing} rel
-       WHERE rel.lwin18 = ${wmsStock.lwin18}
-         AND rel.pricing_released_at IS NOT NULL
-    )`,
   ];
   if (filters.category) {
     where.push(

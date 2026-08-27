@@ -83,17 +83,7 @@ const getCatalogueInboundRows = async (
   const where = [
     eq(logisticsShipments.type, 'inbound'),
     gt(logisticsShipmentItems.cases, 0),
-    /*
-      In-transit wine is the worst offender for publishing a buy price: it has
-      no freight allocated and no margin set, so it listed at import cost plus
-      the flat rate the moment logistics booked it in. It now appears only once
-      the commercial team has released its pricing.
-    */
-    sql`EXISTS (
-      SELECT 1 FROM wms_product_pricing rel
-       WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
-         AND rel.pricing_released_at IS NOT NULL
-    )`,
+
     // Same allowlist the Pricing Manager's inbound toggle uses. It deliberately
     // omits draft, partially_received, delivered and cancelled: once a shipment
     // starts being received its stock is in wms_stock, so including those here
