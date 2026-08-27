@@ -28,6 +28,12 @@ const adminSetImportPrice = wmsOperatorProcedure
         import_price_source = ${source},
         shipment_item_id = ${shipmentItemId ?? null},
         notes = ${notes ?? null},
+        -- A re-costed wine drops off the price lists until someone re-checks it.
+        -- Otherwise it keeps selling at a price built on the OLD cost, which is
+        -- exactly how a buy price ends up published and then quietly moved.
+        pricing_released_at = CASE
+          WHEN wms_product_pricing.import_price_per_bottle IS DISTINCT FROM ${importPricePerBottle}
+          THEN NULL ELSE wms_product_pricing.pricing_released_at END,
         updated_by = ${ctx.user.id},
         updated_at = NOW()
     `;

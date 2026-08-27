@@ -102,6 +102,7 @@ import adminSetLineLogistics from './controller/adminSetLineLogistics';
 import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
 import adminSetOwnerPricingSettings from './controller/adminSetOwnerPricingSettings';
 import adminSetPricingBands from './controller/adminSetPricingBands';
+import adminSetPricingRelease from './controller/adminSetPricingRelease';
 import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
@@ -180,6 +181,7 @@ const stockPricingRouter = createTRPCRouter({
   getProducts: adminGetPricingProducts,
   getBands: adminGetPricingBands,
   setBands: adminSetPricingBands,
+  setRelease: adminSetPricingRelease,
   bulkApplyMargin: adminBulkApplyMargin,
   getOwnerSettings: adminGetOwnerPricingSettings,
   setOwnerSettings: adminSetOwnerPricingSettings,

@@ -903,6 +903,31 @@ const runMigrations = async () => {
       `);
     });
 
+    // --- pricing release gate ------------------------------------------------
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "pricing_released_at" timestamp`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_product_pricing" ADD COLUMN IF NOT EXISTS "pricing_released_by" uuid REFERENCES "users"("id") ON DELETE SET NULL`,
+    );
+    console.log('✅ pricing release columns ready');
+
+    // Everything already on a price list stays on it — the gate applies to what
+    // arrives from here, not a blackout of the existing book.
+    await dataFix('release pricing for wines already listed', async () => {
+      await client.unsafe(`
+        UPDATE "wms_product_pricing"
+           SET "pricing_released_at" = now()
+         WHERE "pricing_released_at" IS NULL
+           AND EXISTS (
+             SELECT 1 FROM "wms_stock" s
+              WHERE s.lwin18 = "wms_product_pricing".lwin18
+                AND s.available_cases > 0
+                AND s.not_for_sale = false
+           )
+      `);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {

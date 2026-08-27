@@ -5143,6 +5143,21 @@ export const wmsProductPricing = pgTable(
     b2bMarginPct: doublePrecision('b2b_margin_pct'),
     /** Per-line Private Client margin %, overriding the band for this wine. */
     pcMarginPct: doublePrecision('pc_margin_pct'),
+    /**
+     * When the commercial team released this wine to the price lists.
+     *
+     * Null = not released: it stays OFF every customer-facing surface. Stock
+     * used to reach the sheet the moment it was inbounded, before freight was
+     * allocated or a margin set, which published a price barely above the buy
+     * price — and then moved it once the real costs landed.
+     *
+     * Cleared automatically whenever the import price changes, so a re-costed
+     * wine cannot keep selling at a price nobody has re-checked.
+     */
+    pricingReleasedAt: timestamp('pricing_released_at', { mode: 'date' }),
+    pricingReleasedBy: uuid('pricing_released_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     importPriceSource: importPriceSource('import_price_source')
       .notNull()
       .default('manual'),
