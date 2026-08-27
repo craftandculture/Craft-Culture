@@ -310,6 +310,11 @@ zohoSalesOrderItems  - Line items for each order
 ## Current Development State
 
 ### Recently Completed
+- **Shipment import checkpoints (Aug 2026)** — a supplier invoice now checks itself. Its own totals row and shipping note ("12 cases on 1 pallet") are read and stored on the shipment as `declared_*`, and shown beside our figures with a confirm action. Currency is read from the cell number format rather than guessed, and an import that cannot say what it is billed in refuses. See `_logistics/IMPORT.md` for the flow, the reference invoice, and the guards that must not be relaxed — every one of them exists because something silent went wrong.
+- **LWIN mapping UX (Aug 2026)** — the matcher's refusals now carry their reasoning and a composed shortlist, a wine mapped once is offered to its other lines ("Map N from wines already mapped"), and latching a LWIN fills producer, region, country and vintage wherever it is set. A Product details bar counts lines still missing them, since those are what the catalogue, stock explorer and quotes read.
+- **Pick-list stock matching (Aug 2026)** — order lines and stock are matched on wine + vintage + bottle size, ANY pack, so a 3-pack invoiced off a 6-pack (or a bay repacked after release) still finds its stock. See "Matching an Order Line to Stock" in `_wms/WMS.md` for the rules and the guards that must not be relaxed.
+- **New Pick List screen** — per-line bay, repack and "no stock" states shown BEFORE release, readiness filter chips, selection-aware totals; `zohoSalesOrders.sync` takes `forceRefreshOrderNumbers` because an item-master SKU edit in Zoho does not bump the sales order's last-modified time
+- **Picking list PDF** — real consignee/invoice (was printing the order number in every field), bottle totals, write-in picked column, sign-off block, page numbers
 - **Logistics Items Tab UX** — Full item editor sheet, LWIN mapping with auto-populate (producer, region, country, HS code, vintage, pack config), HS code progress bar with auto-assign, Sync to Zoho guard
 - **Logistics HS Code Management** — Auto-detection (sparkling vs still wine), bulk auto-assign endpoint, 11 supported HS codes, mandatory before Zoho sync
 - WMS Local Server (NUC) — local-first routing for scanner operations (~15ms vs ~200ms)
@@ -330,6 +335,8 @@ zohoSalesOrderItems  - Line items for each order
 - Optimizing mobile printing workflow for high-volume label printing
 
 ### Pending
+- **Receiving checkpoint** — what physically arrived is not yet compared against the declared cartons (the shipment side of the same idea)
+- **Costs-complete gate** — landed cost feeds pricing before freight and duty are allocated, so a part-costed shipment prices as if it were cheap
 - Add Dispatch endpoint to NUC local server
 - Investigate faster mobile printing options (Enterprise Browser license vs current share workflow)
 - Print case labels during receiving
