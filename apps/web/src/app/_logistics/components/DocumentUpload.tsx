@@ -240,9 +240,29 @@ const LogisticsDocumentUpload = ({
             lineItems: sheet.items,
           } as ExtractionResult);
 
+          const d = sheet.diagnostics;
+
+          if (sheet.items.length === 0) {
+            // A workbook full of wine returning nothing is almost always a
+            // heading mapped to the wrong column, and that is only arguable
+            // if the headings and the choice are both on screen.
+            toast.error(
+              `No lines read from "${sheet.sheetName}". ` +
+                `${d.rowsScanned} rows scanned, ${d.unnamed} had nothing in the column read as the wine name ("${d.mappedTo.productName}"). ` +
+                `Headings found: ${d.headers.slice(0, 12).join(', ')}`,
+              { duration: 30000 },
+            );
+
+            return;
+          }
+
           toast.success(
             `${sheet.items.length} lines from ${sheet.sheetName} · ` +
-              `${sheet.totalBottles} bottles · priced in ${sheet.currency}`,
+              `${sheet.totalBottles} bottles · priced in ${sheet.currency} · ` +
+              `names from "${d.mappedTo.productName}"` +
+              (d.mappedTo.cases ? `, cases from "${d.mappedTo.cases}"` : '') +
+              (d.mappedTo.bottles ? `, bottles from "${d.mappedTo.bottles}"` : ''),
+            { duration: 12000 },
           );
 
           return;

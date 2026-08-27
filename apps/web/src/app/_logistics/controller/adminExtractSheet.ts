@@ -194,11 +194,25 @@ const adminExtractSheet = adminProcedure
 
     const skipHint = map.nonItemRowHint?.trim().toLowerCase();
     let skipped = 0;
+    /**
+     * Rows carrying nothing in the column mapped as the product name.
+     *
+     * "0 lines" on a workbook full of wine is almost always this: the mapper
+     * named a heading that is not the one the names are in, and every row then
+     * looks blank. Counted apart from deliberate skips so the difference
+     * between "mapped the wrong column" and "these were summary rows" is
+     * visible rather than guessed at.
+     */
+    let unnamed = 0;
 
     const items = sheet.rows.flatMap((row) => {
       const rawName = String(pick(row, map.productName) ?? '').trim();
 
-      if (!rawName) return [];
+      if (!rawName) {
+        unnamed += 1;
+
+        return [];
+      }
 
       // Shipping and totals sit in the same column as the wines.
       if (SUMMARY_ROW.test(rawName) || (skipHint && rawName.toLowerCase().includes(skipHint))) {
@@ -269,6 +283,22 @@ const adminExtractSheet = adminProcedure
       skippedNonItemRows: skipped,
       items,
       totalBottles: items.reduce((sum, item) => sum + (item.bottles ?? 0), 0),
+      /**
+       * What the mapper decided, so a run that finds nothing can be argued
+       * with rather than merely repeated.
+       */
+      diagnostics: {
+        headers: sheet.headers,
+        rowsScanned: sheet.rows.length,
+        unnamed,
+        mappedTo: {
+          productName: map.productName,
+          bottles: map.bottles,
+          cases: map.cases,
+          unitPrice: map.unitPrice,
+          lineTotal: map.lineTotal,
+        },
+      },
     };
   });
 
