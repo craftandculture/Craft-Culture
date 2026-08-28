@@ -116,6 +116,21 @@ const shortOwner = (name: string): string => {
 const casePrice = (perBottle: number, caseConfig: number) =>
   `$${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
 
+/**
+ * Profit per bottle and per case, in the units wine is actually sold in
+ *
+ * The per-bottle figure was already computed and rendered at ten pixels in
+ * forty-percent grey under the margin percentage — the number the business
+ * runs on, styled as a footnote. A percentage tells you whether a line is
+ * healthy; this tells you what it earns, and a case figure is what gets quoted.
+ *
+ * @param perBottle - Profit on one bottle
+ * @param caseConfig - Bottles in the case
+ * @returns e.g. "$14.28/btl · $86/case"
+ */
+const profitPerUnit = (perBottle: number, caseConfig: number) =>
+  `$${perBottle.toFixed(2)}/btl · $${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
+
 const PriceCell = ({
   value,
   onSave,
@@ -2766,8 +2781,21 @@ const PricingManagerPage = () => {
                               </span>
                             </div>
                             {displayMarginPerBottle != null && (
-                              <div className="text-[10px] tabular-nums text-text-muted/60">
-                                ${displayMarginPerBottle.toFixed(2)}/btl
+                              /*
+                                What the line earns, beside what it earns as a
+                                percentage. Coloured with the margin so the two
+                                read as one judgement rather than two figures
+                                that happen to sit together.
+                              */
+                              <div
+                                className={`text-[11px] font-medium tabular-nums ${
+                                  displayMarginPerBottle < 0
+                                    ? 'text-red-600'
+                                    : 'text-text-muted'
+                                }`}
+                                title="Profit per bottle and per case, on the basis selected in the Margin header"
+                              >
+                                {profitPerUnit(displayMarginPerBottle, caseConfig)}
                               </div>
                             )}
                           </td>
@@ -2776,6 +2804,51 @@ const PricingManagerPage = () => {
                       {isExpanded && (
                         <tr className="bg-surface-muted/40">
                           <td colSpan={12} className="border-l-4 border-l-transparent px-3 py-3">
+                            {/*
+                              What the line is worth if it all sells at the
+                              current price. Per bottle and per case answer "is
+                              this priced well"; the total answers "is this
+                              worth my attention", and a healthy margin on two
+                              bottles is not the same call as the same margin on
+                              sixty.
+                            */}
+                            {displayMarginPerBottle != null &&
+                              product.totalCases > 0 && (
+                                <div className="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
+                                  <span className="font-semibold uppercase tracking-wide text-text-muted">
+                                    Profit if sold
+                                  </span>
+                                  <span className="tabular-nums">
+                                    <span
+                                      className={`text-sm font-semibold ${
+                                        displayMarginPerBottle < 0
+                                          ? 'text-red-600'
+                                          : 'text-emerald-700'
+                                      }`}
+                                    >
+                                      $
+                                      {Math.round(
+                                        displayMarginPerBottle *
+                                          product.totalCases *
+                                          caseConfig,
+                                      ).toLocaleString('en-US')}
+                                    </span>
+                                    <span className="text-text-muted">
+                                      {' '}
+                                      on {(product.totalCases * caseConfig).toLocaleString()}{' '}
+                                      bottles
+                                    </span>
+                                  </span>
+                                  <span className="tabular-nums text-text-secondary">
+                                    {profitPerUnit(displayMarginPerBottle, caseConfig)}
+                                  </span>
+                                  <span className="text-[10px] uppercase tracking-wide text-text-muted">
+                                    {marginBasis === 'ibLanded'
+                                      ? 'B2B over landed cost'
+                                      : 'private client over B2B'}
+                                  </span>
+                                </div>
+                              )}
                             {lastSold ? (
                               <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs">
                                 <span className="font-semibold uppercase tracking-wide text-text-muted">
