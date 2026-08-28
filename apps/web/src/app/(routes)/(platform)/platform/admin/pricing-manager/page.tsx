@@ -844,7 +844,7 @@ const SkeletonRow = () => (
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 9 }).map((_, i) => (
+    {Array.from({ length: 11 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -2077,10 +2077,11 @@ const PricingManagerPage = () => {
                     Private&nbsp;Client
                   </th>
                   <th
-                    title="Margin of PC price over the in-bond (B2B) price"
+                    title="Margin and cash profit, on the basis chosen below"
                     className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600"
+                    colSpan={2}
                   >
-                    Margin
+                    Margin &amp; Profit
                   </th>
                 </tr>
                 {/* Column row */}
@@ -2244,6 +2245,20 @@ const PricingManagerPage = () => {
                       </div>
                     </div>
                   </th>
+                  {/*
+                    Profit in money, as its own column.
+
+                    It was a sub-line under the percentage, which is where you
+                    put a footnote, not the figure the business runs on — the
+                    first question asked of the screen was "how do I see
+                    profit?" while it was on it.
+                  */}
+                  <th className={`px-3 pb-2.5 pt-1 text-right ${thBase}`}>
+                    <span className="flex items-center justify-end gap-1">
+                      Profit
+                      <HeaderInfo text="Cash profit per bottle and per case, on the basis selected to the left. Expand a row for what the whole line earns." />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-muted">
@@ -2252,7 +2267,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={11} className="py-20 text-center text-text-muted">
+                    <td colSpan={13} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -2788,30 +2803,41 @@ const PricingManagerPage = () => {
                                 {displayMargin != null ? `${displayMargin.toFixed(1)}%` : '—'}
                               </span>
                             </div>
-                            {displayMarginPerBottle != null && (
-                              /*
-                                What the line earns, beside what it earns as a
-                                percentage. Coloured with the margin so the two
-                                read as one judgement rather than two figures
-                                that happen to sit together.
-                              */
-                              <div
-                                className={`text-[11px] font-medium tabular-nums ${
-                                  displayMarginPerBottle < 0
-                                    ? 'text-red-600'
-                                    : 'text-text-muted'
-                                }`}
-                                title="Profit per bottle and per case, on the basis selected in the Margin header"
-                              >
-                                {profitPerUnit(displayMarginPerBottle, caseConfig)}
-                              </div>
-                            )}
                           </td>
                         )}
+
+                        {/* Profit — money, in both units the wine is sold in */}
+                        <td className="px-3 py-2.5 text-right">
+                          {displayMarginPerBottle != null ? (
+                            <>
+                              <div
+                                className={`font-semibold tabular-nums ${
+                                  displayMarginPerBottle < 0
+                                    ? 'text-red-600'
+                                    : 'text-emerald-700'
+                                }`}
+                              >
+                                ${displayMarginPerBottle.toFixed(2)}
+                                <span className="text-[10px] font-normal text-text-muted">
+                                  /btl
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-medium tabular-nums text-text-muted">
+                                $
+                                {Math.round(
+                                  displayMarginPerBottle * caseConfig,
+                                ).toLocaleString('en-US')}
+                                /case
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-text-muted/40">—</span>
+                          )}
+                        </td>
                       </tr>
                       {isExpanded && (
                         <tr className="bg-surface-muted/40">
-                          <td colSpan={12} className="border-l-4 border-l-transparent px-3 py-3">
+                          <td colSpan={13} className="border-l-4 border-l-transparent px-3 py-3">
                             {/*
                               What the line is worth if it all sells at the
                               current price. Per bottle and per case answer "is
