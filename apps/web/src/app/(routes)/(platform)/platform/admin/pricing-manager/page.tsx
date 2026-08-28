@@ -939,15 +939,34 @@ const PricingManagerPage = () => {
     inbondPct: number;
     pcPct: number | null;
   }>({ logistics: 25, inbondPct: 10, pcPct: null });
+  /**
+   * Which owner's rates the boxes are currently showing.
+   *
+   * Seeded once per owner, not on every resolution of the query. It used to
+   * reseed whenever `ownerSettings` changed, which includes the moment the
+   * fetch lands and every refetch triggered by an unrelated save — so a rate
+   * typed in the second after picking an owner was overwritten by the server's
+   * old value before the blur that would have saved it. The number went in,
+   * the field went back, and nothing said why.
+   */
+  const seededOwner = useRef<string | null>(null);
+
   useEffect(() => {
-    if (ownerSettings) {
+    if (!ownerId) {
+      seededOwner.current = null;
+
+      return;
+    }
+
+    if (ownerSettings && seededOwner.current !== ownerId) {
+      seededOwner.current = ownerId;
       setOwnerDraft({
         logistics: ownerSettings.logisticsPerBottle,
         inbondPct: ownerSettings.inbondMarginPct,
         pcPct: ownerSettings.pcMarginPct,
       });
     }
-  }, [ownerSettings]);
+  }, [ownerSettings, ownerId]);
 
   // A margin typed on a row, or implied by a price typed into In Bond. Stored
   // as a MARGIN so it keeps working when the cost moves — a stored price goes
@@ -978,12 +997,20 @@ const PricingManagerPage = () => {
   const setOwnerSettingsMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
     retry: 2,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getOwnerSettings.queryKey(),
-      });
+    onSuccess: (saved) => {
+      /*
+        Said out loud. These rates reprice every line on the screen, and the
+        only previous feedback was the number staying where it was typed —
+        which looks identical to a save that never happened.
+      */
+      toast.success(
+        `Rates saved — in-bond ${saved.inbondMarginPct}%` +
+          (saved.pcMarginPct != null ? `, private client ${saved.pcMarginPct}%` : ', no PC margin'),
+      );
+      void queryClient.invalidateQueries();
     },
-    onError: () => toast.error('Failed to save owner settings'),
+    onError: (error) =>
+      toast.error(`Could not save these rates: ${error.message}`),
   });
   const saveOwnerSettings = (draft: {
     logistics: number;
