@@ -237,7 +237,15 @@ const partnersMerge = adminProcedure
       survivor: survivor.businessName,
       duplicate: duplicate.businessName,
       moved: counts,
-      totalRows: counts.reduce((sum, c) => sum + c.rows, 0),
+      // Counted the same way the preview counts it. Including the discarded
+      // rows here made the result claim one more row than the preview had
+      // promised, and called a deleted row "moved".
+      totalRows: counts
+        .filter((c) => !c.discard)
+        .reduce((sum, c) => sum + c.rows, 0),
+      discardedRows: counts
+        .filter((c) => c.discard)
+        .reduce((sum, c) => sum + c.rows, 0),
     };
   });
 
