@@ -88,7 +88,17 @@ const getCatalogueInboundRows = async (
 ): Promise<CatalogueInboundRow[]> => {
   const where = [
     eq(logisticsShipments.type, 'inbound'),
-    gt(logisticsShipmentItems.cases, 0),
+    /*
+      Bottles, not cases, decide whether there is anything to sell.
+
+      This read cases > 0, which was true of every line while a bottle-billed
+      one was recorded as a case of itself. Now that such a line correctly
+      carries zero cases — its bottles travel in a mixed carton — the test
+      silently dropped it, and seven of the fourteen wines on the invoice that
+      prompted the change went missing from the in-transit price list. They are
+      bought, in transit and sellable; only the packaging is shared.
+    */
+    gt(logisticsShipmentItems.totalBottles, 0),
 
     // Same allowlist the Pricing Manager's inbound toggle uses. It deliberately
     // omits draft, partially_received, delivered and cancelled: once a shipment
@@ -154,6 +164,9 @@ const getCatalogueInboundRows = async (
         number | null
       >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
       cases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+      // What is actually offered. Cases times pack understates any line whose
+      // bottles were billed loose, and reports zero where none were cased.
+      bottles: sql<number>`SUM(${logisticsShipmentItems.totalBottles})::int`,
       costPerBottle: sql<
         number | null
       >`MAX(${logisticsShipmentItems.productCostPerBottle})`,
@@ -285,7 +298,7 @@ const getCatalogueInboundRows = async (
       caseConfig: cc,
       bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
       availableCases: r.cases,
-      availableBottles: r.cases * cc,
+      availableBottles: r.bottles,
       ibPerBottle: round2(ib),
       ibPerCase: round2(ib * cc),
       pcPerBottle: round2(pc),
