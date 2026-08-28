@@ -40,7 +40,7 @@ const DuplicatePartners = () => {
     key: string;
     survivor: string;
     duplicate: string;
-    moved: { table: string; column: string; rows: number }[];
+    moved: { table: string; column: string; rows: number; discard: boolean }[];
     totalRows: number;
   } | null>(null);
 
@@ -183,9 +183,23 @@ const DuplicatePartners = () => {
                         <Typography variant="bodyXs" colorRole="muted">
                           {shown.moved.length === 0
                             ? 'Holds nothing — merging only retires the record.'
-                            : shown.moved
-                                .map((m) => `${m.rows}× ${m.table}`)
-                                .join(' · ')}
+                            : [
+                                shown.moved
+                                  .filter((m) => !m.discard)
+                                  .map((m) => `${m.rows}× ${m.table}`)
+                                  .join(' · '),
+                                // Named separately: a row that is dropped is
+                                // not a row that moved, and the difference
+                                // matters to whoever presses the button
+                                shown.moved.filter((m) => m.discard).length > 0
+                                  ? `discarded (this record's own kept on the survivor): ${shown.moved
+                                      .filter((m) => m.discard)
+                                      .map((m) => m.table)
+                                      .join(', ')}`
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' — ')}
                         </Typography>
                       ) : null}
                     </div>

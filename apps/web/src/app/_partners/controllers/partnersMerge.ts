@@ -99,9 +99,44 @@ const partnersMerge = adminProcedure
           r.table !== 'partners',
       );
 
+    /*
+      Columns where a partner can only ever have one row.
+
+      Owner pricing settings key on the partner id as their PRIMARY key, so
+      both records having margins — which is the normal case, and the reason
+      the duplicate hurts — makes repointing impossible: two rows cannot share
+      one key. There is only one sensible reading of that. A business has one
+      set of margins, the surviving record's are the ones in use, and the
+      duplicate's are discarded rather than blocking the merge.
+
+      Read from the database for the same reason the references are: a
+      hard-coded list of "the unique ones" goes stale silently.
+    */
+    const uniqueColumns = await db.execute<{ table_name: string; column_name: string }>(sql`
+      SELECT tc.table_name, MIN(kcu.column_name) AS column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON kcu.constraint_name = tc.constraint_name
+         AND kcu.constraint_schema = tc.constraint_schema
+       WHERE tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
+         AND tc.table_schema = 'public'
+       GROUP BY tc.table_name, tc.constraint_name
+      HAVING COUNT(*) = 1
+    `);
+
+    const singular = new Set(
+      [...uniqueColumns].map((r) => `${r.table_name}.${r.column_name}`),
+    );
+
     // Counted first so a dry run can report the move, and a real one has a
     // record of what it touched
-    const counts: { table: string; column: string; rows: number }[] = [];
+    const counts: {
+      table: string;
+      column: string;
+      rows: number;
+      /** The survivor already has its own row here, so this one goes */
+      discard: boolean;
+    }[] = [];
 
     for (const target of targets) {
       const [row] = await db.execute<{ n: number }>(sql`
@@ -112,7 +147,21 @@ const partnersMerge = adminProcedure
 
       const rows = Number(row?.n ?? 0);
 
-      if (rows > 0) counts.push({ ...target, rows });
+      if (rows === 0) continue;
+
+      let discard = false;
+
+      if (singular.has(`${target.table}.${target.column}`)) {
+        const [held] = await db.execute<{ n: number }>(sql`
+          SELECT COUNT(*)::int AS n
+            FROM ${sql.raw(`"${target.table}"`)}
+           WHERE ${sql.raw(`"${target.column}"`)} = ${survivorId}
+        `);
+
+        discard = Number(held?.n ?? 0) > 0;
+      }
+
+      counts.push({ ...target, rows, discard });
     }
 
     if (dryRun) {
@@ -121,13 +170,26 @@ const partnersMerge = adminProcedure
         survivor: survivor.businessName,
         duplicate: duplicate.businessName,
         moved: counts,
-        totalRows: counts.reduce((sum, c) => sum + c.rows, 0),
+        totalRows: counts
+          .filter((c) => !c.discard)
+          .reduce((sum, c) => sum + c.rows, 0),
       };
     }
 
     await db.transaction(async (tx) => {
       for (const target of counts) {
         try {
+          if (target.discard) {
+            // The survivor's own row is the one in use; this one cannot move
+            // onto it and must not be left pointing at a retired record.
+            await tx.execute(sql`
+              DELETE FROM ${sql.raw(`"${target.table}"`)}
+               WHERE ${sql.raw(`"${target.column}"`)} = ${duplicateId}
+            `);
+
+            continue;
+          }
+
           await tx.execute(sql`
             UPDATE ${sql.raw(`"${target.table}"`)}
                SET ${sql.raw(`"${target.column}"`)} = ${survivorId}
