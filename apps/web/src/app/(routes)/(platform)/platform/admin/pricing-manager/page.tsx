@@ -144,6 +144,8 @@ const PriceCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
+  /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
+  const discarded = useRef(false);
 
   const valueColor = suggested
     ? 'italic text-violet-400'
@@ -180,33 +182,62 @@ const PriceCell = ({
     );
   }
 
+  /**
+   * Take the typed price, wherever the person went next.
+   *
+   * Pricing a shipment is a column of these, and moving on by clicking the
+   * next cell or pressing Tab threw the number away without a word — the row
+   * simply still read the old price, which looks like the save failed rather
+   * than like it never happened. Enter, Tab, Save and clicking elsewhere now
+   * all commit; only Escape discards, which is the one gesture that means it.
+   */
+  const commit = () => {
+    if (discarded.current) {
+      discarded.current = false;
+
+      return;
+    }
+
+    const num = parseFloat(draft);
+
+    if (!isNaN(num) && num > 0 && num !== value) onSave(num);
+
+    setEditing(false);
+  };
+
   return (
     <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          const num = parseFloat(draft);
-          if (!isNaN(num) && num > 0 && num !== value) {
-            onSave(num);
-          }
-          setEditing(false);
+          commit();
         }}
       >
         <span className="text-xs text-text-muted">$</span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
           min="0"
           autoFocus
+          /*
+            Clicking the Save button blurs the input first, so committing here
+            is what actually saves in that case too; the submit handler then
+            finds nothing left to change. Escape clears the draft before the
+            blur lands, so it stays a discard.
+          */
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
-              setEditing(false);
+              // Set before the state change so a blur racing the unmount
+              // cannot commit the very edit being abandoned
+              discarded.current = true;
               setDraft(value?.toFixed(2) ?? '');
+              setEditing(false);
             }
           }}
         />
@@ -243,6 +274,8 @@ const OverrideCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+  /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
+  const discarded = useRef(false);
 
   if (!editing) {
     const has = value != null && value !== 0;
@@ -269,20 +302,34 @@ const OverrideCell = ({
     );
   }
 
+  /** Same rule as the price cells: only Escape throws the edit away */
+  const commit = () => {
+    if (discarded.current) {
+      discarded.current = false;
+
+      return;
+    }
+
+    const t = draft.trim();
+
+    if (t === '') {
+      onSave(null);
+    } else {
+      const num = parseFloat(t);
+
+      if (!isNaN(num) && num !== value) onSave(num);
+    }
+
+    setEditing(false);
+  };
+
   return (
     <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          const t = draft.trim();
-          if (t === '') {
-            onSave(null);
-          } else {
-            const num = parseFloat(t);
-            if (!isNaN(num) && num !== value) onSave(num);
-          }
-          setEditing(false);
+          commit();
         }}
       >
         <span className="text-xs text-text-muted">$</span>
@@ -296,10 +343,12 @@ const OverrideCell = ({
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              discarded.current = true;
               setEditing(false);
               setDraft(value != null ? value.toFixed(2) : '');
             }
           }}
+          onBlur={commit}
         />
         <button
           type="submit"
@@ -325,6 +374,8 @@ const MarginEditCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(1) : '');
+  /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
+  const discarded = useRef(false);
 
   if (!editing) {
     return (
@@ -348,29 +399,44 @@ const MarginEditCell = ({
     );
   }
 
+  /** Same rule as every other cell here: only Escape throws the edit away */
+  const commit = () => {
+    if (discarded.current) {
+      discarded.current = false;
+
+      return;
+    }
+
+    const num = parseFloat(draft);
+
+    if (!isNaN(num) && num > 0 && num < 100 && num !== value) onSave(num);
+
+    setEditing(false);
+  };
+
   return (
     <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          const num = parseFloat(draft);
-          if (!isNaN(num) && num > 0 && num < 100 && num !== value) onSave(num);
-          setEditing(false);
+          commit();
         }}
       >
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
           placeholder="0.0"
           type="number"
           step="0.1"
           min="0"
           max="99.9"
           autoFocus
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              discarded.current = true;
               setEditing(false);
               setDraft(value != null ? value.toFixed(1) : '');
             }
@@ -405,6 +471,8 @@ const LogisticsCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+  /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
+  const discarded = useRef(false);
 
   if (!editing) {
     const isOverride = value != null;
@@ -436,20 +504,34 @@ const LogisticsCell = ({
     );
   }
 
+  /** Same rule as every other cell here: only Escape throws the edit away */
+  const commit = () => {
+    if (discarded.current) {
+      discarded.current = false;
+
+      return;
+    }
+
+    const t = draft.trim();
+
+    if (t === '') {
+      onSave(null); // clear -> revert to system freight / fallback
+    } else {
+      const num = parseFloat(t);
+
+      if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
+    }
+
+    setEditing(false);
+  };
+
   return (
     <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          const t = draft.trim();
-          if (t === '') {
-            onSave(null); // clear -> revert to system freight / fallback
-          } else {
-            const num = parseFloat(t);
-            if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
-          }
-          setEditing(false);
+          commit();
         }}
       >
         <span className="text-xs text-text-muted">$</span>
@@ -462,8 +544,10 @@ const LogisticsCell = ({
           step="0.01"
           min="0"
           autoFocus
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              discarded.current = true;
               setEditing(false);
               setDraft(value != null ? value.toFixed(2) : '');
             }
@@ -497,6 +581,8 @@ const TransfersCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+  /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
+  const discarded = useRef(false);
 
   if (!editing) {
     const isOverride = value != null;
@@ -528,20 +614,34 @@ const TransfersCell = ({
     );
   }
 
+  /** Same rule as every other cell here: only Escape throws the edit away */
+  const commit = () => {
+    if (discarded.current) {
+      discarded.current = false;
+
+      return;
+    }
+
+    const t = draft.trim();
+
+    if (t === '') {
+      onSave(null); // clear -> revert to the $2.50 default
+    } else {
+      const num = parseFloat(t);
+
+      if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
+    }
+
+    setEditing(false);
+  };
+
   return (
     <td className={`px-3 py-2.5 ${tdClassName}`}>
       <form
         className="flex items-center justify-end gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          const t = draft.trim();
-          if (t === '') {
-            onSave(null); // clear -> revert to the $2.50 default
-          } else {
-            const num = parseFloat(t);
-            if (!isNaN(num) && num >= 0 && num !== value) onSave(num);
-          }
-          setEditing(false);
+          commit();
         }}
       >
         <span className="text-xs text-text-muted">$</span>
@@ -554,8 +654,10 @@ const TransfersCell = ({
           step="0.01"
           min="0"
           autoFocus
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              discarded.current = true;
               setEditing(false);
               setDraft(value != null ? value.toFixed(2) : '');
             }
@@ -1926,7 +2028,12 @@ const PricingManagerPage = () => {
               <thead className="sticky top-0 z-10 bg-surface-muted shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
-                  <th className="px-3 pb-1.5 pt-2.5" colSpan={4} />
+                  {/* Sits over the pinned pair, so it is pinned with them */}
+                  <th
+                    className="bg-surface-muted sticky left-0 z-20 px-3 pb-1.5 pt-2.5"
+                    colSpan={2}
+                  />
+                  <th className="px-3 pb-1.5 pt-2.5" colSpan={2} />
                   <th
                     title="Cost build-up per bottle: Import + Logistics + Transfer + Override = Landed"
                     className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500"
@@ -1955,7 +2062,7 @@ const PricingManagerPage = () => {
                 </tr>
                 {/* Column row */}
                 <tr className="border-b border-border-muted">
-                  <th className="w-8 px-2 pb-2.5 pt-1">
+                  <th className="bg-surface-muted sticky left-0 z-20 w-8 px-2 pb-2.5 pt-1">
                     <input
                       type="checkbox"
                       title="Select every line shown"
@@ -1975,7 +2082,7 @@ const PricingManagerPage = () => {
                     were legible and anonymous.
                   */}
                   <th
-                    className={`bg-surface-primary sticky left-0 z-20 px-3 pb-2.5 pt-1 text-left ${thBase}`}
+                    className={`bg-surface-muted sticky left-8 z-20 px-3 pb-2.5 pt-1 text-left ${thBase}`}
                     onClick={() => handleSort('productName')}
                     title="Wine / product name and producer"
                   >
@@ -2327,16 +2434,28 @@ const PricingManagerPage = () => {
                             : ''
                         }`}
                       >
+                      {/*
+                        Opaque, and inherited by the pinned column.
+
+                        Pinning the product cell gave it a background of its
+                        own, which then sat over the row's own colour — an
+                        in-transit row lost its amber and a below-cost row its
+                        red in the one column that names the wine, and the
+                        hover stopped at the second column. The row owns the
+                        colour and the pinned cell inherits it, which needs the
+                        row to be genuinely opaque: a translucent stripe lets
+                        the columns scrolling underneath show through.
+                      */}
                       <tr
                         className={`transition-colors ${
                           isInbound
-                            ? 'bg-amber-50/60 hover:bg-amber-50'
+                            ? 'bg-amber-50 hover:bg-amber-100'
                             : isLoss
-                              ? 'bg-red-50/70 hover:bg-red-50'
-                              : 'even:bg-surface-muted/40 hover:bg-surface-muted/60'
+                              ? 'bg-red-50 hover:bg-red-100'
+                              : 'bg-surface-primary even:bg-surface-muted hover:bg-surface-muted'
                         }`}
                       >
-                        <td className="w-8 px-2 py-2.5">
+                        <td className="sticky left-0 z-10 w-8 bg-inherit px-2 py-2.5">
                           <input
                             type="checkbox"
                             checked={selected.has(product.lwin18)}
@@ -2354,7 +2473,7 @@ const PricingManagerPage = () => {
 
                         {/* Product — pinned; see the header for why */}
                         <td
-                          className={`bg-surface-primary sticky left-0 z-10 border-l-4 px-3 py-2.5 ${
+                          className={`sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
                             ownerCue?.style.border ?? 'border-l-transparent'
                           }`}
                         >
