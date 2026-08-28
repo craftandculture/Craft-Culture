@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 
+import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
 import { partners, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+
 
 import updateUserSchema from '../schemas/updateUserSchema';
 
@@ -37,11 +39,42 @@ const usersUpdate = protectedProcedure
         .where(eq(partners.userId, ctx.user.id));
 
       if (!existingPartner) {
-        await db.insert(partners).values({
-          userId: ctx.user.id,
-          type: 'wine_partner',
-          businessName: updatedUser.name ?? ctx.user.email ?? 'Wine Partner',
-        });
+        /*
+          A partner already trading under this name is joined, not duplicated.
+
+          This checked only whether the user already had a record, so a business
+          long since on file — with its stock, its shipments and its pricing
+          margins — got a second, empty one the moment somebody signed in. The
+          margins are keyed on the record, so the new one prices at defaults
+          while the screen shows the rate as set on the old.
+        */
+        const name = updatedUser.name ?? ctx.user.email ?? 'Wine Partner';
+        const key = normalisePartnerName(name);
+
+        const byName = key
+          ? (
+              await db
+                .select({ id: partners.id, businessName: partners.businessName })
+                .from(partners)
+            ).find(
+              (partner) => normalisePartnerName(partner.businessName) === key,
+            )
+          : undefined;
+
+        if (byName) {
+          // Claim the existing record for this user rather than starting a
+          // second one beside it.
+          await db
+            .update(partners)
+            .set({ userId: ctx.user.id })
+            .where(eq(partners.id, byName.id));
+        } else {
+          await db.insert(partners).values({
+            userId: ctx.user.id,
+            type: 'wine_partner',
+            businessName: name,
+          });
+        }
       }
     }
 

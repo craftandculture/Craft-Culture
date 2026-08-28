@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import db from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import normalisePartnerName from '../utils/normalisePartnerName';
+
 export interface DuplicatePartnerRecord {
   id: string;
   businessName: string;
@@ -23,84 +25,65 @@ export interface DuplicatePartnerGroup {
 }
 
 /**
- * Find partners recorded twice under the same name
+ * Find businesses recorded under more than one partner record
  *
  * Two records for one business is not a cosmetic duplicate. Owner pricing
  * settings are keyed on the partner id, so a margin set against one record does
  * not reach stock owned by the other — the screen shows the rate as configured
- * and half the wine prices as though it were not. The same split shows up as
- * one owner appearing twice in every filter, each holding part of the total.
+ * and half the wine prices as though it were not. The same split shows one
+ * owner twice in every filter, each holding part of the total.
  *
- * Names are compared with punctuation, spacing, case and the usual company
- * suffixes stripped, because that is how the pairs actually differ: "Craft &
- * Culture" against "Craft and Culture FZE".
+ * The names are compared with the same rule that now refuses to create a
+ * duplicate in the first place, so what this finds and what creation blocks
+ * cannot drift apart.
  *
  * Read-only. Merging is a separate, deliberate act.
  *
  * @returns One entry per name held by more than one partner record
  */
 const partnersFindDuplicates = adminProcedure.query(async () => {
-  /*
-    Normalised in SQL so the grouping and the counting agree. `&` becomes
-    "and", punctuation goes, and the suffixes a business is registered under
-    but rarely called by are dropped.
-  */
-  const normalised = sql`
-    TRIM(REGEXP_REPLACE(
-      REGEXP_REPLACE(
-        LOWER(REGEXP_REPLACE(REPLACE(p.business_name, '&', ' and '), '[^a-zA-Z0-9 ]', ' ', 'g')),
-        '\\s+(fze|fzc|fzco|llc|ltd|limited|inc|gmbh|sa|srl|bv|aps|as|ab|plc|co|company|trading|group|holdings)\\s*$',
-        '', 'g'
-      ),
-      '\\s+', ' ', 'g'
-    ))`;
-
   const rows = await db.execute<{
     id: string;
     business_name: string;
     type: string;
     status: string;
     created_at: Date | null;
-    norm: string;
     stock_rows: number;
     stock_cases: number;
     shipments: number;
     has_pricing: boolean;
   }>(sql`
-    WITH normalised AS (
-      SELECT p.id, p.business_name, p.type::text AS type, p.status::text AS status,
-             p.created_at, ${normalised} AS norm
-        FROM partners p
-    ),
-    dupes AS (
-      SELECT norm FROM normalised WHERE norm <> '' GROUP BY norm HAVING COUNT(*) > 1
-    )
-    SELECT n.id, n.business_name, n.type, n.status, n.created_at, n.norm,
-           COALESCE(s.rows, 0)::int      AS stock_rows,
-           COALESCE(s.cases, 0)::int     AS stock_cases,
+    SELECT p.id, p.business_name, p.type::text AS type, p.status::text AS status,
+           p.created_at,
+           COALESCE(s.rows, 0)::int       AS stock_rows,
+           COALESCE(s.cases, 0)::int      AS stock_cases,
            COALESCE(sh.shipments, 0)::int AS shipments,
            (op.owner_id IS NOT NULL)      AS has_pricing
-      FROM normalised n
-      JOIN dupes d ON d.norm = n.norm
+      FROM partners p
       LEFT JOIN (
         SELECT owner_id, COUNT(*) AS rows, SUM(quantity_cases) AS cases
           FROM wms_stock GROUP BY owner_id
-      ) s ON s.owner_id = n.id
+      ) s ON s.owner_id = p.id
       LEFT JOIN (
         SELECT partner_id, COUNT(*) AS shipments
           FROM logistics_shipments GROUP BY partner_id
-      ) sh ON sh.partner_id = n.id
-      LEFT JOIN wms_owner_pricing_settings op ON op.owner_id = n.id
-     ORDER BY n.norm, s.cases DESC NULLS LAST, n.created_at ASC
+      ) sh ON sh.partner_id = p.id
+      LEFT JOIN wms_owner_pricing_settings op ON op.owner_id = p.id
   `);
 
+  /*
+    Grouped here rather than in SQL so the comparison is the shared rule, not a
+    second copy of it written in Postgres. There are dozens of partners, not
+    thousands, so the work is trivial and the agreement is guaranteed.
+  */
   const groups = new Map<string, DuplicatePartnerGroup>();
 
   for (const row of rows) {
-    const group = groups.get(row.norm) ?? {
-      businessName: row.business_name,
-      records: [],
-    };
+    const key = normalisePartnerName(row.business_name);
+
+    if (!key) continue;
+
+    const group = groups.get(key) ?? { businessName: row.business_name, records: [] };
 
     group.records.push({
       id: row.id,
@@ -114,10 +97,18 @@ const partnersFindDuplicates = adminProcedure.query(async () => {
       hasPricingSettings: Boolean(row.has_pricing),
     });
 
-    groups.set(row.norm, group);
+    groups.set(key, group);
   }
 
-  return { groups: [...groups.values()] };
+  return {
+    groups: [...groups.values()]
+      .filter((group) => group.records.length > 1)
+      // The biggest holding first: it is the one most likely to be the keeper
+      .map((group) => ({
+        ...group,
+        records: [...group.records].sort((a, b) => b.stockCases - a.stockCases),
+      })),
+  };
 });
 
 export default partnersFindDuplicates;
