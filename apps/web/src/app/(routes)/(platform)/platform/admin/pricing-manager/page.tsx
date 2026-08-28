@@ -1343,6 +1343,7 @@ const PricingManagerPage = () => {
         />
       </div>
 
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border-muted bg-surface-muted/20 p-3">
         {/* Category pills */}
@@ -1366,6 +1367,32 @@ const PricingManagerPage = () => {
           ))}
         </div>
 
+        {/* Search — full width so it wraps onto its own line directly beneath
+            the category pills. It used to sit wedged between the owner
+            dropdown and the action buttons at text-sm on a muted fill, where
+            what you had typed was genuinely hard to read. */}
+        <div className="relative w-full">
+          <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Search wines, producers or LWIN…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search products"
+            className="w-full rounded-xl border-2 border-border-primary bg-background-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-border-brand/25"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-text-muted hover:bg-fill-secondary hover:text-text-primary"
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         {/* Owner dropdown */}
         <select
           value={ownerId ?? ''}
@@ -1384,29 +1411,6 @@ const PricingManagerPage = () => {
           ))}
         </select>
 
-        {/* Search — primary control, given a distinct surface + focus ring so it
-            stands out from the filter chips rather than blending into the bar. */}
-        <div className="relative flex-1 lg:max-w-sm">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search wines, producers or LWIN…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search products"
-            className="w-full rounded-lg border-2 border-border-primary bg-surface-muted/50 py-2.5 pl-10 pr-9 text-sm shadow-sm transition-all placeholder:text-text-muted focus:border-border-brand focus:bg-background-primary focus:outline-none focus:ring-2 focus:ring-border-brand/25"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted transition-colors hover:bg-fill-primary-hover hover:text-text-primary"
-            >
-              <IconX className="h-4 w-4" />
-            </button>
-          )}
-        </div>
 
         {/* Global rates (when no owner selected) */}
         {!ownerId && (
