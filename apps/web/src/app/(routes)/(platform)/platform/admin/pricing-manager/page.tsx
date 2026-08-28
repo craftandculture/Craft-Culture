@@ -100,6 +100,22 @@ const shortOwner = (name: string): string => {
 
 // ─── PriceCell (click-to-edit) ────────────────────────────────────────────────
 
+/**
+ * A per-case figure, written so it can be read at a glance
+ *
+ * The case price is what most trade buyers actually transact in, and it was
+ * rendered at ten pixels and sixty percent opacity with no thousands
+ * separator: "$5881/cs" against a bottle price in full contrast. Anyone
+ * comparing case prices down a column was reading the least legible number on
+ * the screen.
+ *
+ * @param perBottle - The per-bottle price
+ * @param caseConfig - Bottles in the case
+ * @returns e.g. "$5,881/case"
+ */
+const casePrice = (perBottle: number, caseConfig: number) =>
+  `$${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
+
 const PriceCell = ({
   value,
   onSave,
@@ -156,7 +172,9 @@ const PriceCell = ({
           <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
         </button>
         {sub && value != null && value > 0 && (
-          <div className="text-[10px] tabular-nums text-text-muted/60">{sub}</div>
+          <div className="text-[11px] font-medium tabular-nums text-text-muted">
+            {sub}
+          </div>
         )}
       </td>
     );
@@ -588,6 +606,7 @@ const KpiCard = ({
   label,
   value,
   subtitle,
+  secondary,
   color = 'default',
   icon,
   onClick,
@@ -596,6 +615,14 @@ const KpiCard = ({
   label: string;
   value: string;
   subtitle?: string;
+  /**
+   * In-transit, shown beneath the landed figure rather than added to it.
+   *
+   * Blending them would overstate what can be sold this week — wine on the
+   * water is owned, not available — and showing only the landed figure reports
+   * zero against a partner whose entire holding is in transit. Both, labelled.
+   */
+  secondary?: string;
   color?: keyof typeof KPI_THEMES;
   icon?: React.ReactNode;
   onClick?: () => void;
@@ -616,6 +643,11 @@ const KpiCard = ({
         )}
       </div>
       <p className={`mt-1.5 text-2xl font-bold tracking-tight tabular-nums ${theme.text}`}>{value}</p>
+      {secondary && (
+        <p className="mt-0.5 text-[11px] font-medium leading-tight text-text-warning">
+          {secondary}
+        </p>
+      )}
       {subtitle && <p className="mt-0.5 text-[11px] leading-tight text-text-muted">{subtitle}</p>}
       {onClick && (
         <p className="mt-1.5 text-[10px] font-medium text-fill-brand">
@@ -921,6 +953,60 @@ const PricingManagerPage = () => {
   const products = data?.products ?? [];
   const pagination = data?.pagination;
   const summary = data?.summary;
+
+  /**
+   * What the in-transit rows are worth, priced the same way the table prices
+   * them.
+   *
+   * Kept apart from the landed summary rather than folded into it. Stock at
+   * cost and in-bond value are asset figures where "in the warehouse" and "on
+   * the water" are genuinely different answers, and a blended total would
+   * overstate what is sellable now. But zero above sixty-five priced wines is
+   * no answer at all, so both are shown.
+   */
+  const inTransitTotals = useMemo(() => {
+    const rows = includeInbound ? (data?.inbound ?? []) : [];
+    let products = 0;
+    let bottles = 0;
+    let cost = 0;
+    let inBond = 0;
+    let pc = 0;
+
+    for (const row of rows) {
+      const caseConfig = row.caseConfig || 1;
+      const rowBottles = (row.totalCases ?? 0) * caseConfig;
+      const override = row.costOverridePerBottle ?? null;
+      const hasCost =
+        (row.importPricePerBottle != null && row.importPricePerBottle > 0) ||
+        override != null;
+
+      products += 1;
+      bottles += rowBottles;
+
+      if (!hasCost) continue;
+
+      const landed =
+        (row.importPricePerBottle ?? 0) +
+        (row.systemLogistics ?? 0) +
+        (row.transferPricePerBottle ?? 2.5) +
+        (override ?? 0);
+
+      const inBondPct = row.ownerInbondPct ?? inBondMarkupPct;
+      const inBondPrice = inBondPct < 100 ? landed / (1 - inBondPct / 100) : null;
+      // No PC margin on the owner means no private-client price, not a zero
+      const pcPct = row.ownerPcPct;
+      const pcPrice =
+        pcPct != null && pcPct < 100 && inBondPrice != null
+          ? inBondPrice / (1 - pcPct / 100)
+          : null;
+
+      cost += landed * rowBottles;
+      if (inBondPrice != null) inBond += inBondPrice * rowBottles;
+      if (pcPrice != null) pc += pcPrice * rowBottles;
+    }
+
+    return { products, bottles, cost, inBond, pc };
+  }, [data?.inbound, includeInbound, inBondMarkupPct]);
   // Every line on screen — the "select all" target, so a filter or search
   // narrows what a bulk action touches.
   const visibleLwins = [
@@ -1264,35 +1350,39 @@ const PricingManagerPage = () => {
         · — · — · $0" directly above a list of sixty-five of their wines, which
         reads as a broken page rather than as two different questions.
       */}
-      {includeInbound && (data?.inbound?.length ?? 0) > 0 && (
-        <div className="border-border-muted bg-fill-muted/30 mb-3 rounded-md border px-3 py-2">
-          <Typography variant="bodyXs" colorRole="muted">
-            The figures below cover stock landed in the warehouse.{' '}
-            {data?.inbound?.length} product
-            {(data?.inbound?.length ?? 0) === 1 ? ' is' : 's are'} still in
-            transit and priced in the table, but not counted here — nothing has
-            been received, so there is no stock on hand to value.
-          </Typography>
-        </div>
-      )}
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Products"
           value={summary?.totalProducts?.toLocaleString() ?? '—'}
-          subtitle="with stock landed"
+          secondary={
+            inTransitTotals.products > 0
+              ? `+ ${inTransitTotals.products.toLocaleString()} in transit`
+              : undefined
+          }
+          subtitle="landed in the warehouse"
           icon={<IconBottle className="h-5 w-5" />}
         />
         <KpiCard
           label="Stock at Cost"
           value={summary?.stockAtCost ? formatValue(summary.stockAtCost) : '—'}
+          secondary={
+            inTransitTotals.cost > 0
+              ? `+ ${formatValue(inTransitTotals.cost)} in transit`
+              : undefined
+          }
           subtitle="landed cost of stock on hand"
           icon={<IconBuildingWarehouse className="h-5 w-5" />}
         />
         <KpiCard
           label="In-Bond Value"
           value={summary?.inBondValue ? formatValue(summary.inBondValue) : '—'}
+          secondary={
+            inTransitTotals.inBond > 0
+              ? `+ ${formatValue(inTransitTotals.inBond)} in transit`
+              : undefined
+          }
           subtitle="B2B value of stock"
           icon={<IconCurrencyDollar className="h-5 w-5" />}
         />
@@ -1300,6 +1390,13 @@ const PricingManagerPage = () => {
           label="PC Value"
           value={summary?.pcValue ? formatValue(summary.pcValue) : '—'}
           color="brand"
+          secondary={
+            inTransitTotals.pc > 0
+              ? `+ ${formatValue(inTransitTotals.pc)} in transit`
+              : inTransitTotals.products > 0
+                ? 'in-transit lines have no PC margin set'
+                : undefined
+          }
           subtitle="private client value of stock"
           icon={<IconCurrencyDollar className="h-5 w-5" />}
         />
@@ -1871,8 +1968,14 @@ const PricingManagerPage = () => {
                       className="h-3.5 w-3.5 cursor-pointer"
                     />
                   </th>
+                  {/*
+                    Pinned. This table is far wider than any screen, so
+                    scrolling right to reach the private-client price took the
+                    name of the wine off the left-hand edge with it — the prices
+                    were legible and anonymous.
+                  */}
                   <th
-                    className={`px-3 pb-2.5 pt-1 text-left ${thBase}`}
+                    className={`bg-surface-primary sticky left-0 z-20 px-3 pb-2.5 pt-1 text-left ${thBase}`}
                     onClick={() => handleSort('productName')}
                     title="Wine / product name and producer"
                   >
@@ -2249,9 +2352,9 @@ const PricingManagerPage = () => {
                           />
                         </td>
 
-                        {/* Product */}
+                        {/* Product — pinned; see the header for why */}
                         <td
-                          className={`border-l-4 px-3 py-2.5 ${
+                          className={`bg-surface-primary sticky left-0 z-10 border-l-4 px-3 py-2.5 ${
                             ownerCue?.style.border ?? 'border-l-transparent'
                           }`}
                         >
@@ -2384,7 +2487,7 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-slate-300"
                           sub={
                             importPrice != null && importPrice > 0
-                              ? `$${(importPrice * caseConfig).toFixed(0)}/cs`
+                              ? casePrice(importPrice, caseConfig)
                               : undefined
                           }
                           onSave={(v) =>
@@ -2437,8 +2540,8 @@ const PricingManagerPage = () => {
                             {landed != null ? `$${landed.toFixed(2)}` : '—'}
                           </div>
                           {landed != null && (
-                            <div className="text-[10px] text-text-muted/60">
-                              ${(landed * caseConfig).toFixed(0)}/cs
+                            <div className="text-[11px] font-medium text-text-muted">
+                              {casePrice(landed, caseConfig)}
                             </div>
                           )}
                         </td>
@@ -2454,7 +2557,7 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-blue-300"
                           sub={
                             inBondPrice != null
-                              ? `$${(inBondPrice * caseConfig).toFixed(0)}/cs`
+                              ? casePrice(inBondPrice, caseConfig)
                               : undefined
                           }
                           hintFor={(price) =>
@@ -2483,7 +2586,7 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-violet-300"
                           sub={
                             sellPrice != null && sellPrice > 0
-                              ? `$${(sellPrice * caseConfig).toFixed(0)}/cs`
+                              ? casePrice(sellPrice, caseConfig)
                               : undefined
                           }
                           onSave={(v) => {
@@ -2565,7 +2668,7 @@ const PricingManagerPage = () => {
                                   </span>
                                   <span className="text-text-muted">/btl</span>
                                   <span className="ml-1.5 text-[10px] text-text-muted/70">
-                                    ${(lastSold.pricePerBottle * caseConfig).toFixed(0)}/cs
+                                    {casePrice(lastSold.pricePerBottle, caseConfig)}
                                   </span>
                                 </span>
                                 <span

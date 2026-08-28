@@ -10,10 +10,12 @@ import contactsGetMany from './controllers/contactsGetMany';
 import contactsUpdate from './controllers/contactsUpdate';
 import partnersCreate from './controllers/partnersCreate';
 import partnersDelete from './controllers/partnersDelete';
+import partnersFindDuplicates from './controllers/partnersFindDuplicates';
 import partnersGetMany from './controllers/partnersGetMany';
 import partnersGetOne from './controllers/partnersGetOne';
 import partnersGetPublicInfo from './controllers/partnersGetPublicInfo';
 import partnersListSimple from './controllers/partnersListSimple';
+import partnersMerge from './controllers/partnersMerge';
 import partnersUpdate from './controllers/partnersUpdate';
 
 const apiKeysRouter = createTRPCRouter({
@@ -33,6 +35,9 @@ const contactsRouter = createTRPCRouter({
 const partnersRouter = createTRPCRouter({
   create: partnersCreate,
   delete: partnersDelete,
+  // One business recorded twice splits its stock and, silently, its pricing
+  findDuplicates: partnersFindDuplicates,
+  merge: partnersMerge,
   getMany: partnersGetMany,
   getOne: partnersGetOne,
   getPublicInfo: partnersGetPublicInfo,

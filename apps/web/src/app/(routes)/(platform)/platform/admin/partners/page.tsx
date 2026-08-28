@@ -20,6 +20,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import DuplicatePartners from '@/app/_partners/components/DuplicatePartners';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
 import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
@@ -332,6 +333,14 @@ const DistributorsPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
+        {/*
+          Shown only when there is something to fix. A business recorded twice
+          splits its stock across two owner filters and, less visibly, its
+          pricing — margins are held against the partner id, so a rate set on
+          one record does not reach wine owned by the other.
+        */}
+        <DuplicatePartners />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
