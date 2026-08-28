@@ -68,6 +68,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
       conditions.push(sql`${effH} > 0 AND ${effH} <= ${landedH}`);
     } else if (priceFilter === 'noImport') {
       conditions.push(sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`);
+    } else if (priceFilter === 'notReleased') {
+      // Still to do. Releasing is the last step of pricing a line, so its
+      // absence is the most useful definition of "not finished".
+      conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NULL`);
+    } else if (priceFilter === 'released') {
+      conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`);
     }
 
     if (search) {
@@ -499,6 +505,25 @@ const adminGetPricingProducts = wmsOperatorProcedure
         // had no owner to match on.
         ...(ownerId ? [eq(logisticsShipments.partnerId, ownerId)] : []),
         inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
+        /*
+          In-transit lines are where pricing is actually done, so the
+          released filter has to reach them too — filtering the landed list
+          alone would leave the toggle looking broken in the one place it
+          matters.
+        */
+        ...(priceFilter === 'notReleased' || priceFilter === 'released'
+          ? [
+              sql`${
+                priceFilter === 'notReleased'
+                  ? sql`NOT EXISTS`
+                  : sql`EXISTS`
+              } (
+                SELECT 1 FROM wms_product_pricing rel
+                 WHERE rel.lwin18 = ${logisticsShipmentItems.lwin}
+                   AND rel.pricing_released_at IS NOT NULL
+              )`,
+            ]
+          : []),
       ];
       if (search) {
         inboundConditions.push(

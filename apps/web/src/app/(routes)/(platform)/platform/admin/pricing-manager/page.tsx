@@ -922,7 +922,7 @@ const PricingManagerPage = () => {
 
   // Price-gap quick filter
   const [priceFilter, setPriceFilter] = useState<
-    'unpriced' | 'lossMaking' | 'noImport' | undefined
+    'unpriced' | 'lossMaking' | 'noImport' | 'notReleased' | 'released' | undefined
   >(undefined);
   const [includeInbound, setIncludeInbound] = useState(false);
   const [includeSoldOut, setIncludeSoldOut] = useState(false);
@@ -1854,6 +1854,14 @@ const PricingManagerPage = () => {
           { key: 'unpriced' as const, label: 'Unpriced' },
           { key: 'lossMaking' as const, label: 'Below cost' },
           { key: 'noImport' as const, label: 'No import cost' },
+          /*
+            The working filter. Pricing a shipment is a line-by-line pass
+            ending in a release, and the finished lines stayed in the list with
+            the unfinished ones — so the job appeared to get longer the closer
+            it came to done.
+          */
+          { key: 'notReleased' as const, label: 'Not on price list' },
+          { key: 'released' as const, label: 'On price list' },
         ]).map((f) => (
           <button
             key={f.label}

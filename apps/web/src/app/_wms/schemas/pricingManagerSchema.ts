@@ -6,7 +6,17 @@ export const getPricingProductsSchema = z.object({
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
   ownerId: z.string().uuid().optional(),
   /** Price-gap filter: unpriced (import but no sell), lossMaking (sell ≤ import), noImport */
-  priceFilter: z.enum(['unpriced', 'lossMaking', 'noImport']).optional(),
+  /**
+   * Which gap in the pricing to show.
+   *
+   * `notReleased` is the working filter: pricing a shipment means going line by
+   * line and releasing each one, and until now the finished lines stayed in the
+   * list with the unfinished ones, so the work got longer as it got closer to
+   * done.
+   */
+  priceFilter: z
+    .enum(['unpriced', 'lossMaking', 'noImport', 'notReleased', 'released'])
+    .optional(),
   /** Also return in-transit (inbound shipment) products as a separate list */
   includeInbound: z.boolean().optional(),
   /** Include sold-out SKUs (0 cases on hand) so the user can see what's moved */
