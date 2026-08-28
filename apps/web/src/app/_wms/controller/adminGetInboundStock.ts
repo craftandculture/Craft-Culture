@@ -5,17 +5,11 @@ import { logisticsShipmentItems, logisticsShipments, partners } from '@/database
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getInboundStockSchema } from '../schemas/stockQuerySchema';
+import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+
 
 /** Inbound shipment statuses (after booking, before WMS receiving) */
-const INBOUND_STATUSES = [
-  'booked',
-  'picked_up',
-  'in_transit',
-  'arrived_port',
-  'customs_clearance',
-  'cleared',
-  'at_warehouse',
-] as const;
+
 
 /**
  * Map HS code to product category.
@@ -70,7 +64,7 @@ const adminGetInboundStock = wmsOperatorProcedure
     // Base conditions: inbound shipments in active statuses
     const conditions = [
       eq(logisticsShipments.type, 'inbound'),
-      inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
+      inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
     ];
 
     if (search) {

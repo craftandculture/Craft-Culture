@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -10,6 +10,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByOwnerSchema } from '../schemas/stockQuerySchema';
+import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 
 /**
  * Get stock grouped by owner with product breakdown
@@ -128,7 +129,19 @@ const adminGetStockByOwner = wmsOperatorProcedure
         and(
           eq(logisticsShipments.type, 'inbound'),
           isNotNull(logisticsShipments.partnerId),
-          gt(logisticsShipmentItems.cases, 0),
+          /*
+            Only what is actually on its way.
+
+            This had no status filter, so it counted every inbound line ever
+            raised against a partner — drafts never bought, shipments long
+            since delivered into stock, and cancellations. A partner with 65
+            wines in transit was offered in the filter as "76 inbound", and the
+            same owner appeared twice where an old shipment sat under a second
+            partner record.
+          */
+          inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
+          // Bottles, not cases: a line billed loose carries no case of its own
+          gt(logisticsShipmentItems.totalBottles, 0),
         ),
       )
       .groupBy(logisticsShipments.partnerId);

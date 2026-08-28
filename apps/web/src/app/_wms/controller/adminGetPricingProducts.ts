@@ -17,6 +17,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
+import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 
 /**
@@ -449,15 +450,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
 
     // In-transit (inbound shipment) products — returned separately so the
     // on-hand pagination is untouched. Cost comes from the shipment.
-    const INBOUND_STATUSES = [
-      'booked',
-      'picked_up',
-      'in_transit',
-      'arrived_port',
-      'customs_clearance',
-      'cleared',
-      'at_warehouse',
-    ] as const;
+
     type InboundRow = {
       lwin18: string;
       productName: string;
@@ -505,7 +498,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         // Filtering by owner used to drop in-transit wine entirely, because it
         // had no owner to match on.
         ...(ownerId ? [eq(logisticsShipments.partnerId, ownerId)] : []),
-        inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
+        inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
       ];
       if (search) {
         inboundConditions.push(

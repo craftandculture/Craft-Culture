@@ -1258,12 +1258,30 @@ const PricingManagerPage = () => {
         </Typography>
       </div>
 
+      {/*
+        These read landed stock only, and say so when that is not what is on
+        screen. A partner whose wine is all still in transit showed "0 products
+        · — · — · $0" directly above a list of sixty-five of their wines, which
+        reads as a broken page rather than as two different questions.
+      */}
+      {includeInbound && (data?.inbound?.length ?? 0) > 0 && (
+        <div className="border-border-muted bg-fill-muted/30 mb-3 rounded-md border px-3 py-2">
+          <Typography variant="bodyXs" colorRole="muted">
+            The figures below cover stock landed in the warehouse.{' '}
+            {data?.inbound?.length} product
+            {(data?.inbound?.length ?? 0) === 1 ? ' is' : 's are'} still in
+            transit and priced in the table, but not counted here — nothing has
+            been received, so there is no stock on hand to value.
+          </Typography>
+        </div>
+      )}
+
       {/* KPI Row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Products"
           value={summary?.totalProducts?.toLocaleString() ?? '—'}
-          subtitle="with stock"
+          subtitle="with stock landed"
           icon={<IconBottle className="h-5 w-5" />}
         />
         <KpiCard

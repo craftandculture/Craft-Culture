@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 
 import type { CatalogueRow } from './getCatalogueRows';
+import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 
 
@@ -32,15 +33,7 @@ const isZeroTransferOwner = (owner: string | null) =>
   !!owner && /(cru wine|crurated)/i.test(owner);
 
 /** Shipment statuses that mean "bought, not yet received into wms_stock". */
-const INBOUND_STATUSES = [
-  'booked',
-  'picked_up',
-  'in_transit',
-  'arrived_port',
-  'customs_clearance',
-  'cleared',
-  'at_warehouse',
-] as const;
+
 
 /** HS codes per category — inbound lines carry no category of their own. */
 const HS_CODES: Record<string, readonly string[] | undefined> = {
@@ -104,7 +97,7 @@ const getCatalogueInboundRows = async (
     // omits draft, partially_received, delivered and cancelled: once a shipment
     // starts being received its stock is in wms_stock, so including those here
     // would list the same bottles twice across the two feeds.
-    inArray(logisticsShipments.status, [...INBOUND_STATUSES]),
+    inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
     /*
       A line inherits its shipment unless it says otherwise, so a whole
       storage shipment is one setting and a mixed one is a handful of
