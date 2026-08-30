@@ -98,6 +98,7 @@ import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
 import adminSetCostOverride from './controller/adminSetCostOverride';
 import adminSetImportPrice from './controller/adminSetImportPrice';
+import adminSetInboundAvailability from './controller/adminSetInboundAvailability';
 import adminSetLineLogistics from './controller/adminSetLineLogistics';
 import adminSetLineMargins from './controller/adminSetLineMargins';
 import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
@@ -183,6 +184,8 @@ const stockPricingRouter = createTRPCRouter({
   getBands: adminGetPricingBands,
   setBands: adminSetPricingBands,
   setRelease: adminSetPricingRelease,
+  // For sale / held, per in-transit line, without a trip to Logistics
+  setInboundAvailability: adminSetInboundAvailability,
   setLineMargins: adminSetLineMargins,
   bulkApplyMargin: adminBulkApplyMargin,
   getOwnerSettings: adminGetOwnerPricingSettings,

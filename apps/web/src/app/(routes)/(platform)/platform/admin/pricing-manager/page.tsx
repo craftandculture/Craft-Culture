@@ -1018,6 +1018,37 @@ const PricingManagerPage = () => {
     onError: (error) => toast.error(`Could not release: ${error.message}`),
   });
 
+  const setAvailabilityMut = useMutation({
+    ...api.wms.admin.stock.pricing.setInboundAvailability.mutationOptions(),
+    onSuccess: (r) => {
+      /*
+        Says what changed. "Held for its owner" is the quietest way for a wine
+        to be missing from a price list, so lifting it should be as loud as
+        setting it.
+      */
+      if (r.updated === 0) {
+        toast.warning('No lines changed — those may already be set that way.');
+      } else {
+        toast.success(
+          r.notForSale
+            ? `${r.updated} line${r.updated === 1 ? '' : 's'} held for their owner`
+            : `${r.updated} line${r.updated === 1 ? '' : 's'} marked for sale — release them to publish`,
+        );
+      }
+      void queryClient.invalidateQueries();
+    },
+    onError: (error) => toast.error(`Could not change availability: ${error.message}`),
+  });
+
+  const setAvailability = (
+    lines: { shipmentNumber: string; lwin18: string }[],
+    notForSale: boolean,
+  ) => {
+    if (lines.length === 0) return;
+
+    setAvailabilityMut.mutate({ lines, notForSale });
+  };
+
   const setOwnerSettingsMut = useMutation({
     ...api.wms.admin.stock.pricing.setOwnerSettings.mutationOptions(),
     retry: 2,
@@ -1191,10 +1222,22 @@ const PricingManagerPage = () => {
    * A bulk release has to know whose stock each line is, so the rows travel
    * rather than just their codes.
    */
-  const allRows: { lwin18: string; ownerId?: string | null }[] = [
+  const allRows: {
+    lwin18: string;
+    ownerId?: string | null;
+    shipmentNumber?: string | null;
+  }[] = [
     ...(includeInbound ? (data?.inbound ?? []) : []),
     ...products,
   ];
+
+  /** Selected lines that are in transit — the only ones this applies to */
+  const selectedInbound = (includeInbound ? (data?.inbound ?? []) : [])
+    .filter((row) => selected.has(row.lwin18) && row.shipmentNumber)
+    .map((row) => ({
+      shipmentNumber: row.shipmentNumber as string,
+      lwin18: row.lwin18,
+    }));
 
   // Every line on screen — the "select all" target, so a filter or search
   // narrows what a bulk action touches.
@@ -2097,6 +2140,38 @@ const PricingManagerPage = () => {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            {/*
+              For sale, per line, without leaving the screen.
+
+              A consignment is rarely all one thing — Ihab Toma's is mostly wine
+              being delivered to him with a few lines we are selling. The
+              shipment-wide hold is right for the shipment and wrong for those
+              few, and saying so meant opening Logistics and editing each line's
+              Availability by hand. It is also the step that defeats every other
+              one: a line held for its owner cannot reach a price list however
+              it is priced or released, so releasing it appears to do nothing.
+            */}
+            {selectedInbound.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setAvailability(selectedInbound, false)}
+                  title="Sell these lines, overriding the shipment's hold"
+                  className="rounded border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                >
+                  Mark for sale
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvailability(selectedInbound, true)}
+                  title="Keep these lines off every price list and quote"
+                  className="rounded border border-border-muted px-3 py-1 text-xs font-semibold text-text-muted hover:bg-fill-secondary"
+                >
+                  Hold for owner
+                </button>
+                <span className="h-4 w-px bg-border-muted" />
+              </>
+            )}
             <button
               type="button"
               onClick={() =>
