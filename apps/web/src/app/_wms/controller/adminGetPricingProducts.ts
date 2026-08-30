@@ -668,6 +668,12 @@ const adminGetPricingProducts = wmsOperatorProcedure
 
           Held for its owner, unclassified, or with no cost: any one of those
           keeps a wine off the list however thoroughly it has been released.
+
+          "Has a cost" means what the row means by it — a manually entered
+          import price, the shipment's own figure, or an override. Asking only
+          for the shipment's figure put a wine priced by hand into the queue of
+          unlisted work while its badge read "On price list", which is two
+          definitions of one thing disagreeing in the same row.
         */
         ...(active.has('onPriceList') || active.has('notOnPriceList')
           ? [
@@ -680,7 +686,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
                   )
                   AND COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false
                   AND ${logisticsShipmentItems.hsCode} IS NOT NULL
-                  AND COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0) > 0
+                  AND (
+                    COALESCE(
+                      ${wmsProductPricing.importPricePerBottle},
+                      ${logisticsShipmentItems.productCostPerBottle},
+                      0
+                    ) > 0
+                    OR ${wmsProductPricing.costOverridePerBottle} IS NOT NULL
+                  )
                 )`;
 
                 return active.has('onPriceList') ? listed : sql`NOT ${listed}`;
