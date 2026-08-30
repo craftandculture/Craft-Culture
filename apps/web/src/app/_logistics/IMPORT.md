@@ -141,6 +141,20 @@ sound invoice.
 
 ---
 
+## After import
+
+- **Availability decides whether a wine can ever be listed.** A shipment marked
+  *Hold for owner* (`not_for_sale`) is excluded from the catalogue, price lists
+  and quotes whatever else is true, and each line can override it. Client
+  consignments should carry it; sell part of one by marking those lines for
+  sale from the Pricing Manager's selection bar.
+- **Non-vintage is an answer.** LWIN says so in the code — the vintage segment
+  reads `0000`. The completeness check counts NV as complete; treating it as a
+  gap put seven correctly recorded Champagnes into a list of things to fix,
+  which is how a check teaches people to ignore it.
+- **The gap counts are clickable** — "1 without region" narrows the item list to
+  that line rather than leaving you to find it among a hundred and sixty-five.
+
 ## Known gaps
 
 - **PDF path** still asks the model for line items, so it truncates on long

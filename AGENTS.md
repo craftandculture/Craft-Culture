@@ -310,6 +310,9 @@ zohoSalesOrderItems  - Line items for each order
 ## Current Development State
 
 ### Recently Completed
+- **Pricing Manager: released vs listed (Aug 2026)** — "on the price list" and "released" were treated as one question and are not: a wine also needs to be not-held-for-its-owner, classified and costed. Filters now combine (Released + Not on price list is the working queue), each row names what is blocking it, and in-transit lines can be marked for sale from the selection bar. See `_wms/PRICING.md` for the keys and definitions — every fault on that screen has come from two places asking one question differently.
+- **Pricing writes reach the row that is read (Aug 2026)** — reads join `wms_product_pricing` pack-agnostically, writes keyed on the exact LWIN18, so an edit landed on a row nobody read and appeared to be rejected. All writes go through `writeProductPricing`.
+- **Partner duplicates (Aug 2026)** — one business held under two partner records splits its stock and, silently, its pricing margins. Detection and merge on `/platform/admin/partners`; creating a second record for a name already on file is now refused.
 - **Shipment import checkpoints (Aug 2026)** — a supplier invoice now checks itself. Its own totals row and shipping note ("12 cases on 1 pallet") are read and stored on the shipment as `declared_*`, and shown beside our figures with a confirm action. Currency is read from the cell number format rather than guessed, and an import that cannot say what it is billed in refuses. See `_logistics/IMPORT.md` for the flow, the reference invoice, and the guards that must not be relaxed — every one of them exists because something silent went wrong.
 - **LWIN mapping UX (Aug 2026)** — the matcher's refusals now carry their reasoning and a composed shortlist, a wine mapped once is offered to its other lines ("Map N from wines already mapped"), and latching a LWIN fills producer, region, country and vintage wherever it is set. A Product details bar counts lines still missing them, since those are what the catalogue, stock explorer and quotes read.
 - **Pick-list stock matching (Aug 2026)** — order lines and stock are matched on wine + vintage + bottle size, ANY pack, so a 3-pack invoiced off a 6-pack (or a bay repacked after release) still finds its stock. See "Matching an Order Line to Stock" in `_wms/WMS.md` for the rules and the guards that must not be relaxed.
@@ -335,6 +338,8 @@ zohoSalesOrderItems  - Line items for each order
 - Optimizing mobile printing workflow for high-volume label printing
 
 ### Pending
+- **Release should be per owner** — it is per wine, so releasing our stock of a wine publishes every owner's holding of it. Built and reverted (`9789f9e9`): it depended on a table the deploy never created. Confirm the migration has run against production, dual-write, verify, then switch reads. `not_for_sale` on the shipment is the protection in force meanwhile.
+- **One wine, two owners, two prices** — the catalogue collapses them with `MAX()`, so which price a customer sees is arbitrary rather than chosen
 - **Receiving checkpoint** — what physically arrived is not yet compared against the declared cartons (the shipment side of the same idea)
 - **Costs-complete gate** — landed cost feeds pricing before freight and duty are allocated, so a part-costed shipment prices as if it were cheap
 - Add Dispatch endpoint to NUC local server
