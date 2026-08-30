@@ -103,6 +103,21 @@ const adminGetPricingProducts = wmsOperatorProcedure
       conditions.push(
         sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
       );
+    } else if (priceFilter === 'onPriceList') {
+      /*
+        Released is not the same question as listed.
+
+        A released line held for its owner, or with no cost to price from, never
+        reaches a customer — so this asks for released AND sellable AND priced,
+        which is what the catalogue itself insists on.
+      */
+      conditions.push(
+        sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
+      );
+      conditions.push(sql`BOOL_AND(${wmsStock.notForSale} = false)`);
+      conditions.push(
+        sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) > 0`,
+      );
     }
 
     if (search) {
@@ -612,7 +627,16 @@ const adminGetPricingProducts = wmsOperatorProcedure
           wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
           badge have to answer the same question or the queue lies.
         */
-        ...(priceFilter === 'notReleased' || priceFilter === 'released'
+        // Held for its owner never reaches a price list, whatever else is true
+        ...(priceFilter === 'onPriceList'
+          ? [
+              sql`COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false`,
+              sql`${logisticsShipmentItems.hsCode} IS NOT NULL`,
+            ]
+          : []),
+        ...(priceFilter === 'notReleased' ||
+        priceFilter === 'released' ||
+        priceFilter === 'onPriceList'
           ? [
               sql`${
                 priceFilter === 'notReleased' ? sql`NOT EXISTS` : sql`EXISTS`

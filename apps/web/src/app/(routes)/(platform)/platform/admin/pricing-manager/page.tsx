@@ -933,7 +933,13 @@ const PricingManagerPage = () => {
 
   // Price-gap quick filter
   const [priceFilter, setPriceFilter] = useState<
-    'unpriced' | 'lossMaking' | 'noImport' | 'notReleased' | 'released' | undefined
+    | 'unpriced'
+    | 'lossMaking'
+    | 'noImport'
+    | 'notReleased'
+    | 'released'
+    | 'onPriceList'
+    | undefined
   >(undefined);
   const [includeInbound, setIncludeInbound] = useState(false);
   const [includeSoldOut, setIncludeSoldOut] = useState(false);
@@ -1988,6 +1994,12 @@ const PricingManagerPage = () => {
           */
           { key: 'notReleased' as const, label: 'Not released' },
           { key: 'released' as const, label: 'Released' },
+          /*
+            The question people actually mean. Released says someone cleared it;
+            this says a customer can see it — released, not held for its owner,
+            classified, and with a cost to price from.
+          */
+          { key: 'onPriceList' as const, label: 'On price list' },
         ]).map((f) => (
           <button
             key={f.label}

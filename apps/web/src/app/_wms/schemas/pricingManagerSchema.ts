@@ -15,7 +15,20 @@ export const getPricingProductsSchema = z.object({
    * done.
    */
   priceFilter: z
-    .enum(['unpriced', 'lossMaking', 'noImport', 'notReleased', 'released'])
+    .enum([
+      'unpriced',
+      'lossMaking',
+      'noImport',
+      'notReleased',
+      'released',
+      /**
+       * Released AND clear of everything else that keeps a wine off the list.
+       *
+       * "Released" alone is not the same question: a released line held for its
+       * owner, or carrying no HS code, never reaches a customer.
+       */
+      'onPriceList',
+    ])
     .optional(),
   /** Also return in-transit (inbound shipment) products as a separate list */
   includeInbound: z.boolean().optional(),
