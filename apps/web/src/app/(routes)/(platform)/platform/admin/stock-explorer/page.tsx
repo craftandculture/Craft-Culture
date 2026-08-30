@@ -2052,6 +2052,30 @@ const StockExplorerPage = () => {
     api.wms.admin.stock.findPackMismatches.queryOptions(),
   );
 
+  /**
+   * What a repacked row is missing, counted before anything is written.
+   *
+   * Shown only when there is something to fill, so it disappears once done
+   * rather than becoming another permanent banner.
+   */
+  const { data: backfillPreview, refetch: refetchBackfill } = useQuery({
+    queryKey: ['stock-backfill-preview'],
+    queryFn: () =>
+      trpcClient.wms.admin.stock.backfillDetails.mutate({ dryRun: true }),
+  });
+
+  const { mutate: backfillDetails, isPending: isBackfilling } = useMutation({
+    ...api.wms.admin.stock.backfillDetails.mutationOptions(),
+    onSuccess: (r) => {
+      toast.success(
+        `Filled ${r.producers} producer${r.producers === 1 ? '' : 's'} and ${r.boes} re-export BOE${r.boes === 1 ? '' : 's'}`,
+      );
+      void refetchBackfill();
+      void queryClient.invalidateQueries();
+    },
+    onError: (error) => toast.error(`Could not fill: ${error.message}`),
+  });
+
   // Lookalike wines in stock (near-identical names) → flag rows so they're
   // reviewed before a picking mix-up (the Talenti vs Talenti Piero trap).
   const { data: lookalikeData } = useQuery({
@@ -2456,6 +2480,42 @@ const StockExplorerPage = () => {
             </Button>
           </div>
         </div>
+
+        {/*
+          Details a repacked row never inherited.
+
+          Read-time fallbacks fix a screen; these two have to be in the data. A
+          re-export BOE is a customs record and belongs on the row that clears,
+          not derived for a display; a producer that only exists at read time is
+          absent from every export and every downstream system.
+        */}
+        {backfillPreview && (backfillPreview.producers > 0 || backfillPreview.boes > 0) && (
+          <div className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+              {backfillPreview.producers > 0
+                ? `${backfillPreview.producers} row${backfillPreview.producers === 1 ? '' : 's'} with no producer`
+                : ''}
+              {backfillPreview.producers > 0 && backfillPreview.boes > 0 ? ' · ' : ''}
+              {backfillPreview.boes > 0
+                ? `${backfillPreview.boes} with no re-export BOE`
+                : ''}
+            </p>
+            <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+              Repacked stock inherits only what the case it came from carried.
+              These can be filled from the wine&rsquo;s own LWIN record and from
+              the shipment they arrived on — nothing is invented, and only blanks
+              are touched.
+            </p>
+            <button
+              type="button"
+              onClick={() => backfillDetails({ dryRun: false })}
+              disabled={isBackfilling}
+              className="mt-2 rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isBackfilling ? 'Filling…' : 'Fill them in'}
+            </button>
+          </div>
+        )}
 
         {/* A stock row's LWIN states the pack in its own digits, so it can be
             checked against the row. When they disagree the pick engine cracks

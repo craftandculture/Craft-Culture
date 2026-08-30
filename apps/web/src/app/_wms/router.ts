@@ -8,6 +8,7 @@ import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminAutoPopulateImportPrice from './controller/adminAutoPopulateImportPrice';
+import adminBackfillStockDetails from './controller/adminBackfillStockDetails';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
 import adminClearAllStock from './controller/adminClearAllStock';
@@ -210,6 +211,8 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
+  // Fills blanks a repacked row never inherited — producer, re-export BOE
+  backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,
   findPackMismatches: adminFindPackMismatches,
   syncToZoho: adminSyncStockToZoho,
