@@ -103,20 +103,24 @@ const adminGetPricingProducts = wmsOperatorProcedure
       conditions.push(
         sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
       );
-    } else if (priceFilter === 'onPriceList') {
+    } else if (priceFilter === 'onPriceList' || priceFilter === 'notOnPriceList') {
       /*
-        Released is not the same question as listed.
+        One definition of "listed", used both ways.
 
-        A released line held for its owner, or with no cost to price from, never
-        reaches a customer — so this asks for released AND sellable AND priced,
-        which is what the catalogue itself insists on.
+        Released is not the same question: a line held for its owner, or with no
+        cost to price from, never reaches a customer. And the queue of work —
+        everything NOT on the list — has to be the exact inverse of that, not a
+        second attempt at the same rules, or the two will disagree and a wine
+        will belong to neither.
       */
+      const listed = sql`(
+        MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL
+        AND BOOL_AND(${wmsStock.notForSale} = false)
+        AND COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) > 0
+      )`;
+
       conditions.push(
-        sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
-      );
-      conditions.push(sql`BOOL_AND(${wmsStock.notForSale} = false)`);
-      conditions.push(
-        sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) > 0`,
+        priceFilter === 'onPriceList' ? listed : sql`NOT ${listed}`,
       );
     }
 
@@ -627,16 +631,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
           badge have to answer the same question or the queue lies.
         */
-        // Held for its owner never reaches a price list, whatever else is true
-        ...(priceFilter === 'onPriceList'
-          ? [
-              sql`COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false`,
-              sql`${logisticsShipmentItems.hsCode} IS NOT NULL`,
-            ]
-          : []),
-        ...(priceFilter === 'notReleased' ||
-        priceFilter === 'released' ||
-        priceFilter === 'onPriceList'
+        ...(priceFilter === 'notReleased' || priceFilter === 'released'
           ? [
               sql`${
                 priceFilter === 'notReleased' ? sql`NOT EXISTS` : sql`EXISTS`
@@ -645,6 +640,34 @@ const adminGetPricingProducts = wmsOperatorProcedure
                  WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${inboundLineKey()}
                    AND rel.pricing_released_at IS NOT NULL
               )`,
+            ]
+          : []),
+        /*
+          The same definition of "listed" as the landed side, used both ways —
+          so "on the price list" and "not on the price list" are one rule read
+          in two directions rather than two rules that can drift apart.
+
+          Held for its owner, unclassified, or with no cost: any one of those
+          keeps a wine off the list however thoroughly it has been released.
+        */
+        ...(priceFilter === 'onPriceList' || priceFilter === 'notOnPriceList'
+          ? [
+              (() => {
+                const listed = sql`(
+                  EXISTS (
+                    SELECT 1 FROM wms_product_pricing rel
+                     WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${inboundLineKey()}
+                       AND rel.pricing_released_at IS NOT NULL
+                  )
+                  AND COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}) = false
+                  AND ${logisticsShipmentItems.hsCode} IS NOT NULL
+                  AND COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0) > 0
+                )`;
+
+                return priceFilter === 'onPriceList'
+                  ? listed
+                  : sql`NOT ${listed}`;
+              })(),
             ]
           : []),
       ];

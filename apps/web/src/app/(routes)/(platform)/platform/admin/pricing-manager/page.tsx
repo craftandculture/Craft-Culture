@@ -939,6 +939,7 @@ const PricingManagerPage = () => {
     | 'notReleased'
     | 'released'
     | 'onPriceList'
+    | 'notOnPriceList'
     | undefined
   >(undefined);
   const [includeInbound, setIncludeInbound] = useState(false);
@@ -2000,6 +2001,8 @@ const PricingManagerPage = () => {
             classified, and with a cost to price from.
           */
           { key: 'onPriceList' as const, label: 'On price list' },
+          /* The queue: not released, held, unclassified or unpriced */
+          { key: 'notOnPriceList' as const, label: 'Not on price list' },
         ]).map((f) => (
           <button
             key={f.label}
@@ -2846,10 +2849,20 @@ const PricingManagerPage = () => {
                               hsCode?: string | null;
                               pricingReleasedAt?: Date | string | null;
                             };
-                            if (!isInbound || !p.pricingReleasedAt) return null;
+                            /*
+                              Shown whether or not the line is released.
+
+                              These were only named on released rows, so the
+                              queue of work — everything a customer cannot see —
+                              stayed silent about the two things that most often
+                              need doing. The badge already says whether it has
+                              been released; this says what else is missing.
+                            */
+                            if (!isInbound) return null;
                             const why = [
                               p.notForSale ? 'held for its owner' : null,
                               !p.hsCode ? 'no HS code' : null,
+                              landed == null || landed <= 0 ? 'no cost' : null,
                             ].filter(Boolean);
 
                             return why.length > 0 ? (

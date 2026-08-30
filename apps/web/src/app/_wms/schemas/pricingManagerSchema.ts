@@ -28,6 +28,8 @@ export const getPricingProductsSchema = z.object({
        * owner, or carrying no HS code, never reaches a customer.
        */
       'onPriceList',
+      /** The work queue: everything a customer cannot see, and why */
+      'notOnPriceList',
     ])
     .optional(),
   /** Also return in-transit (inbound shipment) products as a separate list */
