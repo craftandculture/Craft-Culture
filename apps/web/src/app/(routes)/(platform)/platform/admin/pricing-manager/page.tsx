@@ -1932,8 +1932,19 @@ const PricingManagerPage = () => {
             the unfinished ones — so the job appeared to get longer the closer
             it came to done.
           */
-          { key: 'notReleased' as const, label: 'Not on price list' },
-          { key: 'released' as const, label: 'On price list' },
+          /*
+            Named for what they test.
+
+            They were "On price list" / "Not on price list" while testing only
+            whether a wine had been released. The catalogue applies more gates
+            than that, so a released wine held for its owner sat under "On
+            price list" wearing a badge saying it was not listed — two true
+            statements contradicting each other because one of them was
+            mislabelled. The badge says whether a wine reaches the list; these
+            say whether anyone has released it.
+          */
+          { key: 'notReleased' as const, label: 'Not released' },
+          { key: 'released' as const, label: 'Released' },
         ]).map((f) => (
           <button
             key={f.label}
