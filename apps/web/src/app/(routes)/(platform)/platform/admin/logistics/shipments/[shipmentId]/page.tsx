@@ -221,6 +221,14 @@ const ShipmentDetailPage = () => {
     productCostPerBottle: '',
   });
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
+  /**
+   * Which gap the item list is narrowed to, if any.
+   *
+   * "1 without region" is the right thing to say and useless on its own: it
+   * names a single line among a hundred and sixty-five and leaves you to find
+   * it. The count is the handle — clicking it shows exactly those lines.
+   */
+  const [detailGap, setDetailGap] = useState<string | null>(null);
   const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
   const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
   const [sheetForm, setSheetForm] = useState({
@@ -1404,6 +1412,11 @@ const ShipmentDetailPage = () => {
 
           const detailedCount = items.filter((i) => missingFor(i).length === 0).length;
 
+          /** Narrowed to one gap when its count is clicked, else everything */
+          const shownItems = detailGap
+            ? items.filter((i) => missingFor(i).includes(detailGap))
+            : items;
+
           /** Named per field, so it is obvious which repair is wanted */
           const missingByField = DETAIL_FIELDS.map((field) => ({
             label: field.label,
@@ -1645,10 +1658,30 @@ const ShipmentDetailPage = () => {
                         <Typography variant="bodyXs" className="font-medium">
                           Product details
                           {missingByField.length > 0 ? (
-                            <span className="ml-2 font-normal text-text-warning">
-                              {missingByField
-                                .map((entry) => `${entry.count} without ${entry.label}`)
-                                .join(' · ')}
+                            <span className="ml-2 font-normal">
+                              {missingByField.map((entry, index) => (
+                                <span key={entry.label}>
+                                  {index > 0 ? (
+                                    <span className="text-text-muted"> · </span>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDetailGap(
+                                        detailGap === entry.label ? null : entry.label,
+                                      )
+                                    }
+                                    title={`Show the ${entry.count} line${entry.count === 1 ? '' : 's'} with no ${entry.label}`}
+                                    className={`underline-offset-2 hover:underline ${
+                                      detailGap === entry.label
+                                        ? 'font-semibold text-text-warning underline'
+                                        : 'text-text-warning'
+                                    }`}
+                                  >
+                                    {entry.count} without {entry.label}
+                                  </button>
+                                </span>
+                              ))}
                             </span>
                           ) : null}
                         </Typography>
@@ -2000,7 +2033,25 @@ const ShipmentDetailPage = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {items.map((item) => {
+                          {detailGap && (
+                            <tr>
+                              <td colSpan={11} className="bg-fill-warning/10 px-6 py-2">
+                                <span className="text-xs text-text-warning">
+                                  Showing {shownItems.length} line
+                                  {shownItems.length === 1 ? '' : 's'} with no{' '}
+                                  {detailGap}.{' '}
+                                  <button
+                                    type="button"
+                                    onClick={() => setDetailGap(null)}
+                                    className="font-medium underline underline-offset-2"
+                                  >
+                                    Show all {items.length}
+                                  </button>
+                                </span>
+                              </td>
+                            </tr>
+                          )}
+                          {shownItems.map((item) => {
                             // Skip vintage in metadata if already in product name
                             const vintageStr = item.vintage ? String(item.vintage) : null;
                             const showVintage = vintageStr && !item.productName.includes(vintageStr);
