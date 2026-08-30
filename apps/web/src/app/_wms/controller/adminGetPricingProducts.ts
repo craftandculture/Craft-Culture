@@ -1,4 +1,16 @@
-import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -19,6 +31,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
+import hasPricingReleases from '../utils/hasPricingReleases';
 import inboundLineKey from '../utils/inboundLineKey';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
@@ -27,9 +40,9 @@ import pakKeyOf from '../utils/pakKeyOf';
 /**
  * Get products with stock and pricing data for the Pricing Manager page
  *
- * Returns paginated products with import/selling prices, plus summary stats
- * for KPI cards (total products, avg margin, unpriced count, total values).
- * Falls back to shipment landed cost when no explicit import price exists.
+ * Returns paginated products with import/selling prices, plus summary stats for
+ * KPI cards (total products, avg margin, unpriced count, total values). Falls
+ * back to shipment landed cost when no explicit import price exists.
  */
 /**
  * Standing air-freight estimate per bottle, used for in-transit wine until the
@@ -40,8 +53,29 @@ const DEFAULT_AIR_FREIGHT_PER_BOTTLE = 20;
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
-    const { search, category, ownerId, priceFilter, includeInbound, includeSoldOut, sortBy, sortOrder, limit, offset } =
-      input;
+    const {
+      search,
+      category,
+      ownerId,
+      priceFilter,
+      includeInbound,
+      includeSoldOut,
+      sortBy,
+      sortOrder,
+      limit,
+      offset,
+    } = input;
+
+    /*
+      A schema that has not caught up costs a filter, not the screen.
+
+      Migrations run as postbuild and exit quietly when DB_URL is absent from
+      the build, so a deploy can ship code reading a table the database has
+      never been given. A missing table in a WHERE clause fails the whole
+      statement, which is how a filter answered "No products found" against
+      wines that were sitting right there.
+    */
+    const releasesReady = await hasPricingReleases();
 
     // Default hides sold-out SKUs (0 on hand); the "Sold (0 qty)" toggle relaxes
     // the qty>0 gate to >=0 (always true) so depleted lines show. KPI/summary
@@ -52,7 +86,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         : gt(sql`SUM(${wmsStock.quantityCases})`, 0),
     ];
     const whereConditions = [
-      includeSoldOut ? gte(wmsStock.quantityCases, 0) : gt(wmsStock.quantityCases, 0),
+      includeSoldOut
+        ? gte(wmsStock.quantityCases, 0)
+        : gt(wmsStock.quantityCases, 0),
     ];
 
     // Price-gap filters operate on the grouped MAX() pricing values (HAVING)
@@ -71,26 +107,30 @@ const adminGetPricingProducts = wmsOperatorProcedure
       END)`;
       conditions.push(sql`${effH} > 0 AND ${effH} <= ${landedH}`);
     } else if (priceFilter === 'noImport') {
-      conditions.push(sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`);
+      conditions.push(
+        sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`,
+      );
     } else if (priceFilter === 'notReleased') {
       // Still to do. Releasing is the last step of pricing a line, so its
       // absence is the most useful definition of "not finished".
       // Landed stock: released for the owner that holds it, not for anyone
-      conditions.push(
-        sql`NOT EXISTS (
+      if (releasesReady)
+        conditions.push(
+          sql`NOT EXISTS (
           SELECT 1 FROM wms_pricing_releases rel
            WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
              AND rel.owner_id = ${wmsStock.ownerId}
         )`,
-      );
+        );
     } else if (priceFilter === 'released') {
-      conditions.push(
-        sql`EXISTS (
+      if (releasesReady)
+        conditions.push(
+          sql`EXISTS (
           SELECT 1 FROM wms_pricing_releases rel
            WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
              AND rel.owner_id = ${wmsStock.ownerId}
         )`,
-      );
+        );
     }
 
     if (search) {
@@ -151,23 +191,47 @@ const adminGetPricingProducts = wmsOperatorProcedure
         // 1 for consignment owners (Cru Wine / Crurated) — their transfer fee
         // default is $0 rather than the $2.50 FZ→mainland default.
         isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
-        importPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.importPricePerBottle})`,
-        costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
+        importPricePerBottle: sql<
+          number | null
+        >`MAX(${wmsProductPricing.importPricePerBottle})`,
+        costOverridePerBottle: sql<
+          number | null
+        >`MAX(${wmsProductPricing.costOverridePerBottle})`,
         // Per-line logistics override ($/btl); null = fall back to owner/global
-        lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
+        lineLogistics: sql<
+          number | null
+        >`MAX(${wmsProductPricing.logisticsPerBottle})`,
         // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
-        transferPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
-        sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+        transferPricePerBottle: sql<
+          number | null
+        >`MAX(${wmsProductPricing.transferPricePerBottle})`,
+        sellingPricePerBottle: sql<
+          number | null
+        >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
         // Bespoke per-line margin % over landed (Spirits/RTD only)
-        sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
+        sellMarginPct: sql<
+          number | null
+        >`MAX(${wmsProductPricing.sellMarginPct})`,
         // Owner's own rates (explicit settings; null if the owner hasn't set them)
-        ownerLogistics: sql<number | null>`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
-        ownerInbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-        ownerPcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
+        ownerLogistics: sql<
+          number | null
+        >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
+        ownerInbondPct: sql<
+          number | null
+        >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+        ownerPcPct: sql<
+          number | null
+        >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
-      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+      .leftJoin(
+        wmsProductPricing,
+        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
+      )
+      .leftJoin(
+        wmsOwnerPricingSettings,
+        eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+      )
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
       .having(and(...conditions))
@@ -200,7 +264,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
         .from(wmsStock)
         .innerJoin(
           logisticsShipmentItems,
-          and(isNotNull(logisticsShipmentItems.lwin), sql`${pakItem} = ${pakStock}`),
+          and(
+            isNotNull(logisticsShipmentItems.lwin),
+            sql`${pakItem} = ${pakStock}`,
+          ),
         )
         .where(inArray(wmsStock.lwin18, allLwin18s))
         .orderBy(desc(logisticsShipmentItems.createdAt));
@@ -228,12 +295,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const wantedKeys = new Set(products.map((p) => pak(p.lwin18)));
     const lastSoldMap: Record<
       string,
-      { pricePerBottle: number; ref: string; soldAt: Date | null; tier: 'B2B' | 'PC' }
+      {
+        pricePerBottle: number;
+        ref: string;
+        soldAt: Date | null;
+        tier: 'B2B' | 'PC';
+      }
     > = {};
-    const isNewer = (
-      a: Date | null,
-      b: { soldAt: Date | null } | undefined,
-    ) => !b || (a != null && (b.soldAt == null || a > b.soldAt));
+    const isNewer = (a: Date | null, b: { soldAt: Date | null } | undefined) =>
+      !b || (a != null && (b.soldAt == null || a > b.soldAt));
 
     const zohoSold = await db
       .select({
@@ -244,7 +314,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
         soldAt: zohoSalesOrders.updatedAt,
       })
       .from(zohoSalesOrderItems)
-      .innerJoin(zohoSalesOrders, eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId))
+      .innerJoin(
+        zohoSalesOrders,
+        eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId),
+      )
       .where(
         and(
           // Realized sale: shipped, OR billed in Zoho (zoho_status='invoiced')
@@ -262,7 +335,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
       const key = pak(r.sku);
       if (!wantedKeys.has(key)) continue;
       const pack =
-        Number(/^(\d+)/.exec(r.description ?? '')?.[1]) || Number(r.sku.split('-')[2]) || 1;
+        Number(/^(\d+)/.exec(r.description ?? '')?.[1]) ||
+        Number(r.sku.split('-')[2]) ||
+        1;
       if (isNewer(r.soldAt, lastSoldMap[key])) {
         lastSoldMap[key] = {
           pricePerBottle: Math.round((r.rate / pack) * 100) / 100,
@@ -282,10 +357,16 @@ const adminGetPricingProducts = wmsOperatorProcedure
         soldAt: privateClientOrders.updatedAt,
       })
       .from(privateClientOrderItems)
-      .innerJoin(privateClientOrders, eq(privateClientOrders.id, privateClientOrderItems.orderId))
+      .innerJoin(
+        privateClientOrders,
+        eq(privateClientOrders.id, privateClientOrderItems.orderId),
+      )
       .where(
         and(
-          inArray(privateClientOrders.status, ['delivered', 'distributor_paid']),
+          inArray(privateClientOrders.status, [
+            'delivered',
+            'distributor_paid',
+          ]),
           gt(privateClientOrderItems.pricePerCaseUsd, 0),
         ),
       )
@@ -315,7 +396,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
       const importPaid = manualImport ?? ship?.productCost ?? null;
       const systemLogistics =
         ship && ship.landedCost != null && ship.productCost != null
-          ? Math.max(0, Math.round((ship.landedCost - ship.productCost) * 100) / 100)
+          ? Math.max(
+              0,
+              Math.round((ship.landedCost - ship.productCost) * 100) / 100,
+            )
           : 0;
       return {
         ...p,
@@ -334,8 +418,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
         lwin18: wmsStock.lwin18,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
-      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+      .leftJoin(
+        wmsProductPricing,
+        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
+      )
+      .leftJoin(
+        wmsOwnerPricingSettings,
+        eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+      )
       .where(and(...whereConditions))
       .groupBy(wmsStock.lwin18)
       .having(and(...conditions))
@@ -446,8 +536,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
         belowCostCount: sql<number>`COUNT(DISTINCT CASE WHEN ${pcExpr} > 0 AND ${pcExpr} <= ${landedExpr} THEN ${wmsStock.lwin18} END)::int`,
       })
       .from(wmsStock)
-      .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
-      .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+      .leftJoin(
+        wmsProductPricing,
+        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
+      )
+      .leftJoin(
+        wmsOwnerPricingSettings,
+        eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+      )
       .leftJoin(
         wmsOwnerPricing,
         and(
@@ -466,10 +562,13 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const inBondValue = summaryResult?.inBondValue ?? 0;
     const stockAtCostVal = summaryResult?.stockAtCost ?? 0;
     const blendedMargin =
-      inBondValue > 0 ? Math.round(((inBondValue - stockAtCostVal) / inBondValue) * 1000) / 10 : null;
+      inBondValue > 0
+        ? Math.round(((inBondValue - stockAtCostVal) / inBondValue) * 1000) / 10
+        : null;
 
     const unpricedCount =
-      (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);
+      (summaryResult?.pricedImportCount ?? 0) -
+      (summaryResult?.pricedSellingCount ?? 0);
 
     // In-transit (inbound shipment) products — returned separately so the
     // on-hand pagination is untouched. Cost comes from the shipment.
@@ -541,12 +640,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
           wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
           badge have to answer the same question or the queue lies.
         */
-        ...(priceFilter === 'notReleased' || priceFilter === 'released'
+        ...((priceFilter === 'notReleased' || priceFilter === 'released') &&
+        releasesReady
           ? [
               sql`${
-                priceFilter === 'notReleased'
-                  ? sql`NOT EXISTS`
-                  : sql`EXISTS`
+                priceFilter === 'notReleased' ? sql`NOT EXISTS` : sql`EXISTS`
               } (
                 SELECT 1 FROM wms_pricing_releases rel
                  WHERE rel.lwin_key = ${inboundLineKey()}
@@ -569,7 +667,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
           category === 'Wine'
             ? ['22042100', '22041000']
             : category === 'Spirits'
-              ? ['22084000', '22083000', '22082000', '22089090', '22085000', '22087000', '22086000']
+              ? [
+                  '22084000',
+                  '22083000',
+                  '22082000',
+                  '22089090',
+                  '22085000',
+                  '22087000',
+                  '22086000',
+                ]
               : ['22030000', '22060000'];
         inboundConditions.push(inArray(logisticsShipmentItems.hsCode, hsCodes));
       }
@@ -579,23 +685,43 @@ const adminGetPricingProducts = wmsOperatorProcedure
           lwin18: sql<string>`COALESCE(MAX(${logisticsShipmentItems.lwin}), MAX(${logisticsShipmentItems.productName}))`,
           productName: sql<string>`MAX(${logisticsShipmentItems.productName})`,
           producer: sql<string | null>`MAX(${logisticsShipmentItems.producer})`,
-          caseConfig: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})::int`,
-          bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
+          caseConfig: sql<
+            number | null
+          >`MAX(${logisticsShipmentItems.bottlesPerCase})::int`,
+          bottleSizeMl: sql<
+            number | null
+          >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
           totalCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
           // A manually corrected import price wins over the shipment's own
           // figure — it was being ignored, so an edit saved and the row went on
           // showing the old cost.
-          costPerBottle: sql<number | null>`COALESCE(NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0), MAX(${logisticsShipmentItems.productCostPerBottle}))`,
-          sellingPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+          costPerBottle: sql<
+            number | null
+          >`COALESCE(NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0), MAX(${logisticsShipmentItems.productCostPerBottle}))`,
+          sellingPricePerBottle: sql<
+            number | null
+          >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
           // Overrides ARE saved against in-transit wine — keyed by LWIN like any
           // other — but none of them were selected here, so the cell a user had
           // just edited came back empty and the edit looked lost.
-          costOverridePerBottle: sql<number | null>`MAX(${wmsProductPricing.costOverridePerBottle})`,
-          lineLogistics: sql<number | null>`MAX(${wmsProductPricing.logisticsPerBottle})`,
-          transferPricePerBottle: sql<number | null>`MAX(${wmsProductPricing.transferPricePerBottle})`,
-          sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
-          b2bMarginPct: sql<number | null>`MAX(${wmsProductPricing.b2bMarginPct})`,
-          pcMarginPct: sql<number | null>`MAX(${wmsProductPricing.pcMarginPct})`,
+          costOverridePerBottle: sql<
+            number | null
+          >`MAX(${wmsProductPricing.costOverridePerBottle})`,
+          lineLogistics: sql<
+            number | null
+          >`MAX(${wmsProductPricing.logisticsPerBottle})`,
+          transferPricePerBottle: sql<
+            number | null
+          >`MAX(${wmsProductPricing.transferPricePerBottle})`,
+          sellMarginPct: sql<
+            number | null
+          >`MAX(${wmsProductPricing.sellMarginPct})`,
+          b2bMarginPct: sql<
+            number | null
+          >`MAX(${wmsProductPricing.b2bMarginPct})`,
+          pcMarginPct: sql<
+            number | null
+          >`MAX(${wmsProductPricing.pcMarginPct})`,
           /*
             Released for THIS owner, not for anyone who happens to hold the
             wine. The flag used to live on the pricing row, which is keyed on
@@ -617,27 +743,47 @@ const adminGetPricingProducts = wmsOperatorProcedure
 
           // Freight actually allocated to the shipment line, per bottle. Zero
           // until the freight invoice is loaded against the consolidation group.
-          allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
+          allocatedFreight: sql<
+            number | null
+          >`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
           earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
-          shipmentNumber: sql<string | null>`MAX(${logisticsShipments.shipmentNumber})`,
+          shipmentNumber: sql<
+            string | null
+          >`MAX(${logisticsShipments.shipmentNumber})`,
           // In-transit wine has an owner — the shipment's partner — it was just
           // never joined, so the row showed no owner and quietly took the house
           // rates instead of that partner's.
-          ownerId: sql<string | null>`MAX(${logisticsShipments.partnerId}::text)`,
+          ownerId: sql<
+            string | null
+          >`MAX(${logisticsShipments.partnerId}::text)`,
           ownerName: sql<string | null>`MAX(${partners.businessName})`,
-          ownerLogistics: sql<number | null>`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
-          ownerInbondPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-          ownerPcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
-          category: sql<string | null>`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
+          ownerLogistics: sql<
+            number | null
+          >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
+          ownerInbondPct: sql<
+            number | null
+          >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+          ownerPcPct: sql<
+            number | null
+          >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
+          category: sql<
+            string | null
+          >`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
         })
         .from(logisticsShipmentItems)
-        .innerJoin(logisticsShipments, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
+        .innerJoin(
+          logisticsShipments,
+          eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
+        )
         .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
         .leftJoin(
           wmsOwnerPricingSettings,
           eq(wmsOwnerPricingSettings.ownerId, logisticsShipments.partnerId),
         )
-        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`)
+        .leftJoin(
+          wmsProductPricing,
+          sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`,
+        )
         .where(and(...inboundConditions))
         .groupBy(groupKey)
         .orderBy(asc(sql`MAX(${logisticsShipmentItems.productName})`))
@@ -675,7 +821,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
           }
         }
       } catch (error) {
-        logger.warn('[PricingProducts] Could not read pricing releases', { error });
+        logger.warn('[PricingProducts] Could not read pricing releases', {
+          error,
+        });
       }
 
       inbound = inboundRows.map((r) => ({
@@ -745,11 +893,13 @@ const adminGetPricingProducts = wmsOperatorProcedure
         totalProducts: summaryResult?.totalProducts ?? 0,
         blendedMargin,
         unpricedCount: Math.max(0, unpricedCount),
-        totalImportValue: Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
+        totalImportValue:
+          Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
         stockAtCost: Math.round((summaryResult?.stockAtCost ?? 0) * 100) / 100,
         inBondValue: Math.round((summaryResult?.inBondValue ?? 0) * 100) / 100,
         pcValue: Math.round((summaryResult?.pcValue ?? 0) * 100) / 100,
-        potentialGrossProfit: Math.round((summaryResult?.potentialGrossProfit ?? 0) * 100) / 100,
+        potentialGrossProfit:
+          Math.round((summaryResult?.potentialGrossProfit ?? 0) * 100) / 100,
         belowCostCount: summaryResult?.belowCostCount ?? 0,
       },
     };

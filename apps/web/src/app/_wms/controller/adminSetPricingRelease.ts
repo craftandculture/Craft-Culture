@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { wmsPricingReleases } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import hasPricingReleases from '../utils/hasPricingReleases';
 import pakKeyOf from '../utils/pakKeyOf';
 
 /**
@@ -40,6 +41,9 @@ const adminSetPricingRelease = wmsOperatorProcedure
   )
   .mutation(async ({ input, ctx }) => {
     const { lwin18s, ownerId, released } = input;
+
+    // Creates the table on first use if a deploy shipped without its migration
+    await hasPricingReleases();
 
     const keys = [...new Set(lwin18s.map(pakKeyOf))].filter(Boolean);
 

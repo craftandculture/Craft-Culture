@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 
 import type { CatalogueRow } from './getCatalogueRows';
+import hasPricingReleases from '../utils/hasPricingReleases';
 import inboundLineKey from '../utils/inboundLineKey';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
@@ -80,6 +81,13 @@ const FIRST_GATED_SHIPMENT = 'SHP-2026-0012';
 const getCatalogueInboundRows = async (
   filters: CatalogueInboundFilters = {},
 ): Promise<CatalogueInboundRow[]> => {
+  /*
+    The gate reads a table a deploy may not have created yet, and a missing
+    table fails the statement rather than the clause — which would take the
+    whole in-transit price list down rather than one wine off it.
+  */
+  const releasesReady = await hasPricingReleases();
+
   const where = [
     eq(logisticsShipments.type, 'inbound'),
     /*
@@ -129,14 +137,16 @@ const getCatalogueInboundRows = async (
       wine published every other holding of it — a client's consignment reached
       the price list because we had listed ours.
     */
-    sql`(
+    releasesReady
+      ? sql`(
       ${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}
       OR EXISTS (
         SELECT 1 FROM wms_pricing_releases rel
          WHERE rel.lwin_key = ${inboundLineKey()}
            AND rel.owner_id = ${logisticsShipments.partnerId}
       )
-    )`,
+    )`
+      : sql`${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}`,
   ];
   if (filters.search) {
     const q = `%${filters.search}%`;
