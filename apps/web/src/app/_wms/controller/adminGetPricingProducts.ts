@@ -54,6 +54,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
       category,
       ownerId,
       priceFilter,
+      priceFilters,
       includeInbound,
       includeSoldOut,
       sortBy,
@@ -76,12 +77,23 @@ const adminGetPricingProducts = wmsOperatorProcedure
         : gt(wmsStock.quantityCases, 0),
     ];
 
-    // Price-gap filters operate on the grouped MAX() pricing values (HAVING)
-    if (priceFilter === 'unpriced') {
+    /*
+      Filters combine, because the useful questions are conjunctions.
+
+      They were mutually exclusive, so "released but not on the price list" —
+      the state that matters most, since it is released work a customer still
+      cannot see — could not be asked at all. Contradictory pairs simply return
+      nothing, which is the honest answer to a contradictory question.
+    */
+    const active = new Set(priceFilters ?? (priceFilter ? [priceFilter] : []));
+
+    if (active.has('unpriced')) {
       conditions.push(
         sql`MAX(${wmsProductPricing.importPricePerBottle}) > 0 AND COALESCE(MAX(${wmsProductPricing.sellingPricePerBottle}), 0) = 0`,
       );
-    } else if (priceFilter === 'lossMaking') {
+    }
+
+    if (active.has('lossMaking')) {
       // Below cost = EFFECTIVE PC (computed when owner has a PC%, else stored)
       // at/below landed cost — matches the Below-Cost KPI and the red rows.
       const landedH = sql`(MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0) + COALESCE(MAX(${wmsProductPricing.transferPricePerBottle}), 2.5))`;
@@ -91,19 +103,27 @@ const adminGetPricingProducts = wmsOperatorProcedure
         ELSE MAX(${wmsProductPricing.sellingPricePerBottle})
       END)`;
       conditions.push(sql`${effH} > 0 AND ${effH} <= ${landedH}`);
-    } else if (priceFilter === 'noImport') {
+    }
+
+    if (active.has('noImport')) {
       conditions.push(
         sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`,
       );
-    } else if (priceFilter === 'notReleased') {
+    }
+
+    if (active.has('notReleased')) {
       // Still to do. Releasing is the last step of pricing a line, so its
       // absence is the most useful definition of "not finished".
       conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NULL`);
-    } else if (priceFilter === 'released') {
+    }
+
+    if (active.has('released')) {
       conditions.push(
         sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
       );
-    } else if (priceFilter === 'onPriceList' || priceFilter === 'notOnPriceList') {
+    }
+
+    if (active.has('onPriceList') || active.has('notOnPriceList')) {
       /*
         One definition of "listed", used both ways.
 
@@ -119,9 +139,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         AND COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) > 0
       )`;
 
-      conditions.push(
-        priceFilter === 'onPriceList' ? listed : sql`NOT ${listed}`,
-      );
+      if (active.has('onPriceList')) conditions.push(listed);
+      if (active.has('notOnPriceList')) conditions.push(sql`NOT ${listed}`);
     }
 
     if (search) {
@@ -631,10 +650,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
           wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
           badge have to answer the same question or the queue lies.
         */
-        ...(priceFilter === 'notReleased' || priceFilter === 'released'
+        ...(active.has('notReleased') || active.has('released')
           ? [
               sql`${
-                priceFilter === 'notReleased' ? sql`NOT EXISTS` : sql`EXISTS`
+                active.has('notReleased') ? sql`NOT EXISTS` : sql`EXISTS`
               } (
                 SELECT 1 FROM wms_product_pricing rel
                  WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${inboundLineKey()}
@@ -650,7 +669,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           Held for its owner, unclassified, or with no cost: any one of those
           keeps a wine off the list however thoroughly it has been released.
         */
-        ...(priceFilter === 'onPriceList' || priceFilter === 'notOnPriceList'
+        ...(active.has('onPriceList') || active.has('notOnPriceList')
           ? [
               (() => {
                 const listed = sql`(
@@ -664,13 +683,17 @@ const adminGetPricingProducts = wmsOperatorProcedure
                   AND COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0) > 0
                 )`;
 
-                return priceFilter === 'onPriceList'
-                  ? listed
-                  : sql`NOT ${listed}`;
+                return active.has('onPriceList') ? listed : sql`NOT ${listed}`;
               })(),
             ]
           : []),
       ];
+      if (active.has('noImport')) {
+        inboundConditions.push(
+          sql`COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0) = 0`,
+        );
+      }
+
       if (search) {
         inboundConditions.push(
           or(

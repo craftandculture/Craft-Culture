@@ -14,6 +14,26 @@ export const getPricingProductsSchema = z.object({
    * list with the unfinished ones, so the work got longer as it got closer to
    * done.
    */
+  /**
+   * Several at once, ANDed.
+   *
+   * The single chip could not express "released but not on the price list",
+   * which is the state that matters: released work a customer still cannot see.
+   */
+  priceFilters: z
+    .array(
+      z.enum([
+        'unpriced',
+        'lossMaking',
+        'noImport',
+        'notReleased',
+        'released',
+        'onPriceList',
+        'notOnPriceList',
+      ]),
+    )
+    .optional(),
+  /** @deprecated Superseded by priceFilters; kept so old callers still work */
   priceFilter: z
     .enum([
       'unpriced',

@@ -932,16 +932,30 @@ const PricingManagerPage = () => {
   }, [marginBasis]);
 
   // Price-gap quick filter
-  const [priceFilter, setPriceFilter] = useState<
+  /**
+   * Which price-gap filters are on. Several at once, ANDed.
+   *
+   * One at a time could not express "released but not on the price list" — the
+   * state that matters most, because it is finished work a customer still
+   * cannot see.
+   */
+  type PriceFilterKey =
     | 'unpriced'
     | 'lossMaking'
     | 'noImport'
     | 'notReleased'
     | 'released'
     | 'onPriceList'
-    | 'notOnPriceList'
-    | undefined
-  >(undefined);
+    | 'notOnPriceList';
+
+  const [priceFilters, setPriceFilters] = useState<PriceFilterKey[]>([]);
+
+  const togglePriceFilter = (key: PriceFilterKey) =>
+    setPriceFilters((current) =>
+      current.includes(key)
+        ? current.filter((k) => k !== key)
+        : [...current, key],
+    );
   const [includeInbound, setIncludeInbound] = useState(false);
   const [includeSoldOut, setIncludeSoldOut] = useState(false);
   // Row-expand: which lwin18's last-sold detail is open (null = all collapsed)
@@ -1122,7 +1136,7 @@ const PricingManagerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [sortBy, sortOrder, category, ownerId, priceFilter, includeInbound, includeSoldOut, limit]);
+  }, [sortBy, sortOrder, category, ownerId, priceFilters, includeInbound, includeSoldOut, limit]);
 
   // Close margin popover on outside click
   useEffect(() => {
@@ -1151,7 +1165,7 @@ const PricingManagerPage = () => {
       search: debouncedSearch || undefined,
       category,
       ownerId,
-      priceFilter,
+      priceFilters,
       includeInbound,
       includeSoldOut,
       sortBy,
@@ -1159,7 +1173,7 @@ const PricingManagerPage = () => {
       limit,
       offset: page * limit,
     }),
-    [debouncedSearch, category, ownerId, priceFilter, includeInbound, includeSoldOut, sortBy, sortOrder, limit, page],
+    [debouncedSearch, category, ownerId, priceFilters, includeInbound, includeSoldOut, sortBy, sortOrder, limit, page],
   );
 
   const { data, isLoading } = useQuery(
@@ -1302,7 +1316,7 @@ const PricingManagerPage = () => {
     setOwnerId(undefined);
     setSearch('');
     setDebouncedSearch('');
-    setPriceFilter(undefined);
+    setPriceFilters([]);
   };
 
   // Mutations
@@ -1437,7 +1451,7 @@ const PricingManagerPage = () => {
           search: debouncedSearch || undefined,
           category,
           ownerId,
-          priceFilter,
+          priceFilters,
           sortBy,
           sortOrder,
           limit: pageSize,
@@ -1553,7 +1567,7 @@ const PricingManagerPage = () => {
     debouncedSearch,
     category,
     ownerId,
-    priceFilter,
+    priceFilters,
     sortBy,
     sortOrder,
     effLogistics,
@@ -1681,8 +1695,8 @@ const PricingManagerPage = () => {
           subtitle="have import but no sell price"
           color={summary?.unpricedCount && summary.unpricedCount > 0 ? 'amber' : 'default'}
           icon={<IconAlertTriangle className="h-5 w-5" />}
-          onClick={() => setPriceFilter(priceFilter === 'unpriced' ? undefined : 'unpriced')}
-          active={priceFilter === 'unpriced'}
+          onClick={() => togglePriceFilter('unpriced')}
+          active={priceFilters.includes('unpriced')}
         />
         <KpiCard
           label="Below Cost"
@@ -1691,9 +1705,9 @@ const PricingManagerPage = () => {
           color={summary?.belowCostCount ? 'red' : 'default'}
           icon={<IconAlertTriangle className="h-5 w-5" />}
           onClick={() =>
-            setPriceFilter(priceFilter === 'lossMaking' ? undefined : 'lossMaking')
+            togglePriceFilter('lossMaking')
           }
-          active={priceFilter === 'lossMaking'}
+          active={priceFilters.includes('lossMaking')}
         />
       </div>
 
@@ -2006,11 +2020,21 @@ const PricingManagerPage = () => {
         ]).map((f) => (
           <button
             key={f.label}
-            onClick={() => setPriceFilter(f.key)}
+            // Toggles. "Released" and "Not on price list" together is the whole
+            // point: finished work a customer still cannot see.
+            onClick={() =>
+              f.key === undefined
+                ? setPriceFilters([])
+                : togglePriceFilter(f.key)
+            }
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-              priceFilter === f.key
-                ? 'border-transparent bg-text-primary text-white shadow-sm'
-                : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
+              f.key === undefined
+                ? priceFilters.length === 0
+                  ? 'border-transparent bg-text-primary text-white shadow-sm'
+                  : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
+                : priceFilters.includes(f.key)
+                  ? 'border-transparent bg-text-primary text-white shadow-sm'
+                  : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
             }`}
           >
             {f.label}
