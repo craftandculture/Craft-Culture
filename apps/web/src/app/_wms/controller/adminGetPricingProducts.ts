@@ -511,6 +511,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
           alone would leave the toggle looking broken in the one place it
           matters.
         */
+        /*
+          Matched pack-agnostically, like the badge beside it.
+
+          Written to match the price list's own gate, which asked on the exact
+          code — so a wine released under its 2-pack sat in "Not on price list"
+          wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
+          badge have to answer the same question or the queue lies.
+        */
         ...(priceFilter === 'notReleased' || priceFilter === 'released'
           ? [
               sql`${
@@ -519,7 +527,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
                   : sql`EXISTS`
               } (
                 SELECT 1 FROM wms_product_pricing rel
-                 WHERE rel.lwin18 = ${logisticsShipmentItems.lwin}
+                 WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
                    AND rel.pricing_released_at IS NOT NULL
               )`,
             ]

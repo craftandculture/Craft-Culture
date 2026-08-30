@@ -118,12 +118,16 @@ const getCatalogueInboundRows = async (
       Until it is released, in-transit wine carries no allocated freight and no
       agreed margin, so what would publish is the buy price plus a token
       markup.
+
+      Matched pack-agnostically, as prices are: releasing a wine releases the
+      wine, not one pack of it. On the exact code, a 4-pack line of something
+      released as a 2-pack stayed off the list with no way to tell why.
     */
     sql`(
       ${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}
       OR EXISTS (
         SELECT 1 FROM wms_product_pricing rel
-         WHERE rel.lwin18 = ${logisticsShipmentItems.lwin}
+         WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
            AND rel.pricing_released_at IS NOT NULL
       )
     )`,
