@@ -610,10 +610,18 @@ const adminGetPricingProducts = wmsOperatorProcedure
           notForSale: sql<boolean>`BOOL_OR(COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}))`,
           hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
           shipmentStatus: sql<string>`MAX(${logisticsShipments.status}::text)`,
+          /*
+            Both sides aggregated, because this sits in a grouped select.
+
+            Referencing the bare columns made Postgres reject the whole
+            statement — "must appear in the GROUP BY clause" — and since the
+            failure was the query rather than a row, every in-transit line for
+            every owner disappeared at once.
+          */
           pricingReleasedAt: sql<Date | null>`(
             SELECT MAX(rel.released_at) FROM wms_pricing_releases rel
-             WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
-               AND rel.owner_id = ${logisticsShipments.partnerId}
+             WHERE rel.lwin_key = ${lwinPakKey(sql`MAX(${logisticsShipmentItems.lwin})`)}
+               AND rel.owner_id = MAX(${logisticsShipments.partnerId})
           )`,
           // Freight actually allocated to the shipment line, per bottle. Zero
           // until the freight invoice is loaded against the consolidation group.
