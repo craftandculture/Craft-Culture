@@ -89,6 +89,25 @@ const isCompleteLwin = (value: string | null | undefined) =>
  * option and rendered "Not set" against a line that plainly had a code. Saving
  * that sheet then wiped a valid customs code with an empty one.
  */
+/**
+ * Whether a wine is deliberately non-vintage rather than missing its year
+ *
+ * LWIN states it in the code: the vintage segment of an NV wine reads 0000.
+ * Where a line is unmapped the name usually says it instead — "Champagne Grand
+ * Cru Terroirs NV".
+ *
+ * Counting these as incomplete put seven correctly recorded wines into a list
+ * of things to fix, which is how a completeness check teaches people to ignore
+ * it.
+ *
+ * @param lwin - The line's LWIN18, if it has one
+ * @param productName - The name as billed
+ * @returns Whether the absence of a vintage is intentional
+ */
+const isNonVintage = (lwin: string | null, productName: string) =>
+  /^\d{7}-0000-/.test(lwin ?? '') ||
+  /\b(nv|non[-\s]?vintage|mv|multi[-\s]?vintage)\b/i.test(productName);
+
 const hsOptionsFor = (current: string | null | undefined) => {
   const code = (current ?? '').trim();
 
@@ -1372,7 +1391,12 @@ const ShipmentDetailPage = () => {
             { label: 'producer', has: (i: (typeof items)[number]) => Boolean(i.producer?.trim()) },
             { label: 'region', has: (i: (typeof items)[number]) => Boolean(i.region?.trim()) },
             { label: 'country', has: (i: (typeof items)[number]) => Boolean(i.countryOfOrigin?.trim()) },
-            { label: 'vintage', has: (i: (typeof items)[number]) => i.vintage != null },
+            {
+              label: 'vintage',
+              // Non-vintage is an answer, not a gap — see isNonVintage
+              has: (i: (typeof items)[number]) =>
+                i.vintage != null || isNonVintage(i.lwin, i.productName),
+            },
           ];
 
           const missingFor = (item: (typeof items)[number]) =>
