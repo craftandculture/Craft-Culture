@@ -1050,42 +1050,14 @@ const PricingManagerPage = () => {
     });
   };
 
-  /**
-   * Whose holding a release applies to.
-   *
-   * A release is per owner — releasing C&C's Anne Gros must not publish a
-   * client's consignment of the same wine. An inbound line knows its own
-   * owner; a landed line can be held by several, so the owner filter has to
-   * settle it rather than the code guessing.
-   */
-  const releaseOwnerFor = (row: { ownerId?: string | null }) =>
-    row.ownerId ?? ownerId ?? null;
-
   const release = (
     rows: { lwin18: string; ownerId?: string | null }[],
     released: boolean,
   ) => {
-    const owners = new Set(
-      rows.map((r) => releaseOwnerFor(r)).filter(Boolean) as string[],
-    );
-
-    if (owners.size === 0) {
-      toast.warning(
-        'Choose an owner first — a wine is released for one owner’s stock, not for everyone holding it.',
-      );
-
-      return;
-    }
-
-    for (const owner of owners) {
-      setReleaseMut.mutate({
-        ownerId: owner,
-        released,
-        lwin18s: rows
-          .filter((r) => releaseOwnerFor(r) === owner)
-          .map((r) => r.lwin18),
-      });
-    }
+    setReleaseMut.mutate({
+      released,
+      lwin18s: rows.map((r) => r.lwin18),
+    });
   };
 
   // Effective rates: owner settings when an owner is selected, else global defaults

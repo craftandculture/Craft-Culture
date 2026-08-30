@@ -21,21 +21,17 @@ import {
   privateClientOrders,
   wmsOwnerPricing,
   wmsOwnerPricingSettings,
-  wmsPricingReleases,
   wmsProductPricing,
   wmsStock,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
-import logger from '@/utils/logger';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
-import hasPricingReleases from '../utils/hasPricingReleases';
 import inboundLineKey from '../utils/inboundLineKey';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
-import pakKeyOf from '../utils/pakKeyOf';
 
 /**
  * Get products with stock and pricing data for the Pricing Manager page
@@ -65,17 +61,6 @@ const adminGetPricingProducts = wmsOperatorProcedure
       limit,
       offset,
     } = input;
-
-    /*
-      A schema that has not caught up costs a filter, not the screen.
-
-      Migrations run as postbuild and exit quietly when DB_URL is absent from
-      the build, so a deploy can ship code reading a table the database has
-      never been given. A missing table in a WHERE clause fails the whole
-      statement, which is how a filter answered "No products found" against
-      wines that were sitting right there.
-    */
-    const releasesReady = await hasPricingReleases();
 
     // Default hides sold-out SKUs (0 on hand); the "Sold (0 qty)" toggle relaxes
     // the qty>0 gate to >=0 (always true) so depleted lines show. KPI/summary
@@ -113,24 +98,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
     } else if (priceFilter === 'notReleased') {
       // Still to do. Releasing is the last step of pricing a line, so its
       // absence is the most useful definition of "not finished".
-      // Landed stock: released for the owner that holds it, not for anyone
-      if (releasesReady)
-        conditions.push(
-          sql`NOT EXISTS (
-          SELECT 1 FROM wms_pricing_releases rel
-           WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
-             AND rel.owner_id = ${wmsStock.ownerId}
-        )`,
-        );
+      conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NULL`);
     } else if (priceFilter === 'released') {
-      if (releasesReady)
-        conditions.push(
-          sql`EXISTS (
-          SELECT 1 FROM wms_pricing_releases rel
-           WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
-             AND rel.owner_id = ${wmsStock.ownerId}
-        )`,
-        );
+      conditions.push(
+        sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`,
+      );
     }
 
     if (search) {
@@ -640,15 +612,14 @@ const adminGetPricingProducts = wmsOperatorProcedure
           wearing an ON PRICE LIST badge on its 4-pack line. The filter and the
           badge have to answer the same question or the queue lies.
         */
-        ...((priceFilter === 'notReleased' || priceFilter === 'released') &&
-        releasesReady
+        ...(priceFilter === 'notReleased' || priceFilter === 'released'
           ? [
               sql`${
                 priceFilter === 'notReleased' ? sql`NOT EXISTS` : sql`EXISTS`
               } (
-                SELECT 1 FROM wms_pricing_releases rel
-                 WHERE rel.lwin_key = ${inboundLineKey()}
-                   AND rel.owner_id = ${logisticsShipments.partnerId}
+                SELECT 1 FROM wms_product_pricing rel
+                 WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${inboundLineKey()}
+                   AND rel.pricing_released_at IS NOT NULL
               )`,
             ]
           : []),
@@ -737,6 +708,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
             in-transit. A wine could carry the badge and be absent from the
             list with nothing to explain the gap.
           */
+          pricingReleasedAt: sql<Date | null>`MAX(${wmsProductPricing.pricingReleasedAt})`,
           notForSale: sql<boolean>`BOOL_OR(COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}))`,
           hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
           shipmentStatus: sql<string>`MAX(${logisticsShipments.status}::text)`,
@@ -789,43 +761,6 @@ const adminGetPricingProducts = wmsOperatorProcedure
         .orderBy(asc(sql`MAX(${logisticsShipmentItems.productName})`))
         .limit(300);
 
-      /*
-        Releases are read separately, and a failure here costs a badge.
-
-        This began as a correlated subquery inside the grouped select, which
-        Postgres rejected outright — so the whole statement failed and every
-        in-transit line for every owner vanished behind "No products found".
-        A diagnostic must never be able to empty the screen it annotates, so it
-        is its own query and its own try/catch: if the release table is
-        unreachable the rows still arrive, simply without their badge.
-      */
-      const releaseKeys = new Map<string, Date>();
-
-      try {
-        const owners = [
-          ...new Set(inboundRows.map((r) => r.ownerId).filter(Boolean)),
-        ] as string[];
-
-        if (owners.length > 0) {
-          const releases = await db
-            .select({
-              lwinKey: wmsPricingReleases.lwinKey,
-              ownerId: wmsPricingReleases.ownerId,
-              releasedAt: wmsPricingReleases.releasedAt,
-            })
-            .from(wmsPricingReleases)
-            .where(inArray(wmsPricingReleases.ownerId, owners));
-
-          for (const row of releases) {
-            releaseKeys.set(`${row.lwinKey}|${row.ownerId}`, row.releasedAt);
-          }
-        }
-      } catch (error) {
-        logger.warn('[PricingProducts] Could not read pricing releases', {
-          error,
-        });
-      }
-
       inbound = inboundRows.map((r) => ({
         lwin18: r.lwin18,
         productName: r.productName,
@@ -853,8 +788,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         sellMarginPct: r.sellMarginPct,
         b2bMarginPct: r.b2bMarginPct,
         pcMarginPct: r.pcMarginPct,
-        pricingReleasedAt:
-          releaseKeys.get(`${pakKeyOf(r.lwin18)}|${r.ownerId ?? ''}`) ?? null,
+        pricingReleasedAt: r.pricingReleasedAt,
         notForSale: r.notForSale,
         hsCode: r.hsCode,
         shipmentStatus: r.shipmentStatus,
