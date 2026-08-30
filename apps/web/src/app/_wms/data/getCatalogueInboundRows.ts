@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 
 import type { CatalogueRow } from './getCatalogueRows';
+import inboundLineKey from '../utils/inboundLineKey';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 
@@ -132,7 +133,7 @@ const getCatalogueInboundRows = async (
       ${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}
       OR EXISTS (
         SELECT 1 FROM wms_pricing_releases rel
-         WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
+         WHERE rel.lwin_key = ${inboundLineKey()}
            AND rel.owner_id = ${logisticsShipments.partnerId}
       )
     )`,

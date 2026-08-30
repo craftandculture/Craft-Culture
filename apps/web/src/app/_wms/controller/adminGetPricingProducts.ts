@@ -19,6 +19,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
+import inboundLineKey from '../utils/inboundLineKey';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 import pakKeyOf from '../utils/pakKeyOf';
@@ -548,7 +549,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
                   : sql`EXISTS`
               } (
                 SELECT 1 FROM wms_pricing_releases rel
-                 WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
+                 WHERE rel.lwin_key = ${inboundLineKey()}
                    AND rel.owner_id = ${logisticsShipments.partnerId}
               )`,
             ]
