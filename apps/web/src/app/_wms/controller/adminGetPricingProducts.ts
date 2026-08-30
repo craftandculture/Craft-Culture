@@ -9,16 +9,19 @@ import {
   privateClientOrders,
   wmsOwnerPricing,
   wmsOwnerPricingSettings,
+  wmsPricingReleases,
   wmsProductPricing,
   wmsStock,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
+import pakKeyOf from '../utils/pakKeyOf';
 
 /**
  * Get products with stock and pricing data for the Pricing Manager page
@@ -610,19 +613,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           notForSale: sql<boolean>`BOOL_OR(COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}))`,
           hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
           shipmentStatus: sql<string>`MAX(${logisticsShipments.status}::text)`,
-          /*
-            Both sides aggregated, because this sits in a grouped select.
 
-            Referencing the bare columns made Postgres reject the whole
-            statement — "must appear in the GROUP BY clause" — and since the
-            failure was the query rather than a row, every in-transit line for
-            every owner disappeared at once.
-          */
-          pricingReleasedAt: sql<Date | null>`(
-            SELECT MAX(rel.released_at) FROM wms_pricing_releases rel
-             WHERE rel.lwin_key = ${lwinPakKey(sql`MAX(${logisticsShipmentItems.lwin})`)}
-               AND rel.owner_id = MAX(${logisticsShipments.partnerId})
-          )`,
           // Freight actually allocated to the shipment line, per bottle. Zero
           // until the freight invoice is loaded against the consolidation group.
           allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
@@ -651,6 +642,41 @@ const adminGetPricingProducts = wmsOperatorProcedure
         .orderBy(asc(sql`MAX(${logisticsShipmentItems.productName})`))
         .limit(300);
 
+      /*
+        Releases are read separately, and a failure here costs a badge.
+
+        This began as a correlated subquery inside the grouped select, which
+        Postgres rejected outright — so the whole statement failed and every
+        in-transit line for every owner vanished behind "No products found".
+        A diagnostic must never be able to empty the screen it annotates, so it
+        is its own query and its own try/catch: if the release table is
+        unreachable the rows still arrive, simply without their badge.
+      */
+      const releaseKeys = new Map<string, Date>();
+
+      try {
+        const owners = [
+          ...new Set(inboundRows.map((r) => r.ownerId).filter(Boolean)),
+        ] as string[];
+
+        if (owners.length > 0) {
+          const releases = await db
+            .select({
+              lwinKey: wmsPricingReleases.lwinKey,
+              ownerId: wmsPricingReleases.ownerId,
+              releasedAt: wmsPricingReleases.releasedAt,
+            })
+            .from(wmsPricingReleases)
+            .where(inArray(wmsPricingReleases.ownerId, owners));
+
+          for (const row of releases) {
+            releaseKeys.set(`${row.lwinKey}|${row.ownerId}`, row.releasedAt);
+          }
+        }
+      } catch (error) {
+        logger.warn('[PricingProducts] Could not read pricing releases', { error });
+      }
+
       inbound = inboundRows.map((r) => ({
         lwin18: r.lwin18,
         productName: r.productName,
@@ -678,7 +704,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
         sellMarginPct: r.sellMarginPct,
         b2bMarginPct: r.b2bMarginPct,
         pcMarginPct: r.pcMarginPct,
-        pricingReleasedAt: r.pricingReleasedAt,
+        pricingReleasedAt:
+          releaseKeys.get(`${pakKeyOf(r.lwin18)}|${r.ownerId ?? ''}`) ?? null,
         notForSale: r.notForSale,
         hsCode: r.hsCode,
         shipmentStatus: r.shipmentStatus,
