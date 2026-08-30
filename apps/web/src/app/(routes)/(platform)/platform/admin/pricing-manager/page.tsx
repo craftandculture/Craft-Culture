@@ -131,6 +131,17 @@ const casePrice = (perBottle: number, caseConfig: number) =>
 const profitPerUnit = (perBottle: number, caseConfig: number) =>
   `$${perBottle.toFixed(2)}/btl · $${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
 
+/** The shipment statuses the in-transit price list will publish from */
+const INBOUND_LISTABLE = [
+  'booked',
+  'picked_up',
+  'in_transit',
+  'arrived_port',
+  'customs_clearance',
+  'cleared',
+  'at_warehouse',
+];
+
 const PriceCell = ({
   value,
   onSave,
@@ -2666,6 +2677,31 @@ const PricingManagerPage = () => {
                             const released = (
                               product as { pricingReleasedAt?: Date | string | null }
                             ).pricingReleasedAt;
+                            /*
+                              Released is not the same as listed.
+
+                              The catalogue applies more gates than this badge
+                              ever did, so a wine could read "on price list"
+                              and be nowhere on it. Whatever is actually
+                              holding it back is named here rather than left to
+                              be discovered by looking at the live site.
+                            */
+                            const p = product as {
+                              notForSale?: boolean;
+                              hsCode?: string | null;
+                              shipmentStatus?: string;
+                              importPricePerBottle?: number | null;
+                            };
+                            const blockers = isInbound
+                              ? [
+                                  p.notForSale ? 'held for its owner' : null,
+                                  !p.hsCode ? 'no HS code — outside the wine feed' : null,
+                                  !INBOUND_LISTABLE.includes(p.shipmentStatus ?? '')
+                                    ? `shipment is ${p.shipmentStatus?.replace(/_/g, ' ')}`
+                                    : null,
+                                  landed == null || landed <= 0 ? 'no cost, so no price' : null,
+                                ].filter(Boolean)
+                              : [];
                             const gated =
                               isInbound &&
                               ((product as { shipmentNumber?: string | null })
@@ -2674,13 +2710,21 @@ const PricingManagerPage = () => {
                             return released ? (
                               <button
                                 type="button"
-                                title="On the price lists — click to hold it back"
+                                title={
+                                  blockers.length > 0
+                                    ? `Released, but the price list still excludes it: ${blockers.join('; ')}`
+                                    : 'On the price lists — click to hold it back'
+                                }
                                 onClick={() =>
                                   release([product], false)
                                 }
-                                className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700 hover:bg-emerald-200"
+                                className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                                  blockers.length > 0
+                                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                    : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                }`}
                               >
-                                On price list
+                                {blockers.length > 0 ? 'Released, not listed' : 'On price list'}
                               </button>
                             ) : (
                               <button
@@ -2694,6 +2738,26 @@ const PricingManagerPage = () => {
                                 Release
                               </button>
                             );
+                          })()}
+                          {/* Named on the row: a tooltip is not a place to
+                              keep the reason a wine is not selling. */}
+                          {(() => {
+                            const p = product as {
+                              notForSale?: boolean;
+                              hsCode?: string | null;
+                              pricingReleasedAt?: Date | string | null;
+                            };
+                            if (!isInbound || !p.pricingReleasedAt) return null;
+                            const why = [
+                              p.notForSale ? 'held for its owner' : null,
+                              !p.hsCode ? 'no HS code' : null,
+                            ].filter(Boolean);
+
+                            return why.length > 0 ? (
+                              <span className="text-[9px] font-medium text-amber-700">
+                                {why.join(' · ')}
+                              </span>
+                            ) : null;
                           })()}
                           </div>
                           {product.producer && (

@@ -495,6 +495,11 @@ const adminGetPricingProducts = wmsOperatorProcedure
       b2bMarginPct: number | null;
       pcMarginPct: number | null;
       pricingReleasedAt: Date | null;
+      /** Held for its owner — never listed, whatever else is true */
+      notForSale: boolean;
+      /** No HS code means the wine feed never sees it */
+      hsCode: string | null;
+      shipmentStatus: string;
       /** Per-line override, else allocated freight, else the air estimate. */
       systemLogistics: number;
       /** True while that figure is the estimate rather than a real invoice. */
@@ -593,6 +598,18 @@ const adminGetPricingProducts = wmsOperatorProcedure
             the wine alone, so a client's consignment read as published because
             C&C had released its own stock of the same wine.
           */
+          /*
+            Everything the price list also insists on.
+
+            "On price list" only ever meant "released", while the catalogue
+            applies several more gates — held for its owner, no HS code so it
+            falls outside the Wine feed, a shipment whose status has moved past
+            in-transit. A wine could carry the badge and be absent from the
+            list with nothing to explain the gap.
+          */
+          notForSale: sql<boolean>`BOOL_OR(COALESCE(${logisticsShipmentItems.notForSale}, ${logisticsShipments.notForSale}))`,
+          hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
+          shipmentStatus: sql<string>`MAX(${logisticsShipments.status}::text)`,
           pricingReleasedAt: sql<Date | null>`(
             SELECT MAX(rel.released_at) FROM wms_pricing_releases rel
              WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
@@ -654,6 +671,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
         b2bMarginPct: r.b2bMarginPct,
         pcMarginPct: r.pcMarginPct,
         pricingReleasedAt: r.pricingReleasedAt,
+        notForSale: r.notForSale,
+        hsCode: r.hsCode,
+        shipmentStatus: r.shipmentStatus,
         /*
           Logistics for in-transit wine: a per-line override, else the freight
           actually allocated to the shipment, else the standing air-freight
