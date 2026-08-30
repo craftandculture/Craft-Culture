@@ -1,9 +1,8 @@
-import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import db from '@/database/client';
-import { wmsProductPricing } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+import writeProductPricing from '../utils/writeProductPricing';
 
 /**
  * Set the margin on one wine or on many at once.
@@ -37,30 +36,25 @@ const adminSetLineMargins = wmsOperatorProcedure
       return { updated: 0 };
     }
 
-    // A wine priced for the first time may have no pricing row yet; the insert
-    // creates it so the margin is recorded rather than quietly dropped.
-    await db
-      .insert(wmsProductPricing)
-      .values(
-        lwin18s.map((lwin18) => ({
+    /*
+      Applied to the rows the price screens read.
+
+      This keyed on the exact LWIN18, while every read joins pricing
+      pack-agnostically — so a margin set from a 2-pack line landed on a new
+      row while the 6-pack row the screen was reading kept the old figure.
+    */
+    await Promise.all(
+      lwin18s.map((lwin18) =>
+        writeProductPricing({
           lwin18,
-          importPricePerBottle: 0,
-          b2bMarginPct: b2bMarginPct ?? null,
-          pcMarginPct: pcMarginPct ?? null,
-          updatedBy: ctx.user.id,
-        })),
-      )
-      .onConflictDoUpdate({
-        target: wmsProductPricing.lwin18,
-        set: {
-          ...(b2bMarginPct !== undefined
-            ? { b2bMarginPct: b2bMarginPct }
-            : {}),
-          ...(pcMarginPct !== undefined ? { pcMarginPct: pcMarginPct } : {}),
-          updatedBy: ctx.user.id,
-          updatedAt: sql`NOW()`,
-        },
-      });
+          set: {
+            ...(b2bMarginPct !== undefined ? { b2bMarginPct: b2bMarginPct ?? null } : {}),
+            ...(pcMarginPct !== undefined ? { pcMarginPct: pcMarginPct ?? null } : {}),
+          },
+          userId: ctx.user.id,
+        }),
+      ),
+    );
 
     return { updated: lwin18s.length, b2bMarginPct, pcMarginPct };
   });

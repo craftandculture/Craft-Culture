@@ -1,7 +1,8 @@
-import { client } from '@/database/client';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { setTransferPriceSchema } from '../schemas/pricingManagerSchema';
+import writeProductPricing from '../utils/writeProductPricing';
+
 
 /**
  * Upsert a per-SKU FZ→mainland transfer fee ($/btl) by LWIN18.
@@ -20,14 +21,7 @@ const adminSetTransferPrice = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { lwin18, transferPricePerBottle } = input;
 
-    await client`
-      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, transfer_price_per_bottle, updated_by)
-      VALUES (${lwin18}, 0, ${transferPricePerBottle}, ${ctx.user.id})
-      ON CONFLICT (lwin18) DO UPDATE SET
-        transfer_price_per_bottle = ${transferPricePerBottle},
-        updated_by = ${ctx.user.id},
-        updated_at = NOW()
-    `;
+    await writeProductPricing({ lwin18, set: { transferPricePerBottle }, userId: ctx.user.id });
 
     return { lwin18, transferPricePerBottle };
   });

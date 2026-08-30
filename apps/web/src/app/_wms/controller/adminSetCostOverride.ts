@@ -1,7 +1,8 @@
-import { client } from '@/database/client';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { setCostOverrideSchema } from '../schemas/pricingManagerSchema';
+import writeProductPricing from '../utils/writeProductPricing';
+
 
 /**
  * Upsert a manual per-SKU landed-cost override by LWIN18.
@@ -21,14 +22,7 @@ const adminSetCostOverride = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { lwin18, costOverridePerBottle } = input;
 
-    await client`
-      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, cost_override_per_bottle, updated_by)
-      VALUES (${lwin18}, 0, ${costOverridePerBottle}, ${ctx.user.id})
-      ON CONFLICT (lwin18) DO UPDATE SET
-        cost_override_per_bottle = ${costOverridePerBottle},
-        updated_by = ${ctx.user.id},
-        updated_at = NOW()
-    `;
+    await writeProductPricing({ lwin18, set: { costOverridePerBottle }, userId: ctx.user.id });
 
     return { lwin18, costOverridePerBottle };
   });

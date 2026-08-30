@@ -1,9 +1,8 @@
-import { inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import db from '@/database/client';
-import { wmsProductPricing } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+import writeProductPricing from '../utils/writeProductPricing';
 
 /**
  * Release wines to the price lists, or pull them back off.
@@ -30,44 +29,32 @@ const adminSetPricingRelease = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { lwin18s, released } = input;
 
-    // A wine with no pricing row yet has nothing to release — create one so the
-    // release is recorded rather than silently dropped.
-    if (released) {
-      await db
-        .insert(wmsProductPricing)
-        .values(
-          lwin18s.map((lwin18) => ({
+    /*
+      Matched the way the price lists match.
+
+      Both branches keyed on the exact LWIN18 while every read joins pricing
+      pack-agnostically, so pulling a wine back off the list updated a row that
+      did not exist — the 2-pack line's code against a price row created as a
+      6-pack — and the badge stayed. Worse, it then reported success, because
+      the count returned was how many wines were asked for rather than how many
+      were changed.
+    */
+    const rowsChanged = (
+      await Promise.all(
+        lwin18s.map((lwin18) =>
+          writeProductPricing({
             lwin18,
-            importPricePerBottle: 0,
-            pricingReleasedAt: new Date(),
-            pricingReleasedBy: ctx.user.id,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: wmsProductPricing.lwin18,
-          set: {
-            pricingReleasedAt: new Date(),
-            pricingReleasedBy: ctx.user.id,
-            updatedAt: new Date(),
-          },
-        });
-    } else {
-      await db
-        .update(wmsProductPricing)
-        .set({
-          pricingReleasedAt: null,
-          pricingReleasedBy: ctx.user.id,
-          updatedAt: new Date(),
-        })
-        .where(inArray(wmsProductPricing.lwin18, lwin18s));
-    }
+            set: {
+              pricingReleasedAt: released ? new Date() : null,
+              pricingReleasedBy: ctx.user.id,
+            },
+            userId: ctx.user.id,
+          }),
+        ),
+      )
+    ).reduce((sum, n) => sum + n, 0);
 
-    const [count] = await db
-      .select({ n: sql<number>`COUNT(*)::int` })
-      .from(wmsProductPricing)
-      .where(inArray(wmsProductPricing.lwin18, lwin18s));
-
-    return { released, count: lwin18s.length, touched: count?.n ?? 0 };
+    return { released, count: lwin18s.length, touched: rowsChanged };
   });
 
 export default adminSetPricingRelease;

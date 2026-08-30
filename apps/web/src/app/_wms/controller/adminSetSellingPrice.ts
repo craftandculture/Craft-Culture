@@ -1,7 +1,8 @@
-import { client } from '@/database/client';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { setSellingPriceSchema } from '../schemas/pricingManagerSchema';
+import writeProductPricing from '../utils/writeProductPricing';
+
 
 /**
  * Upsert selling price for a product by LWIN18
@@ -17,14 +18,7 @@ const adminSetSellingPrice = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { lwin18, sellingPricePerBottle } = input;
 
-    await client`
-      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, selling_price_per_bottle, updated_by)
-      VALUES (${lwin18}, 0, ${sellingPricePerBottle}, ${ctx.user.id})
-      ON CONFLICT (lwin18) DO UPDATE SET
-        selling_price_per_bottle = ${sellingPricePerBottle},
-        updated_by = ${ctx.user.id},
-        updated_at = NOW()
-    `;
+    await writeProductPricing({ lwin18, set: { sellingPricePerBottle }, userId: ctx.user.id });
 
     return { lwin18, sellingPricePerBottle };
   });

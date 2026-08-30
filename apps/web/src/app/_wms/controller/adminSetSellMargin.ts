@@ -1,7 +1,8 @@
-import { client } from '@/database/client';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { setSellMarginSchema } from '../schemas/pricingManagerSchema';
+import writeProductPricing from '../utils/writeProductPricing';
+
 
 /**
  * Upsert a bespoke per-line margin % (Spirits/RTD) and its derived selling
@@ -20,15 +21,11 @@ const adminSetSellMargin = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { lwin18, sellMarginPct, sellingPricePerBottle } = input;
 
-    await client`
-      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, sell_margin_pct, selling_price_per_bottle, updated_by)
-      VALUES (${lwin18}, 0, ${sellMarginPct}, ${sellingPricePerBottle}, ${ctx.user.id})
-      ON CONFLICT (lwin18) DO UPDATE SET
-        sell_margin_pct = ${sellMarginPct},
-        selling_price_per_bottle = ${sellingPricePerBottle},
-        updated_by = ${ctx.user.id},
-        updated_at = NOW()
-    `;
+    await writeProductPricing({
+      lwin18,
+      set: { sellMarginPct, sellingPricePerBottle },
+      userId: ctx.user.id,
+    });
 
     return { lwin18, sellMarginPct, sellingPricePerBottle };
   });

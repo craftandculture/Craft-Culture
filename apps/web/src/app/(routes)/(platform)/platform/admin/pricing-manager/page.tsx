@@ -984,11 +984,24 @@ const PricingManagerPage = () => {
   const setReleaseMut = useMutation({
     ...api.wms.admin.stock.pricing.setRelease.mutationOptions(),
     onSuccess: (r) => {
-      toast.success(
-        r.released
-          ? `${r.count} wine${r.count === 1 ? '' : 's'} released to the price lists`
-          : `${r.count} wine${r.count === 1 ? '' : 's'} held back`,
-      );
+      /*
+        Reports what changed, not what was asked for.
+
+        "1 wine held back" appeared with a tick while the badge stayed exactly
+        where it was, because the count returned was the size of the request.
+        A success message that cannot fail is not a success message.
+      */
+      if (r.touched === 0) {
+        toast.warning(
+          'Nothing changed — that wine has no pricing row to hold back. Set a price on it first.',
+        );
+      } else {
+        toast.success(
+          r.released
+            ? `${r.touched} wine${r.touched === 1 ? '' : 's'} released to the price lists`
+            : `${r.touched} wine${r.touched === 1 ? '' : 's'} held back`,
+        );
+      }
       void queryClient.invalidateQueries();
     },
     onError: (error) => toast.error(`Could not release: ${error.message}`),
