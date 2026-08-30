@@ -849,6 +849,61 @@ const runMigrations = async () => {
     }
     console.log('✅ declared shipment totals ready');
 
+    // --- release belongs to an owner, not just to a wine ---------------------
+    // The flag lived on wms_product_pricing, which is keyed on the wine alone,
+    // so releasing a wine released everybody's holding of it — a client's
+    // consignment appeared on the price lists because C&C had released its own
+    // stock of the same wine.
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_pricing_releases" (
+        "lwin_key" text NOT NULL,
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "released_at" timestamp NOT NULL DEFAULT now(),
+        "released_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now()
+      )`);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_pricing_releases_key_owner_idx"
+         ON "wms_pricing_releases" ("lwin_key", "owner_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "wms_pricing_releases_owner_idx"
+         ON "wms_pricing_releases" ("owner_id")`,
+    );
+    console.log('✅ per-owner pricing releases ready');
+
+    /*
+      Existing releases are carried over to Craft & Culture's own records only.
+
+      Nothing recorded whose decision a release was — `pricing_released_by` is a
+      user, not an owner — so it cannot be reconstructed. Every release to date
+      was made when the flag was global and the price lists carried C&C's own
+      book, so attributing them to C&C is the reading that matches what was
+      meant. The alternative, giving every current holder a release, would bake
+      in exactly the fault this table exists to remove: a client's consignment
+      listed because someone released the same wine.
+
+      Client stock therefore starts unreleased and is published deliberately,
+      which is the point.
+    */
+    await dataFix('historic releases attributed to C&C', async () => {
+      await client.unsafe(`
+        INSERT INTO wms_pricing_releases (lwin_key, owner_id, released_at, released_by)
+        SELECT DISTINCT
+               split_part(p.lwin18, '-', 1) || '-' || split_part(p.lwin18, '-', 2)
+                 || '-' || split_part(p.lwin18, '-', 4),
+               pt.id,
+               p.pricing_released_at,
+               p.pricing_released_by
+          FROM wms_product_pricing p
+          CROSS JOIN partners pt
+         WHERE p.pricing_released_at IS NOT NULL
+           AND pt.business_name ~* 'craft.*culture'
+        ON CONFLICT DO NOTHING
+      `);
+    });
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

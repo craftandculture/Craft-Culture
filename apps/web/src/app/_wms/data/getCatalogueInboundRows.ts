@@ -122,13 +122,18 @@ const getCatalogueInboundRows = async (
       Matched pack-agnostically, as prices are: releasing a wine releases the
       wine, not one pack of it. On the exact code, a 4-pack line of something
       released as a 2-pack stayed off the list with no way to tell why.
+
+      And matched against THIS shipment's owner. The flag used to sit on the
+      pricing row, keyed on the wine alone, so releasing C&C's own stock of a
+      wine published every other holding of it — a client's consignment reached
+      the price list because we had listed ours.
     */
     sql`(
       ${logisticsShipments.shipmentNumber} < ${FIRST_GATED_SHIPMENT}
       OR EXISTS (
-        SELECT 1 FROM wms_product_pricing rel
-         WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
-           AND rel.pricing_released_at IS NOT NULL
+        SELECT 1 FROM wms_pricing_releases rel
+         WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
+           AND rel.owner_id = ${logisticsShipments.partnerId}
       )
     )`,
   ];

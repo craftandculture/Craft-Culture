@@ -1039,6 +1039,44 @@ const PricingManagerPage = () => {
     });
   };
 
+  /**
+   * Whose holding a release applies to.
+   *
+   * A release is per owner — releasing C&C's Anne Gros must not publish a
+   * client's consignment of the same wine. An inbound line knows its own
+   * owner; a landed line can be held by several, so the owner filter has to
+   * settle it rather than the code guessing.
+   */
+  const releaseOwnerFor = (row: { ownerId?: string | null }) =>
+    row.ownerId ?? ownerId ?? null;
+
+  const release = (
+    rows: { lwin18: string; ownerId?: string | null }[],
+    released: boolean,
+  ) => {
+    const owners = new Set(
+      rows.map((r) => releaseOwnerFor(r)).filter(Boolean) as string[],
+    );
+
+    if (owners.size === 0) {
+      toast.warning(
+        'Choose an owner first — a wine is released for one owner’s stock, not for everyone holding it.',
+      );
+
+      return;
+    }
+
+    for (const owner of owners) {
+      setReleaseMut.mutate({
+        ownerId: owner,
+        released,
+        lwin18s: rows
+          .filter((r) => releaseOwnerFor(r) === owner)
+          .map((r) => r.lwin18),
+      });
+    }
+  };
+
   // Effective rates: owner settings when an owner is selected, else global defaults
   const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
   const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
@@ -1164,6 +1202,17 @@ const PricingManagerPage = () => {
 
     return { products, bottles, cost, inBond, pc };
   }, [data?.inbound, includeInbound, inBondMarkupPct]);
+  /**
+   * Every line on screen, with its owner.
+   *
+   * A bulk release has to know whose stock each line is, so the rows travel
+   * rather than just their codes.
+   */
+  const allRows: { lwin18: string; ownerId?: string | null }[] = [
+    ...(includeInbound ? (data?.inbound ?? []) : []),
+    ...products,
+  ];
+
   // Every line on screen — the "select all" target, so a filter or search
   // narrows what a bulk action touches.
   const visibleLwins = [
@@ -2057,7 +2106,10 @@ const PricingManagerPage = () => {
             <button
               type="button"
               onClick={() =>
-                setReleaseMut.mutate({ lwin18s: [...selected], released: true })
+                release(
+                  allRows.filter((r) => selected.has(r.lwin18)),
+                  true,
+                )
               }
               className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
             >
@@ -2066,7 +2118,10 @@ const PricingManagerPage = () => {
             <button
               type="button"
               onClick={() =>
-                setReleaseMut.mutate({ lwin18s: [...selected], released: false })
+                release(
+                  allRows.filter((r) => selected.has(r.lwin18)),
+                  false,
+                )
               }
               className="rounded border border-border-muted px-3 py-1 text-xs font-semibold text-text-muted hover:bg-fill-secondary"
             >
@@ -2621,10 +2676,7 @@ const PricingManagerPage = () => {
                                 type="button"
                                 title="On the price lists — click to hold it back"
                                 onClick={() =>
-                                  setReleaseMut.mutate({
-                                    lwin18s: [product.lwin18],
-                                    released: false,
-                                  })
+                                  release([product], false)
                                 }
                                 className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700 hover:bg-emerald-200"
                               >
@@ -2635,10 +2687,7 @@ const PricingManagerPage = () => {
                                 type="button"
                                 title="Held off the price lists until you release it"
                                 onClick={() =>
-                                  setReleaseMut.mutate({
-                                    lwin18s: [product.lwin18],
-                                    released: true,
-                                  })
+                                  release([product], true)
                                 }
                                 className="rounded bg-red-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-700 hover:bg-red-200"
                               >

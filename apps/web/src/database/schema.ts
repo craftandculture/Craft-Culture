@@ -5124,6 +5124,43 @@ export const importPriceSource = pgEnum('import_price_source', [
   'shipment',
 ]);
 
+/**
+ * Which owner's holding of a wine is cleared for the price lists.
+ *
+ * The release flag used to live on `wms_product_pricing`, which is keyed on the
+ * wine alone. Releasing Anne Gros therefore released everybody's Anne Gros —
+ * so a consignment belonging to another client was published because C&C had
+ * released its own stock of the same wine, and nothing on any screen said the
+ * two were connected.
+ *
+ * Keyed on the pack-agnostic wine key rather than the full LWIN18, for the same
+ * reason prices are: releasing a wine releases the wine, not one pack of it.
+ */
+export const wmsPricingReleases = pgTable(
+  'wms_pricing_releases',
+  {
+    /** wine-vintage-size, as `lwinPakKey` computes it */
+    lwinKey: text('lwin_key').notNull(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'cascade' }),
+    releasedAt: timestamp('released_at', { mode: 'date' }).notNull().defaultNow(),
+    releasedBy: uuid('released_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('wms_pricing_releases_key_owner_idx').on(
+      table.lwinKey,
+      table.ownerId,
+    ),
+    index('wms_pricing_releases_owner_idx').on(table.ownerId),
+  ],
+).enableRLS();
+
+export type WmsPricingRelease = typeof wmsPricingReleases.$inferSelect;
+
 export const wmsProductPricing = pgTable(
   'wms_product_pricing',
   {

@@ -71,9 +71,22 @@ const adminGetPricingProducts = wmsOperatorProcedure
     } else if (priceFilter === 'notReleased') {
       // Still to do. Releasing is the last step of pricing a line, so its
       // absence is the most useful definition of "not finished".
-      conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NULL`);
+      // Landed stock: released for the owner that holds it, not for anyone
+      conditions.push(
+        sql`NOT EXISTS (
+          SELECT 1 FROM wms_pricing_releases rel
+           WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
+             AND rel.owner_id = ${wmsStock.ownerId}
+        )`,
+      );
     } else if (priceFilter === 'released') {
-      conditions.push(sql`MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL`);
+      conditions.push(
+        sql`EXISTS (
+          SELECT 1 FROM wms_pricing_releases rel
+           WHERE rel.lwin_key = ${lwinPakKey(wmsStock.lwin18)}
+             AND rel.owner_id = ${wmsStock.ownerId}
+        )`,
+      );
     }
 
     if (search) {
@@ -526,9 +539,9 @@ const adminGetPricingProducts = wmsOperatorProcedure
                   ? sql`NOT EXISTS`
                   : sql`EXISTS`
               } (
-                SELECT 1 FROM wms_product_pricing rel
-                 WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
-                   AND rel.pricing_released_at IS NOT NULL
+                SELECT 1 FROM wms_pricing_releases rel
+                 WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
+                   AND rel.owner_id = ${logisticsShipments.partnerId}
               )`,
             ]
           : []),
@@ -574,7 +587,17 @@ const adminGetPricingProducts = wmsOperatorProcedure
           sellMarginPct: sql<number | null>`MAX(${wmsProductPricing.sellMarginPct})`,
           b2bMarginPct: sql<number | null>`MAX(${wmsProductPricing.b2bMarginPct})`,
           pcMarginPct: sql<number | null>`MAX(${wmsProductPricing.pcMarginPct})`,
-          pricingReleasedAt: sql<Date | null>`MAX(${wmsProductPricing.pricingReleasedAt})`,
+          /*
+            Released for THIS owner, not for anyone who happens to hold the
+            wine. The flag used to live on the pricing row, which is keyed on
+            the wine alone, so a client's consignment read as published because
+            C&C had released its own stock of the same wine.
+          */
+          pricingReleasedAt: sql<Date | null>`(
+            SELECT MAX(rel.released_at) FROM wms_pricing_releases rel
+             WHERE rel.lwin_key = ${lwinPakKey(logisticsShipmentItems.lwin)}
+               AND rel.owner_id = ${logisticsShipments.partnerId}
+          )`,
           // Freight actually allocated to the shipment line, per bottle. Zero
           // until the freight invoice is loaded against the consolidation group.
           allocatedFreight: sql<number | null>`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
