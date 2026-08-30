@@ -1,7 +1,11 @@
 import { and, asc, desc, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsLocations, wmsStock } from '@/database/schema';
+import {
+  lwinWines,
+  wmsLocations,
+  wmsStock,
+} from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByProductSchema } from '../schemas/stockQuerySchema';
@@ -127,7 +131,21 @@ const adminGetStockByProduct = wmsOperatorProcedure
       .select({
         lwin18: wmsStock.lwin18,
         productName: sql<string>`MAX(${wmsStock.productName})`,
-        producer: sql<string | null>`MAX(${wmsStock.producer})`,
+        /*
+          The wine's own record fills a blank producer.
+
+          A repack copies the source row's details, so a split case inherits
+          whatever the original carried — and where the original carried
+          nothing, so does the single. The LWIN reference knows the producer
+          regardless, and a bottle with no producer is invisible to anyone
+          browsing by one.
+        */
+        producer: sql<string | null>`COALESCE(
+          NULLIF(TRIM(MAX(${wmsStock.producer})), ''),
+          NULLIF(TRIM(MAX(
+            COALESCE(${lwinWines.producerTitle}, '') || ' ' || COALESCE(${lwinWines.producerName}, '')
+          )), '')
+        )`,
         vintage: sql<string | null>`MAX(${wmsStock.vintage})`,
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
         caseConfig: wmsStock.caseConfig,
@@ -141,6 +159,11 @@ const adminGetStockByProduct = wmsOperatorProcedure
         hasPerishable: sql<boolean>`BOOL_OR(${wmsStock.isPerishable})`,
       })
       .from(wmsStock)
+      // The wine's record, for details a repacked row did not inherit
+      .leftJoin(
+        lwinWines,
+        sql`${lwinWines.lwin} = SUBSTRING(${wmsStock.lwin18} FROM 1 FOR 7)`,
+      )
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .groupBy(wmsStock.lwin18, wmsStock.caseConfig);
 

@@ -1,11 +1,18 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments, partners } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  lwinWines,
+  partners,
+  wmsProductPricing,
+} from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getInboundStockSchema } from '../schemas/stockQuerySchema';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import lwinPakKey from '../utils/lwinPakKey';
 
 
 /** Inbound shipment statuses (after booking, before WMS receiving) */
@@ -94,13 +101,49 @@ const adminGetInboundStock = wmsOperatorProcedure
       .select({
         groupKey: GROUP_KEY,
         productName: sql<string>`MAX(${logisticsShipmentItems.productName})`,
-        producer: sql<string | null>`MAX(${logisticsShipmentItems.producer})`,
+        /*
+          A split line inherits the wine's identity rather than showing blank.
+
+          Producer and cost were read from the shipment line alone. Splitting a
+          six into singles mints a line with a new pack in its code and none of
+          the wine's details on it, so a repacked bottle arrived with no
+          producer, no cost and no value — the wine was known, just not on that
+          row.
+
+          Falls back to the LWIN reference, which is where a mapped line's
+          identity comes from anyway.
+        */
+        producer: sql<string | null>`COALESCE(
+          MAX(${logisticsShipmentItems.producer}),
+          MAX(TRIM(COALESCE(${lwinWines.producerTitle}, '') || ' ' || COALESCE(${lwinWines.producerName}, '')))
+        )`,
         lwin: sql<string | null>`MAX(${NORMALIZED_LWIN})`,
         vintage: sql<number | null>`MAX(${logisticsShipmentItems.vintage})`,
         bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})`,
         bottlesPerCase: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})`,
         expectedCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
-        costPerBottle: sql<number | null>`MAX(${logisticsShipmentItems.productCostPerBottle})`,
+        /*
+          Cost is per BOTTLE, so a split pack keeps it and the case price simply
+          follows the new pack — six singles out of a $600 case are $100 each,
+          and the "case" price of a single is $100.
+
+          Order: this line's own cost, then any other line of the same wine,
+          vintage and bottle size regardless of pack (which is where the
+          original case's cost still sits after a split), then the stored import
+          price.
+        */
+        costPerBottle: sql<number | null>`COALESCE(
+          MAX(${logisticsShipmentItems.productCostPerBottle}),
+          MAX((
+            SELECT sib.product_cost_per_bottle
+              FROM logistics_shipment_items sib
+             WHERE ${lwinPakKey(sql`sib.lwin`)} = ${lwinPakKey(logisticsShipmentItems.lwin)}
+               AND sib.product_cost_per_bottle > 0
+             ORDER BY sib.created_at DESC
+             LIMIT 1
+          )),
+          MAX(${wmsProductPricing.importPricePerBottle})
+        )`,
         shipmentCount: sql<number>`COUNT(DISTINCT ${logisticsShipments.id})::int`,
         earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
         latestEta: sql<Date | null>`MAX(${logisticsShipments.eta})`,
@@ -110,6 +153,16 @@ const adminGetInboundStock = wmsOperatorProcedure
       .innerJoin(
         logisticsShipments,
         eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
+      )
+      // The wine's own record, for the identity a split line does not carry
+      .leftJoin(
+        lwinWines,
+        sql`${lwinWines.lwin} = SUBSTRING(${logisticsShipmentItems.lwin} FROM 1 FOR 7)`,
+      )
+      // Prices are pack-agnostic, so a repack inherits what its case was priced at
+      .leftJoin(
+        wmsProductPricing,
+        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(logisticsShipmentItems.lwin)}`,
       )
       .where(whereClause)
       .groupBy(GROUP_KEY);
