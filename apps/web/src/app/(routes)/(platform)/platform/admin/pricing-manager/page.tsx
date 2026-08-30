@@ -2374,7 +2374,36 @@ const PricingManagerPage = () => {
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
                     <td colSpan={13} className="py-20 text-center text-text-muted">
-                      No products found
+                      {/*
+                        An owner holding nothing but wine in transit reads as an
+                        owner holding nothing, unless the screen says which of
+                        the two it means. "No products found" is true and
+                        useless: the stock is there, one toggle away.
+                      */}
+                      {(() => {
+                        const owner = owners.find((o) => o.ownerId === ownerId) as
+                          | { inboundCases?: number; ownerName?: string }
+                          | undefined;
+                        const waiting = owner?.inboundCases ?? 0;
+
+                        if (!includeInbound && waiting > 0) {
+                          return (
+                            <span>
+                              Nothing landed for {owner?.ownerName ?? 'this owner'} —
+                              their stock is all in transit.{' '}
+                              <button
+                                type="button"
+                                onClick={() => setIncludeInbound(true)}
+                                className="font-medium text-text-brand hover:underline"
+                              >
+                                Show inbound stock
+                              </button>
+                            </span>
+                          );
+                        }
+
+                        return 'No products found';
+                      })()}
                     </td>
                   </tr>
                 ) : (
