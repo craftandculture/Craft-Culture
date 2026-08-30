@@ -1300,6 +1300,31 @@ const PricingManagerPage = () => {
       onRemove: () => setOwnerId(undefined),
     });
   }
+  /*
+    The price filters belong here too, now that several can be on at once.
+
+    They were only shown as pressed chips in a row of eight, so two active
+    filters looked much like one — and "Clear all" was the only way to drop
+    either, which throws away the owner and the search with them.
+  */
+  const PRICE_FILTER_LABELS: Record<string, string> = {
+    unpriced: 'Unpriced',
+    lossMaking: 'Below cost',
+    noImport: 'No import cost',
+    notReleased: 'Not released',
+    released: 'Released',
+    onPriceList: 'On price list',
+    notOnPriceList: 'Not on price list',
+  };
+
+  for (const key of priceFilters) {
+    activeFilters.push({
+      key: `price-${key}`,
+      label: PRICE_FILTER_LABELS[key] ?? key,
+      onRemove: () => togglePriceFilter(key),
+    });
+  }
+
   if (debouncedSearch) {
     activeFilters.push({
       key: 'search',
@@ -1985,11 +2010,19 @@ const PricingManagerPage = () => {
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           Show
         </span>
+        {/*
+          Two groups, because they answer different questions. The first three
+          are gaps in the pricing; the next four are where a wine has got to on
+          its way to a customer. Eight chips in one undifferentiated row read as
+          eight alternatives, which is also how they behaved until they started
+          combining.
+        */}
         {([
           { key: undefined, label: 'All' },
           { key: 'unpriced' as const, label: 'Unpriced' },
           { key: 'lossMaking' as const, label: 'Below cost' },
           { key: 'noImport' as const, label: 'No import cost' },
+          { key: 'divider' as const, label: '' },
           /*
             The working filter. Pricing a shipment is a line-by-line pass
             ending in a release, and the finished lines stayed in the list with
@@ -2018,6 +2051,9 @@ const PricingManagerPage = () => {
           /* The queue: not released, held, unclassified or unpriced */
           { key: 'notOnPriceList' as const, label: 'Not on price list' },
         ]).map((f) => (
+          f.key === 'divider' ? (
+            <span key="gap-divider" className="mx-1 h-4 w-px bg-border-muted" />
+          ) : (
           <button
             key={f.label}
             // Toggles. "Released" and "Not on price list" together is the whole
@@ -2039,6 +2075,7 @@ const PricingManagerPage = () => {
           >
             {f.label}
           </button>
+          )
         ))}
         <span className="mx-1 h-4 w-px bg-border-muted" />
         <button
@@ -2494,6 +2531,33 @@ const PricingManagerPage = () => {
                                 className="font-medium text-text-brand hover:underline"
                               >
                                 Show inbound stock
+                              </button>
+                            </span>
+                          );
+                        }
+
+                        /*
+                          A dead end should offer the way out.
+
+                          Filters combine now, so it is easy to reach an empty
+                          screen by one chip too many — and "No products found"
+                          reads as an absence of stock rather than an
+                          over-narrowed view.
+                        */
+                        if (priceFilters.length > 0) {
+                          return (
+                            <span>
+                              Nothing matches{' '}
+                              {priceFilters
+                                .map((k) => PRICE_FILTER_LABELS[k] ?? k)
+                                .join(' + ')}
+                              .{' '}
+                              <button
+                                type="button"
+                                onClick={() => setPriceFilters([])}
+                                className="font-medium text-text-brand hover:underline"
+                              >
+                                Clear these filters
                               </button>
                             </span>
                           );
