@@ -9,6 +9,45 @@ import { createSalesOrder } from '@/lib/zoho/salesOrders';
 import logger from '@/utils/logger';
 
 /**
+ * The order's date in the only format Zoho accepts
+ *
+ * An LPO writes its date the way the client's template does — "24 August 2026",
+ * "24-08-2026", "24/08/26" — and Zoho takes yyyy-MM-dd and nothing else, so the
+ * whole order was rejected on the one field that did not matter.
+ *
+ * Day-first where the format is ambiguous, because these orders come from the
+ * UAE and Europe. An unreadable date returns null and the field is simply not
+ * sent: Zoho then dates the order today, which is a better answer than refusing
+ * to create it.
+ *
+ * @param value - The date as the document wrote it
+ * @returns yyyy-MM-dd, or null when it cannot be read with confidence
+ */
+const toZohoDate = (value: string | null) => {
+  if (!value) return null;
+
+  const text = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+  // 24-08-2026, 24/08/2026, 24.08.26 — day first
+  const parts = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/.exec(text);
+
+  if (parts) {
+    const [, day, month, year] = parts;
+    const fullYear = year!.length === 2 ? `20${year}` : year;
+
+    return `${fullYear}-${month!.padStart(2, '0')}-${day!.padStart(2, '0')}`;
+  }
+
+  const parsed = new Date(text);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed.toISOString().slice(0, 10);
+};
+
+/**
  * Turn a read LPO into a draft sales order in Zoho
  *
  * The manual version is: create the item codes the order needs, then key
@@ -189,7 +228,7 @@ const adminCreateZohoOrder = adminProcedure
     const order = await createSalesOrder({
       customer_id: contact.contact_id,
       reference_number: input.poNumber ?? undefined,
-      date: input.poDate ?? undefined,
+      date: toZohoDate(input.poDate) ?? undefined,
       line_items: lineItems,
       terms: input.creditTerms ?? undefined,
       notes: `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.`,
