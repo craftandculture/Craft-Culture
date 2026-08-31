@@ -2,7 +2,9 @@
 
 import { IconAlertTriangle, IconCheck } from '@tabler/icons-react';
 import type { inferRouterOutputs } from '@trpc/server';
+import { useState } from 'react';
 
+import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
 import type { AppRouter } from '@/trpc-router';
 
 import LpoChip from './LpoChip';
@@ -18,6 +20,15 @@ const money = (value: number) =>
   });
 
 /**
+ * The dirham's fixed rate to the dollar, from the one place that holds it.
+ *
+ * AED is pegged, so this is arithmetic rather than a rate anyone has to agree —
+ * but it is still read from `PEGGED` rather than typed here, because a second
+ * copy of a rate is a second answer waiting to disagree.
+ */
+const AED_TO_USD = PEGGED.AED ?? 0.2723;
+
+/**
  * The order read back: whether it adds up, what each line means, and what
  * fulfilling it would need.
  *
@@ -27,6 +38,17 @@ const money = (value: number) =>
  */
 const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
   const { order, reconciliation, summary, lines } = preview;
+  /*
+    The order arrives in dirhams and is billed in dollars.
+
+    Converting a forty-three line order by hand to check a total is the sort of
+    task that gets done once and then trusted, so both readings are one click
+    apart. The rate is the peg, so nothing here is an estimate.
+  */
+  const [currency, setCurrency] = useState<'AED' | 'USD'>('AED');
+  const inUsd = currency === 'USD';
+  const convert = (aed: number) => (inUsd ? aed * AED_TO_USD : aed);
+  const amount = (aed: number) => `${currency} ${money(convert(aed))}`;
   const needsAttention = lines.filter(
     (line) => !line.match.lwin18 || line.shortfall > 0 || line.problem,
   );
@@ -45,7 +67,27 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 .join(' · ')}
             </p>
           </div>
-          {reconciliation.agrees ? (
+          <div className="flex items-center gap-3">
+            {/* Both readings one click apart — the order is in dirhams, the
+                invoice is in dollars, and converting forty-three lines by hand
+                to check a total is done once and then trusted. */}
+            <div className="flex overflow-hidden rounded-md border border-border-muted text-[11px] font-semibold">
+              {(['AED', 'USD'] as const).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setCurrency(code)}
+                  className={`px-2 py-1 ${
+                    currency === code
+                      ? 'bg-text-primary text-white'
+                      : 'bg-background-primary text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {code}
+                </button>
+              ))}
+            </div>
+            {reconciliation.agrees ? (
             <LpoChip tone="good">
               <IconCheck className="mr-1 h-3 w-3" />
               Adds up to the stated total
@@ -55,19 +97,26 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               <IconAlertTriangle className="mr-1 h-3 w-3" />
               Does not match the stated total
             </LpoChip>
-          )}
+            )}
+          </div>
         </div>
+        {inUsd && (
+          <p className="mt-2 text-[11px] text-text-muted">
+            Converted at the dirham&rsquo;s peg, {AED_TO_USD} USD per AED — the
+            order itself is stated in AED.
+          </p>
+        )}
 
         <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             ['Lines', String(reconciliation.lineCount)],
             ['Bottles', String(reconciliation.totalBottles)],
-            ['Order value', `AED ${money(reconciliation.computedTotalAed)}`],
+            ['Order value', amount(reconciliation.computedTotalAed)],
             [
               'Stated total',
               reconciliation.declaredTotalAed === null
                 ? 'not stated'
-                : `AED ${money(reconciliation.declaredTotalAed)}`,
+                : amount(reconciliation.declaredTotalAed),
             ],
           ].map(([label, value]) => (
             <div key={label}>
@@ -142,8 +191,8 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               <th className="px-3 py-2 font-medium">Identified as</th>
               <th className="px-3 py-2 text-right font-medium">Qty</th>
               <th className="px-3 py-2 text-right font-medium">We hold</th>
-              <th className="px-3 py-2 text-right font-medium">Unit AED</th>
-              <th className="px-3 py-2 text-right font-medium">Total AED</th>
+              <th className="px-3 py-2 text-right font-medium">Unit {currency}</th>
+              <th className="px-3 py-2 text-right font-medium">Total {currency}</th>
               <th className="px-3 py-2 font-medium">Needs</th>
             </tr>
           </thead>
@@ -180,10 +229,10 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  {money(line.unitPriceAed)}
+                  {money(convert(line.unitPriceAed))}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  {money(line.lineTotalAed)}
+                  {money(convert(line.lineTotalAed))}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
