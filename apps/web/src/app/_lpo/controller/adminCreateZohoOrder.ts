@@ -203,20 +203,52 @@ const adminCreateZohoOrder = adminProcedure
       const existing = await searchItems(line.lwin18);
       const exact = existing.find((row) => row.sku === line.lwin18);
 
+      /*
+        Zoho's item names are unique; its SKUs are not enforced.
+
+        So a three-pack and a six-pack of one wine cannot both be called
+        "Chateau Talbot 4eme Cru Classe, Saint-Julien 1995" — creating the
+        repack was rejected outright on a name that already belonged to the
+        six-pack. The pack therefore goes in the name as well as the SKU, which
+        also makes it visible to whoever picks it in Zoho rather than buried in
+        a description.
+      */
+      const sizeCl = Math.round((line.bottleSizeMl ?? 750) / 10);
+      const vintage = line.vintage ? ` ${line.vintage}` : '';
+      const packName = `${line.wine}${line.wine.includes(String(line.vintage ?? '')) ? '' : vintage} (${line.soldPack}x${sizeCl}cl)`;
+
       const wineItem = {
         lwin18: line.lwin18,
-        productName: line.wine,
+        // Vintage is already in the name, so it is not appended again
+        productName: packName,
         producer: line.producer ?? null,
-        vintage: line.vintage ?? null,
+        vintage: null,
         hsCode: line.hsCode ?? null,
         countryOfOrigin: line.countryOfOrigin ?? null,
         bottlesPerCase: line.soldPack,
         bottleSizeMl: line.bottleSizeMl ?? 750,
       };
 
-      const item = exact ?? (await createWineItem(wineItem));
+      /*
+        A name collision means the item is already there under a SKU our search
+        did not return — so it is looked up by that name rather than the whole
+        order failing on a code that exists.
+      */
+      let item = exact;
 
-      if (!exact && item?.item_id) createdCodes.push(item.item_id);
+      if (!item) {
+        try {
+          item = await createWineItem(wineItem);
+
+          if (item?.item_id) createdCodes.push(item.item_id);
+        } catch (error) {
+          const byName = await searchItems(packName);
+
+          item = byName.find((row) => row.name === packName);
+
+          if (!item) throw error;
+        }
+      }
 
       if (!item?.item_id) {
         throw new TRPCError({
