@@ -1,10 +1,13 @@
 'use client';
 
-import { IconAlertTriangle, IconCheck } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconFileExport } from '@tabler/icons-react';
+import { useMutation } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
+import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
 import LpoChip from './LpoChip';
@@ -49,6 +52,39 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
   const inUsd = currency === 'USD';
   const convert = (aed: number) => (inUsd ? aed * AED_TO_USD : aed);
   const amount = (aed: number) => `${currency} ${money(convert(aed))}`;
+
+  const api = useTRPC();
+
+  /*
+    The order, keyed for you.
+
+    Refused rather than part-done when a line is unidentified or short: half an
+    order in Zoho leaves someone reconciling two partial ones, which is worse
+    than none. A price disagreement does not block it — that is a conversation
+    to have first, and the chips say which lines to have it about.
+  */
+  const blocked =
+    summary.unmatched > 0
+      ? `${summary.unmatched} line${summary.unmatched === 1 ? '' : 's'} not identified`
+      : summary.shortLines > 0
+        ? `${summary.shortLines} line${summary.shortLines === 1 ? '' : 's'} short of stock`
+        : !reconciliation.agrees
+          ? 'the order does not add up to its stated total'
+          : null;
+
+  const { mutate: createOrder, isPending: isCreating } = useMutation(
+    api.lpo.admin.createZohoOrder.mutationOptions({
+      onSuccess: (r) => {
+        toast.success(
+          `Draft ${r.salesOrderNumber ?? 'sales order'} created in Zoho — ` +
+            `${r.lineCount} lines${r.itemsCreated > 0 ? `, ${r.itemsCreated} new item code${r.itemsCreated === 1 ? '' : 's'}` : ''}. ` +
+            'Open it in Zoho and confirm before sending.',
+          { duration: 20000 },
+        );
+      },
+      onError: (error) => toast.error(error.message, { duration: 20000 }),
+    }),
+  );
   const needsAttention = lines.filter(
     (line) => !line.match.lwin18 || line.shortfall > 0 || line.problem,
   );
@@ -87,6 +123,40 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 </button>
               ))}
             </div>
+            {/* The step this screen exists to remove: 43 lines and 13 item
+                codes, all of it derivable from what is already on screen. */}
+            <button
+              type="button"
+              onClick={() =>
+                createOrder({
+                  client: order.client ?? '',
+                  poNumber: order.poNumber,
+                  poDate: order.poDate,
+                  creditTerms: order.creditTerms,
+                  lines: lines
+                    .filter((line) => line.match.lwin18)
+                    .map((line) => ({
+                      lwin18: line.match.lwin18 as string,
+                      wine: line.match.matchedWine ?? line.wine,
+                      vintage: Number(line.vintage) || null,
+                      bottles: line.bottles,
+                      soldPack: line.soldPack,
+                      unitPriceAed: line.unitPriceAed,
+                      bottleSizeMl: line.sizeMl,
+                    })),
+                })
+              }
+              disabled={isCreating || blocked !== null || !order.client}
+              title={
+                blocked
+                  ? `Not ready: ${blocked}`
+                  : 'Creates a DRAFT sales order in Zoho, with any missing item codes'
+              }
+              className="flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              <IconFileExport className="h-3.5 w-3.5" />
+              {isCreating ? 'Creating…' : 'Create draft order in Zoho'}
+            </button>
             {reconciliation.agrees ? (
             <LpoChip tone="good">
               <IconCheck className="mr-1 h-3 w-3" />
@@ -100,6 +170,12 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
             )}
           </div>
         </div>
+        {blocked && (
+          <p className="mt-2 text-[11px] text-text-muted">
+            The draft order is held back until {blocked} — half an order in Zoho
+            is worse than none.
+          </p>
+        )}
         {inUsd && (
           <p className="mt-2 text-[11px] text-text-muted">
             Converted at the dirham&rsquo;s peg, {AED_TO_USD} USD per AED — the

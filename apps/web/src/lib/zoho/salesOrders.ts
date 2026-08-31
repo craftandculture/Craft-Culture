@@ -12,6 +12,52 @@ import type {
   ZohoSalesOrdersListResponse,
 } from './types';
 
+
+export interface CreateSalesOrderLine {
+  item_id: string;
+  /** Cases, or bottles where the wine is sold loose */
+  quantity: number;
+  /** Price for one of whatever `quantity` counts */
+  rate: number;
+  description?: string;
+}
+
+export interface CreateSalesOrderInput {
+  customer_id: string;
+  /** The client's own PO number, so their paperwork and ours agree */
+  reference_number?: string;
+  date?: string;
+  shipment_date?: string;
+  line_items: CreateSalesOrderLine[];
+  notes?: string;
+  terms?: string;
+  /** Zoho's own SO number; omit to let Zoho allocate one */
+  salesorder_number?: string;
+}
+
+/**
+ * Create a sales order in Zoho, as a draft
+ *
+ * Deliberately a draft. This is built from a client's PDF — a parse, a set of
+ * catalogue matches and a price comparison — and every one of those is a
+ * judgement that can be wrong. A draft is a thing someone opens and confirms;
+ * an open order is a commitment made by a machine reading a PDF.
+ *
+ * The client's own PO number goes on as the reference so their paperwork and
+ * ours can be reconciled without anyone remembering which is which.
+ *
+ * @param input - Customer, lines and the order's own references
+ * @returns The created sales order
+ */
+const createSalesOrder = async (input: CreateSalesOrderInput) => {
+  const response = await zohoFetch<ZohoSalesOrderResponse>('/salesorders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return response.salesorder;
+};
+
 /**
  * Get a sales order by ID
  *
@@ -166,6 +212,7 @@ const getSalesOrdersModifiedSince = async (sinceTime: string) => {
 };
 
 export {
+  createSalesOrder,
   getSalesOrder,
   getSalesOrdersModifiedSince,
   listAllSalesOrdersByStatus,
