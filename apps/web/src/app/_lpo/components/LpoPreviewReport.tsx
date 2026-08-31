@@ -49,6 +49,15 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
     apart. The rate is the peg, so nothing here is an estimate.
   */
   const [currency, setCurrency] = useState<'AED' | 'USD'>('AED');
+  /*
+    Who the order is for, where the document does not say.
+
+    A PDF purchase order carries its client on the letterhead. A replenishment
+    spreadsheet does not — it is a stock list, and the customer is context. So
+    it is asked for rather than guessed, and the order cannot be created
+    without one: a sales order needs to belong to somebody.
+  */
+  const [client, setClient] = useState(order.client ?? '');
   const inUsd = currency === 'USD';
   const convert = (aed: number) => (inUsd ? aed * AED_TO_USD : aed);
   const amount = (aed: number) => `${currency} ${money(convert(aed))}`;
@@ -137,13 +146,23 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 </button>
               ))}
             </div>
+            {/* Asked for only when the document does not name one */}
+            {!order.client && (
+              <input
+                value={client}
+                onChange={(event) => setClient(event.target.value)}
+                placeholder="Customer in Zoho"
+                title="A replenishment sheet does not name its customer, so the order needs one"
+                className="w-44 rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-xs"
+              />
+            )}
             {/* The step this screen exists to remove: 43 lines and 13 item
                 codes, all of it derivable from what is already on screen. */}
             <button
               type="button"
               onClick={() =>
                 createOrder({
-                  client: order.client ?? '',
+                  client: client.trim(),
                   // We bill in dollars whatever the PO is written in
                   billingCurrency: 'USD',
                   poNumber: order.poNumber,
@@ -164,11 +183,13 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                     })),
                 })
               }
-              disabled={isCreating || blocked !== null || !order.client}
+              disabled={isCreating || blocked !== null || !client.trim()}
               title={
                 blocked
                   ? `Not ready: ${blocked}`
-                  : 'Creates a DRAFT sales order in Zoho, billed in USD, with any missing item codes'
+                  : !client.trim()
+                    ? 'Name the customer this order is for'
+                    : 'Creates a DRAFT sales order in Zoho, billed in USD, with any missing item codes'
               }
               className="flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
             >
@@ -195,7 +216,12 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
             )}
           </div>
         </div>
-        {blocked ? (
+        {!order.client && !client.trim() ? (
+          <p className="mt-2 text-[11px] text-text-muted">
+            This sheet does not name a customer — type the Zoho customer it is
+            for before creating the order.
+          </p>
+        ) : blocked ? (
           <p className="mt-2 text-[11px] text-text-muted">
             The draft order is held back until {blocked}.
           </p>
