@@ -222,6 +222,25 @@ const adminGetPricingProducts = wmsOperatorProcedure
         sellMarginPct: sql<
           number | null
         >`MAX(${wmsProductPricing.sellMarginPct})`,
+        /*
+          A margin typed on THIS line, which beats the owner's rate.
+
+          The row already prefers a per-line margin over the owner's — but the
+          landed select never returned one, so typing a margin on a wine wrote
+          it, the row refetched, found nothing, fell back to the owner's rate
+          and snapped straight back to 10%. It read as a cell that could not be
+          edited; it was a cell whose answer was being fetched from somewhere
+          the answer had not been written.
+
+          The in-transit select has always returned these, which is why it
+          worked there and not here.
+        */
+        b2bMarginPct: sql<
+          number | null
+        >`MAX(${wmsProductPricing.b2bMarginPct})`,
+        pcMarginPct: sql<
+          number | null
+        >`MAX(${wmsProductPricing.pcMarginPct})`,
         // Owner's own rates (explicit settings; null if the owner hasn't set them)
         ownerLogistics: sql<
           number | null
