@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { searchContacts } from '@/lib/zoho/contacts';
-import { findOrCreateWineItem } from '@/lib/zoho/items';
+import { createWineItem, searchItems } from '@/lib/zoho/items';
 import { createSalesOrder } from '@/lib/zoho/salesOrders';
 import logger from '@/utils/logger';
 
@@ -186,7 +186,24 @@ const adminCreateZohoOrder = adminProcedure
     const createdCodes: string[] = [];
 
     for (const line of input.lines) {
-      const found = await findOrCreateWineItem({
+      /*
+        The pack is part of the identity of a sales line.
+
+        `findOrCreateWineItem` falls back to matching on the first eleven
+        characters of the LWIN, which is wine and vintage — deliberately, so a
+        stock sync finds a wine whose SKU was truncated. Here it is wrong: a
+        three-bottle repack differs from its six-pack only in the pack segment,
+        so every repack line matched the six-pack, created nothing, and booked
+        three bottles against a code Zoho believes is a case of six. The order
+        looks complete and depletes the wrong stock at the wrong rate.
+
+        So the SKU must match exactly, or the pack gets its own item — which is
+        the thirteen codes this screen exists to stop anyone typing.
+      */
+      const existing = await searchItems(line.lwin18);
+      const exact = existing.find((row) => row.sku === line.lwin18);
+
+      const wineItem = {
         lwin18: line.lwin18,
         productName: line.wine,
         producer: line.producer ?? null,
@@ -195,9 +212,11 @@ const adminCreateZohoOrder = adminProcedure
         countryOfOrigin: line.countryOfOrigin ?? null,
         bottlesPerCase: line.soldPack,
         bottleSizeMl: line.bottleSizeMl ?? 750,
-      });
+      };
 
-      const item = found?.item;
+      const item = exact ?? (await createWineItem(wineItem));
+
+      if (!exact && item?.item_id) createdCodes.push(item.item_id);
 
       if (!item?.item_id) {
         throw new TRPCError({
@@ -205,8 +224,6 @@ const adminCreateZohoOrder = adminProcedure
           message: `Zoho would not give an item code for ${line.wine} (${line.lwin18}). Nothing has been created.`,
         });
       }
-
-      if (found?.created) createdCodes.push(item.item_id);
 
       /*
         Sold by the case, priced by the case.
