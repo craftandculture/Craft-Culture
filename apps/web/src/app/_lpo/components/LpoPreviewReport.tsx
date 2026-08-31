@@ -145,6 +145,9 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       soldPack: line.soldPack,
                       unitPriceAed: line.unitPriceAed,
                       bottleSizeMl: line.sizeMl,
+                      // Customs fields Zoho holds on the item, not the order
+                      hsCode: line.hsCode,
+                      countryOfOrigin: line.countryOfOrigin,
                     })),
                 })
               }
@@ -283,6 +286,20 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
           </p>
         </div>
       )}
+      {summary.withoutHsCode > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            {summary.withoutHsCode} line
+            {summary.withoutHsCode === 1 ? '' : 's'} have no HS code
+          </p>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+            The code is taken from the shipment the wine arrived on and written
+            onto the Zoho item. Without it the item is created a customs field
+            short, which is noticed at a border rather than here — set them on
+            the shipment&rsquo;s Items tab first.
+          </p>
+        </div>
+      )}
       {summary.priceDisputes === 0 && summary.quotedLines > 0 && (
         <div className="rounded-xl border border-border-muted px-4 py-3">
           <p className="text-[13px] text-text-muted">
@@ -355,6 +372,12 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       <LpoChip tone="warn">last bottles</LpoChip>
                     )}
                     {line.problem && <LpoChip tone="bad">check total</LpoChip>}
+                    {/* An item created without one leaves the customs
+                        paperwork a field short, and it is only noticed at the
+                        border. */}
+                    {line.match.lwin18 && !line.hsCode && (
+                      <LpoChip tone="warn">no HS code</LpoChip>
+                    )}
                     {/* The order's price against the one we offered. Whose
                         figure is right is a conversation, so it is reported
                         with both numbers rather than corrected. */}

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import pdfParse from 'pdf-parse';
 
 import db from '@/database/client';
@@ -12,6 +12,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import INBOUND_SHIPMENT_STATUSES from '../../_wms/utils/inboundShipmentStatuses';
+import lwinPakKey from '../../_wms/utils/lwinPakKey';
+import pakKeyOf from '../../_wms/utils/pakKeyOf';
 import previewLpoSchema from '../schemas/previewLpoSchema';
 import findQuotedPrices from '../utils/findQuotedPrices';
 import matchLpoLine from '../utils/matchLpoLine';
@@ -160,6 +162,33 @@ const adminPreviewLpo = adminProcedure
     */
     const quoted = await findQuotedPrices(parsed.client);
 
+    /*
+      HS code and origin, taken from the shipment the wine arrived on.
+
+      Zoho needs both on an item or the customs paperwork is short a field, and
+      neither is on a stock row — they live on the shipment line. Matched
+      pack-agnostically, because a three-pack repacked out of a six clears
+      customs as the same wine and carries the same code.
+    */
+    const customsRows = await db
+      .select({
+        key: sql<string>`${lwinPakKey(logisticsShipmentItems.lwin)}`,
+        hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
+        countryOfOrigin: sql<
+          string | null
+        >`MAX(${logisticsShipmentItems.countryOfOrigin})`,
+      })
+      .from(logisticsShipmentItems)
+      .where(isNotNull(logisticsShipmentItems.lwin))
+      .groupBy(sql`${lwinPakKey(logisticsShipmentItems.lwin)}`);
+
+    const customs = new Map(
+      customsRows.map((row) => [
+        row.key,
+        { hsCode: row.hsCode, countryOfOrigin: row.countryOfOrigin },
+      ]),
+    );
+
     const lines = parsed.lines.map((line) => {
       const match = matchLpoLine({
         wine: line.wine,
@@ -183,6 +212,9 @@ const adminPreviewLpo = adminProcedure
         line.bottles % heldPack === 0 ? heldPack : line.bottles;
 
       const quote = match.lwin18 ? (quoted.get(match.lwin18) ?? null) : null;
+      const wineCustoms = match.lwin18
+        ? (customs.get(pakKeyOf(match.lwin18)) ?? null)
+        : null;
 
       // A dirham either way is rounding, not a disagreement
       const priceDiffersBy =
@@ -197,6 +229,8 @@ const adminPreviewLpo = adminProcedure
         soldPack,
         isRepack: match.lwin18 !== null && soldPack !== heldPack,
         quote,
+        hsCode: wineCustoms?.hsCode ?? null,
+        countryOfOrigin: wineCustoms?.countryOfOrigin ?? null,
         priceDiffersBy:
           priceDiffersBy !== null && Math.abs(priceDiffersBy) >= 1
             ? priceDiffersBy
@@ -234,6 +268,9 @@ const adminPreviewLpo = adminProcedure
           .length,
         quotedLines: lines.filter((line) => line.quote).length,
         priceDisputes: lines.filter((line) => line.priceDiffersBy !== null)
+          .length,
+        // An item created without one leaves the customs paperwork short
+        withoutHsCode: lines.filter((line) => line.match.lwin18 && !line.hsCode)
           .length,
       },
     };
