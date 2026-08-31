@@ -3,6 +3,9 @@
 How a client's LPO becomes a Zoho sales order, and the rules that stop it
 becoming the wrong one. Source of truth when working on `_lpo`.
 
+The screen is `/platform/admin/lpo` (Finance → Client LPOs). It reads and
+reports; it writes nothing, anywhere.
+
 The manual version of this is: read the PDF, find each wine in the catalogue,
 work out which lines are repacks, create those item codes in Zoho by hand, then
 key the order line by line. On the reference order that is 43 lines and 13 new
