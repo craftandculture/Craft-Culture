@@ -183,6 +183,37 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
         </section>
       )}
 
+      {/*
+        Said once at the top as well as per line: on a forty-three line order
+        the two that disagree with the quote are otherwise indistinguishable
+        from the forty-one that do not.
+      */}
+      {summary.priceDisputes > 0 && (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+            {summary.priceDisputes} line
+            {summary.priceDisputes === 1 ? '' : 's'} priced differently from the
+            quote
+          </p>
+          <p className="mt-1 text-xs text-red-700 dark:text-red-400">
+            Checked against the last published quote to this client
+            {summary.quotedLines > 0
+              ? ` — ${summary.quotedLines} of ${lines.length} lines were quoted`
+              : ''}
+            . The order still adds up against itself; this is the price it adds
+            up to.
+          </p>
+        </div>
+      )}
+      {summary.priceDisputes === 0 && summary.quotedLines > 0 && (
+        <div className="rounded-xl border border-border-muted px-4 py-3">
+          <p className="text-[13px] text-text-muted">
+            Prices match the last published quote on {summary.quotedLines} of{' '}
+            {lines.length} lines. The rest were not quoted.
+          </p>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-border-muted">
         <table className="w-full text-sm">
           <thead>
@@ -246,6 +277,16 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       <LpoChip tone="warn">last bottles</LpoChip>
                     )}
                     {line.problem && <LpoChip tone="bad">check total</LpoChip>}
+                    {/* The order's price against the one we offered. Whose
+                        figure is right is a conversation, so it is reported
+                        with both numbers rather than corrected. */}
+                    {line.priceDiffersBy !== null && line.quote && (
+                      <LpoChip tone="bad">
+                        {line.priceDiffersBy > 0 ? 'above' : 'below'} quote{' '}
+                        {line.quote.quoteRef} by {currency}{' '}
+                        {money(Math.abs(convert(line.priceDiffersBy)))}
+                      </LpoChip>
+                    )}
                   </div>
                 </td>
               </tr>

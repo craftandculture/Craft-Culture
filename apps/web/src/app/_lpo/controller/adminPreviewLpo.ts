@@ -13,6 +13,7 @@ import logger from '@/utils/logger';
 
 import INBOUND_SHIPMENT_STATUSES from '../../_wms/utils/inboundShipmentStatuses';
 import previewLpoSchema from '../schemas/previewLpoSchema';
+import findQuotedPrices from '../utils/findQuotedPrices';
 import matchLpoLine from '../utils/matchLpoLine';
 import type { CatalogueCandidate } from '../utils/matchLpoLine';
 import parseLpoText from '../utils/parseLpoText';
@@ -149,6 +150,16 @@ const adminPreviewLpo = adminProcedure
       })),
     ];
 
+    /*
+      What we last offered this client, so the order can be read against it.
+
+      An order that adds up perfectly against itself can still be at the wrong
+      price — a client keying last month's figure, or ours having moved after
+      the offer went out. Reported, never corrected: whose number is right is a
+      conversation, not a calculation.
+    */
+    const quoted = await findQuotedPrices(parsed.client);
+
     const lines = parsed.lines.map((line) => {
       const match = matchLpoLine({
         wine: line.wine,
@@ -171,12 +182,25 @@ const adminPreviewLpo = adminProcedure
       const soldPack =
         line.bottles % heldPack === 0 ? heldPack : line.bottles;
 
+      const quote = match.lwin18 ? (quoted.get(match.lwin18) ?? null) : null;
+
+      // A dirham either way is rounding, not a disagreement
+      const priceDiffersBy =
+        quote && line.unitPriceAed > 0
+          ? Math.round((line.unitPriceAed - quote.aed) * 100) / 100
+          : null;
+
       return {
         ...line,
         match,
         shortfall,
         soldPack,
         isRepack: match.lwin18 !== null && soldPack !== heldPack,
+        quote,
+        priceDiffersBy:
+          priceDiffersBy !== null && Math.abs(priceDiffersBy) >= 1
+            ? priceDiffersBy
+            : null,
       };
     });
 
@@ -207,6 +231,9 @@ const adminPreviewLpo = adminProcedure
         shortLines: lines.filter((line) => line.shortfall > 0).length,
         repackLines: lines.filter((line) => line.isRepack).length,
         lastBottleLines: lines.filter((line) => line.match.takesLastBottles)
+          .length,
+        quotedLines: lines.filter((line) => line.quote).length,
+        priceDisputes: lines.filter((line) => line.priceDiffersBy !== null)
           .length,
       },
     };
