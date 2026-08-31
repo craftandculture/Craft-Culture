@@ -126,10 +126,25 @@ const getCatalogueRows = async (
       selling: sql<number | null>`${preferExact(
         wmsProductPricing.sellingPricePerBottle,
       )}`,
-      inbondPct: sql<
-        number | null
-      >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-      pcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
+      /*
+        A margin set on the wine beats the owner's default, as it does on the
+        pricing screen.
+
+        This read only the owner's rates, so a margin typed against one wine
+        moved its price in the Pricing Manager and nowhere a customer could see
+        — Tignanello 2022 quoted at $174.79 internally and $165.08 on the price
+        list, the difference being the 10% owner default the catalogue kept
+        applying. A price the business has decided on has to be the price that
+        publishes.
+      */
+      inbondPct: sql<number | null>`COALESCE(
+        ${preferExact(wmsProductPricing.b2bMarginPct)},
+        MAX(${wmsOwnerPricingSettings.inbondMarginPct})
+      )`,
+      pcPct: sql<number | null>`COALESCE(
+        ${preferExact(wmsProductPricing.pcMarginPct)},
+        MAX(${wmsOwnerPricingSettings.pcMarginPct})
+      )`,
     })
     .from(wmsStock)
     .leftJoin(

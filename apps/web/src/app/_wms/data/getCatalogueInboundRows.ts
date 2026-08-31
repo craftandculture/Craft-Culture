@@ -195,10 +195,16 @@ const getCatalogueInboundRows = async (
       selling: sql<
         number | null
       >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
-      inbondPct: sql<
-        number | null
-      >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-      pcPct: sql<number | null>`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
+      // A margin set on the wine beats the owner's default, as on the pricing
+      // screen — otherwise a decided price never reaches a customer.
+      inbondPct: sql<number | null>`COALESCE(
+        MAX(${wmsProductPricing.b2bMarginPct}),
+        MAX(${wmsOwnerPricingSettings.inbondMarginPct})
+      )`,
+      pcPct: sql<number | null>`COALESCE(
+        MAX(${wmsProductPricing.pcMarginPct}),
+        MAX(${wmsOwnerPricingSettings.pcMarginPct})
+      )`,
     })
     .from(logisticsShipmentItems)
     .innerJoin(
