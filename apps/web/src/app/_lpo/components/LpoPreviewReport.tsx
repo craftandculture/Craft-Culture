@@ -68,7 +68,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
       ? `${summary.unmatched} line${summary.unmatched === 1 ? '' : 's'} not identified`
       : summary.shortLines > 0
         ? `${summary.shortLines} line${summary.shortLines === 1 ? '' : 's'} short of stock`
-        : !reconciliation.agrees
+        : reconciliation.agrees === false
           ? 'the order does not add up to its stated total'
           : null;
 
@@ -162,7 +162,10 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               <IconFileExport className="h-3.5 w-3.5" />
               {isCreating ? 'Creating…' : 'Create draft order in Zoho'}
             </button>
-            {reconciliation.agrees ? (
+            {reconciliation.agrees === null ? (
+              // A sheet states no total, so there is nothing to agree with
+              <LpoChip tone="warn">No stated total to check against</LpoChip>
+            ) : reconciliation.agrees ? (
             <LpoChip tone="good">
               <IconCheck className="mr-1 h-3 w-3" />
               Adds up to the stated total

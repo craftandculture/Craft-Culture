@@ -2,8 +2,13 @@ import * as XLSX from 'xlsx';
 
 import type { ParsedLpo } from './parseLpoText';
 
-/** "Send 4 case", "Send 2 Cases", "send 1 case next shipment" */
-const SEND = /send\s+(\d+)\s*(case|cs|btl|bottle)/i;
+/*
+  "Send 4 case", "Send 2 Cases", "send 1 case next shipment" — and "Send 2 Cas",
+  because a sheet typed by hand is typed by hand. The unit is matched on its
+  first three letters so a truncation still reads, and a bare "Send 2" counts as
+  cases, which is what it means on a replenishment sheet.
+*/
+const SEND = /send\s+(\d+)\s*(cas\w*|cs|btl\w*|bottle\w*)?/i;
 
 /**
  * Read a replenishment sheet as an order
@@ -83,6 +88,7 @@ const parseReplenishmentSheet = (
     const asked = SEND.exec(instruction);
     const count = Number(asked?.[1] ?? 0);
     const unit = (asked?.[2] ?? 'case').toLowerCase();
+    const isBottles = unit.startsWith('btl') || unit.startsWith('bottle');
 
     if (!count) continue;
 
@@ -93,7 +99,7 @@ const parseReplenishmentSheet = (
       region: source || 'Replenishment',
       wine,
       vintage,
-      volumeText: unit.startsWith('case') || unit === 'cs' ? `${count} case` : `${count} btl`,
+      volumeText: isBottles ? `${count} btl` : `${count} case`,
       // The sheet never states a format; the catalogue match settles it
       sizeMl: 750,
       /*
@@ -102,7 +108,7 @@ const parseReplenishmentSheet = (
         it is the common pack, and the preview shows what we actually hold
         beside it for someone to check before anything is created.
       */
-      bottles: unit.startsWith('case') || unit === 'cs' ? count * 6 : count,
+      bottles: isBottles ? count : count * 6,
       unitPriceAed: 0,
       lineTotalAed: 0,
       problem: null,

@@ -305,9 +305,18 @@ const adminPreviewLpo = adminProcedure
             lines.reduce((sum, line) => sum + line.lineTotalAed, 0) * 100,
           ) / 100,
         declaredTotalAed: parsed.declaredTotalAed,
+        /*
+          Null where there is nothing to check against.
+
+          A replenishment sheet states no total, and treating "no total" as
+          "does not match" put a red "Does not match the stated total" beside
+          the words "not stated" — a warning that cannot be acted on and is
+          therefore learned from.
+        */
         agrees:
-          parsed.declaredTotalAed !== null &&
-          Math.abs(parsed.computedTotalAed - parsed.declaredTotalAed) < 0.5,
+          parsed.declaredTotalAed === null
+            ? null
+            : Math.abs(parsed.computedTotalAed - parsed.declaredTotalAed) < 0.5,
         skipped: parsed.skipped,
         disputedLines: parsed.lines.filter((line) => line.problem !== null)
           .length,
