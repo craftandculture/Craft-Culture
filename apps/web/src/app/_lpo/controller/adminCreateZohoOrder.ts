@@ -141,8 +141,29 @@ const adminCreateZohoOrder = adminProcedure
       invented from a PDF is how a duplicate customer gets into the accounts, in
       a system we do not control.
     */
-    const squash = (value: string) =>
-      value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    /*
+      Names compared the way a person compares them.
+
+      "CD General L.L.C" and "C D General Trading L.L.C" are the same company
+      and neither contains the other — "Trading" sits in the middle. So the
+      letters are squashed together and the registered suffixes stripped off
+      the end, repeatedly, until what is left is the name anyone would say out
+      loud: both become "cdgeneral".
+    */
+    const SUFFIX =
+      /(fze|fzc|fzco|llc|lc|ltd|limited|inc|gmbh|sa|srl|bv|plc|spc|co|company|trading|general|group|holdings)$/;
+
+    const squash = (value: string) => {
+      let key = value.toLowerCase().replace(/[^a-z0-9]/g, '');
+      let previous = '';
+
+      while (key !== previous && key.length > 3) {
+        previous = key;
+        key = key.replace(SUFFIX, '');
+      }
+
+      return key;
+    };
 
     const words = input.client
       .replace(/[^a-zA-Z0-9 ]/g, ' ')
@@ -172,8 +193,31 @@ const adminCreateZohoOrder = adminProcedure
     const wanted = squash(input.client);
     const candidates = [...seen.values()];
 
+    const exact = candidates.filter(
+      (row) => squash(row.contact_name) === wanted,
+    );
+
+    /*
+      Two customers matching equally well is a question, not a coin toss.
+
+      Zoho holds "C D General Trading L.L.C" and "C D GENERAL TRADING LLC" —
+      one company, two records, the same split we spent an hour unpicking on the
+      partners table. Picking one silently would put half this client's orders
+      under each.
+    */
+    if (exact.length > 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          `Zoho has ${exact.length} customers that all match "${input.client}": ` +
+          `${exact.map((row) => row.contact_name).join(', ')}. ` +
+          'They look like one company under several records — merge them in ' +
+          'Zoho, or type the exact name of the one this order belongs to.',
+      });
+    }
+
     const contact =
-      candidates.find((row) => squash(row.contact_name) === wanted) ??
+      exact[0] ??
       candidates.find((row) => {
         const name = squash(row.contact_name);
 
