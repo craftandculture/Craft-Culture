@@ -23,6 +23,13 @@ type LpoPreview = inferRouterOutputs<AppRouter>['lpo']['admin']['preview'];
 const LpoPreviewClient = () => {
   const api = useTRPC();
   const [preview, setPreview] = useState<LpoPreview | null>(null);
+  /**
+   * Whose lines to take from a replenishment sheet.
+   *
+   * "The OpenCellar lines" is a real instruction: one sheet carries several
+   * consignors and an order is placed with one of them.
+   */
+  const [source, setSource] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
 
   const previewMutation = useMutation({
@@ -47,7 +54,13 @@ const LpoPreviewClient = () => {
       reader.readAsDataURL(file);
     });
 
-    previewMutation.mutate({ file: base64, fileName: file.name });
+    previewMutation.mutate({
+      file: base64,
+      fileName: file.name,
+      // Only meaningful for a replenishment sheet, which carries several
+      // consignors in one file
+      source: source.trim() || undefined,
+    });
   };
 
   return (
@@ -57,14 +70,14 @@ const LpoPreviewClient = () => {
         <span className="text-sm font-medium">
           {previewMutation.isPending
             ? 'Reading the order…'
-            : 'Choose the LPO PDF'}
+            : 'Choose the LPO PDF, or a replenishment spreadsheet'}
         </span>
         <span className="text-[12px] text-text-muted">
           {fileName ?? 'Nothing is saved, and nothing is sent to Zoho'}
         </span>
         <input
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,.xlsx,.xls,.csv"
           className="hidden"
           disabled={previewMutation.isPending}
           onChange={(event) => {
@@ -74,6 +87,21 @@ const LpoPreviewClient = () => {
             event.target.value = '';
           }}
         />
+      </label>
+
+      {/*
+        A replenishment sheet lists several consignors; an order goes to one.
+        Left blank it reads every row that asks for something.
+      */}
+      <label className="flex flex-wrap items-center gap-2 text-[13px] text-text-muted">
+        Spreadsheet only — take only rows from
+        <input
+          value={source}
+          onChange={(event) => setSource(event.target.value)}
+          placeholder="e.g. OpenCellar"
+          className="rounded-md border border-border-muted bg-background-primary px-2 py-1 text-[13px] text-text-primary"
+        />
+        <span>(blank takes every row that asks for stock)</span>
       </label>
 
       {preview && <LpoPreviewReport preview={preview} />}

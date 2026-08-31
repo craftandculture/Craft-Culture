@@ -11,6 +11,8 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import { PEGGED } from '../../_logistics/utils/resolveFxToUsd';
+import getCatalogueRows from '../../_wms/data/getCatalogueRows';
 import INBOUND_SHIPMENT_STATUSES from '../../_wms/utils/inboundShipmentStatuses';
 import lwinPakKey from '../../_wms/utils/lwinPakKey';
 import pakKeyOf from '../../_wms/utils/pakKeyOf';
@@ -19,6 +21,7 @@ import findQuotedPrices from '../utils/findQuotedPrices';
 import matchLpoLine from '../utils/matchLpoLine';
 import type { CatalogueCandidate } from '../utils/matchLpoLine';
 import parseLpoText from '../utils/parseLpoText';
+import parseReplenishmentSheet from '../utils/parseReplenishmentSheet';
 
 /** "75cl", "750ml", "1.5L" — however a row happens to spell its size. */
 const toMl = (size: string | null) => {
@@ -51,6 +54,9 @@ const toMl = (size: string | null) => {
  * @param input - The purchase-order PDF
  * @returns The parsed order, its own reconciliation, and a verdict per line
  */
+/** The dirham's peg, so a USD trade price converts exactly */
+const AED_TO_USD = PEGGED.AED ?? 0.2723;
+
 const adminPreviewLpo = adminProcedure
   .input(previewLpoSchema)
   .mutation(async ({ input }) => {
@@ -58,9 +64,23 @@ const adminPreviewLpo = adminProcedure
       ? (input.file.split(',')[1] ?? '')
       : input.file;
 
+    /*
+      A replenishment sheet is a purchase order written as a spreadsheet.
+
+      Same reading, same checks, same draft at the end — so it is parsed into
+      the same shape rather than given a pipeline of its own. What it does not
+      carry is prices, which are filled from our own in-bond book below.
+    */
+    const isSheet = /\.(xlsx|xls|csv)$/i.test(input.fileName ?? '');
+
     const [parsed, parseError] = await (async () => {
       try {
+        if (isSheet) {
+          return [parseReplenishmentSheet(base64, input.source), null] as const;
+        }
+
         const text = (await pdfParse(Buffer.from(base64, 'base64'))).text;
+
         return [parseLpoText(text), null] as const;
       } catch (error) {
         return [null, error] as const;
@@ -68,10 +88,12 @@ const adminPreviewLpo = adminProcedure
     })();
 
     if (!parsed || parseError) {
-      logger.error('Could not read the purchase order PDF', { parseError });
+      logger.error('Could not read the order', { parseError });
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'That PDF could not be read as a purchase order',
+        message: isSheet
+          ? 'That spreadsheet could not be read as a replenishment sheet'
+          : 'That PDF could not be read as a purchase order',
       });
     }
 
@@ -189,6 +211,19 @@ const adminPreviewLpo = adminProcedure
       ]),
     );
 
+    /*
+      Our own trade prices, for an order that arrives without any.
+
+      Read from the catalogue feed the price list itself uses, so a
+      replenishment is quoted at exactly what a customer would be shown rather
+      than at a figure computed a second way.
+    */
+    const catalogue = new Map(
+      parsed.lines.some((line) => line.unitPriceAed === 0)
+        ? (await getCatalogueRows({})).map((row) => [row.lwin18, row])
+        : [],
+    );
+
     const lines = parsed.lines.map((line) => {
       const match = matchLpoLine({
         wine: line.wine,
@@ -210,6 +245,21 @@ const adminPreviewLpo = adminProcedure
       const heldPack = match.rows[0]?.pack ?? line.bottles;
       const soldPack =
         line.bottles % heldPack === 0 ? heldPack : line.bottles;
+
+      /*
+        A sheet states no price, so ours fills it.
+
+        The in-bond (B2B) price is what a trade customer is quoted, and it comes
+        from the catalogue's own figure rather than a second calculation — the
+        same number the price list publishes. Held in AED because the rest of
+        this flow is, and converted back at the peg when the order is billed.
+      */
+      const listed = match.lwin18 ? catalogue.get(match.lwin18) : undefined;
+
+      if (line.unitPriceAed === 0 && listed && listed.ibPerBottle > 0) {
+        line.unitPriceAed = Math.round((listed.ibPerBottle / AED_TO_USD) * 100) / 100;
+        line.lineTotalAed = Math.round(line.unitPriceAed * line.bottles * 100) / 100;
+      }
 
       const quote = match.lwin18 ? (quoted.get(match.lwin18) ?? null) : null;
       const wineCustoms = match.lwin18
@@ -249,7 +299,11 @@ const adminPreviewLpo = adminProcedure
       reconciliation: {
         lineCount: parsed.lines.length,
         totalBottles: parsed.totalBottles,
-        computedTotalAed: parsed.computedTotalAed,
+        computedTotalAed:
+          parsed.computedTotalAed ||
+          Math.round(
+            lines.reduce((sum, line) => sum + line.lineTotalAed, 0) * 100,
+          ) / 100,
         declaredTotalAed: parsed.declaredTotalAed,
         agrees:
           parsed.declaredTotalAed !== null &&
