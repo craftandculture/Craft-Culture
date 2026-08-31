@@ -71,22 +71,70 @@ const adminCreateZohoOrder = adminProcedure
     }
 
     /*
-      The client has to be one we already know.
+      The client has to be one we already know — found the way a person would.
 
-      Creating a contact from a name read off a PDF is how a duplicate customer
-      appears in the accounts — the same mistake as two partner records, in a
-      system we do not control.
+      A PDF letterhead says "C D General Trading L.L.C. - S.P.C" and Zoho holds
+      "CD General Trading LLC". Handing that whole string to Zoho's search
+      returns nothing, so the first attempt refused an order for a customer that
+      was plainly there.
+
+      So it searches on progressively shorter fragments and then compares on
+      letters alone, which is how the two names are obviously the same to
+      anybody reading them. Creating the contact is still not an option: one
+      invented from a PDF is how a duplicate customer gets into the accounts, in
+      a system we do not control.
     */
-    const contacts = await searchContacts(input.client);
-    const contact = contacts[0];
+    const squash = (value: string) =>
+      value.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const words = input.client
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 1);
+
+    const attempts = [
+      input.client,
+      words.slice(0, 3).join(' '),
+      words.slice(0, 2).join(' '),
+      [...words].sort((a, b) => b.length - a.length)[0] ?? '',
+    ].filter((term, index, all) => term && all.indexOf(term) === index);
+
+    const seen = new Map<string, { contact_id: string; contact_name: string }>();
+
+    for (const term of attempts) {
+      const found = await searchContacts(term);
+
+      for (const row of found) {
+        if (row.contact_id) seen.set(row.contact_id, row);
+      }
+
+      // Stop as soon as something plausible turns up
+      if (seen.size > 0) break;
+    }
+
+    const wanted = squash(input.client);
+    const candidates = [...seen.values()];
+
+    const contact =
+      candidates.find((row) => squash(row.contact_name) === wanted) ??
+      candidates.find((row) => {
+        const name = squash(row.contact_name);
+
+        return name.includes(wanted) || wanted.includes(name);
+      }) ??
+      (candidates.length === 1 ? candidates[0] : undefined);
 
     if (!contact) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message:
-          `No Zoho customer matches "${input.client}". Create or rename the ` +
-          'customer in Zoho first — a contact invented from a PDF is how a ' +
-          'duplicate customer gets into the accounts.',
+          `No Zoho customer matches "${input.client}".` +
+          (candidates.length > 0
+            ? ` Zoho has: ${candidates
+                .slice(0, 6)
+                .map((row) => row.contact_name)
+                .join(', ')}. Rename one to match, or tell me which it is.`
+            : ' Nothing similar came back from Zoho at all — check the customer exists.'),
       });
     }
 
