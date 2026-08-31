@@ -130,6 +130,8 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               onClick={() =>
                 createOrder({
                   client: order.client ?? '',
+                  // We bill in dollars whatever the PO is written in
+                  billingCurrency: 'USD',
                   poNumber: order.poNumber,
                   poDate: order.poDate,
                   creditTerms: order.creditTerms,
@@ -150,7 +152,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               title={
                 blocked
                   ? `Not ready: ${blocked}`
-                  : 'Creates a DRAFT sales order in Zoho, with any missing item codes'
+                  : 'Creates a DRAFT sales order in Zoho, billed in USD, with any missing item codes'
               }
               className="flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
             >

@@ -24,6 +24,14 @@ export interface CreateSalesOrderLine {
 
 export interface CreateSalesOrderInput {
   customer_id: string;
+  /**
+   * The currency the RATES are in — stated, never inherited.
+   *
+   * Omitting it lets Zoho fall back to the customer's default, so AED figures
+   * were sent to a customer set up in USD and printed as $125,700 against an
+   * order worth $34,228.
+   */
+  currency_code?: string;
   /** The client's own PO number, so their paperwork and ours agree */
   reference_number?: string;
   date?: string;

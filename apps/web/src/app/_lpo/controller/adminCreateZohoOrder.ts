@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { searchContacts } from '@/lib/zoho/contacts';
@@ -81,6 +82,15 @@ const adminCreateZohoOrder = adminProcedure
       poNumber: z.string().nullable(),
       poDate: z.string().nullable(),
       creditTerms: z.string().nullable(),
+      /**
+       * What we bill in, which is not what the client wrote the PO in.
+       *
+       * C D General send their orders in dirhams and are invoiced in dollars.
+       * Stated rather than inherited from the Zoho customer: an unstated
+       * currency is how AED figures came to print as $125,700 on an order worth
+       * $34,228.
+       */
+      billingCurrency: z.enum(['USD', 'AED']).default('USD'),
       lines: z
         .array(
           z.object({
@@ -182,6 +192,10 @@ const adminCreateZohoOrder = adminProcedure
       exist. Sequential rather than parallel: Zoho rate-limits, and a
       half-created set of items is a worse place to fail than none.
     */
+    /** AED → the billing currency. The dirham is pegged, so this is exact. */
+    const rateToBilling =
+      input.billingCurrency === 'AED' ? 1 : (PEGGED.AED ?? 0.2723);
+
     const lineItems = [];
     const createdCodes: string[] = [];
 
@@ -281,29 +295,45 @@ const adminCreateZohoOrder = adminProcedure
       }
 
       /*
-        Sold by the case, priced by the case.
+        Sold by the case, priced by the case, billed in what we bill in.
 
         The LPO states a price per bottle and Zoho holds these as cases, so the
-        rate is the bottle price times the pack. Sending a bottle price against
-        a case quantity is a bill for a sixth of the order.
+        rate is the bottle price times the pack — a bottle price against a case
+        quantity is a bill for a sixth of the order. The dirham is pegged, so
+        the conversion to dollars is arithmetic rather than a rate anyone has to
+        agree, and it is taken from the same PEGGED table the rest of the FX
+        code reads.
       */
       const cases = line.bottles / line.soldPack;
+      const caseRateAed = line.unitPriceAed * line.soldPack;
 
       lineItems.push({
         item_id: item.item_id,
         quantity: cases,
-        rate: Math.round(line.unitPriceAed * line.soldPack * 100) / 100,
+        rate: Math.round(caseRateAed * rateToBilling * 100) / 100,
         description: `${line.soldPack}x${Math.round((line.bottleSizeMl ?? 750) / 10)}cl`,
       });
     }
 
     const order = await createSalesOrder({
       customer_id: contact.contact_id,
+      currency_code: input.billingCurrency,
       reference_number: input.poNumber ?? undefined,
       date: toZohoDate(input.poDate) ?? undefined,
       line_items: lineItems,
       terms: input.creditTerms ?? undefined,
-      notes: `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.`,
+      /*
+        The original and the rate, on the order itself.
+
+        A converted figure nobody can explain six months later is a figure
+        nobody can defend — the same reason a shipment records the rate it was
+        priced at.
+      */
+      notes:
+        `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.` +
+        (input.billingCurrency === 'AED'
+          ? ''
+          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, ${rateToBilling} per AED.`),
     });
 
     logger.info('[LPO] Draft sales order created', {
