@@ -3,12 +3,20 @@ import * as XLSX from 'xlsx';
 import type { ParsedLpo } from './parseLpoText';
 
 /*
-  "Send 4 case", "Send 2 Cases", "send 1 case next shipment" — and "Send 2 Cas",
-  because a sheet typed by hand is typed by hand. The unit is matched on its
-  first three letters so a truncation still reads, and a bare "Send 2" counts as
-  cases, which is what it means on a replenishment sheet.
+  A sheet typed by hand puts the words in whatever order it likes: "Send 4
+  case", "Send 2 Cas", "5 bottles send", "send 1 case next shipment".
+
+  So the word "send" is what makes a row an instruction, and the quantity is
+  read separately — either as a number with a unit anywhere in the text, or as
+  the number straight after "send", which on a replenishment sheet means cases.
+
+  Requiring "send" is what keeps "5 bottles avaliavle + Large QTY of 2021/2023"
+  out: that is the client telling us what they have, and shipping against it
+  would send wine nobody asked for.
 */
-const SEND = /send\s+(\d+)\s*(cas\w*|cs|btl\w*|bottle\w*)?/i;
+const ASKS = /\bsend\b/i;
+const QUANTITY_WITH_UNIT = /(\d+)\s*(cas\w*|cs\b|btl\w*|bottle\w*)/i;
+const QUANTITY_AFTER_SEND = /send\s+(\d+)/i;
 
 /**
  * Read a replenishment sheet as an order
@@ -76,21 +84,24 @@ const parseReplenishmentSheet = (
     */
     const instruction = Object.values(row)
       .map(text)
-      .find((value) => SEND.test(value));
+      .find((value) => ASKS.test(value));
 
     if (!instruction) {
-      if (/oos|stock ok/i.test(Object.values(row).map(text).join(' '))) continue;
-
-      skipped.push(`${wine} — no quantity in "${Object.values(row).map(text).join(' ')}"`);
+      // Not an instruction at all — a status, a note, or an empty remark
       continue;
     }
 
-    const asked = SEND.exec(instruction);
-    const count = Number(asked?.[1] ?? 0);
-    const unit = (asked?.[2] ?? 'case').toLowerCase();
+    const withUnit = QUANTITY_WITH_UNIT.exec(instruction);
+    const afterSend = QUANTITY_AFTER_SEND.exec(instruction);
+    const count = Number(withUnit?.[1] ?? afterSend?.[1] ?? 0);
+    const unit = (withUnit?.[2] ?? 'case').toLowerCase();
     const isBottles = unit.startsWith('btl') || unit.startsWith('bottle');
 
-    if (!count) continue;
+    if (!count) {
+      // It says send and does not say how many — worth a person's eye
+      skipped.push(`${wine} — says send, but no quantity: "${instruction}"`);
+      continue;
+    }
 
     // A vintage on the end of the name is the only one the sheet states
     const vintage = /\b(19|20)\d{2}\b/.exec(wine)?.[0] ?? 'NV';

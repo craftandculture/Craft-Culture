@@ -91,6 +91,14 @@ const adminCreateZohoOrder = adminProcedure
        * $34,228.
        */
       billingCurrency: z.enum(['USD', 'AED']).default('USD'),
+      /**
+       * Lines the preview could not identify, left off but recorded.
+       *
+       * An order that quietly contains fewer lines than the document it came
+       * from is the hardest kind to reconcile later, so what was left out is
+       * written onto the order rather than remembered.
+       */
+      excluded: z.array(z.string()).default([]),
       lines: z
         .array(
           z.object({
@@ -333,7 +341,10 @@ const adminCreateZohoOrder = adminProcedure
         `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.` +
         (input.billingCurrency === 'AED'
           ? ''
-          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, ${rateToBilling} per AED.`),
+          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, ${rateToBilling} per AED.`) +
+        (input.excluded.length > 0
+          ? ` NOT ON THIS ORDER — could not be identified: ${input.excluded.join('; ')}.`
+          : ''),
     });
 
     logger.info('[LPO] Draft sales order created', {

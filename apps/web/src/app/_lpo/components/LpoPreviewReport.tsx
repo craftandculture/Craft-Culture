@@ -63,14 +63,28 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
     than none. A price disagreement does not block it — that is a conversation
     to have first, and the chips say which lines to have it about.
   */
+  /*
+    Lines we cannot identify are left off, not held against the rest.
+
+    Blocking the whole order on one unmatched line was too strict: a client's
+    sheet naming a wine we do not stock stopped eight good lines from being
+    created, and the way through was to edit their spreadsheet. The unmatched
+    ones are excluded, named on the order itself so the omission is on the
+    record, and the button says how many it will create.
+
+    A real disagreement with a stated total still blocks — that is the order
+    contradicting itself, which is a different thing from us not recognising a
+    wine.
+  */
+  const orderable = lines.filter((line) => line.match.lwin18);
+  const excluded = lines.filter((line) => !line.match.lwin18);
+
   const blocked =
-    summary.unmatched > 0
-      ? `${summary.unmatched} line${summary.unmatched === 1 ? '' : 's'} not identified`
-      : summary.shortLines > 0
-        ? `${summary.shortLines} line${summary.shortLines === 1 ? '' : 's'} short of stock`
-        : reconciliation.agrees === false
-          ? 'the order does not add up to its stated total'
-          : null;
+    orderable.length === 0
+      ? 'no line could be identified'
+      : reconciliation.agrees === false
+        ? 'the order does not add up to its stated total'
+        : null;
 
   const { mutate: createOrder, isPending: isCreating } = useMutation(
     api.lpo.admin.createZohoOrder.mutationOptions({
@@ -135,9 +149,8 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                   poNumber: order.poNumber,
                   poDate: order.poDate,
                   creditTerms: order.creditTerms,
-                  lines: lines
-                    .filter((line) => line.match.lwin18)
-                    .map((line) => ({
+                  excluded: excluded.map((line) => line.wine),
+                  lines: orderable.map((line) => ({
                       lwin18: line.match.lwin18 as string,
                       wine: line.match.matchedWine ?? line.wine,
                       vintage: Number(line.vintage) || null,
@@ -160,7 +173,11 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
               className="flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
             >
               <IconFileExport className="h-3.5 w-3.5" />
-              {isCreating ? 'Creating…' : 'Create draft order in Zoho'}
+              {isCreating
+                ? 'Creating…'
+                : excluded.length > 0
+                  ? `Create draft order (${orderable.length} of ${lines.length} lines)`
+                  : 'Create draft order in Zoho'}
             </button>
             {reconciliation.agrees === null ? (
               // A sheet states no total, so there is nothing to agree with
@@ -178,12 +195,17 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
             )}
           </div>
         </div>
-        {blocked && (
+        {blocked ? (
           <p className="mt-2 text-[11px] text-text-muted">
-            The draft order is held back until {blocked} — half an order in Zoho
-            is worse than none.
+            The draft order is held back until {blocked}.
           </p>
-        )}
+        ) : excluded.length > 0 ? (
+          <p className="mt-2 text-[11px] text-text-muted">
+            {excluded.length} line{excluded.length === 1 ? '' : 's'} we could not
+            identify will be left off and named on the order:{' '}
+            {excluded.map((line) => line.wine).join(', ')}.
+          </p>
+        ) : null}
         {inUsd && (
           <p className="mt-2 text-[11px] text-text-muted">
             Converted at the dirham&rsquo;s peg, {AED_TO_USD} USD per AED — the
