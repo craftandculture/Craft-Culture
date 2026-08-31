@@ -200,8 +200,31 @@ const adminCreateZohoOrder = adminProcedure
         So the SKU must match exactly, or the pack gets its own item — which is
         the thirteen codes this screen exists to stop anyone typing.
       */
-      const existing = await searchItems(line.lwin18);
-      const exact = existing.find((row) => row.sku === line.lwin18);
+      /*
+        The SKU of the pack being SOLD, not of the stock it comes out of.
+
+        `match.lwin18` identifies the case we hold — a twelve of Figeac. Selling
+        three bottles of it is a different item, `…-03-…`, and looking up the
+        held code found the twelve-pack every time: exact match, nothing
+        created, three bottles booked against a case of twelve. The check was
+        right and the question was wrong.
+
+        LWIN18 is wine-vintage-pack-size, so the sold pack is the held code with
+        its third segment replaced.
+      */
+      const parts = line.lwin18.split('-');
+      const saleLwin18 =
+        parts.length === 4
+          ? [
+              parts[0],
+              parts[1],
+              String(line.soldPack).padStart(2, '0'),
+              parts[3],
+            ].join('-')
+          : line.lwin18;
+
+      const existing = await searchItems(saleLwin18);
+      const exact = existing.find((row) => row.sku === saleLwin18);
 
       /*
         Zoho's item names are unique; its SKUs are not enforced.
@@ -218,7 +241,7 @@ const adminCreateZohoOrder = adminProcedure
       const packName = `${line.wine}${line.wine.includes(String(line.vintage ?? '')) ? '' : vintage} (${line.soldPack}x${sizeCl}cl)`;
 
       const wineItem = {
-        lwin18: line.lwin18,
+        lwin18: saleLwin18,
         // Vintage is already in the name, so it is not appended again
         productName: packName,
         producer: line.producer ?? null,
