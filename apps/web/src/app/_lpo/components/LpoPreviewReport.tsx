@@ -1,6 +1,12 @@
 'use client';
 
-import { IconAlertTriangle, IconCheck, IconFileExport } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconArrowBackUp,
+  IconCheck,
+  IconFileExport,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useState } from 'react';
@@ -85,8 +91,39 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
     contradicting itself, which is a different thing from us not recognising a
     wine.
   */
-  const orderable = lines.filter((line) => line.match.lwin18);
-  const excluded = lines.filter((line) => !line.match.lwin18);
+  /*
+    Lines taken off by hand.
+
+    A read order is not always the order you want to place: a row can be
+    misread, or simply not wanted this time. Editing the client's spreadsheet to
+    fix that is absurd, so lines are removed here — kept visible and struck
+    through rather than vanishing, because a line that disappears silently is
+    one nobody notices is gone.
+  */
+  const [removed, setRemoved] = useState<Set<number>>(new Set());
+
+  const toggleRemoved = (index: number) =>
+    setRemoved((current) => {
+      const next = new Set(current);
+
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+
+      return next;
+    });
+
+  const kept = lines.filter((_, index) => !removed.has(index));
+  const orderable = kept.filter((line) => line.match.lwin18);
+  const unidentified = kept.filter((line) => !line.match.lwin18);
+  const excluded = [
+    ...unidentified.map((line) => line.wine),
+    ...lines
+      .filter((_, index) => removed.has(index))
+      .map((line) => `${line.wine} (removed by hand)`),
+  ];
+
+  /** What the kept lines come to, since removing one changes the order */
+  const orderValueAed = kept.reduce((sum, line) => sum + line.lineTotalAed, 0);
 
   const blocked =
     orderable.length === 0
@@ -126,7 +163,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 .join(' · ')}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Both readings one click apart — the order is in dirhams, the
                 invoice is in dollars, and converting forty-three lines by hand
                 to check a total is done once and then trusted. */}
@@ -168,7 +205,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                   poNumber: order.poNumber,
                   poDate: order.poDate,
                   creditTerms: order.creditTerms,
-                  excluded: excluded.map((line) => line.wine),
+                  excluded,
                   lines: orderable.map((line) => ({
                       lwin18: line.match.lwin18 as string,
                       wine: line.match.matchedWine ?? line.wine,
@@ -227,9 +264,8 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
           </p>
         ) : excluded.length > 0 ? (
           <p className="mt-2 text-[11px] text-text-muted">
-            {excluded.length} line{excluded.length === 1 ? '' : 's'} we could not
-            identify will be left off and named on the order:{' '}
-            {excluded.map((line) => line.wine).join(', ')}.
+            {excluded.length} line{excluded.length === 1 ? '' : 's'} will be left
+            off and named on the order: {excluded.join(', ')}.
           </p>
         ) : null}
         {inUsd && (
@@ -241,9 +277,17 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
 
         <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            ['Lines', String(reconciliation.lineCount)],
-            ['Bottles', String(reconciliation.totalBottles)],
-            ['Order value', amount(reconciliation.computedTotalAed)],
+            [
+              'Lines',
+              removed.size > 0
+                ? `${kept.length} of ${lines.length}`
+                : String(reconciliation.lineCount),
+            ],
+            [
+              'Bottles',
+              String(kept.reduce((sum, line) => sum + line.bottles, 0)),
+            ],
+            ['Order value', amount(orderValueAed)],
             [
               'Stated total',
               reconciliation.declaredTotalAed === null
@@ -337,6 +381,21 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
           </p>
         </div>
       )}
+      {removed.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-muted px-4 py-3">
+          <p className="text-[13px] text-text-muted">
+            {removed.size} line{removed.size === 1 ? '' : 's'} taken off by hand.
+            They stay visible, struck through, and are named on the order.
+          </p>
+          <button
+            type="button"
+            onClick={() => setRemoved(new Set())}
+            className="text-[13px] font-medium text-text-brand hover:underline"
+          >
+            Put them all back
+          </button>
+        </div>
+      )}
       {summary.withoutHsCode > 0 && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
@@ -360,29 +419,51 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
         </div>
       )}
 
+      {/* The table is wider than a phone; it scrolls rather than crushing its
+          columns, and the least useful ones drop away on small screens. */}
       <div className="overflow-x-auto rounded-xl border border-border-muted">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[46rem] text-sm">
           <thead>
             <tr className="border-b border-border-muted text-left text-[11px] uppercase tracking-wide text-text-muted">
               <th className="px-3 py-2 font-medium">Ordered</th>
-              <th className="px-3 py-2 font-medium">Identified as</th>
+              <th className="hidden px-3 py-2 font-medium sm:table-cell">
+                Identified as
+              </th>
               <th className="px-3 py-2 text-right font-medium">Qty</th>
-              <th className="px-3 py-2 text-right font-medium">We hold</th>
+              <th className="hidden px-3 py-2 text-right font-medium sm:table-cell">
+                We hold
+              </th>
               <th className="px-3 py-2 text-right font-medium">Unit {currency}</th>
               <th className="px-3 py-2 text-right font-medium">Total {currency}</th>
-              <th className="px-3 py-2 font-medium">Needs</th>
+              <th className="hidden px-3 py-2 font-medium lg:table-cell">Needs</th>
+              <th className="w-8 px-2 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border-muted">
             {lines.map((line, index) => (
-              <tr key={index} className="align-top">
+              <tr
+                key={index}
+                className={`align-top ${
+                  removed.has(index) ? 'opacity-40' : ''
+                }`}
+              >
                 <td className="px-3 py-2">
-                  <div className="font-medium">{line.wine}</div>
+                  <div
+                    className={`font-medium ${removed.has(index) ? 'line-through' : ''}`}
+                  >
+                    {line.wine}
+                  </div>
                   <div className="text-[12px] text-text-muted">
                     {line.vintage} · {line.volumeText}
                   </div>
+                  {/* What the hidden columns would have said, on small screens */}
+                  <div className="text-[12px] text-text-muted sm:hidden">
+                    {line.match.lwin18
+                      ? `${line.match.matchedWine} · we hold ${line.match.availableBottles}`
+                      : line.match.verdict}
+                  </div>
                 </td>
-                <td className="px-3 py-2">
+                <td className="hidden px-3 py-2 sm:table-cell">
                   {line.match.lwin18 ? (
                     <>
                       <div>{line.match.matchedWine}</div>
@@ -397,7 +478,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 <td className="px-3 py-2 text-right tabular-nums">
                   {line.bottles}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">
+                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
                   {line.match.lwin18 ? line.match.availableBottles : '—'}
                   {line.match.inboundBottles > 0 && (
                     <div className="text-[11px] text-text-muted">
@@ -411,7 +492,7 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                 <td className="px-3 py-2 text-right tabular-nums">
                   {money(convert(line.lineTotalAed))}
                 </td>
-                <td className="px-3 py-2">
+                <td className="hidden px-3 py-2 lg:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {line.shortfall > 0 && (
                       <LpoChip tone="bad">short {line.shortfall}</LpoChip>
@@ -440,6 +521,26 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       </LpoChip>
                     )}
                   </div>
+                </td>
+                {/* Off the order, and visibly so — a line that vanishes is one
+                    nobody notices is gone. */}
+                <td className="px-2 py-2 text-right">
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoved(index)}
+                    title={
+                      removed.has(index)
+                        ? 'Put this line back on the order'
+                        : 'Take this line off the order'
+                    }
+                    className="rounded p-1 text-text-muted hover:bg-fill-secondary hover:text-text-primary"
+                  >
+                    {removed.has(index) ? (
+                      <IconArrowBackUp className="h-4 w-4" />
+                    ) : (
+                      <IconX className="h-4 w-4" />
+                    )}
+                  </button>
                 </td>
               </tr>
             ))}
