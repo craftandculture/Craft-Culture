@@ -441,6 +441,24 @@ const adminRepack = wmsOperatorProcedure
     const movementNumberIn1 = await generateMovementNumber(1);
     const movementNumberIn2 = await generateMovementNumber(2);
 
+    /*
+      The case being split has to be one nobody has already been promised.
+
+      The main repack path checks this; this branch did not, so splitting a
+      case out of a fully reserved row drove availableCases negative and left
+      reservations pointing at cases that were no longer whole. That is how a
+      row came to read 1 case, 2 reserved, -1 available.
+    */
+    if (sourceStock.availableCases < 1) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          `No unreserved case to split — all ${sourceStock.quantityCases} ` +
+          `case(s) here are reserved against orders. Release the reservation ` +
+          `first, or split from another location.`,
+      });
+    }
+
     return await db.transaction(async (tx) => {
       // Decrease source stock by 1
       const newSourceQuantity = sourceStock.quantityCases - 1;

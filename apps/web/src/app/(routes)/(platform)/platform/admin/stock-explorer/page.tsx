@@ -493,6 +493,85 @@ const ImportPriceCell = ({
   );
 };
 
+// ─── Reservation Holders ────────────────────────────────────────────────────
+
+interface ReservationHoldersProps {
+  stockIds: string[];
+}
+
+/**
+ * Name the orders holding this product's reserved cases
+ *
+ * "Reserved: 4" is not an answer to "reserved for whom?", and until now the
+ * only way to find out was a database query — the existing endpoint went from
+ * an order to its stock, never the other way.
+ *
+ * Loaded only when a row is expanded and something is actually reserved, so
+ * the common case costs nothing.
+ */
+const ReservationHolders = ({ stockIds }: ReservationHoldersProps) => {
+  const api = useTRPC();
+
+  const { data, isLoading } = useQuery({
+    ...api.wms.admin.ownership.getStockReservations.queryOptions({ stockIds }),
+    enabled: stockIds.length > 0,
+  });
+
+  if (isLoading) {
+    return (
+      <Typography variant="bodyXs" colorRole="muted" className="px-4 pb-4 sm:px-8">
+        Looking up what is holding these cases...
+      </Typography>
+    );
+  }
+
+  const reservations = data?.reservations ?? [];
+
+  if (reservations.length === 0) {
+    /*
+      Reserved with nothing holding it is a stuck counter, not a promise to a
+      customer — an order released or deleted without its reservation being
+      cleared. Saying so is more use than an empty panel.
+    */
+    return (
+      <div className="border-border-muted border-t px-4 py-3 sm:px-8">
+        <Typography variant="bodyXs" className="text-amber-600">
+          Cases are marked reserved but no active order holds them — the
+          reservation was left behind when an order was released or removed.
+        </Typography>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-border-muted border-t px-4 py-3 sm:px-8">
+      <Typography
+        variant="bodyXs"
+        className="text-text-muted mb-2 font-semibold uppercase tracking-wider"
+      >
+        Reserved for
+      </Typography>
+      <div className="flex flex-wrap gap-2">
+        {reservations.map((reservation) => (
+          <span
+            key={reservation.id}
+            className="border-border-muted bg-background-primary inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs"
+          >
+            <span className="font-medium">{reservation.orderNumber}</span>
+            <span className="text-text-muted">
+              {reservation.quantityCases} case
+              {reservation.quantityCases === 1 ? '' : 's'}
+            </span>
+            <span className="text-text-muted uppercase">
+              {reservation.orderType}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Product Row ────────────────────────────────────────────────────────────
 
 interface ProductRowProps {
@@ -1419,6 +1498,18 @@ const ProductRow = ({
                   </tbody>
                 </table>
               </div>
+
+              {/*
+                Reserved cases were a number with nothing behind it. The stock
+                screens said how many; naming the order that holds them meant
+                reading the database by hand.
+              */}
+              {product.reservedCases > 0 && (
+                <ReservationHolders
+                  stockIds={product.locations.map((loc) => loc.stockId)}
+                />
+              )}
+
               {showHistory && (
                 <ProductMovementHistory lwin18={product.lwin18} />
               )}

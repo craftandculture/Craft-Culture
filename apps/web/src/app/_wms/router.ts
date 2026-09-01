@@ -70,6 +70,7 @@ import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
 import adminGetStockLookalikes from './controller/adminGetStockLookalikes';
 import adminGetStockOverview from './controller/adminGetStockOverview';
+import adminGetStockReservations from './controller/adminGetStockReservations';
 import adminHealthCheckDb from './controller/adminHealthCheckDb';
 import adminHealthCheckZoho from './controller/adminHealthCheckZoho';
 import adminImportStock from './controller/adminImportStock';
@@ -227,6 +228,7 @@ const ownershipRouter = createTRPCRouter({
   reserve: adminReserveStock,
   release: adminReleaseReservation,
   getReservations: adminGetOrderReservations,
+  getStockReservations: adminGetStockReservations,
   getRequests: adminGetPartnerRequests,
   resolve: adminResolvePartnerRequest,
 });
