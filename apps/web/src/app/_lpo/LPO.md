@@ -3,8 +3,9 @@
 How a client's LPO becomes a Zoho sales order, and the rules that stop it
 becoming the wrong one. Source of truth when working on `_lpo`.
 
-The screen is `/platform/admin/lpo` (Finance → Client LPOs). It reads and
-reports; it writes nothing, anywhere.
+The screen is `/platform/admin/lpo` (Finance → Client LPOs). It reads, reports,
+and — on one deliberate press — creates a **draft** sales order in Zoho with any
+item codes that order needs.
 
 The manual version of this is: read the PDF, find each wine in the catalogue,
 work out which lines are repacks, create those item codes in Zoho by hand, then
@@ -16,15 +17,18 @@ codes, and every step of it is derivable.
 ## The flow
 
 ```
-upload (.pdf)
+upload (.pdf)                    a client's purchase order
   → pdfParse                     text, as the document's own layout flattens it
   → parseLpoText                 blocks parsed in code; totals checked twice
+
+upload (.xlsx/.csv)              a client's replenishment sheet
+  → parseReplenishmentSheet      rows that ASK for stock; priced from our book
+
   → [ person confirms the parse against the stated grand total ]
   → matchLpoLine per line        against OUR catalogue, not the LWIN reference
-  → [ person settles refusals and confirms the price against the quote ]
-  → planOrderLines               repack codes, cases, case rates
-  → findOrCreateWineItem         only for codes Zoho does not have
-  → createSalesOrder             draft, with terms/delivery/subject
+  → findQuotedPrices             the last published quote to that client
+  → [ person settles refusals, removes lines, confirms the price ]
+  → adminCreateZohoOrder         item codes, then a DRAFT sales order
 ```
 
 No model is asked to reproduce line items. The PDF text is parsed
@@ -111,11 +115,47 @@ run reads:
 Replay it after touching extraction or matching. It has already caught the
 availability fault described above.
 
+## Creating the order
+
+`adminCreateZohoOrder`. Five rules, each of which cost a wrong sales order to
+learn:
+
+- **The SKU is the pack being SOLD, not the stock it comes from.** `match.lwin18`
+  is the case we hold — a twelve of Figeac. Selling three bottles of it is
+  `…-03-…`. Looking up the held code found the twelve-pack every time: an exact
+  match, nothing created, three bottles booked against a case of twelve, and a
+  document that read perfectly.
+- **Zoho enforces unique item NAMES, not SKUs** — the opposite of the
+  assumption. Two packs of one wine cannot share a name, so the pack goes in the
+  name as well: `… 1995 (3x75cl)`.
+- **The order states its currency.** The client's PO is in AED and they are
+  billed in USD; omitting `currency_code` let Zoho use the customer's default
+  and printed AED figures as $125,700 against an order worth $34,228. The peg
+  comes from `PEGGED`, and the note on the order records the original and the
+  rate.
+- **Dates are normalised** to `yyyy-MM-dd`; an unreadable one is omitted rather
+  than blocking the order.
+- **The customer must already exist.** Names are squashed to letters and
+  stripped of registered suffixes, so "CD General L.L.C" finds "C D General
+  Trading L.L.C". Two customers matching equally well **refuses** rather than
+  picking one — Zoho holds duplicates, and half a client's orders under each is
+  a reconciliation nobody would enjoy.
+
+It is a **draft**, deliberately: built from a parse, a set of matches and a
+price comparison, each a judgement that can be wrong.
+
+Lines that cannot be identified, or that a person removes, are left off and
+**named on the order** — an order quietly containing fewer lines than the
+document it came from is the hardest kind to reconcile later.
+
 ## Known gaps
 
 - **The client's own wording is not remembered.** A name settled by hand today
   is scored from scratch on the next order. Confirmed matches should be stored
   as aliases.
-- **Price is not yet checked against the originating quote** — the LPO states a
-  price per bottle and the quote agreed one, and a silent disagreement is money.
-- **Nothing is written to Zoho yet**; `createSalesOrder` does not exist.
+- **HS code and origin come from the shipment**, so a wine never imported has
+  neither and its Zoho item is created a customs field short. Flagged before the
+  order is created; the fix is the shipment's Items tab.
+- **A replenishment sheet guesses the pack.** "Send 4 case" does not say of
+  what, so it reads as six bottles; the preview shows what we hold beside it.
+- **No repair for items already created** without their customs fields.
