@@ -3,6 +3,8 @@
 import {
   IconAdjustments,
   IconAnchor,
+  IconArrowsDiagonal,
+  IconArrowsDiagonalMinimize2,
   IconArrowsExchange,
   IconBuildingWarehouse,
   IconCamera,
@@ -646,6 +648,8 @@ interface ProductRowProps {
    * near-identical name).
    */
   lookalikeTwins?: string[];
+  /** Show wine names in full, wrapping, rather than clipped to the column */
+  fullNames?: boolean;
 }
 
 const ProductRow = ({
@@ -670,6 +674,7 @@ const ProductRow = ({
   isTransferring,
   partners,
   lookalikeTwins,
+  fullNames,
 }: ProductRowProps) => {
   // Bottles left loose in a bay after a case was cracked. They are stock, but
   // the case count cannot express them — 0 cases, 5 bottles.
@@ -771,8 +776,23 @@ const ProductRow = ({
               </button>
             </div>
           ) : (
-            <div className="group/name flex items-center gap-1.5 truncate">
-              <span className="truncate">{product.productName}</span>
+            <div
+              className={`group/name flex items-center gap-1.5 ${
+                fullNames ? 'flex-wrap' : 'truncate'
+              }`}
+            >
+              {/*
+                Truncation hides the part that distinguishes one wine from
+                another: two Masseria Alfano rows read identically to the pixel
+                and differ only past the ellipsis. Full names wrap rather than
+                clip, so the row grows instead of the name disappearing.
+              */}
+              <span
+                className={fullNames ? '' : 'truncate'}
+                title={product.productName}
+              >
+                {product.productName}
+              </span>
               <PackBadge
                 pack={product.caseConfig}
                 bottleSize={product.bottleSize}
@@ -1602,6 +1622,8 @@ interface InboundProduct {
 interface InboundProductRowProps {
   product: InboundProduct;
   isExpanded: boolean;
+  /** Show wine names in full, wrapping, rather than clipped to the column */
+  fullNames?: boolean;
   onToggle: () => void;
   density: RowDensity;
 }
@@ -1611,6 +1633,7 @@ const InboundProductRow = ({
   isExpanded,
   onToggle,
   density,
+  fullNames,
 }: InboundProductRowProps) => {
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
@@ -1645,9 +1668,13 @@ const InboundProductRow = ({
 
         {/* Product name */}
         <td
-          className={`${tdClass} text-text-primary max-w-[280px] truncate font-medium`}
+          className={`${tdClass} text-text-primary font-medium ${
+            fullNames ? 'min-w-[22rem]' : 'max-w-[280px] truncate'
+          }`}
         >
-          {product.productName}
+          <span title={product.productName}>
+            {product.productName}
+          </span>
         </td>
 
         {/* Producer */}
@@ -2028,6 +2055,23 @@ const StockExplorerPage = () => {
   const [vintageTo, setVintageTo] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [showValueDetail, setShowValueDetail] = useState(false);
+  /**
+   * Whether wine names are shown in full.
+   *
+   * Clipping hides the part that tells two wines apart — two Masseria Alfano
+   * rows read identically to the pixel and differ only past the ellipsis. Off
+   * by default because the table is wide, remembered because whoever needs it
+   * needs it every time.
+   */
+  const [fullNames, setFullNames] = useState(false);
+
+  useEffect(() => {
+    setFullNames(localStorage.getItem('se-full-names') === '1');
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('se-full-names', fullNames ? '1' : '0');
+  }, [fullNames]);
   const [showZeroQty, setShowZeroQty] = useState(false);
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [sortBy, setSortBy] = useState<SortField>('totalCases');
@@ -3143,6 +3187,35 @@ const StockExplorerPage = () => {
                     >
                       <span className="flex items-center gap-1">
                         Product {renderSortIcon('productName')}
+                        {/*
+                          Names clip to the column, and what gets clipped is
+                          often the part that tells two wines apart. This shows
+                          them whole; the row grows rather than the name
+                          disappearing.
+                        */}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setFullNames((value) => !value);
+                          }}
+                          title={
+                            fullNames
+                              ? 'Clip long names to the column'
+                              : 'Show full names — rows grow to fit'
+                          }
+                          className={`ml-1 rounded p-0.5 transition-colors ${
+                            fullNames
+                              ? 'text-text-brand'
+                              : 'text-text-muted/50 hover:text-text-primary'
+                          }`}
+                        >
+                          {fullNames ? (
+                            <IconArrowsDiagonalMinimize2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <IconArrowsDiagonal className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </span>
                     </th>
                     {visibleColumns.producer && (
@@ -3307,6 +3380,7 @@ const StockExplorerPage = () => {
                             isExpanded={isExpanded}
                             onToggle={() => toggleRow(key)}
                             density={density}
+                            fullNames={fullNames}
                           />
                         );
                       })
@@ -3366,6 +3440,7 @@ const StockExplorerPage = () => {
                         <ProductRow
                           key={key}
                           product={product}
+                          fullNames={fullNames}
                           lookalikeTwins={lookalikeData?.byLwin18[
                             product.lwin18
                           ]?.map((t) => t.productName)}
