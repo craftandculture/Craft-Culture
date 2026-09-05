@@ -27,6 +27,7 @@ const adminUpsertSku = adminProcedure
       vintage,
       bottleSize,
       caseConfig,
+      ownerName,
       notes,
     } = input;
 
@@ -55,6 +56,9 @@ const adminUpsertSku = adminProcedure
             vintage = ${vintage ?? null},
             bottle_size = ${bottleSize ?? null},
             case_config = ${caseConfig},
+            -- Whose wine it is. Left alone when not supplied, so an edit that
+            -- says nothing about ownership does not silently reassign it.
+            owner_name = COALESCE(${ownerName ?? null}, owner_name),
             notes = ${notes ?? null},
             updated_at = NOW()
         WHERE id = ${skuId}
@@ -85,11 +89,14 @@ const adminUpsertSku = adminProcedure
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_skus (
         w_code, lwin18, product_name, producer, vintage,
-        bottle_size, case_config, notes
+        bottle_size, case_config, owner_name, notes
       )
       VALUES (
         ${trimmedCode}, ${lwin18 ?? null}, ${productName}, ${producer ?? null},
-        ${vintage ?? null}, ${bottleSize ?? null}, ${caseConfig}, ${notes ?? null}
+        ${vintage ?? null}, ${bottleSize ?? null}, ${caseConfig},
+        -- Falls back to the column default rather than being forced to
+        -- Crurated here, so the default lives in one place
+        COALESCE(${ownerName ?? null}, 'Crurated'), ${notes ?? null}
       )
       RETURNING id
     `;

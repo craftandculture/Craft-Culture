@@ -8,6 +8,15 @@ export const triImportKindSchema = z.enum([
   'cc_count',
   'cd_sales',
   'cd_count',
+  /**
+   * The owner billing US for consignment stock that sold.
+   *
+   * A consignment has two halves: City Drinks sells the wine, and its owner —
+   * Cru, Cult, Crurated, Rare or ourselves — invoices us for what went. Only
+   * the selling half was recorded, so "has Cru billed us for that yet?" had no
+   * answer and was chased by hand every month.
+   */
+  'owner_invoice',
 ]);
 
 export type TriImportKind = z.infer<typeof triImportKindSchema>;
@@ -111,6 +120,14 @@ export const upsertSkuSchema = z.object({
   vintage: z.number().int().min(1800).max(2100).optional().nullable(),
   bottleSize: z.string().max(30).optional().nullable(),
   caseConfig: z.number().int().positive().max(120).default(6),
+  /**
+   * Whose wine it is — C&C, Cru, Cult, Crurated, Rare.
+   *
+   * The column existed and defaulted every SKU to Crurated, which is what made
+   * a per-owner split impossible: the statement could not say who to settle
+   * with because every wine claimed the same owner.
+   */
+  ownerName: z.string().max(120).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
 });
 

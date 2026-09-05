@@ -7,7 +7,7 @@ export interface ImportKindMeta {
   /** Flows accumulate over time; snapshots are point-in-time counts */
   behaviour: 'flow' | 'snapshot';
   /** Which side of the triangulation the input describes */
-  side: 'cc' | 'cd';
+  side: 'cc' | 'cd' | 'owner';
   /** Default unit for files of this kind before column mapping overrides it */
   defaultUnit: 'bottle' | 'case';
   cadence: string;
@@ -16,7 +16,7 @@ export interface ImportKindMeta {
 }
 
 /**
- * Display metadata for the five triangulation inputs
+ * Display metadata for the triangulation inputs
  *
  * Keeps the wording of each input consistent between the upload cards, the
  * import history and the reconciliation column headers.
@@ -76,6 +76,17 @@ const importKindLabels: Record<TriImportKind, ImportKindMeta> = {
     defaultUnit: 'bottle',
     cadence: 'Monthly',
     effect: 'Point-in-time check against the calculated City Drinks position',
+  },
+  owner_invoice: {
+    label: 'Owner invoice to C&C',
+    shortLabel: 'Billed to us',
+    description:
+      "What the wine's owner has invoiced us for — Cru, Cult, Crurated, Rare. Upload their invoice for the consignment lines they have billed.",
+    behaviour: 'flow',
+    side: 'owner',
+    defaultUnit: 'bottle',
+    cadence: 'As each owner bills',
+    effect: 'Shows what has been settled against what City Drinks sold',
   },
 };
 

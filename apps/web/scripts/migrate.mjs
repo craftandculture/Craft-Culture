@@ -320,6 +320,18 @@ const runMigrations = async () => {
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "tri_skus_product_name_idx" ON "tri_skus"("product_name")`,
     );
+    /*
+      What the owner has billed us for, which nothing recorded.
+
+      A consignment has two halves: City Drinks sells the wine, and its owner —
+      Cru, Cult, Crurated, Rare, or ourselves — invoices us for what sold. Only
+      the first half was modelled, so "has Cru billed us for that yet?" had no
+      answer anywhere and was chased by hand every month.
+    */
+    await client.unsafe(
+      `ALTER TYPE "tri_import_kind" ADD VALUE IF NOT EXISTS 'owner_invoice'`,
+    );
+
     // Added after the table shipped: whether the Zoho item master has been put
     // right for this wine. Cannot be inferred, because a sales order line
     // keeps the SKU it was raised under and never picks up an item rename.
