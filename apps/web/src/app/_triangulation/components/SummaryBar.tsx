@@ -7,6 +7,14 @@ import formatBottles from '../utils/formatBottles';
 export interface SummaryBarProps {
   /** True when a search or filter is narrowing the rows these totals cover */
   isFiltered?: boolean;
+  /**
+   * Whether C&C physically hold this client's stock.
+   *
+   * Received and On hand come from the warehouse, so for a client whose wine
+   * we never held they are structurally zero rather than genuinely nil — and a
+   * headline zero is read as a fact, not as a column that does not apply.
+   */
+  holdsStock?: boolean;
   ccReceived: number;
   ccSoldToCd: number;
   ccOnHand: number;
@@ -28,6 +36,7 @@ export interface SummaryBarProps {
  */
 const SummaryBar = ({
   isFiltered,
+  holdsStock = true,
   ccReceived,
   ccSoldToCd,
   ccOnHand,
@@ -39,11 +48,13 @@ const SummaryBar = ({
       name: 'Craft & Culture',
       dot: 'bg-fill-brand',
       text: 'text-text-brand',
-      figures: [
-        { label: 'Received', value: ccReceived },
-        { label: 'Sold to CD', value: ccSoldToCd },
-        { label: 'On hand', value: ccOnHand },
-      ],
+      figures: holdsStock
+        ? [
+            { label: 'Received', value: ccReceived },
+            { label: 'Sold to CD', value: ccSoldToCd },
+            { label: 'On hand', value: ccOnHand },
+          ]
+        : [{ label: 'Sold to CD', value: ccSoldToCd }],
     },
     {
       name: 'City Drinks',

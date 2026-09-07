@@ -47,6 +47,8 @@ export interface ImportsTabProps {
    */
   wmsOwnerMatch: string | null;
   zohoCustomerMatch: string | null;
+  /** Which inputs this client has: `warehouse` or `consignment` */
+  inputProfile: string;
 }
 
 /** Where the Zoho customer name for City Drinks is remembered between visits */
@@ -59,6 +61,19 @@ const KIND_ORDER: TriImportKind[] = [
   'cc_opening',
   'cc_sales_to_cd',
   'cc_count',
+  'cd_sales',
+  'cd_count',
+];
+
+/**
+ * The inputs a client whose stock we never hold can actually produce.
+ *
+ * Opening stock and a warehouse count come from our own warehouse. Offering
+ * them to a consignment client invites an upload that cannot exist, and leaves
+ * the tab reading as permanently incomplete.
+ */
+const CONSIGNMENT_KINDS: TriImportKind[] = [
+  'cc_sales_to_cd',
   'cd_sales',
   'cd_count',
 ];
@@ -77,7 +92,10 @@ const ImportsTab = ({
   isLocked,
   wmsOwnerMatch,
   zohoCustomerMatch,
+  inputProfile,
 }: ImportsTabProps) => {
+  /** Whether C&C physically hold this client's stock */
+  const holdsStock = inputProfile !== 'consignment';
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -375,12 +393,23 @@ const ImportsTab = ({
    */
   const refreshLive = async () => {
     setSyncReport([]);
-    await syncReceipts.mutateAsync({ programmeId, ownerName }).catch(() => null);
+
     // Invoices are the sale, and reading them directly picks up the legacy
-    // ones that never had a sales order behind them.
+    // ones that never had a sales order behind them. Every client has this
+    // leg — it is what we invoiced out, whoever owns the wine.
     await syncInvoices
       .mutateAsync({ programmeId, customerMatch: zohoCustomer })
       .catch(() => null);
+
+    /*
+      The warehouse feeds only mean something for stock we actually hold.
+      Running them for a consignment client searched the WMS for an owner with
+      no stock in it and failed three times per refresh, which read as the
+      refresh being broken rather than as three feeds that do not apply.
+    */
+    if (!holdsStock) return;
+
+    await syncReceipts.mutateAsync({ programmeId, ownerName }).catch(() => null);
     await syncCount
       .mutateAsync({ programmeId, ownerName, periodId })
       .catch(() => null);
@@ -429,11 +458,12 @@ const ImportsTab = ({
           <Typography variant="labelSm">In-house inputs</Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1 max-w-xl">
-              WMS receipts, Zoho invoices and WMS stock, read from our own
-              systems. Closed periods stay put.
+              {holdsStock
+                ? 'WMS receipts, Zoho invoices and WMS stock, read from our own systems. Closed periods stay put.'
+                : 'Zoho invoices, read from our own systems. This client\u2019s wine is not held in our warehouse, so there are no receipts or stock position to read. Closed periods stay put.'}
             </p>
           </Typography>
-          {!ownerName.trim() ? (
+          {holdsStock && !ownerName.trim() ? (
             /*
               A blank owner disables the refresh, and a button that will not
               press without saying why is the single most reported fault on
@@ -450,21 +480,25 @@ const ImportsTab = ({
           ) : null}
         </div>
         <div className="flex items-end gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-text-muted text-xs">Stock owner in the WMS</span>
-            <input
-              value={ownerName}
-              onChange={(event) => {
-                setOwnerName(event.target.value);
-                window.localStorage.setItem(OWNER_NAME_KEY, event.target.value);
-              }}
-              placeholder="Crurated"
-              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-40 rounded-md border px-2 text-sm"
-            />
-          </label>
+          {holdsStock ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-text-muted text-xs">Stock owner in the WMS</span>
+              <input
+                value={ownerName}
+                onChange={(event) => {
+                  setOwnerName(event.target.value);
+                  window.localStorage.setItem(OWNER_NAME_KEY, event.target.value);
+                }}
+                placeholder="Crurated"
+                className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-40 rounded-md border px-2 text-sm"
+              />
+            </label>
+          ) : null}
           <Button
             colorRole="brand"
-            isDisabled={isLocked || isSyncing || !ownerName.trim()}
+            isDisabled={
+              isLocked || isSyncing || (holdsStock && !ownerName.trim())
+            }
             onClick={() => void refreshLive()}
           >
             <IconRefresh className="mr-1 size-4" />
@@ -567,7 +601,7 @@ const ImportsTab = ({
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {KIND_ORDER.map((kind) => {
+        {(holdsStock ? KIND_ORDER : CONSIGNMENT_KINDS).map((kind) => {
           const meta = importKindLabels[kind];
           const forKind = rows.filter((row) => row.kind === kind);
           const committed = forKind.filter((row) => row.status === 'committed');

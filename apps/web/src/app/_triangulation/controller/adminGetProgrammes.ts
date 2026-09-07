@@ -11,6 +11,14 @@ export interface TriProgrammeRow {
   wmsOwnerMatch: string | null;
   /** Customer string matched against Zoho's contact name */
   zohoCustomerMatch: string | null;
+  /**
+   * Which inputs this client has: `warehouse` or `consignment`.
+   *
+   * `warehouse` means we hold the stock, so there is an opening position and a
+   * count to check the arithmetic against. `consignment` means we do not, and
+   * the reconciliation is what was invoiced out against what sold.
+   */
+  inputProfile: string;
   skuCount: number;
   importCount: number;
 }
@@ -33,6 +41,14 @@ const adminGetProgrammes = adminProcedure.query(async () => {
       p.identity_strategy AS "identityStrategy",
       p.wms_owner_match AS "wmsOwnerMatch",
       p.zoho_customer_match AS "zohoCustomerMatch",
+      /*
+        Read through the row's own JSON rather than as a column, so a deploy
+        whose migration has not run yet returns 'warehouse' instead of failing
+        the statement. A missing column would otherwise take down the client
+        list, and with it the whole screen — which is exactly how the pricing
+        release failed, reading a table the deploy never created.
+      */
+      COALESCE(to_jsonb(p) ->> 'input_profile', 'warehouse') AS "inputProfile",
       COALESCE(s.sku_count, 0)::int AS "skuCount",
       COALESCE(i.import_count, 0)::int AS "importCount"
     FROM tri_programmes p

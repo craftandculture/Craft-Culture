@@ -669,6 +669,34 @@ const runMigrations = async () => {
       `CREATE INDEX IF NOT EXISTS "tri_programmes_consignor_id_idx" ON "tri_programmes"("consignor_id")`,
     );
 
+    /*
+      Which inputs a client actually has, and therefore what its figures mean.
+
+      `warehouse` is Crurated's shape: we hold the stock, so there is an
+      opening position, a WMS count and a physical count to check the
+      arithmetic against. `consignment` is two inputs — invoiced out, and
+      reported sold, with unsold the difference.
+
+      The column was declared in the Drizzle schema and never migrated, so
+      every client was rendered in Crurated's five-input shape and the four
+      that will never have a warehouse leg showed three permanently empty
+      columns. Empty reads as broken rather than as not applicable.
+
+      Defaulting to 'warehouse' keeps Crurated exactly as it is; the UPDATE
+      below moves everyone else, since only the programme that holds stock in
+      our own warehouse has the extra legs.
+    */
+    await client.unsafe(
+      `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "input_profile" text NOT NULL DEFAULT 'warehouse'`,
+    );
+    await client.unsafe(`
+      UPDATE "tri_programmes"
+      SET "input_profile" = 'consignment'
+      WHERE "id" <> '${CRURATED_PROGRAMME_ID}'
+        AND "input_profile" = 'warehouse'
+    `);
+    console.log('✅ tri_programmes input_profile ready');
+
     // Seeded before the columns that default to it, and with the same match
     // values the browser was holding, so the live figures are unchanged.
     await client.unsafe(`

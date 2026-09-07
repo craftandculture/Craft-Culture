@@ -22,6 +22,15 @@ import exportTriangulationToExcel from '../utils/exportTriangulationToExcel';
 export interface OverviewTabProps {
   programmeId: string | null;
   periodId: string | null;
+  /**
+   * Which inputs this client has: `warehouse` or `consignment`.
+   *
+   * A consignment client's wine never enters our warehouse, so Received, On
+   * hand and WMS actual have no source and never will. Rendering them empty
+   * reads as a broken report rather than as a column that does not apply, so
+   * they are left out entirely for those clients.
+   */
+  inputProfile: string;
 }
 
 /**
@@ -44,8 +53,15 @@ const actualOf = (row: TriangulationRow) =>
  * their consumers — with each party's calculated position set beside the count
  * they declared, and the gap between the two called out.
  */
-const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
+const OverviewTab = ({
+  programmeId,
+  periodId,
+  inputProfile,
+}: OverviewTabProps) => {
   const api = useTRPC();
+
+  /** Whether C&C physically hold this client's stock */
+  const holdsStock = inputProfile !== 'consignment';
 
   const [search, setSearch] = useState('');
   const [variancesOnly, setVariancesOnly] = useState(false);
@@ -82,10 +98,20 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
    */
   const issues: DataQualityIssue[] = [];
 
+  /*
+    Only the inputs this client can actually produce.
+
+    A consignment client's wine never enters our warehouse, so opening stock
+    and a WMS position will never arrive. Listing them as missing reported the
+    client as permanently three inputs short of a reconciliation it had in
+    full, and buried the inputs that were genuinely outstanding.
+  */
   const missingInputs = [
-    present.includes('cc_opening') ? null : 'C&C opening stock',
+    holdsStock && !present.includes('cc_opening') ? 'C&C opening stock' : null,
     present.includes('cc_sales_to_cd') ? null : 'C&C sales to City Drinks',
-    meta?.ccSystemDate || meta?.ccCountDate ? null : 'C&C stock position (WMS)',
+    holdsStock && !meta?.ccSystemDate && !meta?.ccCountDate
+      ? 'C&C stock position (WMS)'
+      : null,
     present.includes('cd_sales') ? null : 'City Drinks sales',
     present.includes('cd_count') ? null : 'City Drinks stock on hand',
   ].filter((entry): entry is string => entry !== null);
@@ -115,7 +141,7 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
     });
   }
 
-  if (!meta?.ccSystemDate && (meta?.systemImports ?? 0) === 0) {
+  if (holdsStock && !meta?.ccSystemDate && (meta?.systemImports ?? 0) === 0) {
     issues.push({
       label: 'No WMS snapshot',
       detail:
@@ -124,7 +150,11 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
     });
   }
 
-  if ((meta?.systemImports ?? 0) > 0 && (meta?.systemMappedLines ?? 0) === 0) {
+  if (
+    holdsStock &&
+    (meta?.systemImports ?? 0) > 0 &&
+    (meta?.systemMappedLines ?? 0) === 0
+  ) {
     issues.push({
       label: 'WMS snapshot unmapped',
       detail:
@@ -169,6 +199,7 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
     <div className="space-y-5">
       <SummaryBar
         isFiltered={!!search.trim() || variancesOnly}
+        holdsStock={holdsStock}
         ccReceived={summary?.ccReceived ?? 0}
         ccSoldToCd={summary?.ccSoldToCd ?? 0}
         ccOnHand={summary?.ccOnHandCalc ?? 0}
@@ -338,7 +369,7 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
                 <th className="bg-fill-primary sticky top-0 z-20 h-9 py-2 pr-3" colSpan={3} />
                 <th
                   className="border-border-primary bg-fill-primary text-text-brand sticky top-0 z-20 h-9 border-x py-2 text-center font-medium"
-                  colSpan={4}
+                  colSpan={holdsStock ? 4 : 1}
                 >
                   <span className="flex items-center justify-center gap-1.5">
                     <span className="bg-fill-brand size-2 rounded-full" />
@@ -364,17 +395,30 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
                 <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 font-medium">Product</th>
                 <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Vintage</th>
                 <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Pack</th>
-                <th className="border-border-primary bg-fill-primary sticky top-9 z-20 border-l py-2 pr-3 text-right font-medium">
-                  Received
-                </th>
-                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">Sold to CD</th>
-                <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">On hand</th>
+                {holdsStock ? (
+                  <th className="border-border-primary bg-fill-primary sticky top-9 z-20 border-l py-2 pr-3 text-right font-medium">
+                    Received
+                  </th>
+                ) : null}
                 <th
-                  className="border-border-primary bg-fill-primary sticky top-9 z-20 border-r py-2 pr-3 text-right font-medium"
-                  title="What the WMS holds, with the gap from the calculated position beneath"
+                  className={`bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium ${
+                    holdsStock ? '' : 'border-border-primary border-x'
+                  }`}
+                  title="What we invoiced out to City Drinks"
                 >
-                  WMS actual
+                  Sold to CD
                 </th>
+                {holdsStock ? (
+                  <>
+                    <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">On hand</th>
+                    <th
+                      className="border-border-primary bg-fill-primary sticky top-9 z-20 border-r py-2 pr-3 text-right font-medium"
+                      title="What the WMS holds, with the gap from the calculated position beneath"
+                    >
+                      WMS actual
+                    </th>
+                  </>
+                ) : null}
                 <th className="bg-fill-primary sticky top-9 z-20 py-2 pr-3 text-right font-medium">
                   Received
                 </th>
@@ -442,17 +486,26 @@ const OverviewTab = ({ programmeId, periodId }: OverviewTabProps) => {
                     {row.caseConfig}
                     {row.bottleSize ? ` × ${row.bottleSize}` : ''}
                   </td>
+                  {holdsStock ? (
+                    <ValueCell
+                      value={row.ccReceived}
+                      className="border-border-primary border-l"
+                    />
+                  ) : null}
                   <ValueCell
-                    value={row.ccReceived}
-                    className="border-border-primary border-l"
+                    value={row.ccSoldToCd}
+                    className={holdsStock ? '' : 'border-border-primary border-x'}
                   />
-                  <ValueCell value={row.ccSoldToCd} />
-                  <ValueCell value={row.ccOnHandCalc} />
-                  <ValueCell
-                    value={actualOf(row).value}
-                    variance={actualOf(row).variance}
-                    className="border-border-primary border-r"
-                  />
+                  {holdsStock ? (
+                    <>
+                      <ValueCell value={row.ccOnHandCalc} />
+                      <ValueCell
+                        value={actualOf(row).value}
+                        variance={actualOf(row).variance}
+                        className="border-border-primary border-r"
+                      />
+                    </>
+                  ) : null}
                   <ValueCell value={row.cdReceived} className="bg-fill-info/5" />
                   <ValueCell value={row.cdSold} className="bg-fill-info/5" />
                   <ValueCell value={row.cdOnHandCalc} className="bg-fill-info/5" />

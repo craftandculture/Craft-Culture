@@ -316,7 +316,11 @@ const TriangulationClient = () => {
         </TabsList>
 
         <TabsContent value="overview" className="pt-6">
-          <OverviewTab programmeId={programmeId} periodId={periodId} />
+          <OverviewTab
+            programmeId={programmeId}
+            periodId={periodId}
+            inputProfile={activeProgramme?.inputProfile ?? 'warehouse'}
+          />
         </TabsContent>
         <TabsContent value="imports" className="pt-6">
           <ImportsTab
@@ -326,6 +330,7 @@ const TriangulationClient = () => {
             isLocked={selected?.status === 'locked'}
             wmsOwnerMatch={activeProgramme?.wmsOwnerMatch ?? null}
             zohoCustomerMatch={activeProgramme?.zohoCustomerMatch ?? null}
+            inputProfile={activeProgramme?.inputProfile ?? 'warehouse'}
           />
         </TabsContent>
         <TabsContent value="mapping" className="pt-6">
