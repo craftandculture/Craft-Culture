@@ -343,13 +343,37 @@ const ImportsTab = ({
   const syncInvoices = useMutation({
     ...api.triangulation.admin.syncSalesFromInvoices.mutationOptions(),
     onSuccess: async (result) => {
+      /*
+        What the consignment filter did, said out loud.
+
+        Only CONSIGNMENT_* invoices are read now, so a month can come out low
+        because the filter is too strict rather than because trade was quiet —
+        and those two look identical in a bottle count. The excluded invoices
+        and any owner tag the tool does not recognise are both reported, since
+        neither can be inferred from the figure that results.
+      */
+      const notes = [
+        result.skippedLines > 0
+          ? `${result.skippedLines} invoice lines carry no item code and cannot be filed against a wine`
+          : null,
+        result.nonConsignmentCount > 0
+          ? `${result.nonConsignmentCount} invoices left out as not consignment: ${result.nonConsignmentInvoices.join('; ')}`
+          : null,
+        result.unknownOwnerTags.length > 0
+          ? `Owner tag not recognised, so attributed per line: ${result.unknownOwnerTags.join('; ')}`
+          : null,
+      ].filter(Boolean);
+
       report({
         feed: 'Zoho sales to City Drinks',
-        tone: result.skippedLines > 0 ? 'warn' : 'ok',
-        summary: `${result.orderLines} lines from ${result.invoices.length} invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
+        tone:
+          result.skippedLines > 0 || result.unknownOwnerTags.length > 0
+            ? 'warn'
+            : 'ok',
+        summary: `${result.orderLines} lines from ${result.invoices.length} consignment invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
         detail:
-          result.skippedLines > 0
-            ? `${result.skippedLines} invoice lines carry no item code and cannot be filed against a wine`
+          notes.length > 0
+            ? notes.join(' · ')
             : 'Read from the invoices themselves, so sales with no sales order behind them are included',
       });
 
