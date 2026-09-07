@@ -20,6 +20,12 @@ import LpoChip from './LpoChip';
 
 export interface LpoPreviewReportProps {
   preview: inferRouterOutputs<AppRouter>['lpo']['admin']['preview'];
+  /** Vintages already answered, keyed by the line's position in the order. */
+  chosenVintages?: Record<string, string>;
+  /** Answer the vintage question on a line, which re-reads the order. */
+  onChooseVintage?: (at: number, vintage: string) => void;
+  /** True while the order is being read again with a new answer. */
+  isRereading?: boolean;
 }
 
 const money = (value: number) =>
@@ -45,7 +51,12 @@ const AED_TO_USD = PEGGED.AED ?? 0.2723;
  * because on a forty-three line order the two that need a person are otherwise
  * indistinguishable from the forty-one that do not.
  */
-const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
+const LpoPreviewReport = ({
+  preview,
+  chosenVintages,
+  onChooseVintage,
+  isRereading = false,
+}: LpoPreviewReportProps) => {
   const { order, reconciliation, summary, lines } = preview;
   /*
     The order arrives in dirhams and is billed in dollars.
@@ -145,9 +156,15 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
       onError: (error) => toast.error(error.message, { duration: 20000 }),
     }),
   );
-  const needsAttention = lines.filter(
-    (line) => !line.match.lwin18 || line.shortfall > 0 || line.problem,
-  );
+  /*
+    Kept with its position in the order, because answering a line's vintage
+    sends that position back — and the filtered list's own index is not it.
+  */
+  const needsAttention = lines
+    .map((line, at) => ({ line, at }))
+    .filter(
+      ({ line }) => !line.match.lwin18 || line.shortfall > 0 || line.problem,
+    );
 
   return (
     <div className="space-y-6">
@@ -336,8 +353,8 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
             {needsAttention.length === 1 ? ' needs' : 's need'} a decision
           </h3>
           <ul className="mt-2 space-y-1.5 text-[13px]">
-            {needsAttention.map((line, index) => (
-              <li key={index}>
+            {needsAttention.map(({ line, at }) => (
+              <li key={at}>
                 <span className="font-medium">
                   {line.wine} {line.vintage}
                 </span>{' '}
@@ -352,20 +369,32 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                   (line.match.vintageNotStated ? (
                     /*
                       The order named the wine but not the year. Rather than
-                      pick one, show what is held so the choice is made by
-                      someone who can ask the client.
+                      pick one, offer what is held: choosing a year reads the
+                      order again with it, so stock, repacks, customs and price
+                      are all worked out for the wine actually meant.
                     */
-                    <span className="text-text-muted">
-                      {' '}
-                      — held:{' '}
+                    <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <span className="text-text-muted">Which year:</span>
                       {line.match.shortlist
                         .filter((row) => row.vintage)
-                        .map((row) =>
-                          row.bottles
-                            ? `${row.vintage} (${row.bottles} btl)`
-                            : `${row.vintage} (${row.inbound ?? 0} inbound)`,
-                        )
-                        .join(', ')}
+                        .map((row) => (
+                          <button
+                            key={row.vintage}
+                            type="button"
+                            disabled={!onChooseVintage || isRereading}
+                            onClick={() =>
+                              onChooseVintage?.(at, String(row.vintage))
+                            }
+                            className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[12px] font-medium tabular-nums hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {row.vintage}{' '}
+                            <span className="font-normal text-text-muted">
+                              {row.bottles
+                                ? `${row.bottles} btl`
+                                : `${row.inbound ?? 0} inbound`}
+                            </span>
+                          </button>
+                        ))}
                     </span>
                   ) : (
                     <span className="text-text-muted">
@@ -373,6 +402,12 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       — closest: {line.match.shortlist[0]?.wine}
                     </span>
                   ))}
+                {chosenVintages?.[String(at)] && (
+                  <span className="text-text-muted">
+                    {' '}
+                    — reading as {chosenVintages[String(at)]}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -475,6 +510,16 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                   </div>
                   <div className="text-[12px] text-text-muted">
                     {line.vintage} · {line.volumeText}
+                    {/*
+                      Marked because the order never said it. Anyone checking
+                      this against the client's document should see the year
+                      came from us, not from them.
+                    */}
+                    {chosenVintages?.[String(index)] === line.vintage && (
+                      <span className="ml-1 rounded bg-amber-100 px-1 text-[11px] text-amber-900">
+                        year chosen here
+                      </span>
+                    )}
                   </div>
                   {/* What the hidden columns would have said, on small screens */}
                   <div className="text-[12px] text-text-muted sm:hidden">

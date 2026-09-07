@@ -97,6 +97,19 @@ const adminPreviewLpo = adminProcedure
       });
     }
 
+    /*
+      A vintage the person reading the order has since supplied. Applied before
+      matching so every figure downstream — what we hold, the shortfall, the
+      pack the sale needs, customs, the quoted price — is worked out for the
+      year they actually meant.
+    */
+    Object.entries(input.vintages ?? {}).forEach(([at, vintage]) => {
+      const line = parsed.lines[Number(at)];
+      if (line && !line.vintage.trim() && /^(\d{4}|NV)$/.test(vintage)) {
+        line.vintage = vintage;
+      }
+    });
+
     if (parsed.lines.length === 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',

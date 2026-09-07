@@ -31,6 +31,14 @@ const LpoPreviewClient = () => {
    */
   const [source, setSource] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
+  /*
+    The order is kept so a vintage answered on screen can re-read it. Choosing
+    a year changes what we hold, what has to be repacked and what it is worth,
+    and all of that is worked out where the stock is — so the answer goes back
+    to the server rather than being patched into the result here.
+  */
+  const [file, setFile] = useState<string | null>(null);
+  const [vintages, setVintages] = useState<Record<string, string>>({});
 
   const previewMutation = useMutation({
     ...api.lpo.admin.preview.mutationOptions(),
@@ -43,23 +51,41 @@ const LpoPreviewClient = () => {
     onError: (error) => toast.error(error.message),
   });
 
-  const onFile = async (file: File) => {
-    setFileName(file.name);
+  const onFile = async (chosen: File) => {
+    setFileName(chosen.name);
     setPreview(null);
+    setVintages({});
 
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(chosen);
     });
+
+    setFile(base64);
 
     previewMutation.mutate({
       file: base64,
-      fileName: file.name,
+      fileName: chosen.name,
       // Only meaningful for a replenishment sheet, which carries several
       // consignors in one file
       source: source.trim() || undefined,
+    });
+  };
+
+  /** Answer the vintage question on one line and read the order again. */
+  const onChooseVintage = (at: number, vintage: string) => {
+    if (!file) return;
+
+    const next = { ...vintages, [String(at)]: vintage };
+    setVintages(next);
+
+    previewMutation.mutate({
+      file,
+      fileName: fileName ?? undefined,
+      source: source.trim() || undefined,
+      vintages: next,
     });
   };
 
@@ -104,7 +130,14 @@ const LpoPreviewClient = () => {
         <span>(blank takes every row that asks for stock)</span>
       </label>
 
-      {preview && <LpoPreviewReport preview={preview} />}
+      {preview && (
+        <LpoPreviewReport
+          preview={preview}
+          chosenVintages={vintages}
+          onChooseVintage={onChooseVintage}
+          isRereading={previewMutation.isPending}
+        />
+      )}
     </div>
   );
 };
