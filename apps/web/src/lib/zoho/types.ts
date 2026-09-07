@@ -103,6 +103,10 @@ export interface ZohoLineItem {
  * Zoho invoice
  */
 export interface ZohoInvoice {
+  /** The subject line — where CONSIGNMENT_CRURATED and its siblings live */
+  subject?: string;
+  /** "Consignment", "90 days" — Zoho's payment-terms label */
+  payment_terms_label?: string;
   invoice_id: string;
   invoice_number: string;
   customer_id: string;

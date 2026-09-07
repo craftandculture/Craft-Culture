@@ -1,8 +1,8 @@
 /**
  * Zoho Invoice Sync Job
  *
- * Scheduled job that syncs invoices from Zoho Books into the zohoInvoices table.
- * Runs every 10 minutes to keep revenue KPIs up to date.
+ * Scheduled job that syncs invoices from Zoho Books into the zohoInvoices
+ * table. Runs every 10 minutes to keep revenue KPIs up to date.
  */
 
 import { logger, schedules } from '@trigger.dev/sdk';
@@ -66,6 +66,10 @@ export const zohoInvoiceSyncJob = schedules.task({
                   invoiceDate: new Date(inv.date),
                   dueDate: inv.due_date ? new Date(inv.due_date) : null,
                   referenceNumber: inv.reference_number ?? null,
+                  // What kind of invoice this is, in the business's own words —
+                  // CONSIGNMENT_CRURATED and its siblings live here
+                  subject: inv.subject ?? null,
+                  paymentTerms: inv.payment_terms_label ?? null,
                   subTotal: inv.sub_total ?? 0,
                   total: inv.total ?? 0,
                   balance: inv.balance ?? 0,
@@ -85,6 +89,10 @@ export const zohoInvoiceSyncJob = schedules.task({
                 invoiceDate: new Date(inv.date),
                 dueDate: inv.due_date ? new Date(inv.due_date) : null,
                 referenceNumber: inv.reference_number ?? null,
+                // What kind of invoice this is, in the business's own words —
+                // CONSIGNMENT_CRURATED and its siblings live here
+                subject: inv.subject ?? null,
+                paymentTerms: inv.payment_terms_label ?? null,
                 subTotal: inv.sub_total ?? 0,
                 total: inv.total ?? 0,
                 balance: inv.balance ?? 0,
@@ -95,7 +103,9 @@ export const zohoInvoiceSyncJob = schedules.task({
             }
           } catch (error) {
             results.errors++;
-            logger.error(`Failed to sync invoice ${inv.invoice_number}`, { error });
+            logger.error(`Failed to sync invoice ${inv.invoice_number}`, {
+              error,
+            });
           }
         }
 

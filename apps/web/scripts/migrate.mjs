@@ -916,6 +916,23 @@ const runMigrations = async () => {
       `);
     });
 
+    /*
+      The invoice's subject and payment terms.
+
+      A consignment invoice is marked as one in its subject — CONSIGNMENT_CC,
+      CONSIGNMENT_CRURATED, CONSIGNMENT_MIX — and its terms read "Consignment"
+      or "90 days". Neither was synced, so nothing downstream could tell a
+      consignment line from an outright sale, and the monthly reconciliation
+      had to be done by eye against the invoices themselves.
+    */
+    await client.unsafe(
+      `ALTER TABLE "zoho_invoices" ADD COLUMN IF NOT EXISTS "subject" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "zoho_invoices" ADD COLUMN IF NOT EXISTS "payment_terms" text`,
+    );
+    console.log('✅ invoice subject and terms ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

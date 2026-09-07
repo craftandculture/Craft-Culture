@@ -4959,6 +4959,18 @@ export const zohoInvoices = pgTable(
     invoiceDate: date('invoice_date', { mode: 'date' }).notNull(),
     dueDate: date('due_date', { mode: 'date' }),
     referenceNumber: text('reference_number'),
+    /**
+     * The invoice's own subject line, where the business writes what kind of
+     * invoice it is: `CONSIGNMENT_CRURATED`, `CONSIGNMENT_MIX`.
+     *
+     * Not synced originally, so nothing downstream could tell a consignment
+     * invoice from an outright sale — the distinction that decides whether a
+     * line belongs in a consignment reconciliation at all, and the reason it
+     * was done by eye against the invoices each month.
+     */
+    subject: text('subject'),
+    /** "Consignment", "90 days" — the other marker of a consignment invoice */
+    paymentTerms: text('payment_terms'),
     subTotal: doublePrecision('sub_total').notNull(),
     total: doublePrecision('total').notNull(),
     balance: doublePrecision('balance').notNull().default(0),

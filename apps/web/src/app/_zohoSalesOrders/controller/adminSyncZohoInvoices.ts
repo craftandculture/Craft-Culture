@@ -7,8 +7,8 @@ import { isZohoConfigured } from '@/lib/zoho/client';
 import { listInvoices } from '@/lib/zoho/invoices';
 
 /**
- * Sync all invoices from Zoho Books into the zohoInvoices table.
- * Paginates through all invoices and upserts each one.
+ * Sync all invoices from Zoho Books into the zohoInvoices table. Paginates
+ * through all invoices and upserts each one.
  *
  * @example
  *   await trpcClient.zohoSalesOrders.syncInvoices.mutate();
@@ -48,6 +48,10 @@ const adminSyncZohoInvoices = adminProcedure.mutation(async () => {
             invoiceDate: new Date(inv.date),
             dueDate: inv.due_date ? new Date(inv.due_date) : null,
             referenceNumber: inv.reference_number ?? null,
+            // What kind of invoice this is, in the business's own words —
+            // CONSIGNMENT_CRURATED and its siblings live here
+            subject: inv.subject ?? null,
+            paymentTerms: inv.payment_terms_label ?? null,
             subTotal: inv.sub_total ?? 0,
             total: inv.total ?? 0,
             balance: inv.balance ?? 0,
@@ -67,6 +71,10 @@ const adminSyncZohoInvoices = adminProcedure.mutation(async () => {
           invoiceDate: new Date(inv.date),
           dueDate: inv.due_date ? new Date(inv.due_date) : null,
           referenceNumber: inv.reference_number ?? null,
+          // What kind of invoice this is, in the business's own words —
+          // CONSIGNMENT_CRURATED and its siblings live here
+          subject: inv.subject ?? null,
+          paymentTerms: inv.payment_terms_label ?? null,
           subTotal: inv.sub_total ?? 0,
           total: inv.total,
           balance: inv.balance,
