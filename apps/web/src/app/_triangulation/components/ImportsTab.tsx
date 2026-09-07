@@ -8,7 +8,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -37,6 +37,16 @@ export interface ImportsTabProps {
   periodId: string | null;
   periodEnd: string | null;
   isLocked: boolean;
+  /**
+   * This client's own WMS owner and Zoho customer, from the programme record.
+   *
+   * These decide whose stock and whose invoices a refresh reads, so they
+   * belong to the client rather than to the browser. Held in localStorage they
+   * defaulted to Crurated's, which meant every other client's tab refreshed
+   * Crurated's figures under that client's name.
+   */
+  wmsOwnerMatch: string | null;
+  zohoCustomerMatch: string | null;
 }
 
 /** Where the Zoho customer name for City Drinks is remembered between visits */
@@ -60,7 +70,14 @@ const KIND_ORDER: TriImportKind[] = [
  * unresolved product codes out of the reconciliation until someone has looked
  * at it.
  */
-const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabProps) => {
+const ImportsTab = ({
+  programmeId,
+  periodId,
+  periodEnd,
+  isLocked,
+  wmsOwnerMatch,
+  zohoCustomerMatch,
+}: ImportsTabProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -87,18 +104,35 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
       entry,
     ]);
 
+  /*
+    Seed the two match strings from the programme that owns them.
+
+    Reseeding on every query resolution overwrites what someone is part-way
+    through typing — a fault this codebase has already shipped once, on the
+    owner-rates screen. So it is applied once per distinct set of values,
+    tracked in a ref: a refetch returning the same settings is inert, while
+    switching client, or the programme list arriving after first render, both
+    reseed properly.
+
+    The programme wins over the remembered value, so Cru's tab cannot keep
+    refreshing under Crurated's owner name. The stored value only stands in
+    where a programme has nothing configured.
+  */
+  const seeded = useRef<string | null>(null);
+
   useEffect(() => {
+    const signature = `${programmeId}|${wmsOwnerMatch ?? ''}|${zohoCustomerMatch ?? ''}`;
+
+    if (seeded.current === signature) return;
+
+    seeded.current = signature;
+
     const storedCustomer = window.localStorage.getItem(ZOHO_CUSTOMER_KEY);
     const storedOwner = window.localStorage.getItem(OWNER_NAME_KEY);
 
-    if (storedCustomer) {
-      setZohoCustomer(storedCustomer);
-    }
-
-    if (storedOwner) {
-      setOwnerName(storedOwner);
-    }
-  }, []);
+    setZohoCustomer(zohoCustomerMatch ?? storedCustomer ?? '');
+    setOwnerName(wmsOwnerMatch ?? storedOwner ?? '');
+  }, [programmeId, wmsOwnerMatch, zohoCustomerMatch]);
 
   const imports = useQuery(
     api.triangulation.admin.getImports.queryOptions({
@@ -399,6 +433,21 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
               systems. Closed periods stay put.
             </p>
           </Typography>
+          {!ownerName.trim() ? (
+            /*
+              A blank owner disables the refresh, and a button that will not
+              press without saying why is the single most reported fault on
+              these screens. The programme has not been pointed at a WMS owner
+              yet, which is a step of onboarding rather than an error.
+            */
+            <Typography variant="bodyXs" colorRole="warning" asChild>
+              <p className="mt-2 max-w-xl">
+                This client has no WMS stock owner set, so there is nothing to
+                refresh against. Type the owner name as the WMS spells it — the
+                sync will list the owners it can see if it finds no match.
+              </p>
+            </Typography>
+          ) : null}
         </div>
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1">

@@ -75,6 +75,15 @@ const TriangulationClient = () => {
   const programmes = useQuery(
     api.triangulation.admin.getProgrammes.queryOptions(),
   );
+
+  /*
+    The client currently on screen, which is what decides whose stock and whose
+    invoices the live feeds read. Held on the programme rather than in the
+    browser so two people reading the same tab get the same figures.
+  */
+  const activeProgramme = programmes.data?.find(
+    (programme) => programme.id === programmeId,
+  );
   // Every active partner, so a client is picked from the record their orders
   // and invoices already hang off rather than typed in a second time.
   const partnerOptions = useQuery({
@@ -315,6 +324,8 @@ const TriangulationClient = () => {
             periodId={periodId}
             periodEnd={selected?.periodEnd ?? null}
             isLocked={selected?.status === 'locked'}
+            wmsOwnerMatch={activeProgramme?.wmsOwnerMatch ?? null}
+            zohoCustomerMatch={activeProgramme?.zohoCustomerMatch ?? null}
           />
         </TabsContent>
         <TabsContent value="mapping" className="pt-6">
