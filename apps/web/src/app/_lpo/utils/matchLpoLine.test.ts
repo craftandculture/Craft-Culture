@@ -169,3 +169,65 @@ describe('matchLpoLine', () => {
     expect(result.verdict).toMatch(/Nothing on file for 1961/);
   });
 });
+
+describe('an order that does not state a vintage', () => {
+  const rows = (vintages: string[]) =>
+    vintages.map((vintage, index) => ({
+      lwin18: `1015234-${vintage}-06-00750`,
+      wine: 'Numanthia, Toro',
+      producer: 'Numanthia',
+      vintage,
+      sizeMl: 750,
+      pack: 6,
+      bottles: 12 * (index + 1),
+      source: 'stock' as const,
+    }));
+
+  it('matches when only one vintage is held', () => {
+    const result = matchLpoLine({
+      wine: 'Numanthia, Numanthia, Toro DO',
+      vintage: '',
+      sizeMl: 750,
+      bottles: 6,
+      candidates: rows(['2019']),
+    });
+
+    expect(result.lwin18).toBe('1015234-2019-06-00750');
+    expect(result.vintageNotStated).toBe(true);
+    expect(result.verdict).toMatch(/states no vintage/i);
+  });
+
+  it('refuses and offers the vintages when more than one is held', () => {
+    const result = matchLpoLine({
+      wine: 'Numanthia, Numanthia, Toro DO',
+      vintage: '',
+      sizeMl: 750,
+      bottles: 6,
+      candidates: rows(['2018', '2019']),
+    });
+
+    expect(result.lwin18).toBeNull();
+    expect(result.vintageNotStated).toBe(true);
+    expect(result.verdict).toMatch(/choose which one/i);
+    expect(result.shortlist.map((row) => row.vintage).sort()).toEqual([
+      '2018',
+      '2019',
+    ]);
+    expect(result.shortlist.every((row) => typeof row.bottles === 'number')).toBe(
+      true,
+    );
+  });
+
+  it('still requires the size to agree', () => {
+    const result = matchLpoLine({
+      wine: 'Numanthia, Numanthia, Toro DO',
+      vintage: '',
+      sizeMl: 1500,
+      bottles: 6,
+      candidates: rows(['2019']),
+    });
+
+    expect(result.lwin18).toBeNull();
+    expect(result.verdict).toMatch(/Nothing on file at 1500ml/);
+  });
+});

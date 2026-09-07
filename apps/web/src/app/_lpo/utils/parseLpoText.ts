@@ -14,6 +14,20 @@ export interface LpoLine {
   lineTotalAed: number;
   /** Set when the line's own arithmetic disagrees; never silently corrected. */
   problem: string | null;
+
+  /*
+    Set only by layouts that order in cases. The pipeline reasons in bottles,
+    so `bottles` and `unitPriceAed` are already converted; these carry what the
+    client actually wrote so the report can show it back to them.
+  */
+  /** Cases ordered, where the order counted in cases. */
+  cases?: number;
+  /** Bottles per case, where the order stated a pack. */
+  pack?: number;
+  /** Price per case as written, before it was divided down to a bottle. */
+  unitPriceCaseAed?: number;
+  /** The client's own code for the item, where their form carries one. */
+  supplierCode?: string | null;
 }
 
 export interface ParsedLpo {

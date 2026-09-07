@@ -347,12 +347,31 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       ? line.match.verdict
                       : `short ${line.shortfall} of ${line.bottles}`)}
                 </span>
-                {line.match.shortlist.length > 0 && !line.match.lwin18 && (
-                  <span className="text-text-muted">
-                    {' '}
-                    — closest: {line.match.shortlist[0]?.wine}
-                  </span>
-                )}
+                {line.match.shortlist.length > 0 &&
+                  !line.match.lwin18 &&
+                  (line.match.vintageNotStated ? (
+                    /*
+                      The order named the wine but not the year. Rather than
+                      pick one, show what is held so the choice is made by
+                      someone who can ask the client.
+                    */
+                    <span className="text-text-muted">
+                      {' '}
+                      — held:{' '}
+                      {line.match.shortlist
+                        .filter((row) => row.vintage)
+                        .map(
+                          (row) =>
+                            `${row.vintage} (${row.bottles ?? 0} btl)`,
+                        )
+                        .join(', ')}
+                    </span>
+                  ) : (
+                    <span className="text-text-muted">
+                      {' '}
+                      — closest: {line.match.shortlist[0]?.wine}
+                    </span>
+                  ))}
               </li>
             ))}
           </ul>

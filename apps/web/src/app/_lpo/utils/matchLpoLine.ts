@@ -38,7 +38,17 @@ export interface LpoMatch {
   /** The packs this wine is actually held in, best first. */
   rows: CatalogueCandidate[];
   /** Shown when the match is refused or close, so a person can settle it. */
-  shortlist: { lwin18: string; wine: string; score: number }[];
+  shortlist: {
+    lwin18: string;
+    wine: string;
+    score: number;
+    /** Four digits, or "NV" — so an unstated vintage can be chosen. */
+    vintage?: string;
+    /** Bottles free on this row, so the choice is an informed one. */
+    bottles?: number;
+  }[];
+  /** True when the order did not state a vintage and one must be chosen. */
+  vintageNotStated?: boolean;
 }
 
 /** Below this, a name has not been identified at all. */
@@ -140,16 +150,30 @@ const matchLpoLine = ({
     return { ...empty, score: 0, verdict: 'Nothing searchable in the name', shortlist: [] };
   }
 
+  /*
+    Some purchase orders name the wine and the pack but never the vintage. That
+    is a question, not a detail to fill in: the same wine across two vintages is
+    two different products at two different prices. Where it is unstated the
+    name and size alone decide eligibility, and the rival check below refuses
+    the line whenever more than one vintage answers to it.
+  */
+  const vintageNotStated = vintage.trim() === '';
+
   const eligible = candidates.filter(
-    (candidate) => candidate.vintage === vintage && candidate.sizeMl === sizeMl,
+    (candidate) =>
+      (vintageNotStated || candidate.vintage === vintage) &&
+      candidate.sizeMl === sizeMl,
   );
 
   if (eligible.length === 0) {
     return {
       ...empty,
       score: 0,
-      verdict: `Nothing on file for ${vintage} at ${sizeMl}ml`,
+      verdict: vintageNotStated
+        ? `Nothing on file at ${sizeMl}ml`
+        : `Nothing on file for ${vintage} at ${sizeMl}ml`,
       shortlist: [],
+      vintageNotStated,
     };
   }
 
@@ -164,10 +188,12 @@ const matchLpoLine = ({
     .sort((left, right) => right.score - left.score);
 
   const best = scored[0];
-  const shortlist = scored.slice(0, 4).map(({ candidate, score }) => ({
+  const shortlist = scored.slice(0, 6).map(({ candidate, score }) => ({
     lwin18: candidate.lwin18,
     wine: candidate.wine,
     score: Math.round(score * 100) / 100,
+    vintage: candidate.vintage,
+    bottles: candidate.bottles,
   }));
 
   if (!best || best.score < MIN_SCORE) {
@@ -176,6 +202,7 @@ const matchLpoLine = ({
       score: best?.score ?? 0,
       verdict: 'No name close enough to be sure',
       shortlist,
+      vintageNotStated,
     };
   }
 
@@ -191,8 +218,11 @@ const matchLpoLine = ({
     return {
       ...empty,
       score: best.score,
-      verdict: `Too close to call against "${rival.candidate.wine}"`,
+      verdict: vintageNotStated
+        ? 'The order does not state a vintage — choose which one it means'
+        : `Too close to call against "${rival.candidate.wine}"`,
       shortlist,
+      vintageNotStated,
     };
   }
 
@@ -211,12 +241,15 @@ const matchLpoLine = ({
     lwin18: best.candidate.lwin18,
     matchedWine: best.candidate.wine,
     score: Math.round(best.score * 100) / 100,
-    verdict: 'Matched',
+    verdict: vintageNotStated
+      ? `Matched — the order states no vintage, and ${best.candidate.vintage} is the only one held`
+      : 'Matched',
     availableBottles,
     inboundBottles: sum('inbound'),
     takesLastBottles: availableBottles > 0 && availableBottles === bottles,
     rows,
     shortlist,
+    vintageNotStated,
   };
 };
 

@@ -20,7 +20,7 @@ import previewLpoSchema from '../schemas/previewLpoSchema';
 import findQuotedPrices from '../utils/findQuotedPrices';
 import matchLpoLine from '../utils/matchLpoLine';
 import type { CatalogueCandidate } from '../utils/matchLpoLine';
-import parseLpoText from '../utils/parseLpoText';
+import parseAnyLpoText from '../utils/parseAnyLpoText';
 import parseReplenishmentSheet from '../utils/parseReplenishmentSheet';
 
 /** "75cl", "750ml", "1.5L" — however a row happens to spell its size. */
@@ -81,7 +81,7 @@ const adminPreviewLpo = adminProcedure
 
         const text = (await pdfParse(Buffer.from(base64, 'base64'))).text;
 
-        return [parseLpoText(text), null] as const;
+        return [parseAnyLpoText(text), null] as const;
       } catch (error) {
         return [null, error] as const;
       }
