@@ -435,7 +435,16 @@ const SkusTab = ({ programmeId }: SkusTabProps) => {
             <tbody>
               {rows.map((sku) => (
                 <tr key={sku.id} className="border-border-primary border-b align-top">
-                  <td className="py-2 pr-3 font-mono">{sku.wCode}</td>
+                  {/* Only Crurated issue W codes; everyone else is identified
+                      by LWIN, and an empty cell reads as missing data rather
+                      than as a wine identified another way. */}
+                  <td className="py-2 pr-3 font-mono">
+                    {sku.wCode ?? (
+                      <span className="text-text-muted">
+                        {sku.lwin18 ?? '—'}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-3">
                     {sku.productName}
                     {sku.producer ? (
@@ -465,6 +474,7 @@ const SkusTab = ({ programmeId }: SkusTabProps) => {
                         }
 
                         upsertSku.mutate({
+                          programmeId,
                           skuId: sku.id,
                           wCode: sku.wCode,
                           lwin18: sku.lwin18,

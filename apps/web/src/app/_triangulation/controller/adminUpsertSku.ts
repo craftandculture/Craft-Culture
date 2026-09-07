@@ -6,6 +6,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import mapImportLines from '../data/mapImportLines';
 import { upsertSkuSchema } from '../schemas/triangulationSchemas';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
+import resolveProgrammeId from '../utils/programmeId';
 
 /**
  * Create or update a canonical W code SKU
@@ -18,6 +19,7 @@ import type { TriAliasSource } from '../schemas/triangulationSchemas';
 const adminUpsertSku = adminProcedure
   .input(upsertSkuSchema)
   .mutation(async ({ input }) => {
+    const programmeId = resolveProgrammeId(input.programmeId);
     const {
       skuId,
       wCode,
@@ -31,19 +33,42 @@ const adminUpsertSku = adminProcedure
       notes,
     } = input;
 
-    const trimmedCode = wCode.trim();
+    /*
+      Only Crurated issue W codes, so a wine can perfectly well have none and
+      be identified by its LWIN instead. Null rather than empty string: the
+      unique index treats nulls as distinct, so any number of LWIN-identified
+      wines coexist, while two empty strings would collide.
+    */
+    const trimmedCode = wCode?.trim() ? wCode.trim() : null;
 
-    const [clash] = await client<{ id: string }[]>`
-      SELECT id FROM tri_skus
-      WHERE w_code = ${trimmedCode} ${skuId ? client`AND id <> ${skuId}` : client``}
-      LIMIT 1
-    `;
-
-    if (clash) {
+    if (!trimmedCode && !lwin18) {
       throw new TRPCError({
-        code: 'CONFLICT',
-        message: `W code "${trimmedCode}" is already in use`,
+        code: 'BAD_REQUEST',
+        message:
+          'A wine needs either a W code or a LWIN to be identified. Neither was given.',
       });
+    }
+
+    if (trimmedCode) {
+      /*
+        Scoped to the programme, matching the unique index. Unscoped, one
+        client's house code blocked another's — and two clients numbering
+        their own wines from 1 is the normal case, not an unlucky one.
+      */
+      const [clash] = await client<{ id: string }[]>`
+        SELECT id FROM tri_skus
+        WHERE w_code = ${trimmedCode}
+          AND programme_id = ${programmeId}
+          ${skuId ? client`AND id <> ${skuId}` : client``}
+        LIMIT 1
+      `;
+
+      if (clash) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `W code "${trimmedCode}" is already in use`,
+        });
+      }
     }
 
     if (skuId) {
@@ -88,15 +113,20 @@ const adminUpsertSku = adminProcedure
 
     const [created] = await client<{ id: string }[]>`
       INSERT INTO tri_skus (
-        w_code, lwin18, product_name, producer, vintage,
+        programme_id, w_code, lwin18, product_name, producer, vintage,
         bottle_size, case_config, owner_name, notes
       )
       VALUES (
+        -- Without this the row took the column default, so a wine added from
+        -- any client's tab was created in Crurated's registry and vanished
+        -- from the one it was typed into.
+        ${programmeId},
         ${trimmedCode}, ${lwin18 ?? null}, ${productName}, ${producer ?? null},
         ${vintage ?? null}, ${bottleSize ?? null}, ${caseConfig},
-        -- Falls back to the column default rather than being forced to
-        -- Crurated here, so the default lives in one place
-        COALESCE(${ownerName ?? null}, 'Crurated'), ${notes ?? null}
+        -- Null defers to the column default. Forcing 'Crurated' here made
+        -- every client's wine claim Crurated as its owner, which is the
+        -- fault that made a per-owner split impossible in the first place.
+        ${ownerName ?? null}, ${notes ?? null}
       )
       RETURNING id
     `;

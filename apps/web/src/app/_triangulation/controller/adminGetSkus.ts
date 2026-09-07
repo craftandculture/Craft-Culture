@@ -14,7 +14,8 @@ export interface TriSkuAliasRow {
 
 export interface TriSkuRow {
   id: string;
-  wCode: string;
+  /** Crurated's house code; null for clients identified by LWIN */
+  wCode: string | null;
   lwin18: string | null;
   productName: string;
   producer: string | null;

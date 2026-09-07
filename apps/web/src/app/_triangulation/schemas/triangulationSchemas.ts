@@ -113,7 +113,16 @@ export const updateImportSchema = z.object({
 
 export const upsertSkuSchema = z.object({
   skuId: z.string().uuid().optional(),
-  wCode: z.string().min(1).max(80),
+  /** Which client's registry this wine belongs to */
+  programmeId: uuidLike.optional().nullable(),
+  /**
+   * Crurated's house code, and only theirs.
+   *
+   * Every other client is identified by LWIN, and their seeded wines carry no
+   * W code at all — so requiring one here rejected an edit to any wine the
+   * seeder had created, which is every wine those clients have.
+   */
+  wCode: z.string().max(80).optional().nullable(),
   lwin18: z.string().max(30).optional().nullable(),
   productName: z.string().min(1).max(300),
   producer: z.string().max(200).optional().nullable(),
