@@ -109,6 +109,12 @@ const identityOf = (lwin18: string) => {
   return parts.length === 4 ? `${parts[0]}-${parts[1]}-${parts[3]}` : lwin18;
 };
 
+/** The same wine across every year it was made, at one size. */
+const wineOf = (lwin18: string) => {
+  const parts = String(lwin18 ?? '').split('-');
+  return parts.length === 4 ? `${parts[0]}-${parts[3]}` : lwin18;
+};
+
 /**
  * Work out which wine a purchase-order line means, and whether we hold it.
  *
@@ -191,29 +197,33 @@ const matchLpoLine = ({
 
   const best = scored[0];
   /*
-    Where the vintage is the open question, the choice is between YEARS, not
-    between rows. A wine held in two packs of the same vintage is one option
-    with the bottles added up, and a vintage we hold none of is not an option
-    at all — it is noise in front of the person deciding.
+    Where the vintage is the open question, the choice is between the YEARS OF
+    ONE WINE. Grouping everything eligible would offer every wine we hold at
+    that size, which is the catalogue, not a decision. So the options are the
+    years of whichever wine the name actually identified: packs of a year added
+    together, years we hold nothing of left out, most stock first.
   */
   const byVintage = () => {
+    const wineKey = best ? wineOf(best.candidate.lwin18) : null;
     const totals = new Map<
       string,
       { lwin18: string; wine: string; score: number; stock: number; inbound: number }
     >();
 
-    scored.forEach(({ candidate, score }) => {
-      const held = totals.get(candidate.vintage) ?? {
-        lwin18: candidate.lwin18,
-        wine: candidate.wine,
-        score: Math.round(score * 100) / 100,
-        stock: 0,
-        inbound: 0,
-      };
-      if (candidate.source === 'stock') held.stock += candidate.bottles;
-      else held.inbound += candidate.bottles;
-      totals.set(candidate.vintage, held);
-    });
+    scored
+      .filter(({ candidate }) => wineOf(candidate.lwin18) === wineKey)
+      .forEach(({ candidate, score }) => {
+        const held = totals.get(candidate.vintage) ?? {
+          lwin18: candidate.lwin18,
+          wine: candidate.wine,
+          score: Math.round(score * 100) / 100,
+          stock: 0,
+          inbound: 0,
+        };
+        if (candidate.source === 'stock') held.stock += candidate.bottles;
+        else held.inbound += candidate.bottles;
+        totals.set(candidate.vintage, held);
+      });
 
     return [...totals.entries()]
       .filter(([, held]) => held.stock > 0 || held.inbound > 0)
@@ -228,15 +238,16 @@ const matchLpoLine = ({
       }));
   };
 
-  const shortlist = vintageNotStated
-    ? byVintage()
-    : scored.slice(0, 6).map(({ candidate, score }) => ({
-        lwin18: candidate.lwin18,
-        wine: candidate.wine,
-        score: Math.round(score * 100) / 100,
-        vintage: candidate.vintage,
-        bottles: candidate.bottles,
-      }));
+  const shortlist =
+    vintageNotStated && best && best.score >= MIN_SCORE
+      ? byVintage()
+      : scored.slice(0, 6).map(({ candidate, score }) => ({
+          lwin18: candidate.lwin18,
+          wine: candidate.wine,
+          score: Math.round(score * 100) / 100,
+          vintage: candidate.vintage,
+          bottles: candidate.bottles,
+        }));
 
   if (!best || best.score < MIN_SCORE) {
     return {
