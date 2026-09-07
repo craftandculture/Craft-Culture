@@ -57,10 +57,15 @@ interface ParsedResult {
 }
 
 const fmtUsd = (v: number | null | undefined) =>
-  v == null ? '—' : `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  v == null
+    ? '—'
+    : `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
-const bottlesOf = (i: { totalBottles: number | null; cases: number; bottlesPerCase: number | null }) =>
-  i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+const bottlesOf = (i: {
+  totalBottles: number | null;
+  cases: number;
+  bottlesPerCase: number | null;
+}) => i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
 
 const selectCls =
   'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
@@ -164,7 +169,7 @@ const InvoiceVendorField = ({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Supplier name"
           autoFocus
-          className="w-52 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-sm focus:border-border-brand focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-border-brand w-52 rounded border px-1.5 py-0.5 text-sm focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               setDraft(vendor ?? '');
@@ -174,7 +179,7 @@ const InvoiceVendorField = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white hover:bg-fill-brand/90"
+          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white"
         >
           Save
         </button>
@@ -194,9 +199,13 @@ const InvoiceVendorField = ({
       title="Set supplier"
     >
       {vendor ? (
-        <span className="truncate font-semibold text-text-primary">{vendor}</span>
+        <span className="text-text-primary truncate font-semibold">
+          {vendor}
+        </span>
       ) : (
-        <span className="text-xs font-medium text-text-muted/60">+ Add supplier</span>
+        <span className="text-text-muted/60 text-xs font-medium">
+          + Add supplier
+        </span>
       )}
       <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/v:opacity-60" />
     </button>
@@ -229,15 +238,23 @@ const ShipmentGroupDetailPage = () => {
   });
 
   useEffect(() => {
-    if (data?.group) setWeightKg(data.group.chargeableWeightKg?.toString() ?? '');
+    if (data?.group)
+      setWeightKg(data.group.chargeableWeightKg?.toString() ?? '');
   }, [data?.group]);
 
-  const memberIds = useMemo(() => new Set(data?.shipments.map((s) => s.id) ?? []), [data]);
+  const memberIds = useMemo(
+    () => new Set(data?.shipments.map((s) => s.id) ?? []),
+    [data],
+  );
 
   const invalidate = () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: api.logistics.admin.groups.getOne.queryKey() }),
-      queryClient.invalidateQueries({ queryKey: api.logistics.admin.groups.getMany.queryKey() }),
+      queryClient.invalidateQueries({
+        queryKey: api.logistics.admin.groups.getOne.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: api.logistics.admin.groups.getMany.queryKey(),
+      }),
     ]);
 
   const updateMut = useMutation({
@@ -245,6 +262,20 @@ const ShipmentGroupDetailPage = () => {
     onSuccess: () => void invalidate(),
     onError: () => toast.error('Save failed'),
   });
+
+  // The group name was display-only, so a typo in it (a wrong year, say) could
+  // never be corrected once the group existed — the update endpoint has always
+  // accepted a name, nothing just called it. Click the title to rename.
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+
+  const commitName = () => {
+    const name = nameDraft.trim();
+    setEditingName(false);
+    if (!name || name === data?.group.name) return;
+    updateMut.mutate({ id: groupId, name });
+    toast.success('Group renamed');
+  };
   const addLineMut = useMutation({
     ...api.logistics.admin.groups.addCostLine.mutationOptions(),
     onSuccess: () => {
@@ -297,7 +328,8 @@ const ShipmentGroupDetailPage = () => {
     onSuccess: (r) => {
       setParsed(r);
       setBatchFx(defaultFxFor(r.currency));
-      if (r.chargeableWeightKg && !weightKg) setWeightKg(String(r.chargeableWeightKg));
+      if (r.chargeableWeightKg && !weightKg)
+        setWeightKg(String(r.chargeableWeightKg));
       toast.success(`Found ${r.candidates.length} charge lines`);
     },
     onError: (e) => toast.error(e.message || 'Could not parse invoice'),
@@ -307,7 +339,11 @@ const ShipmentGroupDetailPage = () => {
     const f = fileList?.[0];
     if (!f) return;
     const fileType = f.type;
-    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'].includes(fileType)) {
+    if (
+      !['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'].includes(
+        fileType,
+      )
+    ) {
       toast.error('Upload a PDF, PNG or JPG');
       return;
     }
@@ -316,7 +352,11 @@ const ShipmentGroupDetailPage = () => {
       parseMut.mutate({
         groupId,
         file: reader.result as string,
-        fileType: fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+        fileType: fileType as
+          | 'application/pdf'
+          | 'image/png'
+          | 'image/jpeg'
+          | 'image/jpg',
       });
     reader.readAsDataURL(f);
   };
@@ -371,7 +411,10 @@ const ShipmentGroupDetailPage = () => {
         });
       }
       if (parsed.chargeableWeightKg) {
-        updateMut.mutate({ id: groupId, chargeableWeightKg: parsed.chargeableWeightKg });
+        updateMut.mutate({
+          id: groupId,
+          chargeableWeightKg: parsed.chargeableWeightKg,
+        });
       }
       toast.success(`Added ${parsed.candidates.length} cost lines`);
       setParsed(null);
@@ -409,13 +452,21 @@ const ShipmentGroupDetailPage = () => {
   if (isLoading || !data) {
     return (
       <div className="flex justify-center py-20">
-        <IconLoader2 className="h-6 w-6 animate-spin text-text-muted" />
+        <IconLoader2 className="text-text-muted h-6 w-6 animate-spin" />
       </div>
     );
   }
 
-  const { group, shipments, totalBottles, totalCases, totalProductCost, costLines, metrics, documents } =
-    data;
+  const {
+    group,
+    shipments,
+    totalBottles,
+    totalCases,
+    totalProductCost,
+    costLines,
+    metrics,
+    documents,
+  } = data;
   const goods = totalProductCost;
   const logistics = metrics.totalLogisticsUsd;
   const landed = goods + logistics;
@@ -432,11 +483,36 @@ const ShipmentGroupDetailPage = () => {
               </Button>
             </Link>
             <div>
-              <Typography variant="headingSm">{group.name}</Typography>
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={commitName}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitName();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  className="border-border-primary bg-background-primary focus:border-border-brand w-full min-w-[18rem] rounded border px-2 py-0.5 text-lg font-semibold focus:outline-none"
+                  aria-label="Group name"
+                />
+              ) : (
+                <button
+                  type="button"
+                  title="Click to rename"
+                  onClick={() => {
+                    setNameDraft(group.name);
+                    setEditingName(true);
+                  }}
+                  className="hover:bg-surface-muted focus-visible:ring-border-brand -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
+                >
+                  <Typography variant="headingSm">{group.name}</Typography>
+                </button>
+              )}
               <Typography variant="bodyXs" colorRole="muted">
                 {group.reference ? `${group.reference} · ` : ''}
-                {shipments.length} shipments · {totalCases.toLocaleString()} cases ·{' '}
-                {totalBottles.toLocaleString()} bottles
+                {shipments.length} shipments · {totalCases.toLocaleString()}{' '}
+                cases · {totalBottles.toLocaleString()} bottles
               </Typography>
             </div>
           </div>
@@ -461,22 +537,36 @@ const ShipmentGroupDetailPage = () => {
                 No shipments yet — tick inbound shipments below to add them.
               </Typography>
             ) : (
-              <div className="divide-y divide-border-muted">
+              <div className="divide-border-muted divide-y">
                 {shipments.map((s) => {
-                  const bottles = s.items.reduce((sum, i) => sum + bottlesOf(i), 0);
-                  const freight = s.items.reduce((sum, i) => sum + (i.freightAllocated ?? 0), 0);
+                  const bottles = s.items.reduce(
+                    (sum, i) => sum + bottlesOf(i),
+                    0,
+                  );
+                  const freight = s.items.reduce(
+                    (sum, i) => sum + (i.freightAllocated ?? 0),
+                    0,
+                  );
                   return (
-                    <div key={s.id} className="flex items-center justify-between gap-3 py-2">
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between gap-3 py-2"
+                    >
                       <div className="min-w-0">
                         <Typography variant="labelSm" className="truncate">
                           {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
-                          {s.items.length} lines · {bottles.toLocaleString()} bottles
+                          {s.items.length} lines · {bottles.toLocaleString()}{' '}
+                          bottles
                           {freight > 0 ? ` · logistics ${fmtUsd(freight)}` : ''}
                         </Typography>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => toggleShipment(s.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleShipment(s.id)}
+                      >
                         <ButtonContent>Remove</ButtonContent>
                       </Button>
                     </div>
@@ -491,22 +581,29 @@ const ShipmentGroupDetailPage = () => {
         <Card>
           <CardContent className="gap-3 p-4">
             <Typography variant="labelSm">Add inbound shipments</Typography>
-            <div className="max-h-56 divide-y divide-border-muted overflow-y-auto">
+            <div className="divide-border-muted max-h-56 divide-y overflow-y-auto">
               {(inboundData?.data ?? [])
                 .filter((s) => !memberIds.has(s.id))
                 .map((s) => (
                   <label
                     key={s.id}
-                    className="flex cursor-pointer items-center gap-3 py-2 hover:bg-fill-primary-hover"
+                    className="hover:bg-fill-primary-hover flex cursor-pointer items-center gap-3 py-2"
                   >
-                    <input type="checkbox" checked={false} onChange={() => toggleShipment(s.id)} className="h-4 w-4" />
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => toggleShipment(s.id)}
+                      className="h-4 w-4"
+                    />
                     <div className="min-w-0 flex-1">
                       <Typography variant="bodySm" className="truncate">
                         {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
                         {s.totalCases} cases · {s.totalBottles} bottles
-                        {s.groupId && s.groupId !== groupId ? ' · in another group' : ''}
+                        {s.groupId && s.groupId !== groupId
+                          ? ' · in another group'
+                          : ''}
                       </Typography>
                     </div>
                   </label>
@@ -522,7 +619,8 @@ const ShipmentGroupDetailPage = () => {
               <div>
                 <Typography variant="labelSm">Documents</Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Upload the AWB or a shared doc once — it shows on all {shipments.length} shipments
+                  Upload the AWB or a shared doc once — it shows on all{' '}
+                  {shipments.length} shipments
                 </Typography>
               </div>
               <div className="flex items-center gap-2">
@@ -553,26 +651,35 @@ const ShipmentGroupDetailPage = () => {
                   onClick={() => docFileRef.current?.click()}
                   disabled={uploadDocMut.isPending}
                 >
-                  <ButtonContent iconLeft={uploadDocMut.isPending ? IconLoader2 : IconUpload}>
+                  <ButtonContent
+                    iconLeft={uploadDocMut.isPending ? IconLoader2 : IconUpload}
+                  >
                     {uploadDocMut.isPending ? 'Uploading…' : 'Upload'}
                   </ButtonContent>
                 </Button>
               </div>
             </div>
             {documents.length > 0 && (
-              <div className="divide-y divide-border-muted">
+              <div className="divide-border-muted divide-y">
                 {documents.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between gap-3 py-1.5">
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between gap-3 py-1.5"
+                  >
                     <a
                       href={d.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-w-0 truncate text-sm text-text-brand hover:underline"
+                      className="text-text-brand min-w-0 truncate text-sm hover:underline"
                     >
                       &#x1F4C4; {d.fileName}
                     </a>
                     <div className="flex items-center gap-2">
-                      <Typography variant="bodyXs" colorRole="muted" className="capitalize">
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="capitalize"
+                      >
                         {docLabel(d.documentType)}
                       </Typography>
                       <button
@@ -611,7 +718,9 @@ const ShipmentGroupDetailPage = () => {
                   onClick={() => fileRef.current?.click()}
                   disabled={parseMut.isPending}
                 >
-                  <ButtonContent iconLeft={parseMut.isPending ? IconLoader2 : IconUpload}>
+                  <ButtonContent
+                    iconLeft={parseMut.isPending ? IconLoader2 : IconUpload}
+                  >
                     {parseMut.isPending ? 'Parsing…' : 'Upload invoice'}
                   </ButtonContent>
                 </Button>
@@ -625,7 +734,8 @@ const ShipmentGroupDetailPage = () => {
                   onBlur={() =>
                     updateMut.mutate({
                       id: groupId,
-                      chargeableWeightKg: weightKg.trim() === '' ? null : Number(weightKg),
+                      chargeableWeightKg:
+                        weightKg.trim() === '' ? null : Number(weightKg),
                     })
                   }
                   className={`${selectCls} w-20 text-right`}
@@ -663,8 +773,9 @@ const ShipmentGroupDetailPage = () => {
                 {parsed.currency !== 'USD' && Number(batchFx) === 1 && (
                   <div className="mb-2 rounded border border-red-200 bg-red-50 px-2 py-1">
                     <Typography variant="bodyXs" className="text-red-600">
-                      Amounts are in {parsed.currency} but the FX rate is 1 — set the{' '}
-                      {parsed.currency}→USD rate before adding, or they&apos;ll be treated as USD.
+                      Amounts are in {parsed.currency} but the FX rate is 1 —
+                      set the {parsed.currency}→USD rate before adding, or
+                      they&apos;ll be treated as USD.
                     </Typography>
                   </div>
                 )}
@@ -672,9 +783,13 @@ const ShipmentGroupDetailPage = () => {
                   {parsed.candidates.map((c, i) => {
                     const shp = shipments.find((s) => s.id === c.shipmentId);
                     return (
-                      <div key={i} className="flex items-center justify-between gap-2 py-1">
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-2 py-1"
+                      >
                         <Typography variant="bodyXs" className="truncate">
-                          <span className="capitalize">{c.category}</span> · {c.description}
+                          <span className="capitalize">{c.category}</span> ·{' '}
+                          {c.description}
                           {c.scope === 'shipment'
                             ? ` → ${shp?.shipmentNumber ?? c.shipmentMatch ?? '?'}`
                             : ''}
@@ -687,7 +802,12 @@ const ShipmentGroupDetailPage = () => {
                             onClick={() =>
                               setParsed((p) =>
                                 p
-                                  ? { ...p, candidates: p.candidates.filter((_, j) => j !== i) }
+                                  ? {
+                                      ...p,
+                                      candidates: p.candidates.filter(
+                                        (_, j) => j !== i,
+                                      ),
+                                    }
                                   : p,
                               )
                             }
@@ -701,7 +821,11 @@ const ShipmentGroupDetailPage = () => {
                   })}
                 </div>
                 <div className="mt-2 flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setParsed(null)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setParsed(null)}
+                  >
                     <ButtonContent>Discard</ButtonContent>
                   </Button>
                   <Button
@@ -709,7 +833,9 @@ const ShipmentGroupDetailPage = () => {
                     onClick={addAllParsed}
                     disabled={savingBatch || parsed.candidates.length === 0}
                   >
-                    <ButtonContent iconLeft={savingBatch ? IconLoader2 : IconPlus}>
+                    <ButtonContent
+                      iconLeft={savingBatch ? IconLoader2 : IconPlus}
+                    >
                       Add {parsed.candidates.length} lines
                     </ButtonContent>
                   </Button>
@@ -723,7 +849,8 @@ const ShipmentGroupDetailPage = () => {
                 {(() => {
                   const byDoc = new Map<string, typeof costLines>();
                   for (const l of costLines) {
-                    const key = l.invoiceRef || l.sourceDocument || 'Manual entry';
+                    const key =
+                      l.invoiceRef || l.sourceDocument || 'Manual entry';
                     const arr = byDoc.get(key) ?? [];
                     arr.push(l);
                     byDoc.set(key, arr);
@@ -742,16 +869,24 @@ const ShipmentGroupDetailPage = () => {
                         {/* Invoice header */}
                         <div className="flex items-center justify-between gap-3 px-3 py-2">
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className={`mt-1 h-2 w-2 shrink-0 self-start rounded-full ${tint.dot}`} />
+                            <span
+                              className={`mt-1 h-2 w-2 shrink-0 self-start rounded-full ${tint.dot}`}
+                            />
                             <div className="min-w-0">
                               <InvoiceVendorField
                                 vendor={lines[0]?.vendor ?? null}
                                 onSave={(v) =>
-                                  setVendorMut.mutate({ groupId, docKey: doc, vendor: v })
+                                  setVendorMut.mutate({
+                                    groupId,
+                                    docKey: doc,
+                                    vendor: v,
+                                  })
                                 }
                               />
-                              <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
-                                <span className="truncate font-mono">{doc}</span>
+                              <div className="text-text-muted flex items-center gap-1.5 text-[11px]">
+                                <span className="truncate font-mono">
+                                  {doc}
+                                </span>
                                 {cur !== 'USD' && (
                                   <span className="shrink-0">
                                     · {cur} @ {fx}
@@ -761,31 +896,42 @@ const ShipmentGroupDetailPage = () => {
                             </div>
                           </div>
                           <div className="shrink-0 text-right">
-                            <Typography variant="labelSm" className="tabular-nums">
+                            <Typography
+                              variant="labelSm"
+                              className="tabular-nums"
+                            >
                               {fmtUsd(subtotal)}
                             </Typography>
                             <Typography variant="bodyXs" colorRole="muted">
-                              {lines.length} {lines.length === 1 ? 'line' : 'lines'}
+                              {lines.length}{' '}
+                              {lines.length === 1 ? 'line' : 'lines'}
                             </Typography>
                           </div>
                         </div>
                         {/* Line items on a clean surface for readability */}
-                        <div className="divide-y divide-border-muted/60 border-t border-border-muted/60 bg-surface-primary/70">
+                        <div className="divide-border-muted/60 border-border-muted/60 bg-surface-primary/70 divide-y border-t">
                           {lines.map((l) => {
-                            const shp = shipments.find((s) => s.id === l.shipmentId);
+                            const shp = shipments.find(
+                              (s) => s.id === l.shipmentId,
+                            );
                             return (
                               <div
                                 key={l.id}
                                 className="flex items-center justify-between gap-3 px-3 py-2"
                               >
                                 <div className="flex min-w-0 items-center gap-2">
-                                  <span className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary dark:bg-white/10">
+                                  <span className="text-text-secondary shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-white/10">
                                     {l.category}
                                   </span>
                                   <div className="min-w-0">
-                                    <Typography variant="bodySm" className="truncate">
+                                    <Typography
+                                      variant="bodySm"
+                                      className="truncate"
+                                    >
                                       {l.description || (
-                                        <span className="capitalize">{l.category}</span>
+                                        <span className="capitalize">
+                                          {l.category}
+                                        </span>
                                       )}
                                     </Typography>
                                     <Typography
@@ -801,11 +947,16 @@ const ShipmentGroupDetailPage = () => {
                                   </div>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-2">
-                                  <Typography variant="labelSm" className="tabular-nums">
+                                  <Typography
+                                    variant="labelSm"
+                                    className="tabular-nums"
+                                  >
                                     {fmtUsd(l.amountUsd)}
                                   </Typography>
                                   <button
-                                    onClick={() => delLineMut.mutate({ id: l.id })}
+                                    onClick={() =>
+                                      delLineMut.mutate({ id: l.id })
+                                    }
                                     className="text-text-muted hover:text-red-500"
                                     aria-label="Delete cost line"
                                   >
@@ -820,7 +971,7 @@ const ShipmentGroupDetailPage = () => {
                     );
                   });
                 })()}
-                <div className="flex items-center justify-between border-t-2 border-border-primary pt-2.5">
+                <div className="border-border-primary flex items-center justify-between border-t-2 pt-2.5">
                   <Typography variant="labelSm">Total logistics</Typography>
                   <Typography variant="labelSm" className="tabular-nums">
                     {fmtUsd(metrics.totalLogisticsUsd)}
@@ -830,10 +981,15 @@ const ShipmentGroupDetailPage = () => {
             )}
 
             {/* Add line */}
-            <div className="flex flex-wrap items-end gap-2 border-t border-border-muted pt-3">
+            <div className="border-border-muted flex flex-wrap items-end gap-2 border-t pt-3">
               <select
                 value={line.category}
-                onChange={(e) => setLine((l) => ({ ...l, category: e.target.value as Category }))}
+                onChange={(e) =>
+                  setLine((l) => ({
+                    ...l,
+                    category: e.target.value as Category,
+                  }))
+                }
                 className={`${selectCls} capitalize`}
               >
                 {CATEGORIES.map((c) => (
@@ -845,19 +1001,25 @@ const ShipmentGroupDetailPage = () => {
               <Input
                 placeholder="Description"
                 value={line.description}
-                onChange={(e) => setLine((l) => ({ ...l, description: e.target.value }))}
+                onChange={(e) =>
+                  setLine((l) => ({ ...l, description: e.target.value }))
+                }
                 className="min-w-[140px] flex-1"
               />
               <input
                 type="number"
                 placeholder="Amount"
                 value={line.amount}
-                onChange={(e) => setLine((l) => ({ ...l, amount: e.target.value }))}
+                onChange={(e) =>
+                  setLine((l) => ({ ...l, amount: e.target.value }))
+                }
                 className={`${selectCls} w-24 text-right`}
               />
               <select
                 value={line.currency}
-                onChange={(e) => setLine((l) => ({ ...l, currency: e.target.value }))}
+                onChange={(e) =>
+                  setLine((l) => ({ ...l, currency: e.target.value }))
+                }
                 className={selectCls}
               >
                 {['USD', 'GBP', 'EUR', 'AED'].map((c) => (
@@ -870,14 +1032,19 @@ const ShipmentGroupDetailPage = () => {
                 type="number"
                 placeholder="FX→USD"
                 value={line.fxToUsd}
-                onChange={(e) => setLine((l) => ({ ...l, fxToUsd: e.target.value }))}
+                onChange={(e) =>
+                  setLine((l) => ({ ...l, fxToUsd: e.target.value }))
+                }
                 title="FX rate to USD at time of conversion"
                 className={`${selectCls} w-20 text-right`}
               />
               <select
                 value={line.scope}
                 onChange={(e) =>
-                  setLine((l) => ({ ...l, scope: e.target.value as 'shared' | 'shipment' }))
+                  setLine((l) => ({
+                    ...l,
+                    scope: e.target.value as 'shared' | 'shipment',
+                  }))
                 }
                 className={selectCls}
               >
@@ -887,7 +1054,9 @@ const ShipmentGroupDetailPage = () => {
               {line.scope === 'shipment' && (
                 <select
                   value={line.shipmentId}
-                  onChange={(e) => setLine((l) => ({ ...l, shipmentId: e.target.value }))}
+                  onChange={(e) =>
+                    setLine((l) => ({ ...l, shipmentId: e.target.value }))
+                  }
                   className={selectCls}
                 >
                   <option value="">Shipment…</option>
@@ -898,17 +1067,30 @@ const ShipmentGroupDetailPage = () => {
                   ))}
                 </select>
               )}
-              <Button onClick={addLine} disabled={!line.amount || addLineMut.isPending}>
-                <ButtonContent iconLeft={addLineMut.isPending ? IconLoader2 : IconPlus}>Add</ButtonContent>
+              <Button
+                onClick={addLine}
+                disabled={!line.amount || addLineMut.isPending}
+              >
+                <ButtonContent
+                  iconLeft={addLineMut.isPending ? IconLoader2 : IconPlus}
+                >
+                  Add
+                </ButtonContent>
               </Button>
             </div>
 
-            <div className="flex justify-end border-t border-border-muted pt-3">
+            <div className="border-border-muted flex justify-end border-t pt-3">
               <Button
                 onClick={() => calcMut.mutate({ id: groupId })}
-                disabled={calcMut.isPending || shipments.length === 0 || costLines.length === 0}
+                disabled={
+                  calcMut.isPending ||
+                  shipments.length === 0 ||
+                  costLines.length === 0
+                }
               >
-                <ButtonContent iconLeft={calcMut.isPending ? IconLoader2 : IconCalculator}>
+                <ButtonContent
+                  iconLeft={calcMut.isPending ? IconLoader2 : IconCalculator}
+                >
                   Calculate &amp; apply
                 </ButtonContent>
               </Button>
@@ -927,7 +1109,8 @@ const ShipmentGroupDetailPage = () => {
                 { v: fmtUsd(metrics.perBottle), label: 'Logistics / 75cl btl' },
                 { v: fmtUsd(metrics.perCase), label: 'Logistics / case' },
                 {
-                  v: metrics.perKg != null ? `${fmtUsd(metrics.perKg)}/kg` : '—',
+                  v:
+                    metrics.perKg != null ? `${fmtUsd(metrics.perKg)}/kg` : '—',
                   label: 'Logistics / kg',
                 },
               ].map((t) => (
@@ -939,7 +1122,11 @@ const ShipmentGroupDetailPage = () => {
                 </div>
               ))}
             </div>
-            <Typography variant="bodyXs" colorRole="muted" className="text-center">
+            <Typography
+              variant="bodyXs"
+              colorRole="muted"
+              className="text-center"
+            >
               {group.allocatedAt
                 ? 'Applied to items — landed cost is written onto each bottle for pricing.'
                 : 'Live preview. Hit “Calculate & apply” to write landed cost onto each bottle.'}
