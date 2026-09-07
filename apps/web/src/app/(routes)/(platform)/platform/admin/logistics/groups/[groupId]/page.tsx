@@ -268,6 +268,7 @@ const ShipmentGroupDetailPage = () => {
   // accepted a name, nothing just called it. Click the title to rename.
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const amountRef = useRef<HTMLInputElement>(null);
 
   const commitName = () => {
     const name = nameDraft.trim();
@@ -436,7 +437,14 @@ const ShipmentGroupDetailPage = () => {
 
   const addLine = () => {
     const amount = Number(line.amount);
-    if (!amount) return;
+    // Say why nothing happened. This used to be a bare `return` behind a
+    // disabled button, so clicking Add with an empty Amount gave no toast, no
+    // error, no cursor — indistinguishable from the feature being broken.
+    if (!amount) {
+      toast.error('Enter an amount before adding a cost');
+      amountRef.current?.focus();
+      return;
+    }
     addLineMut.mutate({
       groupId,
       category: line.category,
@@ -1007,12 +1015,16 @@ const ShipmentGroupDetailPage = () => {
                 className="min-w-[140px] flex-1"
               />
               <input
+                ref={amountRef}
                 type="number"
                 placeholder="Amount"
                 value={line.amount}
                 onChange={(e) =>
                   setLine((l) => ({ ...l, amount: e.target.value }))
                 }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addLine();
+                }}
                 className={`${selectCls} w-24 text-right`}
               />
               <select
@@ -1067,10 +1079,7 @@ const ShipmentGroupDetailPage = () => {
                   ))}
                 </select>
               )}
-              <Button
-                onClick={addLine}
-                disabled={!line.amount || addLineMut.isPending}
-              >
+              <Button onClick={addLine} disabled={addLineMut.isPending}>
                 <ButtonContent
                   iconLeft={addLineMut.isPending ? IconLoader2 : IconPlus}
                 >
