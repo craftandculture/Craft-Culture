@@ -256,9 +256,35 @@ const adminPreviewLpo = adminProcedure
         candidates,
       });
 
+      /** Bottles the order asks for that are not on a shelf today. */
       const shortfall = match.lwin18
         ? Math.max(0, line.bottles - match.availableBottles)
         : 0;
+
+      /*
+        The same shortfall, after the wine already on the water.
+
+        Stock alone answers "can this be picked this morning". It is the wrong
+        question for an order: most of what we sell is sold before it lands,
+        and a line covered by a shipment in transit was being reported short —
+        which reads as a problem to solve rather than an allocation to make.
+
+        `shortfall` is kept as it was, because what can be picked today is
+        still worth knowing. This is what decides whether a line needs anyone's
+        attention.
+      */
+      const shortAfterInbound = match.lwin18
+        ? Math.max(
+            0,
+            line.bottles - match.availableBottles - match.inboundBottles,
+          )
+        : 0;
+
+      /** Bottles of this line that would come off a shipment, not a shelf. */
+      const fromInbound = Math.min(
+        shortfall,
+        Math.max(0, match.inboundBottles),
+      );
 
       /*
         The pack the sale needs. A client taking three bottles of a six is a
@@ -299,6 +325,8 @@ const adminPreviewLpo = adminProcedure
         ...line,
         match,
         shortfall,
+        shortAfterInbound,
+        fromInbound,
         soldPack,
         isRepack: match.lwin18 !== null && soldPack !== heldPack,
         quote,
@@ -348,7 +376,10 @@ const adminPreviewLpo = adminProcedure
       summary: {
         matched: lines.filter((line) => line.match.lwin18).length,
         unmatched: lines.filter((line) => !line.match.lwin18).length,
-        shortLines: lines.filter((line) => line.shortfall > 0).length,
+        // Short after what is on the water, since that is what has to be acted on
+        shortLines: lines.filter((line) => line.shortAfterInbound > 0).length,
+        /** Lines that a shipment in transit covers, wholly or in part */
+        inboundLines: lines.filter((line) => line.fromInbound > 0).length,
         repackLines: lines.filter((line) => line.isRepack).length,
         lastBottleLines: lines.filter((line) => line.match.takesLastBottles)
           .length,

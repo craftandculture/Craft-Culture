@@ -215,7 +215,8 @@ const LpoPreviewReport = ({
   const needsAttention = lines
     .map((line, at) => ({ line, at }))
     .filter(
-      ({ line }) => !line.match.lwin18 || line.shortfall > 0 || line.problem,
+      ({ line }) =>
+        !line.match.lwin18 || line.shortAfterInbound > 0 || line.problem,
     );
 
   return (
@@ -424,6 +425,13 @@ const LpoPreviewReport = ({
         <LpoChip tone={summary.shortLines === 0 ? 'good' : 'bad'}>
           {summary.shortLines} short of stock
         </LpoChip>
+        {/* Sold before it lands is ordinary here, so it is stated rather than
+            flagged: the line is covered, just not off a shelf. */}
+        {summary.inboundLines > 0 && (
+          <LpoChip tone="plain">
+            {summary.inboundLines} from stock in transit
+          </LpoChip>
+        )}
         <LpoChip tone="plain">{summary.repackLines} repacks</LpoChip>
         <LpoChip tone={summary.lastBottleLines > 0 ? 'warn' : 'plain'}>
           {summary.lastBottleLines} take the last bottles
@@ -449,7 +457,10 @@ const LpoPreviewReport = ({
                   {line.problem ??
                     (!line.match.lwin18
                       ? line.match.verdict
-                      : `short ${line.shortfall} of ${line.bottles}`)}
+                      : `short ${line.shortAfterInbound} of ${line.bottles}` +
+                        (line.fromInbound > 0
+                          ? `, with ${line.fromInbound} more on the water`
+                          : ''))}
                 </span>
                 {line.match.shortlist.length > 0 &&
                   !line.match.lwin18 &&
@@ -611,7 +622,10 @@ const LpoPreviewReport = ({
                   {/* What the hidden columns would have said, on small screens */}
                   <div className="text-[12px] text-text-muted sm:hidden">
                     {line.match.lwin18
-                      ? `${line.match.matchedWine} · we hold ${line.match.availableBottles}`
+                      ? `${line.match.matchedWine} · we hold ${line.match.availableBottles}` +
+                        (line.match.inboundBottles > 0
+                          ? `, ${line.match.inboundBottles} in transit`
+                          : '')
                       : line.match.verdict}
                   </div>
                 </td>
@@ -646,8 +660,14 @@ const LpoPreviewReport = ({
                 </td>
                 <td className="hidden px-3 py-2 lg:table-cell">
                   <div className="flex flex-wrap gap-1">
-                    {line.shortfall > 0 && (
-                      <LpoChip tone="bad">short {line.shortfall}</LpoChip>
+                    {line.shortAfterInbound > 0 && (
+                      <LpoChip tone="bad">short {line.shortAfterInbound}</LpoChip>
+                    )}
+                    {/* Covered, but off a shipment rather than a shelf */}
+                    {line.fromInbound > 0 && (
+                      <LpoChip tone="plain">
+                        {line.fromInbound} in transit
+                      </LpoChip>
                     )}
                     {line.isRepack && (
                       <LpoChip tone="warn">repack {line.soldPack}-pack</LpoChip>
