@@ -373,6 +373,14 @@ const ImportsTab = ({
         !result.consignmentTag
           ? 'This client has no consignment tag set, so it claims no invoices by name. Set one to attribute its wine.'
           : null,
+        /*
+          Shown when the feed comes back empty. Nothing else on screen can
+          distinguish "no invoices are this client's" from "the subject line
+          is not where we look for it" — and the figure is zero either way.
+        */
+        result.orderLines === 0 && result.evidence.length > 0
+          ? `Nothing was taken. What the invoices carried: ${result.evidence.join(' | ')}`
+          : null,
       ].filter(Boolean);
 
       report({
@@ -380,6 +388,7 @@ const ImportsTab = ({
         tone:
           result.skippedLines > 0 ||
           result.unknownOwnerTags.length > 0 ||
+          result.orderLines === 0 ||
           !result.consignmentTag
             ? 'warn'
             : 'ok',

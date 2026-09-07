@@ -13,6 +13,7 @@ import resolveProgrammeId from '../utils/programmeId';
 import readConsignmentSubject, {
   OWNER_BY_TAG,
 } from '../utils/readConsignmentSubject';
+import readInvoiceSubject from '../utils/readInvoiceSubject';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -132,6 +133,8 @@ const adminSyncSalesFromInvoices = adminProcedure
       to be visible or the list of owners stays wrong indefinitely.
     */
     const unknownTags = new Set<string>();
+    /** What the first few invoices carried, so an empty feed can be diagnosed */
+    const evidence: string[] = [];
 
     // Both feeds describe the same sales, so the order-based one goes with
     // this one's own previous run. Leaving it would double Sold to City
@@ -180,10 +183,26 @@ const adminSyncSalesFromInvoices = adminProcedure
         The subject is read from the invoice fetched here rather than from the
         list response, because the list does not reliably carry it.
       */
+      const subject = readInvoiceSubject(invoice);
       const consignment = readConsignmentSubject(
-        invoice.subject,
+        subject,
         invoice.payment_terms_label,
       );
+
+      /*
+        What the first few invoices actually carried, whatever was decided
+        about them.
+
+        The filter emptied a client's feed completely and nothing on screen
+        could say whether that was the right answer, a subject Zoho does not
+        return, or a tag nobody recognised. Those need different fixes and the
+        resulting figure — zero — is identical for all three.
+      */
+      if (evidence.length < 6) {
+        evidence.push(
+          `${invoice.invoice_number}: subject=${subject ?? '(none)'} · terms=${invoice.payment_terms_label ?? '(none)'} · read as ${consignment.ownerName ?? (consignment.isConsignment ? 'consignment, no owner' : 'not consignment')}`,
+        );
+      }
 
       if (!consignment.isConsignment) {
         nonConsignment.push(`${invoice.invoice_number} — ${consignment.reason}`);
@@ -212,7 +231,7 @@ const adminSyncSalesFromInvoices = adminProcedure
       }
 
       if (consignment.isMixed && /unrecognised owner/.test(consignment.reason)) {
-        unknownTags.add(`${invoice.invoice_number}: ${invoice.subject ?? ''}`);
+        unknownTags.add(`${invoice.invoice_number}: ${subject ?? ''}`);
       }
 
       invoiceNumbers.push(invoice.invoice_number);
@@ -315,6 +334,8 @@ const adminSyncSalesFromInvoices = adminProcedure
       unknownOwnerTags: [...unknownTags].slice(0, 25),
       /** This client's tag, so an unconfigured one explains its own emptiness */
       consignmentTag: claim?.consignmentTag ?? null,
+      /** What the first few invoices carried, whatever was decided */
+      evidence,
       /** Consignment invoices belonging to other clients, by owner */
       otherOwners: [...otherOwners.entries()].map(
         ([owner, count]) => `${owner}: ${count}`,

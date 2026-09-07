@@ -102,9 +102,24 @@ export interface ZohoLineItem {
 /**
  * Zoho invoice
  */
+/** A Zoho custom field, as the API returns it on a record */
+export interface ZohoCustomField {
+  customfield_id?: string;
+  label?: string;
+  api_name?: string;
+  value?: string | number | boolean | null;
+}
+
 export interface ZohoInvoice {
   /** The subject line — where CONSIGNMENT_CRURATED and its siblings live */
   subject?: string;
+  /**
+   * Custom fields, which is where a "Subject" added to the template lives.
+   *
+   * Zoho Books does not give invoices a standard subject, so a label printed
+   * on the document may be a custom field and absent from `subject` entirely.
+   */
+  custom_fields?: ZohoCustomField[];
   /** "Consignment", "90 days" — Zoho's payment-terms label */
   payment_terms_label?: string;
   invoice_id: string;
