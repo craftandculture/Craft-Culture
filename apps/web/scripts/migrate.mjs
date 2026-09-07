@@ -697,6 +697,52 @@ const runMigrations = async () => {
     `);
     console.log('✅ tri_programmes input_profile ready');
 
+    /*
+      Which CONSIGNMENT_* tag on an invoice means this client.
+
+      The invoice states its owner in the subject and the line records it, but
+      nothing said which programme that owner IS. Deriving it from the
+      programme's name works for Cult Wines and Crurated and breaks on C&C —
+      "C&C" against "Craft & Culture" share no letters to match on — and a key
+      derived two different ways is the fault that has cost this codebase five
+      separate bugs. So it is stated once, here.
+
+      `takes_unattributed` is for lines no tag claims: a CONSIGNMENT_MIX
+      invoice, or one recognised only by its payment terms. Crurated takes
+      them because that is where they have always gone, so nothing moves
+      except the wine that now has a rightful owner.
+    */
+    await client.unsafe(
+      `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "consignment_tag" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "takes_unattributed" boolean NOT NULL DEFAULT false`,
+    );
+    await client.unsafe(`
+      UPDATE "tri_programmes"
+      SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
+      WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
+    `);
+    /*
+      Everyone else is matched on the letters of their name, which is reliable
+      for the four tags that are a word from it. Anything it does not match is
+      left null and simply claims nothing until someone sets it — an unclaimed
+      client is visible, whereas a wrongly claimed one is not.
+    */
+    for (const [tag, pattern] of [
+      ['CULT', '%cult%'],
+      ['CRU', '%cru wine%'],
+      ['RARE', '%rare%'],
+    ]) {
+      await client.unsafe(`
+        UPDATE "tri_programmes"
+        SET "consignment_tag" = '${tag}'
+        WHERE "consignment_tag" IS NULL
+          AND LOWER("name") LIKE '${pattern}'
+      `);
+    }
+    console.log('✅ tri_programmes consignment tags ready');
+
     // Seeded before the columns that default to it, and with the same match
     // values the browser was holding, so the live figures are unchanged.
     await client.unsafe(`

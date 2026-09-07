@@ -10,7 +10,9 @@ import mapImportLines from '../data/mapImportLines';
 import { syncSalesFromZohoSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
 import resolveProgrammeId from '../utils/programmeId';
-import readConsignmentSubject from '../utils/readConsignmentSubject';
+import readConsignmentSubject, {
+  OWNER_BY_TAG,
+} from '../utils/readConsignmentSubject';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -90,8 +92,32 @@ const adminSyncSalesFromInvoices = adminProcedure
       });
     }
 
+    /*
+      What this client claims. A programme with no tag claims nothing by name
+      and reads exactly as it did before owners existed, so an unconfigured
+      client is visibly empty rather than quietly holding someone else's wine.
+    */
+    const [claim] = await client<
+      { consignmentTag: string | null; takesUnattributed: boolean }[]
+    >`
+      SELECT
+        to_jsonb(p) ->> 'consignment_tag' AS "consignmentTag",
+        COALESCE((to_jsonb(p) ->> 'takes_unattributed')::boolean, false)
+          AS "takesUnattributed"
+      FROM tri_programmes p
+      WHERE p.id = ${programmeId}
+      LIMIT 1
+    `;
+
+    const ownerClaimed = claim?.consignmentTag
+      ? (OWNER_BY_TAG[claim.consignmentTag] ?? null)
+      : null;
+    const takesUnattributed = claim?.takesUnattributed ?? false;
+
     const rows: Record<string, unknown>[] = [];
     const invoiceNumbers: string[] = [];
+    /** Invoices belonging to another client, which this one must not absorb */
+    const otherOwners = new Map<string, number>();
     let skippedLines = 0;
     /** Kept, but only nameable by description until Zoho gives the item a SKU */
     let codelessLines = 0;
@@ -161,6 +187,27 @@ const adminSyncSalesFromInvoices = adminProcedure
 
       if (!consignment.isConsignment) {
         nonConsignment.push(`${invoice.invoice_number} — ${consignment.reason}`);
+        continue;
+      }
+
+      /*
+        Whose wine this is against whose client we are looking at.
+
+        Without this every client's feed read every consignment invoice, so
+        Cult's programme filled with Crurated's wine and seeding a registry
+        from it would have given Cult several hundred wines it has never
+        owned. An invoice naming an owner goes to that owner alone; one naming
+        nobody goes to whoever takes the unattributed, which is where it has
+        always gone.
+      */
+      const belongsHere = consignment.ownerName
+        ? consignment.ownerName === ownerClaimed
+        : takesUnattributed;
+
+      if (!belongsHere) {
+        const owner = consignment.ownerName ?? 'no stated owner';
+
+        otherOwners.set(owner, (otherOwners.get(owner) ?? 0) + 1);
         continue;
       }
 
@@ -266,6 +313,12 @@ const adminSyncSalesFromInvoices = adminProcedure
       nonConsignmentInvoices: nonConsignment.slice(0, 25),
       /** Consignment invoices carrying an owner tag the tool does not know */
       unknownOwnerTags: [...unknownTags].slice(0, 25),
+      /** This client's tag, so an unconfigured one explains its own emptiness */
+      consignmentTag: claim?.consignmentTag ?? null,
+      /** Consignment invoices belonging to other clients, by owner */
+      otherOwners: [...otherOwners.entries()].map(
+        ([owner, count]) => `${owner}: ${count}`,
+      ),
     };
   });
 

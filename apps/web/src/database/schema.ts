@@ -5411,6 +5411,24 @@ export const triProgrammes = pgTable(
      * would be answering a question nobody asked.
      */
     inputProfile: text('input_profile').notNull().default('warehouse'),
+    /**
+     * Which `CONSIGNMENT_*` tag on an invoice subject means this client.
+     *
+     * The invoice states its owner and the line records it, but nothing said
+     * which programme that owner is. Derived from the programme's name it
+     * works for Cult Wines and breaks on C&C, whose name shares no letters
+     * with its tag — so it is stated once here rather than inferred twice.
+     */
+    consignmentTag: text('consignment_tag'),
+    /**
+     * Whether this client takes lines no tag claims.
+     *
+     * A `CONSIGNMENT_MIX` invoice names no owner per line, and one recognised
+     * only by its payment terms names none at all. Those have always landed
+     * with Crurated, so Crurated keeps them and nothing moves except wine that
+     * now has a rightful owner elsewhere.
+     */
+    takesUnattributed: boolean('takes_unattributed').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     ...timestamps,

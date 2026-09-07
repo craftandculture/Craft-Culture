@@ -4,7 +4,7 @@
  * `MIX` is not an owner. It says the invoice carries several owners' wine, and
  * that each line has to be attributed from its own SKU instead.
  */
-const OWNER_BY_TAG: Record<string, string> = {
+export const OWNER_BY_TAG: Record<string, string> = {
   CC: 'C&C',
   CRURATED: 'Crurated',
   RARE: 'Rare',

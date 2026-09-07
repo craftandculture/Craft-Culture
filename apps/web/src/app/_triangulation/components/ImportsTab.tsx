@@ -362,12 +362,25 @@ const ImportsTab = ({
         result.unknownOwnerTags.length > 0
           ? `Owner tag not recognised, so attributed per line: ${result.unknownOwnerTags.join('; ')}`
           : null,
+        result.otherOwners.length > 0
+          ? `Left with their own client: ${result.otherOwners.join(', ')}`
+          : null,
+        /*
+          A client with no tag claims nothing, and reads as a client with no
+          trade. Those are opposite problems and the figure alone cannot tell
+          them apart, so the unconfigured case says so outright.
+        */
+        !result.consignmentTag
+          ? 'This client has no consignment tag set, so it claims no invoices by name. Set one to attribute its wine.'
+          : null,
       ].filter(Boolean);
 
       report({
         feed: 'Zoho sales to City Drinks',
         tone:
-          result.skippedLines > 0 || result.unknownOwnerTags.length > 0
+          result.skippedLines > 0 ||
+          result.unknownOwnerTags.length > 0 ||
+          !result.consignmentTag
             ? 'warn'
             : 'ok',
         summary: `${result.orderLines} lines from ${result.invoices.length} consignment invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
