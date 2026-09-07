@@ -184,7 +184,16 @@ const parseOrderFormText = (text: string): ParsedLpo => {
   return {
     poNumber: value(/Serial\s*No\.?:?\s*([A-Za-z0-9-]+)/i),
     poDate: value(/^Date:?\s*(.+)$/i),
-    client: value(/^SUPPLIER:\s*(.+)$/i),
+    /*
+      This layout names no buyer.
+
+      Its only party line is "SUPPLIER: CRAFT & CULTURE DUBAI", which is us —
+      reading it as the client raised the order against ourselves, and Zoho
+      rightly held no such customer. The buyer is on the letterhead, which is
+      an image, so there is nothing here to read. Left null so the customer is
+      chosen from Zoho rather than taken from a field that means the opposite.
+    */
+    client: null,
     creditTerms: value(/^(.*\bCREDIT TERMS\b.*)$/i)?.replace(/\d+\.$/, '').trim() ?? null,
     lines,
     totalBottles: lines.reduce((sum, line) => sum + line.bottles, 0),

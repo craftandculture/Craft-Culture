@@ -7,9 +7,9 @@ import {
   IconFileExport,
   IconX,
 } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
@@ -24,6 +24,8 @@ export interface LpoPreviewReportProps {
   chosenVintages?: Record<string, string>;
   /** Answer the vintage question on a line, which re-reads the order. */
   onChooseVintage?: (at: number, vintage: string) => void;
+  /** Name the customer, which re-reads the order to check prices against them. */
+  onChooseClient?: (name: string) => void;
   /** True while the order is being read again with a new answer. */
   isRereading?: boolean;
 }
@@ -55,6 +57,7 @@ const LpoPreviewReport = ({
   preview,
   chosenVintages,
   onChooseVintage,
+  onChooseClient,
   isRereading = false,
 }: LpoPreviewReportProps) => {
   const { order, reconciliation, summary, lines } = preview;
@@ -75,11 +78,60 @@ const LpoPreviewReport = ({
     without one: a sales order needs to belong to somebody.
   */
   const [client, setClient] = useState(order.client ?? '');
+  /*
+    Which Zoho customer, by id.
+
+    The name printed on a purchase order is not an identifier, and matching on
+    it fails in both directions. This client's own template labels the buyer
+    "SUPPLIER", so the order read us as the customer and Zoho held no such
+    record; and a name that is right — "Craft & Culture Dubai" against "Craft
+    and Culture FZE" — still does not match on letters. So it is chosen from
+    what Zoho holds, and the id goes through untouched.
+  */
+  const [contactId, setContactId] = useState('');
+
   const inUsd = currency === 'USD';
   const convert = (aed: number) => (inUsd ? aed * AED_TO_USD : aed);
   const amount = (aed: number) => `${currency} ${money(convert(aed))}`;
 
   const api = useTRPC();
+  const customersQuery = useQuery(
+    api.lpo.admin.zohoCustomers.queryOptions({ term: '' }),
+  );
+  // Held steady between renders: a fresh [] each time would re-run the
+  // preselect below on every render.
+  const customers = useMemo(
+    () => customersQuery.data?.customers ?? [],
+    [customersQuery.data],
+  );
+
+  /*
+    Offer the closest name the document gave as the starting choice — still
+    shown, still changeable, and never used unless somebody leaves it.
+  */
+  useEffect(() => {
+    if (contactId || customers.length === 0) return;
+
+    const squash = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const wanted = squash(order.client ?? '');
+
+    if (wanted.length < 4) return;
+
+    const hit = customers.find((customer) => {
+      const name = squash(customer.contactName);
+
+      return (
+        name.length >= 4 &&
+        (name === wanted || name.includes(wanted) || wanted.includes(name))
+      );
+    });
+
+    if (hit) {
+      setContactId(hit.contactId);
+      setClient(hit.contactName);
+    }
+  }, [customers, contactId, order.client]);
+
 
   /*
     The order, keyed for you.
@@ -200,13 +252,47 @@ const LpoPreviewReport = ({
                 </button>
               ))}
             </div>
-            {/* Asked for only when the document does not name one */}
-            {!order.client && (
+            {/*
+              Always asked, never assumed. A purchase order names a party on
+              its letterhead, but which party depends on whose template it is.
+            */}
+            {customers.length > 0 ? (
+              <select
+                value={contactId}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const name =
+                    customers.find((customer) => customer.contactId === id)
+                      ?.contactName ?? '';
+
+                  setContactId(id);
+                  setClient(name);
+                  // Reads the order again, so its prices are checked against
+                  // the last quote published to this customer
+                  if (name) onChooseClient?.(name);
+                }}
+                disabled={isRereading}
+                title="The Zoho customer this order belongs to"
+                className="w-56 rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-xs"
+              >
+                <option value="">Choose the customer…</option>
+                {customers.map((customer) => (
+                  <option key={customer.contactId} value={customer.contactId}>
+                    {customer.contactName}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              /* Zoho unreachable or unconfigured — the name still works */
               <input
                 value={client}
                 onChange={(event) => setClient(event.target.value)}
-                placeholder="Customer in Zoho"
-                title="A replenishment sheet does not name its customer, so the order needs one"
+                placeholder={
+                  customersQuery.isPending
+                    ? 'Loading customers…'
+                    : 'Customer in Zoho'
+                }
+                title="Matched to a Zoho customer by name"
                 className="w-44 rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-xs"
               />
             )}
@@ -217,6 +303,7 @@ const LpoPreviewReport = ({
               onClick={() =>
                 createOrder({
                   client: client.trim(),
+                  clientContactId: contactId || undefined,
                   // We bill in dollars whatever the PO is written in
                   billingCurrency: 'USD',
                   poNumber: order.poNumber,
@@ -242,7 +329,7 @@ const LpoPreviewReport = ({
                 blocked
                   ? `Not ready: ${blocked}`
                   : !client.trim()
-                    ? 'Name the customer this order is for'
+                    ? 'Choose the customer this order is for'
                     : 'Creates a DRAFT sales order in Zoho, billed in USD, with any missing item codes'
               }
               className="flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"

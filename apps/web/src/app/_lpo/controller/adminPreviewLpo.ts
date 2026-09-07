@@ -195,7 +195,17 @@ const adminPreviewLpo = adminProcedure
       the offer went out. Reported, never corrected: whose number is right is a
       conversation, not a calculation.
     */
-    const quoted = await findQuotedPrices(parsed.client);
+    /*
+      Whoever the order is actually for.
+
+      Some layouts name no buyer, and one names only the supplier — us. The
+      customer chosen on screen wins over anything read off the document,
+      because it was picked from the customers Zoho holds rather than parsed
+      from a letterhead.
+    */
+    const clientName = input.client?.trim() || parsed.client;
+
+    const quoted = await findQuotedPrices(clientName);
 
     /*
       HS code and origin, taken from the shipment the wine arrived on.
@@ -305,7 +315,7 @@ const adminPreviewLpo = adminProcedure
       order: {
         poNumber: parsed.poNumber,
         poDate: parsed.poDate,
-        client: parsed.client,
+        client: clientName,
         creditTerms: parsed.creditTerms,
         fileName: input.fileName ?? null,
       },

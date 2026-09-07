@@ -39,6 +39,8 @@ const LpoPreviewClient = () => {
   */
   const [file, setFile] = useState<string | null>(null);
   const [vintages, setVintages] = useState<Record<string, string>>({});
+  /** The customer, once picked, so prices can be checked against their quote */
+  const [chosenClient, setChosenClient] = useState('');
 
   const previewMutation = useMutation({
     ...api.lpo.admin.preview.mutationOptions(),
@@ -55,6 +57,7 @@ const LpoPreviewClient = () => {
     setFileName(chosen.name);
     setPreview(null);
     setVintages({});
+    setChosenClient('');
 
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -68,6 +71,7 @@ const LpoPreviewClient = () => {
     previewMutation.mutate({
       file: base64,
       fileName: chosen.name,
+      client: chosenClient || undefined,
       // Only meaningful for a replenishment sheet, which carries several
       // consignors in one file
       source: source.trim() || undefined,
@@ -85,7 +89,29 @@ const LpoPreviewClient = () => {
       file,
       fileName: fileName ?? undefined,
       source: source.trim() || undefined,
+      client: chosenClient || undefined,
       vintages: next,
+    });
+  };
+
+  /**
+   * Name the customer and read the order again.
+   *
+   * Prices are checked against the last quote published to this client, so
+   * until there is a client the check has nothing to compare with and passes
+   * every line in silence.
+   */
+  const onChooseClient = (name: string) => {
+    if (!file) return;
+
+    setChosenClient(name);
+
+    previewMutation.mutate({
+      file,
+      fileName: fileName ?? undefined,
+      source: source.trim() || undefined,
+      client: name || undefined,
+      vintages,
     });
   };
 
@@ -135,6 +161,7 @@ const LpoPreviewClient = () => {
           preview={preview}
           chosenVintages={vintages}
           onChooseVintage={onChooseVintage}
+          onChooseClient={onChooseClient}
           isRereading={previewMutation.isPending}
         />
       )}

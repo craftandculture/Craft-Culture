@@ -21,6 +21,15 @@ const previewLpoSchema = z.object({
    * customs and price derived in one place instead of two.
    */
   vintages: z.record(z.string(), z.string()).optional(),
+  /**
+   * The customer, once chosen, so the price check has someone to check against.
+   *
+   * Prices are compared to the last quote published to this client. An order
+   * that names no buyer — or names us — has nothing to compare with, and the
+   * check silently passes on every line. Choosing the customer turns it back
+   * on.
+   */
+  client: z.string().optional(),
 });
 
 export default previewLpoSchema;

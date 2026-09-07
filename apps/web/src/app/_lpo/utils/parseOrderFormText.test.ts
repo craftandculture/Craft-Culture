@@ -65,6 +65,15 @@ describe('parseOrderFormText', () => {
     expect(line?.pack).toBe(6);
   });
 
+  /*
+    The one field naming a party on this form is the supplier, and the supplier
+    is us. Reading it as the client raised the order against ourselves, and
+    Zoho — correctly — held no such customer.
+  */
+  it('takes no client from a form whose only named party is the supplier', () => {
+    expect(parseOrderFormText(FIXTURE).client).toBeNull();
+  });
+
   it('counts in bottles while remembering the client ordered cases', () => {
     const [line] = parseOrderFormText(FIXTURE).lines;
 

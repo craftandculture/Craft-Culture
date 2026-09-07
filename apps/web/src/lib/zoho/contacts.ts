@@ -80,6 +80,27 @@ const searchContacts = async (searchTerm: string) => {
 };
 
 /**
+ * List the customers Zoho holds
+ *
+ * `searchContacts` needs something to search on, which is no use to a picker
+ * that has to show its options before anyone has typed. This asks for
+ * customers only — vendors and the freight forwarders among them are not who
+ * an order is raised for.
+ *
+ * @param limit - How many to take, newest first as Zoho orders them
+ * @returns The customer contacts
+ */
+const listCustomerContacts = async (limit = 200) => {
+  const response = await zohoFetch<{
+    code: number;
+    message: string;
+    contacts: ZohoContact[];
+  }>(`/contacts?contact_type=customer&per_page=${Math.min(limit, 200)}`);
+
+  return response.contacts;
+};
+
+/**
  * Create or update a contact based on email match
  *
  * @param data - Contact data
@@ -104,6 +125,7 @@ const upsertContactByEmail = async (data: ZohoCreateContactRequest) => {
 export {
   createContact,
   getContact,
+  listCustomerContacts,
   searchContacts,
   updateContact,
   upsertContactByEmail,

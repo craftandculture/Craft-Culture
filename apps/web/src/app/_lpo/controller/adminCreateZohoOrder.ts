@@ -79,6 +79,16 @@ const adminCreateZohoOrder = adminProcedure
   .input(
     z.object({
       client: z.string().min(1),
+      /**
+       * The Zoho customer, chosen rather than matched.
+       *
+       * The name on a purchase order is not an identifier. This client's own
+       * template labels the buyer "SUPPLIER", so the order was raised against
+       * "Craft & Culture Dubai" — us — and Zoho, correctly, held no such
+       * customer. Where a contact id is given the name search is skipped
+       * entirely; `client` is then only what gets written on the order.
+       */
+      clientContactId: z.string().optional(),
       poNumber: z.string().nullable(),
       poDate: z.string().nullable(),
       creditTerms: z.string().nullable(),
@@ -126,6 +136,13 @@ const adminCreateZohoOrder = adminProcedure
         message: 'Zoho is not configured on this environment.',
       });
     }
+
+    /*
+      Chosen from the Zoho list, which is the whole of the question answered.
+
+      Everything below is the fallback for a caller that only has a name.
+    */
+    const chosenContactId = input.clientContactId?.trim();
 
     /*
       The client has to be one we already know — found the way a person would.
@@ -179,7 +196,10 @@ const adminCreateZohoOrder = adminProcedure
 
     const seen = new Map<string, { contact_id: string; contact_name: string }>();
 
-    for (const term of attempts) {
+    // Nothing to search for when the customer has already been picked. The
+    // fragment search below costs several Zoho calls, and its ambiguity check
+    // would refuse an order whose customer is no longer in question.
+    for (const term of chosenContactId ? [] : attempts) {
       const found = await searchContacts(term);
 
       for (const row of found) {
@@ -205,7 +225,7 @@ const adminCreateZohoOrder = adminProcedure
       partners table. Picking one silently would put half this client's orders
       under each.
     */
-    if (exact.length > 1) {
+    if (!chosenContactId && exact.length > 1) {
       throw new TRPCError({
         code: 'CONFLICT',
         message:
@@ -216,8 +236,9 @@ const adminCreateZohoOrder = adminProcedure
       });
     }
 
-    const contact =
-      exact[0] ??
+    const contact = chosenContactId
+      ? { contact_id: chosenContactId, contact_name: input.client }
+      : exact[0] ??
       candidates.find((row) => {
         const name = squash(row.contact_name);
 
