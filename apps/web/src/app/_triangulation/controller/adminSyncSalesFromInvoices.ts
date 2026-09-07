@@ -199,8 +199,18 @@ const adminSyncSalesFromInvoices = adminProcedure
         resulting figure — zero — is identical for all three.
       */
       if (evidence.length < 6) {
+        /*
+          The custom fields are listed by label because the subject is printed
+          on the document and absent from the API response, so the field it
+          actually lives in has to be found by looking rather than guessed at
+          a third time.
+        */
+        const custom = (invoice.custom_fields ?? [])
+          .map((f) => `${f.label ?? f.api_name ?? '?'}=${String(f.value ?? '')}`)
+          .join(', ');
+
         evidence.push(
-          `${invoice.invoice_number}: subject=${subject ?? '(none)'} · terms=${invoice.payment_terms_label ?? '(none)'} · read as ${consignment.ownerName ?? (consignment.isConsignment ? 'consignment, no owner' : 'not consignment')}`,
+          `${invoice.invoice_number}: subject=${subject ?? '(none)'} · terms=${invoice.payment_terms_label ?? '(none)'} · ref=${invoice.reference_number ?? '(none)'} · custom=[${custom || 'none returned'}] · read as ${consignment.ownerName ?? (consignment.isConsignment ? 'consignment, no owner' : 'not consignment')}`,
         );
       }
 
