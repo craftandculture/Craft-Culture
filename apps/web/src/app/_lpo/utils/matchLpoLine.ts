@@ -44,8 +44,10 @@ export interface LpoMatch {
     score: number;
     /** Four digits, or "NV" — so an unstated vintage can be chosen. */
     vintage?: string;
-    /** Bottles free on this row, so the choice is an informed one. */
+    /** Bottles free across every pack of this vintage. */
     bottles?: number;
+    /** Bottles of it on the water, where none are free. */
+    inbound?: number;
   }[];
   /** True when the order did not state a vintage and one must be chosen. */
   vintageNotStated?: boolean;
@@ -188,13 +190,53 @@ const matchLpoLine = ({
     .sort((left, right) => right.score - left.score);
 
   const best = scored[0];
-  const shortlist = scored.slice(0, 6).map(({ candidate, score }) => ({
-    lwin18: candidate.lwin18,
-    wine: candidate.wine,
-    score: Math.round(score * 100) / 100,
-    vintage: candidate.vintage,
-    bottles: candidate.bottles,
-  }));
+  /*
+    Where the vintage is the open question, the choice is between YEARS, not
+    between rows. A wine held in two packs of the same vintage is one option
+    with the bottles added up, and a vintage we hold none of is not an option
+    at all — it is noise in front of the person deciding.
+  */
+  const byVintage = () => {
+    const totals = new Map<
+      string,
+      { lwin18: string; wine: string; score: number; stock: number; inbound: number }
+    >();
+
+    scored.forEach(({ candidate, score }) => {
+      const held = totals.get(candidate.vintage) ?? {
+        lwin18: candidate.lwin18,
+        wine: candidate.wine,
+        score: Math.round(score * 100) / 100,
+        stock: 0,
+        inbound: 0,
+      };
+      if (candidate.source === 'stock') held.stock += candidate.bottles;
+      else held.inbound += candidate.bottles;
+      totals.set(candidate.vintage, held);
+    });
+
+    return [...totals.entries()]
+      .filter(([, held]) => held.stock > 0 || held.inbound > 0)
+      .sort(([, left], [, right]) => right.stock - left.stock)
+      .map(([vintage, held]) => ({
+        lwin18: held.lwin18,
+        wine: held.wine,
+        score: held.score,
+        vintage,
+        bottles: held.stock,
+        inbound: held.inbound,
+      }));
+  };
+
+  const shortlist = vintageNotStated
+    ? byVintage()
+    : scored.slice(0, 6).map(({ candidate, score }) => ({
+        lwin18: candidate.lwin18,
+        wine: candidate.wine,
+        score: Math.round(score * 100) / 100,
+        vintage: candidate.vintage,
+        bottles: candidate.bottles,
+      }));
 
   if (!best || best.score < MIN_SCORE) {
     return {

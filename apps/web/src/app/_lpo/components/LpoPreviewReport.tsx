@@ -360,9 +360,10 @@ const LpoPreviewReport = ({ preview }: LpoPreviewReportProps) => {
                       — held:{' '}
                       {line.match.shortlist
                         .filter((row) => row.vintage)
-                        .map(
-                          (row) =>
-                            `${row.vintage} (${row.bottles ?? 0} btl)`,
+                        .map((row) =>
+                          row.bottles
+                            ? `${row.vintage} (${row.bottles} btl)`
+                            : `${row.vintage} (${row.inbound ?? 0} inbound)`,
                         )
                         .join(', ')}
                     </span>

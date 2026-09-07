@@ -197,6 +197,28 @@ describe('an order that does not state a vintage', () => {
     expect(result.verdict).toMatch(/states no vintage/i);
   });
 
+  it('adds up the packs of a vintage and drops the ones we hold none of', () => {
+    const result = matchLpoLine({
+      wine: 'Numanthia, Numanthia, Toro DO',
+      vintage: '',
+      sizeMl: 750,
+      bottles: 6,
+      candidates: [
+        // the same year in two packs is ONE option, not two
+        { lwin18: '1015234-2017-06-00750', wine: 'Numanthia, Toro', producer: 'Numanthia', vintage: '2017', sizeMl: 750, pack: 6, bottles: 6, source: 'stock' as const },
+        { lwin18: '1015234-2017-12-00750', wine: 'Numanthia, Toro', producer: 'Numanthia', vintage: '2017', sizeMl: 750, pack: 12, bottles: 36, source: 'stock' as const },
+        { lwin18: '1015234-2016-06-00750', wine: 'Numanthia, Toro', producer: 'Numanthia', vintage: '2016', sizeMl: 750, pack: 6, bottles: 12, source: 'stock' as const },
+        // nothing free and nothing coming: not a choice anyone can make
+        { lwin18: '1015234-2021-06-00750', wine: 'Numanthia, Toro', producer: 'Numanthia', vintage: '2021', sizeMl: 750, pack: 6, bottles: 0, source: 'stock' as const },
+      ],
+    });
+
+    expect(result.lwin18).toBeNull();
+    expect(
+      result.shortlist.map((row) => `${row.vintage}:${row.bottles}`),
+    ).toEqual(['2017:42', '2016:12']);
+  });
+
   it('refuses and offers the vintages when more than one is held', () => {
     const result = matchLpoLine({
       wine: 'Numanthia, Numanthia, Toro DO',
