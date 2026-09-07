@@ -139,6 +139,7 @@ const adminSyncCountFromWms = adminProcedure
       WHERE kind = 'cc_count'
         AND as_of_date = ${asOfDate}
         AND (source_ref IS DISTINCT FROM 'wms-stock')
+        AND programme_id = ${programmeId}
     `;
 
     await client`

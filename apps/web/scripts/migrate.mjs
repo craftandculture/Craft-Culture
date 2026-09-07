@@ -933,6 +933,22 @@ const runMigrations = async () => {
     );
     console.log('✅ invoice subject and terms ready');
 
+    /*
+      Whose wine an import line is, as its own document declared it.
+
+      The SKU carries an owner too, but it defaults every wine to Crurated, so
+      it cannot split a statement by owner. An invoice subjected
+      CONSIGNMENT_RARE states the answer outright, and this is where that
+      statement is kept.
+    */
+    await client.unsafe(
+      `ALTER TABLE "tri_import_lines" ADD COLUMN IF NOT EXISTS "stated_owner_name" text`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "tri_import_lines_stated_owner_idx" ON "tri_import_lines"("stated_owner_name")`,
+    );
+    console.log('✅ import line owner ready');
+
     if (dataFixFailures.length > 0) {
       console.error(
         `\n⚠️  ${dataFixFailures.length} data backfill(s) did not run — schema is up to date and the deploy is good, but these need a follow-up:`,

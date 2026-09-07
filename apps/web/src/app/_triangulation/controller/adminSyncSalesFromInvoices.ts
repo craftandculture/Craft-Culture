@@ -10,6 +10,7 @@ import mapImportLines from '../data/mapImportLines';
 import { syncSalesFromZohoSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
 import resolveProgrammeId from '../utils/programmeId';
+import readConsignmentSubject from '../utils/readConsignmentSubject';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -94,6 +95,8 @@ const adminSyncSalesFromInvoices = adminProcedure
     let skippedLines = 0;
     /** Kept, but only nameable by description until Zoho gives the item a SKU */
     let codelessLines = 0;
+    /** Invoices to this customer that are not consignment, and why */
+    const nonConsignment: string[] = [];
 
     // Both feeds describe the same sales, so the order-based one goes with
     // this one's own previous run. Leaving it would double Sold to City
@@ -133,6 +136,24 @@ const adminSyncSalesFromInvoices = adminProcedure
 
     for (const header of headers) {
       const invoice = await getInvoice(header.invoiceId);
+
+      /*
+        Only stock we consigned belongs in this reconciliation. Wine City
+        Drinks bought outright is their own, and reading it here counted it as
+        consigned and then chased its owner for a bill they never owed.
+
+        The subject is read from the invoice fetched here rather than from the
+        list response, because the list does not reliably carry it.
+      */
+      const consignment = readConsignmentSubject(
+        invoice.subject,
+        invoice.payment_terms_label,
+      );
+
+      if (!consignment.isConsignment) {
+        nonConsignment.push(`${invoice.invoice_number} — ${consignment.reason}`);
+        continue;
+      }
 
       invoiceNumbers.push(invoice.invoice_number);
 
@@ -182,6 +203,8 @@ const adminSyncSalesFromInvoices = adminProcedure
           currency: invoice.currency_code ?? null,
           doc_ref: invoice.invoice_number,
           doc_date: invoice.date,
+          // Null on a MIX, where the SKU is the only thing that knows
+          stated_owner_name: consignment.ownerName,
           status: 'unmapped',
         });
       }
@@ -203,6 +226,7 @@ const adminSyncSalesFromInvoices = adminProcedure
           'currency',
           'doc_ref',
           'doc_date',
+          'stated_owner_name',
           'status',
         ],
         rows,
@@ -220,6 +244,13 @@ const adminSyncSalesFromInvoices = adminProcedure
       skippedLines,
       mappedRowCount: mapped.mappedRowCount,
       totalBottles: mapped.totalBottles,
+      /*
+        Every invoice left out, and why. A consignment filter that is too
+        strict looks identical to a quiet month, so what it excluded has to be
+        readable rather than inferred from a total that came out low.
+      */
+      nonConsignmentCount: nonConsignment.length,
+      nonConsignmentInvoices: nonConsignment.slice(0, 25),
     };
   });
 

@@ -341,19 +341,19 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
    */
   const refreshLive = async () => {
     setSyncReport([]);
-    await syncReceipts.mutateAsync({ ownerName }).catch(() => null);
+    await syncReceipts.mutateAsync({ programmeId, ownerName }).catch(() => null);
     // Invoices are the sale, and reading them directly picks up the legacy
     // ones that never had a sales order behind them.
     await syncInvoices
-      .mutateAsync({ customerMatch: zohoCustomer })
+      .mutateAsync({ programmeId, customerMatch: zohoCustomer })
       .catch(() => null);
     await syncCount
-      .mutateAsync({ ownerName, periodId })
+      .mutateAsync({ programmeId, ownerName, periodId })
       .catch(() => null);
     // The physical count only yields anything once a cycle count has been
     // completed in the WMS, so it is expected to no-op much of the time.
     await syncCycleCount
-      .mutateAsync({ ownerName, periodId })
+      .mutateAsync({ programmeId, ownerName, periodId })
       .catch(() => null);
   };
 
@@ -568,7 +568,7 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
                     colorRole="brand"
                     className="grow justify-center"
                     isDisabled={isLocked || isSyncing}
-                    onClick={() => syncReceipts.mutate({ ownerName })}
+                    onClick={() => syncReceipts.mutate({ programmeId, ownerName })}
                   >
                     <IconRefresh className="mr-1 size-4" />
                     {syncReceipts.isPending ? 'Syncing…' : 'Sync receipts'}
@@ -599,7 +599,7 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
                       className="justify-center"
                       isDisabled={isLocked || isSyncing || !zohoCustomer.trim()}
                       onClick={() =>
-                        syncInvoices.mutate({ customerMatch: zohoCustomer })
+                        syncInvoices.mutate({ programmeId, customerMatch: zohoCustomer })
                       }
                     >
                       <IconRefresh className="mr-1 size-4" />
@@ -615,7 +615,7 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
                       className="grow justify-center"
                       isDisabled={isLocked || isSyncing}
                       onClick={() =>
-                        syncCount.mutate({ ownerName, periodId })
+                        syncCount.mutate({ programmeId, ownerName, periodId })
                       }
                     >
                       <IconRefresh className="mr-1 size-4" />
@@ -628,7 +628,7 @@ const ImportsTab = ({ programmeId, periodId, periodEnd, isLocked }: ImportsTabPr
                       className="grow justify-center"
                       isDisabled={isLocked || isSyncing}
                       onClick={() =>
-                        syncCycleCount.mutate({ ownerName, periodId })
+                        syncCycleCount.mutate({ programmeId, ownerName, periodId })
                       }
                     >
                       <IconRefresh className="mr-1 size-4" />

@@ -5632,6 +5632,16 @@ export const triImportLines = pgTable(
     currency: text('currency'),
     docRef: text('doc_ref'),
     docDate: date('doc_date'),
+    /**
+     * Whose wine this line is, as the source document itself declared it.
+     *
+     * A `CONSIGNMENT_CRURATED` invoice states its owner outright, and that is
+     * better evidence than the SKU's — which defaults to Crurated for every
+     * wine and so cannot be trusted to split a statement by owner. Null on a
+     * `CONSIGNMENT_MIX`, where the document declares nothing per line and the
+     * SKU is all there is.
+     */
+    statedOwnerName: text('stated_owner_name'),
     // mapped | unmapped | ignored
     status: text('status').notNull().default('unmapped'),
     raw: jsonb('raw'),
