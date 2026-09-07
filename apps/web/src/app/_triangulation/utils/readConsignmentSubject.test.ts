@@ -10,6 +10,19 @@ describe('readConsignmentSubject', () => {
     );
   });
 
+  /*
+    INV-000296, the first real consignment invoice this was tested against.
+    CULT was missing from the tag map — the brief listed four owners and the
+    invoices carry five.
+  */
+  it('reads INV-000296 as Cult on consignment terms', () => {
+    const result = readConsignmentSubject('CONSIGNMENT_CULT', 'Consignment');
+
+    expect(result.isConsignment).toBe(true);
+    expect(result.ownerName).toBe('Cult');
+    expect(result.isMixed).toBe(false);
+  });
+
   it('does not let CRU swallow CRURATED', () => {
     const crurated = readConsignmentSubject('CONSIGNMENT_CRURATED', null);
     const cru = readConsignmentSubject('CONSIGNMENT_CRU', null);

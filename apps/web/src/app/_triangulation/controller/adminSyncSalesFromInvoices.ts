@@ -97,6 +97,15 @@ const adminSyncSalesFromInvoices = adminProcedure
     let codelessLines = 0;
     /** Invoices to this customer that are not consignment, and why */
     const nonConsignment: string[] = [];
+    /*
+      Consignment invoices whose owner tag is not one we know.
+
+      The brief named four owners and the invoices carry at least five —
+      CONSIGNMENT_CULT was found only by reading a real one. An unknown tag is
+      still counted, but it attributes per line rather than by name, so it has
+      to be visible or the list of owners stays wrong indefinitely.
+    */
+    const unknownTags = new Set<string>();
 
     // Both feeds describe the same sales, so the order-based one goes with
     // this one's own previous run. Leaving it would double Sold to City
@@ -153,6 +162,10 @@ const adminSyncSalesFromInvoices = adminProcedure
       if (!consignment.isConsignment) {
         nonConsignment.push(`${invoice.invoice_number} — ${consignment.reason}`);
         continue;
+      }
+
+      if (consignment.isMixed && /unrecognised owner/.test(consignment.reason)) {
+        unknownTags.add(`${invoice.invoice_number}: ${invoice.subject ?? ''}`);
       }
 
       invoiceNumbers.push(invoice.invoice_number);
@@ -251,6 +264,8 @@ const adminSyncSalesFromInvoices = adminProcedure
       */
       nonConsignmentCount: nonConsignment.length,
       nonConsignmentInvoices: nonConsignment.slice(0, 25),
+      /** Consignment invoices carrying an owner tag the tool does not know */
+      unknownOwnerTags: [...unknownTags].slice(0, 25),
     };
   });
 

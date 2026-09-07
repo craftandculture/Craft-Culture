@@ -9,6 +9,7 @@ const OWNER_BY_TAG: Record<string, string> = {
   CRURATED: 'Crurated',
   RARE: 'Rare',
   CRU: 'Cru',
+  CULT: 'Cult',
 };
 
 /**
