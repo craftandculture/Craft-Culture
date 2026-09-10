@@ -75,7 +75,10 @@ const partnersMerge = adminProcedure
     }
 
     // Every column in the database pointing at partners.id, asked of Postgres
-    const references = await db.execute<{ table_name: string; column_name: string }>(sql`
+    const references = await db.execute<{
+      table_name: string;
+      column_name: string;
+    }>(sql`
       SELECT tc.table_name, kcu.column_name
         FROM information_schema.table_constraints tc
         JOIN information_schema.key_column_usage kcu
@@ -100,41 +103,89 @@ const partnersMerge = adminProcedure
       );
 
     /*
-      Columns where a partner can only ever have one row.
+      Every unique key covering a column about to be repointed.
 
-      Owner pricing settings key on the partner id as their PRIMARY key, so
-      both records having margins — which is the normal case, and the reason
-      the duplicate hurts — makes repointing impossible: two rows cannot share
-      one key. There is only one sensible reading of that. A business has one
-      set of margins, the surviving record's are the ones in use, and the
-      duplicate's are discarded rather than blocking the merge.
+      Both records holding a row under the same key is the normal case, and the
+      reason the duplicate hurts: two rows cannot share one key, so repointing
+      collides. There is one sensible reading of that — a business has one set
+      of margins and one release per wine, and the survivor's is the one in use
+      — so the duplicate's copy is dropped rather than blocking the merge.
 
       Read from the database for the same reason the references are: a
       hard-coded list of "the unique ones" goes stale silently.
     */
-    const uniqueColumns = await db.execute<{ table_name: string; column_name: string }>(sql`
-      SELECT tc.table_name, MIN(kcu.column_name) AS column_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-          ON kcu.constraint_name = tc.constraint_name
-         AND kcu.constraint_schema = tc.constraint_schema
-       WHERE tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
-         AND tc.table_schema = 'public'
-       GROUP BY tc.table_name, tc.constraint_name
-      HAVING COUNT(*) = 1
+    const uniqueIndexes = await db.execute<{
+      table_name: string;
+      columns: string[];
+    }>(sql`
+      SELECT t.relname AS table_name,
+             array_agg(a.attname ORDER BY k.ord) AS columns
+        FROM pg_index i
+        JOIN pg_class t ON t.oid = i.indrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord)
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = k.attnum
+       WHERE i.indisunique
+         AND n.nspname = 'public'
+         AND i.indpred IS NULL
+         AND i.indexprs IS NULL
+       GROUP BY t.relname, i.indexrelid
     `);
 
-    const singular = new Set(
-      [...uniqueColumns].map((r) => `${r.table_name}.${r.column_name}`),
-    );
+    /**
+     * Rows on the duplicate that cannot move because the survivor already holds
+     * the same unique key.
+     *
+     * Read from pg_index, not information_schema: `uniqueIndex()` in the schema
+     * creates a bare unique INDEX, which has no row in
+     * information_schema.table_constraints at all. Missing those made a merge
+     * fail outright instead of resolving — wms_pricing_releases is unique on
+     * (lwin_key, owner_id), both records had released the same wines, and all
+     * 372 repointed rows collided at once.
+     *
+     * For a single-column key this reduces to "the survivor has any row here",
+     * which is exactly the behaviour it replaces.
+     */
+    const collisionPredicate = (target: Reference) => {
+      const covering = [...uniqueIndexes].filter(
+        (index) =>
+          index.table_name === target.table &&
+          index.columns.includes(target.column) &&
+          index.columns.every((column) => SAFE_IDENTIFIER.test(column)),
+      );
+
+      if (covering.length === 0) return null;
+
+      const clauses = covering.map((index) => {
+        const others = index.columns.filter(
+          (column) => column !== target.column,
+        );
+        const sameKey = others.map((column) =>
+          sql.raw(
+            `survivor_row."${column}" IS NOT DISTINCT FROM dup_row."${column}"`,
+          ),
+        );
+
+        return sql`EXISTS (
+          SELECT 1 FROM ${sql.raw(`"${target.table}"`)} survivor_row
+           WHERE survivor_row.${sql.raw(`"${target.column}"`)} = ${survivorId}
+           ${others.length > 0 ? sql`AND ${sql.join(sameKey, sql` AND `)}` : sql``}
+        )`;
+      });
+
+      return sql.join(clauses, sql` OR `);
+    };
 
     // Counted first so a dry run can report the move, and a real one has a
     // record of what it touched
     const counts: {
       table: string;
       column: string;
+      /** Rows the duplicate holds here */
       rows: number;
-      /** The survivor already has its own row here, so this one goes */
+      /** Of those, how many the survivor already has under the same key */
+      discarded: number;
+      /** Any at all — kept so the summary can name the tables that lost rows */
       discard: boolean;
     }[] = [];
 
@@ -149,19 +200,21 @@ const partnersMerge = adminProcedure
 
       if (rows === 0) continue;
 
-      let discard = false;
+      const collides = collisionPredicate(target);
+      let discarded = 0;
 
-      if (singular.has(`${target.table}.${target.column}`)) {
+      if (collides) {
         const [held] = await db.execute<{ n: number }>(sql`
           SELECT COUNT(*)::int AS n
-            FROM ${sql.raw(`"${target.table}"`)}
-           WHERE ${sql.raw(`"${target.column}"`)} = ${survivorId}
+            FROM ${sql.raw(`"${target.table}"`)} dup_row
+           WHERE dup_row.${sql.raw(`"${target.column}"`)} = ${duplicateId}
+             AND (${collides})
         `);
 
-        discard = Number(held?.n ?? 0) > 0;
+        discarded = Number(held?.n ?? 0);
       }
 
-      counts.push({ ...target, rows, discard });
+      counts.push({ ...target, rows, discarded, discard: discarded > 0 });
     }
 
     if (dryRun) {
@@ -170,24 +223,27 @@ const partnersMerge = adminProcedure
         survivor: survivor.businessName,
         duplicate: duplicate.businessName,
         moved: counts,
-        totalRows: counts
-          .filter((c) => !c.discard)
-          .reduce((sum, c) => sum + c.rows, 0),
+        totalRows: counts.reduce((sum, c) => sum + (c.rows - c.discarded), 0),
       };
     }
 
     await db.transaction(async (tx) => {
       for (const target of counts) {
         try {
-          if (target.discard) {
-            // The survivor's own row is the one in use; this one cannot move
-            // onto it and must not be left pointing at a retired record.
-            await tx.execute(sql`
-              DELETE FROM ${sql.raw(`"${target.table}"`)}
-               WHERE ${sql.raw(`"${target.column}"`)} = ${duplicateId}
-            `);
+          if (target.discarded > 0) {
+            /*
+              Only the rows that actually collide. Deleting everything the
+              duplicate held here — which is what a table-wide delete did —
+              threw away releases and overrides the survivor did NOT have, so
+              a merge quietly lost data instead of gathering it.
+            */
+            const collides = collisionPredicate(target);
 
-            continue;
+            await tx.execute(sql`
+              DELETE FROM ${sql.raw(`"${target.table}"`)} dup_row
+               WHERE dup_row.${sql.raw(`"${target.column}"`)} = ${duplicateId}
+                 AND (${collides})
+            `);
           }
 
           await tx.execute(sql`

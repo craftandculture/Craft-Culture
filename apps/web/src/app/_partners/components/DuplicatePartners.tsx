@@ -1,6 +1,10 @@
 'use client';
 
-import { IconAlertTriangle, IconArrowRight, IconLoader2 } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconArrowRight,
+  IconLoader2,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -40,7 +44,13 @@ const DuplicatePartners = () => {
     key: string;
     survivor: string;
     duplicate: string;
-    moved: { table: string; column: string; rows: number; discard: boolean }[];
+    moved: {
+      table: string;
+      column: string;
+      rows: number;
+      discarded: number;
+      discard: boolean;
+    }[];
     totalRows: number;
   } | null>(null);
 
@@ -136,7 +146,9 @@ const DuplicatePartners = () => {
                         {[
                           `${record.stockCases} cases`,
                           `${record.shipments} shipment${record.shipments === 1 ? '' : 's'}`,
-                          record.hasPricingSettings ? 'has margins' : 'no margins',
+                          record.hasPricingSettings
+                            ? 'has margins'
+                            : 'no margins',
                           record.status,
                         ].join(' · ')}
                       </span>
@@ -185,16 +197,20 @@ const DuplicatePartners = () => {
                             ? 'Holds nothing — merging only retires the record.'
                             : [
                                 shown.moved
-                                  .filter((m) => !m.discard)
-                                  .map((m) => `${m.rows}× ${m.table}`)
+                                  .filter((m) => m.rows - m.discarded > 0)
+                                  .map(
+                                    (m) =>
+                                      `${m.rows - m.discarded}× ${m.table}`,
+                                  )
                                   .join(' · '),
-                                // Named separately: a row that is dropped is
-                                // not a row that moved, and the difference
-                                // matters to whoever presses the button
-                                shown.moved.filter((m) => m.discard).length > 0
-                                  ? `discarded (this record's own kept on the survivor): ${shown.moved
-                                      .filter((m) => m.discard)
-                                      .map((m) => m.table)
+                                // Named separately, with counts: a table can
+                                // move some rows and drop others, and the
+                                // difference matters to whoever presses this
+                                shown.moved.filter((m) => m.discarded > 0)
+                                  .length > 0
+                                  ? `discarded (survivor already has its own): ${shown.moved
+                                      .filter((m) => m.discarded > 0)
+                                      .map((m) => `${m.discarded}× ${m.table}`)
                                       .join(', ')}`
                                   : '',
                               ]
