@@ -8,6 +8,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminApproveSalesOrders from './controller/adminApproveSalesOrders';
 import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListFromSalesOrder';
+import adminGetCustomerInvoiceTotals from './controller/adminGetCustomerInvoiceTotals';
 import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
 import adminListSalesOrders from './controller/adminListSalesOrders';
@@ -24,6 +25,8 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   sync: adminSyncSalesOrders,
   syncInvoices: adminSyncZohoInvoices,
   getPickedForDispatch: adminGetPickedOrdersForDispatch,
+  // What a customer has been invoiced, by their Zoho record and by currency
+  customerInvoiceTotals: adminGetCustomerInvoiceTotals,
 });
 
 export default zohoSalesOrdersRouter;
