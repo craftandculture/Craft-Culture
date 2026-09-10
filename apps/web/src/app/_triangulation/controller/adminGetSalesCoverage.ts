@@ -89,7 +89,7 @@ const adminGetSalesCoverage = adminProcedure
       WHERE NOT EXISTS (
         SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
         WHERE POSITION(
-          tok IN REGEXP_REPLACE(UPPER(inv.customer_name), '[^A-Z0-9]', '', 'g')
+          tok IN REGEXP_REPLACE(UPPER(COALESCE(inv.customer_name, '')), '[^A-Z0-9]', '', 'g')
         ) = 0
       )
       ORDER BY inv.invoice_date DESC

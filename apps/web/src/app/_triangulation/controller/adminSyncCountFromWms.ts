@@ -86,7 +86,7 @@ const adminSyncCountFromWms = adminProcedure
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
       GROUP BY COALESCE(NULLIF(TRIM(s.supplier_sku), ''), s.lwin18)
@@ -125,7 +125,7 @@ const adminSyncCountFromWms = adminProcedure
       WHERE NOT EXISTS (
         SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
         WHERE POSITION(
-          tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+          tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
         ) = 0
       )
       ORDER BY s.owner_name

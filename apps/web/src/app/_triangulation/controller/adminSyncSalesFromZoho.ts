@@ -112,7 +112,7 @@ const adminSyncSalesFromZoho = adminProcedure
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(so.customer_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(so.customer_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
         AND so.status IS DISTINCT FROM 'cancelled'
@@ -144,7 +144,7 @@ const adminSyncSalesFromZoho = adminProcedure
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(so.customer_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(so.customer_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
         AND so.status IS DISTINCT FROM 'cancelled'

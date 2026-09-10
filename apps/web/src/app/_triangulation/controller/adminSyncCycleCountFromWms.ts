@@ -89,7 +89,7 @@ const adminSyncCycleCountFromWms = adminProcedure
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(st.owner_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(st.owner_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
       GROUP BY ci.lwin18

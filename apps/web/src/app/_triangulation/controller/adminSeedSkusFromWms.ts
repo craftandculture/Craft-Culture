@@ -45,7 +45,7 @@ const adminSeedSkusFromWms = adminProcedure
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(s.owner_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
       ORDER BY s.supplier_sku, s.received_at DESC NULLS LAST

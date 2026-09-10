@@ -66,7 +66,7 @@ const adminSyncReceiptsFromWms = adminProcedure
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
           WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(p.business_name), '[^A-Z0-9]', '', 'g')
+            tok IN REGEXP_REPLACE(UPPER(COALESCE(p.business_name, '')), '[^A-Z0-9]', '', 'g')
           ) = 0
         )
         AND m.quantity_cases <> 0
