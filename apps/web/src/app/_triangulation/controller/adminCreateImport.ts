@@ -82,6 +82,7 @@ const adminCreateImport = adminProcedure
       currency: line.currency ?? null,
       doc_ref: line.docRef ?? null,
       doc_date: line.docDate ?? null,
+      stated_owner_name: line.statedOwnerName ?? null,
       status: 'unmapped',
       raw: line.raw ?? null,
     }));
@@ -102,6 +103,7 @@ const adminCreateImport = adminProcedure
         'currency',
         'doc_ref',
         'doc_date',
+        'stated_owner_name',
         'status',
         'raw',
       ],

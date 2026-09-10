@@ -44,6 +44,12 @@ const packingListResultSchema = z.object({
           .describe('Bottles per case, only when the document states or implies it'),
         bottleSize: z.string().optional().describe('Bottle size as printed, e.g. 75cl'),
         lwin: z.string().optional().describe('LWIN code if one is printed'),
+        consignmentOwner: z
+          .string()
+          .optional()
+          .describe(
+            'The CONSIGNMENT_* heading this line sits under, exactly as printed, e.g. CONSIGNMENT_CC. Omit when the document has no such headings.',
+          ),
       }),
     )
     .describe('Every product line on the document, across all pages'),
@@ -64,6 +70,12 @@ Rules:
 - Only state caseConfig when the document says or clearly shows it (e.g. a
   "6x75cl" format column). Leave it out rather than assuming a house default —
   a wrong pack size silently multiplies the error six-fold.
+- A row reading CONSIGNMENT_CC, CONSIGNMENT_RARE, CONSIGNMENT_CRU,
+  CONSIGNMENT_CRURATED or CONSIGNMENT_CULT is a HEADING, not a product. It says
+  whose wine every line beneath it is, until the next such heading. Do not
+  extract it as a line; instead copy it into consignmentOwner on each line it
+  covers. An invoice subjected CONSIGNMENT_MIX carries several owners this way,
+  and attributing its lines to one owner settles the wrong client.
 - Ignore totals rows, subtotals, pallet summaries and freight lines.
 - If a value is not printed, leave the field out rather than guessing.`;
 
@@ -146,6 +158,12 @@ const adminExtractPackingList = adminProcedure
         // before the bottle figures mean anything.
         linesWithoutPack: lines.filter((line) => !line.caseConfig).length,
         linesWithoutCode: lines.filter((line) => !line.code).length,
+        /*
+          How many lines the document attributed to an owner. A MIX invoice
+          that came back with none means the headings were not read, which is
+          indistinguishable from a single-owner invoice in the figures alone.
+        */
+        linesWithOwner: lines.filter((line) => line.consignmentOwner).length,
       };
     } catch (error) {
       if (error instanceof TRPCError) {

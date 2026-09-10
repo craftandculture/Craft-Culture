@@ -59,6 +59,14 @@ export const importLineInputSchema = z.object({
   unitPrice: z.number().finite().optional().nullable(),
   currency: z.string().max(10).optional().nullable(),
   docRef: z.string().max(120).optional().nullable(),
+  /**
+   * Whose wine the document said this line is.
+   *
+   * A CONSIGNMENT_MIX invoice groups its items under owner headings, and the
+   * heading is the only place that answer exists — Zoho's API returns neither
+   * the subject nor the heading rows.
+   */
+  statedOwnerName: z.string().max(120).optional().nullable(),
   docDate: isoDateSchema.optional().nullable(),
   raw: z.record(z.string(), z.unknown()).optional().nullable(),
 });

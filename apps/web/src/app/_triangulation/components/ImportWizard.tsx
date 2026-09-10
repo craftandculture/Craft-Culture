@@ -23,6 +23,7 @@ import importKindLabels from '../utils/importKindLabels';
 import parseCell from '../utils/parseCell';
 import parseWorkbook from '../utils/parseWorkbook';
 import type { ParsedSheet } from '../utils/parseWorkbook';
+import readConsignmentSubject from '../utils/readConsignmentSubject';
 
 
 export interface ImportWizardProps {
@@ -174,6 +175,15 @@ const ImportWizard = ({
             currency: null,
             docRef: result.documentRef ?? null,
             docDate: result.documentDate ?? null,
+            /*
+              The CONSIGNMENT_* heading this line sat under, resolved to the
+              same owner name the invoice feed writes. Resolved through the
+              one parser rather than stored as the raw tag, so "CONSIGNMENT_CRU"
+              cannot mean Cru here and Crurated there.
+            */
+            statedOwnerName: line.consignmentOwner
+              ? readConsignmentSubject(line.consignmentOwner, null).ownerName
+              : null,
             raw: null,
           })),
         );
