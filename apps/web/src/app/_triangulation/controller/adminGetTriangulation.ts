@@ -7,7 +7,10 @@ import resolveProgrammeId from '../utils/programmeId';
 
 export interface TriangulationRow {
   skuId: string;
-  wCode: string;
+  /** Crurated's house code; null for clients identified by LWIN */
+  wCode: string | null;
+  /** The wine's LWIN, which is the identity for every client but Crurated */
+  lwin18: string | null;
   productName: string;
   producer: string | null;
   vintage: number | null;
@@ -257,6 +260,7 @@ const adminGetTriangulation = adminProcedure
         SELECT
           s.id AS "skuId",
           s.w_code AS "wCode",
+          s.lwin18 AS "lwin18",
           s.product_name AS "productName",
           s.producer,
           s.vintage,

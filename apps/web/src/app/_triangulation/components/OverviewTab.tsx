@@ -63,6 +63,19 @@ const OverviewTab = ({
   /** Whether C&C physically hold this client's stock */
   const holdsStock = inputProfile !== 'consignment';
 
+  /*
+    What to print in the identity column.
+
+    Only Crurated issue W codes, so every other client's wines carry none and
+    this read `row.wCode.length` straight off a null — which took down the
+    whole Reconciliation tab the moment a client that is not Crurated had a
+    single committed row. The LWIN is the identity for those clients, and a
+    wine seeded from a document may have neither, so the name has to be able
+    to stand alone.
+  */
+  const identityOf = (row: { wCode: string | null; lwin18: string | null }) =>
+    row.wCode ?? row.lwin18 ?? '—';
+
   const [search, setSearch] = useState('');
   const [variancesOnly, setVariancesOnly] = useState(false);
   const [openSkuId, setOpenSkuId] = useState<string | null>(null);
@@ -241,7 +254,7 @@ const OverviewTab = ({
                     key={`${row.skuId}-${row.kind}-${row.asOfDate ?? 'all'}`}
                     className="border-border-danger/20 border-t align-top"
                   >
-                    <td className="py-1 pr-3 font-mono">{row.wCode}</td>
+                    <td className="py-1 pr-3 font-mono">{identityOf(row)}</td>
                     <td className="py-1 pr-3">{row.productName}</td>
                     <td className="text-text-muted py-1 pr-3">
                       {row.kind === 'cc_opening'
@@ -452,14 +465,14 @@ const OverviewTab = ({
                     }`}
                     title={
                       row.hasNegative
-                        ? `${row.wCode} — calculates to a negative position, so more went out than was recorded in`
-                        : row.wCode
+                        ? `${identityOf(row)} — calculates to a negative position, so more went out than was recorded in`
+                        : identityOf(row)
                     }
                   >
                     <span className="text-text-primary block leading-tight">
-                      {row.wCode.length > 18
-                        ? `${row.wCode.slice(0, 17)}…`
-                        : row.wCode}
+                      {identityOf(row).length > 18
+                        ? `${identityOf(row).slice(0, 17)}…`
+                        : identityOf(row)}
                     </span>
                     <span className="text-text-muted block leading-tight">
                       {row.cdCodes ?? (
