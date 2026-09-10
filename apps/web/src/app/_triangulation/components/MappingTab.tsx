@@ -14,6 +14,7 @@ import useTRPC from '@/lib/trpc/browser';
 import SelectField from './SelectField';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
 import type { TriImportKind } from '../schemas/triangulationSchemas';
+import aliasSourceLabels from '../utils/aliasSourceLabels';
 import importKindLabels from '../utils/importKindLabels';
 
 
@@ -368,8 +369,12 @@ const MappingTab = ({ programmeId }: MappingTabProps) => {
                         </span>
                       )}
                     </Typography>
+                    {/* Whose CODES this file speaks, not whose wine it is —
+                        the stored value for our own house codes is "crurated",
+                        which read as the wine belonging to the wrong client. */}
                     <Badge size="xs" colorRole="muted">
-                      {row.aliasSource.replace('_', ' ')}
+                      {aliasSourceLabels[row.aliasSource as TriAliasSource] ??
+                        row.aliasSource.replace('_', ' ')}
                     </Badge>
                     {row.kinds.map((kind) => (
                       <Badge key={kind} size="xs" colorRole="info">
