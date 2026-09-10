@@ -95,6 +95,19 @@ const adminGetTriangulation = adminProcedure
     // With no period selected, reconcile everything recorded to date.
     const cutoff = period?.periodEnd ?? '9999-12-31';
 
+    /*
+      Whether we physically hold this client's stock.
+
+      Read through the row's own JSON so a deploy whose migration has not run
+      returns 'warehouse' rather than failing the statement and emptying the
+      screen.
+    */
+    const [profile] = await client<{ inputProfile: string }[]>`
+      SELECT COALESCE(to_jsonb(p) ->> 'input_profile', 'warehouse') AS "inputProfile"
+      FROM tri_programmes p WHERE p.id = ${programmeId} LIMIT 1
+    `;
+    const holdsStock = (profile?.inputProfile ?? 'warehouse') !== 'consignment';
+
     /**
      * Which snapshot to fall back on when none was taken by the cut-off.
      *
@@ -303,7 +316,15 @@ const adminGetTriangulation = adminProcedure
             (cd.qty - (COALESCE(f.cd_received_at_count, 0) - COALESCE(f.cd_sold_at_count, 0)))::float8
           END AS "cdVariance",
           (
-            COALESCE(f.cc_received, 0) - COALESCE(f.cc_sold_to_cd, 0) < 0
+            /*
+              Receiving into our warehouse is an input a consignment client
+              does not have — their wine never enters it. Measuring "received
+              minus sold" there subtracts a real figure from a structural
+              zero, so every row went negative and the screen reported four
+              faults on a reconciliation that was correct.
+            */
+            (${holdsStock}
+              AND COALESCE(f.cc_received, 0) - COALESCE(f.cc_sold_to_cd, 0) < 0)
             OR COALESCE(f.cc_sold_to_cd, 0) - COALESCE(f.cd_sold, 0) < 0
           ) AS "hasNegative"
         FROM tri_skus s
