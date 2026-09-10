@@ -217,20 +217,6 @@ const adminSyncSalesFromInvoices = adminProcedure
       */
       if (subject && evidence.length >= 6) evidence.shift();
 
-      /*
-        Zoho documents item_type as line_item | header | subtotal, so a heading
-        should arrive like any other row. None did across 272 lines, which is
-        either a GET that omits them or a heading whose text is not in `name`.
-        Dumping one invoice's rows verbatim settles which.
-      */
-      if (/INV-000294|INV-000296/.test(invoice.invoice_number)) {
-        for (const raw of invoice.line_items ?? []) {
-          evidence.push(
-            `${invoice.invoice_number} row: type=${raw.item_type ?? '(none)'} qty=${raw.quantity ?? '(none)'} name=${(raw.name ?? '(none)').slice(0, 40)} desc=${(raw.description ?? '(none)').slice(0, 28)}`,
-          );
-        }
-      }
-
       if (subject || evidence.length < 6) {
         /*
           The custom fields are listed by label because the subject is printed
