@@ -7,14 +7,10 @@ import { partners } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
-/** A table and column pointing at partners.id */
-interface Reference {
-  table: string;
-  column: string;
-}
-
-/** Postgres identifiers, as Postgres itself writes them */
-const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+import type { PartnerReference as Reference } from '../utils/partnerReferenceColumns';
+import partnerReferenceColumns, {
+  SAFE_IDENTIFIER,
+} from '../utils/partnerReferenceColumns';
 
 /**
  * Move everything one partner record owns onto another, and retire it
@@ -74,33 +70,7 @@ const partnersMerge = adminProcedure
       });
     }
 
-    // Every column in the database pointing at partners.id, asked of Postgres
-    const references = await db.execute<{
-      table_name: string;
-      column_name: string;
-    }>(sql`
-      SELECT tc.table_name, kcu.column_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-          ON kcu.constraint_name = tc.constraint_name
-         AND kcu.constraint_schema = tc.constraint_schema
-        JOIN information_schema.constraint_column_usage ccu
-          ON ccu.constraint_name = tc.constraint_name
-         AND ccu.constraint_schema = tc.constraint_schema
-       WHERE tc.constraint_type = 'FOREIGN KEY'
-         AND tc.table_schema = 'public'
-         AND ccu.table_name = 'partners'
-         AND ccu.column_name = 'id'
-    `);
-
-    const targets: Reference[] = references
-      .map((r) => ({ table: r.table_name, column: r.column_name }))
-      .filter(
-        (r) =>
-          SAFE_IDENTIFIER.test(r.table) &&
-          SAFE_IDENTIFIER.test(r.column) &&
-          r.table !== 'partners',
-      );
+    const targets = await partnerReferenceColumns();
 
     /*
       Every unique key covering a column about to be repointed.

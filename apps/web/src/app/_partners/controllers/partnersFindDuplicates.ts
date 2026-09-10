@@ -4,6 +4,7 @@ import db from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import normalisePartnerName from '../utils/normalisePartnerName';
+import partnerReferenceColumns from '../utils/partnerReferenceColumns';
 
 export interface DuplicatePartnerRecord {
   id: string;
@@ -83,7 +84,10 @@ const partnersFindDuplicates = adminProcedure.query(async () => {
 
     if (!key) continue;
 
-    const group = groups.get(key) ?? { businessName: row.business_name, records: [] };
+    const group = groups.get(key) ?? {
+      businessName: row.business_name,
+      records: [],
+    };
 
     group.records.push({
       id: row.id,
@@ -100,14 +104,57 @@ const partnersFindDuplicates = adminProcedure.query(async () => {
     groups.set(key, group);
   }
 
+  const candidates = [...groups.values()].filter(
+    (group) => group.records.length > 1,
+  );
+
+  /*
+    A retired record that still holds nothing is history, not a duplicate.
+
+    It has to be asked of the data, not inferred from the name or the status:
+    the case this exists for is a record retired by an earlier merge that has
+    since had something attached to it again — an order raised against the old
+    id — and that is precisely the thing worth surfacing. Counting is cheap
+    because it only runs for names that already collide, which is normally none.
+  */
+  const retired = candidates
+    .flatMap((group) => group.records)
+    .filter((record) => record.status !== 'active');
+
+  const emptyRetired = new Set<string>();
+
+  if (retired.length > 0) {
+    const targets = await partnerReferenceColumns();
+
+    for (const record of retired) {
+      let held = 0;
+
+      for (const target of targets) {
+        const [row] = await db.execute<{ n: number }>(sql`
+          SELECT COUNT(*)::int AS n
+            FROM ${sql.raw(`"${target.table}"`)}
+           WHERE ${sql.raw(`"${target.column}"`)} = ${record.id}
+        `);
+
+        held += Number(row?.n ?? 0);
+
+        if (held > 0) break;
+      }
+
+      if (held === 0) emptyRetired.add(record.id);
+    }
+  }
+
   return {
-    groups: [...groups.values()]
-      .filter((group) => group.records.length > 1)
-      // The biggest holding first: it is the one most likely to be the keeper
+    groups: candidates
       .map((group) => ({
         ...group,
-        records: [...group.records].sort((a, b) => b.stockCases - a.stockCases),
-      })),
+        records: group.records
+          .filter((record) => !emptyRetired.has(record.id))
+          // The biggest holding first: it is the one most likely to be the keeper
+          .sort((a, b) => b.stockCases - a.stockCases),
+      }))
+      .filter((group) => group.records.length > 1),
   };
 });
 
