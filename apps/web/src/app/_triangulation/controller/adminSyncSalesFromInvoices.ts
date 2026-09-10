@@ -135,6 +135,14 @@ const adminSyncSalesFromInvoices = adminProcedure
     const unknownTags = new Set<string>();
     /** What the first few invoices carried, so an empty feed can be diagnosed */
     const evidence: string[] = [];
+    /**
+     * How many invoices carried a subject line at all.
+     *
+     * The sample alone could not answer this: it took whichever invoices came
+     * first, which are the newest, and those may simply be untagged while the
+     * older ones carry the tag the document prints.
+     */
+    let withSubject = 0;
 
     // Both feeds describe the same sales, so the order-based one goes with
     // this one's own previous run. Leaving it would double Sold to City
@@ -198,7 +206,16 @@ const adminSyncSalesFromInvoices = adminProcedure
         return, or a tag nobody recognised. Those need different fixes and the
         resulting figure — zero — is identical for all three.
       */
-      if (evidence.length < 6) {
+      if (subject) withSubject += 1;
+
+      /*
+        Invoices that DO carry a subject are the informative ones, so they are
+        kept in preference to the first six encountered — otherwise a run can
+        report "no subject anywhere" having looked only at the newest.
+      */
+      if (subject && evidence.length >= 6) evidence.shift();
+
+      if (subject || evidence.length < 6) {
         /*
           The custom fields are listed by label because the subject is printed
           on the document and absent from the API response, so the field it
@@ -344,8 +361,12 @@ const adminSyncSalesFromInvoices = adminProcedure
       unknownOwnerTags: [...unknownTags].slice(0, 25),
       /** This client's tag, so an unconfigured one explains its own emptiness */
       consignmentTag: claim?.consignmentTag ?? null,
-      /** What the first few invoices carried, whatever was decided */
+      /** What the sampled invoices carried, whatever was decided */
       evidence,
+      /** How many of every invoice read carried a subject line at all */
+      withSubject,
+      /** How many invoices were read in total, so the sample can be judged */
+      invoicesRead: headers.length,
       /** Consignment invoices belonging to other clients, by owner */
       otherOwners: [...otherOwners.entries()].map(
         ([owner, count]) => `${owner}: ${count}`,
