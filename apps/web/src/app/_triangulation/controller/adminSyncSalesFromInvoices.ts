@@ -135,6 +135,8 @@ const adminSyncSalesFromInvoices = adminProcedure
     const unknownTags = new Set<string>();
     /** What the first few invoices carried, so an empty feed can be diagnosed */
     const evidence: string[] = [];
+    /** Owner heading rows found inside invoices, which is how a MIX splits */
+    const headingsSeen = new Set<string>();
     /**
      * How many invoices carried a subject line at all.
      *
@@ -246,16 +248,11 @@ const adminSyncSalesFromInvoices = adminProcedure
         nobody goes to whoever takes the unattributed, which is where it has
         always gone.
       */
-      const belongsHere = consignment.ownerName
-        ? consignment.ownerName === ownerClaimed
-        : takesUnattributed;
-
-      if (!belongsHere) {
-        const owner = consignment.ownerName ?? 'no stated owner';
-
-        otherOwners.set(owner, (otherOwners.get(owner) ?? 0) + 1);
-        continue;
-      }
+      /*
+        A MIX invoice belongs to several clients at once, so the decision is
+        taken per line rather than per invoice. An invoice naming one owner
+        throughout still resolves the same way — every line inherits it.
+      */
 
       if (consignment.isMixed && /unrecognised owner/.test(consignment.reason)) {
         unknownTags.add(`${invoice.invoice_number}: ${subject ?? ''}`);
@@ -263,8 +260,51 @@ const adminSyncSalesFromInvoices = adminProcedure
 
       invoiceNumbers.push(invoice.invoice_number);
 
+      /*
+        Whose wine the lines beneath belong to.
+
+        A CONSIGNMENT_MIX invoice groups its items under heading rows —
+        "CONSIGNMENT_CC", then "CONSIGNMENT_RARE" — and Zoho returns those
+        headings in `line_items` like any other row. Reading them is what lets
+        one invoice settle against two clients; without it the whole document
+        went to whoever took the unattributed.
+
+        Starts at the invoice's own owner, so a single-owner invoice needs no
+        headings at all.
+      */
+      let lineOwner = consignment.ownerName;
+
       for (const line of invoice.line_items ?? []) {
+        /*
+          A heading names an owner and sells nothing. Recognised on the name
+          rather than on `item_type`, since a row typed as an ordinary item but
+          named CONSIGNMENT_RARE means exactly the same thing to the person who
+          wrote it, and quantity is what separates the two.
+        */
+        const heading = readConsignmentSubject(line.name, null);
+
+        if (heading.isConsignment && !line.quantity) {
+          lineOwner = heading.ownerName ?? lineOwner;
+          headingsSeen.add(`${invoice.invoice_number}: ${line.name.trim()}`);
+          continue;
+        }
+
         if (!line.quantity) continue;
+
+        /*
+          Now the line's owner is known, decide whether it is this client's.
+          Lines belonging elsewhere are counted and left for their own client
+          rather than absorbed into this one.
+        */
+        const owner = lineOwner;
+        const belongsHere = owner ? owner === ownerClaimed : takesUnattributed;
+
+        if (!belongsHere) {
+          const label = owner ?? 'no stated owner';
+
+          otherOwners.set(label, (otherOwners.get(label) ?? 0) + 1);
+          continue;
+        }
 
         const code = line.sku ?? '';
         const normalized = normalizeCode(code);
@@ -309,8 +349,9 @@ const adminSyncSalesFromInvoices = adminProcedure
           currency: invoice.currency_code ?? null,
           doc_ref: invoice.invoice_number,
           doc_date: invoice.date,
-          // Null on a MIX, where the SKU is the only thing that knows
-          stated_owner_name: consignment.ownerName,
+          // The heading's owner where the invoice grouped its lines, else the
+          // invoice's own. Null only when neither said.
+          stated_owner_name: owner,
           status: 'unmapped',
         });
       }
@@ -367,7 +408,9 @@ const adminSyncSalesFromInvoices = adminProcedure
       withSubject,
       /** How many invoices were read in total, so the sample can be judged */
       invoicesRead: headers.length,
-      /** Consignment invoices belonging to other clients, by owner */
+      /** Owner headings found inside invoices, which is how a MIX splits */
+      headings: [...headingsSeen].slice(0, 25),
+      /** Consignment lines belonging to other clients, by owner */
       otherOwners: [...otherOwners.entries()].map(
         ([owner, count]) => `${owner}: ${count}`,
       ),

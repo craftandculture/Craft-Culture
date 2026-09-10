@@ -87,6 +87,15 @@ export interface ZohoContactResponse {
  */
 export interface ZohoLineItem {
   item_id?: string;
+  /**
+   * What kind of row this is.
+   *
+   * Zoho Books allows header rows inside the item table, and Craft & Culture
+   * use them on a CONSIGNMENT_MIX invoice to say whose wine the lines beneath
+   * belong to. Those rows come back in `line_items` like any other.
+   */
+  item_type?: string;
+  item_order?: number;
   /** The item's code, which carries the LWIN on wine lines */
   sku?: string;
   name: string;

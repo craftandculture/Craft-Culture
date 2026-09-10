@@ -363,7 +363,15 @@ const ImportsTab = ({
           ? `Owner tag not recognised, so attributed per line: ${result.unknownOwnerTags.join('; ')}`
           : null,
         result.otherOwners.length > 0
-          ? `Left with their own client: ${result.otherOwners.join(', ')}`
+          ? `Lines left with their own client: ${result.otherOwners.join(', ')}`
+          : null,
+        /*
+          Whether the owner headings inside a MIX invoice are reaching us.
+          Their absence and an invoice that genuinely names one owner look
+          identical in the figures.
+        */
+        result.headings.length > 0
+          ? `Owner headings read: ${result.headings.join('; ')}`
           : null,
         /*
           A client with no tag claims nothing, and reads as a client with no
