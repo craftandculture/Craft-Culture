@@ -161,6 +161,7 @@ const TriangulationClient = () => {
       const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
 
       createPeriod.mutate({
+        programmeId,
         label: `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`,
         periodStart: start.toISOString().slice(0, 10),
         periodEnd: end.toISOString().slice(0, 10),
@@ -169,7 +170,10 @@ const TriangulationClient = () => {
       return;
     }
 
-    createPeriod.mutate(next);
+    // Periods belong to a client. Without the programme this created the
+    // period under Crurated, and the tab it was created from went on saying
+    // it had none.
+    createPeriod.mutate({ programmeId, ...next });
   };
 
   return (
@@ -340,7 +344,7 @@ const TriangulationClient = () => {
           <SkusTab programmeId={programmeId} />
         </TabsContent>
         <TabsContent value="zoho" className="pt-6">
-          <ZohoCleanupTab />
+          <ZohoCleanupTab programmeId={programmeId} />
         </TabsContent>
       </Tabs>
     </div>

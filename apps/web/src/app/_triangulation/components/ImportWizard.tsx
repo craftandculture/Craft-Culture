@@ -26,6 +26,15 @@ import type { ParsedSheet } from '../utils/parseWorkbook';
 
 
 export interface ImportWizardProps {
+  /**
+   * Which client's reconciliation this upload belongs to.
+   *
+   * Without it every upload took the server's default programme, so a file
+   * chosen on Cult's tab was filed under Crurated and its rows appeared in
+   * nobody's mapping queue — the import reported success and the wine went
+   * somewhere the person who uploaded it was not looking.
+   */
+  programmeId: string | null;
   kind: TriImportKind;
   periodId: string | null;
   defaultAsOfDate: string;
@@ -77,6 +86,7 @@ const defaultAliasSource = (kind: TriImportKind): TriAliasSource => {
  * costs a dropdown, not a code change.
  */
 const ImportWizard = ({
+  programmeId,
   kind,
   periodId,
   defaultAsOfDate,
@@ -524,6 +534,7 @@ const ImportWizard = ({
           isDisabled={!canSubmit || createImport.isPending}
           onClick={() =>
             createImport.mutate({
+              programmeId,
               periodId,
               kind,
               fileName,

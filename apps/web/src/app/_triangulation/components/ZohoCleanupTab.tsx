@@ -66,7 +66,18 @@ const stateOf = (wine: ZohoCleanupWine) => {
  * alias table goes on resolving the old codes, so history keeps reading
  * correctly throughout.
  */
-const ZohoCleanupTab = () => {
+export interface ZohoCleanupTabProps {
+  /**
+   * Which client's reconciliation to rebuild after correcting a Zoho item.
+   *
+   * Re-reading the orders writes a sales feed, and without the programme that
+   * write took Crurated by default — so repairing an item on another client's
+   * tab rebuilt Crurated's figures and left the client's own untouched.
+   */
+  programmeId: string | null;
+}
+
+const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
@@ -205,6 +216,7 @@ const ZohoCleanupTab = () => {
 
       const result =
         await trpcClient.triangulation.admin.syncSalesFromZoho.mutate({
+          programmeId,
           customerMatch: 'CD General',
         });
 

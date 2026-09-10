@@ -489,6 +489,7 @@ const ImportsTab = ({
         </Typography>
         <ImportWizard
           kind={activeKind}
+          programmeId={programmeId}
           periodId={periodId}
           defaultAsOfDate={periodEnd ?? new Date().toISOString().slice(0, 10)}
           onClose={() => setActiveKind(null)}
