@@ -999,10 +999,24 @@ const WMSReceiveShipmentPage = () => {
   const addedItems = Array.from(receivedItems.values()).filter(
     (ri) => ri.isAddedItem && !shipment.items.some((si) => si.id === ri.id),
   );
-  const totalProducts = shipment.items.length + addedItems.length;
-  const completedProducts = Array.from(receivedItems.values()).filter(
-    (item) => item.isCommitted || item.isSkipped,
+  /*
+    Both halves of the progress count come off ONE list.
+
+    They used to be derived separately — the total from the shipment, the
+    completed count from every entry in the draft — which let an orphaned draft
+    line push completed past total. A committed line whose logistics item is
+    later deleted is deliberately kept on load, so `completed === total` could
+    never hold again and receiving could not be finished from the screen at all.
+  */
+  const pageProducts = [
+    ...shipment.items.map((item) => receivedItems.get(item.id)),
+    ...addedItems,
+  ];
+  const totalProducts = pageProducts.length;
+  const completedProducts = pageProducts.filter(
+    (item) => item?.isCommitted || item?.isSkipped,
   ).length;
+  const outstandingProducts = totalProducts - completedProducts;
   const progressPercent = totalProducts > 0 ? Math.round((completedProducts / totalProducts) * 100) : 0;
   const allComplete = completedProducts === totalProducts && totalProducts > 0;
 
@@ -1078,7 +1092,7 @@ const WMSReceiveShipmentPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fill-secondary pb-32 sm:bg-fill-primary sm:pb-8">
+    <div className="min-h-screen bg-fill-secondary pb-32 sm:bg-fill-primary sm:pb-32">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-fill-primary p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -1431,20 +1445,6 @@ const WMSReceiveShipmentPage = () => {
               )}
             </div>
 
-            {/* Finish Receiving button at bottom of list */}
-            {allComplete && (
-              <Button
-                variant="default"
-                size="lg"
-                className="h-14 w-full text-lg"
-                onClick={handleCompleteReceiving}
-                disabled={finalizeMutation.isPending}
-              >
-                <ButtonContent iconLeft={finalizeMutation.isPending ? IconLoader2 : IconCheck}>
-                  {finalizeMutation.isPending ? 'Finishing...' : 'Finish Receiving'}
-                </ButtonContent>
-              </Button>
-            )}
           </>
         )}
 
@@ -2172,6 +2172,43 @@ const WMSReceiveShipmentPage = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+      </div>
+
+      {/*
+        Completion bar, pinned.
+
+        This action used to sit below the product list. On a 165-line shipment
+        that put it past every card on the page, so an operator who had turned
+        the whole list green reasonably concluded the job was done and left the
+        shipment in `partially_received` — where it stays in the receive queue
+        and is excluded from the inbound catalogue feed. Nothing about a
+        complete list closes a shipment; only this does.
+      */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border-primary bg-fill-primary p-3 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+        {allComplete ? (
+          <Button
+            variant="default"
+            size="lg"
+            className="h-14 w-full text-lg"
+            onClick={handleCompleteReceiving}
+            disabled={finalizeMutation.isPending}
+          >
+            <ButtonContent iconLeft={finalizeMutation.isPending ? IconLoader2 : IconCheck}>
+              {finalizeMutation.isPending ? 'Finishing...' : 'Finish Receiving'}
+            </ButtonContent>
+          </Button>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            className="h-14 w-full text-lg"
+            disabled
+          >
+            <ButtonContent iconLeft={IconAlertCircle}>
+              {outstandingProducts} of {totalProducts} still to receive
+            </ButtonContent>
+          </Button>
         )}
       </div>
 
