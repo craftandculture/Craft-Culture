@@ -1,5 +1,7 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
+import { deliveryAddressFor } from '@/lib/company';
+
 Font.register({
   family: 'Roboto',
   fonts: [
@@ -190,6 +192,7 @@ const InboundDeliveryNotePDFTemplate = ({
   const totalCases = items.reduce((s, i) => s + i.cases, 0);
   const totalBottles = items.reduce((s, i) => s + bottlesOf(i), 0);
   const arrival = shipment.arrivedAt ?? deliveryNote.generatedAt;
+  const deliveryAddress = deliveryAddressFor(shipment.warehouseName);
 
   return (
     <Document>
@@ -221,11 +224,16 @@ const InboundDeliveryNotePDFTemplate = ({
           </View>
           <View style={styles.partyBox}>
             <Text style={styles.partyLabel}>RECEIVED AT</Text>
-            <Text style={styles.partyName}>
-              {shipment.warehouseName ?? 'Craft & Culture Warehouse'}
+            <Text style={styles.partyName}>{deliveryAddress.name}</Text>
+            {deliveryAddress.lines.map((line) => (
+              <Text key={line} style={styles.partyLine}>
+                {line}
+              </Text>
+            ))}
+            <Text style={styles.partyLine}>{deliveryAddress.country}</Text>
+            <Text style={[styles.partyLine, { marginTop: 4 }]}>
+              Arrived {formatDate(arrival)}
             </Text>
-            <Text style={styles.partyLine}>United Arab Emirates</Text>
-            <Text style={styles.partyLine}>Arrived {formatDate(arrival)}</Text>
           </View>
         </View>
 

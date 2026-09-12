@@ -1,5 +1,7 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
+import { COMPANY_NAME, WAREHOUSE_ADDRESS } from '@/lib/company';
+
 // Register fonts
 Font.register({
   family: 'Roboto',
@@ -409,10 +411,13 @@ const DeliveryNotePDFTemplate = ({
           <View style={styles.addressCol}>
             <Text style={styles.addressLabel}>Ship From</Text>
             <View style={styles.addressBox}>
-              <Text style={[styles.addressText, styles.addressBold]}>Craft & Culture FZE</Text>
-              <Text style={styles.addressText}>Warehouse 1.2 (Duty Free)</Text>
-              <Text style={styles.addressText}>RAK Port</Text>
-              <Text style={styles.addressText}>Ras Al Khaimah, UAE</Text>
+              <Text style={[styles.addressText, styles.addressBold]}>{COMPANY_NAME}</Text>
+              {WAREHOUSE_ADDRESS.lines.map((line) => (
+                <Text key={line} style={styles.addressText}>
+                  {line}
+                </Text>
+              ))}
+              <Text style={styles.addressText}>{WAREHOUSE_ADDRESS.country}</Text>
             </View>
           </View>
           <View style={styles.addressCol}>
