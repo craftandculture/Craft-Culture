@@ -30,6 +30,7 @@ import adminExtractSheet from './controller/adminExtractSheet';
 import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoice';
 import adminFindLwinMismatches from './controller/adminFindLwinMismatches';
 import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
+import adminGenerateInboundDeliveryNote from './controller/adminGenerateInboundDeliveryNote';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
@@ -102,6 +103,7 @@ const adminRouter = createTRPCRouter({
   calculateLandedCost: adminCalculateLandedCost,
   extractSheet: adminExtractSheet,
   extractShipmentInvoice: adminExtractShipmentInvoice,
+  generateInboundDeliveryNote: adminGenerateInboundDeliveryNote,
   addShipmentCostLine: adminAddShipmentCostLine,
   deleteShipmentCostLine: adminDeleteShipmentCostLine,
 

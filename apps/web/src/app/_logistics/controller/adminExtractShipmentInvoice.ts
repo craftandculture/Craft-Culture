@@ -75,7 +75,12 @@ const adminExtractShipmentInvoice = adminProcedure
     // Parse ALL logistics invoices on the shipment (GAC + shipping + customs +
     // delivery) — not just one — and combine their charges. Commercial invoices
     // and packing lists are goods, so they're excluded.
-    const LOGISTICS_TYPES = /gac|shipping|freight|customs|clearance|delivery|bill_of_lading|airway/i;
+    // `delivery_note` is the transporter's charge for the final leg and is read
+    // for cost. `proof_of_delivery` is deliberately excluded: the inbound
+    // delivery note we generate for a supplier is filed under it and carries no
+    // charges, so feeding it to the parser would invent cost lines from a
+    // document that has none.
+    const LOGISTICS_TYPES = /gac|shipping|freight|customs|clearance|delivery_note|bill_of_lading|airway/i;
     const docs = await db
       .select()
       .from(logisticsDocuments)

@@ -518,6 +518,19 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: generateDeliveryNote, isPending: isGeneratingDN } = useMutation(
+    api.logistics.admin.generateInboundDeliveryNote.mutationOptions({
+      onSuccess: (r) => {
+        toast.success(
+          `${r.deliveryNoteNumber} created — ${r.totalCases} cases, ${r.totalBottles} bottles`,
+        );
+        window.open(r.fileUrl, '_blank');
+        void refetch();
+      },
+      onError: (e) => toast.error(e.message),
+    }),
+  );
+
   const { mutate: extractInvoice, isPending: isExtracting } = useMutation(
     api.logistics.admin.extractShipmentInvoice.mutationOptions({
       onSuccess: (r) => {
@@ -2696,6 +2709,25 @@ const ShipmentDetailPage = () => {
                 documents={shipment.documents ?? []}
                 onUploadComplete={() => void refetch()}
               />
+              {/*
+                The note a supplier asks for once their pallet has landed. Built
+                from the shipment's own lines, so it says what we actually
+                booked in rather than what the paperwork claimed.
+              */}
+              <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border-primary pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateDeliveryNote({ shipmentId })}
+                  disabled={isGeneratingDN || !(shipment.items ?? []).length}
+                  title="Create a delivery note confirming this consignment reached the warehouse"
+                >
+                  {isGeneratingDN ? 'Generating...' : 'Generate delivery note'}
+                </Button>
+                <Typography variant="bodySm" colorRole="muted">
+                  Confirms to the supplier that the consignment arrived, and files a copy here.
+                </Typography>
+              </div>
             </CardContent>
           </Card>
         )}
