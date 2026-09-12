@@ -9,9 +9,19 @@ import type { ZohoInvoice } from '@/lib/zoho/types';
  * nothing on every invoice, attributed every one of them to nobody, and left
  * each client's feed empty while Crurated absorbed the lot.
  *
- * Both are read, standard field first. Any custom field whose label or API
- * name mentions a subject counts, since the label is typed by whoever built
- * the template and is not guaranteed to be exactly "Subject".
+ * Three places are read, in order of how deliberate each is.
+ *
+ * `subject` and a subject-ish custom field come first, for the day Zoho starts
+ * returning either. Neither does today: across seventy City Drinks invoices
+ * both were empty on every one, and the heading rows Zoho's own docs allow
+ * (`item_type: header`) are dropped on read as well. Every carrier the
+ * document prints is invisible to the API.
+ *
+ * So the reference number is read too. It is the one field that arrives
+ * intact — it already holds the sales order, `SO-00105` — and a tag appended
+ * to it, `SO-00105 CONSIGNMENT_CULT`, reaches us where nothing else does.
+ * Reading it costs nothing while it is absent, so this works the day someone
+ * starts writing it and not before.
  *
  * @param invoice - The invoice as Zoho returns it
  * @returns The subject line, or null if the invoice carries none
@@ -27,9 +37,16 @@ const readInvoiceSubject = (invoice: ZohoInvoice) => {
 
   const value = field?.value;
 
-  if (typeof value !== 'string' || !value.trim()) return null;
+  if (typeof value === 'string' && value.trim()) return value.trim();
 
-  return value.trim();
+  /*
+    The reference number carries the sales order, so only the consignment tag
+    within it is taken — returning the whole string would make "SO-00105" look
+    like a subject that simply named no owner.
+  */
+  const tagged = /CONSIGNMENT_[A-Z]+/i.exec(invoice.reference_number ?? '');
+
+  return tagged?.[0]?.toUpperCase() ?? null;
 };
 
 export default readInvoiceSubject;

@@ -281,13 +281,29 @@ const adminSyncSalesFromInvoices = adminProcedure
           named CONSIGNMENT_RARE means exactly the same thing to the person who
           wrote it, and quantity is what separates the two.
         */
-        const heading = readConsignmentSubject(line.name, null);
+        /*
+          Zoho drops its own heading rows on read, so a mixed invoice can only
+          be split if the owner is written where the API does deliver —
+          the line's description, beside the pack size: "3x75cl CONSIGNMENT_CC".
+          The name is still read first, for the day headings start arriving.
+        */
+        const heading = readConsignmentSubject(
+          `${line.name ?? ''} ${line.description ?? ''}`,
+          null,
+        );
 
         if (heading.isConsignment && !line.quantity) {
           lineOwner = heading.ownerName ?? lineOwner;
           headingsSeen.add(`${invoice.invoice_number}: ${line.name.trim()}`);
           continue;
         }
+
+        /*
+          A tagged line is a wine, not a heading: it names its own owner and
+          sells something. The owner applies to this line alone rather than
+          carrying down, since a description is written per line.
+        */
+        const lineTagged = heading.isConsignment ? heading.ownerName : null;
 
         if (!line.quantity) continue;
 
@@ -296,7 +312,7 @@ const adminSyncSalesFromInvoices = adminProcedure
           Lines belonging elsewhere are counted and left for their own client
           rather than absorbed into this one.
         */
-        const owner = lineOwner;
+        const owner = lineTagged ?? lineOwner;
         const belongsHere = owner ? owner === ownerClaimed : takesUnattributed;
 
         if (!belongsHere) {
