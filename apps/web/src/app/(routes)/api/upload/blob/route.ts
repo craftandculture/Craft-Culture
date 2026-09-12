@@ -36,6 +36,19 @@ export const POST = async (request: Request) => {
             'text/csv',
           ],
           maximumSizeInBytes: 10 * 1024 * 1024, // 10MB
+          /*
+            The client uploads under the file's own name, so without this the
+            second upload of a given filename fails outright — "This blob
+            already exists". Two shipments that arrived on the same truck could
+            not both carry IMG_1234.jpg, and the operator was told nothing
+            except that Blob refused it.
+
+            A suffix rather than allowOverwrite: the same filename from two
+            shipments is two different photographs, and overwriting would leave
+            the first shipment's document row pointing at the second one's
+            image.
+          */
+          addRandomSuffix: true,
           tokenPayload: JSON.stringify({ userId: user.id }),
         };
       },

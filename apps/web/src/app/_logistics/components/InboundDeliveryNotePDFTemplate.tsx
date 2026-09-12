@@ -117,10 +117,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 8,
   },
-  signRow: { flexDirection: 'row', gap: 24, marginTop: 22 },
+  signRow: { flexDirection: 'row', gap: 24, marginTop: 28 },
   signCell: { flex: 1 },
   signLine: { borderBottom: `1px solid ${TEXT_MUTED}`, height: 28 },
-  signImage: { height: 26, marginBottom: 2, objectFit: 'contain' },
+  signImage: { height: 54, marginBottom: 2, objectFit: 'contain' },
   signName: { fontSize: 9, fontWeight: 'bold' },
   signLabel: { fontSize: 7, color: TEXT_MUTED, marginTop: 4 },
   footer: {
@@ -315,7 +315,7 @@ const InboundDeliveryNotePDFTemplate = ({
           <View style={styles.signCell}>
             {signature ? (
               <>
-                <View style={{ height: 26 }} />
+                <View style={{ height: 54 }} />
                 <View style={styles.signLine} />
                 <Text style={styles.signName}>{formatDate(signature.signedAt)}</Text>
               </>
