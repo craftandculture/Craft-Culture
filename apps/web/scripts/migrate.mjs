@@ -200,6 +200,14 @@ const runMigrations = async () => {
     );
     console.log('✅ wms_stock.open_bottles ready');
 
+    // Delivery notes: consignor address as it should read on the document,
+    // separate from the origin fields that record where goods left from.
+    console.log('🔄 Ensuring logistics_shipments.supplier_address column...');
+    await client.unsafe(
+      `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "supplier_address" text`,
+    );
+    console.log('✅ logistics_shipments.supplier_address ready');
+
     // Pricing Manager: bespoke per-line margin % over landed (Spirits/RTD).
     console.log('🔄 Ensuring wms_product_pricing.sell_margin_pct column...');
     await client.unsafe(

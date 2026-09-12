@@ -2788,6 +2788,15 @@ export const logisticsShipments = pgTable(
     originCountry: text('origin_country'),
     originCity: text('origin_city'),
     originWarehouse: text('origin_warehouse'),
+    /**
+     * The supplier's address as it should appear on paperwork leaving us.
+     *
+     * Distinct from the origin fields, which say where the goods physically
+     * left from — frequently a third-party cellar or forwarder rather than the
+     * party we bought from. A delivery note naming the cellar as consignor is
+     * wrong on the document the supplier files.
+     */
+    supplierAddress: text('supplier_address'),
 
     // Destination location
     destinationCountry: text('destination_country'),

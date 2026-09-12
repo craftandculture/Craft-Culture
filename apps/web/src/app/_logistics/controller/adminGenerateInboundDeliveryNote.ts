@@ -43,6 +43,8 @@ const adminGenerateInboundDeliveryNote = adminProcedure
         .max(2_000_000)
         .optional(),
       signedBy: z.string().min(1).max(120).optional(),
+      /** Saved back to the shipment so it only has to be typed once. */
+      supplierAddress: z.string().max(500).optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -85,18 +87,38 @@ const adminGenerateInboundDeliveryNote = adminProcedure
     const deliveryNoteNumber = `DN-${shipment.shipmentNumber}`;
 
     /*
-      The consignor's own address where we hold one, since that is what the
-      supplier expects to see on a note they file. The shipment's origin fields
-      describe where the goods left from, which is often a third-party cellar
-      rather than the supplier, so they are the fallback and not the first
-      choice.
+      Address precedence: what the operator just typed, then what was saved on
+      the shipment, then the partner's own address.
+
+      The shipment's origin fields are deliberately NOT a fallback. They record
+      where the goods physically left from, which is frequently a forwarder or
+      a third-party cellar, and naming that party as consignor is wrong on the
+      document the supplier files. Better to refuse than to print the wrong
+      company.
     */
-    const originLines = (
-      supplierAddress
-        ? supplierAddress.split(/\r?\n|,/)
-        : [shipment.originWarehouse, shipment.originCity]
-    )
-      .map((part) => (part ?? '').trim())
+    const typed = input.supplierAddress?.trim() || null;
+    const effectiveAddress = typed ?? shipment.supplierAddress ?? supplierAddress ?? null;
+
+    if (!effectiveAddress) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Add the supplier address before generating the delivery note — it has to name the party the goods were bought from.',
+      });
+    }
+
+    // Typed fresh, so keep it: the next note for this shipment should not ask
+    // again, and neither should anyone reprinting this one.
+    if (typed && typed !== shipment.supplierAddress) {
+      await db
+        .update(logisticsShipments)
+        .set({ supplierAddress: typed, updatedAt: new Date() })
+        .where(eq(logisticsShipments.id, shipment.id));
+    }
+
+    const originLines = effectiveAddress
+      .split(/\r?\n|,/)
+      .map((part) => part.trim())
       .filter(Boolean);
 
     // Both halves or neither — a drawn squiggle with no name against it, or a

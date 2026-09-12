@@ -27,6 +27,7 @@ const updateShipmentSchema = z.object({
   destinationCountry: z.string().optional(),
   destinationCity: z.string().optional(),
   destinationWarehouse: z.string().optional(),
+  supplierAddress: z.string().max(500).optional().nullable(),
 
   // Carrier info
   carrierName: z.string().optional(),

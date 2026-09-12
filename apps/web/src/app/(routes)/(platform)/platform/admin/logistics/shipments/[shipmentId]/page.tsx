@@ -525,6 +525,7 @@ const ShipmentDetailPage = () => {
   );
 
   const [isSignOpen, setIsSignOpen] = useState(false);
+  const [supplierAddress, setSupplierAddress] = useState('');
   const [signature, setSignature] = useState<string | null>(null);
   const [signedBy, setSignedBy] = useState('');
 
@@ -2731,7 +2732,10 @@ const ShipmentDetailPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsSignOpen(true)}
+                  onClick={() => {
+                    setSupplierAddress(shipment.supplierAddress ?? '');
+                    setIsSignOpen(true);
+                  }}
                   disabled={isGeneratingDN || !(shipment.items ?? []).length}
                   title="Create a delivery note confirming this consignment reached the warehouse"
                 >
@@ -3185,6 +3189,23 @@ const ShipmentDetailPage = () => {
           <div className="mt-4 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Typography variant="bodySm" colorRole="muted">
+                Supplier address
+              </Typography>
+              <textarea
+                value={supplierAddress}
+                onChange={(e) => setSupplierAddress(e.target.value)}
+                rows={3}
+                placeholder={'Supplier name\nStreet\nCity, Postcode\nCountry'}
+                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+              />
+              <Typography variant="bodyXs" colorRole="muted">
+                Who the goods were bought from, as it should read on the note. Saved to the
+                shipment, so it is only typed once.
+              </Typography>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Typography variant="bodySm" colorRole="muted">
                 Received by
               </Typography>
               <input
@@ -3199,8 +3220,13 @@ const ShipmentDetailPage = () => {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={() => generateDeliveryNote({ shipmentId })}
-                isDisabled={isGeneratingDN}
+                onClick={() =>
+                  generateDeliveryNote({
+                    shipmentId,
+                    supplierAddress: supplierAddress.trim() || undefined,
+                  })
+                }
+                isDisabled={isGeneratingDN || !supplierAddress.trim()}
                 className="flex-1"
               >
                 Without signature
@@ -3212,9 +3238,12 @@ const ShipmentDetailPage = () => {
                     shipmentId,
                     signatureDataUrl: signature ?? undefined,
                     signedBy: signedBy.trim() || undefined,
+                    supplierAddress: supplierAddress.trim() || undefined,
                   })
                 }
-                isDisabled={isGeneratingDN || !signature || !signedBy.trim()}
+                isDisabled={
+                  isGeneratingDN || !signature || !signedBy.trim() || !supplierAddress.trim()
+                }
                 className="flex-1"
               >
                 {isGeneratingDN ? 'Generating...' : 'Sign and generate'}
