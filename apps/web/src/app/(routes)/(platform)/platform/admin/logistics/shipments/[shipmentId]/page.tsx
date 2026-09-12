@@ -30,6 +30,7 @@ import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconcil
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
+import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
@@ -38,6 +39,11 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
@@ -518,6 +524,10 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const [isSignOpen, setIsSignOpen] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signedBy, setSignedBy] = useState('');
+
   const { mutate: generateDeliveryNote, isPending: isGeneratingDN } = useMutation(
     api.logistics.admin.generateInboundDeliveryNote.mutationOptions({
       onSuccess: (r) => {
@@ -525,6 +535,9 @@ const ShipmentDetailPage = () => {
           `${r.deliveryNoteNumber} created — ${r.totalCases} cases, ${r.totalBottles} bottles`,
         );
         window.open(r.fileUrl, '_blank');
+        setIsSignOpen(false);
+        setSignature(null);
+        setSignedBy('');
         void refetch();
       },
       onError: (e) => toast.error(e.message),
@@ -2718,7 +2731,7 @@ const ShipmentDetailPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => generateDeliveryNote({ shipmentId })}
+                  onClick={() => setIsSignOpen(true)}
                   disabled={isGeneratingDN || !(shipment.items ?? []).length}
                   title="Create a delivery note confirming this consignment reached the warehouse"
                 >
@@ -3153,6 +3166,63 @@ const ShipmentDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/*
+        Sign at hand-over rather than printing the note and scanning it back.
+        Signing is optional: leaving it blank still produces a valid note with a
+        rule to sign by hand, which is what a courier drop with nobody senior on
+        the dock actually needs.
+      */}
+      <Dialog open={isSignOpen} onOpenChange={setIsSignOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Delivery note</DialogTitle>
+            <DialogDescription>
+              Sign to confirm this consignment was received. You can skip signing and print the
+              note to sign by hand instead.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Typography variant="bodySm" colorRole="muted">
+                Received by
+              </Typography>
+              <input
+                type="text"
+                value={signedBy}
+                onChange={(e) => setSignedBy(e.target.value)}
+                placeholder="Name of the person checking the goods in"
+                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+              />
+            </div>
+            <SignaturePad onChange={setSignature} label="Signature" />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => generateDeliveryNote({ shipmentId })}
+                isDisabled={isGeneratingDN}
+                className="flex-1"
+              >
+                Without signature
+              </Button>
+              <Button
+                variant="default"
+                onClick={() =>
+                  generateDeliveryNote({
+                    shipmentId,
+                    signatureDataUrl: signature ?? undefined,
+                    signedBy: signedBy.trim() || undefined,
+                  })
+                }
+                isDisabled={isGeneratingDN || !signature || !signedBy.trim()}
+                className="flex-1"
+              >
+                {isGeneratingDN ? 'Generating...' : 'Sign and generate'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

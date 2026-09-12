@@ -120,6 +120,8 @@ const styles = StyleSheet.create({
   signRow: { flexDirection: 'row', gap: 24, marginTop: 22 },
   signCell: { flex: 1 },
   signLine: { borderBottom: `1px solid ${TEXT_MUTED}`, height: 28 },
+  signImage: { height: 26, marginBottom: 2, objectFit: 'contain' },
+  signName: { fontSize: 9, fontWeight: 'bold' },
   signLabel: { fontSize: 7, color: TEXT_MUTED, marginTop: 4 },
   footer: {
     position: 'absolute',
@@ -148,6 +150,12 @@ export interface InboundDeliveryNotePDFTemplateProps {
     arrivedAt?: Date | null;
     notes?: string | null;
   };
+  /** Drawn at hand-over on the warehouse tablet. Absent leaves a blank rule to sign by hand. */
+  signature?: {
+    dataUrl: string;
+    signedBy: string;
+    signedAt: Date;
+  } | null;
   items: Array<{
     productName: string;
     producer?: string | null;
@@ -170,6 +178,7 @@ export interface InboundDeliveryNotePDFTemplateProps {
 const InboundDeliveryNotePDFTemplate = ({
   deliveryNote,
   shipment,
+  signature,
   items,
 }: InboundDeliveryNotePDFTemplateProps) => {
   const formatDate = (date: Date) =>
@@ -291,11 +300,28 @@ const InboundDeliveryNotePDFTemplate = ({
 
         <View style={styles.signRow}>
           <View style={styles.signCell}>
-            <View style={styles.signLine} />
+            {signature ? (
+              <>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image */}
+                <Image style={styles.signImage} src={signature.dataUrl} />
+                <View style={styles.signLine} />
+                <Text style={styles.signName}>{signature.signedBy}</Text>
+              </>
+            ) : (
+              <View style={styles.signLine} />
+            )}
             <Text style={styles.signLabel}>RECEIVED BY (CRAFT &amp; CULTURE)</Text>
           </View>
           <View style={styles.signCell}>
-            <View style={styles.signLine} />
+            {signature ? (
+              <>
+                <View style={{ height: 26 }} />
+                <View style={styles.signLine} />
+                <Text style={styles.signName}>{formatDate(signature.signedAt)}</Text>
+              </>
+            ) : (
+              <View style={styles.signLine} />
+            )}
             <Text style={styles.signLabel}>DATE</Text>
           </View>
         </View>

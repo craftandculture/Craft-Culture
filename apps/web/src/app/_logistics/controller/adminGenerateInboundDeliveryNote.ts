@@ -33,7 +33,18 @@ import renderInboundDeliveryNotePDF from '../utils/renderInboundDeliveryNotePDF'
  *   });
  */
 const adminGenerateInboundDeliveryNote = adminProcedure
-  .input(z.object({ shipmentId: z.string().uuid() }))
+  .input(
+    z.object({
+      shipmentId: z.string().uuid(),
+      /** PNG data URL drawn on the tablet at hand-over. */
+      signatureDataUrl: z
+        .string()
+        .startsWith('data:image/png;base64,')
+        .max(2_000_000)
+        .optional(),
+      signedBy: z.string().min(1).max(120).optional(),
+    }),
+  )
   .mutation(async ({ input, ctx }) => {
     const [shipment] = await db
       .select()
@@ -72,8 +83,20 @@ const adminGenerateInboundDeliveryNote = adminProcedure
       .filter(Boolean)
       .join(', ');
 
+    // Both halves or neither — a drawn squiggle with no name against it, or a
+    // name with nothing drawn, is worse than an honest blank rule.
+    const signature =
+      input.signatureDataUrl && input.signedBy
+        ? {
+            dataUrl: input.signatureDataUrl,
+            signedBy: input.signedBy,
+            signedAt: generatedAt,
+          }
+        : null;
+
     const pdfBuffer = await renderInboundDeliveryNotePDF({
       deliveryNote: { deliveryNoteNumber, generatedAt },
+      signature,
       shipment: {
         shipmentNumber: shipment.shipmentNumber,
         supplierName,
@@ -127,6 +150,7 @@ const adminGenerateInboundDeliveryNote = adminProcedure
     return {
       deliveryNoteNumber,
       fileUrl: blob.url,
+      signed: signature !== null,
       documentId: document?.id ?? null,
       totalCases: items.reduce((s, i) => s + i.cases, 0),
       totalBottles: items.reduce(
