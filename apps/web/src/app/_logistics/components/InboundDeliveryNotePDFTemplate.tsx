@@ -144,7 +144,8 @@ export interface InboundDeliveryNotePDFTemplateProps {
     shipmentNumber: string;
     supplierName: string | null;
     originCountry?: string | null;
-    originAddress?: string | null;
+    /** Consignor address, already split into display lines. */
+    originLines?: string[];
     warehouseName?: string | null;
     reference?: string | null;
     awbOrContainer?: string | null;
@@ -215,9 +216,11 @@ const InboundDeliveryNotePDFTemplate = ({
           <View style={styles.partyBox}>
             <Text style={styles.partyLabel}>CONSIGNED BY</Text>
             <Text style={styles.partyName}>{shipment.supplierName ?? 'Supplier'}</Text>
-            {shipment.originAddress ? (
-              <Text style={styles.partyLine}>{shipment.originAddress}</Text>
-            ) : null}
+            {(shipment.originLines ?? []).map((line) => (
+              <Text key={line} style={styles.partyLine}>
+                {line}
+              </Text>
+            ))}
             {shipment.originCountry ? (
               <Text style={styles.partyLine}>{shipment.originCountry}</Text>
             ) : null}
@@ -231,6 +234,7 @@ const InboundDeliveryNotePDFTemplate = ({
               </Text>
             ))}
             <Text style={styles.partyLine}>{deliveryAddress.country}</Text>
+            <Text style={styles.partyLine}>{deliveryAddress.email}</Text>
             <Text style={[styles.partyLine, { marginTop: 4 }]}>
               Arrived {formatDate(arrival)}
             </Text>

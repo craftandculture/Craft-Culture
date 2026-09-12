@@ -1,6 +1,6 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
-import { COMPANY_NAME, WAREHOUSE_ADDRESS } from '@/lib/company';
+import { COMPANY_NAME, LOGISTICS_EMAIL, WAREHOUSE_ADDRESS } from '@/lib/company';
 
 // Register fonts
 Font.register({
@@ -418,6 +418,7 @@ const DeliveryNotePDFTemplate = ({
                 </Text>
               ))}
               <Text style={styles.addressText}>{WAREHOUSE_ADDRESS.country}</Text>
+              <Text style={styles.addressText}>{LOGISTICS_EMAIL}</Text>
             </View>
           </View>
           <View style={styles.addressCol}>

@@ -9,6 +9,9 @@
  */
 export const COMPANY_NAME = 'Craft & Culture FZE';
 
+/** Where a supplier or carrier should reply about a consignment. */
+export const LOGISTICS_EMAIL = 'logistics@craftculture.xyz';
+
 /** The bonded warehouse goods are received into. */
 export const WAREHOUSE_ADDRESS = {
   name: 'RAK Port',
@@ -41,12 +44,16 @@ export const deliveryAddressFor = (destinationWarehouse?: string | null) => {
       name: COMPANY_NAME,
       lines: [...WAREHOUSE_ADDRESS.lines],
       country: WAREHOUSE_ADDRESS.country,
+      email: LOGISTICS_EMAIL,
     };
   }
 
+  // Someone else's site — our logistics inbox is still the right contact for
+  // questions about the consignment, but the address is theirs.
   return {
     name: destinationWarehouse,
     lines: [] as string[],
     country: WAREHOUSE_ADDRESS.country,
+    email: LOGISTICS_EMAIL,
   };
 };

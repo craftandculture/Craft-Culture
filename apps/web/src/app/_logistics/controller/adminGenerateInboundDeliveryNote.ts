@@ -68,20 +68,36 @@ const adminGenerateInboundDeliveryNote = adminProcedure
     }
 
     let supplierName: string | null = null;
+    let supplierAddress: string | null = null;
     if (shipment.partnerId) {
       const [partner] = await db
-        .select({ businessName: partners.businessName })
+        .select({
+          businessName: partners.businessName,
+          businessAddress: partners.businessAddress,
+        })
         .from(partners)
         .where(eq(partners.id, shipment.partnerId));
       supplierName = partner?.businessName ?? null;
+      supplierAddress = partner?.businessAddress ?? null;
     }
 
     const generatedAt = new Date();
     const deliveryNoteNumber = `DN-${shipment.shipmentNumber}`;
 
-    const originAddress = [shipment.originWarehouse, shipment.originCity]
-      .filter(Boolean)
-      .join(', ');
+    /*
+      The consignor's own address where we hold one, since that is what the
+      supplier expects to see on a note they file. The shipment's origin fields
+      describe where the goods left from, which is often a third-party cellar
+      rather than the supplier, so they are the fallback and not the first
+      choice.
+    */
+    const originLines = (
+      supplierAddress
+        ? supplierAddress.split(/\r?\n|,/)
+        : [shipment.originWarehouse, shipment.originCity]
+    )
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean);
 
     // Both halves or neither — a drawn squiggle with no name against it, or a
     // name with nothing drawn, is worse than an honest blank rule.
@@ -101,7 +117,7 @@ const adminGenerateInboundDeliveryNote = adminProcedure
         shipmentNumber: shipment.shipmentNumber,
         supplierName,
         originCountry: shipment.originCountry,
-        originAddress: originAddress || null,
+        originLines,
         warehouseName: shipment.destinationWarehouse,
         reference: shipment.carrierBookingRef,
         awbOrContainer: shipment.awbNumber ?? shipment.containerNumber ?? shipment.blNumber,
