@@ -24,8 +24,8 @@ type StatusFilter =
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
   submitted: 'Awaiting review',
-  under_review: 'Quoted, with the member',
-  revision_requested: 'Sent back for revisions',
+  under_review: 'Quoted — awaiting member',
+  revision_requested: 'Revisions requested',
   confirmed: 'Confirmed',
   cancelled: 'Cancelled',
 };
@@ -73,7 +73,7 @@ const CellarReleasesPage = () => {
           result.status === 'under_review'
             ? `Quoted — $${result.total?.toLocaleString()} sent to the member`
             : result.status === 'revision_requested'
-              ? 'Sent back for revisions'
+              ? 'Revisions requested'
               : 'Request cancelled',
         );
         setOpenId(null);
@@ -88,7 +88,7 @@ const CellarReleasesPage = () => {
   const filters: { id: StatusFilter; label: string }[] = [
     { id: 'open', label: 'Open' },
     { id: 'submitted', label: 'Awaiting review' },
-    { id: 'under_review', label: 'With the member' },
+    { id: 'under_review', label: 'Awaiting member' },
     { id: 'confirmed', label: 'Confirmed' },
     { id: 'all', label: 'All' },
   ];
@@ -99,7 +99,7 @@ const CellarReleasesPage = () => {
         <div>
           <Typography variant="headingLg">Cellar releases</Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Members asking for wine they already own to be brought out of bond
+            Member requests to release wine held in bond
           </Typography>
         </div>
         <Button
@@ -309,8 +309,10 @@ const CellarReleasesPage = () => {
                         {request.suggested?.priced ? (
                           <>
                             <Typography variant="bodyXs" colorRole="muted">
-                              {isOverridden ? 'Overridden' : 'Their rate card'}
-                              , card {request.suggested.version}
+                              {isOverridden
+                                ? 'Overridden'
+                                : 'Member rate card'}{' '}
+                              &middot; {request.suggested.version}
                             </Typography>
                             {isOverridden && (
                               <button
@@ -336,14 +338,14 @@ const CellarReleasesPage = () => {
                                 }}
                                 className="text-text-brand text-xs font-medium hover:underline"
                               >
-                                Put the card back
+                                Restore rate card
                               </button>
                             )}
                           </>
                         ) : (
                           <Typography variant="bodyXs" colorRole="muted">
-                            No rate card set for this member, or for the house
-                            &mdash; these figures have to be entered by hand
+                            No rate card configured for this member or as a
+                            house default &mdash; enter the figures manually
                           </Typography>
                         )}
                       </div>

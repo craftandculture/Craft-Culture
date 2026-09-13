@@ -134,6 +134,9 @@ const CellarPage = () => {
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
   const [isBasketOpen, setIsBasketOpen] = useState(false);
+  /* Which submitted request is open, and the edits made to it so far. */
+  const [openRequestId, setOpenRequestId] = useState<string | null>(null);
+  const [editLines, setEditLines] = useState<Map<string, number>>(new Map());
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [shouldSaveAddress, setShouldSaveAddress] = useState(true);
 
@@ -165,7 +168,7 @@ const CellarPage = () => {
     api.cellar.member.submitRelease.mutationOptions({
       onSuccess: (result) => {
         toast.success(
-          `${result.requestNumber} sent — we will come back with the cost of clearance and delivery.`,
+          `${result.requestNumber} submitted. We will confirm the cost of clearance and delivery.`,
         );
         setBasket(new Map());
         setAddress('');
@@ -187,7 +190,7 @@ const CellarPage = () => {
         */
         if (result.alreadySubmitted) {
           toast.success(
-            `Added to ${result.requestNumber} — we will come back with the cost for everything on it.`,
+            `Added to ${result.requestNumber}. We will confirm the cost for the full request.`,
           );
           setBasket(new Map());
           setMemberNotes('');
@@ -202,10 +205,32 @@ const CellarPage = () => {
     }),
   );
 
+  const { mutate: amendRelease, isPending: isAmending } = useMutation(
+    api.cellar.member.amendRelease.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.requestNumber} updated.`);
+        setOpenRequestId(null);
+        void refetchReleases();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: withdrawRelease, isPending: isWithdrawing } = useMutation(
+    api.cellar.member.withdrawRelease.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.requestNumber} withdrawn.`);
+        setOpenRequestId(null);
+        void refetchReleases();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const { mutate: acceptRelease, isPending: isAccepting } = useMutation(
     api.cellar.member.acceptRelease.mutationOptions({
       onSuccess: (result) => {
-        toast.success(`Accepted — order ${result.orderNumber} raised.`);
+        toast.success(`Accepted. Order ${result.orderNumber} has been raised.`);
         void refetchReleases();
         void refetch();
       },
@@ -685,14 +710,42 @@ const CellarPage = () => {
             {openRequests.map((request) => {
               const needsDecision = request.status === 'under_review';
 
+              const isEditable = [
+                'draft',
+                'submitted',
+                'revision_requested',
+              ].includes(request.status);
+
+              const isOpen = openRequestId === request.id;
+
+              const lineFor = (itemId: string, fallback: number) =>
+                editLines.get(itemId) ?? fallback;
+
               return (
+                <div key={request.id}>
                 <div
-                  key={request.id}
                   className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
                     needsDecision ? 'bg-teal-50/60' : ''
                   }`}
                 >
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isOpen) {
+                        setOpenRequestId(null);
+                        return;
+                      }
+
+                      setOpenRequestId(request.id);
+                      setEditLines(new Map());
+                    }}
+                    className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-left"
+                  >
+                    <Icon
+                      icon={IconChevronDown}
+                      size="xs"
+                      className={`text-text-muted transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                    />
                     <span className="text-text-muted font-mono text-xs">
                       {request.requestNumber}
                     </span>
@@ -703,7 +756,7 @@ const CellarPage = () => {
 
                     {request.status === 'submitted' && (
                       <Typography variant="bodyXs" colorRole="muted">
-                        &middot; With us, being priced
+                        &middot; Under review
                       </Typography>
                     )}
 
@@ -711,7 +764,7 @@ const CellarPage = () => {
                       <Typography variant="bodyXs" className="text-amber-700">
                         &middot;{' '}
                         {request.adminNotes ??
-                          'We need a change before we can price this'}
+                          'A change is required before we can price this request'}
                       </Typography>
                     )}
 
@@ -721,7 +774,7 @@ const CellarPage = () => {
                         all in
                       </Typography>
                     )}
-                  </div>
+                  </button>
 
                   {needsDecision && (
                     <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -775,6 +828,149 @@ const CellarPage = () => {
                       </Button>
                     </div>
                   )}
+                </div>
+
+                {isOpen && (
+                  <div className="border-border-muted bg-background-primary border-t px-3 py-3">
+                    <div className="border-border-muted mb-3 overflow-hidden rounded-lg border">
+                      <table className="w-full text-xs">
+                        <tbody className="divide-border-muted/60 divide-y">
+                          {request.items.map((item) => {
+                            const bottles = lineFor(item.id, item.bottles);
+
+                            return (
+                              <tr key={item.id}>
+                                <td className="px-3 py-2">
+                                  {item.productName}
+                                  {item.lotNumber && (
+                                    <span className="text-text-muted ml-2 font-mono text-[11px]">
+                                      lot {item.lotNumber}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-2 text-right">
+                                  {isEditable ? (
+                                    <span className="inline-flex items-center gap-0.5">
+                                      <button
+                                        type="button"
+                                        aria-label="One fewer bottle"
+                                        disabled={bottles <= 1}
+                                        onClick={() =>
+                                          setEditLines((current) =>
+                                            new Map(current).set(
+                                              item.id,
+                                              bottles - 1,
+                                            ),
+                                          )
+                                        }
+                                        className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors disabled:opacity-30"
+                                      >
+                                        &minus;
+                                      </button>
+                                      <span className="min-w-[24px] text-center tabular-nums">
+                                        {bottles}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        aria-label="One more bottle"
+                                        onClick={() =>
+                                          setEditLines((current) =>
+                                            new Map(current).set(
+                                              item.id,
+                                              bottles + 1,
+                                            ),
+                                          )
+                                        }
+                                        className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors"
+                                      >
+                                        +
+                                      </button>
+                                      <span className="text-text-muted ml-1">
+                                        {bottles === 1 ? 'bottle' : 'bottles'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove ${item.productName}`}
+                                        onClick={() =>
+                                          setEditLines((current) =>
+                                            new Map(current).set(item.id, 0),
+                                          )
+                                        }
+                                        className="text-text-muted hover:text-text-primary ml-1 px-1 transition-colors"
+                                      >
+                                        &times;
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <span className="tabular-nums">
+                                      {item.bottles}{' '}
+                                      {item.bottles === 1
+                                        ? 'bottle'
+                                        : 'bottles'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {isEditable ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          colorRole="brand"
+                          isDisabled={isAmending || editLines.size === 0}
+                          onClick={() => {
+                            const lines = request.items
+                              .map((item) => ({
+                                stockId: item.stockId ?? '',
+                                bottles: lineFor(item.id, item.bottles),
+                              }))
+                              .filter(
+                                (line) => line.stockId && line.bottles > 0,
+                              );
+
+                            if (lines.length === 0) {
+                              toast.error(
+                                'A request needs at least one wine. Withdraw it instead.',
+                              );
+                              return;
+                            }
+
+                            amendRelease({
+                              requestId: request.id,
+                              lines,
+                            });
+                          }}
+                        >
+                          <ButtonContent>Save changes</ButtonContent>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          isDisabled={isWithdrawing}
+                          onClick={() =>
+                            withdrawRelease({ requestId: request.id })
+                          }
+                        >
+                          <ButtonContent>Withdraw request</ButtonContent>
+                        </Button>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Changes can be made until we issue your costs.
+                        </Typography>
+                      </div>
+                    ) : (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        This request has been priced, so its contents are now
+                        fixed. Accept the quotation, or contact us if it needs
+                        to change.
+                      </Typography>
+                    )}
+                  </div>
+                )}
                 </div>
               );
             })}
@@ -1241,12 +1437,13 @@ const CellarPage = () => {
                                               className="max-w-[240px] text-left lg:max-w-[240px]"
                                             >
                                               <Typography variant="bodyXs">
-                                                <strong>AED 150</strong> for
-                                                this parcel. Every bottle
-                                                inspected &mdash; fill, label,
-                                                capsule, closure &mdash; with
+                                                <strong>AED 150</strong> per
+                                                parcel. Each bottle is
+                                                inspected &mdash; fill level,
+                                                label, capsule and closure
+                                                &mdash; and reported with
                                                 photographs and written notes.
-                                                Billed on your next invoice.
+                                                Charged on your next invoice.
                                               </Typography>
                                             </TooltipContent>
                                           </Tooltip>
@@ -1382,7 +1579,7 @@ const CellarPage = () => {
                           >
                             {isEstimating
                               ? 'Estimating…'
-                              : `about ${money(estimate.totalUsd)} to deliver`}
+                              : `Estimated ${money(estimate.totalUsd)} to deliver`}
                           </Typography>
                           {/*
                             Named an estimate every time it is shown. A figure
@@ -1472,7 +1669,7 @@ const CellarPage = () => {
                       <span className="font-mono">
                         {mergeTarget.requestNumber}
                       </span>
-                      , which is already with us &mdash; one delivery, not two.
+                      , so everything travels as a single delivery.
                     </Typography>
                   )}
                   {isBasketOpen && (
@@ -1648,8 +1845,8 @@ const CellarPage = () => {
                 <ButtonContent>Request delivery</ButtonContent>
               </Button>
               <Typography variant="bodyXs" colorRole="muted">
-                We price it first. No wine leaves bond until you approve the
-                cost.
+                You will receive costs for approval before any wine leaves
+                bond.
               </Typography>
             </div>
           </div>

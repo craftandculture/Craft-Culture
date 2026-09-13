@@ -7,6 +7,7 @@ import adminGetReleases from './controller/adminGetReleases';
 import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import memberAcceptRelease from './controller/memberAcceptRelease';
+import memberAmendRelease from './controller/memberAmendRelease';
 import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocument';
 import memberEstimateRelease from './controller/memberEstimateRelease';
 import memberGetProfile from './controller/memberGetProfile';
@@ -16,6 +17,7 @@ import memberSaveProfile from './controller/memberSaveProfile';
 import memberSaveRelease from './controller/memberSaveRelease';
 import memberSubmitRelease from './controller/memberSubmitRelease';
 import memberUploadIdentityDocument from './controller/memberUploadIdentityDocument';
+import memberWithdrawRelease from './controller/memberWithdrawRelease';
 
 const memberRouter = createTRPCRouter({
   getProfile: memberGetProfile,
@@ -25,6 +27,8 @@ const memberRouter = createTRPCRouter({
   uploadIdentityDocument: memberUploadIdentityDocument,
   deleteIdentityDocument: memberDeleteIdentityDocument,
   getReleases: memberGetReleases,
+  amendRelease: memberAmendRelease,
+  withdrawRelease: memberWithdrawRelease,
   saveRelease: memberSaveRelease,
   submitRelease: memberSubmitRelease,
   acceptRelease: memberAcceptRelease,

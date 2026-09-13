@@ -350,7 +350,7 @@ const CellarRatesPage = () => {
         <div>
           <Typography variant="headingLg">Release rates</Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            What a member is charged to bring their own wine out of bond
+            Charges applied when a member releases wine from bond
           </Typography>
         </div>
         <Button
@@ -393,11 +393,11 @@ const CellarRatesPage = () => {
                 <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
                   {houseRate
                     ? summarise(houseRate)
-                    : 'Not set — nothing can be quoted until it is'}
+                    : 'Not configured — releases cannot be quoted until this is set'}
                 </Typography>
               </div>
               <span className="text-text-muted text-xs">
-                {editing === 'house' ? 'Close' : houseRate ? 'Edit' : 'Set it'}
+                {editing === 'house' ? 'Close' : houseRate ? 'Edit' : 'Configure'}
               </span>
             </button>
             {editing === 'house' && renderEditor(null)}
@@ -411,7 +411,7 @@ const CellarRatesPage = () => {
               {members.length === 0 && (
                 <div className="border-border-muted rounded-xl border px-6 py-10 text-center">
                   <Typography variant="bodySm" colorRole="muted">
-                    No active members hold stock yet.
+                    No active members are currently holding stock.
                   </Typography>
                 </div>
               )}
@@ -437,7 +437,7 @@ const CellarRatesPage = () => {
                       <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
                         {member.rate
                           ? `Own card (${member.rate.version}) · ${summarise(member.rate)}`
-                          : 'On the house rate'}
+                          : 'On the house rate card'}
                       </Typography>
                     </div>
                     <span className="text-text-muted flex-shrink-0 text-xs">
@@ -445,7 +445,7 @@ const CellarRatesPage = () => {
                         ? 'Close'
                         : member.rate
                           ? 'Edit'
-                          : 'Give them their own'}
+                          : 'Create a card'}
                     </span>
                   </button>
                   {editing === member.id && renderEditor(member.id)}

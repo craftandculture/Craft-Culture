@@ -122,7 +122,7 @@ const CellarProfilePage = () => {
     if (!file) return;
 
     if (file.size > MAX_BYTES) {
-      toast.error('That file is over 10MB. A phone photo is usually enough.');
+      toast.error('That file exceeds 10MB. A standard phone photograph is sufficient.');
       return;
     }
 
@@ -382,7 +382,7 @@ const CellarProfilePage = () => {
 
             <Typography variant="bodyXs" colorRole="muted" className="mt-2 block">
               Visible only to you and the Craft &amp; Culture team. A clear
-              photo from your phone is fine.
+              photograph from your phone is sufficient.
             </Typography>
           </section>
 
