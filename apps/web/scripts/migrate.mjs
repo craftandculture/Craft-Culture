@@ -984,6 +984,38 @@ const runMigrations = async () => {
     }
     console.log('✅ cellar release requests ready');
 
+    // --- release rates per member ------------------------------------------
+    // What it costs a member to take their own wine out: duty, clearance,
+    // transfer and the drive. A row with a null partner is the house default,
+    // so a new member is quotable the day they join.
+    await client.unsafe(`CREATE TABLE IF NOT EXISTS "cellar_release_rates" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "partner_id" uuid REFERENCES "partners"("id") ON DELETE CASCADE,
+      "version" text NOT NULL DEFAULT 'v1',
+      "duty_pct" double precision NOT NULL DEFAULT 0,
+      "clearance_per_case" double precision NOT NULL DEFAULT 0,
+      "clearance_per_bottle" double precision NOT NULL DEFAULT 0,
+      "transfer_per_bottle" double precision NOT NULL DEFAULT 0,
+      "delivery_flat" double precision NOT NULL DEFAULT 0,
+      "delivery_per_case" double precision NOT NULL DEFAULT 0,
+      "notes" text,
+      "updated_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    )`);
+
+    // One row per partner, and exactly one default. A partial index is needed
+    // because NULLs do not collide in a plain unique index.
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cellar_release_rates_partner_idx"
+         ON "cellar_release_rates" ("partner_id") WHERE "partner_id" IS NOT NULL`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cellar_release_rates_default_idx"
+         ON "cellar_release_rates" ((1)) WHERE "partner_id" IS NULL`,
+    );
+    console.log('✅ cellar release rates ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

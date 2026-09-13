@@ -249,13 +249,58 @@ const CellarReleasesPage = () => {
                     </Typography>
                   ) : (
                     <>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="mb-2 block font-semibold uppercase tracking-wider"
-                      >
-                        Quote
-                      </Typography>
+                      <div className="mb-3 flex flex-wrap items-center gap-3">
+                        <Typography
+                          variant="bodyXs"
+                          colorRole="muted"
+                          className="font-semibold uppercase tracking-wider"
+                        >
+                          Quote
+                        </Typography>
+                        {request.suggested?.priced ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm({
+                                clearance: String(
+                                  request.suggested.clearanceTotalUsd,
+                                ),
+                                delivery: String(request.suggested.deliveryUsd),
+                                goods: String(request.suggested.goodsValueUsd),
+                                rateVersion: request.suggested.version,
+                                notes: form.notes,
+                              })
+                            }
+                            className="text-text-brand text-xs font-medium hover:underline"
+                          >
+                            Use their rate card &mdash;{' '}
+                            {request.suggested.totalUsd.toLocaleString('en-US', {
+                              style: 'currency',
+                              currency: 'USD',
+                              maximumFractionDigits: 0,
+                            })}
+                          </button>
+                        ) : (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            No rate card set for this member, or for the house
+                          </Typography>
+                        )}
+                      </div>
+
+                      {request.suggested?.priced && (
+                        <Typography
+                          variant="bodyXs"
+                          colorRole="muted"
+                          className="mb-3 block"
+                        >
+                          Their card ({request.suggested.version}) gives duty{' '}
+                          {request.suggested.dutyUsd}, clearance{' '}
+                          {request.suggested.clearanceUsd}, transfer{' '}
+                          {request.suggested.transferUsd}, delivery{' '}
+                          {request.suggested.deliveryUsd} &mdash; on goods valued
+                          at {request.suggested.goodsValueUsd}.
+                        </Typography>
+                      )}
                       <div className="mb-3 grid gap-3 sm:grid-cols-4">
                         {[
                           { key: 'clearance', label: 'Clearance $' },

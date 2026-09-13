@@ -4852,6 +4852,57 @@ export type CellarReleaseRequestItem =
   typeof cellarReleaseRequestItems.$inferSelect;
 
 /**
+ * What it costs a member to take their own wine out of bond
+ *
+ * Distinct from `wmsOwnerPricingSettings`, which prices wine we sell: margins
+ * over landed cost, in-bond and private-client. This runs the other way — the
+ * member already owns the goods, and what is being priced is duty, clearance
+ * and the drive.
+ *
+ * One row per partner, plus a row with a null partner as the house default, so
+ * a new member is quotable on the day they join rather than after somebody
+ * remembers to configure them.
+ */
+export const cellarReleaseRates = pgTable(
+  'cellar_release_rates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Null is the default every partner falls back to */
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'cascade',
+    }),
+    /** A label the quote records, so an old figure stays explicable */
+    version: text('version').notNull().default('v1'),
+
+    /** Duty and taxes, as a percentage of the declared value of the goods */
+    dutyPct: doublePrecision('duty_pct').notNull().default(0),
+    /** Clearance and paperwork */
+    clearancePerCase: doublePrecision('clearance_per_case').notNull().default(0),
+    clearancePerBottle: doublePrecision('clearance_per_bottle')
+      .notNull()
+      .default(0),
+    /** Moving it out of the free zone */
+    transferPerBottle: doublePrecision('transfer_per_bottle')
+      .notNull()
+      .default(0),
+    /** The drive: a flat call-out plus anything per case */
+    deliveryFlat: doublePrecision('delivery_flat').notNull().default(0),
+    deliveryPerCase: doublePrecision('delivery_per_case').notNull().default(0),
+
+    notes: text('notes'),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cellar_release_rates_partner_idx').on(table.partnerId),
+  ],
+);
+
+export type CellarReleaseRates = typeof cellarReleaseRates.$inferSelect;
+
+/**
  * Consignment Settlements - tracking payments to stock owners
  */
 export const consignmentSettlements = pgTable(

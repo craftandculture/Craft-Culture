@@ -1,13 +1,17 @@
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
+  logisticsShipmentItems,
   partners,
+  wmsProductPricing,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import computeReleaseQuote from '../utils/computeReleaseQuote';
 
 /**
  * Release requests across every member
@@ -81,14 +85,65 @@ const adminGetReleases = adminProcedure
       ]);
     }
 
-    return {
-      requests: rows.map((row) => ({
-        ...row.request,
-        partnerName: row.partnerName,
-        partnerType: row.partnerType,
-        items: byRequest.get(row.request.id) ?? [],
-      })),
-    };
+    /*
+      Duty is a percentage of what the goods are worth, so the quote needs a
+      value per bottle. Resolved the way the Pricing Manager resolves it —
+      the pricing record first, the most recent shipment line behind it — so a
+      release is valued the same way everything else in the platform is.
+    */
+    const lwins = [...new Set(items.map((item) => item.lwin18))];
+
+    const costRows = lwins.length
+      ? await db
+          .select({
+            lwin18: wmsProductPricing.lwin18,
+            cost: sql<number | null>`COALESCE(
+              NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0),
+              MAX(${logisticsShipmentItems.productCostPerBottle})
+            )`,
+          })
+          .from(wmsProductPricing)
+          .leftJoin(
+            logisticsShipmentItems,
+            eq(logisticsShipmentItems.lwin, wmsProductPricing.lwin18),
+          )
+          .where(inArray(wmsProductPricing.lwin18, lwins))
+          .groupBy(wmsProductPricing.lwin18)
+      : [];
+
+    const costByLwin = new Map(
+      costRows.map((row) => [row.lwin18, Number(row.cost ?? 0)]),
+    );
+
+    /*
+      Each request arrives with the figures its member's own rate card
+      produces, so pricing is a review rather than an act of arithmetic — and
+      two people quoting the same basket cannot reach different numbers.
+    */
+    const requests = await Promise.all(
+      rows.map(async (row) => {
+        const items = byRequest.get(row.request.id) ?? [];
+
+        const suggested = await computeReleaseQuote(
+          row.request.partnerId,
+          items.map((item) => ({
+            bottles: item.bottles,
+            caseConfig: item.caseConfig,
+            costPerBottle: costByLwin.get(item.lwin18) ?? null,
+          })),
+        );
+
+        return {
+          ...row.request,
+          partnerName: row.partnerName,
+          partnerType: row.partnerType,
+          items,
+          suggested,
+        };
+      }),
+    );
+
+    return { requests };
   });
 
 export default adminGetReleases;
