@@ -84,12 +84,30 @@ export const GET = async (request: Request) => {
     return NextResponse.json({ error: 'Unavailable' }, { status: 502 });
   }
 
+  /*
+    The filename came from whoever uploaded it and is interpolated into a
+    response header, so a name containing CR or LF would let the uploader append
+    headers of their own. Stripping quotes was not enough. Everything outside a
+    conservative set is replaced for the plain parameter, and the real name is
+    carried in the RFC 5987 form where it is percent-encoded anyway.
+  */
+  const safeName =
+    document.fileName.replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 120) ||
+    'document';
+
   return new NextResponse(response.body, {
     headers: {
       'Content-Type': document.mimeType,
-      'Content-Disposition': `inline; filename="${document.fileName.replace(/"/g, '')}"`,
+      'Content-Disposition': `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(document.fileName)}`,
       /* Never cached by a proxy, and not left in the browser's disk cache. */
       'Cache-Control': 'private, no-store, max-age=0',
+      /*
+        The type is taken from sniffing the bytes at upload and is one of four
+        we allow, but saying so stops a browser deciding for itself that a
+        government ID is something it should execute.
+      */
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
     },
   });
 };

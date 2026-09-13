@@ -32,9 +32,24 @@ const memberUploadIdentityDocument = stockOwnerProcedure
         'emirates_id_back',
         'passport',
       ]),
-      /** Data URI from the browser's FileReader */
-      file: z.string(),
-      filename: z.string().max(255),
+      /*
+        Bounded here rather than only after decoding. An unbounded string is
+        parsed as JSON and held in memory, and the buffer allocated from it,
+        before any size check runs — so the limit has to be part of validation.
+        Base64 is roughly four bytes per three, hence the headroom over the
+        10MB of actual file this permits.
+      */
+      file: z.string().max(14_000_000),
+      /*
+        No control characters. The name is echoed in a Content-Disposition
+        header when the document is served back, and a CR or LF there is a way
+        to append headers of somebody else's choosing.
+      */
+      filename: z
+        .string()
+        .max(255)
+         
+        .regex(/^[^\u0000-\u001f\u007f]+$/, 'That filename is not valid'),
     }),
   )
   .mutation(async ({ ctx, input }) => {
@@ -97,7 +112,7 @@ const memberUploadIdentityDocument = stockOwnerProcedure
       partnerId: ctx.partner.id,
       documentType: input.documentType,
       fileUrl: blob.url,
-      fileName: input.filename,
+      fileName: input.filename.replace(/["\\]/g, ''),
       mimeType: detected.mime,
       fileSize: buffer.length,
       uploadedBy: ctx.user.id,

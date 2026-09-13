@@ -17,8 +17,34 @@ import { stockOwnerProcedure } from '@/lib/trpc/procedures';
  *   const { requests } = await trpcClient.cellar.member.getReleases.query();
  */
 const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
+  /*
+    Named columns, not the whole row.
+
+    The member is shown one all-in figure by deliberate decision — an itemised
+    quote invites a negotiation of costs they cannot change, and the amounts
+    would publish our rates to anyone who knows what their own wine cost. A
+    `select()` handed the breakdown over anyway: goods value, the rate card
+    version, the service fee, the margin. The screen did not render it, which
+    is not the same as it being private.
+  */
   const requests = await db
-    .select()
+    .select({
+      id: cellarReleaseRequests.id,
+      requestNumber: cellarReleaseRequests.requestNumber,
+      status: cellarReleaseRequests.status,
+      deliveryAddress: cellarReleaseRequests.deliveryAddress,
+      memberNotes: cellarReleaseRequests.memberNotes,
+      /* What we asked them to change — written to be read by them. */
+      adminNotes: cellarReleaseRequests.adminNotes,
+      /* The one figure, and the label for anything unusual inside it. */
+      totalCostUsd: cellarReleaseRequests.totalCostUsd,
+      additionalChargeLabel: cellarReleaseRequests.additionalChargeLabel,
+      quotedAt: cellarReleaseRequests.quotedAt,
+      submittedAt: cellarReleaseRequests.submittedAt,
+      confirmedAt: cellarReleaseRequests.confirmedAt,
+      privateClientOrderId: cellarReleaseRequests.privateClientOrderId,
+      createdAt: cellarReleaseRequests.createdAt,
+    })
     .from(cellarReleaseRequests)
     .where(eq(cellarReleaseRequests.partnerId, ctx.partner.id))
     .orderBy(desc(cellarReleaseRequests.createdAt))
@@ -32,7 +58,17 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
     another the first time the filter was edited.
   */
   const items = await db
-    .select()
+    .select({
+      id: cellarReleaseRequestItems.id,
+      requestId: cellarReleaseRequestItems.requestId,
+      stockId: cellarReleaseRequestItems.stockId,
+      lotNumber: cellarReleaseRequestItems.lotNumber,
+      productName: cellarReleaseRequestItems.productName,
+      vintage: cellarReleaseRequestItems.vintage,
+      bottleSize: cellarReleaseRequestItems.bottleSize,
+      caseConfig: cellarReleaseRequestItems.caseConfig,
+      bottles: cellarReleaseRequestItems.bottles,
+    })
     .from(cellarReleaseRequestItems)
     .where(
       inArray(

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generateOrderNumber from '@/app/_privateClientOrders/utils/generateOrderNumber';
@@ -10,6 +10,7 @@ import {
   partners,
   privateClientOrderItems,
   privateClientOrders,
+  wmsStock,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
@@ -66,6 +67,60 @@ const memberAcceptRelease = stockOwnerProcedure
         code: 'BAD_REQUEST',
         message: 'This request has no wines on it.',
       });
+    }
+
+    /*
+      Re-checked at acceptance, not only when the request was raised.
+
+      Time passes between a quote going out and a member agreeing it, and stock
+      moves in that time — picked for another order, transferred, adjusted after
+      a count. Raising the order anyway would commit us to wine that is no
+      longer there, and the failure would surface in the warehouse days later
+      rather than here, where it can still be explained.
+    */
+    const stockIds = lines
+      .map((line) => line.stockId)
+      .filter((id): id is string => Boolean(id));
+
+    const held = stockIds.length
+      ? await db
+          .select({
+            id: wmsStock.id,
+            productName: wmsStock.productName,
+            caseConfig: wmsStock.caseConfig,
+            quantityCases: wmsStock.quantityCases,
+            openBottles: wmsStock.openBottles,
+          })
+          .from(wmsStock)
+          .where(
+            and(
+              inArray(wmsStock.id, stockIds),
+              eq(wmsStock.ownerId, ctx.partner.id),
+            ),
+          )
+      : [];
+
+    const heldById = new Map(held.map((row) => [row.id, row]));
+
+    for (const line of lines) {
+      const stock = line.stockId ? heldById.get(line.stockId) : undefined;
+
+      if (!stock) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `${line.productName} is no longer held in your cellar. Contact us and we will re-quote what remains.`,
+        });
+      }
+
+      const available =
+        stock.quantityCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+
+      if (line.bottles > available) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Only ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} remain. Contact us and we will re-quote.`,
+        });
+      }
     }
 
     const [owner] = await db
