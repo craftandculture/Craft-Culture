@@ -1016,6 +1016,21 @@ const runMigrations = async () => {
     );
     console.log('✅ cellar release rates ready');
 
+    // Margins: the licensed partner who delivers, and C&C for handling it.
+    // Both take the declared value as their base, as the rate card describes.
+    for (const [table, column] of [
+      ['cellar_release_rates', 'distributor_margin_pct'],
+      ['cellar_release_rates', 'cc_margin_pct'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "${column}" double precision NOT NULL DEFAULT 0`,
+      );
+    }
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_requests" ADD COLUMN IF NOT EXISTS "service_fee_usd" double precision`,
+    );
+    console.log('✅ cellar release margins ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

@@ -25,6 +25,7 @@ const adminQuoteRelease = adminProcedure
       goodsValueUsd: z.number().min(0).optional(),
       clearanceCostUsd: z.number().min(0).optional(),
       deliveryCostUsd: z.number().min(0).optional(),
+      serviceFeeUsd: z.number().min(0).optional(),
       clearanceRateVersion: z.string().max(60).optional(),
     }),
   )
@@ -80,6 +81,7 @@ const adminQuoteRelease = adminProcedure
     const goods = input.goodsValueUsd ?? 0;
     const clearance = input.clearanceCostUsd ?? 0;
     const delivery = input.deliveryCostUsd ?? 0;
+    const service = input.serviceFeeUsd ?? 0;
 
     if (clearance === 0 && delivery === 0) {
       throw new TRPCError({
@@ -96,7 +98,8 @@ const adminQuoteRelease = adminProcedure
         goodsValueUsd: goods,
         clearanceCostUsd: clearance,
         deliveryCostUsd: delivery,
-        totalCostUsd: clearance + delivery,
+        serviceFeeUsd: service,
+        totalCostUsd: clearance + delivery + service,
         clearanceRateVersion: input.clearanceRateVersion,
         adminNotes: input.adminNotes,
         quotedAt: new Date(),
@@ -105,7 +108,7 @@ const adminQuoteRelease = adminProcedure
       })
       .where(eq(cellarReleaseRequests.id, request.id));
 
-    return { status: 'under_review' as const, total: clearance + delivery };
+    return { status: 'under_review' as const, total: clearance + delivery + service };
   });
 
 export default adminQuoteRelease;

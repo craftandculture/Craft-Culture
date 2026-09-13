@@ -17,6 +17,8 @@ const adminSetReleaseRates = adminProcedure
       partnerId: z.string().uuid().nullable(),
       version: z.string().min(1).max(60).default('v1'),
       dutyPct: z.number().min(0).max(200).default(0),
+      distributorMarginPct: z.number().min(0).max(200).default(0),
+      ccMarginPct: z.number().min(0).max(200).default(0),
       clearancePerCase: z.number().min(0).default(0),
       clearancePerBottle: z.number().min(0).default(0),
       transferPerBottle: z.number().min(0).default(0),

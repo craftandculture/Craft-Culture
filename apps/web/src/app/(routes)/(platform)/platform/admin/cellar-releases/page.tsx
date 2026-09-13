@@ -52,6 +52,7 @@ const CellarReleasesPage = () => {
   const [form, setForm] = useState({
     clearance: '',
     delivery: '',
+    service: '',
     goods: '',
     rateVersion: '',
     notes: '',
@@ -266,6 +267,7 @@ const CellarReleasesPage = () => {
                                   request.suggested.clearanceTotalUsd,
                                 ),
                                 delivery: String(request.suggested.deliveryUsd),
+                                service: String(request.suggested.serviceFeeUsd),
                                 goods: String(request.suggested.goodsValueUsd),
                                 rateVersion: request.suggested.version,
                                 notes: form.notes,
@@ -293,18 +295,23 @@ const CellarReleasesPage = () => {
                           colorRole="muted"
                           className="mb-3 block"
                         >
-                          Their card ({request.suggested.version}) gives duty{' '}
-                          {request.suggested.dutyUsd}, clearance{' '}
-                          {request.suggested.clearanceUsd}, transfer{' '}
-                          {request.suggested.transferUsd}, delivery{' '}
-                          {request.suggested.deliveryUsd} &mdash; on goods valued
-                          at {request.suggested.goodsValueUsd}.
+                          Card {request.suggested.version} on goods valued at{' '}
+                          {request.suggested.goodsValueUsd}: duty{' '}
+                          {request.suggested.dutyUsd} &middot; clearance{' '}
+                          {request.suggested.clearanceUsd} &middot; transfer{' '}
+                          {request.suggested.transferUsd} &middot; distributor{' '}
+                          {request.suggested.distributorMarginUsd} &middot;
+                          delivery {request.suggested.deliveryUsd} &middot;{' '}
+                          <strong className="text-text-brand">
+                            C&amp;C {request.suggested.ccMarginUsd}
+                          </strong>
                         </Typography>
                       )}
-                      <div className="mb-3 grid gap-3 sm:grid-cols-4">
+                      <div className="mb-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
                         {[
-                          { key: 'clearance', label: 'Clearance $' },
+                          { key: 'clearance', label: 'Duties & clearance $' },
                           { key: 'delivery', label: 'Delivery $' },
+                          { key: 'service', label: 'Service fee $' },
                           { key: 'goods', label: 'Goods value $' },
                           { key: 'rateVersion', label: 'Rate version' },
                         ].map((field) => (
@@ -354,6 +361,7 @@ const CellarReleasesPage = () => {
                               outcome: 'quote',
                               clearanceCostUsd: Number(form.clearance) || 0,
                               deliveryCostUsd: Number(form.delivery) || 0,
+                              serviceFeeUsd: Number(form.service) || 0,
                               goodsValueUsd: Number(form.goods) || 0,
                               clearanceRateVersion: form.rateVersion || undefined,
                               adminNotes: form.notes || undefined,

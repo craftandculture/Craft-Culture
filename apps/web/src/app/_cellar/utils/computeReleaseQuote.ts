@@ -17,8 +17,14 @@ export interface ReleaseQuote {
   clearanceUsd: number;
   transferUsd: number;
   deliveryUsd: number;
-  /** Everything the member owes: duty, clearance and transfer */
+  /** The licensed partner's cut of a mainland delivery */
+  distributorMarginUsd: number;
+  /** What C&C earns for handling it */
+  ccMarginUsd: number;
+  /** Duties, clearance, transfer and the distributor — everything but us */
   clearanceTotalUsd: number;
+  /** C&C's margin, quoted to the member as a service fee */
+  serviceFeeUsd: number;
   totalUsd: number;
   /** False when no rates are configured and the figures are all zero */
   priced: boolean;
@@ -26,6 +32,12 @@ export interface ReleaseQuote {
 
 /**
  * Price a release from the member's own rate card
+ *
+ * Four things are charged: what the state takes (duty), what the work costs
+ * (clearance, transfer, the drive), what the licensed partner delivering it
+ * takes, and what C&C earns. The last two are kept apart in the result so a
+ * release can be reported on, even though the member sees them folded into
+ * two lines and a service fee.
  *
  * Cases are derived from bottles rather than taken as given: a member asking
  * for three bottles out of a six-pack is still a case being opened, handled
@@ -83,7 +95,10 @@ const computeReleaseQuote = async (
       clearanceUsd: 0,
       transferUsd: 0,
       deliveryUsd: 0,
+      distributorMarginUsd: 0,
+      ccMarginUsd: 0,
       clearanceTotalUsd: 0,
+      serviceFeeUsd: 0,
       totalUsd: 0,
       priced: false,
     };
@@ -100,7 +115,19 @@ const computeReleaseQuote = async (
     (bottles > 0 ? rate.deliveryFlat : 0) + cases * rate.deliveryPerCase,
   );
 
-  const clearanceTotalUsd = round(dutyUsd + clearanceUsd + transferUsd);
+  /*
+    Both margins take the declared value as their base rather than the costs,
+    which is how the published rate card already describes a mainland release
+    — an uplift on the duty-free price, not a mark-up on the paperwork.
+  */
+  const distributorMarginUsd = round(
+    goodsValueUsd * (rate.distributorMarginPct / 100),
+  );
+  const ccMarginUsd = round(goodsValueUsd * (rate.ccMarginPct / 100));
+
+  const clearanceTotalUsd = round(
+    dutyUsd + clearanceUsd + transferUsd + distributorMarginUsd,
+  );
 
   return {
     version: rate.version,
@@ -109,8 +136,11 @@ const computeReleaseQuote = async (
     clearanceUsd,
     transferUsd,
     deliveryUsd,
+    distributorMarginUsd,
+    ccMarginUsd,
     clearanceTotalUsd,
-    totalUsd: round(clearanceTotalUsd + deliveryUsd),
+    serviceFeeUsd: ccMarginUsd,
+    totalUsd: round(clearanceTotalUsd + deliveryUsd + ccMarginUsd),
     priced: true,
   };
 };

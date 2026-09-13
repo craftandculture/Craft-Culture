@@ -4798,6 +4798,8 @@ export const cellarReleaseRequests = pgTable(
     goodsValueUsd: doublePrecision('goods_value_usd'),
     clearanceCostUsd: doublePrecision('clearance_cost_usd'),
     deliveryCostUsd: doublePrecision('delivery_cost_usd'),
+    /** C&C's own margin, kept apart so it can be reported on */
+    serviceFeeUsd: doublePrecision('service_fee_usd'),
     totalCostUsd: doublePrecision('total_cost_usd'),
     quotedAt: timestamp('quoted_at', { mode: 'date' }),
     quotedBy: uuid('quoted_by').references(() => users.id),
@@ -4874,8 +4876,19 @@ export const cellarReleaseRates = pgTable(
     /** A label the quote records, so an old figure stays explicable */
     version: text('version').notNull().default('v1'),
 
-    /** Duty and taxes, as a percentage of the declared value of the goods */
+    /*
+      Everything below that is a percentage takes the declared value of the
+      goods as its base, which is how the published rate card already
+      describes a mainland release: an uplift on the duty-free price.
+    */
+    /** Duty and taxes */
     dutyPct: doublePrecision('duty_pct').notNull().default(0),
+    /** The licensed partner who actually delivers on the mainland */
+    distributorMarginPct: doublePrecision('distributor_margin_pct')
+      .notNull()
+      .default(0),
+    /** What C&C earns for handling the release */
+    ccMarginPct: doublePrecision('cc_margin_pct').notNull().default(0),
     /** Clearance and paperwork */
     clearancePerCase: doublePrecision('clearance_per_case').notNull().default(0),
     clearancePerBottle: doublePrecision('clearance_per_bottle')

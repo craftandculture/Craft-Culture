@@ -439,7 +439,9 @@ const CellarPage = () => {
                       {request.status === 'under_review' &&
                         `${money(request.totalCostUsd ?? 0)} to deliver — ${money(
                           request.clearanceCostUsd ?? 0,
-                        )} clearance, ${money(request.deliveryCostUsd ?? 0)} delivery`}
+                        )} duties and clearance, ${money(
+                          request.deliveryCostUsd ?? 0,
+                        )} delivery, ${money(request.serviceFeeUsd ?? 0)} service`}
                     </Typography>
                   </div>
                   {request.status === 'under_review' && (
