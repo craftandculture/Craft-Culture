@@ -744,17 +744,25 @@ const CellarPage = () => {
                           side="left"
                           className="max-w-[240px] text-left lg:max-w-[240px]"
                         >
-                          <Typography variant="bodyXs">
-                            The wine is not in this figure &mdash; you
-                            already own it. This is what it costs to bring it
-                            out of bond and to your door: duty and clearance,
-                            VAT, transfer, licensed distribution, delivery and
-                            our handling.
-                            {request.additionalChargeLabel
-                              ? ` Also covers ${request.additionalChargeLabel.toLowerCase()}.`
-                              : ''}{' '}
-                            Nothing further is charged.
-                          </Typography>
+                          <div className="flex flex-col gap-1.5 text-left">
+                            <Typography
+                              variant="bodyXs"
+                              className="font-semibold"
+                            >
+                              You already own the wine. This is the cost of
+                              releasing it.
+                            </Typography>
+                            <Typography variant="bodyXs">
+                              Duty, VAT, clearance, transfer out of bond,
+                              licensed delivery, and our handling.
+                              {request.additionalChargeLabel
+                                ? ` Also ${request.additionalChargeLabel.toLowerCase()}.`
+                                : ''}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              Nothing further is charged.
+                            </Typography>
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                       <Button
@@ -1393,17 +1401,30 @@ const CellarPage = () => {
                               side="top"
                               className="max-w-[240px] text-left lg:max-w-[240px]"
                             >
-                              <Typography variant="bodyXs">
-                                <strong>The wine is not in this figure</strong>
-                                &nbsp;&mdash; you already own it. This is what
-                                it costs to bring it out of bond and to your
-                                door: duty and clearance, VAT, transfer,
-                                licensed distribution, delivery and our
-                                handling. Duty is assessed on the declared
-                                value, so a more valuable case costs more to
-                                release. An estimate from your rate card; we
-                                confirm the figure before anything moves.
-                              </Typography>
+                              {/*
+                                Three short statements rather than one long
+                                one. A tooltip is read standing up, and the
+                                first thing it has to answer is the thing the
+                                member would otherwise assume.
+                              */}
+                              <div className="flex flex-col gap-1.5 text-left">
+                                <Typography
+                                  variant="bodyXs"
+                                  className="font-semibold"
+                                >
+                                  You already own the wine. This is the cost of
+                                  releasing it.
+                                </Typography>
+                                <Typography variant="bodyXs">
+                                  Duty, VAT, clearance, transfer out of bond,
+                                  licensed delivery, and our handling.
+                                </Typography>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Duty follows the declared value, so a finer
+                                  case costs more to release. We confirm the
+                                  figure before anything moves.
+                                </Typography>
+                              </div>
                             </TooltipContent>
                           </Tooltip>
                         </span>
