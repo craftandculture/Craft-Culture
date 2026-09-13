@@ -903,6 +903,14 @@ const runMigrations = async () => {
     );
     console.log('✅ not-for-sale stock ready');
 
+    // --- private collectors ---------------------------------------------------
+    // Individual members of the Private Cellar programme. They were being filed
+    // as wine_partner, which grants sourcing and RFQ access they should not have.
+    await client.unsafe(
+      `ALTER TYPE "partner_type" ADD VALUE IF NOT EXISTS 'private_collector'`,
+    );
+    console.log('✅ private_collector partner type ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

@@ -50,6 +50,7 @@ const navGroups: NavGroup[] = [
       { label: 'Users', href: '/platform/admin/users', icon: IconUsers },
       { label: 'Distributors', href: '/platform/admin/partners', icon: IconBuildingStore },
       { label: 'Partners', href: '/platform/admin/wine-partners', icon: IconBottle },
+      { label: 'Collectors', href: '/platform/admin/collectors', icon: IconBottle },
     ],
   },
   {

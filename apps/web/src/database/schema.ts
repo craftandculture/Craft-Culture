@@ -369,6 +369,15 @@ export const partnerType = pgEnum('partner_type', [
   'distributor',
   'wine_partner',
   'supplier',
+  /**
+   * An individual collector on the Private Cellar programme.
+   *
+   * Distinct from wine_partner, which they were filed under for want of
+   * anywhere else: wine_partner carries sourcing, RFQs and the private-orders
+   * screens, none of which a collector should see. A collector owns stock in
+   * the warehouse and looks at it.
+   */
+  'private_collector',
 ]);
 
 export const partnerStatus = pgEnum('partner_status', [

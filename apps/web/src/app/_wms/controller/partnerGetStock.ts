@@ -2,16 +2,21 @@ import { and, desc, eq, gt, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
-import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get stock owned by the current partner
+ *
+ * Serves both a wine partner and a private collector: the question is the same
+ * either way — what does this owner have in the warehouse — and the
+ * answer is already scoped by `ownerId`.
+ *
  * Returns products with quantities and location details
  *
  * @example
  *   await trpcClient.wms.partner.getStock.query();
  */
-const partnerGetStock = winePartnerProcedure.query(async ({ ctx: { partner } }) => {
+const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) => {
   // Get stock grouped by product
   const products = await db
     .select({
@@ -99,6 +104,8 @@ const partnerGetStock = winePartnerProcedure.query(async ({ ctx: { partner } }) 
     partner: {
       id: partner.id,
       name: partner.companyName,
+      // A collector's screen is their cellar; a partner's is their stock.
+      type: partner.type,
     },
     summary: {
       totalCases,

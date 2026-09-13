@@ -102,59 +102,15 @@ export const wmsOperatorProcedure = protectedProcedure.use(
  */
 export const winePartnerProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    const { eq, and } = await import('drizzle-orm');
-    const { partners, partnerMembers } = await import('@/database/schema');
+    const { default: resolvePartnerForUser } = await import(
+      '@/app/_partners/data/resolvePartnerForUser'
+    );
 
-    let partner;
-
-    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
-    const membership = await db
-      .select({ partner: partners })
-      .from(partnerMembers)
-      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
-      .where(
-        and(
-          eq(partnerMembers.userId, ctx.user.id),
-          eq(partners.type, 'wine_partner'),
-        ),
-      )
-      .limit(1);
-
-    if (membership.length > 0 && membership[0]) {
-      partner = membership[0].partner;
-    }
-
-    // FALLBACK 1: Check direct partner link (owner)
-    if (!partner) {
-      const directPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.userId, ctx.user.id),
-            eq(partners.type, 'wine_partner'),
-          ),
-        )
-        .limit(1);
-
-      partner = directPartnerResult[0];
-    }
-
-    // FALLBACK 2: Check legacy user.partnerId field (deprecated)
-    if (!partner && ctx.user.partnerId) {
-      const userPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.id, ctx.user.partnerId),
-            eq(partners.type, 'wine_partner'),
-          ),
-        )
-        .limit(1);
-
-      partner = userPartnerResult[0];
-    }
+    const partner = await resolvePartnerForUser(
+      ctx.user.id,
+      ['wine_partner'],
+      ctx.user.partnerId,
+    );
 
     if (!partner) {
       throw new TRPCError({
@@ -172,11 +128,7 @@ export const winePartnerProcedure = protectedProcedure.use(
     }
 
     return await next({
-      ctx: {
-        ...ctx,
-        partner,
-        partnerId: partner.id,
-      },
+      ctx: { ...ctx, partner, partnerId: partner.id },
     });
   },
 );
@@ -194,59 +146,15 @@ export const winePartnerProcedure = protectedProcedure.use(
  */
 export const distributorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    const { eq, and } = await import('drizzle-orm');
-    const { partners, partnerMembers } = await import('@/database/schema');
+    const { default: resolvePartnerForUser } = await import(
+      '@/app/_partners/data/resolvePartnerForUser'
+    );
 
-    let partner;
-
-    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
-    const membership = await db
-      .select({ partner: partners })
-      .from(partnerMembers)
-      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
-      .where(
-        and(
-          eq(partnerMembers.userId, ctx.user.id),
-          eq(partners.type, 'distributor'),
-        ),
-      )
-      .limit(1);
-
-    if (membership.length > 0 && membership[0]) {
-      partner = membership[0].partner;
-    }
-
-    // FALLBACK 1: Check direct partner link (owner)
-    if (!partner) {
-      const directPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.userId, ctx.user.id),
-            eq(partners.type, 'distributor'),
-          ),
-        )
-        .limit(1);
-
-      partner = directPartnerResult[0];
-    }
-
-    // FALLBACK 2: Check legacy user.partnerId field (deprecated)
-    if (!partner && ctx.user.partnerId) {
-      const userPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.id, ctx.user.partnerId),
-            eq(partners.type, 'distributor'),
-          ),
-        )
-        .limit(1);
-
-      partner = userPartnerResult[0];
-    }
+    const partner = await resolvePartnerForUser(
+      ctx.user.id,
+      ['distributor'],
+      ctx.user.partnerId,
+    );
 
     if (!partner) {
       throw new TRPCError({
@@ -264,11 +172,47 @@ export const distributorProcedure = protectedProcedure.use(
     }
 
     return await next({
-      ctx: {
-        ...ctx,
-        partner,
-        partnerId: partner.id,
-      },
+      ctx: { ...ctx, partner, partnerId: partner.id },
+    });
+  },
+);
+
+/**
+ * Stock-owner procedure
+ *
+ * For any partner whose wine physically sits in the warehouse — a wine partner
+ * or a private collector. Distributors are deliberately excluded: they fulfil
+ * orders, they do not own stock, so nothing here would be theirs to see.
+ */
+export const stockOwnerProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    const { default: resolvePartnerForUser } = await import(
+      '@/app/_partners/data/resolvePartnerForUser'
+    );
+
+    const partner = await resolvePartnerForUser(
+      ctx.user.id,
+      ['wine_partner', 'private_collector'],
+      ctx.user.partnerId,
+    );
+
+    if (!partner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You are not linked to an account holding stock. Contact admin to be assigned.',
+      });
+    }
+
+    if (partner.status !== 'active') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your account is not active',
+      });
+    }
+
+    return await next({
+      ctx: { ...ctx, partner, partnerId: partner.id },
     });
   },
 );

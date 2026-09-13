@@ -73,7 +73,7 @@ const OverviewTab = ({
     wine seeded from a document may have neither, so the name has to be able
     to stand alone.
   */
-  const identityOf = (row: { wCode: string | null; lwin18: string | null }) =>
+  const identityOf = (row: { wCode: string | null; lwin18?: string | null }) =>
     row.wCode ?? row.lwin18 ?? '—';
 
   const [search, setSearch] = useState('');

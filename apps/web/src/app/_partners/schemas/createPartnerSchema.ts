@@ -10,7 +10,13 @@ import z from 'zod';
  */
 const createPartnerSchema = z.object({
   // Core business details
-  type: z.enum(['retailer', 'sommelier', 'distributor', 'wine_partner']),
+  type: z.enum([
+    'retailer',
+    'sommelier',
+    'distributor',
+    'wine_partner',
+    'private_collector',
+  ]),
   businessName: z.string().min(1, 'Business name is required'),
   /**
    * Create a second record for a name already on file.

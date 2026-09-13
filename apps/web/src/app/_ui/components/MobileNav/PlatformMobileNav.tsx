@@ -16,12 +16,20 @@ interface PlatformMobileNavProps {
 const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   const sections = [];
   const isWinePartner = user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
+  const isCollector =
+    user.customerType === 'private_clients' && user.partner?.type === 'private_collector';
 
-  // Local Stock section - for Wine Partners only (replaces Quotes)
-  if (isWinePartner) {
+  // Inventory section — a wine partner's stock, or a collector's cellar.
+  // Both replace Quotes, which neither of them raises.
+  if (isWinePartner || isCollector) {
     sections.push({
-      title: 'Inventory',
-      links: [{ href: '/platform/partner/stock', label: 'Local Stock' }],
+      title: isCollector ? 'Cellar' : 'Inventory',
+      links: [
+        {
+          href: '/platform/partner/stock',
+          label: isCollector ? 'Your Cellar' : 'Local Stock',
+        },
+      ],
     });
   } else if (user.role !== 'admin') {
     // Quotes section - for non-wine partners, non-admins (admins get Quotes under Orders section)
@@ -134,6 +142,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/users', label: 'Users' },
         { href: '/platform/admin/partners', label: 'Distributors' },
         { href: '/platform/admin/wine-partners', label: 'Wine Partners' },
+        { href: '/platform/admin/collectors', label: 'Collectors' },
       ],
     });
     sections.push({

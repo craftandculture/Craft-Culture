@@ -16,7 +16,15 @@ const partnersListSimple = adminProcedure
   .input(
     z
       .object({
-        type: z.enum(['distributor', 'wine_partner', 'supplier', 'private_client']).optional(),
+        type: z
+          .enum([
+            'distributor',
+            'wine_partner',
+            'supplier',
+            'private_client',
+            'private_collector',
+          ])
+          .optional(),
       })
       .optional(),
   )

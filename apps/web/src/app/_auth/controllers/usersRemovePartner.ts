@@ -7,7 +7,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
   userId: z.string().uuid(),
-  partnerType: z.enum(['distributor', 'wine_partner']),
+  partnerType: z.enum(['distributor', 'wine_partner', 'private_collector']),
 });
 
 /**
@@ -41,8 +41,9 @@ const usersRemovePartner = adminProcedure
         );
     }
 
-    // Also clear legacy user.partnerId field when removing wine partner assignment
-    if (partnerType === 'wine_partner') {
+    // Also clear the legacy user.partnerId field when removing a stock-owning
+    // partner, matching what assignment does.
+    if (partnerType === 'wine_partner' || partnerType === 'private_collector') {
       await db
         .update(users)
         .set({ partnerId: null })

@@ -71,9 +71,9 @@ const usersAssignPartner = adminProcedure
       })
       .returning();
 
-    // Clear legacy user.partnerId field if assigning to a wine partner
-    // This ensures partnerMembers is the single source of truth for partner resolution
-    if (partner.type === 'wine_partner') {
+    // Clear the legacy user.partnerId field for any stock-owning partner, so
+    // partnerMembers stays the single source of truth for partner resolution.
+    if (partner.type === 'wine_partner' || partner.type === 'private_collector') {
       await db
         .update(users)
         .set({ partnerId: null })

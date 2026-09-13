@@ -5,7 +5,7 @@ import parseChangelog from '@/utils/parseChangelog';
 
 export interface BrandedFooterProps {
   customerType: 'b2b' | 'b2c' | 'private_clients';
-  partnerType?: 'wine_partner' | 'distributor' | null;
+  partnerType?: 'wine_partner' | 'distributor' | 'private_collector' | null;
 }
 
 /**

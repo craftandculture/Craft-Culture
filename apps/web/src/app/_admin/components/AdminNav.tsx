@@ -46,6 +46,12 @@ const navItems: NavItem[] = [
     description: 'Wine companies',
   },
   {
+    label: 'Collectors',
+    href: '/platform/admin/collectors',
+    icon: IconBottle,
+    description: 'Private Cellar members',
+  },
+  {
     label: 'Private Clients',
     href: '/platform/admin/private-orders',
     icon: IconPackage,

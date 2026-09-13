@@ -244,6 +244,8 @@ const PartnerStockPage = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const isCollector = data?.partner?.type === 'private_collector';
+
   const rowKey = (product: { lwin18: string; caseConfig: number | null; salesArrangement: string | null }) =>
     `${product.lwin18}-${product.caseConfig ?? ''}-${product.salesArrangement ?? ''}`;
 
@@ -253,9 +255,14 @@ const PartnerStockPage = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Typography variant="headingLg">Local Stock</Typography>
+            <Typography variant="headingLg">
+              {isCollector ? 'Your Cellar' : 'Local Stock'}
+            </Typography>
             <Typography variant="bodySm" colorRole="muted" className="mt-1">
-              {data?.partner?.name ? `${data.partner.name} — ` : ''}Products stored at C&C bonded warehouse
+              {data?.partner?.name ? `${data.partner.name} — ` : ''}
+              {isCollector
+                ? 'Held in bond at the C&C warehouse'
+                : 'Products stored at C&C bonded warehouse'}
             </Typography>
           </div>
           <div className="flex items-center gap-2">

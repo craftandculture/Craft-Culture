@@ -21,7 +21,9 @@ const PartnerLayout = async ({ children }: React.PropsWithChildren) => {
 
   // Only allow wine partners to access partner routes
   const isWinePartner =
-    user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
+    user.customerType === 'private_clients' &&
+    (user.partner?.type === 'wine_partner' ||
+      user.partner?.type === 'private_collector');
 
   if (!isWinePartner) {
     redirect('/platform');
