@@ -6,12 +6,13 @@ import {
   IconChevronDown,
   IconCoin,
   IconDownload,
+  IconHistory,
   IconRefresh,
   IconSearch,
   IconShip,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,8 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
+import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
 import useTRPC from '@/lib/trpc/browser';
 
 interface CellarParcel {
@@ -65,38 +68,6 @@ const money = (value: number, precise = false) =>
     currency: 'USD',
     maximumFractionDigits: precise ? 2 : 0,
   });
-
-/**
- * What happened to the wine, in a sentence
- *
- * The warehouse records a movement type and a case count. An owner reading
- * their own cellar wants neither: they want to know that two cases arrived, or
- * that one left for Dubai, and roughly when.
- */
-const describeMovement = (movement: {
-  movementType: string;
-  quantityCases: number | null;
-  notes: string | null;
-}) => {
-  const cases = movement.quantityCases ?? 0;
-  const unit = `${cases} ${cases === 1 ? 'case' : 'cases'}`;
-
-  switch (movement.movementType) {
-    case 'receive':
-      return `${unit} received into bond`;
-    case 'pick':
-    case 'dispatch':
-      return `${unit} released from bond`;
-    case 'transfer':
-      return `${unit} moved within the warehouse`;
-    case 'repack':
-      return `${unit} repacked`;
-    case 'adjustment':
-      return `Holding corrected to ${unit}`;
-    default:
-      return `${unit} · ${movement.movementType.replaceAll('_', ' ')}`;
-  }
-};
 
 /**
  * A collector's cellar
@@ -591,53 +562,76 @@ const CellarPage = () => {
 
                         {history.length > 0 && (
                           <>
-                            <Typography
-                              variant="bodyXs"
-                              className="text-text-muted mb-2 block font-semibold uppercase tracking-wider"
-                            >
-                              History
-                            </Typography>
+                            <div className="mb-2 flex items-center gap-1.5">
+                              <Icon
+                                icon={IconHistory}
+                                size="sm"
+                                className="text-text-muted"
+                              />
+                              <Typography
+                                variant="bodyXs"
+                                className="text-text-muted font-semibold uppercase tracking-wider"
+                              >
+                                Movement history &mdash; {history.length} record
+                                {history.length === 1 ? '' : 's'}
+                              </Typography>
+                            </div>
+
                             {/*
-                              A timeline, oldest at the top, each entry written
-                              as something that happened to the wine rather
-                              than as a warehouse operation code. "pick · 2"
-                              means nothing to an owner; "2 cases released"
-                              does.
+                              The same shape as the warehouse's own history, so
+                              it is familiar to whoever answers the phone about
+                              it — minus the bay codes, the staff names and the
+                              operational notes, none of which are the owner's
+                              business or interest.
                             */}
-                            <ol className="border-border-muted ml-1 flex flex-col gap-3 border-l pl-4">
-                              {[...history]
-                                .sort(
-                                  (a, b) =>
-                                    new Date(a.performedAt ?? 0).getTime() -
-                                    new Date(b.performedAt ?? 0).getTime(),
-                                )
-                                .map((movement) => (
-                                  <li key={movement.id} className="relative">
-                                    <span className="bg-fill-brand absolute -left-[21px] top-1.5 h-2 w-2 rounded-full" />
-                                    <Typography
-                                      variant="bodySm"
-                                      className="block leading-snug"
-                                    >
-                                      {describeMovement(movement)}
-                                    </Typography>
-                                    <Typography
-                                      variant="bodyXs"
-                                      colorRole="muted"
-                                      className="mt-0.5 block"
-                                    >
-                                      {movement.performedAt
-                                        ? `${format(
-                                            new Date(movement.performedAt),
-                                            'd MMMM yyyy',
-                                          )} · ${formatDistanceToNow(
-                                            new Date(movement.performedAt),
-                                            { addSuffix: true },
-                                          )}`
-                                        : ''}
-                                    </Typography>
-                                  </li>
-                                ))}
-                            </ol>
+                            <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
+                              <table className="w-auto text-sm">
+                                <thead>
+                                  <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
+                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                      When
+                                    </th>
+                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                      Type
+                                    </th>
+                                    <th className="whitespace-nowrap px-4 py-1.5 text-right">
+                                      Cases
+                                    </th>
+                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                      Reference
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-border-muted/60 divide-y">
+                                  {history.map((movement) => (
+                                    <tr key={movement.id}>
+                                      <td className="text-text-muted whitespace-nowrap px-4 py-2">
+                                        {movement.performedAt
+                                          ? format(
+                                              new Date(movement.performedAt),
+                                              'd MMM yyyy',
+                                            )
+                                          : '—'}
+                                      </td>
+                                      <td className="whitespace-nowrap px-4 py-2">
+                                        <MovementTypeBadge
+                                          movementType={
+                                            movement.movementType as MovementTypeBadgeProps['movementType']
+                                          }
+                                          size="sm"
+                                        />
+                                      </td>
+                                      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
+                                        {movement.quantityCases ?? '—'}
+                                      </td>
+                                      <td className="text-text-muted whitespace-nowrap px-4 py-2 font-mono text-xs">
+                                        {movement.movementNumber ?? '—'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </>
                         )}
                       </td>
