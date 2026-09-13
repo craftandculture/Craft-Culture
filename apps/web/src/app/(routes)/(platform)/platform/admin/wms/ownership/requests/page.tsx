@@ -23,6 +23,12 @@ import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type TypeFilter =
+  | 'all'
+  | 'transfer'
+  | 'mark_for_sale'
+  | 'withdrawal'
+  | 'condition_report';
 
 /**
  * WMS Partner Requests - Admin view to review and resolve partner requests
@@ -33,6 +39,7 @@ const WMSPartnerRequestsPage = () => {
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [resolveModal, setResolveModal] = useState<{
     requestId: string;
     requestNumber: string;
@@ -45,6 +52,7 @@ const WMSPartnerRequestsPage = () => {
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.admin.ownership.getRequests.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
+      requestType: typeFilter === 'all' ? undefined : typeFilter,
       limit: 50,
       offset: 0,
     }),
@@ -86,16 +94,31 @@ const WMSPartnerRequestsPage = () => {
     { id: 'all', label: 'All' },
   ];
 
+  /*
+    Condition reports are chargeable work with a member waiting on them, so
+    they need to be findable rather than scrolled for among transfers.
+  */
+  const typeFilters: { id: TypeFilter; label: string }[] = [
+    { id: 'all', label: 'All types' },
+    { id: 'condition_report', label: 'Condition reports' },
+    { id: 'transfer', label: 'Transfers' },
+    { id: 'withdrawal', label: 'Withdrawals' },
+    { id: 'mark_for_sale', label: 'For sale' },
+  ];
+
   const getRequestTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
       transfer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       mark_for_sale: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
       withdrawal: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      condition_report:
+        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
     };
     const labels: Record<string, string> = {
       transfer: 'Transfer',
       mark_for_sale: 'For Sale',
       withdrawal: 'Withdrawal',
+      condition_report: 'Condition Report',
     };
     return (
       <span className={`rounded px-2 py-0.5 text-xs font-medium ${colors[type] || 'bg-fill-secondary text-text-muted'}`}>
@@ -170,6 +193,22 @@ const WMSPartnerRequestsPage = () => {
         )}
 
         {/* Filters */}
+        <div className="flex flex-wrap gap-1.5">
+          {typeFilters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setTypeFilter(filter.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                typeFilter === filter.id
+                  ? 'bg-fill-brand text-text-on-brand'
+                  : 'border-border-muted text-text-muted hover:text-text-primary border'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex gap-1 rounded-lg bg-fill-secondary p-1">
           {statusFilters.map((filter) => (
             <button

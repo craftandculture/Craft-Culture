@@ -67,7 +67,9 @@ export const getPartnerRequestsSchema = z.object({
   /** Filter by partner */
   partnerId: z.string().uuid().optional(),
   /** Filter by request type */
-  requestType: z.enum(['transfer', 'mark_for_sale', 'withdrawal']).optional(),
+  requestType: z
+    .enum(['transfer', 'mark_for_sale', 'withdrawal', 'condition_report'])
+    .optional(),
   /** Pagination */
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0),
