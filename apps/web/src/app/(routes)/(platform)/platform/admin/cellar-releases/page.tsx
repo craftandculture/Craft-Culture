@@ -231,7 +231,7 @@ const CellarReleasesPage = () => {
                         <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
                           <th className="px-3 py-1.5 text-left">Wine</th>
                           <th className="px-3 py-1.5 text-center">Vintage</th>
-                          <th className="px-3 py-1.5 text-center">Size</th>
+                          <th className="px-3 py-1.5 text-center">Format</th>
                           <th className="px-3 py-1.5 text-left">Lot</th>
                           <th className="px-3 py-1.5 text-right">Quantity</th>
                         </tr>
@@ -243,8 +243,17 @@ const CellarReleasesPage = () => {
                             <td className="px-3 py-2 text-center tabular-nums">
                               {item.vintage ?? 'NV'}
                             </td>
+                            {/*
+                              Pack and format together. A six of 75cl and a
+                              three of magnums are different things to pick,
+                              carry and clear, and 'Size' alone said neither.
+                            */}
                             <td className="px-3 py-2 text-center">
-                              {item.bottleSize ?? '—'}
+                              {item.bottleSize
+                                ? item.caseConfig && item.caseConfig > 1
+                                  ? `${item.caseConfig}×${item.bottleSize}`
+                                  : item.bottleSize
+                                : '—'}
                             </td>
                             {/*
                               The parcel the member picked, not a parcel of the

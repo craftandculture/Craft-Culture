@@ -530,6 +530,35 @@ const CellarPage = () => {
       .replace(/\s+(19|20)\d{2}\s*$/, '')
       .trim();
 
+  /*
+    The table can trim the vintage and format because it has columns for them.
+    A list has none, so three vintages of one wine would read as the same
+    line. Here the detail goes back on, after the name rather than buried in
+    it.
+  */
+  const lineLabel = (
+    name: string,
+    vintage: number | null | undefined,
+    bottleSize: string | null | undefined,
+    caseConfig: number | null | undefined,
+  ) => {
+    /*
+      Pack and format together, the way a merchant writes them: 6×75cl says
+      both how it is cased and what the bottle is, and distinguishes a six of
+      75cl from a three of magnums at a glance.
+    */
+    const pack = caseConfig ?? 1;
+    const format = bottleSize
+      ? pack > 1
+        ? `${pack}×${bottleSize}`
+        : bottleSize
+      : null;
+
+    return [displayName(name), vintage ? String(vintage) : 'NV', format]
+      .filter(Boolean)
+      .join(' · ');
+  };
+
   return (
     <div className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6 sm:py-8">
       <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -873,7 +902,12 @@ const CellarPage = () => {
                             return (
                               <tr key={item.id}>
                                 <td className="px-3 py-2">
-                                  {item.productName}
+                                  {lineLabel(
+                                    item.productName,
+                                    item.vintage,
+                                    item.bottleSize,
+                                    item.caseConfig,
+                                  )}
                                   {item.lotNumber && (
                                     <span className="text-text-muted ml-2 font-mono text-[11px]">
                                       lot {item.lotNumber}
@@ -1727,7 +1761,14 @@ const CellarPage = () => {
                             return (
                             <tr key={line.stockId}>
                               <td className="px-3 py-1.5">
-                                {line.wine?.productName}
+                                {line.wine
+                                  ? lineLabel(
+                                      line.wine.productName,
+                                      line.wine.vintage,
+                                      line.wine.bottleSize,
+                                      line.wine.caseConfig,
+                                    )
+                                  : ''}
                                 {parcel?.lotNumber && (
                                   <span className="text-text-muted ml-2 font-mono text-[11px]">
                                     lot {parcel.lotNumber}
