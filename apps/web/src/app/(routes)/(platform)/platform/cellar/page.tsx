@@ -194,7 +194,7 @@ const CellarPage = () => {
     { key: 'all', label: 'All' },
     { key: 'largeFormat', label: 'Large format' },
     { key: 'magnumPlus', label: 'Magnum and above' },
-    { key: 'reserved', label: 'Awaiting collection' },
+    { key: 'reserved', label: 'Allocated' },
   ];
 
   const th =
@@ -233,7 +233,7 @@ const CellarPage = () => {
       </header>
 
       {/* Headline figures, in the Stock Explorer idiom */}
-      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
         <div className="to-background-primary rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 px-3 py-2.5 text-center shadow-sm">
           <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100/70 text-indigo-500">
             <IconBottle size={13} />
@@ -334,13 +334,13 @@ const CellarPage = () => {
         />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <div className="-mx-3 mb-4 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {filters.map((filter) => (
           <button
             key={filter.key}
             type="button"
             onClick={() => setQuickFilter(filter.key)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               quickFilter === filter.key
                 ? 'bg-fill-brand text-text-on-brand'
                 : 'border-border-muted text-text-muted hover:text-text-primary border'
@@ -355,17 +355,17 @@ const CellarPage = () => {
         {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
       </Typography>
 
-      <div className="border-border-muted overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="bg-fill-muted/40">
+      <div className="border-border-muted max-h-[72vh] overflow-auto rounded-xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-fill-muted border-border-muted sticky top-0 z-10 border-b">
             <tr>
               <th className="w-8 px-2 py-2.5" />
-              <th className={`${th} text-left`}>Wine</th>
+              <th className={`${th} w-[38%] text-left`}>Wine</th>
               <th className={`${th} hidden text-left sm:table-cell`}>Producer</th>
-              <th className={`${th} text-center`}>Vintage</th>
+              <th className={`${th} hidden text-center sm:table-cell`}>Vintage</th>
               <th className={`${th} hidden text-center sm:table-cell`}>Size</th>
               <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
-              <th className={`${th} text-right`}>Cases</th>
+              <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
               <th className={`${th} text-right`}>Bottles</th>
               <th className={`${th} hidden text-right lg:table-cell`}>
                 Import $/btl
@@ -414,12 +414,19 @@ const CellarPage = () => {
                       {wine.productName}
                       <span className="text-text-muted block text-xs sm:hidden">
                         {wine.producer}
+                        {wine.vintage ? ` · ${wine.vintage}` : ''}
+                        {wine.bottleSize ? ` · ${wine.bottleSize}` : ''}
+                        {wine.totalCases
+                          ? ` · ${wine.totalCases} ${wine.totalCases === 1 ? 'case' : 'cases'}`
+                          : ''}
                       </span>
                     </td>
                     <td className={`${td} text-text-muted hidden sm:table-cell`}>
                       {wine.producer ?? '—'}
                     </td>
-                    <td className={`${td} text-center tabular-nums`}>
+                    <td
+                      className={`${td} hidden text-center tabular-nums sm:table-cell`}
+                    >
                       {wine.vintage ?? 'NV'}
                     </td>
                     <td className={`${td} hidden text-center sm:table-cell`}>
@@ -428,7 +435,9 @@ const CellarPage = () => {
                     <td className={`${td} hidden text-center md:table-cell`}>
                       {wine.caseConfig ?? '—'}
                     </td>
-                    <td className={`${td} text-right font-semibold tabular-nums`}>
+                    <td
+                      className={`${td} hidden text-right font-semibold tabular-nums sm:table-cell`}
+                    >
                       {wine.totalCases}
                     </td>
                     <td className={`${td} text-right tabular-nums`}>
@@ -464,14 +473,14 @@ const CellarPage = () => {
                           <table className="w-full min-w-[460px] text-sm">
                             <thead>
                               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
-                                <th className="px-3 py-1.5 text-right">Cases</th>
-                                <th className="px-3 py-1.5 text-center">Pack</th>
-                                <th className="px-3 py-1.5 text-right">Bottles</th>
-                                <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                                <th className="whitespace-nowrap px-4 py-1.5 text-right">Cases</th>
+                                <th className="whitespace-nowrap px-4 py-1.5 text-center">Pack</th>
+                                <th className="whitespace-nowrap px-4 py-1.5 text-right">Bottles</th>
+                                <th className="hidden whitespace-nowrap px-4 py-1.5 text-left sm:table-cell">
                                   Lot
                                 </th>
-                                <th className="px-3 py-1.5 text-left">In bond since</th>
-                                <th className="px-3 py-1.5 text-left">Status</th>
+                                <th className="whitespace-nowrap px-4 py-1.5 text-left">In bond since</th>
+                                <th className="whitespace-nowrap px-4 py-1.5 text-left">Status</th>
                               </tr>
                             </thead>
                             <tbody className="divide-border-muted/60 divide-y">
@@ -479,20 +488,20 @@ const CellarPage = () => {
                                 <tr
                                   key={`${parcel.locationId}-${parcel.lotNumber ?? ''}`}
                                 >
-                                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                                  <td className="whitespace-nowrap px-4 py-2 text-right font-semibold tabular-nums">
                                     {parcel.quantityCases}
                                   </td>
-                                  <td className="text-text-muted px-3 py-2 text-center tabular-nums">
+                                  <td className="text-text-muted whitespace-nowrap px-4 py-2 text-center tabular-nums">
                                     {wine.caseConfig ?? 1} &times;{' '}
                                     {wine.bottleSize ?? '75cl'}
                                   </td>
-                                  <td className="px-3 py-2 text-right tabular-nums">
+                                  <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
                                     {parcel.quantityCases * (wine.caseConfig ?? 1)}
                                   </td>
-                                  <td className="text-text-muted hidden px-3 py-2 font-mono text-xs sm:table-cell">
+                                  <td className="text-text-muted hidden whitespace-nowrap px-4 py-2 font-mono text-xs sm:table-cell">
                                     {parcel.lotNumber ?? '—'}
                                   </td>
-                                  <td className="text-text-muted px-3 py-2">
+                                  <td className="text-text-muted whitespace-nowrap px-4 py-2">
                                     {parcel.receivedAt
                                       ? format(
                                           new Date(parcel.receivedAt),
@@ -503,7 +512,7 @@ const CellarPage = () => {
                                   <td className="px-3 py-2">
                                     {parcel.reservedCases > 0 ? (
                                       <span className="text-text-brand text-xs">
-                                        {parcel.reservedCases} awaiting collection
+                                        {parcel.reservedCases} allocated
                                       </span>
                                     ) : (
                                       <span className="text-text-muted text-xs">
@@ -571,8 +580,10 @@ const CellarPage = () => {
       </div>
 
       <Typography variant="bodyXs" colorRole="muted" className="mt-6 block">
-        Import cost is the value declared when the wine was brought into bond,
-        not a market valuation. To call wines forward for delivery, contact{' '}
+        Allocated cases are committed against an order and cannot be released
+        again until it completes. Import cost is the value declared when the
+        wine was brought into bond, not a market valuation. To call wines
+        forward for delivery, contact{' '}
         <a className="text-text-brand" href="mailto:enquiries@craftculture.xyz">
           enquiries@craftculture.xyz
         </a>
