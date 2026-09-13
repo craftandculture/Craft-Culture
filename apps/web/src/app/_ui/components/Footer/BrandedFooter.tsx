@@ -126,6 +126,19 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               >
                 Help Center
               </Link>
+              {/*
+                A member consolidating a purchase or offering wine for resale
+                needs a person, not a page. It belongs where someone already
+                looks for a way to reach us.
+              */}
+              {access.kind === 'collector' && (
+                <a
+                  href="mailto:enquiries@craftculture.xyz"
+                  className="text-text-muted hover:text-text-primary text-xs transition-colors"
+                >
+                  Email your account team
+                </a>
+              )}
               {access.kind !== 'collector' && (
                 <Link
                   href="/platform/development-log"

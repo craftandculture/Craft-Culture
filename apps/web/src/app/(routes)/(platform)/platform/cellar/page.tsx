@@ -1101,8 +1101,27 @@ const CellarPage = () => {
               <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
               <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
               <th className={`${th} text-right`}>Bottles</th>
+              {/*
+                The definition sits on the thing it defines. As a glossary at
+                the foot of the page it was three sentences nobody reached,
+                explaining labels they had already stopped wondering about.
+              */}
               <th className={`${th} hidden text-right lg:table-cell`}>
-                {currency === 'AED' ? 'AED' : '$'} / btl
+                <Tooltip>
+                  <TooltipTrigger className="inline-flex items-center gap-1">
+                    {currency === 'AED' ? 'AED' : '$'} / btl
+                    <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="left"
+                    className="max-w-[220px] text-left lg:max-w-[220px]"
+                  >
+                    <Typography variant="bodyXs">
+                      The value declared when the wine was brought into bond.
+                      Not a market valuation.
+                    </Typography>
+                  </TooltipContent>
+                </Tooltip>
               </th>
               <th className={`${th} min-w-[150px] text-right`}>Request</th>
             </tr>
@@ -1361,12 +1380,18 @@ const CellarPage = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2">
                                     {parcel.reservedCases > 0 ? (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                      <span
+                                        title="Committed against an order already placed"
+                                        className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                                      >
                                         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                                         {parcel.reservedCases} allocated
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                                      <span
+                                        title="Held in bond, duty suspended"
+                                        className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700"
+                                      >
                                         <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
                                         In bond
                                       </span>
@@ -1983,52 +2008,6 @@ const CellarPage = () => {
           </Button>
         </Link>
       </section>
-
-      <div className="border-border-muted mt-8 border-t pt-6">
-        {/*
-          Three separate facts read as three, not as a paragraph. Each one
-          answers a question a member will actually ask, so each gets a label
-          they can find it by.
-        */}
-        <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-3">
-          {[
-            {
-              term: 'Duty',
-              detail:
-                'Suspended while in bond. Payable on release, and quoted first.',
-            },
-            {
-              term: 'Allocated',
-              detail: 'Committed against an order already placed.',
-            },
-            {
-              term: 'Import cost',
-              detail: 'Declared on import. Not a market valuation.',
-            },
-          ].map((note) => (
-            <div key={note.term}>
-              <dt className="text-text-muted mb-1 text-[11px] font-semibold uppercase tracking-wider">
-                {note.term}
-              </dt>
-              <dd className="text-text-muted m-0 max-w-[46ch] text-xs leading-relaxed">
-                {note.detail}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        <div className="border-border-muted mt-5 border-t pt-4">
-          <Typography variant="bodyXs" colorRole="muted" className="block">
-            Consolidating a purchase, or offering wine for resale?{' '}
-            <a
-              className="text-text-brand font-medium"
-              href="mailto:enquiries@craftculture.xyz"
-            >
-              enquiries@craftculture.xyz
-            </a>
-          </Typography>
-        </div>
-      </div>
 
     </div>
   );
