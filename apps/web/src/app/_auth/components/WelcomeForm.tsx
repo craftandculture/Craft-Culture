@@ -1,7 +1,7 @@
 'use client';
 
 import { IconArrowRight, IconCheck } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -48,6 +48,18 @@ const WelcomeForm = () => {
 
   const trpc = useTRPC();
 
+  /*
+    An account the admin has already set up does not get asked what it is.
+
+    The role list writes customerType, and a private collector shares
+    `private_clients` with a wine partner — so the question cannot even express
+    the difference, and answering it wrongly (Distributor, say) would strip the
+    access an admin had just granted. Where a partner is already linked, the
+    only things left to collect are a name and the terms.
+  */
+  const { data: me } = useQuery(trpc.users.getMe.queryOptions());
+  const isProvisioned = Boolean(me?.partner);
+
   const { mutateAsync: updateUser } = useMutation(
     trpc.users.update.mutationOptions({
       onSuccess: () => {
@@ -65,7 +77,7 @@ const WelcomeForm = () => {
       toast.error('Please accept the Terms of Use to continue');
       return;
     }
-    if (!values.customerType) {
+    if (!isProvisioned && !values.customerType) {
       toast.error('Please select your role');
       return;
     }
@@ -120,64 +132,66 @@ const WelcomeForm = () => {
             </FormFieldContent>
           </FormField>
 
-          {/* Role Selection */}
-          <FormField>
-            <FormFieldLabel asChild>
-              <label>Select your role</label>
-            </FormFieldLabel>
-            <FormFieldContent>
-              <Controller
-                control={control}
-                name="customerType"
-                render={({ field }) => (
-                  <div className="flex flex-col gap-2">
-                    {customerTypeOptions.map((option) => {
-                      const isSelected = field.value === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => field.onChange(option.value as CustomerTypeValue)}
-                          disabled={isSubmitting || isRouting}
-                          className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${
-                            isSelected
-                              ? 'border-fill-brand bg-fill-brand/5'
-                              : 'border-border-secondary hover:border-border-primary hover:bg-fill-secondary/50'
-                          } ${isSubmitting || isRouting ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                        >
-                          <div
-                            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+          {/* Role Selection — only where the admin has not already set one */}
+          {!isProvisioned && (
+            <FormField>
+              <FormFieldLabel asChild>
+                <label>Select your role</label>
+              </FormFieldLabel>
+              <FormFieldContent>
+                <Controller
+                  control={control}
+                  name="customerType"
+                  render={({ field }) => (
+                    <div className="flex flex-col gap-2">
+                      {customerTypeOptions.map((option) => {
+                        const isSelected = field.value === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => field.onChange(option.value as CustomerTypeValue)}
+                            disabled={isSubmitting || isRouting}
+                            className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${
                               isSelected
-                                ? 'border-fill-brand bg-fill-brand'
-                                : 'border-border-muted'
-                            }`}
+                                ? 'border-fill-brand bg-fill-brand/5'
+                                : 'border-border-secondary hover:border-border-primary hover:bg-fill-secondary/50'
+                            } ${isSubmitting || isRouting ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                           >
-                            {isSelected && (
-                              <IconCheck size={12} className="text-white" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <Typography
-                              variant="labelMd"
-                              className={isSelected ? 'text-text-brand' : ''}
+                            <div
+                              className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                isSelected
+                                  ? 'border-fill-brand bg-fill-brand'
+                                  : 'border-border-muted'
+                              }`}
                             >
-                              {option.label}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {option.description}
-                            </Typography>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                              {isSelected && (
+                                <IconCheck size={12} className="text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <Typography
+                                variant="labelMd"
+                                className={isSelected ? 'text-text-brand' : ''}
+                              >
+                                {option.label}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {option.description}
+                              </Typography>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
+                {errors.customerType && (
+                  <FormFieldError>{errors.customerType.message}</FormFieldError>
                 )}
-              />
-              {errors.customerType && (
-                <FormFieldError>{errors.customerType.message}</FormFieldError>
-              )}
-            </FormFieldContent>
-          </FormField>
+              </FormFieldContent>
+            </FormField>
+          )}
 
           {/* Terms Acceptance */}
           <div className="rounded-lg border border-border-secondary bg-fill-secondary/30 p-4">
