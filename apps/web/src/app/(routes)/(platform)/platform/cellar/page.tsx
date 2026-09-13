@@ -67,10 +67,23 @@ const sizeMl = (size: string | null) => {
   return size.toLowerCase().includes('cl') ? value * 10 : value;
 };
 
-const money = (value: number, precise = false) =>
-  value.toLocaleString('en-US', {
+type Currency = 'USD' | 'AED';
+
+/*
+  The dirham is pegged to the dollar at 3.6725, so this is a conversion rather
+  than a rate that has to be fetched and can go stale. Everything on this page
+  is held in dollars; the toggle only changes how it is read.
+*/
+const AED_PER_USD = 3.6725;
+
+const formatMoney = (
+  value: number,
+  currency: Currency,
+  precise = false,
+) =>
+  (currency === 'AED' ? value * AED_PER_USD : value).toLocaleString('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     maximumFractionDigits: precise ? 2 : 0,
   });
 
@@ -95,6 +108,11 @@ const CellarPage = () => {
 
   /* What the member has picked, in bottles, keyed by the parcel it comes from. */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
+
+  const [currency, setCurrency] = useState<Currency>('USD');
+
+  const money = (value: number, precise = false) =>
+    formatMoney(value, currency, precise);
 
   /*
     Every quantity control routes through here, so the cap on what is held is
@@ -423,7 +441,13 @@ const CellarPage = () => {
 
   const handleExport = () => {
     const csvRows = [
-      ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Import $/btl'],
+      /*
+        The export stays in dollars whatever the screen is showing, and says
+        so in the header. A spreadsheet whose currency depends on a toggle
+        somebody flicked before downloading it is a spreadsheet nobody can
+        trust a month later.
+      */
+      ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Import USD/btl'],
       ...wines.map((wine) => [
         wine.producer ?? '',
         wine.productName,
@@ -511,6 +535,28 @@ const CellarPage = () => {
           >
             <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
           </Button>
+          {/*
+            The dirham is pegged, so this converts rather than quotes a rate.
+            A member who thinks in dirhams should not have to do the sum to
+            know whether a release is worth asking for.
+          */}
+          <div className="border-border-muted flex overflow-hidden rounded-lg border">
+            {(['USD', 'AED'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setCurrency(option)}
+                aria-pressed={currency === option}
+                className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  currency === option
+                    ? 'bg-fill-brand text-text-on-brand'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -557,7 +603,9 @@ const CellarPage = () => {
           <div className="text-lg font-bold leading-tight tabular-nums">
             {totals.cost > 0 ? money(totals.cost) : '—'}
           </div>
-          <div className="text-text-muted text-[11px]">Recorded on import</div>
+          <div className="text-text-muted text-[11px]">
+            Recorded on import
+          </div>
           <div className="text-text-muted text-[10px]">
             {totals.pricedCount}/{totals.wines} wines
           </div>
@@ -780,7 +828,7 @@ const CellarPage = () => {
               <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
               <th className={`${th} text-right`}>Bottles</th>
               <th className={`${th} hidden text-right lg:table-cell`}>
-                Import $/btl
+                Import {currency === 'AED' ? 'AED' : '$'}/btl
               </th>
               <th className={`${th} min-w-[150px] text-right`}>Request</th>
             </tr>
@@ -1579,7 +1627,8 @@ const CellarPage = () => {
                 <ButtonContent>Request delivery</ButtonContent>
               </Button>
               <Typography variant="bodyXs" colorRole="muted">
-                Nothing moves until you have seen the cost and agreed it.
+                We price it first. No wine leaves bond until you approve the
+                cost.
               </Typography>
             </div>
           </div>
