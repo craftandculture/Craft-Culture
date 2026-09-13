@@ -220,23 +220,42 @@ const CellarPage = () => {
     the remainder into the next, which is what the warehouse would do anyway.
   */
   const addToWine = (wine: CellarWine, bottles: number) => {
-    let remaining = bottles;
-
     setBasket((current) => {
       const next = new Map(current);
+      let remaining = bottles;
 
-      for (const parcel of wine.locations) {
-        if (remaining <= 0) break;
+      /*
+        Taking bottles away walks the parcels backwards, so removing one
+        undoes the last one added rather than breaking into the earliest
+        parcel the member had already settled on.
+      */
+      const parcels =
+        bottles < 0 ? [...wine.locations].reverse() : wine.locations;
+
+      for (const parcel of parcels) {
+        if (remaining === 0) break;
 
         const held = parcel.quantityCases * (wine.caseConfig ?? 1);
         const already = next.get(parcel.stockId) ?? 0;
-        const room = held - already;
 
-        if (room <= 0) continue;
+        if (bottles > 0) {
+          const room = held - already;
+          if (room <= 0) continue;
 
-        const take = Math.min(room, remaining);
-        next.set(parcel.stockId, already + take);
-        remaining -= take;
+          const take = Math.min(room, remaining);
+          next.set(parcel.stockId, already + take);
+          remaining -= take;
+        } else {
+          if (already <= 0) continue;
+
+          const give = Math.min(already, -remaining);
+          const left = already - give;
+
+          if (left > 0) next.set(parcel.stockId, left);
+          else next.delete(parcel.stockId);
+
+          remaining += give;
+        }
       }
 
       return next;
@@ -420,8 +439,27 @@ const CellarPage = () => {
   ];
 
   const th =
-    'text-[11px] font-medium uppercase tracking-wider text-text-muted px-3 py-2.5';
-  const td = 'px-3 py-2.5 align-middle';
+    'text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted px-3 py-2';
+  /*
+    Everything on a row was the same weight, so nothing was findable: the wine
+    name competed with its own producer, with six numbers and with two
+    buttons. The name is the only thing at full strength now; the rest recedes
+    to supporting detail and the numbers carry weight only where a member is
+    actually counting — bottles.
+  */
+  const td = 'px-3 py-2 align-middle text-[13px]';
+  const tdMuted = `${td} text-text-muted`;
+
+  /*
+    The catalogue name repeats the size and strength that already have their
+    own columns. Printed in full it pushes the producer off small screens and
+    makes every row look like every other row.
+  */
+  const displayName = (name: string) =>
+    name
+      .replace(/\s+\d+(\.\d+)?%\s*abv\s*$/i, '')
+      .replace(/\s+\d+(\.\d+)?L\s*$/i, '')
+      .trim();
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6 sm:py-8">
@@ -658,21 +696,26 @@ const CellarPage = () => {
         </section>
       )}
 
-      <div className="relative mb-3">
-        <Icon
-          icon={IconSearch}
-          size="sm"
-          className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-        />
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by wine, producer or vintage"
-          className="pl-9"
-        />
-      </div>
+      {/*
+        Search and filters on one line above small screens. Stacked, they cost
+        three bands of vertical space before a member sees a single wine.
+      */}
+      <div className="mb-3 lg:flex lg:items-center lg:gap-4">
+        <div className="relative lg:w-72 lg:flex-shrink-0">
+          <Icon
+            icon={IconSearch}
+            size="sm"
+            className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+          />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by wine, producer or vintage"
+            className="pl-9"
+          />
+        </div>
 
-      <div className="-mx-3 mb-4 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <div className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 lg:mt-0">
         {filters.map((filter) => (
           <button
             key={filter.key}
@@ -686,7 +729,8 @@ const CellarPage = () => {
           >
             {filter.label}
           </button>
-        ))}
+          ))}
+        </div>
       </div>
 
       <Typography variant="bodyXs" colorRole="muted" className="mb-2 block">
@@ -738,7 +782,7 @@ const CellarPage = () => {
                 <Fragment key={wine.lwin18}>
                   <tr
                     onClick={() => setOpenWine(isOpen ? null : wine.lwin18)}
-                    className="hover:bg-fill-muted/40 cursor-pointer transition-colors"
+                    className="hover:bg-fill-muted/40 group cursor-pointer transition-colors"
                   >
                     <td className="px-2 py-2.5">
                       <Icon
@@ -749,8 +793,8 @@ const CellarPage = () => {
                         }`}
                       />
                     </td>
-                    <td className={`${td} font-medium`}>
-                      {wine.productName}
+                    <td className={`${td} text-text-primary font-medium`}>
+                      {displayName(wine.productName)}
                       <span className="text-text-muted block text-xs sm:hidden">
                         {wine.producer}
                         {wine.vintage ? ` · ${wine.vintage}` : ''}
@@ -760,30 +804,32 @@ const CellarPage = () => {
                           : ''}
                       </span>
                     </td>
-                    <td className={`${td} text-text-muted hidden md:table-cell`}>
+                    <td className={`${tdMuted} hidden md:table-cell`}>
                       {wine.producer ?? '—'}
                     </td>
                     <td
-                      className={`${td} hidden text-center tabular-nums sm:table-cell`}
+                      className={`${tdMuted} hidden text-center tabular-nums sm:table-cell`}
                     >
                       {wine.vintage ?? 'NV'}
                     </td>
-                    <td className={`${td} hidden text-center sm:table-cell`}>
+                    <td className={`${tdMuted} hidden text-center sm:table-cell`}>
                       {wine.bottleSize ?? '—'}
                     </td>
-                    <td className={`${td} hidden text-center md:table-cell`}>
+                    <td className={`${tdMuted} hidden text-center tabular-nums md:table-cell`}>
                       {wine.caseConfig ?? '—'}
                     </td>
                     <td
-                      className={`${td} hidden text-right font-semibold tabular-nums sm:table-cell`}
+                      className={`${tdMuted} hidden text-right tabular-nums sm:table-cell`}
                     >
                       {wine.totalCases}
                     </td>
-                    <td className={`${td} text-right tabular-nums`}>
+                    <td
+                      className={`${td} text-text-primary text-right font-semibold tabular-nums`}
+                    >
                       {bottlesOf(wine)}
                     </td>
                     <td
-                      className={`${td} hidden text-right tabular-nums lg:table-cell`}
+                      className={`${tdMuted} hidden text-right tabular-nums lg:table-cell`}
                     >
                       {wine.costPerBottle
                         ? money(wine.costPerBottle, true)
@@ -804,12 +850,43 @@ const CellarPage = () => {
                         const held = bottlesOf(wine);
                         const pack = wine.caseConfig ?? 1;
 
+                        /*
+                          The count replaced the controls, so a member could
+                          add one bottle and then had no way to add a second
+                          without opening the row. It keeps its controls.
+                        */
                         if (chosen > 0) {
                           return (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className="text-text-brand text-xs font-semibold tabular-nums">
+                            <span className="inline-flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                aria-label={`One fewer bottle of ${wine.productName}`}
+                                onClick={() => addToWine(wine, -1)}
+                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors"
+                              >
+                                &minus;
+                              </button>
+                              <span className="text-text-brand min-w-[46px] text-center text-xs font-semibold tabular-nums">
                                 {chosen} of {held}
                               </span>
+                              <button
+                                type="button"
+                                aria-label={`One more bottle of ${wine.productName}`}
+                                disabled={chosen >= held}
+                                onClick={() => addToWine(wine, 1)}
+                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-30"
+                              >
+                                +
+                              </button>
+                              {pack > 1 && chosen + pack <= held && (
+                                <button
+                                  type="button"
+                                  onClick={() => addToWine(wine, pack)}
+                                  className="text-text-muted hover:bg-fill-brand/10 hover:text-text-brand ml-0.5 rounded px-1.5 py-1 text-[11px] font-medium transition-colors"
+                                >
+                                  + Case
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 aria-label={`Remove ${wine.productName} from the request`}
@@ -822,13 +899,18 @@ const CellarPage = () => {
                           );
                         }
 
+                        /*
+                          Two outlined boxes on sixty-five rows is a wall of
+                          buttons. They sit quiet until the row is under the
+                          cursor, which is the only time they can be used.
+                        */
                         return (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                             {pack > 1 && (
                               <button
                                 type="button"
                                 onClick={() => addToWine(wine, pack)}
-                                className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand rounded-md border px-2 py-1 text-xs font-medium transition-colors"
+                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-1.5 py-1 text-xs font-medium transition-colors"
                               >
                                 + Case
                               </button>
@@ -836,7 +918,7 @@ const CellarPage = () => {
                             <button
                               type="button"
                               onClick={() => addToWine(wine, 1)}
-                              className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand rounded-md border px-2 py-1 text-xs font-medium transition-colors"
+                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-1.5 py-1 text-xs font-medium transition-colors"
                             >
                               + Bottle
                             </button>
