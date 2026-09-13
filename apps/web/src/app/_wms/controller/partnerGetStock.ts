@@ -1,8 +1,17 @@
-import { and, desc, eq, gt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  wmsLocations,
+  wmsProductPricing,
+  wmsStock,
+  wmsStockMovements,
+} from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+
+import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 
 /**
  * Get stock owned by the current partner
@@ -100,6 +109,71 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     .orderBy(desc(wmsStockMovements.performedAt))
     .limit(50);
 
+  /*
+    What the wine cost when it was imported — the figure on the import
+    documents, not a market valuation. C&C does not value collections, so this
+    is labelled as what it is: the recorded import cost, which is also what an
+    insurance declaration is built from.
+
+    Preferring the pricing record and falling back to the most recent shipment
+    line mirrors how the Pricing Manager resolves the same number.
+  */
+  const costRows = await db
+    .select({
+      lwin18: wmsStock.lwin18,
+      costPerBottle: sql<number | null>`COALESCE(
+        NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0),
+        MAX(${logisticsShipmentItems.productCostPerBottle})
+      )`,
+    })
+    .from(wmsStock)
+    .leftJoin(
+      wmsProductPricing,
+      eq(wmsProductPricing.lwin18, wmsStock.lwin18),
+    )
+    .leftJoin(
+      logisticsShipmentItems,
+      eq(logisticsShipmentItems.lwin, wmsStock.lwin18),
+    )
+    .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
+    .groupBy(wmsStock.lwin18);
+
+  const costByLwin = new Map(
+    costRows.map((row) => [row.lwin18, Number(row.costPerBottle ?? 0)]),
+  );
+
+  /*
+    Wine bought and shipped but not yet received owns no warehouse row, so it
+    was invisible here — a collector who has just bought sees nothing at all
+    until it lands, which is exactly when they most want to look.
+  */
+  const inbound = await db
+    .select({
+      lwin18: logisticsShipmentItems.lwin,
+      productName: logisticsShipmentItems.productName,
+      producer: logisticsShipmentItems.producer,
+      vintage: logisticsShipmentItems.vintage,
+      bottlesPerCase: logisticsShipmentItems.bottlesPerCase,
+      cases: logisticsShipmentItems.cases,
+      totalBottles: logisticsShipmentItems.totalBottles,
+      shipmentNumber: logisticsShipments.shipmentNumber,
+      status: logisticsShipments.status,
+      eta: logisticsShipments.eta,
+    })
+    .from(logisticsShipmentItems)
+    .innerJoin(
+      logisticsShipments,
+      eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
+    )
+    .where(
+      and(
+        eq(logisticsShipments.partnerId, partner.id),
+        eq(logisticsShipments.type, 'inbound'),
+        inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
+      ),
+    )
+    .orderBy(logisticsShipments.eta);
+
   return {
     partner: {
       id: partner.id,
@@ -116,7 +190,9 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     products: products.map((product) => ({
       ...product,
       locations: locationsByLwin.get(product.lwin18) ?? [],
+      costPerBottle: costByLwin.get(product.lwin18) ?? null,
     })),
+    inbound,
     recentMovements,
   };
 });
