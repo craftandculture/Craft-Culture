@@ -50,14 +50,23 @@ const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   let impersonatedBy: string | null = null;
   let impersonatingAdmin: CurrentUser['impersonatingAdmin'] = null;
 
-  if (sessionToken) {
+  /*
+    The cookie carries `token.signature`; the sessions table stores the token
+    alone. Comparing the whole cookie value never matched, so impersonation was
+    never detected and the banner — the only way out of an impersonated session
+    — never rendered anywhere. Tokens themselves contain no dot, so taking the
+    part before the first one is safe whether or not the cookie is signed.
+  */
+  const sessionTokenValue = sessionToken?.split('.')[0];
+
+  if (sessionTokenValue) {
     // Look up the session in the database to check for impersonation
     const [dbSession] = await db
       .select({
         impersonatedBy: sessions.impersonatedBy,
       })
       .from(sessions)
-      .where(eq(sessions.token, sessionToken))
+      .where(eq(sessions.token, sessionTokenValue))
       .limit(1);
 
     if (dbSession?.impersonatedBy) {
