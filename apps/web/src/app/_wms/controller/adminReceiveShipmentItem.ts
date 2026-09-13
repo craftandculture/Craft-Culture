@@ -21,6 +21,7 @@ import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
 import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
+import notifyOwnerOfArrival from '../utils/notifyOwnerOfArrival';
 
 /**
  * Receive a single item from a shipment into the WMS (incremental receiving)
@@ -165,12 +166,15 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       caseLabels: Array<{ id: string; barcode: string }>;
     }> = [];
 
+    /* Captured for the arrival notice, which is sent once the item is booked in. */
+    const receivedOwnerId = shipmentItem.overrideOwnerId ?? partner.id;
+
     for (const assignment of receivedItem.locationAssignments) {
       const itemLocationId = assignment.locationId;
       const assignmentCases = assignment.cases;
 
       // Check for existing stock at this location with same LWIN18 and owner
-      const resolvedOwnerId = shipmentItem.overrideOwnerId ?? partner.id;
+      const resolvedOwnerId = receivedOwnerId;
       const [existingStock] = await db
         .select()
         .from(wmsStock)
@@ -373,11 +377,29 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       });
     }
 
+    const casesReceived = createdStock.reduce((sum, s) => sum + s.cases, 0);
+
+    /*
+      Tell the owner their wine has landed.
+
+      Arrival is the moment an owner most wants to hear from us and the one
+      they hear nothing about — the cellar just gains a line the next time
+      they happen to look. Deliberately after the stock is written and
+      deliberately unable to fail the receipt.
+    */
+    await notifyOwnerOfArrival({
+      ownerId: receivedOwnerId,
+      productName,
+      cases: casesReceived,
+      bottles: casesReceived * actualBottlesPerCase,
+      shipmentNumber: shipment.shipmentNumber,
+    });
+
     return {
       success: true,
       lwin18,
       productName,
-      totalCases: createdStock.reduce((sum, s) => sum + s.cases, 0),
+      totalCases: casesReceived,
       stock: createdStock,
     };
   });

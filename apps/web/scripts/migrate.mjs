@@ -918,6 +918,14 @@ const runMigrations = async () => {
     );
     console.log('✅ condition_report request type ready');
 
+    // --- cellar arrivals -------------------------------------------------
+    // Telling an owner their wine has landed is the most useful message this
+    // product sends, and it needs a type of its own so it can be muted alone.
+    await client.unsafe(
+      `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'cellar_wine_received'`,
+    );
+    console.log('✅ cellar_wine_received notification type ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

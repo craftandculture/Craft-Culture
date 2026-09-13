@@ -726,6 +726,8 @@ export const notificationType = pgEnum('notification_type', [
   'shipment_status_changed',
   'document_expired',
   'document_expiring_soon',
+  // Private Cellar
+  'cellar_wine_received',
 ]);
 
 /**
