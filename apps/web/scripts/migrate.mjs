@@ -926,6 +926,64 @@ const runMigrations = async () => {
     );
     console.log('✅ cellar_wine_received notification type ready');
 
+    // --- cellar release requests -------------------------------------------
+    // A member asking for their own wine back out of bond. Not an order: what
+    // is being agreed is the cost of clearance and delivery, so it carries a
+    // quote and an approval before anything moves.
+    await client.unsafe(`DO $$ BEGIN
+      CREATE TYPE "cellar_release_status" AS ENUM
+        ('draft','submitted','under_review','revision_requested','confirmed','cancelled');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+
+    await client.unsafe(`CREATE TABLE IF NOT EXISTS "cellar_release_requests" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "request_number" text NOT NULL UNIQUE,
+      "partner_id" uuid NOT NULL REFERENCES "partners"("id"),
+      "requested_by" uuid NOT NULL REFERENCES "users"("id"),
+      "status" "cellar_release_status" NOT NULL DEFAULT 'draft',
+      "delivery_address" text,
+      "member_notes" text,
+      "admin_notes" text,
+      "clearance_rate_version" text,
+      "goods_value_usd" double precision,
+      "clearance_cost_usd" double precision,
+      "delivery_cost_usd" double precision,
+      "total_cost_usd" double precision,
+      "quoted_at" timestamp,
+      "quoted_by" uuid REFERENCES "users"("id"),
+      "submitted_at" timestamp,
+      "confirmed_at" timestamp,
+      "confirmed_by" uuid REFERENCES "users"("id"),
+      "private_client_order_id" uuid,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    )`);
+
+    await client.unsafe(`CREATE TABLE IF NOT EXISTS "cellar_release_request_items" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "request_id" uuid NOT NULL REFERENCES "cellar_release_requests"("id") ON DELETE CASCADE,
+      "stock_id" uuid REFERENCES "wms_stock"("id"),
+      "lwin18" text NOT NULL,
+      "product_name" text NOT NULL,
+      "vintage" integer,
+      "bottle_size" text,
+      "case_config" integer,
+      "bottles" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    )`);
+
+    for (const [table, column] of [
+      ['cellar_release_requests', 'partner_id'],
+      ['cellar_release_requests', 'status'],
+      ['cellar_release_request_items', 'request_id'],
+    ]) {
+      await client.unsafe(
+        `CREATE INDEX IF NOT EXISTS "${table}_${column}_idx" ON "${table}" ("${column}")`,
+      );
+    }
+    console.log('✅ cellar release requests ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

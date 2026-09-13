@@ -1,6 +1,7 @@
 import adminRouter from '@/app/_admin/router';
 import agentsRouter from '@/app/_agents/router';
 import usersRouter from '@/app/_auth/router';
+import cellarRouter from '@/app/_cellar/router';
 import commissionsRouter from '@/app/_commissions/router';
 import logisticsRouter from '@/app/_logistics/router';
 import lpoRouter from '@/app/_lpo/router';
@@ -48,6 +49,7 @@ export const appRouter = createTRPCRouter({
   source: sourceRouter,
   triangulation: triangulationRouter,
   warehouse: warehouseRouter,
+  cellar: cellarRouter,
   wms: wmsRouter,
   settings: settingsRouter,
   zohoImport: zohoImportRouter,

@@ -4746,6 +4746,112 @@ export const wmsPartnerRequests = pgTable(
 export type WmsPartnerRequest = typeof wmsPartnerRequests.$inferSelect;
 
 /**
+ * Where a release request has got to
+ *
+ * Deliberately the same vocabulary as `quoteStatus`, which already describes
+ * this shape for buy requests — compose, submit, review, push back, confirm.
+ * A team that knows one flow should not have to learn a second set of words
+ * for the same sequence.
+ */
+export const cellarReleaseStatus = pgEnum('cellar_release_status', [
+  'draft',
+  'submitted',
+  'under_review',
+  'revision_requested',
+  'confirmed',
+  'cancelled',
+]);
+
+/**
+ * A member asking for their own wine to be released
+ *
+ * Not an order and not a purchase: the wine is already theirs. What is being
+ * agreed is what it costs to get it out of bond and to them, which is why it
+ * carries a quote and an approval rather than a price and a basket.
+ */
+export const cellarReleaseRequests = pgTable(
+  'cellar_release_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestNumber: text('request_number').notNull().unique(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id)
+      .notNull(),
+    requestedBy: uuid('requested_by')
+      .references(() => users.id)
+      .notNull(),
+    status: cellarReleaseStatus('status').notNull().default('draft'),
+
+    /** Where it is going, and anything the member wants us to know */
+    deliveryAddress: text('delivery_address'),
+    memberNotes: text('member_notes'),
+    adminNotes: text('admin_notes'),
+
+    /*
+      The quote, and the basis it was built on.
+
+      A rate version is stored with the figures because a quote raised in March
+      must still be explicable in September — the same reason a shipment
+      records the FX rate it was priced at rather than only the result.
+    */
+    clearanceRateVersion: text('clearance_rate_version'),
+    goodsValueUsd: doublePrecision('goods_value_usd'),
+    clearanceCostUsd: doublePrecision('clearance_cost_usd'),
+    deliveryCostUsd: doublePrecision('delivery_cost_usd'),
+    totalCostUsd: doublePrecision('total_cost_usd'),
+    quotedAt: timestamp('quoted_at', { mode: 'date' }),
+    quotedBy: uuid('quoted_by').references(() => users.id),
+
+    submittedAt: timestamp('submitted_at', { mode: 'date' }),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    confirmedBy: uuid('confirmed_by').references(() => users.id),
+
+    /** The order raised once the member has agreed the cost */
+    privateClientOrderId: uuid('private_client_order_id'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_release_requests_partner_idx').on(table.partnerId),
+    index('cellar_release_requests_status_idx').on(table.status),
+  ],
+);
+
+export type CellarReleaseRequest = typeof cellarReleaseRequests.$inferSelect;
+
+/**
+ * One wine on a release request
+ *
+ * Quantities are held in bottles because a member may ask for three from a
+ * six-pack, and the warehouse can do that. Cases are derived where the request
+ * happens to be whole cases; bottles are the truth.
+ */
+export const cellarReleaseRequestItems = pgTable(
+  'cellar_release_request_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestId: uuid('request_id')
+      .references(() => cellarReleaseRequests.id, { onDelete: 'cascade' })
+      .notNull(),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    vintage: integer('vintage'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+    /** What the member asked for */
+    bottles: integer('bottles').notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_release_request_items_request_idx').on(table.requestId),
+  ],
+);
+
+export type CellarReleaseRequestItem =
+  typeof cellarReleaseRequestItems.$inferSelect;
+
+/**
  * Consignment Settlements - tracking payments to stock owners
  */
 export const consignmentSettlements = pgTable(
