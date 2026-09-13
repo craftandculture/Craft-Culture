@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners } from '@/database/schema';
@@ -19,7 +19,18 @@ const partnersGetWinePartners = adminProcedure.query(async () => {
     })
     .from(partners)
     .where(
-      and(eq(partners.type, 'wine_partner'), eq(partners.status, 'active')),
+      /*
+        Both stock-owning types, not wine partners alone.
+
+        This list populates the partner assignment dropdown on the users
+        screen. Filtered to wine_partner, a collector could never be assigned a
+        login — and reclassifying an assigned partner made them vanish from the
+        control that had just been used to assign them.
+      */
+      and(
+        inArray(partners.type, ['wine_partner', 'private_collector']),
+        eq(partners.status, 'active'),
+      ),
     )
     .orderBy(partners.businessName);
 

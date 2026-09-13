@@ -51,11 +51,15 @@ const usersGetPartnerMembership = adminProcedure
       (m) => m.partner.type === 'distributor',
     );
     const winePartnerMembership = memberships.find(
-      (m) => m.partner.type === 'wine_partner',
+      (m) =>
+        m.partner.type === 'wine_partner' ||
+        m.partner.type === 'private_collector',
     );
 
     const directDistributor = directPartners.find((p) => p.type === 'distributor');
-    const directWinePartner = directPartners.find((p) => p.type === 'wine_partner');
+    const directWinePartner = directPartners.find(
+      (p) => p.type === 'wine_partner' || p.type === 'private_collector',
+    );
 
     return {
       distributor: distributorMembership

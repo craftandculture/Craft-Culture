@@ -74,7 +74,9 @@ const usersAdminGetOne = adminProcedure
       (m) => m.partnerType === 'distributor',
     );
     const winePartnerMembership = memberships.find(
-      (m) => m.partnerType === 'wine_partner',
+      (m) =>
+        m.partnerType === 'wine_partner' ||
+        m.partnerType === 'private_collector',
     );
 
     // Get recent activity logs (admin actions on this user)
