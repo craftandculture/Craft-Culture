@@ -88,6 +88,50 @@ const CellarPage = () => {
     ...api.wms.partner.getStock.queryOptions(),
   });
 
+  /* What the member has picked, in bottles, keyed by the parcel it comes from. */
+  const [basket, setBasket] = useState<Map<string, number>>(new Map());
+  const [address, setAddress] = useState('');
+  const [memberNotes, setMemberNotes] = useState('');
+
+  const { data: releaseData, refetch: refetchReleases } = useQuery({
+    ...api.cellar.member.getReleases.queryOptions(),
+  });
+
+  const { mutate: submitRelease } = useMutation(
+    api.cellar.member.submitRelease.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.requestNumber} sent — we will come back with the cost of clearance and delivery.`,
+        );
+        setBasket(new Map());
+        setAddress('');
+        setMemberNotes('');
+        void refetchReleases();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: saveRelease, isPending: isSaving } = useMutation(
+    api.cellar.member.saveRelease.mutationOptions({
+      onSuccess: (result) => {
+        submitRelease({ requestId: result.requestId });
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: acceptRelease, isPending: isAccepting } = useMutation(
+    api.cellar.member.acceptRelease.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`Accepted — order ${result.orderNumber} raised.`);
+        void refetchReleases();
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const { mutate: requestReport, isPending: isRequesting } = useMutation(
     api.wms.partner.requestConditionReport.mutationOptions({
       onSuccess: (result) => {
@@ -352,6 +396,67 @@ const CellarPage = () => {
         </section>
       )}
 
+      {(releaseData?.requests ?? []).filter((request) =>
+        ['submitted', 'under_review', 'revision_requested'].includes(request.status),
+      ).length > 0 && (
+        <section className="border-border-brand/40 bg-fill-brand/5 mb-5 rounded-xl border p-4">
+          <Typography
+            variant="bodyXs"
+            className="text-text-brand mb-3 block font-semibold uppercase tracking-wider"
+          >
+            Your release requests
+          </Typography>
+          <div className="flex flex-col gap-3">
+            {(releaseData?.requests ?? [])
+              .filter((request) =>
+                ['submitted', 'under_review', 'revision_requested'].includes(
+                  request.status,
+                ),
+              )
+              .map((request) => (
+                <div
+                  key={request.id}
+                  className="border-border-muted bg-background-primary flex flex-col gap-2 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <Typography variant="bodySm" className="font-medium">
+                      <span className="font-mono text-xs">
+                        {request.requestNumber}
+                      </span>{' '}
+                      &middot; {request.items.length}{' '}
+                      {request.items.length === 1 ? 'wine' : 'wines'}
+                    </Typography>
+                    <Typography
+                      variant="bodyXs"
+                      colorRole="muted"
+                      className="mt-0.5 block"
+                    >
+                      {request.status === 'submitted' &&
+                        'With us — we are pricing the clearance and delivery.'}
+                      {request.status === 'revision_requested' &&
+                        (request.adminNotes ??
+                          'We have asked for a change before we can price this.')}
+                      {request.status === 'under_review' &&
+                        `Clearance ${money(request.clearanceCostUsd ?? 0)} · delivery ${money(
+                          request.deliveryCostUsd ?? 0,
+                        )} · total ${money(request.totalCostUsd ?? 0)}`}
+                    </Typography>
+                  </div>
+                  {request.status === 'under_review' && (
+                    <Button
+                      size="sm"
+                      isDisabled={isAccepting}
+                      onClick={() => acceptRelease({ requestId: request.id })}
+                    >
+                      <ButtonContent>Accept and release</ButtonContent>
+                    </Button>
+                  )}
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
       <div className="relative mb-3">
         <Icon
           icon={IconSearch}
@@ -554,6 +659,44 @@ const CellarPage = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2 text-right">
                                     {(() => {
+                                      const inBasket = basket.get(parcel.stockId) ?? 0;
+                                      const held =
+                                        parcel.quantityCases * (wine.caseConfig ?? 1);
+
+                                      return (
+                                        <span className="inline-flex items-center gap-1">
+                                          <input
+                                            type="number"
+                                            min={0}
+                                            max={held}
+                                            value={inBasket || ''}
+                                            placeholder="0"
+                                            aria-label={`Bottles of ${wine.productName} to request`}
+                                            onClick={(event) => event.stopPropagation()}
+                                            onChange={(event) => {
+                                              const wanted = Math.max(
+                                                0,
+                                                Math.min(held, Number(event.target.value) || 0),
+                                              );
+
+                                              setBasket((current) => {
+                                                const next = new Map(current);
+                                                if (wanted > 0) next.set(parcel.stockId, wanted);
+                                                else next.delete(parcel.stockId);
+                                                return next;
+                                              });
+                                            }}
+                                            className="border-border-muted bg-background-primary h-7 w-14 rounded-md border px-2 text-right text-xs tabular-nums"
+                                          />
+                                          <span className="text-text-muted text-[11px]">
+                                            / {held}
+                                          </span>
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                    {(() => {
                                       const open = requestByStock.get(parcel.stockId);
 
                                       /*
@@ -679,6 +822,59 @@ const CellarPage = () => {
           </tbody>
         </table>
       </div>
+
+      {basket.size > 0 && (
+        <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 rounded-xl border p-4 shadow-lg">
+          <div className="flex flex-col gap-3">
+            <Typography variant="bodySm" className="font-semibold">
+              {basket.size} {basket.size === 1 ? 'wine' : 'wines'} &middot;{' '}
+              {[...basket.values()].reduce((sum, n) => sum + n, 0)} bottles to
+              request
+            </Typography>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Where should it go?"
+              />
+              <Input
+                value={memberNotes}
+                onChange={(event) => setMemberNotes(event.target.value)}
+                placeholder="Anything we should know (optional)"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                isDisabled={isSaving}
+                onClick={() =>
+                  saveRelease({
+                    deliveryAddress: address || undefined,
+                    memberNotes: memberNotes || undefined,
+                    lines: [...basket.entries()].map(([stockId, bottles]) => ({
+                      stockId,
+                      bottles,
+                    })),
+                  })
+                }
+              >
+                <ButtonContent>Request release</ButtonContent>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBasket(new Map())}
+              >
+                <ButtonContent>Clear</ButtonContent>
+              </Button>
+              <Typography variant="bodyXs" colorRole="muted">
+                We will come back with the cost of clearance and delivery before
+                anything moves.
+              </Typography>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="border-border-muted mt-8 border-t pt-6">
         {/*
