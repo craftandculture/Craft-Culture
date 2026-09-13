@@ -387,13 +387,13 @@ const CellarPage = () => {
         {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
       </Typography>
 
-      <div className="border-border-muted max-h-[72vh] overflow-auto rounded-xl border">
+      <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted border-border-muted sticky top-0 z-10 border-b">
             <tr>
               <th className="w-8 px-2 py-2.5" />
-              <th className={`${th} w-[38%] text-left`}>Wine</th>
-              <th className={`${th} hidden text-left sm:table-cell`}>Producer</th>
+              <th className={`${th} min-w-[220px] text-left`}>Wine</th>
+              <th className={`${th} hidden text-left md:table-cell`}>Producer</th>
               <th className={`${th} hidden text-center sm:table-cell`}>Vintage</th>
               <th className={`${th} hidden text-center sm:table-cell`}>Size</th>
               <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
@@ -453,7 +453,7 @@ const CellarPage = () => {
                           : ''}
                       </span>
                     </td>
-                    <td className={`${td} text-text-muted hidden sm:table-cell`}>
+                    <td className={`${td} text-text-muted hidden md:table-cell`}>
                       {wine.producer ?? '—'}
                     </td>
                     <td
@@ -501,8 +501,8 @@ const CellarPage = () => {
                           {wine.locations.length === 1 ? '' : 's'}
                         </Typography>
 
-                        <div className="border-border-muted bg-background-primary mb-4 overflow-x-auto rounded-lg border">
-                          <table className="w-full min-w-[460px] text-sm">
+                        <div className="border-border-muted bg-background-primary mb-4 max-w-full overflow-x-auto rounded-lg border">
+                          <table className="w-full min-w-[440px] text-sm">
                             <thead>
                               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
                                 <th className="whitespace-nowrap px-4 py-1.5 text-right">Cases</th>
@@ -583,7 +583,7 @@ const CellarPage = () => {
                                               stockId: parcel.stockId,
                                             });
                                           }}
-                                          className="text-text-brand text-xs font-medium hover:underline disabled:opacity-50"
+                                          className="text-text-brand hover:bg-fill-brand/10 -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
                                         >
                                           Request condition report
                                         </button>
@@ -680,21 +680,55 @@ const CellarPage = () => {
         </table>
       </div>
 
-      <Typography variant="bodyXs" colorRole="muted" className="mt-6 block">
-        Wine held in bond is duty suspended. Applicable duties, taxes and
-        delivery charges become payable only on release to the mainland, and are
-        quoted before anything moves. Allocated cases are committed against an
-        order already placed. Import cost is the value declared when the wine
-        was brought into bond, not a market valuation.
-        <br />
-        <br />
-        To call wines forward, consolidate a new purchase into your cellar, or
-        offer wine for resale through the C&amp;C network, contact{' '}
-        <a className="text-text-brand" href="mailto:enquiries@craftculture.xyz">
-          enquiries@craftculture.xyz
-        </a>
-        .
-      </Typography>
+      <div className="border-border-muted mt-8 border-t pt-6">
+        {/*
+          Three separate facts read as three, not as a paragraph. Each one
+          answers a question a member will actually ask, so each gets a label
+          they can find it by.
+        */}
+        <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-3">
+          {[
+            {
+              term: 'Duty',
+              detail:
+                'Wine held in bond is duty suspended. Duties, taxes and delivery become payable only on release to the mainland, and are quoted before anything moves.',
+            },
+            {
+              term: 'Allocated',
+              detail: 'Cases committed against an order already placed.',
+            },
+            {
+              term: 'Import cost',
+              detail:
+                'The value declared when the wine was brought into bond. Not a market valuation.',
+            },
+          ].map((note) => (
+            <div key={note.term}>
+              <dt className="text-text-muted mb-1 text-[11px] font-semibold uppercase tracking-wider">
+                {note.term}
+              </dt>
+              <dd className="text-text-muted m-0 max-w-[46ch] text-xs leading-relaxed">
+                {note.detail}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="border-border-muted mt-6 border-t pt-5">
+          <Typography variant="bodySm" className="block">
+            To call wines forward, consolidate a new purchase into your cellar,
+            or offer wine for resale through the C&amp;C network, contact{' '}
+            <a
+              className="text-text-brand font-medium"
+              href="mailto:enquiries@craftculture.xyz"
+            >
+              enquiries@craftculture.xyz
+            </a>
+            .
+          </Typography>
+        </div>
+      </div>
+
     </div>
   );
 };

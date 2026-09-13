@@ -20,8 +20,8 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
   const latestVersion = versions[0]?.version ?? '1.0.0';
 
   const isB2C = customerType === 'b2c';
-  const isWinePartner = resolveAccessProfile({ customerType, partnerType })
-    .can.ownsStock;
+  const access = resolveAccessProfile({ customerType, partnerType });
+  const isWinePartner = access.can.ownsStock;
   const isDistributor = customerType === 'b2b' || partnerType === 'distributor';
 
   // Route to appropriate support page based on user type
@@ -56,12 +56,14 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               Quick Links
             </h3>
             <nav className="flex flex-col space-y-1.5">
-              <Link
-                href="/platform/quotes"
-                className="text-text-muted hover:text-text-primary text-xs transition-colors"
-              >
-                Quote Tool
-              </Link>
+              {access.can.raiseQuotes && (
+                <Link
+                  href="/platform/quotes"
+                  className="text-text-muted hover:text-text-primary text-xs transition-colors"
+                >
+                  Quote Tool
+                </Link>
+              )}
               <Link
                 href="https://craftculture.xyz"
                 target="_blank"
@@ -91,12 +93,14 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               >
                 Help Center
               </Link>
-              <Link
-                href="/platform/development-log"
-                className="text-text-muted hover:text-text-primary text-xs transition-colors"
-              >
-                Development Log
-              </Link>
+              {access.kind !== 'collector' && (
+                <Link
+                  href="/platform/development-log"
+                  className="text-text-muted hover:text-text-primary text-xs transition-colors"
+                >
+                  Development Log
+                </Link>
+              )}
               <Link
                 href="/platform/terms-of-use"
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
