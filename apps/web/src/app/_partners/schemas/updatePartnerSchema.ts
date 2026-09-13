@@ -32,6 +32,8 @@ const updatePartnerSchema = z.object({
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   businessName: z.string().min(1).optional(),
   businessAddress: z.string().optional(),
+  deliveryAddress: z.string().optional(),
+  deliveryInstructions: z.string().optional(),
   businessPhone: z.string().optional(),
   businessEmail: z.string().email().optional().or(z.literal('')),
   taxId: z.string().optional(),

@@ -73,6 +73,8 @@ const CollectorsPage = () => {
     id: string;
     businessName: string;
     businessAddress: string;
+    deliveryAddress: string;
+    deliveryInstructions: string;
     businessPhone: string;
     businessEmail: string;
     taxId: string;
@@ -156,6 +158,8 @@ const CollectorsPage = () => {
       id: partner.id,
       businessName: partner.businessName,
       businessAddress: partner.businessAddress || '',
+      deliveryAddress: partner.deliveryAddress || '',
+      deliveryInstructions: partner.deliveryInstructions || '',
       businessPhone: partner.businessPhone || '',
       businessEmail: partner.businessEmail || '',
       taxId: partner.taxId || '',
@@ -171,6 +175,8 @@ const CollectorsPage = () => {
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
       businessAddress: editingPartner.businessAddress || undefined,
+      deliveryAddress: editingPartner.deliveryAddress,
+      deliveryInstructions: editingPartner.deliveryInstructions,
       businessPhone: editingPartner.businessPhone || undefined,
       businessEmail: editingPartner.businessEmail || undefined,
       taxId: editingPartner.taxId || undefined,
@@ -634,6 +640,40 @@ const CollectorsPage = () => {
                     }
                     rows={2}
                     className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm resize-none"
+                  />
+                </div>
+
+                {/*
+                  Where wine goes, which is not always where the invoice goes.
+                  The member maintains this from their own cellar; it is here
+                  so the team can read it and correct it.
+                */}
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1">
+                    Delivery Address
+                  </label>
+                  <textarea
+                    value={editingPartner.deliveryAddress}
+                    onChange={(e) =>
+                      setEditingPartner({
+                        ...editingPartner,
+                        deliveryAddress: e.target.value,
+                      })
+                    }
+                    rows={2}
+                    placeholder="Villa or office, area, emirate"
+                    className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm resize-none"
+                  />
+                  <input
+                    value={editingPartner.deliveryInstructions}
+                    onChange={(e) =>
+                      setEditingPartner({
+                        ...editingPartner,
+                        deliveryInstructions: e.target.value,
+                      })
+                    }
+                    placeholder="Standing access instructions — gate code, who to ask for"
+                    className="mt-2 w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
                   />
                 </div>
 

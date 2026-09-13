@@ -1031,6 +1031,15 @@ const runMigrations = async () => {
     );
     console.log('✅ cellar release margins ready');
 
+    // Where wine goes, kept apart from where the invoice goes, so correcting
+    // one cannot silently reroute the other.
+    for (const column of ['delivery_address', 'delivery_instructions']) {
+      await client.unsafe(
+        `ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "${column}" text`,
+      );
+    }
+    console.log('✅ partner delivery address ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

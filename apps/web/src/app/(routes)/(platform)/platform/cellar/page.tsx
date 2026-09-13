@@ -92,6 +92,29 @@ const CellarPage = () => {
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
   const [address, setAddress] = useState('');
   const [memberNotes, setMemberNotes] = useState('');
+  /* Set only when the member chooses to send this one somewhere else. */
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [shouldSaveAddress, setShouldSaveAddress] = useState(true);
+
+  const { data: profile, refetch: refetchProfile } = useQuery({
+    ...api.cellar.member.getProfile.queryOptions(),
+  });
+
+  const savedAddress = profile?.deliveryAddress ?? null;
+
+  /*
+    The address the request will actually carry. A member who has not opened
+    the editor is delivering to their account address, so that is what gets
+    sent — not the empty box behind it.
+  */
+  const effectiveAddress = isEditingAddress ? address.trim() : (savedAddress ?? '');
+
+  const { mutate: saveAddress } = useMutation(
+    api.cellar.member.saveDeliveryAddress.mutationOptions({
+      onSuccess: () => void refetchProfile(),
+      onError: (error) => toast.error(error.message),
+    }),
+  );
 
   const { data: releaseData, refetch: refetchReleases } = useQuery({
     ...api.cellar.member.getReleases.queryOptions(),
@@ -106,6 +129,7 @@ const CellarPage = () => {
         setBasket(new Map());
         setAddress('');
         setMemberNotes('');
+        setIsEditingAddress(false);
         void refetchReleases();
       },
       onError: (error) => toast.error(error.message),
@@ -872,16 +896,77 @@ const CellarPage = () => {
                someone types, taking the only explanation of the field with it.
              */}
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
+              {/*
+                 The address lives on the account. Retyped into every request
+                 it becomes four spellings of the same villa, and the team
+                 cannot tell which one is current.
+               */}
+              <div className="block">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
                   Delivery address
                 </span>
-                <Input
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder="Villa or office, area, emirate"
-                />
-              </label>
+                {savedAddress && !isEditingAddress ? (
+                  <div className="border-border-muted bg-fill-muted/40 flex items-start justify-between gap-3 rounded-lg border px-3 py-2">
+                    <div className="min-w-0">
+                      <Typography variant="bodySm">{savedAddress}</Typography>
+                      {profile?.deliveryInstructions && (
+                        <Typography
+                          variant="bodyXs"
+                          colorRole="muted"
+                          className="mt-0.5 block"
+                        >
+                          {profile.deliveryInstructions}
+                        </Typography>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="text-text-brand flex-shrink-0 text-xs font-semibold hover:underline"
+                      onClick={() => {
+                        setAddress(savedAddress);
+                        setShouldSaveAddress(false);
+                        setIsEditingAddress(true);
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                      placeholder="Villa or office, area, emirate"
+                    />
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <label className="text-text-muted flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={shouldSaveAddress}
+                          onChange={(event) =>
+                            setShouldSaveAddress(event.target.checked)
+                          }
+                        />
+                        {savedAddress
+                          ? 'Make this my address from now on'
+                          : 'Save this to my account'}
+                      </label>
+                      {savedAddress && (
+                        <button
+                          type="button"
+                          className="text-text-muted text-xs hover:underline"
+                          onClick={() => {
+                            setIsEditingAddress(false);
+                            setAddress('');
+                          }}
+                        >
+                          Use my saved address
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
               <label className="block">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
                   Notes for our team &mdash; optional
@@ -897,16 +982,32 @@ const CellarPage = () => {
               <Button
                 size="sm"
                 isDisabled={isSaving}
-                onClick={() =>
+                onClick={() => {
+                  /*
+                    Saved before the request is raised, not after: the request
+                    stores its own copy of the address, so an account updated
+                    afterwards would leave this one pointing at the old place.
+                  */
+                  if (
+                    isEditingAddress &&
+                    shouldSaveAddress &&
+                    effectiveAddress &&
+                    effectiveAddress !== savedAddress
+                  ) {
+                    saveAddress({
+                      deliveryAddress: effectiveAddress,
+                    });
+                  }
+
                   saveRelease({
-                    deliveryAddress: address || undefined,
+                    deliveryAddress: effectiveAddress || undefined,
                     memberNotes: memberNotes || undefined,
                     lines: [...basket.entries()].map(([stockId, bottles]) => ({
                       stockId,
                       bottles,
                     })),
-                  })
-                }
+                  });
+                }}
               >
                 <ButtonContent>Request delivery</ButtonContent>
               </Button>

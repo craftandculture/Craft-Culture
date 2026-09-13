@@ -39,6 +39,10 @@ const partnersUpdate = adminProcedure
       updates.businessName = updateData.businessName;
     if (updateData.businessAddress !== undefined)
       updates.businessAddress = updateData.businessAddress;
+    if (updateData.deliveryAddress !== undefined)
+      updates.deliveryAddress = updateData.deliveryAddress || null;
+    if (updateData.deliveryInstructions !== undefined)
+      updates.deliveryInstructions = updateData.deliveryInstructions || null;
     if (updateData.businessPhone !== undefined)
       updates.businessPhone = updateData.businessPhone;
     if (updateData.businessEmail !== undefined)

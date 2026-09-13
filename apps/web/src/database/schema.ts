@@ -397,6 +397,15 @@ export const partners = pgTable(
     status: partnerStatus('status').notNull().default('active'),
     businessName: text('business_name').notNull(),
     businessAddress: text('business_address'),
+    /*
+      Where wine actually goes, which is not always where the invoice goes.
+      Kept apart from businessAddress so correcting a billing address cannot
+      silently reroute a delivery, and so a member can hold a villa here and a
+      company address above it.
+    */
+    deliveryAddress: text('delivery_address'),
+    /** Standing access instructions — the gate code, who to ask for */
+    deliveryInstructions: text('delivery_instructions'),
     businessPhone: text('business_phone'),
     businessEmail: text('business_email'),
     taxId: text('tax_id'),

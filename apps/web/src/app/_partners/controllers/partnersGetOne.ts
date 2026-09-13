@@ -24,6 +24,8 @@ const partnersGetOne = adminProcedure
         status: partners.status,
         businessName: partners.businessName,
         businessAddress: partners.businessAddress,
+        deliveryAddress: partners.deliveryAddress,
+        deliveryInstructions: partners.deliveryInstructions,
         businessPhone: partners.businessPhone,
         businessEmail: partners.businessEmail,
         taxId: partners.taxId,
