@@ -20,20 +20,29 @@ export const viewport = {
   userScalable: true,
 };
 
+/*
+  A browser tab shows about thirty characters. The marketing strapline used the
+  whole title on a sentence about market entry, so every tab in the platform
+  read the same and none of them said which screen it was. The template lets a
+  page name itself and keeps the company name as the suffix, where it is still
+  legible when the tab is narrow.
+*/
 export const metadata: Metadata = {
-  title:
-    serverConfig.env === 'development'
-      ? 'Craft & Culture - Empowering alcohol / liquor brands to succeed in the GCC markets with comprehensive services'
-      : 'Craft & Culture - Empowering alcohol / liquor brands to succeed in the GCC markets with comprehensive services',
+  title: {
+    default:
+      serverConfig.env === 'development'
+        ? 'Craft & Culture Index (dev)'
+        : 'Craft & Culture Index',
+    template: '%s · Craft & Culture',
+  },
   description:
-    'We help wine & spirits brands unlock growth opportunities in the Middle East. Providing infrastructure, expertise, and network for seamless market entry and commercial success.',
+    'The platform behind Craft & Culture: bonded inventory, logistics and private cellars for fine wine in the Middle East.',
 
   openGraph: {
     siteName: 'Craft & Culture',
-    title:
-      'Craft & Culture - Empowering alcohol / liquor brands to succeed in the GCC markets with comprehensive services',
+    title: 'Craft & Culture Index',
     description:
-      'We help wine & spirits brands unlock growth opportunities in the Middle East. Providing infrastructure, expertise, and network for seamless market entry and commercial success.',
+      'The platform behind Craft & Culture: bonded inventory, logistics and private cellars for fine wine in the Middle East.',
     url: clientConfig.appUrl.toString(),
     type: 'website',
   },

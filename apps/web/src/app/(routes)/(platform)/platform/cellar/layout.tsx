@@ -1,9 +1,16 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
+
+export const metadata: Metadata = {
+  title: 'Your Cellar',
+  /* Behind a login, and about a named individual's holdings either way. */
+  robots: { index: false, follow: false },
+};
 
 /**
  * The cellar is for accounts that hold wine with us
