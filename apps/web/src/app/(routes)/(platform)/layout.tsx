@@ -6,6 +6,7 @@ import AdminSectionTabs from '@/app/_admin/components/AdminSectionTabs';
 import AdminTopNav from '@/app/_admin/components/AdminTopNav';
 import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
@@ -43,6 +44,13 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/welcome');
   }
 
+  // One source of truth for what this account is and what it may reach.
+  const access = resolveAccessProfile({
+    role: user.role,
+    customerType: user.customerType,
+    partnerType: user.partner?.type,
+  });
+
   // WMS Mode layout (clean, no sidebar/footer)
   const wmsLayout = (
     <PrinterProvider>
@@ -70,14 +78,14 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <div className="flex items-center gap-3 md:gap-6">
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
-              href={user.role === 'admin' ? '/platform/admin/home' : user.role === 'wms_operator' ? '/platform/admin/wms' : user.customerType === 'private_clients' && (user.partner?.type === 'wine_partner' || user.partner?.type === 'private_collector') ? '/platform/partner/stock' : '/platform/quotes'}
+              href={access.home}
               className="transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             <nav className="hidden items-center gap-2 md:flex">
               {/* Quotes section - hidden for wine partners and admins (admins have it in section tabs) */}
-              {!(user.customerType === 'private_clients' && (user.partner?.type === 'wine_partner' || user.partner?.type === 'private_collector')) && user.role !== 'admin' && (
+              {access.can.raiseQuotes && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
                   <Link
                     href="/platform/quotes"
@@ -112,24 +120,24 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                 </div>
               )}
               {/* Inventory — a wine partner's stock, or a collector's cellar */}
-              {user.customerType === 'private_clients' && (user.partner?.type === 'wine_partner' || user.partner?.type === 'private_collector') && (
+              {access.can.ownsStock && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
                   <Link
                     href="/platform/partner/stock"
                     className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
                   >
-                    {user.partner?.type === 'private_collector' ? 'Cellar' : 'Inventory'}
+                    {access.kind === 'collector' ? 'Cellar' : 'Inventory'}
                   </Link>
                   <Link
                     href="/platform/partner/stock"
                     className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
                   >
-                    {user.partner?.type === 'private_collector' ? 'Your Cellar' : 'Local Stock'}
+                    {access.inventoryLabel}
                   </Link>
                 </div>
               )}
               {/* Private Clients section - for Wine Partners */}
-              {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
+              {access.can.privateOrders && (
                 <>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                     <Link
@@ -176,7 +184,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                 </>
               )}
               {/* Distributor section - for B2B users and distributor partners (not admins - they have their own section) */}
-              {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && user.role !== 'admin' && (
+              {access.can.distributorTools && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                   <Link
                     href="/platform/distributor"

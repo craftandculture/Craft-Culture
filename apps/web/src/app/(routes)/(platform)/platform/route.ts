@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { STOCK_OWNER_PARTNER_TYPES, resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import resolvePartnerForUser from '@/app/_partners/data/resolvePartnerForUser';
 import tryCatch from '@/utils/tryCatch';
@@ -7,33 +8,27 @@ import tryCatch from '@/utils/tryCatch';
 export const GET = async () => {
   const [user] = await tryCatch(getCurrentUser());
 
-  // Admins and operators have their own homes
-  if (user?.role === 'admin') {
-    return redirect('/platform/admin/home');
-  }
-
-  if (user?.role === 'wms_operator') {
-    return redirect('/platform/admin/wms');
-  }
-
   /*
-    Stock owners land on their inventory.
-
-    This used to test `user.partnerId`, which assignment deliberately clears —
-    partnerMembers is the source of truth — so anyone linked the modern way fell
-    through to the quotes screen, which is not theirs to use.
+    The partner has to be resolved before the profile can be, because a
+    stock owner is only distinguishable from a sales account by what they are
+    linked to. This used to test `user.partnerId` — which assignment clears on
+    purpose, partnerMembers being the source of truth — so anyone linked the
+    modern way was sent to the quotes screen instead of their own stock.
   */
-  if (user?.customerType === 'private_clients') {
-    const partner = await resolvePartnerForUser(
-      user.id,
-      ['wine_partner', 'private_collector'],
-      user.partnerId,
-    );
+  const partner =
+    user?.customerType === 'private_clients'
+      ? await resolvePartnerForUser(
+          user.id,
+          [...STOCK_OWNER_PARTNER_TYPES],
+          user.partnerId,
+        )
+      : null;
 
-    if (partner) {
-      return redirect('/platform/partner/stock');
-    }
-  }
+  const access = resolveAccessProfile({
+    role: user?.role,
+    customerType: user?.customerType,
+    partnerType: partner?.type,
+  });
 
-  return redirect('/platform/quotes');
+  return redirect(access.home);
 };

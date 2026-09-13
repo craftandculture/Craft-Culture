@@ -1,6 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { isStockOwnerPartnerType } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import { partnerMembers, partners, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -43,7 +44,7 @@ const usersRemovePartner = adminProcedure
 
     // Also clear the legacy user.partnerId field when removing a stock-owning
     // partner, matching what assignment does.
-    if (partnerType === 'wine_partner' || partnerType === 'private_collector') {
+    if (isStockOwnerPartnerType(partnerType)) {
       await db
         .update(users)
         .set({ partnerId: null })

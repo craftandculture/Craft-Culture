@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 import { TRPCError } from '@trpc/server';
 
+import { STOCK_OWNER_PARTNER_TYPES } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import serverConfig from '@/server.config';
 
@@ -192,7 +193,7 @@ export const stockOwnerProcedure = protectedProcedure.use(
 
     const partner = await resolvePartnerForUser(
       ctx.user.id,
-      ['wine_partner', 'private_collector'],
+      [...STOCK_OWNER_PARTNER_TYPES],
       ctx.user.partnerId,
     );
 

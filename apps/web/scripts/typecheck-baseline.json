@@ -79,7 +79,6 @@
   "src/app/_zohoSalesOrders/controller/adminCreatePickListFromSalesOrder.ts|TS18048": 2,
   "src/app/_zohoSalesOrders/controller/adminReleaseToPick.ts|TS18048": 2,
   "src/app/_zohoSalesOrders/controller/adminSyncSalesOrders.ts|TS18048": 1,
-  "src/app/(routes)/(platform)/layout.tsx|TS2367": 1,
   "src/app/(routes)/(platform)/platform/admin/home/MorningViewContent.tsx|TS18047": 8,
   "src/app/(routes)/(platform)/platform/admin/home/MorningViewContent.tsx|TS18048": 4,
   "src/app/(routes)/(platform)/platform/admin/logistics/quotes/[quoteId]/page.tsx|TS2322": 4,

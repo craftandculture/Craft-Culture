@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -244,7 +245,8 @@ const PartnerStockPage = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const isCollector = data?.partner?.type === 'private_collector';
+  const access = resolveAccessProfile({ partnerType: data?.partner?.type });
+  const isCollector = access.kind === 'collector';
 
   const rowKey = (product: { lwin18: string; caseConfig: number | null; salesArrangement: string | null }) =>
     `${product.lwin18}-${product.caseConfig ?? ''}-${product.salesArrangement ?? ''}`;

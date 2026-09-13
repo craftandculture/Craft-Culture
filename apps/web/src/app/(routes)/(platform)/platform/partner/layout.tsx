@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -21,9 +22,11 @@ const PartnerLayout = async ({ children }: React.PropsWithChildren) => {
 
   // Only allow wine partners to access partner routes
   const isWinePartner =
-    user.customerType === 'private_clients' &&
-    (user.partner?.type === 'wine_partner' ||
-      user.partner?.type === 'private_collector');
+    resolveAccessProfile({
+      role: user.role,
+      customerType: user.customerType,
+      partnerType: user.partner?.type,
+    }).can.ownsStock;
 
   if (!isWinePartner) {
     redirect('/platform');

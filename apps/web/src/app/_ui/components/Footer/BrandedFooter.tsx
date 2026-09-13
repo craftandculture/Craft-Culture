@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
 import parseChangelog from '@/utils/parseChangelog';
 
@@ -19,7 +20,8 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
   const latestVersion = versions[0]?.version ?? '1.0.0';
 
   const isB2C = customerType === 'b2c';
-  const isWinePartner = customerType === 'private_clients' && partnerType === 'wine_partner';
+  const isWinePartner = resolveAccessProfile({ customerType, partnerType })
+    .can.ownsStock;
   const isDistributor = customerType === 'b2b' || partnerType === 'distributor';
 
   // Route to appropriate support page based on user type

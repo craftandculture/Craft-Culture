@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import type { User } from '@/database/schema';
 
 import MobileNav from './MobileNav';
@@ -15,20 +16,18 @@ interface PlatformMobileNavProps {
  */
 const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   const sections = [];
-  const isWinePartner = user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
-  const isCollector =
-    user.customerType === 'private_clients' && user.partner?.type === 'private_collector';
+  const access = resolveAccessProfile({
+    role: user.role,
+    customerType: user.customerType,
+    partnerType: user.partner?.type,
+  });
 
-  // Inventory section — a wine partner's stock, or a collector's cellar.
-  // Both replace Quotes, which neither of them raises.
-  if (isWinePartner || isCollector) {
+  // An account that holds wine with us gets its inventory in place of Quotes.
+  if (access.can.ownsStock) {
     sections.push({
-      title: isCollector ? 'Cellar' : 'Inventory',
+      title: access.kind === 'collector' ? 'Cellar' : 'Inventory',
       links: [
-        {
-          href: '/platform/partner/stock',
-          label: isCollector ? 'Your Cellar' : 'Local Stock',
-        },
+        { href: '/platform/partner/stock', label: access.inventoryLabel },
       ],
     });
   } else if (user.role !== 'admin') {
@@ -40,8 +39,8 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     sections.push({ title: 'Quotes', links: quotesLinks });
   }
 
-  // Private Clients section - for Wine Partners
-  if (isWinePartner) {
+  // Private Clients section
+  if (access.can.privateOrders) {
     sections.push({
       title: 'Private Clients',
       links: [{ href: '/platform/private-orders', label: 'My Orders' }],
@@ -53,7 +52,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   }
 
   // Distributor section - for B2B users and distributor partners (not admins)
-  if ((user.customerType === 'b2b' || user.partner?.type === 'distributor') && user.role !== 'admin') {
+  if (access.can.distributorTools) {
     sections.push({
       title: 'Private Clients',
       links: [
@@ -165,12 +164,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     });
   }
 
-  // Support section - route to appropriate support page based on user type
-  const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
-
+  // Support routes to the desk that knows this kind of account.
   const getSupportHref = () => {
-    if (isWinePartner) return '/platform/partner/support';
-    if (isDistributor) return '/platform/distributor/support';
+    if (access.can.ownsStock) return '/platform/partner/support';
+    if (access.can.distributorTools) return '/platform/distributor/support';
     return '/platform/support';
   };
 

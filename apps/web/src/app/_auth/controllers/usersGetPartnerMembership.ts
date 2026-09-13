@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { isStockOwnerPartnerType } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import { partnerMembers, partners } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -51,14 +52,12 @@ const usersGetPartnerMembership = adminProcedure
       (m) => m.partner.type === 'distributor',
     );
     const winePartnerMembership = memberships.find(
-      (m) =>
-        m.partner.type === 'wine_partner' ||
-        m.partner.type === 'private_collector',
+      (m) => isStockOwnerPartnerType(m.partner.type),
     );
 
     const directDistributor = directPartners.find((p) => p.type === 'distributor');
-    const directWinePartner = directPartners.find(
-      (p) => p.type === 'wine_partner' || p.type === 'private_collector',
+    const directWinePartner = directPartners.find((p) =>
+      isStockOwnerPartnerType(p.type),
     );
 
     return {

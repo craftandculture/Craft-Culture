@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { isStockOwnerPartnerType } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import {
   adminActivityLogs,
@@ -74,9 +75,7 @@ const usersAdminGetOne = adminProcedure
       (m) => m.partnerType === 'distributor',
     );
     const winePartnerMembership = memberships.find(
-      (m) =>
-        m.partnerType === 'wine_partner' ||
-        m.partnerType === 'private_collector',
+      (m) => isStockOwnerPartnerType(m.partnerType),
     );
 
     // Get recent activity logs (admin actions on this user)

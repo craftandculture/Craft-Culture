@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -20,7 +21,11 @@ const DistributorLayout = async ({ children }: React.PropsWithChildren) => {
   }
 
   // Allow distributors (b2b customer type or distributor partner type)
-  const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
+  const isDistributor = resolveAccessProfile({
+    role: user.role,
+    customerType: user.customerType,
+    partnerType: user.partner?.type,
+  }).can.distributorTools;
 
   if (!isDistributor) {
     redirect('/platform');

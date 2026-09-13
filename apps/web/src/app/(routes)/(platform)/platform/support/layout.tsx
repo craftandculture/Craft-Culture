@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -20,15 +21,21 @@ const SupportLayout = async ({ children }: React.PropsWithChildren) => {
   }
 
   // Redirect wine partners to partner support
+  const access = resolveAccessProfile({
+    role: user.role,
+    customerType: user.customerType,
+    partnerType: user.partner?.type,
+  });
+
   const isWinePartner =
-    user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
+    access.can.ownsStock;
 
   if (isWinePartner) {
     redirect('/platform/partner/support');
   }
 
   // Redirect distributors to distributor support
-  const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
+  const isDistributor = access.can.distributorTools;
 
   if (isDistributor) {
     redirect('/platform/distributor/support');

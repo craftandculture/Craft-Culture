@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { isStockOwnerPartnerType } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import { partnerMembers, partners, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -73,7 +74,7 @@ const usersAssignPartner = adminProcedure
 
     // Clear the legacy user.partnerId field for any stock-owning partner, so
     // partnerMembers stays the single source of truth for partner resolution.
-    if (partner.type === 'wine_partner' || partner.type === 'private_collector') {
+    if (isStockOwnerPartnerType(partner.type)) {
       await db
         .update(users)
         .set({ partnerId: null })

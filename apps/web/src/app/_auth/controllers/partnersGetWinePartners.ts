@@ -1,5 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 
+import { STOCK_OWNER_PARTNER_TYPES } from '@/app/_auth/constants/accessProfiles';
 import db from '@/database/client';
 import { partners } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -28,7 +29,7 @@ const partnersGetWinePartners = adminProcedure.query(async () => {
         control that had just been used to assign them.
       */
       and(
-        inArray(partners.type, ['wine_partner', 'private_collector']),
+        inArray(partners.type, [...STOCK_OWNER_PARTNER_TYPES]),
         eq(partners.status, 'active'),
       ),
     )
