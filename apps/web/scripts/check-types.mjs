@@ -49,7 +49,37 @@ const resolveTsc = () => {
 /** `src/foo.ts(12,3): error TS2345: …` -> `src/foo.ts|TS2345` */
 const ERROR_LINE = /^(.+?)\((\d+),(\d+)\): error (TS\d+):/;
 
+/**
+ * Make sure Next's ambient types are present before anything is counted.
+ *
+ * `next-env.d.ts` is gitignored, and it is the file that pulls in
+ * `next/image-types/global` — the declarations that make `import logo from
+ * './logo.png'` a typed import. Next regenerates it on `next dev` and `next
+ * build`, so it is always there on a developer's machine and never there on a
+ * fresh CI checkout, where neither has run.
+ *
+ * That made the baseline unmeetable: 351 errors locally, 355 in CI, the four
+ * extra being image imports that nobody could see or fix. Every push failed
+ * this gate for a month, which skipped the Trigger.dev deploy behind it.
+ *
+ * Written without Next's `.next/types/routes.d.ts` reference, since that file
+ * is a build artefact and a reference to a missing one is itself an error.
+ */
+const ensureNextTypes = () => {
+  const path = join(appRoot, 'next-env.d.ts');
+
+  if (existsSync(path)) return;
+
+  writeFileSync(
+    path,
+    '/// <reference types="next" />\n' +
+      '/// <reference types="next/image-types/global" />\n',
+  );
+};
+
 const collect = () => {
+  ensureNextTypes();
+
   const result = spawnSync(
     'node',
     [resolveTsc(), '--noEmit', '-p', 'tsconfig.json'],
