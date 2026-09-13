@@ -4876,6 +4876,14 @@ export const cellarReleaseRequests = pgTable(
     deliveryCostUsd: doublePrecision('delivery_cost_usd'),
     /** C&C's own margin, kept apart so it can be reported on */
     serviceFeeUsd: doublePrecision('service_fee_usd'),
+    /*
+      Anything the rate card does not foresee — a customs inspection, a
+      storage day, a second attempt at a delivery. Carried with its reason so
+      a figure that differs from the card can be explained later without
+      anyone remembering.
+    */
+    additionalChargeUsd: doublePrecision('additional_charge_usd'),
+    additionalChargeLabel: text('additional_charge_label'),
     totalCostUsd: doublePrecision('total_cost_usd'),
     quotedAt: timestamp('quoted_at', { mode: 'date' }),
     quotedBy: uuid('quoted_by').references(() => users.id),

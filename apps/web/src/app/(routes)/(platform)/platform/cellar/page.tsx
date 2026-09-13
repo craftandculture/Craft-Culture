@@ -675,8 +675,11 @@ const CellarPage = () => {
                           <Typography variant="bodyXs">
                             Includes duty and clearance, VAT, transfer out of
                             bond, licensed distribution, delivery to your
-                            address, and our handling. Nothing further is
-                            charged.
+                            address, and our handling.
+                            {request.additionalChargeLabel
+                              ? ` Also covers ${request.additionalChargeLabel.toLowerCase()}.`
+                              : ''}{' '}
+                            Nothing further is charged.
                           </Typography>
                         </TooltipContent>
                       </Tooltip>

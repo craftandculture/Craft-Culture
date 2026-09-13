@@ -28,6 +28,9 @@ const adminQuoteRelease = adminProcedure
       clearanceCostUsd: z.number().min(0).optional(),
       deliveryCostUsd: z.number().min(0).optional(),
       serviceFeeUsd: z.number().min(0).optional(),
+      /** Anything the rate card does not foresee, with its reason */
+      additionalChargeUsd: z.number().min(0).optional(),
+      additionalChargeLabel: z.string().max(120).optional(),
       clearanceRateVersion: z.string().max(60).optional(),
     }),
   )
@@ -93,6 +96,7 @@ const adminQuoteRelease = adminProcedure
     const clearance = input.clearanceCostUsd ?? 0;
     const delivery = input.deliveryCostUsd ?? 0;
     const service = input.serviceFeeUsd ?? 0;
+    const extra = input.additionalChargeUsd ?? 0;
 
     if (clearance === 0 && delivery === 0) {
       throw new TRPCError({
@@ -110,7 +114,9 @@ const adminQuoteRelease = adminProcedure
         clearanceCostUsd: clearance,
         deliveryCostUsd: delivery,
         serviceFeeUsd: service,
-        totalCostUsd: clearance + delivery + service,
+        additionalChargeUsd: extra || null,
+        additionalChargeLabel: extra ? (input.additionalChargeLabel ?? null) : null,
+        totalCostUsd: clearance + delivery + service + extra,
         clearanceRateVersion: input.clearanceRateVersion,
         adminNotes: input.adminNotes,
         quotedAt: new Date(),
@@ -119,7 +125,7 @@ const adminQuoteRelease = adminProcedure
       })
       .where(eq(cellarReleaseRequests.id, request.id));
 
-    const total = clearance + delivery + service;
+    const total = clearance + delivery + service + extra;
 
     await notifyReleaseUpdate({
       event: 'quoted',

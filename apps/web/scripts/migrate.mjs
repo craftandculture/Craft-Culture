@@ -1110,6 +1110,15 @@ const runMigrations = async () => {
     );
     console.log('✅ release parcel identity ready');
 
+    // Anything the rate card does not foresee, carried with its reason.
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_requests" ADD COLUMN IF NOT EXISTS "additional_charge_usd" double precision`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_requests" ADD COLUMN IF NOT EXISTS "additional_charge_label" text`,
+    );
+    console.log('✅ release additional charge ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

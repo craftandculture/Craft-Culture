@@ -53,10 +53,14 @@ const CellarReleasesPage = () => {
     clearance: '',
     delivery: '',
     service: '',
+    extra: '',
+    extraLabel: '',
     goods: '',
     rateVersion: '',
     notes: '',
   });
+  /* Set the moment an operator types, so a refetch cannot undo their edit. */
+  const [isOverridden, setIsOverridden] = useState(false);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.cellar.admin.getReleases.queryOptions({ status }),
@@ -154,7 +158,39 @@ const CellarReleasesPage = () => {
             >
               <button
                 type="button"
-                onClick={() => setOpenId(isOpen ? null : request.id)}
+                onClick={() => {
+                  if (isOpen) {
+                    setOpenId(null);
+                    return;
+                  }
+
+                  /*
+                    The member's commercials apply on open. Requiring a click
+                    to load figures the platform had already worked out meant
+                    every quote was retyped, and a retyped figure is a figure
+                    that can differ from the card it is supposed to come from.
+                  */
+                  setOpenId(request.id);
+                  setIsOverridden(false);
+                  setForm({
+                    clearance: request.suggested?.priced
+                      ? String(request.suggested.clearanceTotalUsd)
+                      : '',
+                    delivery: request.suggested?.priced
+                      ? String(request.suggested.deliveryUsd)
+                      : '',
+                    service: request.suggested?.priced
+                      ? String(request.suggested.serviceFeeUsd)
+                      : '',
+                    extra: '',
+                    extraLabel: '',
+                    goods: request.suggested?.priced
+                      ? String(request.suggested.goodsValueUsd)
+                      : '',
+                    rateVersion: request.suggested?.version ?? '',
+                    notes: '',
+                  });
+                }}
                 className="hover:bg-fill-muted/40 flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
@@ -271,32 +307,43 @@ const CellarReleasesPage = () => {
                           Quote
                         </Typography>
                         {request.suggested?.priced ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setForm({
-                                clearance: String(
-                                  request.suggested.clearanceTotalUsd,
-                                ),
-                                delivery: String(request.suggested.deliveryUsd),
-                                service: String(request.suggested.serviceFeeUsd),
-                                goods: String(request.suggested.goodsValueUsd),
-                                rateVersion: request.suggested.version,
-                                notes: form.notes,
-                              })
-                            }
-                            className="text-text-brand text-xs font-medium hover:underline"
-                          >
-                            Use their rate card &mdash;{' '}
-                            {request.suggested.totalUsd.toLocaleString('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 0,
-                            })}
-                          </button>
+                          <>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {isOverridden ? 'Overridden' : 'Their rate card'}
+                              , card {request.suggested.version}
+                            </Typography>
+                            {isOverridden && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsOverridden(false);
+                                  setForm((current) => ({
+                                    ...current,
+                                    clearance: String(
+                                      request.suggested.clearanceTotalUsd,
+                                    ),
+                                    delivery: String(
+                                      request.suggested.deliveryUsd,
+                                    ),
+                                    service: String(
+                                      request.suggested.serviceFeeUsd,
+                                    ),
+                                    goods: String(
+                                      request.suggested.goodsValueUsd,
+                                    ),
+                                    rateVersion: request.suggested.version,
+                                  }));
+                                }}
+                                className="text-text-brand text-xs font-medium hover:underline"
+                              >
+                                Put the card back
+                              </button>
+                            )}
+                          </>
                         ) : (
                           <Typography variant="bodyXs" colorRole="muted">
                             No rate card set for this member, or for the house
+                            &mdash; these figures have to be entered by hand
                           </Typography>
                         )}
                       </div>
@@ -319,11 +366,13 @@ const CellarReleasesPage = () => {
                           </strong>
                         </Typography>
                       )}
-                      <div className="mb-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                      <div className="mb-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
                         {[
                           { key: 'clearance', label: 'Duty, VAT & clearance $' },
                           { key: 'delivery', label: 'Delivery $' },
                           { key: 'service', label: 'Service fee $' },
+                          { key: 'extra', label: 'Additional charge $' },
+                          { key: 'extraLabel', label: 'What it is for' },
                           { key: 'goods', label: 'Goods value $' },
                           { key: 'rateVersion', label: 'Rate version' },
                         ].map((field) => (
@@ -333,11 +382,16 @@ const CellarReleasesPage = () => {
                             </span>
                             <Input
                               value={form[field.key as keyof typeof form]}
-                              onChange={(event) =>
+                              onChange={(event) => {
+                                if (field.key !== 'extra' && field.key !== 'extraLabel') {
+                                  setIsOverridden(true);
+                                }
+
                                 setForm((current) => ({
                                   ...current,
                                   [field.key]: event.target.value,
-                                }))
+                                }));
+                              }
                               }
                               placeholder={
                                 field.key === 'rateVersion' ? '2026-Q3' : '0.00'
@@ -374,6 +428,9 @@ const CellarReleasesPage = () => {
                               clearanceCostUsd: Number(form.clearance) || 0,
                               deliveryCostUsd: Number(form.delivery) || 0,
                               serviceFeeUsd: Number(form.service) || 0,
+                              additionalChargeUsd: Number(form.extra) || 0,
+                              additionalChargeLabel:
+                                form.extraLabel || undefined,
                               goodsValueUsd: Number(form.goods) || 0,
                               clearanceRateVersion: form.rateVersion || undefined,
                               adminNotes: form.notes || undefined,
