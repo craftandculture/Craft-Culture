@@ -404,7 +404,7 @@ const CellarPage = () => {
             variant="bodyXs"
             className="text-text-brand mb-3 block font-semibold uppercase tracking-wider"
           >
-            Your release requests
+            Requests in progress
           </Typography>
           <div className="flex flex-col gap-3">
             {(releaseData?.requests ?? [])
@@ -432,14 +432,14 @@ const CellarPage = () => {
                       className="mt-0.5 block"
                     >
                       {request.status === 'submitted' &&
-                        'With us — we are pricing the clearance and delivery.'}
+                        'With us. We are working out what clearance and delivery will cost.'}
                       {request.status === 'revision_requested' &&
                         (request.adminNotes ??
                           'We have asked for a change before we can price this.')}
                       {request.status === 'under_review' &&
-                        `Clearance ${money(request.clearanceCostUsd ?? 0)} · delivery ${money(
-                          request.deliveryCostUsd ?? 0,
-                        )} · total ${money(request.totalCostUsd ?? 0)}`}
+                        `${money(request.totalCostUsd ?? 0)} to deliver — ${money(
+                          request.clearanceCostUsd ?? 0,
+                        )} clearance, ${money(request.deliveryCostUsd ?? 0)} delivery`}
                     </Typography>
                   </div>
                   {request.status === 'under_review' && (
@@ -448,7 +448,7 @@ const CellarPage = () => {
                       isDisabled={isAccepting}
                       onClick={() => acceptRelease({ requestId: request.id })}
                     >
-                      <ButtonContent>Accept and release</ButtonContent>
+                      <ButtonContent>Accept and deliver</ButtonContent>
                     </Button>
                   )}
                 </div>
@@ -618,6 +618,10 @@ const CellarPage = () => {
                                 </th>
                                 <th className="whitespace-nowrap px-4 py-1.5 text-left">In bond since</th>
                                 <th className="whitespace-nowrap px-4 py-1.5 text-left">Status</th>
+                                <th className="whitespace-nowrap px-4 py-1.5 text-right">
+                                  Bottles to release
+                                </th>
+                                <th className="px-4 py-1.5 text-right" />
                               </tr>
                             </thead>
                             <tbody className="divide-border-muted/60 divide-y">
@@ -833,23 +837,45 @@ const CellarPage = () => {
               );
 
               return (
-                <Typography variant="bodySm" className="font-semibold">
-                  {basket.size} {basket.size === 1 ? 'wine' : 'wines'} &middot;{' '}
-                  {bottles} {bottles === 1 ? 'bottle' : 'bottles'} to request
-                </Typography>
+                <div>
+                  <Typography
+                    variant="bodyXs"
+                    className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
+                  >
+                    Delivery request
+                  </Typography>
+                  <Typography variant="bodySm" className="font-semibold">
+                    {bottles} {bottles === 1 ? 'bottle' : 'bottles'} from{' '}
+                    {basket.size} {basket.size === 1 ? 'wine' : 'wines'}
+                  </Typography>
+                </div>
               );
             })()}
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="Where should it go?"
-              />
-              <Input
-                value={memberNotes}
-                onChange={(event) => setMemberNotes(event.target.value)}
-                placeholder="Anything we should know (optional)"
-              />
+            {/*
+               Labelled, not placeholder-led. A placeholder vanishes the moment
+               someone types, taking the only explanation of the field with it.
+             */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
+                  Delivery address
+                </span>
+                <Input
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder="Villa or office, area, emirate"
+                />
+              </label>
+              <label className="block">
+                <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
+                  Notes for our team &mdash; optional
+                </span>
+                <Input
+                  value={memberNotes}
+                  onChange={(event) => setMemberNotes(event.target.value)}
+                  placeholder="Preferred timing, access, anything else"
+                />
+              </label>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -866,7 +892,7 @@ const CellarPage = () => {
                   })
                 }
               >
-                <ButtonContent>Request release</ButtonContent>
+                <ButtonContent>Request delivery</ButtonContent>
               </Button>
               <Button
                 size="sm"
@@ -876,8 +902,7 @@ const CellarPage = () => {
                 <ButtonContent>Clear</ButtonContent>
               </Button>
               <Typography variant="bodyXs" colorRole="muted">
-                We will come back with the cost of clearance and delivery before
-                anything moves.
+                Nothing moves until you have seen the cost and agreed it.
               </Typography>
             </div>
           </div>
