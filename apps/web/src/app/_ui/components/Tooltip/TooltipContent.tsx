@@ -24,16 +24,23 @@ const TooltipContent = ({
   children,
   ...props
 }: TooltipContentProps) => {
+  /*
+    Portalled to the body. Rendered in place, a tooltip raised from inside a
+    scrolling container — a wide table, a sheet — is clipped by that
+    container's overflow, so the end of the sentence simply disappears.
+  */
   return (
-    <TooltipPrimitive.Content
-      sideOffset={sideOffset}
-      collisionPadding={collisionPadding}
-      className={content({ className })}
-      {...props}
-    >
-      <TooltipPrimitive.Arrow className={arrow()} />
-      {children}
-    </TooltipPrimitive.Content>
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        className={content({ className })}
+        {...props}
+      >
+        <TooltipPrimitive.Arrow className={arrow()} />
+        {children}
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
   );
 };
 

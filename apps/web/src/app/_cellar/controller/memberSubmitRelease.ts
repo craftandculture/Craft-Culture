@@ -10,6 +10,7 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import EDITABLE_STATUSES from '../utils/editableStatuses';
+import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 
 /**
  * Hand a release request to us for review
@@ -70,6 +71,13 @@ const memberSubmitRelease = stockOwnerProcedure
         updatedAt: new Date(),
       })
       .where(eq(cellarReleaseRequests.id, request.id));
+
+    await notifyReleaseUpdate({
+      event: 'submitted',
+      partnerId: ctx.partner.id,
+      requestId: request.id,
+      requestNumber: request.requestNumber,
+    });
 
     return { requestNumber: request.requestNumber, lines: lines.length };
   });

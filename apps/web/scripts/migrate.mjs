@@ -1084,6 +1084,18 @@ const runMigrations = async () => {
     );
     console.log('✅ partner identity documents ready');
 
+    // A quote nobody is told about is a quote nobody accepts.
+    for (const value of [
+      'cellar_release_submitted',
+      'cellar_release_quoted',
+      'cellar_release_revision',
+    ]) {
+      await client.unsafe(
+        `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS '${value}'`,
+      );
+    }
+    console.log('✅ cellar release notifications ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

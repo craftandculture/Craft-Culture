@@ -6,6 +6,8 @@ import db from '@/database/client';
 import { cellarReleaseRequests } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
+
 /**
  * Put a cost against a release request, or send it back
  *
@@ -33,6 +35,7 @@ const adminQuoteRelease = adminProcedure
     const [request] = await db
       .select({
         id: cellarReleaseRequests.id,
+        partnerId: cellarReleaseRequests.partnerId,
         status: cellarReleaseRequests.status,
         requestNumber: cellarReleaseRequests.requestNumber,
       })
@@ -61,6 +64,14 @@ const adminQuoteRelease = adminProcedure
           updatedAt: new Date(),
         })
         .where(eq(cellarReleaseRequests.id, request.id));
+
+      await notifyReleaseUpdate({
+        event: 'revision',
+        partnerId: request.partnerId,
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        adminNotes: input.adminNotes,
+      });
 
       return { status: 'revision_requested' as const };
     }
@@ -108,7 +119,17 @@ const adminQuoteRelease = adminProcedure
       })
       .where(eq(cellarReleaseRequests.id, request.id));
 
-    return { status: 'under_review' as const, total: clearance + delivery + service };
+    const total = clearance + delivery + service;
+
+    await notifyReleaseUpdate({
+      event: 'quoted',
+      partnerId: request.partnerId,
+      requestId: request.id,
+      requestNumber: request.requestNumber,
+      totalUsd: total,
+    });
+
+    return { status: 'under_review' as const, total };
   });
 
 export default adminQuoteRelease;

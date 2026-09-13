@@ -979,16 +979,17 @@ const CellarPage = () => {
                                                 colorRole="muted"
                                               />
                                             </TooltipTrigger>
-                                            <TooltipContent className="max-w-[260px]">
+                                            <TooltipContent
+                                              side="left"
+                                              className="max-w-[240px] text-left lg:max-w-[240px]"
+                                            >
                                               <Typography variant="bodyXs">
                                                 <strong>AED 150</strong> for
-                                                this parcel. We take the cases
-                                                out and inspect every bottle
-                                                &mdash; fill level, label,
-                                                capsule and closure &mdash; and
-                                                send you photographs with
-                                                written notes. Billed on your
-                                                next invoice.
+                                                this parcel. Every bottle
+                                                inspected &mdash; fill, label,
+                                                capsule, closure &mdash; with
+                                                photographs and written notes.
+                                                Billed on your next invoice.
                                               </Typography>
                                             </TooltipContent>
                                           </Tooltip>

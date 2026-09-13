@@ -42,6 +42,16 @@ const ALL_CATEGORIES: NotificationCategory[] = [
         label: 'Wine Received',
         description: 'When wine arrives into your cellar and is put away',
       },
+      {
+        type: 'cellar_release_quoted',
+        label: 'Release Quoted',
+        description: 'When we have priced a delivery you asked for',
+      },
+      {
+        type: 'cellar_release_revision',
+        label: 'Release Sent Back',
+        description: 'When we need a change before we can price a delivery',
+      },
     ],
   },
   {
@@ -195,6 +205,11 @@ const ALL_CATEGORIES: NotificationCategory[] = [
         type: 'new_user_pending',
         label: 'New User Pending',
         description: 'When a new user is awaiting approval',
+      },
+      {
+        type: 'cellar_release_submitted',
+        label: 'Release Requested',
+        description: 'When a member asks for wine to be brought out of bond',
       },
     ],
   },
