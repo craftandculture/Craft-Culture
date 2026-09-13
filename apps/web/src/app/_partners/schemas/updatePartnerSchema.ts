@@ -15,7 +15,20 @@ const paymentDetailsSchema = z.object({
 
 const updatePartnerSchema = z.object({
   partnerId: z.string().uuid(),
-  type: z.enum(['retailer', 'sommelier', 'distributor']).optional(),
+  /*
+    Includes the stock-owning types so a partner filed under the wrong one can
+    be corrected in the admin. Reclassifying changes what the partner can reach;
+    it does not touch their stock, which is keyed on owner id throughout.
+  */
+  type: z
+    .enum([
+      'retailer',
+      'sommelier',
+      'distributor',
+      'wine_partner',
+      'private_collector',
+    ])
+    .optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   businessName: z.string().min(1).optional(),
   businessAddress: z.string().optional(),

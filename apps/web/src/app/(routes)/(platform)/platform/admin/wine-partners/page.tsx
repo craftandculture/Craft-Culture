@@ -13,6 +13,7 @@ import {
   IconReceipt,
   IconSearch,
   IconTrash,
+  IconUser,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -504,6 +505,45 @@ const WinePartnersPage = () => {
                           <ButtonContent iconLeft={IconCheck}>Activate</ButtonContent>
                         </Button>
                       )}
+                      {/*
+                        Reclassify rather than recreate. Individual collectors
+                        were filed here for want of a type that fitted, and
+                        deleting and re-adding them would orphan the stock that
+                        already points at this partner id.
+                      */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline" isDisabled={isUpdating}>
+                            <ButtonContent iconLeft={IconUser}>Make Collector</ButtonContent>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Reclassify {partner.businessName} as a private collector?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              They move to the Collectors tab and see only their own
+                              cellar &mdash; sourcing, RFQs and private-client orders are
+                              withdrawn. All stock stays with them: it is held against
+                              this partner record, not against the type.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() =>
+                                updatePartner({
+                                  partnerId: partner.id,
+                                  type: 'private_collector',
+                                })
+                              }
+                            >
+                              Make Collector
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Button
                         size="sm"
                         variant="outline"
