@@ -4319,10 +4319,19 @@ export const wmsStock = pgTable(
       table.ownerId,
     ),
     // Prevent duplicate stock records for same product at same location from same shipment
+    /*
+      Widened with the owner. The invariant every writer already maintains is
+      one row per wine, per location, per OWNER — receiving looks stock up that
+      way — but the index was narrower than the rule it was written to protect,
+      so two partners could not hold the same wine from one shipment in one
+      bay. A partial ownership transfer therefore raised a unique violation
+      rather than splitting the parcel.
+    */
     uniqueIndex('wms_stock_lwin18_location_shipment_unique').on(
       table.lwin18,
       table.locationId,
       table.shipmentId,
+      table.ownerId,
     ),
   ],
 );
@@ -4381,6 +4390,15 @@ export const wmsStockReservations = pgTable(
     stockId: uuid('stock_id')
       .references(() => wmsStock.id)
       .notNull(),
+    /*
+      Whose wine this reservation is against, denormalised at creation.
+
+      A reservation binds to a stock row, and a stock row can change owner. With
+      one wine held for five partners, an order filled from whichever row the
+      matcher happened to hit would settle to an arbitrary owner — so the pick
+      asserts this against the row's current owner before releasing anything.
+    */
+    ownerId: uuid('owner_id').references(() => partners.id),
     orderType: text('order_type').notNull(), // 'zoho' | 'pco'
     orderId: uuid('order_id').notNull(),
     orderItemId: uuid('order_item_id').notNull(),

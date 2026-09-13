@@ -1119,6 +1119,25 @@ const runMigrations = async () => {
     );
     console.log('✅ release additional charge ready');
 
+    // Two partners could not hold the same wine from one shipment in one bay,
+    // so a partial ownership transfer raised a unique violation instead of
+    // splitting the parcel. Adding a column to a unique index is a strict
+    // weakening — every row that satisfied the old one satisfies this — so
+    // there is nothing to clean up first and nothing to back-fill.
+    await client.unsafe(
+      `DROP INDEX IF EXISTS "wms_stock_lwin18_location_shipment_unique"`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_stock_lwin18_location_shipment_unique"
+         ON "wms_stock" ("lwin18", "location_id", "shipment_id", "owner_id")`,
+    );
+    // A reservation must know whose wine it holds, or a shared pool settles to
+    // whichever owner the matcher happened to pick.
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_reservations" ADD COLUMN IF NOT EXISTS "owner_id" uuid REFERENCES "partners"("id")`,
+    );
+    console.log('✅ ownership transfer integrity ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

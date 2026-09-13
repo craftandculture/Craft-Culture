@@ -151,6 +151,13 @@ const reserveStockForOrderItems = async ({
       // Create reservation record
       await db.insert(wmsStockReservations).values({
         stockId: stock.id,
+        /*
+          Recorded now, because a stock row can change owner later. Without it,
+          an order filled from a shared pool cannot say afterwards whose wine it
+          took — and the settlement would be owed to whoever happens to hold the
+          row at the time somebody looks.
+        */
+        ownerId: stock.ownerId,
         orderType,
         orderId,
         orderItemId: item.orderItemId,

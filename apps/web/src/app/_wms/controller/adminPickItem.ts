@@ -331,6 +331,7 @@ const adminPickItem = wmsOperatorProcedure
       const [heldForThisOrder] = await db
         .select({
           cases: sql<number>`COALESCE(SUM(${wmsStockReservations.quantityCases}), 0)::int`,
+          ownerId: sql<string | null>`MAX(${wmsStockReservations.ownerId}::text)`,
         })
         .from(wmsStockReservations)
         .where(
@@ -340,6 +341,25 @@ const adminPickItem = wmsOperatorProcedure
             eq(wmsStockReservations.status, 'active'),
           ),
         );
+
+      /*
+        The wine was set aside when it belonged to someone else.
+
+        A reservation binds to a stock row, and ownership of that row can move
+        underneath it. Picking anyway would ship this owner's wine against an
+        order reserved from another's, and settle the proceeds to the wrong
+        partner. Older reservations carry no owner, so those are let through
+        rather than blocking a warehouse that has done nothing wrong.
+      */
+      if (
+        heldForThisOrder?.ownerId &&
+        heldForThisOrder.ownerId !== stock.ownerId
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `This stock has changed owner since it was reserved. It is now held for ${stock.ownerName}. Re-reserve the order before picking it.`,
+        });
+      }
 
       const pickable = stock.availableCases + (heldForThisOrder?.cases ?? 0);
       if (pickable < pickedQuantity) {

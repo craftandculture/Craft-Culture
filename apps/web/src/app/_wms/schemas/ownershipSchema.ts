@@ -16,6 +16,12 @@ export const transferOwnershipSchema = z.object({
   consignmentCommissionPercent: z.number().min(0).max(100).optional(),
   /** Notes for the transfer */
   notes: z.string().optional(),
+  /*
+    Move wine that is reserved against an open order. Refused by default; an
+    admin may override, but the reservation then points at stock its order no
+    longer owns.
+  */
+  allowReservedTransfer: z.boolean().optional(),
 });
 
 /**
