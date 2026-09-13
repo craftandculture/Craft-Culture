@@ -42,6 +42,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Distributors', href: '/platform/admin/partners' },
     { label: 'Wine Partners', href: '/platform/admin/wine-partners' },
     { label: 'Collectors', href: '/platform/admin/collectors' },
+    { label: 'Cellar Members', href: '/platform/admin/cellar-members' },
     { label: 'Cellar Releases', href: '/platform/admin/cellar-releases' },
     { label: 'Release Rates', href: '/platform/admin/cellar-rates' },
   ],

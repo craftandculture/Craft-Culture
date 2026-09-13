@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminGetMembers from './controller/adminGetMembers';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
 import adminQuoteRelease from './controller/adminQuoteRelease';
@@ -19,6 +20,7 @@ const memberRouter = createTRPCRouter({
 const adminRouter = createTRPCRouter({
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
+  getMembers: adminGetMembers,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
 });
