@@ -437,12 +437,26 @@ const CellarPage = () => {
                         (request.adminNotes ??
                           'We have asked for a change before we can price this.')}
                       {request.status === 'under_review' &&
-                        `${money(request.totalCostUsd ?? 0)} to deliver — ${money(
-                          request.clearanceCostUsd ?? 0,
-                        )} duties and clearance, ${money(
-                          request.deliveryCostUsd ?? 0,
-                        )} delivery, ${money(request.serviceFeeUsd ?? 0)} service`}
+                        `${money(request.totalCostUsd ?? 0)} to deliver, all in`}
                     </Typography>
+                    {/*
+                      One figure, and a sentence saying what is inside it. An
+                      itemised quote invites a line-by-line negotiation of
+                      costs the member cannot change, and naming the amounts
+                      would publish our rates to anyone who knows what their
+                      own wine cost.
+                    */}
+                    {request.status === 'under_review' && (
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="mt-1 block"
+                      >
+                        Includes duty and taxes, customs clearance, transfer
+                        out of bond, licensed distribution, delivery to your
+                        address, and our handling. Nothing further is charged.
+                      </Typography>
+                    )}
                   </div>
                   {request.status === 'under_review' && (
                     <Button
