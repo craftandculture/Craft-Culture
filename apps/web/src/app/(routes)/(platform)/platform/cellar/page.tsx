@@ -205,11 +205,23 @@ const CellarPage = () => {
     <div className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6 sm:py-8">
       <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <Typography variant="headingLg">Your cellar</Typography>
+          {/*
+            The same programme the member joined, named the same way. A portal
+            that calls itself something else reads as a different product from
+            the one they were sold.
+          */}
+          <Typography
+            variant="bodyXs"
+            className="text-text-brand mb-1.5 block font-semibold uppercase tracking-[0.18em]"
+          >
+            C&amp;C Private Cellar
+          </Typography>
+          <Typography variant="headingLg">
+            {data?.partner?.name ?? 'Your cellar'}
+          </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            {data?.partner?.name ? `${data.partner.name} — ` : ''}held in bond at
-            Craft &amp; Culture, Ras Al Khaimah &middot; duty suspended until
-            release
+            Held in bond at Craft &amp; Culture, Ras Al Khaimah. Duty is
+            suspended until you call wines forward.
           </Typography>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -580,14 +592,19 @@ const CellarPage = () => {
       </div>
 
       <Typography variant="bodyXs" colorRole="muted" className="mt-6 block">
-        Allocated cases are committed against an order and cannot be released
-        again until it completes. Import cost is the value declared when the
-        wine was brought into bond, not a market valuation. To call wines
-        forward for delivery, contact{' '}
+        Wine held in bond is duty suspended. Applicable duties, taxes and
+        delivery charges become payable only on release to the mainland, and are
+        quoted before anything moves. Allocated cases are committed against an
+        order already placed. Import cost is the value declared when the wine
+        was brought into bond, not a market valuation.
+        <br />
+        <br />
+        To call wines forward, consolidate a new purchase into your cellar, or
+        offer wine for resale through the C&amp;C network, contact{' '}
         <a className="text-text-brand" href="mailto:enquiries@craftculture.xyz">
           enquiries@craftculture.xyz
         </a>
-        &nbsp;— duties and delivery are quoted before any release.
+        .
       </Typography>
     </div>
   );
