@@ -27,7 +27,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     sections.push({
       title: access.kind === 'collector' ? 'Cellar' : 'Inventory',
       links: [
-        { href: '/platform/partner/stock', label: access.inventoryLabel },
+        { href: access.home, label: access.inventoryLabel },
       ],
     });
   } else if (user.role !== 'admin') {

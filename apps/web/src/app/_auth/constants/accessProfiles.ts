@@ -94,7 +94,8 @@ export const ACCESS_PROFILES: Record<AccountKind, AccessProfile> = {
   collector: {
     kind: 'collector',
     inventoryLabel: 'Your Cellar',
-    home: '/platform/partner/stock',
+    // A collector's own screen, not the warehouse view a wine partner needs.
+    home: '/platform/cellar',
     // A collector owns wine and looks at it. Nothing else, by design.
     can: { ...none, ownsStock: true },
   },

@@ -123,13 +123,13 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {access.can.ownsStock && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
                   <Link
-                    href="/platform/partner/stock"
+                    href={access.home}
                     className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
                   >
                     {access.kind === 'collector' ? 'Cellar' : 'Inventory'}
                   </Link>
                   <Link
-                    href="/platform/partner/stock"
+                    href={access.home}
                     className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
                   >
                     {access.inventoryLabel}
