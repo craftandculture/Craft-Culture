@@ -1,4 +1,6 @@
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import getNotificationCategories from '@/app/_notifications/data/getNotificationCategories';
+import resolvePartnerForUser from '@/app/_partners/data/resolvePartnerForUser';
 import db from '@/database/client';
 import type { User } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
@@ -6,7 +8,10 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 /**
  * Get user's notification preferences
  *
- * Returns all notification types organized by category with enabled/disabled state
+ * Narrowed to what this account can actually receive. A private collector has
+ * no buy requests, no purchase orders and no RFQs, so offering them fifteen
+ * switches for those was telling them the platform does things for them that
+ * it does not — and burying the one switch that matters underneath.
  */
 const notificationPreferencesGet = protectedProcedure.query(
   async ({ ctx: { user } }) => {
@@ -21,7 +26,23 @@ const notificationPreferencesGet = protectedProcedure.query(
       | User['notificationPreferences']
       | undefined;
 
-    const categories = getNotificationCategories();
+    /*
+      The partner has to be resolved before the profile can be: a collector is
+      only distinguishable from a sales account by what they are linked to.
+    */
+    const partner = await resolvePartnerForUser(
+      user.id,
+      ['wine_partner', 'distributor', 'private_collector'],
+      user.partnerId,
+    );
+
+    const access = resolveAccessProfile({
+      role: user.role,
+      customerType: user.customerType,
+      partnerType: partner?.type,
+    });
+
+    const categories = getNotificationCategories(access.kind);
 
     // Map categories with enabled state for each type
     const categoriesWithState = categories.map((category) => ({

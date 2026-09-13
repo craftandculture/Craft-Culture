@@ -1,3 +1,4 @@
+import type { AccountKind } from '@/app/_auth/constants/accessProfiles';
 import type { Notification } from '@/database/schema';
 
 interface NotificationTypeInfo {
@@ -9,18 +10,44 @@ interface NotificationTypeInfo {
 interface NotificationCategory {
   id: string;
   label: string;
+  /*
+    Which accounts can actually receive these. A preference for something that
+    can never fire is worse than no preference at all: it tells the account
+    holder this platform does something for them that it does not, and buries
+    the two switches that matter under fifteen that cannot.
+  */
+  appliesTo: AccountKind[];
   types: NotificationTypeInfo[];
 }
 
-/**
- * Get notification types organized by category for UI display
- *
- * @returns Array of categories with their notification types
- */
-const getNotificationCategories = (): NotificationCategory[] => [
+const TRADE: AccountKind[] = ['admin', 'sales', 'distributor', 'wine_partner'];
+
+const EVERYONE: AccountKind[] = [
+  'admin',
+  'warehouse',
+  'wine_partner',
+  'collector',
+  'distributor',
+  'sales',
+];
+
+const ALL_CATEGORIES: NotificationCategory[] = [
+  {
+    id: 'cellar',
+    label: 'Your Cellar',
+    appliesTo: ['collector', 'wine_partner', 'admin'],
+    types: [
+      {
+        type: 'cellar_wine_received',
+        label: 'Wine Received',
+        description: 'When wine arrives into your cellar and is put away',
+      },
+    ],
+  },
   {
     id: 'quotes',
     label: 'Quotes & Orders',
+    appliesTo: TRADE,
     types: [
       {
         type: 'buy_request_submitted',
@@ -52,6 +79,7 @@ const getNotificationCategories = (): NotificationCategory[] => [
   {
     id: 'purchase_orders',
     label: 'Purchase Orders',
+    appliesTo: TRADE,
     types: [
       {
         type: 'po_submitted',
@@ -83,6 +111,7 @@ const getNotificationCategories = (): NotificationCategory[] => [
   {
     id: 'payments',
     label: 'Payments',
+    appliesTo: TRADE,
     types: [
       {
         type: 'payment_received',
@@ -99,6 +128,7 @@ const getNotificationCategories = (): NotificationCategory[] => [
   {
     id: 'sourcing',
     label: 'Sourcing (RFQ)',
+    appliesTo: ['admin', 'wine_partner'],
     types: [
       {
         type: 'rfq_received',
@@ -123,14 +153,32 @@ const getNotificationCategories = (): NotificationCategory[] => [
     ],
   },
   {
-    id: 'admin',
-    label: 'Admin & System',
+    id: 'logistics',
+    label: 'Shipments & Documents',
+    appliesTo: ['admin', 'wine_partner'],
     types: [
       {
-        type: 'new_user_pending',
-        label: 'New User Pending',
-        description: 'When a new user is awaiting approval',
+        type: 'shipment_status_changed',
+        label: 'Shipment Status',
+        description: 'When a shipment moves to a new stage',
       },
+      {
+        type: 'document_expiring_soon',
+        label: 'Document Expiring',
+        description: 'Before a document on file lapses',
+      },
+      {
+        type: 'document_expired',
+        label: 'Document Expired',
+        description: 'When a document on file has lapsed',
+      },
+    ],
+  },
+  {
+    id: 'general',
+    label: 'General',
+    appliesTo: EVERYONE,
+    types: [
       {
         type: 'action_required',
         label: 'Action Required',
@@ -138,7 +186,37 @@ const getNotificationCategories = (): NotificationCategory[] => [
       },
     ],
   },
+  {
+    id: 'admin',
+    label: 'Admin & System',
+    appliesTo: ['admin'],
+    types: [
+      {
+        type: 'new_user_pending',
+        label: 'New User Pending',
+        description: 'When a new user is awaiting approval',
+      },
+    ],
+  },
 ];
+
+/**
+ * Get notification categories, optionally narrowed to one kind of account
+ *
+ * Called with no argument it returns the whole catalogue, which is what the
+ * "disable everything" admin tooling needs. Called with an account kind it
+ * returns only what that account can receive.
+ *
+ * @example
+ *   getNotificationCategories('collector'); // Your Cellar, General
+ *
+ * @param kind - Whose settings screen this is for
+ * @returns The categories that account can act on
+ */
+const getNotificationCategories = (kind?: AccountKind): NotificationCategory[] =>
+  kind
+    ? ALL_CATEGORIES.filter((category) => category.appliesTo.includes(kind))
+    : ALL_CATEGORIES;
 
 /**
  * Get all notification types as a flat array
