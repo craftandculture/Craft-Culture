@@ -107,6 +107,16 @@ const CellarHelp = () => {
               is the declared import value, not a market valuation &mdash; we
               do not price your collection.
             </Typography>
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
+              Cold-chain records are held against the wine itself &mdash; the
+              conditions it was kept in, and the journey from producer to
+              delivery &mdash; and travel with it on release. There is no
+              charge for them.
+            </Typography>
           </HelpSection>
 
           <HelpSection

@@ -1949,10 +1949,25 @@ const CellarPage = () => {
             Delivery details
           </Typography>
           {profile?.deliveryAddress ? (
-            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-              {profile.deliveryAddress}
-              {profile.documents.length === 0 && ' · no ID on file'}
-            </Typography>
+            <>
+              <Typography
+                variant="bodyXs"
+                colorRole="muted"
+                className="mt-0.5 block"
+              >
+                {profile.deliveryAddress}
+              </Typography>
+              {/*
+                A licensed delivery cannot be made without it, so it is a
+                blocker rather than a detail mentioned in passing.
+              */}
+              {profile.documents.length === 0 && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  No ID on file &mdash; needed before we can deliver
+                </span>
+              )}
+            </>
           ) : (
             <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
               No delivery address yet. Add one and it will be filled in
@@ -1969,67 +1984,6 @@ const CellarPage = () => {
         </Link>
       </section>
 
-      {/*
-        The same four facts the membership was sold on, in the same words. A
-        member who was told the wine sits at twelve to fourteen degrees under
-        CCTV should be able to see that stated where the wine is, not only in
-        the document that persuaded them.
-      */}
-      <section className="border-border-muted mt-8 overflow-hidden rounded-xl border">
-        <div className="border-border-muted flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-2.5">
-          <Typography
-            variant="bodyXs"
-            className="font-semibold uppercase tracking-wider"
-          >
-            The warehouse
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted">
-            Craft &amp; Culture &mdash; Ras Al Khaimah
-          </Typography>
-        </div>
-        <dl className="divide-border-muted/60 grid gap-px sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              term: 'Temperature',
-              detail: '12–14°C, continuously logged',
-            },
-            {
-              term: 'Status',
-              detail: 'UAE licensed bonded — duty suspended, not deferred',
-            },
-            {
-              term: 'Security',
-              detail: 'CCTV, humidity control, restricted access',
-            },
-            {
-              term: 'Handling',
-              detail: 'Receiving, putaway, picking and dispatch in house',
-            },
-          ].map((fact) => (
-            <div key={fact.term} className="px-4 py-3">
-              <dt className="text-text-muted mb-0.5 text-[11px] font-semibold uppercase tracking-wider">
-                {fact.term}
-              </dt>
-              <dd className="text-text-primary m-0 text-xs leading-relaxed">
-                {fact.detail}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <div className="border-border-muted border-t px-4 py-3">
-          <Typography
-            variant="bodyXs"
-            colorRole="muted"
-            className="block max-w-[80ch] leading-relaxed"
-          >
-            Cold-chain records are held against the wine itself &mdash; the
-            conditions it was kept in, and the journey from producer to
-            delivery &mdash; and travel with it on release. There is no charge
-            for them.
-          </Typography>
-        </div>
-      </section>
-
       <div className="border-border-muted mt-8 border-t pt-6">
         {/*
           Three separate facts read as three, not as a paragraph. Each one
@@ -2041,16 +1995,15 @@ const CellarPage = () => {
             {
               term: 'Duty',
               detail:
-                'Wine held in bond is duty suspended. Duties, taxes and delivery become payable only on release to the mainland, and are quoted before anything moves.',
+                'Suspended while in bond. Payable on release, and quoted first.',
             },
             {
               term: 'Allocated',
-              detail: 'Cases committed against an order already placed.',
+              detail: 'Committed against an order already placed.',
             },
             {
               term: 'Import cost',
-              detail:
-                'The value declared when the wine was brought into bond. Not a market valuation.',
+              detail: 'Declared on import. Not a market valuation.',
             },
           ].map((note) => (
             <div key={note.term}>
@@ -2064,17 +2017,15 @@ const CellarPage = () => {
           ))}
         </dl>
 
-        <div className="border-border-muted mt-6 border-t pt-5">
-          <Typography variant="bodySm" className="block">
-            To call wines forward, consolidate a new purchase into your cellar,
-            or offer wine for resale through the C&amp;C network, contact{' '}
+        <div className="border-border-muted mt-5 border-t pt-4">
+          <Typography variant="bodyXs" colorRole="muted" className="block">
+            Consolidating a purchase, or offering wine for resale?{' '}
             <a
               className="text-text-brand font-medium"
               href="mailto:enquiries@craftculture.xyz"
             >
               enquiries@craftculture.xyz
             </a>
-            .
           </Typography>
         </div>
       </div>

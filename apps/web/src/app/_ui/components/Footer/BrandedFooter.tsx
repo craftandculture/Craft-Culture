@@ -24,8 +24,14 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
   const isWinePartner = access.can.ownsStock;
   const isDistributor = customerType === 'b2b' || partnerType === 'distributor';
 
-  // Route to appropriate support page based on user type
+  /*
+    A collector owns stock, so the wine-partner branch below was catching them
+    and sending them to help about sourcing and RFQs. Their help lives on the
+    general route, which serves cellar content when the account is a
+    collector.
+  */
   const getSupportHref = () => {
+    if (access.kind === 'collector') return '/platform/support';
     if (isWinePartner) return '/platform/partner/support';
     if (isDistributor) return '/platform/distributor/support';
     return '/platform/support';
@@ -36,6 +42,26 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
       <WarehouseDataFeed />
 
+      {/*
+        The four facts the membership was sold on, in the footer of every
+        cellar page. One line: a member wants to know the wine is looked
+        after, not to read a specification each time they open the page.
+      */}
+      {access.kind === 'collector' && (
+        <div className="border-border-primary border-b">
+          <div className="container flex flex-wrap items-baseline gap-x-2 gap-y-1 py-3">
+            <span className="text-text-primary text-[11px] font-semibold uppercase tracking-wider">
+              The warehouse
+            </span>
+            <span className="text-text-muted text-xs">
+              Ras Al Khaimah &middot; 12&ndash;14&deg;C continuously logged
+              &middot; UAE licensed bonded, duty suspended &middot; CCTV and
+              humidity control &middot; handled in house
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="container py-6 md:py-8">
         <div className="grid gap-6 md:grid-cols-3 md:gap-8">
           {/* Company Info - Conditional */}
@@ -43,10 +69,17 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
             <h3 className="text-text-primary text-sm font-semibold">
               Craft & Culture
             </h3>
+            {/*
+              A collector was being told we build bridges for brands to scale
+              across the GCC, which describes a business they are not in. What
+              they bought was storage and access.
+            */}
             <p className="text-text-muted text-xs leading-relaxed">
-              {isB2C
-                ? 'The region\'s first professional wine pricing tool. Built around bottle integrity, fair market pricing, and trusted expertise.'
-                : 'Building the bridge for wine & spirits brands to access, activate, and scale across the GCC.'}
+              {access.kind === 'collector'
+                ? 'Private Cellar. Access international merchants, consolidate globally, and hold your collection in bond in the UAE.'
+                : isB2C
+                  ? 'The region\'s first professional wine pricing tool. Built around bottle integrity, fair market pricing, and trusted expertise.'
+                  : 'Building the bridge for wine & spirits brands to access, activate, and scale across the GCC.'}
             </p>
           </div>
 

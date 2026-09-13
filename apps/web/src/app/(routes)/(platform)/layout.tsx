@@ -229,7 +229,13 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         {(user.role === 'admin' || user.role === 'wms_operator') && <AdminSectionTabs userRole={user.role} />}
       </header>
       <div className="flex-1">{children}</div>
-      <BrandedFooter customerType={user.customerType} partnerType={user.partner?.type as 'wine_partner' | 'distributor' | undefined} />
+      <BrandedFooter customerType={user.customerType} partnerType={
+          user.partner?.type as
+            | 'wine_partner'
+            | 'distributor'
+            | 'private_collector'
+            | undefined
+        } />
     </div>
   );
 
