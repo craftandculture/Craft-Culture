@@ -518,14 +518,16 @@ const CellarPage = () => {
   const tdMuted = `${td} text-text-muted`;
 
   /*
-    The catalogue name repeats the size and strength that already have their
-    own columns. Printed in full it pushes the producer off small screens and
-    makes every row look like every other row.
+    The catalogue name repeats the vintage, size and strength that all have
+    their own columns. Trimming the size alone left three formats of one wine
+    reading identically, so the vintage goes too — what remains is the wine
+    itself, and the columns say which bottle of it.
   */
   const displayName = (name: string) =>
     name
       .replace(/\s+\d+(\.\d+)?%\s*abv\s*$/i, '')
       .replace(/\s+\d+(\.\d+)?L\s*$/i, '')
+      .replace(/\s+(19|20)\d{2}\s*$/, '')
       .trim();
 
   return (
@@ -593,61 +595,68 @@ const CellarPage = () => {
         </div>
       </header>
 
-      {/* Headline figures, in the Stock Explorer idiom */}
+      {/*
+        Four cards in four unrelated pastels said nothing — the colours were
+        chosen per card rather than meaning anything, so the eye got no help
+        deciding which figure mattered. They are one neutral surface now, and
+        the only card that colours itself is wine in transit, which colours
+        itself only when there is some.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
-        <div className="to-background-primary rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 px-3 py-2.5 text-center shadow-sm">
-          <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100/70 text-indigo-500">
-            <IconBottle size={13} />
+        {[
+          {
+            icon: IconBottle,
+            value: totals.bottles.toLocaleString(),
+            label: 'Bottles',
+            detail: `${totals.cases.toLocaleString()} cases`,
+            alert: false,
+          },
+          {
+            icon: IconBuildingWarehouse,
+            value: totals.wines.toLocaleString(),
+            label: 'Wines',
+            detail: `${totals.producers} producers`,
+            alert: false,
+          },
+          {
+            icon: IconCoin,
+            value: totals.cost > 0 ? money(totals.cost) : '—',
+            label: 'Recorded on import',
+            detail: `${totals.pricedCount}/${totals.wines} wines`,
+            alert: false,
+          },
+          {
+            icon: IconShip,
+            value: totals.inboundBottles.toLocaleString(),
+            label: 'In transit',
+            detail: `${inbound.length} ${inbound.length === 1 ? 'line' : 'lines'}`,
+            alert: inbound.length > 0,
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className={`rounded-xl border px-3 py-2.5 text-center ${
+              card.alert
+                ? 'border-amber-200 bg-amber-50/50'
+                : 'border-border-muted bg-background-primary'
+            }`}
+          >
+            <div
+              className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
+                card.alert
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-teal-50 text-teal-600'
+              }`}
+            >
+              <card.icon size={13} />
+            </div>
+            <div className="text-lg font-bold leading-tight tabular-nums">
+              {card.value}
+            </div>
+            <div className="text-text-muted text-[11px]">{card.label}</div>
+            <div className="text-text-muted text-[10px]">{card.detail}</div>
           </div>
-          <div className="text-lg font-bold leading-tight tabular-nums">
-            {totals.bottles.toLocaleString()}
-          </div>
-          <div className="text-text-muted text-[11px]">Bottles</div>
-          <div className="text-text-muted text-[10px]">
-            {totals.cases.toLocaleString()} cases
-          </div>
-        </div>
-
-        <div className="to-background-primary rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 px-3 py-2.5 text-center shadow-sm">
-          <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
-            <IconBuildingWarehouse size={13} />
-          </div>
-          <div className="text-lg font-bold leading-tight tabular-nums">
-            {totals.wines.toLocaleString()}
-          </div>
-          <div className="text-text-muted text-[11px]">Wines</div>
-          <div className="text-text-muted text-[10px]">
-            {totals.producers} producers
-          </div>
-        </div>
-
-        <div className="to-background-primary rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 px-3 py-2.5 text-center shadow-sm">
-          <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100/70 text-emerald-500">
-            <IconCoin size={13} />
-          </div>
-          <div className="text-lg font-bold leading-tight tabular-nums">
-            {totals.cost > 0 ? money(totals.cost) : '—'}
-          </div>
-          <div className="text-text-muted text-[11px]">
-            Recorded on import
-          </div>
-          <div className="text-text-muted text-[10px]">
-            {totals.pricedCount}/{totals.wines} wines
-          </div>
-        </div>
-
-        <div className="to-background-primary rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 px-3 py-2.5 text-center shadow-sm">
-          <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-amber-100/70 text-amber-500">
-            <IconShip size={13} />
-          </div>
-          <div className="text-lg font-bold leading-tight tabular-nums">
-            {totals.inboundBottles.toLocaleString()}
-          </div>
-          <div className="text-text-muted text-[11px]">In transit</div>
-          <div className="text-text-muted text-[10px]">
-            {inbound.length} {inbound.length === 1 ? 'line' : 'lines'}
-          </div>
-        </div>
+        ))}
       </div>
 
       {inbound.length > 0 && (
@@ -1006,7 +1015,7 @@ const CellarPage = () => {
         three bands of vertical space before a member sees a single wine.
       */}
       <div className="mb-3 lg:flex lg:items-center lg:gap-4">
-        <div className="relative lg:w-72 lg:flex-shrink-0">
+        <div className="relative lg:w-80 lg:flex-shrink-0">
           <Icon
             icon={IconSearch}
             size="sm"
@@ -1015,7 +1024,7 @@ const CellarPage = () => {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by wine, producer or vintage"
+            placeholder="Search wine, producer or vintage"
             className="pl-9"
           />
         </div>
@@ -1035,12 +1044,16 @@ const CellarPage = () => {
             {filter.label}
           </button>
           ))}
+          <Typography
+            variant="bodyXs"
+            colorRole="muted"
+            className="ml-auto hidden flex-shrink-0 self-center lg:block"
+          >
+            {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
+          </Typography>
         </div>
       </div>
 
-      <Typography variant="bodyXs" colorRole="muted" className="mb-2 block">
-        {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
-      </Typography>
 
       <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto">
         <table className="w-full text-sm">
@@ -1055,7 +1068,7 @@ const CellarPage = () => {
               <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
               <th className={`${th} text-right`}>Bottles</th>
               <th className={`${th} hidden text-right lg:table-cell`}>
-                Import {currency === 'AED' ? 'AED' : '$'}/btl
+                {currency === 'AED' ? 'AED' : '$'} / btl
               </th>
               <th className={`${th} min-w-[150px] text-right`}>Request</th>
             </tr>
@@ -1127,7 +1140,14 @@ const CellarPage = () => {
                     >
                       {wine.vintage ?? 'NV'}
                     </td>
-                    <td className={`${tdMuted} hidden text-center sm:table-cell`}>
+                    {/*
+                      With the format trimmed out of the name, this column is
+                      what tells one row from the next. It cannot be the
+                      faintest thing on the row.
+                    */}
+                    <td
+                      className={`${td} text-text-primary hidden text-center sm:table-cell`}
+                    >
                       {wine.bottleSize ?? '—'}
                     </td>
                     <td className={`${tdMuted} hidden text-center tabular-nums md:table-cell`}>

@@ -9,11 +9,15 @@ import {
   IconShoppingCart,
   IconTimeline,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import useTRPC from '@/lib/trpc/browser';
 
+import CellarHelp from './CellarHelp';
 import FAQAccordion from './FAQAccordion';
 import HelpNavigation from './HelpNavigation';
 import HelpSection from './HelpSection';
@@ -62,6 +66,28 @@ const faqItems = [
 ];
 
 const SupportPage = () => {
+  const api = useTRPC();
+
+  const { data: user, isLoading } = useQuery({
+    ...api.users.getMe.queryOptions(),
+  });
+
+  /*
+    A private collector has no quotes, no purchase orders and nothing to
+    source, so none of the help below is about anything they can do. Answering
+    the wrong questions is worse than answering none: it tells a member the
+    platform was built for somebody else.
+  */
+  const access = resolveAccessProfile({
+    role: user?.role,
+    customerType: user?.customerType,
+    partnerType: user?.partner?.type,
+  });
+
+  if (isLoading) return null;
+
+  if (access.kind === 'collector') return <CellarHelp />;
+
   return (
     <main className="container py-6 md:py-10">
       <div className="mx-auto w-full max-w-3xl">
