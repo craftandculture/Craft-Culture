@@ -709,6 +709,8 @@ const CellarPage = () => {
           <div className="divide-border-muted/60 bg-background-primary divide-y">
             {openRequests.map((request) => {
               const needsDecision = request.status === 'under_review';
+              /* Sent back to them: nothing happens until they act on it. */
+              const needsAction = request.status === 'revision_requested';
 
               const isEditable = [
                 'draft',
@@ -725,7 +727,11 @@ const CellarPage = () => {
                 <div key={request.id}>
                 <div
                   className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
-                    needsDecision ? 'bg-teal-50/60' : ''
+                    needsDecision
+                      ? 'bg-teal-50/60'
+                      : needsAction
+                        ? 'bg-amber-50/60'
+                        : ''
                   }`}
                 >
                   <button
@@ -760,12 +766,16 @@ const CellarPage = () => {
                       </Typography>
                     )}
 
-                    {request.status === 'revision_requested' && (
-                      <Typography variant="bodyXs" className="text-amber-700">
-                        &middot;{' '}
-                        {request.adminNotes ??
-                          'A change is required before we can price this request'}
-                      </Typography>
+                    {needsAction && (
+                      <>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                          Action needed
+                        </span>
+                        <Typography variant="bodyXs" className="text-amber-700">
+                          {request.adminNotes ??
+                            'A change is required before we can price this request'}
+                        </Typography>
+                      </>
                     )}
 
                     {needsDecision && (
@@ -832,6 +842,19 @@ const CellarPage = () => {
 
                 {isOpen && (
                   <div className="border-border-muted bg-background-primary border-t px-3 py-3">
+                    {needsAction && request.adminNotes && (
+                      <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2">
+                        <Typography
+                          variant="bodyXs"
+                          className="mb-0.5 block font-semibold uppercase tracking-wider text-amber-800"
+                        >
+                          What we need changed
+                        </Typography>
+                        <Typography variant="bodySm" className="text-amber-900">
+                          {request.adminNotes}
+                        </Typography>
+                      </div>
+                    )}
                     <div className="border-border-muted mb-3 overflow-hidden rounded-lg border">
                       <table className="w-full text-xs">
                         <tbody className="divide-border-muted/60 divide-y">

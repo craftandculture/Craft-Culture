@@ -59,6 +59,19 @@ const adminQuoteRelease = adminProcedure
     }
 
     if (input.outcome === 'request_revisions') {
+      /*
+        The note is the entire content of this action. Without it the member
+        is told their request is wrong and not told why, which leaves them
+        able to do nothing except ask us what we meant.
+      */
+      if (!input.adminNotes?.trim()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Say what needs to change. The note is all the member receives.',
+        });
+      }
+
       await db
         .update(cellarReleaseRequests)
         .set({

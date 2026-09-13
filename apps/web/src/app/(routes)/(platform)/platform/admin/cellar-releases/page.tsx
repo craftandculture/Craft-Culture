@@ -405,7 +405,7 @@ const CellarReleasesPage = () => {
 
                       <label className="mb-3 block">
                         <span className="text-text-muted mb-1 block text-[11px] uppercase tracking-wider">
-                          Note to the member
+                          Note to the member — required to request revisions
                         </span>
                         <Input
                           value={form.notes}
@@ -443,10 +443,16 @@ const CellarReleasesPage = () => {
                             Send quote
                           </ButtonContent>
                         </Button>
+                        {/*
+                          Unavailable until the note exists. The note is the
+                          entire content of this action — without it the
+                          member is told their request is wrong and not told
+                          why.
+                        */}
                         <Button
                           size="sm"
                           variant="outline"
-                          isDisabled={isPending}
+                          isDisabled={isPending || !form.notes.trim()}
                           onClick={() =>
                             decide({
                               requestId: request.id,
