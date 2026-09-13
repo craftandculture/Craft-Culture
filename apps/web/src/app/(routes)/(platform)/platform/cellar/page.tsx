@@ -697,9 +697,11 @@ const CellarPage = () => {
                           className="max-w-[240px] text-left lg:max-w-[240px]"
                         >
                           <Typography variant="bodyXs">
-                            Includes duty and clearance, VAT, transfer out of
-                            bond, licensed distribution, delivery to your
-                            address, and our handling.
+                            The wine is not in this figure &mdash; you
+                            already own it. This is what it costs to bring it
+                            out of bond and to your door: duty and clearance,
+                            VAT, transfer, licensed distribution, delivery and
+                            our handling.
                             {request.additionalChargeLabel
                               ? ` Also covers ${request.additionalChargeLabel.toLowerCase()}.`
                               : ''}{' '}
@@ -1322,7 +1324,9 @@ const CellarPage = () => {
                             variant="bodyXs"
                             className="font-semibold text-teal-800"
                           >
-                            {isEstimating ? 'Estimating…' : `about ${money(estimate.totalUsd)}`}
+                            {isEstimating
+                              ? 'Estimating…'
+                              : `about ${money(estimate.totalUsd)} to deliver`}
                           </Typography>
                           {/*
                             Named an estimate every time it is shown. A figure
@@ -1342,12 +1346,15 @@ const CellarPage = () => {
                               className="max-w-[240px] text-left lg:max-w-[240px]"
                             >
                               <Typography variant="bodyXs">
-                                An estimate from your rate card &mdash; duty
-                                and clearance, VAT, transfer out of bond,
+                                <strong>The wine is not in this figure</strong>
+                                &nbsp;&mdash; you already own it. This is what
+                                it costs to bring it out of bond and to your
+                                door: duty and clearance, VAT, transfer,
                                 licensed distribution, delivery and our
-                                handling. We confirm the figure before anything
-                                moves, and nothing is reserved until you accept
-                                it.
+                                handling. Duty is assessed on the declared
+                                value, so a more valuable case costs more to
+                                release. An estimate from your rate card; we
+                                confirm the figure before anything moves.
                               </Typography>
                             </TooltipContent>
                           </Tooltip>
