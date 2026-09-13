@@ -826,11 +826,19 @@ const CellarPage = () => {
       {basket.size > 0 && (
         <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 rounded-xl border p-4 shadow-lg">
           <div className="flex flex-col gap-3">
-            <Typography variant="bodySm" className="font-semibold">
-              {basket.size} {basket.size === 1 ? 'wine' : 'wines'} &middot;{' '}
-              {[...basket.values()].reduce((sum, n) => sum + n, 0)} bottles to
-              request
-            </Typography>
+            {(() => {
+              const bottles = [...basket.values()].reduce(
+                (sum, count) => sum + count,
+                0,
+              );
+
+              return (
+                <Typography variant="bodySm" className="font-semibold">
+                  {basket.size} {basket.size === 1 ? 'wine' : 'wines'} &middot;{' '}
+                  {bottles} {bottles === 1 ? 'bottle' : 'bottles'} to request
+                </Typography>
+              );
+            })()}
             <div className="grid gap-2 sm:grid-cols-2">
               <Input
                 value={address}
