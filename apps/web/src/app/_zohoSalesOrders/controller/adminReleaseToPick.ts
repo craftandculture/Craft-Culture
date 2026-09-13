@@ -7,7 +7,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
+import { and, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -20,6 +20,7 @@ import {
   wmsPickListItems,
   wmsPickLists,
   wmsStock,
+  wmsStockReservations,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -98,6 +99,8 @@ const adminReleaseToPick = wmsOperatorProcedure
     // Create pick list items with suggested locations
     const pickListItems = [];
     const unresolvedItems: string[] = [];
+    const shortOnRelease: string[] = [];
+    let reservedCases = 0;
 
     for (const item of orderItems) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
@@ -310,6 +313,52 @@ const adminReleaseToPick = wmsOperatorProcedure
           .update(zohoSalesOrderItems)
           .set({ stockId: suggestedStock.stockId })
           .where(eq(zohoSalesOrderItems.id, item.id));
+
+        /*
+          Hold the stock that has just been promised to this order.
+
+          Nothing reserved at release before: reservation happened only when an
+          order was first inserted by the Zoho sync, matching on the exact
+          pack. An order placed before its wine arrived reserved nothing and
+          was never retried, and a 6-pack invoiced off a 12-pack reserved
+          nothing at all — so released orders sat against stock the catalogue
+          still offered for sale.
+
+          Reserving here reuses the pack-agnostic resolution above, which is
+          the same matching the picker will use at the bay.
+        */
+        const held = Math.min(casesNeeded, suggestedStock.availableCases);
+
+        if (held > 0) {
+          await db.insert(wmsStockReservations).values({
+            stockId: suggestedStock.stockId,
+            orderType: 'zoho',
+            orderId: order.id,
+            orderItemId: item.id,
+            orderNumber: order.salesOrderNumber,
+            lwin18: suggestedStock.lwin18,
+            productName: suggestedStock.productName,
+            quantityCases: held,
+            status: 'active',
+          });
+
+          await db
+            .update(wmsStock)
+            .set({
+              reservedCases: sql`${wmsStock.reservedCases} + ${held}`,
+              availableCases: sql`${wmsStock.availableCases} - ${held}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(wmsStock.id, suggestedStock.stockId));
+
+          reservedCases += held;
+        }
+
+        if (held < casesNeeded) {
+          shortOnRelease.push(
+            `${item.name} (${casesNeeded - held} of ${casesNeeded} cases)`,
+          );
+        }
       }
     }
 
@@ -328,10 +377,14 @@ const adminReleaseToPick = wmsOperatorProcedure
       pickList,
       items: pickListItems,
       unresolvedItems,
+      reservedCases,
+      shortOnRelease,
       message:
         unresolvedItems.length > 0
           ? `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${unresolvedItems.length} could not be matched to stock and need checking: ${unresolvedItems.join(', ')}`
-          : `Released to pick: ${pickListNumber} with ${pickListItems.length} items`,
+          : shortOnRelease.length > 0
+            ? `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${reservedCases} cases held, short on: ${shortOnRelease.join(', ')}`
+            : `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${reservedCases} cases held`,
     };
   });
 
