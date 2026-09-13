@@ -304,6 +304,24 @@ const CellarPage = () => {
     return `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
   };
 
+  /*
+    An estimate against the member's own rate card, so the shape of the cost
+    is visible before they commit to asking. Asking and waiting a day to learn
+    the number is how somebody submits a request they would never have made.
+  */
+  const estimateLines = [...basket.entries()].map(([stockId, bottles]) => ({
+    stockId,
+    bottles,
+  }));
+
+  const { data: estimate, isFetching: isEstimating } = useQuery({
+    ...api.cellar.member.estimateRelease.queryOptions({
+      lines: estimateLines,
+    }),
+    enabled: estimateLines.length > 0,
+    placeholderData: (previous) => previous,
+  });
+
   const openRequests = (releaseData?.requests ?? []).filter((request) =>
     ['submitted', 'under_review', 'revision_requested'].includes(
       request.status,
@@ -597,8 +615,12 @@ const CellarPage = () => {
           <div className="flex items-center justify-between px-3 py-2">
             <Typography
               variant="bodyXs"
-              className="text-text-brand font-semibold uppercase tracking-wider"
+              className="text-text-brand flex items-center gap-1.5 font-semibold uppercase tracking-wider"
             >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
+              </span>
               Requests in progress
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
@@ -618,7 +640,9 @@ const CellarPage = () => {
               return (
                 <div
                   key={request.id}
-                  className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                  className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
+                    needsDecision ? 'bg-teal-50/60' : ''
+                  }`}
                 >
                   <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className="text-text-muted font-mono text-xs">
@@ -685,6 +709,7 @@ const CellarPage = () => {
                       </Tooltip>
                       <Button
                         size="sm"
+                        colorRole="brand"
                         isDisabled={isAccepting}
                         onClick={() => acceptRelease({ requestId: request.id })}
                       >
@@ -742,7 +767,7 @@ const CellarPage = () => {
 
       <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto">
         <table className="w-full text-sm">
-          <thead className="bg-fill-muted border-border-muted sticky top-0 z-10 border-b">
+          <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
             <tr>
               <th className="w-8 px-2 py-2.5" />
               <th className={`${th} min-w-[220px] text-left`}>Wine</th>
@@ -785,7 +810,17 @@ const CellarPage = () => {
                 <Fragment key={wine.lwin18}>
                   <tr
                     onClick={() => setOpenWine(isOpen ? null : wine.lwin18)}
-                    className="hover:bg-fill-muted/40 group cursor-pointer transition-colors"
+                    /*
+                      Colour marks state, not decoration. A wine already in the
+                      request is tinted and carries a rail, so a member
+                      scrolling sixty-five lines can see what they have picked
+                      without reading a single number.
+                    */
+                    className={`group cursor-pointer transition-colors ${
+                      basketBottlesOf(wine) > 0
+                        ? 'bg-fill-brand/[0.06] shadow-[inset_2px_0_0_0] shadow-teal-400'
+                        : 'hover:bg-fill-muted/40'
+                    }`}
                   >
                     <td className="px-2 py-2.5">
                       <Icon
@@ -932,7 +967,7 @@ const CellarPage = () => {
                   </tr>
 
                   {isOpen && (
-                    <tr className="bg-fill-muted/30">
+                    <tr className="bg-fill-brand/[0.04] shadow-[inset_2px_0_0_0] shadow-teal-400">
                       <td colSpan={10} className="px-4 py-3 sm:px-10">
                         {/*
                           One line per parcel actually held. A wine received on
@@ -944,6 +979,7 @@ const CellarPage = () => {
                           variant="bodyXs"
                           className="text-text-muted mb-2 block font-semibold uppercase tracking-wider"
                         >
+                          <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400 align-middle" />
                           Cases held &mdash; {wine.locations.length} record
                           {wine.locations.length === 1 ? '' : 's'}
                         </Typography>
@@ -994,11 +1030,13 @@ const CellarPage = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2">
                                     {parcel.reservedCases > 0 ? (
-                                      <span className="text-text-brand text-xs">
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                                         {parcel.reservedCases} allocated
                                       </span>
                                     ) : (
-                                      <span className="text-text-muted text-xs">
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
                                         In bond
                                       </span>
                                     )}
@@ -1176,6 +1214,7 @@ const CellarPage = () => {
                                 variant="bodyXs"
                                 className="text-text-muted font-semibold uppercase tracking-wider"
                               >
+                                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400/60 align-middle" />
                                 Movement history &mdash; {history.length} record
                                 {history.length === 1 ? '' : 's'}
                               </Typography>
@@ -1249,7 +1288,9 @@ const CellarPage = () => {
       </div>
 
       {basket.size > 0 && (
-        <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 rounded-xl border p-4 shadow-lg">
+        <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 overflow-hidden rounded-xl border shadow-lg">
+          <div className="h-1 bg-gradient-to-r from-teal-400 via-teal-300 to-teal-200" />
+          <div className="p-4">
           <div className="flex flex-col gap-3">
             {(() => {
               const bottles = [...basket.values()].reduce(
@@ -1264,7 +1305,7 @@ const CellarPage = () => {
               return (
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-baseline gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <Typography
                         variant="bodyXs"
                         className="text-text-brand font-semibold uppercase tracking-wider"
@@ -1275,6 +1316,43 @@ const CellarPage = () => {
                         {bottles} {bottles === 1 ? 'bottle' : 'bottles'} from{' '}
                         {wineCount} {wineCount === 1 ? 'wine' : 'wines'}
                       </Typography>
+                      {estimate?.priced && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1">
+                          <Typography
+                            variant="bodyXs"
+                            className="font-semibold text-teal-800"
+                          >
+                            {isEstimating ? 'Estimating…' : `about ${money(estimate.totalUsd)}`}
+                          </Typography>
+                          {/*
+                            Named an estimate every time it is shown. A figure
+                            a member reads as a price and is later charged
+                            differently is worse than no figure at all.
+                          */}
+                          <Tooltip>
+                            <TooltipTrigger aria-label="How this estimate is worked out">
+                              <Icon
+                                icon={IconInfoCircle}
+                                size="xs"
+                                className="text-teal-700"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="max-w-[240px] text-left lg:max-w-[240px]"
+                            >
+                              <Typography variant="bodyXs">
+                                An estimate from your rate card &mdash; duty
+                                and clearance, VAT, transfer out of bond,
+                                licensed distribution, delivery and our
+                                handling. We confirm the figure before anything
+                                moves, and nothing is reserved until you accept
+                                it.
+                              </Typography>
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                      )}
                     </div>
 
                     {/*
@@ -1286,6 +1364,7 @@ const CellarPage = () => {
                     <div className="flex flex-shrink-0 items-center gap-2">
                       <Button
                         size="sm"
+                        colorRole="brand"
                         onClick={() => setIsBasketOpen(!isBasketOpen)}
                       >
                         <ButtonContent>
@@ -1461,6 +1540,7 @@ const CellarPage = () => {
             >
               <Button
                 size="sm"
+                colorRole="brand"
                 isDisabled={isSaving}
                 onClick={() => {
                   /*
@@ -1495,6 +1575,7 @@ const CellarPage = () => {
                 Nothing moves until you have seen the cost and agreed it.
               </Typography>
             </div>
+          </div>
           </div>
         </div>
       )}

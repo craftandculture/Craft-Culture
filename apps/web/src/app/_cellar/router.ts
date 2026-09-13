@@ -8,6 +8,7 @@ import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import memberAcceptRelease from './controller/memberAcceptRelease';
 import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocument';
+import memberEstimateRelease from './controller/memberEstimateRelease';
 import memberGetProfile from './controller/memberGetProfile';
 import memberGetReleases from './controller/memberGetReleases';
 import memberSaveDeliveryAddress from './controller/memberSaveDeliveryAddress';
@@ -18,6 +19,7 @@ import memberUploadIdentityDocument from './controller/memberUploadIdentityDocum
 
 const memberRouter = createTRPCRouter({
   getProfile: memberGetProfile,
+  estimateRelease: memberEstimateRelease,
   saveProfile: memberSaveProfile,
   saveDeliveryAddress: memberSaveDeliveryAddress,
   uploadIdentityDocument: memberUploadIdentityDocument,
