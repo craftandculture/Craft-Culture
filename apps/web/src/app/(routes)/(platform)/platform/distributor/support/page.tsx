@@ -257,8 +257,9 @@ const DistributorSupportPage = () => {
                   1. Generate Client Invoice
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Create invoice with full amount including products, duty (20%), logistics, and VAT
-                  (5%). Invoice in AED for local clients.
+                  Create invoice with full amount including products, duty,
+                  logistics and VAT, at the rates in force on the day. Invoice
+                  in AED for local clients.
                 </Typography>
               </div>
 
@@ -292,7 +293,13 @@ const DistributorSupportPage = () => {
                   <span>Base price</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ Import Duty (20%)</span>
+                  {/*
+                    No percentage printed. Duty and VAT rates change, a help
+                    page is not where anyone thinks to update them, and a
+                    stale rate in writing is worse than none — the invoice is
+                    where the real figures are.
+                  */}
+                  <span className="text-text-muted">+ Import duty</span>
                   <span>UAE customs</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -300,7 +307,7 @@ const DistributorSupportPage = () => {
                   <span>Freezone → Delivery</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ VAT (5%)</span>
+                  <span className="text-text-muted">+ VAT</span>
                   <span>UAE tax</span>
                 </div>
                 <div className="border-t border-border-primary pt-2">

@@ -49,7 +49,7 @@ const faqItems = [
   {
     question: 'How is pricing calculated?',
     answer:
-      'Your Landed Duty Free (LDF) price is the base. UAE costs are added: Import Duty (20%), Logistics (transfer from Freezone), VAT (5%). The client pays the final total.',
+      'Your Landed Duty Free (LDF) price is the base. UAE costs are added on top: import duty, logistics for the transfer out of the free zone, and VAT. Rates are applied as they stand on the day and shown in full on the quote, so the client sees the figure they will pay.',
   },
   {
     question: 'What do I get paid?',
@@ -428,16 +428,22 @@ const PartnerSupportPage = () => {
                   <span>Base price</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ Import Duty (20%)</span>
-                  <span>UAE customs</span>
+                  {/*
+                    No percentage printed here. Duty and VAT rates change, a
+                    help page is not where anybody thinks to update them, and
+                    a stale rate in writing is worse than no rate at all — the
+                    quote is where the real figures are.
+                  */}
+                  <span className="text-text-muted">+ Import duty</span>
+                  <span>UAE customs, at the prevailing rate</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">+ Transfer Cost</span>
                   <span>Freezone → Mainland</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ VAT (5%)</span>
-                  <span>UAE tax</span>
+                  <span className="text-text-muted">+ VAT</span>
+                  <span>UAE tax, at the prevailing rate</span>
                 </div>
                 <div className="border-t border-border-primary pt-2">
                   <div className="flex justify-between font-medium">

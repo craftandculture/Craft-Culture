@@ -2,6 +2,7 @@
 
 import {
   IconBottle,
+  IconBuildingWarehouse,
   IconCoin,
   IconId,
   IconMail,
@@ -11,6 +12,7 @@ import Link from 'next/link';
 
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+import CellarHelpNavigation from './CellarHelpNavigation';
 import FAQAccordion from './FAQAccordion';
 import HelpSection from './HelpSection';
 
@@ -23,7 +25,7 @@ const faqItems = [
   {
     question: 'What is included in the release cost?',
     answer:
-      'Duty and clearance, VAT, transfer out of bond, licensed distribution, delivery to your address, and our handling. The wine itself is not included — you already own it. Duty is assessed on the declared import value, so a more valuable case costs more to release than a less valuable one of the same size.',
+      'Duty and clearance, VAT, transfer out of bond, licensed distribution, delivery to your address, and our handling. The wine itself is not included — you already own it. Duty is assessed on the declared import value, so a more valuable case costs more to release than a less valuable one of the same size. Rates are set by UAE customs and applied as they stand when the release is cleared; your cellar estimates the cost as you build a request and we confirm it before anything moves.',
   },
   {
     question: 'Can I change a request after sending it?',
@@ -84,6 +86,8 @@ const CellarHelp = () => {
             Your wine, how to call it forward, and what it costs to do so
           </Typography>
         </div>
+
+        <CellarHelpNavigation />
 
         <div className="space-y-6">
           <HelpSection id="your-cellar" icon={IconBottle} title="Your cellar">
@@ -189,9 +193,73 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
+              Duty and VAT are set by UAE customs, not by us, and are applied
+              at the rate in force on the day a release is cleared. No
+              percentage is quoted here for that reason: a figure written into
+              a help page is a figure nobody updates. Your cellar estimates
+              the cost as you build a request, and we confirm it before
+              anything moves.
+            </Typography>
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
               A condition report is AED 150 per parcel. Each bottle is
               inspected &mdash; fill level, label, capsule and closure &mdash;
               and reported with photographs and written notes.
+            </Typography>
+          </HelpSection>
+
+          <HelpSection
+            id="warehouse"
+            icon={IconBuildingWarehouse}
+            title="The warehouse"
+          >
+            <dl className="grid gap-4 sm:grid-cols-2">
+              {[
+                {
+                  term: 'Temperature',
+                  detail:
+                    'Twelve to fourteen degrees, continuously logged rather than spot-checked.',
+                },
+                {
+                  term: 'Status',
+                  detail:
+                    'Licensed and bonded by UAE customs. Duty is suspended, not deferred — it is not owed until wine is released.',
+                },
+                {
+                  term: 'Security',
+                  detail:
+                    'CCTV, humidity control and restricted access, within the bonded facility.',
+                },
+                {
+                  term: 'Handling',
+                  detail:
+                    'Receiving, putaway, picking and dispatch are all done in house, by the team that holds the record.',
+                },
+              ].map((fact) => (
+                <div key={fact.term}>
+                  <dt className="text-text-muted mb-0.5 text-[11px] font-semibold uppercase tracking-wider">
+                    {fact.term}
+                  </dt>
+                  <dd className="text-text-primary m-0 text-sm leading-relaxed">
+                    {fact.detail}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
+              Each case is recorded on arrival against a numbered bay, and
+              keeps its own history from that point: what arrived and when,
+              what was released and to whom, and what remains in bond. This is
+              the record the warehouse itself works from, not a statement
+              prepared afterwards, so what you read is what stands on the
+              shelf.
             </Typography>
           </HelpSection>
 
