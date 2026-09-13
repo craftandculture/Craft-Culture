@@ -1969,6 +1969,67 @@ const CellarPage = () => {
         </Link>
       </section>
 
+      {/*
+        The same four facts the membership was sold on, in the same words. A
+        member who was told the wine sits at twelve to fourteen degrees under
+        CCTV should be able to see that stated where the wine is, not only in
+        the document that persuaded them.
+      */}
+      <section className="border-border-muted mt-8 overflow-hidden rounded-xl border">
+        <div className="border-border-muted flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-2.5">
+          <Typography
+            variant="bodyXs"
+            className="font-semibold uppercase tracking-wider"
+          >
+            The warehouse
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            Craft &amp; Culture &mdash; Ras Al Khaimah
+          </Typography>
+        </div>
+        <dl className="divide-border-muted/60 grid gap-px sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              term: 'Temperature',
+              detail: '12–14°C, continuously logged',
+            },
+            {
+              term: 'Status',
+              detail: 'UAE licensed bonded — duty suspended, not deferred',
+            },
+            {
+              term: 'Security',
+              detail: 'CCTV, humidity control, restricted access',
+            },
+            {
+              term: 'Handling',
+              detail: 'Receiving, putaway, picking and dispatch in house',
+            },
+          ].map((fact) => (
+            <div key={fact.term} className="px-4 py-3">
+              <dt className="text-text-muted mb-0.5 text-[11px] font-semibold uppercase tracking-wider">
+                {fact.term}
+              </dt>
+              <dd className="text-text-primary m-0 text-xs leading-relaxed">
+                {fact.detail}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="border-border-muted border-t px-4 py-3">
+          <Typography
+            variant="bodyXs"
+            colorRole="muted"
+            className="block max-w-[80ch] leading-relaxed"
+          >
+            Cold-chain records are held against the wine itself &mdash; the
+            conditions it was kept in, and the journey from producer to
+            delivery &mdash; and travel with it on release. There is no charge
+            for them.
+          </Typography>
+        </div>
+      </section>
+
       <div className="border-border-muted mt-8 border-t pt-6">
         {/*
           Three separate facts read as three, not as a paragraph. Each one
