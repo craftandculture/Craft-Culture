@@ -3,6 +3,10 @@ import { eq, isNull, or } from 'drizzle-orm';
 import db from '@/database/client';
 import { cellarReleaseRates } from '@/database/schema';
 
+import priceFromRateCard, {
+  type ReleasePricing,
+} from './priceFromRateCard';
+
 export interface ReleaseLine {
   bottles: number;
   caseConfig: number | null;
@@ -10,22 +14,7 @@ export interface ReleaseLine {
   costPerBottle?: number | null;
 }
 
-export interface ReleaseQuote {
-  version: string;
-  goodsValueUsd: number;
-  dutyUsd: number;
-  clearanceUsd: number;
-  transferUsd: number;
-  deliveryUsd: number;
-  /** The licensed partner's cut of a mainland delivery */
-  distributorMarginUsd: number;
-  /** What C&C earns for handling it */
-  ccMarginUsd: number;
-  /** Duties, clearance, transfer and the distributor — everything but us */
-  clearanceTotalUsd: number;
-  /** C&C's margin, quoted to the member as a service fee */
-  serviceFeeUsd: number;
-  totalUsd: number;
+export interface ReleaseQuote extends ReleasePricing {
   /** False when no rates are configured and the figures are all zero */
   priced: boolean;
 }
@@ -104,43 +93,8 @@ const computeReleaseQuote = async (
     };
   }
 
-  const round = (value: number) => Math.round(value * 100) / 100;
-
-  const dutyUsd = round(goodsValueUsd * (rate.dutyPct / 100));
-  const clearanceUsd = round(
-    cases * rate.clearancePerCase + bottles * rate.clearancePerBottle,
-  );
-  const transferUsd = round(bottles * rate.transferPerBottle);
-  const deliveryUsd = round(
-    (bottles > 0 ? rate.deliveryFlat : 0) + cases * rate.deliveryPerCase,
-  );
-
-  /*
-    Both margins take the declared value as their base rather than the costs,
-    which is how the published rate card already describes a mainland release
-    — an uplift on the duty-free price, not a mark-up on the paperwork.
-  */
-  const distributorMarginUsd = round(
-    goodsValueUsd * (rate.distributorMarginPct / 100),
-  );
-  const ccMarginUsd = round(goodsValueUsd * (rate.ccMarginPct / 100));
-
-  const clearanceTotalUsd = round(
-    dutyUsd + clearanceUsd + transferUsd + distributorMarginUsd,
-  );
-
   return {
-    version: rate.version,
-    goodsValueUsd: round(goodsValueUsd),
-    dutyUsd,
-    clearanceUsd,
-    transferUsd,
-    deliveryUsd,
-    distributorMarginUsd,
-    ccMarginUsd,
-    clearanceTotalUsd,
-    serviceFeeUsd: ccMarginUsd,
-    totalUsd: round(clearanceTotalUsd + deliveryUsd + ccMarginUsd),
+    ...priceFromRateCard(rate, { bottles, cases, goodsValueUsd }),
     priced: true,
   };
 };
