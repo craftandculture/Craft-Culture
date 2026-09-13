@@ -31,6 +31,12 @@ const WelcomeForm = () => {
   const [isRouting, setIsRouting] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  const trpc = useTRPC();
+
+  const { data: me, isPending: isLoadingMe } = useQuery(
+    trpc.users.getMe.queryOptions(),
+  );
+
   const {
     register,
     control,
@@ -38,6 +44,7 @@ const WelcomeForm = () => {
     watch,
     formState: { isSubmitting, errors },
   } = useZodForm(updateUserSchema, {
+    values: { name: me?.name ?? undefined },
     defaultValues: {
       name: undefined,
       customerType: undefined,
@@ -46,7 +53,6 @@ const WelcomeForm = () => {
 
   const selectedType = watch('customerType');
 
-  const trpc = useTRPC();
 
   /*
     An account the admin has already set up does not get asked what it is.
@@ -57,7 +63,12 @@ const WelcomeForm = () => {
     access an admin had just granted. Where a partner is already linked, the
     only things left to collect are a name and the terms.
   */
-  const { data: me } = useQuery(trpc.users.getMe.queryOptions());
+
+  /*
+    Undefined while the query is in flight, which read as "not provisioned" and
+    rendered the role step to people who should never see it. The form waits
+    for the answer rather than guessing at it.
+  */
   const isProvisioned = Boolean(me?.partner);
 
   const { mutateAsync: updateUser } = useMutation(
@@ -83,6 +94,16 @@ const WelcomeForm = () => {
     }
     await updateUser({ ...values, acceptTerms: true });
   };
+
+  if (isLoadingMe) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Typography variant="bodySm" colorRole="muted">
+          Loading your account...
+        </Typography>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">
