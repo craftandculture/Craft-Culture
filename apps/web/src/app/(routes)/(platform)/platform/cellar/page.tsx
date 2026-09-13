@@ -115,7 +115,7 @@ const CellarPage = () => {
   const [address, setAddress] = useState('');
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
-  const [isBasketOpen, setIsBasketOpen] = useState(true);
+  const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [shouldSaveAddress, setShouldSaveAddress] = useState(true);
 
@@ -250,6 +250,12 @@ const CellarPage = () => {
 
     return index;
   }, [wines]);
+
+  const openRequests = (releaseData?.requests ?? []).filter((request) =>
+    ['submitted', 'under_review', 'revision_requested'].includes(
+      request.status,
+    ),
+  );
 
   const basketLines = [...basket.entries()]
     .map(([stockId, bottles]) => ({
@@ -505,79 +511,106 @@ const CellarPage = () => {
         </section>
       )}
 
-      {(releaseData?.requests ?? []).filter((request) =>
-        ['submitted', 'under_review', 'revision_requested'].includes(request.status),
-      ).length > 0 && (
-        <section className="border-border-brand/40 bg-fill-brand/5 mb-5 rounded-xl border p-4">
-          <Typography
-            variant="bodyXs"
-            className="text-text-brand mb-3 block font-semibold uppercase tracking-wider"
-          >
-            Requests in progress
-          </Typography>
-          <div className="flex flex-col gap-3">
-            {(releaseData?.requests ?? [])
-              .filter((request) =>
-                ['submitted', 'under_review', 'revision_requested'].includes(
-                  request.status,
-                ),
-              )
-              .map((request) => (
+      {openRequests.length > 0 && (
+        <section className="border-border-brand/40 bg-fill-brand/5 mb-5 overflow-hidden rounded-xl border">
+          <div className="flex items-center justify-between px-3 py-2">
+            <Typography
+              variant="bodyXs"
+              className="text-text-brand font-semibold uppercase tracking-wider"
+            >
+              Requests in progress
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              {openRequests.length}
+            </Typography>
+          </div>
+
+          {/*
+            A line each, not a card each. Two requests took three hundred
+            pixels above the cellar and said almost the same thing twice; the
+            one that needs a decision is the only one that earns more room.
+          */}
+          <div className="divide-border-muted/60 bg-background-primary divide-y">
+            {openRequests.map((request) => {
+              const needsDecision = request.status === 'under_review';
+
+              return (
                 <div
                   key={request.id}
-                  className="border-border-muted bg-background-primary flex flex-col gap-2 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0">
-                    <Typography variant="bodySm" className="font-medium">
-                      <span className="font-mono text-xs">
-                        {request.requestNumber}
-                      </span>{' '}
-                      &middot; {request.items.length}{' '}
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-text-muted font-mono text-xs">
+                      {request.requestNumber}
+                    </span>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {request.items.length}{' '}
                       {request.items.length === 1 ? 'wine' : 'wines'}
                     </Typography>
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mt-0.5 block"
-                    >
-                      {request.status === 'submitted' &&
-                        'With us. We are working out what clearance and delivery will cost.'}
-                      {request.status === 'revision_requested' &&
-                        (request.adminNotes ??
-                          'We have asked for a change before we can price this.')}
-                      {request.status === 'under_review' &&
-                        `${money(request.totalCostUsd ?? 0)} to deliver, all in`}
-                    </Typography>
-                    {/*
-                      One figure, and a sentence saying what is inside it. An
-                      itemised quote invites a line-by-line negotiation of
-                      costs the member cannot change, and naming the amounts
-                      would publish our rates to anyone who knows what their
-                      own wine cost.
-                    */}
-                    {request.status === 'under_review' && (
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="mt-1 block"
-                      >
-                        Includes duty and clearance, VAT, transfer out of
-                        bond, licensed distribution, delivery to your address,
-                        and our handling. Nothing further is charged.
+
+                    {request.status === 'submitted' && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        &middot; With us, being priced
+                      </Typography>
+                    )}
+
+                    {request.status === 'revision_requested' && (
+                      <Typography variant="bodyXs" className="text-amber-700">
+                        &middot;{' '}
+                        {request.adminNotes ??
+                          'We need a change before we can price this'}
+                      </Typography>
+                    )}
+
+                    {needsDecision && (
+                      <Typography variant="bodySm" className="font-semibold">
+                        &middot; {money(request.totalCostUsd ?? 0)} to deliver,
+                        all in
                       </Typography>
                     )}
                   </div>
-                  {request.status === 'under_review' && (
-                    <Button
-                      size="sm"
-                      isDisabled={isAccepting}
-                      onClick={() => acceptRelease({ requestId: request.id })}
-                    >
-                      <ButtonContent>Accept and deliver</ButtonContent>
-                    </Button>
+
+                  {needsDecision && (
+                    <div className="flex flex-shrink-0 items-center gap-1.5">
+                      {/*
+                        One figure, and the detail behind an ⓘ. An itemised
+                        quote invites a line-by-line negotiation of costs the
+                        member cannot change, and naming the amounts would
+                        publish our rates to anyone who knows what their own
+                        wine cost.
+                      */}
+                      <Tooltip>
+                        <TooltipTrigger aria-label="What this figure includes">
+                          <Icon
+                            icon={IconInfoCircle}
+                            size="xs"
+                            colorRole="muted"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="left"
+                          className="max-w-[240px] text-left lg:max-w-[240px]"
+                        >
+                          <Typography variant="bodyXs">
+                            Includes duty and clearance, VAT, transfer out of
+                            bond, licensed distribution, delivery to your
+                            address, and our handling. Nothing further is
+                            charged.
+                          </Typography>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Button
+                        size="sm"
+                        isDisabled={isAccepting}
+                        onClick={() => acceptRelease({ requestId: request.id })}
+                      >
+                        <ButtonContent>Accept and deliver</ButtonContent>
+                      </Button>
+                    </div>
                   )}
                 </div>
-              ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -1102,11 +1135,11 @@ const CellarPage = () => {
 
               return (
                 <div>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-baseline gap-2">
                       <Typography
                         variant="bodyXs"
-                        className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
+                        className="text-text-brand font-semibold uppercase tracking-wider"
                       >
                         Delivery request
                       </Typography>
@@ -1115,13 +1148,30 @@ const CellarPage = () => {
                         {wineCount} {wineCount === 1 ? 'wine' : 'wines'}
                       </Typography>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsBasketOpen(!isBasketOpen)}
-                      className="text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
-                    >
-                      {isBasketOpen ? 'Hide the list' : 'Show the list'}
-                    </button>
+
+                    {/*
+                      Collapsed until it is needed. Left open, the panel
+                      covered three rows of the cellar the member was still
+                      choosing from, and looked like an action on whichever
+                      wine it happened to be sitting over.
+                    */}
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => setIsBasketOpen(!isBasketOpen)}
+                      >
+                        <ButtonContent>
+                          {isBasketOpen ? 'Keep choosing' : 'Review and send'}
+                        </ButtonContent>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBasket(new Map())}
+                      >
+                        <ButtonContent>Clear</ButtonContent>
+                      </Button>
+                    </div>
                   </div>
 
                   {/*
@@ -1167,7 +1217,9 @@ const CellarPage = () => {
                Labelled, not placeholder-led. A placeholder vanishes the moment
                someone types, taking the only explanation of the field with it.
              */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div
+              className={`grid gap-3 sm:grid-cols-2 ${isBasketOpen ? '' : 'hidden'}`}
+            >
               {/*
                  The address lives on the account. Retyped into every request
                  it becomes four spellings of the same villa, and the team
@@ -1250,7 +1302,9 @@ const CellarPage = () => {
                 />
               </label>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div
+              className={`flex flex-wrap items-center gap-2 ${isBasketOpen ? '' : 'hidden'}`}
+            >
               <Button
                 size="sm"
                 isDisabled={isSaving}
@@ -1282,13 +1336,6 @@ const CellarPage = () => {
                 }}
               >
                 <ButtonContent>Request delivery</ButtonContent>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setBasket(new Map())}
-              >
-                <ButtonContent>Clear</ButtonContent>
               </Button>
               <Typography variant="bodyXs" colorRole="muted">
                 Nothing moves until you have seen the cost and agreed it.
