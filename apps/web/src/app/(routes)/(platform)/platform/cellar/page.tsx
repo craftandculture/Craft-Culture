@@ -1368,7 +1368,7 @@ const CellarPage = () => {
                         onClick={() => setIsBasketOpen(!isBasketOpen)}
                       >
                         <ButtonContent>
-                          {isBasketOpen ? 'Keep choosing' : 'Review and send'}
+                          {isBasketOpen ? 'Add more bottles' : 'Review and send'}
                         </ButtonContent>
                       </Button>
                       <Button
