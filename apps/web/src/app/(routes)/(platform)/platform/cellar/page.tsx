@@ -7,6 +7,7 @@ import {
   IconCoin,
   IconDownload,
   IconHistory,
+  IconInfoCircle,
   IconRefresh,
   IconSearch,
   IconShip,
@@ -21,6 +22,9 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
@@ -91,9 +95,27 @@ const CellarPage = () => {
 
   /* What the member has picked, in bottles, keyed by the parcel it comes from. */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
+
+  /*
+    Every quantity control routes through here, so the cap on what is held is
+    applied in one place. Spread across the stepper, the case button and the
+    typed input it would have been three chances to let somebody request wine
+    they do not own.
+  */
+  const setParcelBottles = (stockId: string, bottles: number, held: number) =>
+    setBasket((current) => {
+      const next = new Map(current);
+      const wanted = Math.max(0, Math.min(held, bottles));
+
+      if (wanted > 0) next.set(stockId, wanted);
+      else next.delete(stockId);
+
+      return next;
+    });
   const [address, setAddress] = useState('');
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
+  const [isBasketOpen, setIsBasketOpen] = useState(true);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [shouldSaveAddress, setShouldSaveAddress] = useState(true);
 
@@ -175,6 +197,68 @@ const CellarPage = () => {
     () => (data?.products ?? []) as unknown as CellarWine[],
     [data],
   );
+
+  /*
+    A wine can sit in more than one parcel. Adding "a case" should not make the
+    member choose which one — fill the earliest parcel that has room and carry
+    the remainder into the next, which is what the warehouse would do anyway.
+  */
+  const addToWine = (wine: CellarWine, bottles: number) => {
+    let remaining = bottles;
+
+    setBasket((current) => {
+      const next = new Map(current);
+
+      for (const parcel of wine.locations) {
+        if (remaining <= 0) break;
+
+        const held = parcel.quantityCases * (wine.caseConfig ?? 1);
+        const already = next.get(parcel.stockId) ?? 0;
+        const room = held - already;
+
+        if (room <= 0) continue;
+
+        const take = Math.min(room, remaining);
+        next.set(parcel.stockId, already + take);
+        remaining -= take;
+      }
+
+      return next;
+    });
+  };
+
+  const basketBottlesOf = (wine: CellarWine) =>
+    wine.locations.reduce(
+      (sum, parcel) => sum + (basket.get(parcel.stockId) ?? 0),
+      0,
+    );
+
+  const clearWine = (wine: CellarWine) =>
+    setBasket((current) => {
+      const next = new Map(current);
+      for (const parcel of wine.locations) next.delete(parcel.stockId);
+      return next;
+    });
+
+  /* Basket lines are keyed by parcel; the request panel names wines. */
+  const parcelIndex = useMemo(() => {
+    const index = new Map<string, CellarWine>();
+
+    for (const wine of wines) {
+      for (const parcel of wine.locations) index.set(parcel.stockId, wine);
+    }
+
+    return index;
+  }, [wines]);
+
+  const basketLines = [...basket.entries()]
+    .map(([stockId, bottles]) => ({
+      stockId,
+      bottles,
+      wine: parcelIndex.get(stockId),
+    }))
+    .filter((line) => line.wine);
+
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
 
@@ -548,12 +632,13 @@ const CellarPage = () => {
               <th className={`${th} hidden text-right lg:table-cell`}>
                 Import $/btl
               </th>
+              <th className={`${th} min-w-[150px] text-right`}>Request</th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
             {isLoading && (
               <tr>
-                <td colSpan={9} className="text-text-muted px-3 py-8 text-center">
+                <td colSpan={10} className="text-text-muted px-3 py-8 text-center">
                   Loading your cellar...
                 </td>
               </tr>
@@ -561,7 +646,7 @@ const CellarPage = () => {
 
             {!isLoading && !rows.length && (
               <tr>
-                <td colSpan={9} className="text-text-muted px-3 py-10 text-center">
+                <td colSpan={10} className="text-text-muted px-3 py-10 text-center">
                   {search || quickFilter !== 'all'
                     ? 'No wines match that filter.'
                     : 'Nothing is held in your cellar yet.'}
@@ -628,11 +713,66 @@ const CellarPage = () => {
                         ? money(wine.costPerBottle, true)
                         : '—'}
                     </td>
+                    {/*
+                      Adding a wine should not require opening it. Selecting
+                      twenty lines meant twenty expansions and twenty typed
+                      numbers, which is why requests were going out one wine at
+                      a time.
+                    */}
+                    <td
+                      className={`${td} text-right`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {(() => {
+                        const chosen = basketBottlesOf(wine);
+                        const held = bottlesOf(wine);
+                        const pack = wine.caseConfig ?? 1;
+
+                        if (chosen > 0) {
+                          return (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="text-text-brand text-xs font-semibold tabular-nums">
+                                {chosen} of {held}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Remove ${wine.productName} from the request`}
+                                onClick={() => clearWine(wine)}
+                                className="text-text-muted hover:text-text-primary rounded px-1 text-xs transition-colors"
+                              >
+                                &times;
+                              </button>
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <span className="inline-flex items-center gap-1">
+                            {pack > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => addToWine(wine, pack)}
+                                className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand rounded-md border px-2 py-1 text-xs font-medium transition-colors"
+                              >
+                                + Case
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addToWine(wine, 1)}
+                              className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand rounded-md border px-2 py-1 text-xs font-medium transition-colors"
+                            >
+                              + Bottle
+                            </button>
+                          </span>
+                        );
+                      })()}
+                    </td>
                   </tr>
 
                   {isOpen && (
                     <tr className="bg-fill-muted/30">
-                      <td colSpan={9} className="px-4 py-3 sm:px-10">
+                      <td colSpan={10} className="px-4 py-3 sm:px-10">
                         {/*
                           One line per parcel actually held. A wine received on
                           two occasions is two holdings with two histories, and
@@ -705,11 +845,48 @@ const CellarPage = () => {
                                   <td className="whitespace-nowrap px-4 py-2 text-right">
                                     {(() => {
                                       const inBasket = basket.get(parcel.stockId) ?? 0;
-                                      const held =
-                                        parcel.quantityCases * (wine.caseConfig ?? 1);
+                                      const pack = wine.caseConfig ?? 1;
+                                      const held = parcel.quantityCases * pack;
 
                                       return (
-                                        <span className="inline-flex items-center gap-1">
+                                        <span
+                                          className="inline-flex items-center gap-1"
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
+                                        >
+                                          {pack > 1 && (
+                                            <button
+                                              type="button"
+                                              aria-label={`Add a case of ${wine.productName}`}
+                                              disabled={inBasket + pack > held}
+                                              onClick={() =>
+                                                setParcelBottles(
+                                                  parcel.stockId,
+                                                  inBasket + pack,
+                                                  held,
+                                                )
+                                              }
+                                              className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand mr-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40"
+                                            >
+                                              + Case
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            aria-label={`One fewer bottle of ${wine.productName}`}
+                                            disabled={inBasket === 0}
+                                            onClick={() =>
+                                              setParcelBottles(
+                                                parcel.stockId,
+                                                inBasket - 1,
+                                                held,
+                                              )
+                                            }
+                                            className="border-border-muted hover:bg-fill-muted h-7 w-7 rounded-md border text-xs transition-colors disabled:opacity-40"
+                                          >
+                                            &minus;
+                                          </button>
                                           <input
                                             type="number"
                                             min={0}
@@ -717,22 +894,30 @@ const CellarPage = () => {
                                             value={inBasket || ''}
                                             placeholder="0"
                                             aria-label={`Bottles of ${wine.productName} to request`}
-                                            onClick={(event) => event.stopPropagation()}
-                                            onChange={(event) => {
-                                              const wanted = Math.max(
-                                                0,
-                                                Math.min(held, Number(event.target.value) || 0),
-                                              );
-
-                                              setBasket((current) => {
-                                                const next = new Map(current);
-                                                if (wanted > 0) next.set(parcel.stockId, wanted);
-                                                else next.delete(parcel.stockId);
-                                                return next;
-                                              });
-                                            }}
-                                            className="border-border-muted bg-background-primary h-7 w-14 rounded-md border px-2 text-right text-xs tabular-nums"
+                                            onChange={(event) =>
+                                              setParcelBottles(
+                                                parcel.stockId,
+                                                Number(event.target.value) || 0,
+                                                held,
+                                              )
+                                            }
+                                            className="border-border-muted bg-background-primary h-7 w-12 rounded-md border px-1 text-center text-xs tabular-nums"
                                           />
+                                          <button
+                                            type="button"
+                                            aria-label={`One more bottle of ${wine.productName}`}
+                                            disabled={inBasket >= held}
+                                            onClick={() =>
+                                              setParcelBottles(
+                                                parcel.stockId,
+                                                inBasket + 1,
+                                                held,
+                                              )
+                                            }
+                                            className="border-border-muted hover:bg-fill-muted h-7 w-7 rounded-md border text-xs transition-colors disabled:opacity-40"
+                                          >
+                                            +
+                                          </button>
                                           <span className="text-text-muted text-[11px]">
                                             / {held}
                                           </span>
@@ -762,19 +947,52 @@ const CellarPage = () => {
                                       }
 
                                       return (
-                                        <button
-                                          type="button"
-                                          disabled={isRequesting}
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            requestReport({
-                                              stockId: parcel.stockId,
-                                            });
-                                          }}
-                                          className="text-text-brand hover:bg-fill-brand/10 -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-                                        >
-                                          Request condition report
-                                        </button>
+                                        <span className="inline-flex items-center gap-0.5">
+                                          <button
+                                            type="button"
+                                            disabled={isRequesting}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              requestReport({
+                                                stockId: parcel.stockId,
+                                              });
+                                            }}
+                                            className="text-text-brand hover:bg-fill-brand/10 -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                                          >
+                                            Request condition report
+                                          </button>
+                                          {/*
+                                            A chargeable action should say what
+                                            it costs before it is clicked, not
+                                            on the invoice afterwards.
+                                          */}
+                                          <Tooltip>
+                                            <TooltipTrigger
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                              aria-label="What a condition report includes"
+                                            >
+                                              <Icon
+                                                icon={IconInfoCircle}
+                                                size="xs"
+                                                colorRole="muted"
+                                              />
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-[260px]">
+                                              <Typography variant="bodyXs">
+                                                <strong>AED 150</strong> for
+                                                this parcel. We take the cases
+                                                out and inspect every bottle
+                                                &mdash; fill level, label,
+                                                capsule and closure &mdash; and
+                                                send you photographs with
+                                                written notes. Billed on your
+                                                next invoice.
+                                              </Typography>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </span>
                                       );
                                     })()}
                                   </td>
@@ -877,18 +1095,70 @@ const CellarPage = () => {
                 0,
               );
 
+              const wineCount = new Set(
+                basketLines.map((line) => line.wine?.lwin18),
+              ).size;
+
               return (
                 <div>
-                  <Typography
-                    variant="bodyXs"
-                    className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
-                  >
-                    Delivery request
-                  </Typography>
-                  <Typography variant="bodySm" className="font-semibold">
-                    {bottles} {bottles === 1 ? 'bottle' : 'bottles'} from{' '}
-                    {basket.size} {basket.size === 1 ? 'wine' : 'wines'}
-                  </Typography>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <Typography
+                        variant="bodyXs"
+                        className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
+                      >
+                        Delivery request
+                      </Typography>
+                      <Typography variant="bodySm" className="font-semibold">
+                        {bottles} {bottles === 1 ? 'bottle' : 'bottles'} from{' '}
+                        {wineCount} {wineCount === 1 ? 'wine' : 'wines'}
+                      </Typography>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsBasketOpen(!isBasketOpen)}
+                      className="text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
+                    >
+                      {isBasketOpen ? 'Hide the list' : 'Show the list'}
+                    </button>
+                  </div>
+
+                  {/*
+                    One request, and it says so. Without the list the panel
+                    looked like an action on whichever wine happened to be
+                    open, so members were sending a request per wine.
+                  */}
+                  {isBasketOpen && (
+                    <div className="border-border-muted mt-2 max-h-[30vh] overflow-y-auto rounded-lg border">
+                      <table className="w-full text-xs">
+                        <tbody className="divide-border-muted/60 divide-y">
+                          {basketLines.map((line) => (
+                            <tr key={line.stockId}>
+                              <td className="px-3 py-1.5">
+                                {line.wine?.productName}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                                {line.bottles}{' '}
+                                {line.bottles === 1 ? 'bottle' : 'bottles'}
+                              </td>
+                              <td className="w-8 px-2 py-1.5 text-right">
+                                <button
+                                  type="button"
+                                  aria-label={`Remove ${line.wine?.productName}`}
+                                  onClick={() =>
+                                    setParcelBottles(line.stockId, 0, 0)
+                                  }
+                                  className="text-text-muted hover:text-text-primary px-1 transition-colors"
+                                >
+                                  &times;
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               );
             })()}
