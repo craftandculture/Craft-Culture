@@ -454,59 +454,67 @@ const CellarPage = () => {
                         */}
                         <Typography
                           variant="bodyXs"
-                          colorRole="muted"
-                          className="mb-2 block font-semibold uppercase tracking-wider"
+                          className="text-text-muted mb-2 block font-semibold uppercase tracking-wider"
                         >
-                          Cases held
+                          Cases held &mdash; {wine.locations.length} record
+                          {wine.locations.length === 1 ? '' : 's'}
                         </Typography>
-                        <div className="mb-3 flex flex-col gap-1.5">
-                          {wine.locations.map((parcel) => (
-                            <div
-                              key={`${parcel.locationId}-${parcel.lotNumber ?? ''}`}
-                              className="border-border-muted/60 bg-background-primary flex flex-col gap-1 rounded-lg border px-3 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
-                            >
-                              <Typography variant="bodySm" className="tabular-nums">
-                                <span className="font-semibold">
-                                  {parcel.quantityCases}{' '}
-                                  {parcel.quantityCases === 1 ? 'case' : 'cases'}
-                                </span>{' '}
-                                <span className="text-text-muted">
-                                  &times; {wine.caseConfig ?? 1}{' '}
-                                  {wine.bottleSize ?? '75cl'} ={' '}
-                                  {parcel.quantityCases * (wine.caseConfig ?? 1)}{' '}
-                                  bottles
-                                </span>
-                              </Typography>
-                              <div className="flex flex-wrap gap-x-3">
-                                {parcel.lotNumber && (
-                                  <Typography
-                                    variant="bodyXs"
-                                    colorRole="muted"
-                                    className="font-mono"
-                                  >
-                                    Lot {parcel.lotNumber}
-                                  </Typography>
-                                )}
-                                {parcel.receivedAt && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    In bond since{' '}
-                                    {format(
-                                      new Date(parcel.receivedAt),
-                                      'MMM yyyy',
+
+                        <div className="border-border-muted bg-background-primary mb-4 overflow-x-auto rounded-lg border">
+                          <table className="w-full min-w-[460px] text-sm">
+                            <thead>
+                              <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
+                                <th className="px-3 py-1.5 text-right">Cases</th>
+                                <th className="px-3 py-1.5 text-center">Pack</th>
+                                <th className="px-3 py-1.5 text-right">Bottles</th>
+                                <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                                  Lot
+                                </th>
+                                <th className="px-3 py-1.5 text-left">In bond since</th>
+                                <th className="px-3 py-1.5 text-left">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-border-muted/60 divide-y">
+                              {wine.locations.map((parcel) => (
+                                <tr
+                                  key={`${parcel.locationId}-${parcel.lotNumber ?? ''}`}
+                                >
+                                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                                    {parcel.quantityCases}
+                                  </td>
+                                  <td className="text-text-muted px-3 py-2 text-center tabular-nums">
+                                    {wine.caseConfig ?? 1} &times;{' '}
+                                    {wine.bottleSize ?? '75cl'}
+                                  </td>
+                                  <td className="px-3 py-2 text-right tabular-nums">
+                                    {parcel.quantityCases * (wine.caseConfig ?? 1)}
+                                  </td>
+                                  <td className="text-text-muted hidden px-3 py-2 font-mono text-xs sm:table-cell">
+                                    {parcel.lotNumber ?? '—'}
+                                  </td>
+                                  <td className="text-text-muted px-3 py-2">
+                                    {parcel.receivedAt
+                                      ? format(
+                                          new Date(parcel.receivedAt),
+                                          'MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {parcel.reservedCases > 0 ? (
+                                      <span className="text-text-brand text-xs">
+                                        {parcel.reservedCases} awaiting collection
+                                      </span>
+                                    ) : (
+                                      <span className="text-text-muted text-xs">
+                                        In bond
+                                      </span>
                                     )}
-                                  </Typography>
-                                )}
-                                {parcel.reservedCases > 0 && (
-                                  <Typography
-                                    variant="bodyXs"
-                                    className="text-text-brand"
-                                  >
-                                    {parcel.reservedCases} awaiting collection
-                                  </Typography>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
 
                         {history.length > 0 && (
