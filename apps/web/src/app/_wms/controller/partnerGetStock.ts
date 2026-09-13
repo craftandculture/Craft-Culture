@@ -5,6 +5,7 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   wmsLocations,
+  wmsPartnerRequests,
   wmsProductPricing,
   wmsStock,
   wmsStockMovements,
@@ -177,6 +178,29 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     )
     .orderBy(logisticsShipments.eta);
 
+  /*
+    Requests already open against this cellar.
+
+    Without them the screen can only tell a member about their own request by
+    refusing a second one, which is feedback delivered as an error.
+  */
+  const openRequests = await db
+    .select({
+      stockId: wmsPartnerRequests.stockId,
+      requestNumber: wmsPartnerRequests.requestNumber,
+      requestType: wmsPartnerRequests.requestType,
+      status: wmsPartnerRequests.status,
+      requestedAt: wmsPartnerRequests.requestedAt,
+    })
+    .from(wmsPartnerRequests)
+    .where(
+      and(
+        eq(wmsPartnerRequests.partnerId, partner.id),
+        eq(wmsPartnerRequests.status, 'pending'),
+      ),
+    )
+    .orderBy(desc(wmsPartnerRequests.requestedAt));
+
   return {
     partner: {
       id: partner.id,
@@ -196,6 +220,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       costPerBottle: costByLwin.get(product.lwin18) ?? null,
     })),
     inbound,
+    openRequests,
     recentMovements,
   };
 });

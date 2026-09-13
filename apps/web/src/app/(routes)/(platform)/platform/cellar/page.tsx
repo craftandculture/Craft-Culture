@@ -91,6 +91,7 @@ const CellarPage = () => {
   const { mutate: requestReport, isPending: isRequesting } = useMutation(
     api.wms.partner.requestConditionReport.mutationOptions({
       onSuccess: (result) => {
+        void refetch();
         toast.success(
           `Condition report ${result.requestNumber} requested — ${result.cases} ${
             result.cases === 1 ? 'case' : 'cases'
@@ -107,6 +108,16 @@ const CellarPage = () => {
   );
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
+
+  const requestByStock = useMemo(() => {
+    const map = new Map<string, { requestNumber: string }>();
+
+    for (const request of data?.openRequests ?? []) {
+      if (request.stockId) map.set(request.stockId, request);
+    }
+
+    return map;
+  }, [data]);
 
   const movementsByWine = useMemo(() => {
     type Movement = NonNullable<typeof data>['recentMovements'][number];
@@ -542,17 +553,42 @@ const CellarPage = () => {
                                     )}
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2 text-right">
-                                    <button
-                                      type="button"
-                                      disabled={isRequesting}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        requestReport({ stockId: parcel.stockId });
-                                      }}
-                                      className="text-text-brand text-xs font-medium hover:underline disabled:opacity-50"
-                                    >
-                                      Request condition report
-                                    </button>
+                                    {(() => {
+                                      const open = requestByStock.get(parcel.stockId);
+
+                                      /*
+                                        A control that always offers the action
+                                        and then refuses it is telling the
+                                        member about their own request through
+                                        an error. Show the state instead.
+                                      */
+                                      if (open) {
+                                        return (
+                                          <span className="text-text-muted text-xs">
+                                            Report requested &middot;{' '}
+                                            <span className="font-mono">
+                                              {open.requestNumber}
+                                            </span>
+                                          </span>
+                                        );
+                                      }
+
+                                      return (
+                                        <button
+                                          type="button"
+                                          disabled={isRequesting}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            requestReport({
+                                              stockId: parcel.stockId,
+                                            });
+                                          }}
+                                          className="text-text-brand text-xs font-medium hover:underline disabled:opacity-50"
+                                        >
+                                          Request condition report
+                                        </button>
+                                      );
+                                    })()}
                                   </td>
                                 </tr>
                               ))}
