@@ -3,6 +3,17 @@ import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
 import { wmsStock } from '@/database/schema';
 
 interface ResolvePickStockParams {
+  /*
+    A parcel the line must come from, when the order names one.
+
+    Normally any stock of the same wine, vintage and size will satisfy a pick —
+    one bottle we own is as good as another. It is not true of a cellar
+    release: the member owns particular bottles, in a particular lot, and a
+    neighbouring case is somebody else's wine. When this is set the matcher
+    below is skipped entirely rather than consulted and overridden, because a
+    "preference" that can be silently improved upon is not a constraint.
+  */
+  sourceStockId?: string | null;
   /** The ordered line's LWIN18 (dashed or raw); may be empty. */
   lwin18: string | null | undefined;
   /** The ordered line's product name, for the name fallback. */
@@ -34,15 +45,42 @@ interface StockRow {
  * back to a strict name + vintage match ONLY when the LWIN yields nothing, and
  * refuses to guess when the name matches more than one distinct wine.
  *
+ * When the line names a parcel, that parcel is returned and none of this
+ * runs: a cellar release must come from the bottles its owner chose.
+ *
  * @returns The chosen stock (with how it was matched), or null when nothing in
  *   stock matches.
  */
 const resolvePickStock = async ({
+  sourceStockId,
   lwin18,
   productName,
   neededCases,
   db,
 }: ResolvePickStockParams) => {
+  if (sourceStockId) {
+    const [pinned] = await db
+      .select({
+        stockId: wmsStock.id,
+        locationId: wmsStock.locationId,
+        availableCases: wmsStock.availableCases,
+        quantityCases: wmsStock.quantityCases,
+        openBottles: wmsStock.openBottles,
+        caseConfig: wmsStock.caseConfig,
+        lwin18: wmsStock.lwin18,
+      })
+      .from(wmsStock)
+      .where(eq(wmsStock.id, sourceStockId))
+      .limit(1);
+
+    /*
+      Returned even when short. Substituting another parcel to make the
+      quantity up would hand over wine the owner did not ask for, and a pick
+      that comes up short is a conversation, not a thing to solve quietly.
+    */
+    if (pinned) return { ...pinned, matchedBy: 'pinned' as const };
+  }
+
   const digits = String(lwin18 ?? '').replace(/\D/g, '');
   const lwin7 = digits.length >= 11 ? digits.slice(0, 7) : '';
   const vintageStr = digits.length >= 11 ? digits.slice(7, 11) : '';

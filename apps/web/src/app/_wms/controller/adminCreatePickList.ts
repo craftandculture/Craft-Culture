@@ -90,7 +90,13 @@ const adminCreatePickList = wmsOperatorProcedure
       // Pack-agnostic, in-stock-only match by LWIN7+vintage with a safe name
       // fallback — never pins an empty pack or a lookalike cuvée.
       const neededCases = item.quantity ?? 0;
+      /*
+        A cellar release names the parcel it must come from, because the wine
+        belongs to the member who chose it. Every other order leaves this null
+        and matches as before.
+      */
       const suggestedStock = await resolvePickStock({
+        sourceStockId: item.sourceStockId,
         lwin18: item.lwin,
         productName: item.productName,
         neededCases,
@@ -107,9 +113,13 @@ const adminCreatePickList = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes:
-            suggestedStock?.matchedBy === 'name'
-              ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
-              : null,
+            suggestedStock?.matchedBy === 'pinned'
+              ? `OWNER'S STOCK: pick this parcel only${
+                  item.sourceLotNumber ? ` — lot ${item.sourceLotNumber}` : ''
+                }`
+              : suggestedStock?.matchedBy === 'name'
+                ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
+                : null,
         })
         .returning();
 
