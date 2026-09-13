@@ -125,6 +125,7 @@ import adminValidateImportItems from './controller/adminValidateImportItems';
 import deviceGetBayTotems from './controller/deviceGetBayTotems';
 import deviceGetLocationLabels from './controller/deviceGetLocationLabels';
 import partnerGetStock from './controller/partnerGetStock';
+import partnerRequestConditionReport from './controller/partnerRequestConditionReport';
 
 const locationsRouter = createTRPCRouter({
   create: adminCreateLocation,
@@ -303,6 +304,7 @@ const adminRouter = createTRPCRouter({
 
 const partnerRouter = createTRPCRouter({
   getStock: partnerGetStock,
+  requestConditionReport: partnerRequestConditionReport,
 });
 
 /** Device-authenticated routes for WMS terminals (TC27/Enterprise Browser) */

@@ -62,6 +62,9 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   // Get location breakdown for each product
   const stockByLocation = await db
     .select({
+      // The parcel's own identity. A location id identifies a bay, and several
+      // parcels can share one, so an action aimed at "this case" needs this.
+      stockId: wmsStock.id,
       lwin18: wmsStock.lwin18,
       locationId: wmsStock.locationId,
       locationCode: wmsLocations.locationCode,

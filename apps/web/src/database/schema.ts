@@ -4128,6 +4128,11 @@ export const wmsRequestType = pgEnum('wms_request_type', [
   'transfer',
   'mark_for_sale',
   'withdrawal',
+  /**
+   * A chargeable inspection: each bottle examined and photographed, with a
+   * written report. Ordered by the owner from their own cellar screen.
+   */
+  'condition_report',
 ]);
 
 export const wmsRequestStatus = pgEnum('wms_request_status', [

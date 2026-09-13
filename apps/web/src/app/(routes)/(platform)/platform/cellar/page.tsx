@@ -10,9 +10,10 @@ import {
   IconSearch,
   IconShip,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Fragment, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -22,6 +23,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 interface CellarParcel {
+  stockId: string;
   locationId: string;
   quantityCases: number;
   reservedCases: number;
@@ -64,13 +66,36 @@ const money = (value: number, precise = false) =>
     maximumFractionDigits: precise ? 2 : 0,
   });
 
-const MOVEMENT_LABELS: Record<string, string> = {
-  receive: 'Received into bond',
-  transfer: 'Moved within the warehouse',
-  pick: 'Released',
-  dispatch: 'Dispatched',
-  adjustment: 'Adjusted',
-  repack: 'Repacked',
+/**
+ * What happened to the wine, in a sentence
+ *
+ * The warehouse records a movement type and a case count. An owner reading
+ * their own cellar wants neither: they want to know that two cases arrived, or
+ * that one left for Dubai, and roughly when.
+ */
+const describeMovement = (movement: {
+  movementType: string;
+  quantityCases: number | null;
+  notes: string | null;
+}) => {
+  const cases = movement.quantityCases ?? 0;
+  const unit = `${cases} ${cases === 1 ? 'case' : 'cases'}`;
+
+  switch (movement.movementType) {
+    case 'receive':
+      return `${unit} received into bond`;
+    case 'pick':
+    case 'dispatch':
+      return `${unit} released from bond`;
+    case 'transfer':
+      return `${unit} moved within the warehouse`;
+    case 'repack':
+      return `${unit} repacked`;
+    case 'adjustment':
+      return `Holding corrected to ${unit}`;
+    default:
+      return `${unit} · ${movement.movementType.replaceAll('_', ' ')}`;
+  }
 };
 
 /**
@@ -91,6 +116,19 @@ const CellarPage = () => {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
+
+  const { mutate: requestReport, isPending: isRequesting } = useMutation(
+    api.wms.partner.requestConditionReport.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `Condition report ${result.requestNumber} requested — ${result.cases} ${
+            result.cases === 1 ? 'case' : 'cases'
+          }, AED ${result.feeAed.toLocaleString()}.`,
+        );
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
 
   const wines = useMemo(
     () => (data?.products ?? []) as unknown as CellarWine[],
@@ -498,7 +536,7 @@ const CellarPage = () => {
                             <tbody className="divide-border-muted/60 divide-y">
                               {wine.locations.map((parcel) => (
                                 <tr
-                                  key={`${parcel.locationId}-${parcel.lotNumber ?? ''}`}
+                                  key={parcel.stockId}
                                 >
                                   <td className="whitespace-nowrap px-4 py-2 text-right font-semibold tabular-nums">
                                     {parcel.quantityCases}
@@ -521,7 +559,7 @@ const CellarPage = () => {
                                         )
                                       : '—'}
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="whitespace-nowrap px-4 py-2">
                                     {parcel.reservedCases > 0 ? (
                                       <span className="text-text-brand text-xs">
                                         {parcel.reservedCases} allocated
@@ -531,6 +569,19 @@ const CellarPage = () => {
                                         In bond
                                       </span>
                                     )}
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                    <button
+                                      type="button"
+                                      disabled={isRequesting}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        requestReport({ stockId: parcel.stockId });
+                                      }}
+                                      className="text-text-brand text-xs font-medium hover:underline disabled:opacity-50"
+                                    >
+                                      Request condition report
+                                    </button>
                                   </td>
                                 </tr>
                               ))}
@@ -542,43 +593,51 @@ const CellarPage = () => {
                           <>
                             <Typography
                               variant="bodyXs"
-                              colorRole="muted"
-                              className="mb-1.5 block font-semibold uppercase tracking-wider"
+                              className="text-text-muted mb-2 block font-semibold uppercase tracking-wider"
                             >
                               History
                             </Typography>
-                            <div className="flex flex-col gap-1">
-                              {history.slice(0, 5).map((movement) => (
-                                <div
-                                  key={movement.id}
-                                  className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
-                                >
-                                  <Typography variant="bodyXs">
-                                    {MOVEMENT_LABELS[movement.movementType] ??
-                                      movement.movementType}
-                                    {movement.quantityCases
-                                      ? ` · ${movement.quantityCases} ${
-                                          movement.quantityCases === 1
-                                            ? 'case'
-                                            : 'cases'
-                                        }`
-                                      : ''}
-                                  </Typography>
-                                  <Typography
-                                    variant="bodyXs"
-                                    colorRole="muted"
-                                    className="flex-shrink-0"
-                                  >
-                                    {movement.performedAt
-                                      ? format(
-                                          new Date(movement.performedAt),
-                                          'd MMM yyyy',
-                                        )
-                                      : ''}
-                                  </Typography>
-                                </div>
-                              ))}
-                            </div>
+                            {/*
+                              A timeline, oldest at the top, each entry written
+                              as something that happened to the wine rather
+                              than as a warehouse operation code. "pick · 2"
+                              means nothing to an owner; "2 cases released"
+                              does.
+                            */}
+                            <ol className="border-border-muted ml-1 flex flex-col gap-3 border-l pl-4">
+                              {[...history]
+                                .sort(
+                                  (a, b) =>
+                                    new Date(a.performedAt ?? 0).getTime() -
+                                    new Date(b.performedAt ?? 0).getTime(),
+                                )
+                                .map((movement) => (
+                                  <li key={movement.id} className="relative">
+                                    <span className="bg-fill-brand absolute -left-[21px] top-1.5 h-2 w-2 rounded-full" />
+                                    <Typography
+                                      variant="bodySm"
+                                      className="block leading-snug"
+                                    >
+                                      {describeMovement(movement)}
+                                    </Typography>
+                                    <Typography
+                                      variant="bodyXs"
+                                      colorRole="muted"
+                                      className="mt-0.5 block"
+                                    >
+                                      {movement.performedAt
+                                        ? `${format(
+                                            new Date(movement.performedAt),
+                                            'd MMMM yyyy',
+                                          )} · ${formatDistanceToNow(
+                                            new Date(movement.performedAt),
+                                            { addSuffix: true },
+                                          )}`
+                                        : ''}
+                                    </Typography>
+                                  </li>
+                                ))}
+                            </ol>
                           </>
                         )}
                       </td>

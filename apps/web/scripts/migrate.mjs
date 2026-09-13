@@ -911,6 +911,13 @@ const runMigrations = async () => {
     );
     console.log('✅ private_collector partner type ready');
 
+    // --- condition reports -----------------------------------------------
+    // A chargeable inspection a cellar owner can order against their own wine.
+    await client.unsafe(
+      `ALTER TYPE "wms_request_type" ADD VALUE IF NOT EXISTS 'condition_report'`,
+    );
+    console.log('✅ condition_report request type ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.
