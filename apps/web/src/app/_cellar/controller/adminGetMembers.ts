@@ -24,6 +24,11 @@ const INCLUDED_CASES = 20;
  * they over the twenty cases the membership includes — but they do not decide
  * the order.
  *
+ * Private collectors only. A wine partner holding stock with us is on a
+ * commercial arrangement, not the cellar membership, and mixing the two here
+ * would put an allowance and a storage overage against a company that has
+ * neither.
+ *
  * A member with no stock and no requests still appears. Somebody who joined
  * and never shipped is a fact worth seeing, and a list that quietly omitted
  * them would read as a list of all members.
@@ -38,7 +43,7 @@ const adminGetMembers = adminProcedure.query(async () => {
     .from(partners)
     .where(
       and(
-        inArray(partners.type, ['private_collector', 'wine_partner']),
+        eq(partners.type, 'private_collector'),
         eq(partners.status, 'active'),
       ),
     );

@@ -1029,6 +1029,18 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cellar_release_requests" ADD COLUMN IF NOT EXISTS "service_fee_usd" double precision`,
     );
+    // VAT was missing entirely, and the per-case clearance fee beside the duty
+    // percentage was the same money charged twice — what is paid at clearance
+    // IS the duty. Dropped rather than left dormant: a column nothing reads is
+    // a number somebody will one day set and wonder why it does nothing.
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "vat_pct" double precision NOT NULL DEFAULT 0`,
+    );
+    for (const column of ['clearance_per_case', 'clearance_per_bottle']) {
+      await client.unsafe(
+        `ALTER TABLE "cellar_release_rates" DROP COLUMN IF EXISTS "${column}"`,
+      );
+    }
     console.log('✅ cellar release margins ready');
 
     // Where wine goes, kept apart from where the invoice goes, so correcting
@@ -1039,6 +1051,38 @@ const runMigrations = async () => {
       );
     }
     console.log('✅ partner delivery address ready');
+
+    // Emirates ID. The number and expiry sit on the member; the scans live in
+    // their own table and are never served straight from blob storage.
+    await client.unsafe(
+      `ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "eid_number" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "eid_expiry" timestamp`,
+    );
+    await client.unsafe(
+      `CREATE TABLE IF NOT EXISTS "partner_identity_documents" (
+         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+         "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+         "document_type" text NOT NULL,
+         "file_url" text NOT NULL,
+         "file_name" text NOT NULL,
+         "mime_type" text NOT NULL,
+         "file_size" integer NOT NULL DEFAULT 0,
+         "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+         "created_at" timestamp DEFAULT now() NOT NULL,
+         "updated_at" timestamp DEFAULT now() NOT NULL
+       )`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "partner_identity_documents_partner_idx"
+         ON "partner_identity_documents" ("partner_id")`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "partner_identity_documents_unique_idx"
+         ON "partner_identity_documents" ("partner_id", "document_type")`,
+    );
+    console.log('✅ partner identity documents ready');
 
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per

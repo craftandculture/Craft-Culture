@@ -130,6 +130,18 @@ const CollectorsPage = () => {
 
   const partners = data ?? [];
 
+  /*
+    Fetched only while a record is open. Identification is the most sensitive
+    thing on this screen, and a list that pulled every member's on file would
+    be reading it for people nobody asked about.
+  */
+  const { data: identity } = useQuery({
+    ...api.cellar.admin.getMemberIdentity.queryOptions({
+      partnerId: editingPartner?.id ?? '',
+    }),
+    enabled: Boolean(editingPartner?.id),
+  });
+
   const getStatusBadge = (status: PartnerStatus) => {
     switch (status) {
       case 'active':
@@ -675,6 +687,49 @@ const CollectorsPage = () => {
                     placeholder="Standing access instructions — gate code, who to ask for"
                     className="mt-2 w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
                   />
+                </div>
+
+                {/*
+                  What the member has given us to prove who they are. The
+                  files are never linked to directly — /api/cellar/identity
+                  checks the session and streams them — so a URL copied out of
+                  this page is worthless to anyone signed out.
+                */}
+                <div className="rounded-md border border-border-muted px-3 py-2.5">
+                  <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-xs font-medium text-text-muted">
+                      Identification
+                    </span>
+                    {identity?.eidNumber && (
+                      <span className="font-mono text-xs text-text-primary">
+                        {identity.eidNumber}
+                        {identity.eidExpiry &&
+                          ` · expires ${new Date(identity.eidExpiry).toLocaleDateString('en-GB')}`}
+                      </span>
+                    )}
+                  </div>
+                  {identity && identity.documents.length > 0 ? (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {identity.documents.map((document) => (
+                        <a
+                          key={document.documentType}
+                          href={`/api/cellar/identity?type=${document.documentType}&partnerId=${editingPartner.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-medium text-text-brand hover:underline"
+                        >
+                          {document.documentType
+                            .replace(/_/g, ' ')
+                            .replace('emirates id', 'Emirates ID')}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-text-muted">
+                      Nothing on file. The member uploads this from their own
+                      cellar.
+                    </span>
+                  )}
                 </div>
 
                 {/* Email & Phone row */}

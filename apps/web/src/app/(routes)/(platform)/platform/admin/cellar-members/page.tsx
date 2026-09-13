@@ -187,15 +187,6 @@ const CellarMembersPage = () => {
                     <Typography variant="bodySm" className="font-semibold">
                       {member.name}
                     </Typography>
-                    {member.type === 'wine_partner' && (
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="block"
-                      >
-                        Wine partner
-                      </Typography>
-                    )}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
                     {member.wines || '—'}

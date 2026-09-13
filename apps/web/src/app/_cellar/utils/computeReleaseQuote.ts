@@ -81,7 +81,7 @@ const computeReleaseQuote = async (
       version: 'none',
       goodsValueUsd,
       dutyUsd: 0,
-      clearanceUsd: 0,
+      vatUsd: 0,
       transferUsd: 0,
       deliveryUsd: 0,
       distributorMarginUsd: 0,

@@ -1,20 +1,27 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
 import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import memberAcceptRelease from './controller/memberAcceptRelease';
+import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocument';
 import memberGetProfile from './controller/memberGetProfile';
 import memberGetReleases from './controller/memberGetReleases';
 import memberSaveDeliveryAddress from './controller/memberSaveDeliveryAddress';
+import memberSaveProfile from './controller/memberSaveProfile';
 import memberSaveRelease from './controller/memberSaveRelease';
 import memberSubmitRelease from './controller/memberSubmitRelease';
+import memberUploadIdentityDocument from './controller/memberUploadIdentityDocument';
 
 const memberRouter = createTRPCRouter({
   getProfile: memberGetProfile,
+  saveProfile: memberSaveProfile,
   saveDeliveryAddress: memberSaveDeliveryAddress,
+  uploadIdentityDocument: memberUploadIdentityDocument,
+  deleteIdentityDocument: memberDeleteIdentityDocument,
   getReleases: memberGetReleases,
   saveRelease: memberSaveRelease,
   submitRelease: memberSubmitRelease,
@@ -25,6 +32,7 @@ const adminRouter = createTRPCRouter({
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
   getMembers: adminGetMembers,
+  getMemberIdentity: adminGetMemberIdentity,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
 });

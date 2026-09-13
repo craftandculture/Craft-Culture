@@ -406,6 +406,14 @@ export const partners = pgTable(
     deliveryAddress: text('delivery_address'),
     /** Standing access instructions — the gate code, who to ask for */
     deliveryInstructions: text('delivery_instructions'),
+    /*
+      Emirates ID. The licensed partner delivering on the mainland has to
+      establish who is receiving alcohol, so the number and its expiry sit on
+      the member's record. The scans themselves live in
+      partnerIdentityDocuments and are never handed to a browser directly.
+    */
+    eidNumber: text('eid_number'),
+    eidExpiry: timestamp('eid_expiry', { mode: 'date' }),
     businessPhone: text('business_phone'),
     businessEmail: text('business_email'),
     taxId: text('tax_id'),
@@ -457,6 +465,49 @@ export const partners = pgTable(
 ).enableRLS();
 
 export type Partner = typeof partners.$inferSelect;
+
+/**
+ * Identity documents a member has given us
+ *
+ * Separate from logisticsDocuments, which hangs off a shipment: this is a
+ * person proving who they are, not paperwork about a consignment, and it is
+ * read under different rules.
+ *
+ * fileUrl is a Vercel Blob URL, and Vercel Blob has no private tier — anyone
+ * holding the URL can fetch it. So it is never returned to a browser. Reads go
+ * through an authenticated route that checks the caller is the member or an
+ * admin and streams the bytes back itself.
+ */
+export const partnerIdentityDocuments = pgTable(
+  'partner_identity_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** 'emirates_id_front', 'emirates_id_back', 'passport' */
+    documentType: text('document_type').notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: integer('file_size').notNull().default(0),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    index('partner_identity_documents_partner_idx').on(table.partnerId),
+    /* One current copy of each side. Replacing overwrites rather than piles up. */
+    uniqueIndex('partner_identity_documents_unique_idx').on(
+      table.partnerId,
+      table.documentType,
+    ),
+  ],
+).enableRLS();
+
+export type PartnerIdentityDocument =
+  typeof partnerIdentityDocuments.$inferSelect;
 
 /**
  * Partner member roles for access control
@@ -4890,19 +4941,20 @@ export const cellarReleaseRates = pgTable(
       goods as its base, which is how the published rate card already
       describes a mainland release: an uplift on the duty-free price.
     */
-    /** Duty and taxes */
+    /*
+      Duty and clearance are one charge. What is paid at clearance is the duty,
+      assessed on the declared value — a separate per-case clearance fee beside
+      it was the same money counted twice.
+    */
     dutyPct: doublePrecision('duty_pct').notNull().default(0),
+    /** VAT, applied last, to the released value as a whole */
+    vatPct: doublePrecision('vat_pct').notNull().default(0),
     /** The licensed partner who actually delivers on the mainland */
     distributorMarginPct: doublePrecision('distributor_margin_pct')
       .notNull()
       .default(0),
     /** What C&C earns for handling the release */
     ccMarginPct: doublePrecision('cc_margin_pct').notNull().default(0),
-    /** Clearance and paperwork */
-    clearancePerCase: doublePrecision('clearance_per_case').notNull().default(0),
-    clearancePerBottle: doublePrecision('clearance_per_bottle')
-      .notNull()
-      .default(0),
     /** Moving it out of the free zone */
     transferPerBottle: doublePrecision('transfer_per_bottle')
       .notNull()

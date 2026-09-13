@@ -20,10 +20,9 @@ interface RateForm extends ReleaseRateCard {
 const EMPTY_FORM: RateForm = {
   version: 'v1',
   dutyPct: 0,
+  vatPct: 0,
   distributorMarginPct: 0,
   ccMarginPct: 0,
-  clearancePerCase: 0,
-  clearancePerBottle: 0,
   transferPerBottle: 0,
   deliveryFlat: 0,
   deliveryPerCase: 0,
@@ -41,25 +40,22 @@ const FIELD_GROUPS: {
   fields: { key: keyof ReleaseRateCard; label: string; suffix: string }[];
 }[] = [
   {
-    title: 'Duty',
-    hint: 'Charged on the declared value of the wine',
+    title: 'Duty and clearance',
+    hint: 'One charge, on the declared value — what is paid at clearance is the duty',
     fields: [{ key: 'dutyPct', label: 'Duty', suffix: '%' }],
   },
   {
-    title: 'Handling',
-    hint: 'What the paperwork and the move out of the free zone cost',
-    fields: [
-      { key: 'clearancePerCase', label: 'Clearance, per case', suffix: '$' },
-      { key: 'clearancePerBottle', label: 'Clearance, per bottle', suffix: '$' },
-      { key: 'transferPerBottle', label: 'Transfer, per bottle', suffix: '$' },
-    ],
+    title: 'VAT',
+    hint: 'Applied last, to everything else on the quote',
+    fields: [{ key: 'vatPct', label: 'VAT', suffix: '%' }],
   },
   {
-    title: 'Delivery',
-    hint: 'A call-out for the run, plus anything that scales with the load',
+    title: 'Handling and delivery',
+    hint: 'Moving it out of the free zone, then the run itself',
     fields: [
-      { key: 'deliveryFlat', label: 'Call-out, flat', suffix: '$' },
-      { key: 'deliveryPerCase', label: 'Per case', suffix: '$' },
+      { key: 'transferPerBottle', label: 'Transfer, per bottle', suffix: '$' },
+      { key: 'deliveryFlat', label: 'Delivery call-out, flat', suffix: '$' },
+      { key: 'deliveryPerCase', label: 'Delivery, per case', suffix: '$' },
     ],
   },
   {
@@ -136,10 +132,9 @@ const CellarRatesPage = () => {
       ? {
           version: rate.version,
           dutyPct: rate.dutyPct,
+          vatPct: rate.vatPct,
           distributorMarginPct: rate.distributorMarginPct,
           ccMarginPct: rate.ccMarginPct,
-          clearancePerCase: rate.clearancePerCase,
-          clearancePerBottle: rate.clearancePerBottle,
           transferPerBottle: rate.transferPerBottle,
           deliveryFlat: rate.deliveryFlat,
           deliveryPerCase: rate.deliveryPerCase,
@@ -274,11 +269,11 @@ const CellarRatesPage = () => {
 
           <dl className="flex flex-col gap-1 text-sm">
             {[
-              { label: 'Duty', value: preview.dutyUsd },
-              { label: 'Clearance', value: preview.clearanceUsd },
+              { label: 'Duty and clearance', value: preview.dutyUsd },
               { label: 'Transfer', value: preview.transferUsd },
               { label: 'Distributor', value: preview.distributorMarginUsd },
               { label: 'Delivery', value: preview.deliveryUsd },
+              { label: 'VAT', value: preview.vatUsd },
             ].map((line) => (
               <div key={line.label} className="flex justify-between">
                 <dt className="text-text-muted text-xs">{line.label}</dt>
@@ -322,10 +317,9 @@ const CellarRatesPage = () => {
               partnerId,
               version: form.version || 'v1',
               dutyPct: form.dutyPct,
+              vatPct: form.vatPct,
               distributorMarginPct: form.distributorMarginPct,
               ccMarginPct: form.ccMarginPct,
-              clearancePerCase: form.clearancePerCase,
-              clearancePerBottle: form.clearancePerBottle,
               transferPerBottle: form.transferPerBottle,
               deliveryFlat: form.deliveryFlat,
               deliveryPerCase: form.deliveryPerCase,
@@ -345,9 +339,9 @@ const CellarRatesPage = () => {
   const summarise = (rate: ReleaseRateCard) =>
     [
       `${rate.dutyPct}% duty`,
+      `${rate.vatPct}% VAT`,
       `${rate.distributorMarginPct}% distributor`,
       `${rate.ccMarginPct}% C&C`,
-      `${money(rate.clearancePerCase)}/case clearance`,
     ].join(' · ');
 
   return (

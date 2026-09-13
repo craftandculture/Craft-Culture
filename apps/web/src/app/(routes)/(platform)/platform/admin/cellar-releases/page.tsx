@@ -297,11 +297,11 @@ const CellarReleasesPage = () => {
                         >
                           Card {request.suggested.version} on goods valued at{' '}
                           {request.suggested.goodsValueUsd}: duty{' '}
-                          {request.suggested.dutyUsd} &middot; clearance{' '}
-                          {request.suggested.clearanceUsd} &middot; transfer{' '}
+                          {request.suggested.dutyUsd} &middot; transfer{' '}
                           {request.suggested.transferUsd} &middot; distributor{' '}
                           {request.suggested.distributorMarginUsd} &middot;
-                          delivery {request.suggested.deliveryUsd} &middot;{' '}
+                          delivery {request.suggested.deliveryUsd} &middot; VAT{' '}
+                          {request.suggested.vatUsd} &middot;{' '}
                           <strong className="text-text-brand">
                             C&amp;C {request.suggested.ccMarginUsd}
                           </strong>
@@ -309,7 +309,7 @@ const CellarReleasesPage = () => {
                       )}
                       <div className="mb-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
                         {[
-                          { key: 'clearance', label: 'Duties & clearance $' },
+                          { key: 'clearance', label: 'Duty, VAT & clearance $' },
                           { key: 'delivery', label: 'Delivery $' },
                           { key: 'service', label: 'Service fee $' },
                           { key: 'goods', label: 'Goods value $' },

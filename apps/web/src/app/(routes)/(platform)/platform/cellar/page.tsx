@@ -13,6 +13,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -476,9 +477,9 @@ const CellarPage = () => {
                         colorRole="muted"
                         className="mt-1 block"
                       >
-                        Includes duty and taxes, customs clearance, transfer
-                        out of bond, licensed distribution, delivery to your
-                        address, and our handling. Nothing further is charged.
+                        Includes duty and clearance, VAT, transfer out of
+                        bond, licensed distribution, delivery to your address,
+                        and our handling. Nothing further is charged.
                       </Typography>
                     )}
                   </div>
@@ -1025,6 +1026,37 @@ const CellarPage = () => {
           </div>
         </div>
       )}
+
+      {/*
+        One place to edit an account detail, and this is not it. The panel
+        summarises and links; two editors for one address is how they end up
+        disagreeing.
+      */}
+      <section className="border-border-muted mt-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-4">
+        <div className="min-w-0">
+          <Typography variant="bodySm" className="font-semibold">
+            Delivery details
+          </Typography>
+          {profile?.deliveryAddress ? (
+            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
+              {profile.deliveryAddress}
+              {profile.documents.length === 0 && ' · no ID on file'}
+            </Typography>
+          ) : (
+            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
+              No delivery address yet. Add one and it will be filled in
+              whenever you call wines forward.
+            </Typography>
+          )}
+        </div>
+        <Link href="/platform/cellar/profile">
+          <Button variant="outline" size="sm">
+            <ButtonContent>
+              {profile?.deliveryAddress ? 'Your details' : 'Add your details'}
+            </ButtonContent>
+          </Button>
+        </Link>
+      </section>
 
       <div className="border-border-muted mt-8 border-t pt-6">
         {/*
