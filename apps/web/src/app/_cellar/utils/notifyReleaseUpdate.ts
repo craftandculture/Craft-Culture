@@ -16,6 +16,8 @@ export interface NotifyReleaseUpdateParams {
   totalUsd?: number | null;
   /** What we need changed, when sending one back */
   adminNotes?: string | null;
+  /** True when wine was added to a request already with us */
+  amended?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ const notifyReleaseUpdate = async ({
   requestId,
   totalUsd,
   adminNotes,
+  amended,
 }: NotifyReleaseUpdateParams) => {
   try {
     const recipients = await (async () => {
@@ -93,8 +96,10 @@ const notifyReleaseUpdate = async ({
     const content = {
       submitted: {
         type: 'cellar_release_submitted' as const,
-        title: 'Release requested',
-        message: `${partner?.name ?? 'A member'} has asked for wine to be brought out of bond on ${requestNumber}.`,
+        title: amended ? 'Release added to' : 'Release requested',
+        message: amended
+          ? `${partner?.name ?? 'A member'} has added more wine to ${requestNumber}. Re-open it before quoting.`
+          : `${partner?.name ?? 'A member'} has asked for wine to be brought out of bond on ${requestNumber}.`,
         actionUrl: `${serverConfig.appUrl}/platform/admin/cellar-releases`,
       },
       quoted: {

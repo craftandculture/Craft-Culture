@@ -1315,6 +1315,19 @@ export const privateClientOrderItems = pgTable(
     bottleSize: text('bottle_size'),
     caseConfig: integer('case_config').default(12),
 
+    /*
+      The exact parcel this line must be picked from.
+
+      Normally a pick may be satisfied by any stock of the same wine, vintage
+      and size — one bottle of a wine we own is as good as another. It is not
+      true of a cellar release: the member owns particular bottles, with a
+      particular lot and a particular history, and substituting a neighbouring
+      case hands them somebody else's wine. Null on every other kind of order,
+      where the usual matching is correct.
+    */
+    sourceStockId: uuid('source_stock_id'),
+    sourceLotNumber: text('source_lot_number'),
+
     // Stock source and status
     source: orderItemSource('source').notNull().default('manual'),
     stockStatus: orderItemStockStatus('stock_status').notNull().default('pending'),
@@ -4899,6 +4912,8 @@ export const cellarReleaseRequestItems = pgTable(
       .references(() => cellarReleaseRequests.id, { onDelete: 'cascade' })
       .notNull(),
     stockId: uuid('stock_id').references(() => wmsStock.id),
+    /** Carried so the pick names the lot, not just the wine */
+    lotNumber: text('lot_number'),
     lwin18: text('lwin18').notNull(),
     productName: text('product_name').notNull(),
     vintage: integer('vintage'),

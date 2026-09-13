@@ -196,7 +196,8 @@ const CellarReleasesPage = () => {
                           <th className="px-3 py-1.5 text-left">Wine</th>
                           <th className="px-3 py-1.5 text-center">Vintage</th>
                           <th className="px-3 py-1.5 text-center">Size</th>
-                          <th className="px-3 py-1.5 text-right">Bottles</th>
+                          <th className="px-3 py-1.5 text-left">Lot</th>
+                          <th className="px-3 py-1.5 text-right">Quantity</th>
                         </tr>
                       </thead>
                       <tbody className="divide-border-muted/60 divide-y">
@@ -209,8 +210,19 @@ const CellarReleasesPage = () => {
                             <td className="px-3 py-2 text-center">
                               {item.bottleSize ?? '—'}
                             </td>
+                            {/*
+                              The parcel the member picked, not a parcel of the
+                              same wine. These are their bottles.
+                            */}
+                            <td className="text-text-muted px-3 py-2 font-mono text-xs">
+                              {item.lotNumber ?? '—'}
+                            </td>
                             <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                              {item.bottles}
+                              {item.caseConfig &&
+                              item.caseConfig > 1 &&
+                              item.bottles % item.caseConfig === 0
+                                ? `${item.bottles / item.caseConfig} × ${item.caseConfig}`
+                                : `${item.bottles} btl`}
                             </td>
                           </tr>
                         ))}

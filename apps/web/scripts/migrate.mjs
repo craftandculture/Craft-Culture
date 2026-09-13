@@ -1096,6 +1096,20 @@ const runMigrations = async () => {
     }
     console.log('✅ cellar release notifications ready');
 
+    // A release must be picked from the parcel the member chose. Any bottle of
+    // the same wine will do on a normal order; it will not do when the member
+    // owns particular bottles with a particular lot.
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_request_items" ADD COLUMN IF NOT EXISTS "lot_number" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_order_items" ADD COLUMN IF NOT EXISTS "source_stock_id" uuid`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_order_items" ADD COLUMN IF NOT EXISTS "source_lot_number" text`,
+    );
+    console.log('✅ release parcel identity ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

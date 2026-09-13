@@ -162,6 +162,22 @@ const CellarPage = () => {
   const { mutate: saveRelease, isPending: isSaving } = useMutation(
     api.cellar.member.saveRelease.mutationOptions({
       onSuccess: (result) => {
+        /*
+          Already with us: the wine has joined that request and the team has
+          been told. Submitting again would be refused, and rightly — it is
+          the same request, not a new one.
+        */
+        if (result.alreadySubmitted) {
+          toast.success(
+            `Added to ${result.requestNumber} — we will come back with the cost for everything on it.`,
+          );
+          setBasket(new Map());
+          setMemberNotes('');
+          setIsBasketOpen(false);
+          void refetchReleases();
+          return;
+        }
+
         submitRelease({ requestId: result.requestId });
       },
       onError: (error) => toast.error(error.message),
@@ -251,10 +267,37 @@ const CellarPage = () => {
     return index;
   }, [wines]);
 
+  /*
+    A member who asked for a whole case should be told they asked for a case.
+    "6 bottles" and "1 case of 6" are the same number and a different
+    instruction — the second one gets a sealed case picked, which is what they
+    meant and what protects the wine.
+  */
+  const describeQuantity = (bottles: number, caseConfig: number | null) => {
+    const pack = caseConfig ?? 1;
+
+    if (pack > 1 && bottles % pack === 0) {
+      const cases = bottles / pack;
+
+      return `${cases} ${cases === 1 ? 'case' : 'cases'} of ${pack} · ${bottles} bottles`;
+    }
+
+    return `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+  };
+
   const openRequests = (releaseData?.requests ?? []).filter((request) =>
     ['submitted', 'under_review', 'revision_requested'].includes(
       request.status,
     ),
+  );
+
+  /*
+    A request we have already quoted is deliberately not a merge target: the
+    member is holding a figure, and adding to what it covers would make that
+    figure wrong.
+  */
+  const mergeTarget = openRequests.find(
+    (request) => request.status !== 'under_review',
   );
 
   const basketLines = [...basket.entries()]
@@ -1179,18 +1222,43 @@ const CellarPage = () => {
                     looked like an action on whichever wine happened to be
                     open, so members were sending a request per wine.
                   */}
+                  {mergeTarget && (
+                    <Typography
+                      variant="bodyXs"
+                      colorRole="muted"
+                      className="mt-1 block"
+                    >
+                      These will be added to{' '}
+                      <span className="font-mono">
+                        {mergeTarget.requestNumber}
+                      </span>
+                      , which is already with us &mdash; one delivery, not two.
+                    </Typography>
+                  )}
                   {isBasketOpen && (
                     <div className="border-border-muted mt-2 max-h-[30vh] overflow-y-auto rounded-lg border">
                       <table className="w-full text-xs">
                         <tbody className="divide-border-muted/60 divide-y">
-                          {basketLines.map((line) => (
+                          {basketLines.map((line) => {
+                            const parcel = line.wine?.locations.find(
+                              (location) => location.stockId === line.stockId,
+                            );
+
+                            return (
                             <tr key={line.stockId}>
                               <td className="px-3 py-1.5">
                                 {line.wine?.productName}
+                                {parcel?.lotNumber && (
+                                  <span className="text-text-muted ml-2 font-mono text-[11px]">
+                                    lot {parcel.lotNumber}
+                                  </span>
+                                )}
                               </td>
                               <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                                {line.bottles}{' '}
-                                {line.bottles === 1 ? 'bottle' : 'bottles'}
+                                {describeQuantity(
+                                  line.bottles,
+                                  line.wine?.caseConfig ?? null,
+                                )}
                               </td>
                               <td className="w-8 px-2 py-1.5 text-right">
                                 <button
@@ -1205,7 +1273,8 @@ const CellarPage = () => {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

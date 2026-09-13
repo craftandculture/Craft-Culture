@@ -125,7 +125,14 @@ const memberAcceptRelease = stockOwnerProcedure
         vintage: line.vintage ? String(line.vintage) : null,
         lwin: line.lwin18,
         bottleSize: line.bottleSize,
+        caseConfig: line.caseConfig ?? 12,
         quantity: line.bottles,
+        /*
+          The parcel the member chose, carried through so the pick is against
+          their bottles rather than any bottles of the same wine.
+        */
+        sourceStockId: line.stockId,
+        sourceLotNumber: line.lotNumber,
         // Nothing is being sold: the member already owns the wine.
         pricePerCaseUsd: 0,
         totalUsd: 0,
