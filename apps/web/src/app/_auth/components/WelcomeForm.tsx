@@ -235,7 +235,14 @@ const WelcomeForm = () => {
             type="submit"
             size="lg"
             colorRole="brand"
-            isDisabled={!selectedType || !termsAccepted || isSubmitting || isRouting}
+            /* A provisioned account has no role to select, so requiring one
+               here left Continue permanently disabled. */
+            isDisabled={
+              (!isProvisioned && !selectedType) ||
+              !termsAccepted ||
+              isSubmitting ||
+              isRouting
+            }
           >
             <ButtonContent
               iconRight={IconArrowRight}
