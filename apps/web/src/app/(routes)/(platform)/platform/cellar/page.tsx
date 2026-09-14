@@ -591,7 +591,7 @@ const CellarPage = () => {
 
   return (
     <div className="w-full pb-8">
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {/*
             The same programme the member joined, named the same way. A portal
@@ -600,14 +600,20 @@ const CellarPage = () => {
           */}
           <Typography
             variant="bodyXs"
-            className="text-text-brand mb-1.5 block font-semibold uppercase tracking-[0.18em]"
+            className="text-text-brand mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]"
           >
             C&amp;C Private Cellar
           </Typography>
-          <Typography variant="headingLg">
+          {/*
+            No page title. The tab above already says "Your cellar", and
+            repeating it cost a whole line of heading before a member saw a
+            single bottle. The member's name earns its place; the word for the
+            screen they are already on does not.
+          */}
+          <Typography variant="headingMd" className="block">
             {data?.partner?.name ?? 'Your cellar'}
           </Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
+          <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
             Held in bond at Craft &amp; Culture, Ras Al Khaimah. Duty is
             suspended until you call wines forward.
           </Typography>
@@ -661,7 +667,7 @@ const CellarPage = () => {
         the only card that colours itself is wine in transit, which colours
         itself only when there is some.
       */}
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
         {[
           {
             icon: IconBottle,
@@ -694,20 +700,20 @@ const CellarPage = () => {
         ].map((card) => (
           <div
             key={card.label}
-            className={`rounded-xl border px-3 py-2.5 text-center ${
+            className={`rounded-xl border px-3 py-2 text-center ${
               card.alert
                 ? 'border-amber-200 bg-amber-50/50'
                 : 'border-border-muted bg-background-primary'
             }`}
           >
             <div
-              className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
+              className={`mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md ${
                 card.alert
                   ? 'bg-amber-100 text-amber-600'
                   : 'bg-teal-50 text-teal-600'
               }`}
             >
-              <card.icon size={13} />
+              <card.icon size={12} />
             </div>
             <div className="text-lg font-bold leading-tight tabular-nums">
               {card.value}

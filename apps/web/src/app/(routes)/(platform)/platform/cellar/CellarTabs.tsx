@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBottle, IconShoppingBag, IconTag } from '@tabler/icons-react';
+import { IconBottle, IconSparkles, IconTag } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,7 +9,12 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 const tabs = [
   { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
   { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
-  { href: '/platform/pool', label: 'The pool', icon: IconShoppingBag },
+  /*
+    "The pool" was our word for it, not a member's. What they want to know is
+    what they can add to their cellar today, so the tab says that. It lives
+    under the cellar rather than at its own root so it keeps this navigation.
+  */
+  { href: '/platform/cellar/available', label: 'Available now', icon: IconSparkles },
 ];
 
 /**
