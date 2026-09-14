@@ -518,6 +518,15 @@ const ImportsTab = ({
                 : 'Zoho invoices, read from our own systems. This client\u2019s wine is not held in our warehouse, so there are no receipts or stock position to read. Closed periods stay put.'}
             </p>
           </Typography>
+          {!zohoCustomer.trim() ? (
+            <Typography variant="bodyXs" colorRole="warning" asChild>
+              <p className="mt-2 max-w-xl">
+                This client has no Zoho customer set, so there are no invoices
+                to read. City Drinks trade as “C D General Trading” — type the
+                name below and the refresh will run.
+              </p>
+            </Typography>
+          ) : null}
           {holdsStock && !ownerName.trim() ? (
             /*
               A blank owner disables the refresh, and a button that will not
@@ -551,8 +560,18 @@ const ImportsTab = ({
           ) : null}
           <Button
             colorRole="brand"
+            /*
+              Invoices are the one feed every client has, so a missing Zoho
+              customer blocks the refresh whatever the profile. Guarding only
+              on the WMS owner let a consignment client refresh with an empty
+              customer, which failed schema validation and put a raw Zod error
+              on screen.
+            */
             isDisabled={
-              isLocked || isSyncing || (holdsStock && !ownerName.trim())
+              isLocked ||
+              isSyncing ||
+              !zohoCustomer.trim() ||
+              (holdsStock && !ownerName.trim())
             }
             onClick={() => void refreshLive()}
           >

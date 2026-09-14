@@ -751,6 +751,21 @@ const runMigrations = async () => {
     }
     console.log('✅ tri_programmes consignment tags ready');
 
+    /*
+      Every consignment programme sells through City Drinks — that is what the
+      reconciliation is about — so the Zoho customer is the same for all of
+      them and only Crurated had it recorded. The others fell back to whatever
+      the browser happened to remember, and on a browser that remembered
+      nothing the sync was called with an empty customer and failed schema
+      validation in front of the user.
+    */
+    await client.unsafe(`
+      UPDATE "tri_programmes"
+      SET "zoho_customer_match" = 'CD General'
+      WHERE COALESCE("zoho_customer_match", '') = ''
+    `);
+    console.log('✅ tri_programmes Zoho customer ready');
+
     // Seeded before the columns that default to it, and with the same match
     // values the browser was holding, so the live figures are unchanged.
     await client.unsafe(`
