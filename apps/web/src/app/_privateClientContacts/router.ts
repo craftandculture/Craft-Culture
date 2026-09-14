@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminLinkOrCreateForOrder from './controller/adminLinkOrCreateForOrder';
 import adminSetVerified from './controller/adminSetVerified';
 import adminUpdate from './controller/adminUpdate';
 import create from './controller/create';
@@ -17,6 +18,8 @@ const privateClientContactsRouter = createTRPCRouter({
   adminUpdate,
   // The flag ordersAssignDistributor reads to skip the verification steps
   adminSetVerified,
+  // Orders raised without a client record have nothing to edit or verify
+  adminLinkOrCreateForOrder,
   delete: deleteContact,
 });
 

@@ -1,6 +1,11 @@
 'use client';
 
-import { IconCheck, IconPencil, IconShieldCheck } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconPencil,
+  IconShieldCheck,
+  IconUserPlus,
+} from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -22,8 +27,10 @@ export interface OrderClientCardClient {
 }
 
 export interface OrderClientCardProps {
-  /** Null on older orders that were typed in without a client record. */
+  /** Null on orders that were typed in without a client record. */
   client: OrderClientCardClient | null;
+  /** Needed to create the missing client record from the order's details. */
+  orderId: string;
   /** The order's own copy, which is what ships on the paperwork. */
   fallback: { name: string | null; email: string | null; phone: string | null };
 }
@@ -65,7 +72,11 @@ const FIELDS: { key: keyof Draft; label: string; type?: string }[] = [
  * Edits are saved to the client record and carried onto their orders that are
  * still in flight. Delivered and cancelled orders keep what was true then.
  */
-const OrderClientCard = ({ client, fallback }: OrderClientCardProps) => {
+const OrderClientCard = ({
+  client,
+  orderId,
+  fallback,
+}: OrderClientCardProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -98,6 +109,24 @@ const OrderClientCard = ({ client, fallback }: OrderClientCardProps) => {
         data?.cityDrinksVerifiedAt
           ? 'Client marked verified — new orders skip verification'
           : 'Verification withdrawn',
+      );
+      refresh();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const linkMutation = useMutation({
+    ...api.privateClientContacts.adminLinkOrCreateForOrder.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? `Client record created for ${result.name}`
+          : `Linked to the existing record for ${result.name}`,
+        result.matchingOrders > 0
+          ? {
+              description: `${result.matchingOrders} other order${result.matchingOrders === 1 ? '' : 's'} for this name still have no record.`,
+            }
+          : undefined,
       );
       refresh();
     },
@@ -188,10 +217,23 @@ const OrderClientCard = ({ client, fallback }: OrderClientCardProps) => {
           )}
         </div>
       ) : (
-        <p className="mt-3 border-t border-border-muted pt-3 text-[11px] leading-snug text-text-muted">
-          This order was typed in without a client record, so there is nothing to
-          edit or verify. The details above travel with the order only.
-        </p>
+        <div className="mt-3 border-t border-border-muted pt-3">
+          <button
+            type="button"
+            disabled={linkMutation.isPending || !fallback.name}
+            onClick={() => linkMutation.mutate({ orderId, includeMatchingOrders: false })}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border-muted bg-fill-secondary px-3 py-1.5 text-[12px] font-medium hover:bg-fill-tertiary disabled:opacity-50"
+          >
+            <IconUserPlus className="h-3.5 w-3.5" />
+            {linkMutation.isPending ? 'Saving…' : 'Create client record'}
+          </button>
+          <p className="mt-1.5 text-[11px] leading-snug text-text-muted">
+            This order carries the client&apos;s details but no client record, so
+            there is nothing to edit or mark verified. Creating one links an
+            existing client of this partner with the same name, or makes a new
+            one.
+          </p>
+        </div>
       )}
 
       {editing && draft && client && (

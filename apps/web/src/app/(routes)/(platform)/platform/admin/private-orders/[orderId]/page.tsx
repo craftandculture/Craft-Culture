@@ -1181,6 +1181,7 @@ const AdminPrivateOrderDetailPage = () => {
           {/* Client — editable, and the verification gate */}
           <OrderClientCard
             client={order.client ?? null}
+            orderId={orderId}
             fallback={{
               name: order.clientName,
               email: order.clientEmail,
