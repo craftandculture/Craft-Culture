@@ -1374,27 +1374,26 @@ const CellarPage = () => {
                         */}
                         <Typography
                           variant="bodyXs"
-                          className="text-text-muted mb-2 block font-semibold uppercase tracking-wider"
+                          className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
                         >
                           <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400 align-middle" />
-                          Cases held &mdash; {wine.locations.length} record
-                          {wine.locations.length === 1 ? '' : 's'}
+                          Cases held
                         </Typography>
 
                         <div className="border-border-muted bg-background-primary mb-4 max-w-full overflow-x-auto rounded-lg border">
-                          <table className="w-full min-w-[440px] text-sm">
+                          <table className="w-full min-w-[440px] text-xs">
                             <thead>
                               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
-                                <th className="whitespace-nowrap px-4 py-1.5 text-right">Cases</th>
-                                <th className="whitespace-nowrap px-4 py-1.5 text-center">Pack</th>
-                                <th className="whitespace-nowrap px-4 py-1.5 text-right">Bottles</th>
-                                <th className="hidden whitespace-nowrap px-4 py-1.5 text-left sm:table-cell">
+                                <th className="whitespace-nowrap px-3 py-1.5 text-right">Cases</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-center">Pack</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-right">Bottles</th>
+                                <th className="hidden whitespace-nowrap px-3 py-1.5 text-left sm:table-cell">
                                   Lot
                                 </th>
-                                <th className="whitespace-nowrap px-4 py-1.5 text-left">In bond since</th>
-                                <th className="whitespace-nowrap px-4 py-1.5 text-left">Status</th>
-                                <th className="whitespace-nowrap px-4 py-1.5 text-right">
-                                  Bottles to release
+                                <th className="whitespace-nowrap px-3 py-1.5 text-left">In bond since</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-left">Status</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-right">
+                                  Release
                                 </th>
                                 <th className="px-4 py-1.5 text-right" />
                               </tr>
@@ -1404,20 +1403,20 @@ const CellarPage = () => {
                                 <tr
                                   key={parcel.stockId}
                                 >
-                                  <td className="whitespace-nowrap px-4 py-2 text-right font-semibold tabular-nums">
+                                  <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums">
                                     {parcel.quantityCases}
                                   </td>
-                                  <td className="text-text-muted whitespace-nowrap px-4 py-2 text-center tabular-nums">
+                                  <td className="text-text-muted whitespace-nowrap px-3 py-1.5 text-center tabular-nums">
                                     {wine.caseConfig ?? 1} &times;{' '}
                                     {wine.bottleSize ?? '75cl'}
                                   </td>
-                                  <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
+                                  <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
                                     {parcel.quantityCases * (wine.caseConfig ?? 1)}
                                   </td>
-                                  <td className="text-text-muted hidden whitespace-nowrap px-4 py-2 font-mono text-xs sm:table-cell">
+                                  <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-xs sm:table-cell">
                                     {parcel.lotNumber ?? '—'}
                                   </td>
-                                  <td className="text-text-muted whitespace-nowrap px-4 py-2">
+                                  <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
                                     {parcel.receivedAt
                                       ? format(
                                           new Date(parcel.receivedAt),
@@ -1425,7 +1424,7 @@ const CellarPage = () => {
                                         )
                                       : '—'}
                                   </td>
-                                  <td className="whitespace-nowrap px-4 py-2">
+                                  <td className="whitespace-nowrap px-3 py-1.5">
                                     {parcel.reservedCases > 0 ? (
                                       <span
                                         title="Committed against an order already placed"
@@ -1444,7 +1443,7 @@ const CellarPage = () => {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                  <td className="whitespace-nowrap px-3 py-1.5 text-right">
                                     {(() => {
                                       const inBasket = basket.get(parcel.stockId) ?? 0;
                                       const pack = wine.caseConfig ?? 1;
@@ -1527,7 +1526,7 @@ const CellarPage = () => {
                                       );
                                     })()}
                                   </td>
-                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                  <td className="whitespace-nowrap px-3 py-1.5 text-right">
                                     {(() => {
                                       const open = requestByStock.get(parcel.stockId);
 
@@ -1616,11 +1615,10 @@ const CellarPage = () => {
                               />
                               <Typography
                                 variant="bodyXs"
-                                className="text-text-muted font-semibold uppercase tracking-wider"
+                                className="text-text-muted text-[10px] font-semibold uppercase tracking-wider"
                               >
                                 <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400/60 align-middle" />
-                                Movement history &mdash; {history.length} record
-                                {history.length === 1 ? '' : 's'}
+                                Movement history
                               </Typography>
                             </div>
 
@@ -1632,19 +1630,19 @@ const CellarPage = () => {
                               business or interest.
                             */}
                             <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
-                              <table className="w-auto text-sm">
+                              <table className="w-auto text-xs">
                                 <thead>
                                   <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
-                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">
                                       When
                                     </th>
-                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">
                                       Type
                                     </th>
-                                    <th className="whitespace-nowrap px-4 py-1.5 text-right">
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-right">
                                       Cases
                                     </th>
-                                    <th className="whitespace-nowrap px-4 py-1.5 text-left">
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">
                                       Reference
                                     </th>
                                   </tr>
@@ -1652,7 +1650,7 @@ const CellarPage = () => {
                                 <tbody className="divide-border-muted/60 divide-y">
                                   {history.map((movement) => (
                                     <tr key={movement.id}>
-                                      <td className="text-text-muted whitespace-nowrap px-4 py-2">
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
                                         {movement.performedAt
                                           ? format(
                                               new Date(movement.performedAt),
@@ -1660,7 +1658,7 @@ const CellarPage = () => {
                                             )
                                           : '—'}
                                       </td>
-                                      <td className="whitespace-nowrap px-4 py-2">
+                                      <td className="whitespace-nowrap px-3 py-1.5">
                                         <MovementTypeBadge
                                           movementType={
                                             movement.movementType as MovementTypeBadgeProps['movementType']
@@ -1668,10 +1666,10 @@ const CellarPage = () => {
                                           size="sm"
                                         />
                                       </td>
-                                      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
                                         {movement.quantityCases ?? '—'}
                                       </td>
-                                      <td className="text-text-muted whitespace-nowrap px-4 py-2 font-mono text-xs">
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5 font-mono text-xs">
                                         {movement.movementNumber ?? '—'}
                                       </td>
                                     </tr>
