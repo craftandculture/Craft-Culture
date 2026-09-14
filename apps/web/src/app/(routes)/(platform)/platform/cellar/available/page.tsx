@@ -9,8 +9,16 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+/*
+  Always two decimals. Without a minimum the column rendered $65, $80.9 and
+  $67.01 in the same run of figures, so the decimal points did not line up and
+  the eye could not compare them.
+*/
 const money = (value: number) =>
-  `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 /*
   The catalogue name repeats the vintage and format that both have their own
@@ -34,10 +42,12 @@ const displayName = (name: string) =>
 const AvailablePage = () => {
   const api = useTRPC();
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<string | undefined>();
 
   const { data, isLoading } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
       search: search || undefined,
+      category,
     }),
   });
 
@@ -55,18 +65,42 @@ const AvailablePage = () => {
         </Typography>
       </div>
 
-      <div className="relative mb-4 lg:max-w-sm">
-        <Icon
-          icon={IconSearch}
-          size="sm"
-          className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-        />
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search wine, producer or vintage"
-          className="pl-9"
-        />
+      <div className="mb-4 lg:flex lg:items-center lg:gap-4">
+        <div className="relative lg:w-80 lg:flex-shrink-0">
+          <Icon
+            icon={IconSearch}
+            size="sm"
+            className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+          />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search wine, producer or vintage"
+            className="pl-9"
+          />
+        </div>
+
+        <div className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0 lg:mt-0">
+          {[
+            { id: undefined, label: 'Everything' },
+            { id: 'Wine', label: 'Wine' },
+            { id: 'Spirits', label: 'Spirits' },
+            { id: 'RTD', label: 'RTD' },
+          ].map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => setCategory(chip.id)}
+              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                category === chip.id
+                  ? 'bg-fill-brand text-text-on-brand'
+                  : 'border-border-muted text-text-muted hover:text-text-primary border'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading && (
@@ -85,9 +119,27 @@ const AvailablePage = () => {
 
       {!isLoading && wines.length > 0 && (
         <>
-          <Typography variant="bodyXs" colorRole="muted" className="mb-2 block">
-            {wines.length} {wines.length === 1 ? 'wine' : 'wines'}
-          </Typography>
+          {/*
+            One line, not a link on every row. The per-row "Enquire" was a
+            mailto, which navigates the page away from the list somebody was
+            halfway through reading — and buying out of the catalogue is not
+            built, so a control on each line promised something no click could
+            deliver.
+          */}
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <Typography variant="bodyXs" colorRole="muted">
+              {wines.length} {wines.length === 1 ? 'wine' : 'wines'}
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              To buy anything here, speak to your account team at{' '}
+              <a
+                className="text-text-brand font-medium"
+                href="mailto:enquiries@craftculture.xyz"
+              >
+                enquiries@craftculture.xyz
+              </a>
+            </Typography>
+          </div>
 
           <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[68vh] sm:overflow-auto">
             <table className="w-full min-w-[720px] text-sm">
@@ -103,7 +155,6 @@ const AvailablePage = () => {
                   <th className="px-3 py-2 text-center">Format</th>
                   <th className="px-3 py-2 text-right">Available</th>
                   <th className="px-3 py-2 text-right">$ / btl</th>
-                  <th className="px-3 py-2 text-right" />
                 </tr>
               </thead>
               <tbody className="divide-border-muted divide-y">
@@ -133,21 +184,6 @@ const AvailablePage = () => {
                     </td>
                     <td className="text-text-primary px-3 py-2 text-right text-[13px] font-semibold tabular-nums">
                       {money(wine.pricePerBottleUsd)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {/*
-                        An enquiry, not a basket. Buying out of the pool is not
-                        built — a sale has to move beneficial ownership and
-                        settle the member it came from, and neither of those
-                        exists yet. A button that took an order we could not
-                        fulfil would be worse than a line that says who to ask.
-                      */}
-                      <a
-                        href={`mailto:enquiries@craftculture.xyz?subject=${encodeURIComponent(`Enquiry — ${wine.product}`)}`}
-                        className="text-text-brand text-xs font-semibold opacity-0 transition-opacity hover:underline group-hover:opacity-100"
-                      >
-                        Enquire
-                      </a>
                     </td>
                   </tr>
                 ))}

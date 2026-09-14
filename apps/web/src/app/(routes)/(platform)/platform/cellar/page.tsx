@@ -1369,9 +1369,17 @@ const CellarPage = () => {
                     </td>
                   </tr>
 
+                  {/*
+                    A panel, not more table. Tinting the row was not enough —
+                    the nested tables have their own headers and rules, so at
+                    the same width and inset as the cellar they read as a
+                    continuation of it rather than as detail belonging to one
+                    wine. A border, a ground and an inset say whose they are.
+                  */}
                   {isOpen && (
-                    <tr className="bg-fill-brand/[0.04] shadow-[inset_2px_0_0_0] shadow-teal-400">
-                      <td colSpan={10} className="px-4 py-3 sm:px-10">
+                    <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-teal-400">
+                      <td colSpan={10} className="px-3 py-3 sm:px-6 sm:py-4">
+                        <div className="border-border-muted bg-background-primary rounded-xl border px-4 py-4 shadow-sm">
                         {/*
                           One line per parcel actually held. A wine received on
                           two occasions is two holdings with two histories, and
@@ -1612,11 +1620,11 @@ const CellarPage = () => {
                         </div>
 
                         {history.length > 0 && (
-                          <>
+                          <div className="border-border-muted mt-5 border-t pt-4">
                             <div className="mb-2 flex items-center gap-1.5">
                               <Icon
                                 icon={IconHistory}
-                                size="sm"
+                                size="xs"
                                 className="text-text-muted"
                               />
                               <Typography
@@ -1683,8 +1691,9 @@ const CellarPage = () => {
                                 </tbody>
                               </table>
                             </div>
-                          </>
+                          </div>
                         )}
+                        </div>
                       </td>
                     </tr>
                   )}
