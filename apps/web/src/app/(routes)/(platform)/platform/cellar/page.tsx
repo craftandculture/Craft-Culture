@@ -20,6 +20,11 @@ import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
@@ -35,6 +40,12 @@ interface CellarParcel {
   locationId: string;
   quantityCases: number;
   reservedCases: number;
+  /*
+    What can actually be committed. Offering wine that is already reserved
+    against somebody's order would mean withdrawing the offer later, so the
+    sell dialog caps on this rather than on the total in the bay.
+  */
+  availableCases: number;
   lotNumber: string | null;
   receivedAt: Date | null;
 }
@@ -134,6 +145,10 @@ const CellarPage = () => {
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
   const [isBasketOpen, setIsBasketOpen] = useState(false);
+  /* The wine being offered for sale, and the terms while they are being set. */
+  const [sellingWine, setSellingWine] = useState<CellarWine | null>(null);
+  const [sellLines, setSellLines] = useState<Map<string, number>>(new Map());
+  const [sellAsk, setSellAsk] = useState('');
   /* Which submitted request is open, and the edits made to it so far. */
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
   const [editLines, setEditLines] = useState<Map<string, number>>(new Map());
@@ -222,6 +237,21 @@ const CellarPage = () => {
         toast.success(`${result.requestNumber} withdrawn.`);
         setOpenRequestId(null);
         void refetchReleases();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: offerForSale, isPending: isOffering } = useMutation(
+    api.consignment.member.offerForSale.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.mandateNumber} sent — we will come back to you once it is listed.`,
+        );
+        setSellingWine(null);
+        setSellLines(new Map());
+        setSellAsk('');
+        void refetch();
       },
       onError: (error) => toast.error(error.message),
     }),
@@ -1123,7 +1153,7 @@ const CellarPage = () => {
                   </TooltipContent>
                 </Tooltip>
               </th>
-              <th className={`${th} min-w-[150px] text-right`}>Request</th>
+              <th className={`${th} min-w-[190px] text-right`}>Drink &middot; Sell</th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
@@ -1309,6 +1339,23 @@ const CellarPage = () => {
                               className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-1.5 py-1 text-xs font-medium transition-colors"
                             >
                               + Bottle
+                            </button>
+                            {/*
+                              Selling sits beside drinking because they are the
+                              only two things a member can do, and making one of
+                              them live on another screen would mean deciding
+                              which before looking at what they own.
+                            */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSellingWine(wine);
+                                setSellLines(new Map());
+                                setSellAsk('');
+                              }}
+                              className="ml-1 rounded px-1.5 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
+                            >
+                              Sell
                             </button>
                           </span>
                         );
@@ -2009,6 +2056,199 @@ const CellarPage = () => {
         </Link>
       </section>
 
+      {/*
+        Selling is a dialog rather than an expanding row. It is one decision
+        about one wine, it carries a warning the member has to read, and it
+        should not be something they scroll past while looking at something
+        else.
+      */}
+      <Dialog
+        open={Boolean(sellingWine)}
+        onOpenChange={(open) => {
+          if (!open) setSellingWine(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          {sellingWine && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Offer for sale</DialogTitle>
+                <DialogDescription>
+                  {displayName(sellingWine.productName)}
+                  {sellingWine.vintage ? ` · ${sellingWine.vintage}` : ''}
+                  {sellingWine.bottleSize
+                    ? ` · ${sellingWine.caseConfig && sellingWine.caseConfig > 1 ? `${sellingWine.caseConfig}×` : ''}${sellingWine.bottleSize}`
+                    : ''}
+                </DialogDescription>
+              </DialogHeader>
+
+              {(() => {
+                const pack = sellingWine.caseConfig ?? 1;
+
+                const chosen = [...sellLines.values()].reduce(
+                  (sum, count) => sum + count,
+                  0,
+                );
+
+                const ask = Math.max(0, Number(sellAsk) || 0);
+                /*
+                  The ask is what the member receives. The shelf price is the
+                  ask with commission added on top, not taken out of it — the
+                  second reading makes a member feel short-changed by a number
+                  they chose themselves.
+                */
+                const listed = ask > 0 ? ask / (1 - 2.5 / 100) : 0;
+                const listedPc = ask > 0 ? ask / (1 - 30 / 100) : 0;
+
+                return (
+                  <div className="flex flex-col gap-4">
+                    <div className="border-border-muted overflow-hidden rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
+                            <th className="px-3 py-1.5 text-left">Parcel</th>
+                            <th className="px-3 py-1.5 text-right">Available</th>
+                            <th className="px-3 py-1.5 text-right">Offering</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-border-muted/60 divide-y">
+                          {sellingWine.locations.map((parcel) => {
+                            const available = parcel.availableCases * pack;
+                            const offering = sellLines.get(parcel.stockId) ?? 0;
+
+                            return (
+                              <tr key={parcel.stockId}>
+                                <td className="px-3 py-2">
+                                  <span className="text-text-muted font-mono text-xs">
+                                    {parcel.lotNumber ?? 'no lot'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {available}
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={available}
+                                    value={offering || ''}
+                                    placeholder="0"
+                                    onChange={(event) => {
+                                      const wanted = Math.max(
+                                        0,
+                                        Math.min(
+                                          available,
+                                          Number(event.target.value) || 0,
+                                        ),
+                                      );
+
+                                      setSellLines((current) => {
+                                        const next = new Map(current);
+                                        if (wanted > 0)
+                                          next.set(parcel.stockId, wanted);
+                                        else next.delete(parcel.stockId);
+                                        return next;
+                                      });
+                                    }}
+                                    className="border-border-muted bg-background-primary h-8 w-20 rounded-md border px-2 text-right text-sm tabular-nums"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <label className="block">
+                      <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
+                        Your price per bottle
+                      </span>
+                      <Input
+                        value={sellAsk}
+                        onChange={(event) => setSellAsk(event.target.value)}
+                        placeholder="0.00"
+                      />
+                    </label>
+
+                    {ask > 0 && chosen > 0 && (
+                      <dl className="border-border-muted flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-sm">
+                        <div className="flex justify-between">
+                          <dt className="font-semibold">You receive</dt>
+                          <dd className="font-semibold tabular-nums">
+                            {money(ask * chosen)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted text-xs">
+                            Listed to trade
+                          </dt>
+                          <dd className="text-text-muted text-xs tabular-nums">
+                            {money(listed)} a bottle
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-text-muted text-xs">
+                            Listed to private clients
+                          </dt>
+                          <dd className="text-text-muted text-xs tabular-nums">
+                            {money(listedPc)} a bottle
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+
+                    {/*
+                      The member's point of no return is this button, not the
+                      placement — which they neither see coming nor control. It
+                      has to be said here, before they press it.
+                    */}
+                    <div className="rounded-lg bg-amber-50 px-3 py-2.5">
+                      <Typography
+                        variant="bodyXs"
+                        className="block leading-relaxed text-amber-900"
+                      >
+                        <strong>This cannot always be taken back.</strong> You
+                        may withdraw while the wine is still with us. If we
+                        place it with a distributor to sell it — our decision,
+                        not yours — it leaves bond and can no longer be
+                        withdrawn.
+                      </Typography>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        colorRole="brand"
+                        isDisabled={isOffering || chosen === 0 || ask <= 0}
+                        onClick={() =>
+                          offerForSale({
+                            lines: [...sellLines.entries()].map(
+                              ([stockId, bottles]) => ({ stockId, bottles }),
+                            ),
+                            askPerBottleUsd: ask,
+                          })
+                        }
+                      >
+                        <ButtonContent>
+                          {chosen > 0
+                            ? `Offer ${chosen} ${chosen === 1 ? 'bottle' : 'bottles'} to C&C`
+                            : 'Offer to C&C'}
+                        </ButtonContent>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSellingWine(null)}
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
