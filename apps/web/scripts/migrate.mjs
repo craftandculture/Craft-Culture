@@ -1259,6 +1259,15 @@ const runMigrations = async () => {
     );
     console.log('✅ sale mandates ready');
 
+    // A member offering wine, and hearing nothing back, is the same hole the
+    // release flow had: they find out by logging in and looking.
+    for (const value of ['mandate_offered', 'mandate_listed', 'mandate_sent_back']) {
+      await client.unsafe(
+        `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS '${value}'`,
+      );
+    }
+    console.log('✅ mandate notifications ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

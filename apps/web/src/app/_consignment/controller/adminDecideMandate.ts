@@ -6,6 +6,8 @@ import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import notifyMandateUpdate from '../utils/notifyMandateUpdate';
+
 /**
  * Accept a member's offer and list it, or send it back
  *
@@ -66,6 +68,19 @@ const adminDecideMandate = adminProcedure
           updatedAt: new Date(),
         })
         .where(eq(saleMandates.id, mandate.id));
+
+      if (input.outcome === 'send_back') {
+        await notifyMandateUpdate({
+          event: 'sent_back',
+          ownerId: mandate.ownerId,
+          ownerName: mandate.ownerName,
+          mandateId: mandate.id,
+          mandateNumber: mandate.mandateNumber,
+          productName: mandate.productName,
+          bottles: mandate.bottlesRemaining,
+          adminNotes: input.adminNotes,
+        });
+      }
 
       return { status: input.outcome };
     }
@@ -149,6 +164,16 @@ const adminDecideMandate = adminProcedure
           updatedAt: new Date(),
         })
         .where(eq(saleMandates.id, mandate.id));
+    });
+
+    await notifyMandateUpdate({
+      event: 'listed',
+      ownerId: mandate.ownerId,
+      ownerName: mandate.ownerName,
+      mandateId: mandate.id,
+      mandateNumber: mandate.mandateNumber,
+      productName: mandate.productName,
+      bottles: mandate.bottlesRemaining,
     });
 
     return { status: 'listed' as const, mandateNumber: mandate.mandateNumber };

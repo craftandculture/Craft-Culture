@@ -791,6 +791,10 @@ export const notificationType = pgEnum('notification_type', [
   'cellar_release_submitted',
   'cellar_release_quoted',
   'cellar_release_revision',
+  // Selling from the pool
+  'mandate_offered',
+  'mandate_listed',
+  'mandate_sent_back',
 ]);
 
 /**

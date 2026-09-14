@@ -8,6 +8,7 @@ import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import generateMandateNumber from '../utils/generateMandateNumber';
+import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
 /**
  * A member instructs C&C to sell wine on their behalf
@@ -183,6 +184,16 @@ const memberOfferForSale = stockOwnerProcedure
       );
 
       return mandate.id;
+    });
+
+    await notifyMandateUpdate({
+      event: 'offered',
+      ownerId: ctx.partner.id,
+      ownerName: ctx.partner.businessName,
+      mandateId,
+      mandateNumber,
+      productName: first.productName,
+      bottles: totalBottles,
     });
 
     return { mandateId, mandateNumber, bottles: totalBottles };

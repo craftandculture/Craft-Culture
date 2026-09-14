@@ -544,7 +544,7 @@ const CellarPage = () => {
     to supporting detail and the numbers carry weight only where a member is
     actually counting — bottles.
   */
-  const td = 'px-3 py-2 align-middle text-[13px]';
+  const td = 'px-3 py-2.5 align-middle text-[13px]';
   const tdMuted = `${td} text-text-muted`;
 
   /*
@@ -1329,23 +1329,37 @@ const CellarPage = () => {
                           cursor, which is the only time they can be used.
                         */
                         return (
-                          <span className="inline-flex items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100">
-                            {pack > 1 && (
+                          <span className="inline-flex items-center opacity-60 transition-opacity group-hover:opacity-100">
+                            {/*
+                              Two verbs, not three controls. Drinking and
+                              selling were sitting in one undifferentiated row
+                              of links, so the eye read them as a list and had
+                              to stop and parse which was which. The rule
+                              between them does the grouping.
+                            */}
+                            <span className="inline-flex items-center gap-0.5">
+                              {pack > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => addToWine(wine, pack)}
+                                  className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-2 py-1 text-xs font-medium transition-colors"
+                                >
+                                  + Case
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                onClick={() => addToWine(wine, pack)}
-                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-1.5 py-1 text-xs font-medium transition-colors"
+                                onClick={() => addToWine(wine, 1)}
+                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-2 py-1 text-xs font-medium transition-colors"
                               >
-                                + Case
+                                + Bottle
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => addToWine(wine, 1)}
-                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-1.5 py-1 text-xs font-medium transition-colors"
-                            >
-                              + Bottle
-                            </button>
+                            </span>
+
+                            <span
+                              aria-hidden
+                              className="bg-border-muted mx-2 h-3.5 w-px"
+                            />
                             {/*
                               Selling sits beside drinking because they are the
                               only two things a member can do, and making one of
@@ -1359,7 +1373,7 @@ const CellarPage = () => {
                                 setSellLines(new Map());
                                 setSellAsk('');
                               }}
-                              className="ml-1 rounded px-1.5 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
+                              className="rounded px-2 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
                             >
                               Sell
                             </button>

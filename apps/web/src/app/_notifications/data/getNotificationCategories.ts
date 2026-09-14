@@ -52,6 +52,16 @@ const ALL_CATEGORIES: NotificationCategory[] = [
         label: 'Release Sent Back',
         description: 'When we need a change before we can price a delivery',
       },
+      {
+        type: 'mandate_listed',
+        label: 'Offer Accepted',
+        description: 'When wine you offered for sale goes on our lists',
+      },
+      {
+        type: 'mandate_sent_back',
+        label: 'Offer Sent Back',
+        description: 'When we need a change before we can list it',
+      },
     ],
   },
   {
@@ -210,6 +220,11 @@ const ALL_CATEGORIES: NotificationCategory[] = [
         type: 'cellar_release_submitted',
         label: 'Release Requested',
         description: 'When a member asks for wine to be brought out of bond',
+      },
+      {
+        type: 'mandate_offered',
+        label: 'Wine Offered For Sale',
+        description: 'When a member asks us to sell wine on their behalf',
       },
     ],
   },
