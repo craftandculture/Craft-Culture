@@ -143,6 +143,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/wine-partners', label: 'Wine Partners' },
         { href: '/platform/admin/collectors', label: 'Collectors' },
         { href: '/platform/admin/cellar-members', label: 'Cellar Members' },
+        { href: '/platform/admin/consignment', label: 'Consignment' },
         { href: '/platform/admin/cellar-releases', label: 'Cellar Releases' },
         { href: '/platform/admin/cellar-rates', label: 'Release Rates' },
       ],
