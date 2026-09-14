@@ -256,6 +256,17 @@ const adminQuickDispatch = wmsOperatorProcedure
           const lwin = item.lwin18 ?? item.sku;
           if (!lwin || item.quantity <= 0) continue;
 
+          /*
+            Stock held for its owner is never dispatchable, whatever an order
+            says.
+
+            This matched on the wine and a positive case count and nothing
+            else, so a quick dispatch would draw down a member's cellar to fill
+            somebody else's order — the one consumption path in the warehouse
+            that did not honour the hold. Every other route (reservation,
+            picking, the catalogue, quote lines) already excludes it, which is
+            what made the gap easy to miss and expensive to find.
+          */
           const stockRecords = await db
             .select({
               id: wmsStock.id,
@@ -263,7 +274,11 @@ const adminQuickDispatch = wmsOperatorProcedure
             })
             .from(wmsStock)
             .where(
-              and(eq(wmsStock.lwin18, lwin), gt(wmsStock.quantityCases, 0)),
+              and(
+                eq(wmsStock.lwin18, lwin),
+                gt(wmsStock.quantityCases, 0),
+                eq(wmsStock.notForSale, false),
+              ),
             );
 
           let remaining = item.quantity;
