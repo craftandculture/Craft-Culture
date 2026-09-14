@@ -1,10 +1,14 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientContacts, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import buildOrderClientPatch, {
+  OPEN_ORDER_STATUSES,
+} from '../utils/clientDetailCascade';
 
 const updateSchema = z.object({
   id: z.string().uuid(),
@@ -66,18 +70,27 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
     .where(and(eq(privateClientContacts.id, id), eq(privateClientContacts.partnerId, partnerId)))
     .returning();
 
-  // Cascade contact updates to linked orders
-  // This ensures distributor portal shows current client details
-  if (data.name !== undefined || data.phone !== undefined || data.email !== undefined) {
-    const orderUpdateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (data.name !== undefined) orderUpdateData.clientName = data.name;
-    if (data.phone !== undefined) orderUpdateData.clientPhone = data.phone || null;
-    if (data.email !== undefined) orderUpdateData.clientEmail = data.email || null;
+  /*
+    Bring the order's own copy of the client details with it, so the
+    distributor portal is not delivering against an old number.
 
+    Both this and `adminUpdate` decide what cascades in one place. They drifted
+    before: this path omitted the address entirely, and rewrote EVERY order
+    including delivered ones — restating the client details on a delivery note
+    that had already gone out.
+  */
+  const orderPatch = buildOrderClientPatch(data);
+
+  if (Object.keys(orderPatch).length > 0) {
     await db
       .update(privateClientOrders)
-      .set(orderUpdateData)
-      .where(eq(privateClientOrders.clientId, id));
+      .set({ ...orderPatch, updatedAt: new Date() })
+      .where(
+        and(
+          eq(privateClientOrders.clientId, id),
+          inArray(privateClientOrders.status, OPEN_ORDER_STATUSES),
+        ),
+      );
   }
 
   return updated;

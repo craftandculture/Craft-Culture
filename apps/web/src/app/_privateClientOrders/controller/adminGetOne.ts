@@ -38,6 +38,15 @@ const adminGetOne = wmsOperatorProcedure
           name: privateClientContacts.name,
           email: privateClientContacts.email,
           phone: privateClientContacts.phone,
+          addressLine1: privateClientContacts.addressLine1,
+          addressLine2: privateClientContacts.addressLine2,
+          city: privateClientContacts.city,
+          stateProvince: privateClientContacts.stateProvince,
+          postalCode: privateClientContacts.postalCode,
+          country: privateClientContacts.country,
+          // What decides whether assigning a distributor needs the two
+          // verification steps, so the order screen can show and set it.
+          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
         },
       })
       .from(privateClientOrders)

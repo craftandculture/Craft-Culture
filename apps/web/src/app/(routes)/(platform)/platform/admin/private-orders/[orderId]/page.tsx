@@ -25,6 +25,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
@@ -1177,25 +1178,15 @@ const AdminPrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Client Info - Compact */}
-          <Card>
-            <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Client
-              </Typography>
-              <div className="space-y-1 text-sm">
-                <Typography variant="bodySm" className="font-medium">
-                  {order.clientName || '-'}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {order.clientEmail || '-'}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {order.clientPhone || '-'}
-                </Typography>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Client — editable, and the verification gate */}
+          <OrderClientCard
+            client={order.client ?? null}
+            fallback={{
+              name: order.clientName,
+              email: order.clientEmail,
+              phone: order.clientPhone,
+            }}
+          />
 
           {/* Distributor - With logo */}
           <Card>
