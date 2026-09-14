@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getCommittedBottles from '../data/getCommittedBottles';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
 /**
@@ -122,6 +123,13 @@ const adminDecideMandate = adminProcedure
 
     const heldById = new Map(held.map((row) => [row.id, row]));
 
+    /*
+      What other mandates claim on the same parcels, this one excluded. Two
+      offers over the same bottles can both be waiting here, and accepting both
+      would put the same wine on the list twice.
+    */
+    const committed = await getCommittedBottles(stockIds, mandate.id);
+
     for (const lot of lots) {
       const stock = heldById.get(lot.stockId);
 
@@ -133,12 +141,14 @@ const adminDecideMandate = adminProcedure
       }
 
       const available =
-        stock.availableCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+        stock.availableCases * (stock.caseConfig ?? 1) +
+        (stock.openBottles ?? 0) -
+        (committed.get(lot.stockId) ?? 0);
 
       if (lot.bottlesRemaining > available) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: `Only ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} remain available. Send the offer back.`,
+          message: `Only ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} free — the rest is held or under another offer. Send this one back.`,
         });
       }
     }

@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { toast } from 'sonner';
 
+import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -12,7 +13,10 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (value: number) =>
-  `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 /*
   What each state means to the member, in their words rather than ours. The
@@ -89,14 +93,25 @@ const SellingPage = () => {
 
   return (
     <div className="w-full pb-8">
-      <Typography variant="headingLg">Selling</Typography>
-      <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-        Wine you have asked us to sell on your behalf
-      </Typography>
+      {/*
+        headingMd, like the cellar and Available now. Three tabs had three
+        different heading sizes, so moving between them made the page look like
+        it was jumping.
+      */}
+      <div className="mb-4">
+        <Typography variant="headingMd" className="block">
+          Selling
+        </Typography>
+        <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
+          Wine you have asked us to sell on your behalf. You receive your ask in
+          full &mdash; our commission is added on top of it, not taken out of
+          it.
+        </Typography>
+      </div>
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
-          Loading...
+          Loading&hellip;
         </Typography>
       )}
 
@@ -114,12 +129,13 @@ const SellingPage = () => {
 
       {!isLoading && mandates.length > 0 && (
         <div className="border-border-muted mt-6 overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
                 <th className="px-4 py-2 text-left">Wine</th>
                 <th className="px-3 py-2 text-right">Bottles</th>
                 <th className="px-3 py-2 text-right">Your ask</th>
+                <th className="px-3 py-2 text-right">Buyer pays</th>
                 <th className="px-3 py-2 text-right">You receive</th>
                 <th className="px-3 py-2 text-left">State</th>
                 <th className="px-4 py-2 text-right" />
@@ -170,6 +186,27 @@ const SellingPage = () => {
                       {money(mandate.askPerBottleUsd)}
                       <span className="text-text-muted block text-[11px]">
                         per bottle
+                      </span>
+                    </td>
+                    {/*
+                      The margin, disclosed rather than discovered. A member who
+                      finds their $210 on our list at $221 having never been
+                      told is right to ask why; the rate depends on who buys, so
+                      it is a range until one does.
+                    */}
+                    <td className="text-text-muted px-3 py-3 text-right tabular-nums">
+                      {money(
+                        mandate.askPerBottleUsd /
+                          (1 - COMMISSION_RATES.collector / 100),
+                      )}
+                      <span className="text-text-muted">&ndash;</span>
+                      {money(
+                        mandate.askPerBottleUsd /
+                          (1 - COMMISSION_RATES.trade / 100),
+                      )}
+                      <span className="text-text-muted block text-[11px]">
+                        {COMMISSION_RATES.collector}% collector &middot;{' '}
+                        {COMMISSION_RATES.trade}% trade
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right font-semibold tabular-nums">

@@ -7,6 +7,7 @@ import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import getCommittedBottles from '../data/getCommittedBottles';
 import generateMandateNumber from '../utils/generateMandateNumber';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
@@ -81,6 +82,13 @@ const memberOfferForSale = stockOwnerProcedure
       });
     }
 
+    /*
+      What other open offers already claim. Offering does not decrement stock —
+      nothing moves and nothing is reserved — so without this the same six
+      bottles can be offered twice, accepted twice, and listed twice.
+    */
+    const committed = await getCommittedBottles(stockIds);
+
     for (const line of input.lines) {
       const stock = ownedById.get(line.stockId);
 
@@ -96,13 +104,20 @@ const memberOfferForSale = stockOwnerProcedure
         are not the member's to offer, and finding that out at the point of sale
         would mean withdrawing an offer a buyer had already accepted.
       */
+      const spokenFor = committed.get(line.stockId) ?? 0;
+
       const available =
-        stock.availableCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+        stock.availableCases * (stock.caseConfig ?? 1) +
+        (stock.openBottles ?? 0) -
+        spokenFor;
 
       if (line.bottles > available) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} available to offer.`,
+          message:
+            available <= 0
+              ? `All of your ${stock.productName} is already under offer. Withdraw that offer first if you want to change it.`
+              : `${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} free to offer${spokenFor > 0 ? ` — the rest is already under offer` : ''}.`,
         });
       }
     }

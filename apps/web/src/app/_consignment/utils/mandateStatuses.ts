@@ -16,6 +16,27 @@ export const SELLABLE_STATUSES = [
   'partially_sold',
 ] as const;
 
+/**
+ * While a mandate still has a claim on the bottles it names
+ *
+ * Availability on a stock row does not fall when wine is offered — the bottles
+ * are still there, still the member's, and nothing has moved. So a parcel that
+ * is already spoken for looks entirely free to a second offer, and the same six
+ * bottles can be offered twice, listed twice and sold twice.
+ *
+ * Anything reading availability for the purpose of committing bottles has to
+ * subtract what these mandates already hold.
+ *
+ * `draft` is excluded deliberately: a sent-back offer has been refused and must
+ * be re-made, so it holds nothing in the meantime.
+ */
+export const COMMITTING_STATUSES = [
+  'offered',
+  'listed',
+  'placed',
+  'partially_sold',
+] as const;
+
 export type WithdrawableStatus = (typeof WITHDRAWABLE_STATUSES)[number];
 
 export default WITHDRAWABLE_STATUSES;

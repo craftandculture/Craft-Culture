@@ -104,8 +104,8 @@ const AvailablePage = () => {
       </div>
 
       {isLoading && (
-        <Typography variant="bodySm" colorRole="muted">
-          Loading...
+        <Typography variant="bodySm" colorRole="muted" className="block py-6">
+          Loading&hellip;
         </Typography>
       )}
 

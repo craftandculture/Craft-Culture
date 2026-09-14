@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import getCommittedBottles from '../data/getCommittedBottles';
 import { WITHDRAWABLE_STATUSES } from '../utils/mandateStatuses';
 
 /**
@@ -58,17 +59,33 @@ const memberWithdrawMandate = stockOwnerProcedure
       .from(saleMandateLots)
       .where(eq(saleMandateLots.mandateId, mandate.id));
 
+    /*
+      Parcels another live mandate still covers. A parcel can appear in more
+      than one offer — a member may offer six bottles, then six more of the same
+      case — and restoring the hold here would quietly pull the *other* offer's
+      wine off the price list it is legitimately on. Whoever withdraws last
+      restores it.
+    */
+    const stillClaimed = await getCommittedBottles(
+      lots.map((lot) => lot.stockId),
+      mandate.id,
+    );
+
     await db.transaction(async (tx) => {
       /*
         Grouped so one statement restores every parcel that was held, and
         another every parcel that was already sellable — rather than a query per
         lot, and rather than assuming they were all the same.
       */
-      const toHold = lots
+      const restorable = lots.filter(
+        (lot) => (stillClaimed.get(lot.stockId) ?? 0) === 0,
+      );
+
+      const toHold = restorable
         .filter((lot) => lot.previousNotForSale)
         .map((lot) => lot.stockId);
 
-      const toRelease = lots
+      const toRelease = restorable
         .filter((lot) => !lot.previousNotForSale)
         .map((lot) => lot.stockId);
 

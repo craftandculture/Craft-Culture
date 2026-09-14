@@ -16,7 +16,10 @@ import useTRPC from '@/lib/trpc/browser';
 type StatusFilter = 'open' | 'all' | 'offered' | 'listed' | 'placed' | 'sold';
 
 const money = (value: number) =>
-  `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const STATE_STYLES: Record<string, string> = {
   offered: 'bg-amber-100 text-amber-800',
@@ -126,7 +129,7 @@ const ConsignmentPage = () => {
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted">
-          Loading offers...
+          Loading&hellip;
         </Typography>
       )}
 

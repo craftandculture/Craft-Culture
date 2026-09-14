@@ -1166,15 +1166,15 @@ const CellarPage = () => {
                 column header solves both: said once, directly above its own
                 controls.
               */}
-              <th className={`${th} w-[168px] min-w-[168px] text-right`}>Drink</th>
-              <th className={`${th} w-[76px] min-w-[76px] text-right`}>Sell</th>
+              <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>Drink</th>
+              <th className={`${th} text-right sm:w-[76px] sm:min-w-[76px]`}>Sell</th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
             {isLoading && (
               <tr>
                 <td colSpan={11} className="text-text-muted px-3 py-8 text-center">
-                  Loading your cellar...
+                  Loading your cellar&hellip;
                 </td>
               </tr>
             )}
@@ -1337,7 +1337,7 @@ const CellarPage = () => {
                           cursor, which is the only time they can be used.
                         */
                         return (
-                          <span className="inline-flex items-center justify-end gap-0.5 opacity-60 transition-opacity group-hover:opacity-100">
+                          <span className="inline-flex items-center justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-60 sm:group-hover:opacity-100">
                             {/*
                               Fixed width and no wrapping. The labels were
                               breaking mid-word into "+" over "Case", which
@@ -1358,7 +1358,7 @@ const CellarPage = () => {
                             <button
                               type="button"
                               onClick={() => addToWine(wine, 1)}
-                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted w-[68px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
+                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:w-[68px]"
                             >
                               + Bottle
                             </button>
@@ -1385,7 +1385,7 @@ const CellarPage = () => {
                           setSellLines(new Map());
                           setSellAsk('');
                         }}
-                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 opacity-60 transition-all hover:bg-violet-50 group-hover:opacity-100"
+                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 opacity-100 transition-all hover:bg-violet-50 sm:opacity-60 sm:group-hover:opacity-100"
                       >
                         Sell
                       </button>
