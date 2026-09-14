@@ -4144,6 +4144,20 @@ export const wmsLocationType = pgEnum('wms_location_type', [
   'floor',
   'receiving',
   'shipping',
+  /**
+   * Somebody else's premises.
+   *
+   * A distributor holding a member's wine on consignment. The wine is out of
+   * bond and out of the building, but it is still owned and still unsold, so
+   * it has to land somewhere rather than being decremented to nothing — which
+   * is what dispatch does today, and why stock at City Drinks exists only in a
+   * monthly spreadsheet.
+   *
+   * Every screen that assumes a location is one of our bays must exclude these:
+   * they cannot be putaway targets, counted, picked from, or offered on our own
+   * price lists, because the distributor is selling them.
+   */
+  'consignment',
 ]);
 
 export const wmsStorageMethod = pgEnum('wms_storage_method', [
@@ -4242,6 +4256,14 @@ export const wmsLocations = pgTable(
     bay: text('bay').notNull(),
     level: text('level').notNull(),
     locationType: wmsLocationType('location_type').notNull(),
+    /**
+     * Whose premises this is. Null for our own bays.
+     *
+     * Set on a `consignment` location so a placement knows who is holding the
+     * wine, and so the owner's cellar can say "with City Drinks" rather than
+     * naming a bay that is not ours.
+     */
+    partnerId: uuid('partner_id').references(() => partners.id),
     storageMethod: wmsStorageMethod('storage_method').default('shelf'),
     position: text('position'), // Optional sub-position (e.g., 'L', 'R', '01', '02')
     capacityCases: integer('capacity_cases'),

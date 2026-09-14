@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -36,6 +36,13 @@ const deviceGetLocationLabels = deviceProcedure
       conditions.push(eq(wmsLocations.locationType, input.locationType));
     }
 
+    /*
+      Never a distributor's premises. A consignment location stands for
+      somebody else's warehouse — there is no shelf of ours to label and no
+      scanner that will ever be pointed at it.
+    */
+    conditions.push(ne(wmsLocations.locationType, 'consignment'));
+
     const locations = await db
       .select({
         id: wmsLocations.id,
@@ -58,7 +65,8 @@ const deviceGetLocationLabels = deviceProcedure
       aisle: loc.aisle,
       bay: loc.bay,
       level: loc.level,
-      locationType: loc.locationType,
+      /* Consignment locations are excluded above; this narrows to match. */
+      locationType: loc.locationType as LocationLabelData['locationType'],
       requiresForklift: loc.requiresForklift,
     }));
 

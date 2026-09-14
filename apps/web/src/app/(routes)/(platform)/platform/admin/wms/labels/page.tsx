@@ -242,7 +242,7 @@ const WMSLabelsPage = () => {
           aisle: loc.aisle,
           bay: loc.bay,
           level: loc.level,
-          locationType: loc.locationType,
+          locationType: loc.locationType as LocationLabelData['locationType'],
           requiresForklift: loc.requiresForklift,
         }));
 
@@ -320,7 +320,7 @@ const WMSLabelsPage = () => {
               aisle: loc.aisle,
               bay: loc.bay,
               level: loc.level,
-              locationType: loc.locationType,
+              locationType: loc.locationType as LocationLabelData['locationType'],
               requiresForklift: loc.requiresForklift,
             }),
           )

@@ -1268,6 +1268,17 @@ const runMigrations = async () => {
     }
     console.log('✅ mandate notifications ready');
 
+    // A distributor is a place, not a void. Wine placed with one has to land
+    // somewhere it can still be seen, owned and counted — today it is
+    // decremented to zero and disappears from every screen.
+    await client.unsafe(
+      `ALTER TYPE "wms_location_type" ADD VALUE IF NOT EXISTS 'consignment'`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_locations" ADD COLUMN IF NOT EXISTS "partner_id" uuid REFERENCES "partners"("id")`,
+    );
+    console.log('✅ consignment locations ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

@@ -95,8 +95,14 @@ const WMSDeviceLabelsContent = () => {
       let zpl = '';
 
       if (activeTab === 'location' && locationLabelsData) {
-        const selectedLocations = locationLabelsData.locations.filter((loc) =>
-          selectedLabels.has(loc.id),
+        /*
+          Our own bays only. A consignment location is a distributor's premises
+          — there is no shelf of ours to stick a barcode on, and a scanner will
+          never be pointed at one.
+        */
+        const selectedLocations = locationLabelsData.locations.filter(
+          (loc) =>
+            selectedLabels.has(loc.id) && loc.locationType !== 'consignment',
         );
 
         const labelData: LocationLabelData[] = selectedLocations.map((loc) => ({
@@ -105,7 +111,7 @@ const WMSDeviceLabelsContent = () => {
           aisle: loc.aisle,
           bay: loc.bay,
           level: loc.level,
-          locationType: loc.locationType,
+          locationType: loc.locationType as LocationLabelData['locationType'],
           requiresForklift: loc.requiresForklift,
         }));
 

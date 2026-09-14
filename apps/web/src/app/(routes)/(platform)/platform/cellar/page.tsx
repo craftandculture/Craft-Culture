@@ -1159,7 +1159,7 @@ const CellarPage = () => {
                   </TooltipContent>
                 </Tooltip>
               </th>
-              <th className={`${th} min-w-[190px] text-right`}>Drink &middot; Sell</th>
+              <th className={`${th} w-[230px] min-w-[230px] text-right`}>Drink &middot; Sell</th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
@@ -1337,12 +1337,20 @@ const CellarPage = () => {
                               to stop and parse which was which. The rule
                               between them does the grouping.
                             */}
-                            <span className="inline-flex items-center gap-0.5">
+                            {/*
+                              Fixed width and no wrapping. The labels were
+                              breaking mid-word into "+" over "Case", which
+                              made rows different heights, and "+ Bottle" sat
+                              in a different place depending on whether the row
+                              had a case button beside it — so the eye had to
+                              find the control again on every line.
+                            */}
+                            <span className="inline-flex w-[148px] items-center justify-end gap-0.5">
                               {pack > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => addToWine(wine, pack)}
-                                  className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-2 py-1 text-xs font-medium transition-colors"
+                                  className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
                                 >
                                   + Case
                                 </button>
@@ -1350,7 +1358,7 @@ const CellarPage = () => {
                               <button
                                 type="button"
                                 onClick={() => addToWine(wine, 1)}
-                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted rounded px-2 py-1 text-xs font-medium transition-colors"
+                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted w-[68px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
                               >
                                 + Bottle
                               </button>
@@ -1373,7 +1381,7 @@ const CellarPage = () => {
                                 setSellLines(new Map());
                                 setSellAsk('');
                               }}
-                              className="rounded px-2 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
+                              className="w-[44px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
                             >
                               Sell
                             </button>
