@@ -250,7 +250,13 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   return {
     partner: {
       id: partner.id,
-      name: partner.companyName,
+      /*
+        businessName, not companyName — the latter is a users column and does
+        not exist here, so this read was silently undefined and the cellar
+        heading fell through to its placeholder. That placeholder was the word
+        "Your cellar", which the tab above it already said.
+      */
+      name: partner.businessName,
       // A collector's screen is their cellar; a partner's is their stock.
       type: partner.type,
     },

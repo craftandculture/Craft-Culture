@@ -75,7 +75,6 @@
   "src/app/_wms/controller/adminSyncStockToZoho.ts|TS2345": 1,
   "src/app/_wms/controller/adminTransferStock.ts|TS18048": 1,
   "src/app/_wms/controller/adminUnsealPallet.ts|TS2769": 1,
-  "src/app/_wms/controller/partnerGetStock.ts|TS2339": 1,
   "src/app/_zohoSalesOrders/controller/adminCreatePickListFromSalesOrder.ts|TS18048": 2,
   "src/app/_zohoSalesOrders/controller/adminReleaseToPick.ts|TS18048": 2,
   "src/app/_zohoSalesOrders/controller/adminSyncSalesOrders.ts|TS18048": 1,

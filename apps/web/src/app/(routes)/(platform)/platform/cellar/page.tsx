@@ -611,7 +611,7 @@ const CellarPage = () => {
             screen they are already on does not.
           */}
           <Typography variant="headingMd" className="block">
-            {data?.partner?.name ?? 'Your cellar'}
+            {data?.partner?.name ?? '\u00A0'}
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
             Held in bond at Craft &amp; Culture, Ras Al Khaimah. Duty is
@@ -1159,13 +1159,21 @@ const CellarPage = () => {
                   </TooltipContent>
                 </Tooltip>
               </th>
-              <th className={`${th} w-[286px] min-w-[286px] text-right`} />
+              {/*
+                Two columns, two headers. Repeating the verb on every row was
+                worse than the header had been — the problem was that the label
+                sat a long way from the buttons, not that it was missing. A
+                column header solves both: said once, directly above its own
+                controls.
+              */}
+              <th className={`${th} w-[168px] min-w-[168px] text-right`}>Drink</th>
+              <th className={`${th} w-[76px] min-w-[76px] text-right`}>Sell</th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
             {isLoading && (
               <tr>
-                <td colSpan={10} className="text-text-muted px-3 py-8 text-center">
+                <td colSpan={11} className="text-text-muted px-3 py-8 text-center">
                   Loading your cellar...
                 </td>
               </tr>
@@ -1173,7 +1181,7 @@ const CellarPage = () => {
 
             {!isLoading && !rows.length && (
               <tr>
-                <td colSpan={10} className="text-text-muted px-3 py-10 text-center">
+                <td colSpan={11} className="text-text-muted px-3 py-10 text-center">
                   {search || quickFilter !== 'all'
                     ? 'No wines match that filter.'
                     : 'Nothing is held in your cellar yet.'}
@@ -1329,14 +1337,7 @@ const CellarPage = () => {
                           cursor, which is the only time they can be used.
                         */
                         return (
-                          <span className="inline-flex items-center opacity-60 transition-opacity group-hover:opacity-100">
-                            {/*
-                              Two verbs, not three controls. Drinking and
-                              selling were sitting in one undifferentiated row
-                              of links, so the eye read them as a list and had
-                              to stop and parse which was which. The rule
-                              between them does the grouping.
-                            */}
+                          <span className="inline-flex items-center justify-end gap-0.5 opacity-60 transition-opacity group-hover:opacity-100">
                             {/*
                               Fixed width and no wrapping. The labels were
                               breaking mid-word into "+" over "Case", which
@@ -1345,60 +1346,49 @@ const CellarPage = () => {
                               had a case button beside it — so the eye had to
                               find the control again on every line.
                             */}
-                            {/*
-                              The verb, said once, next to its own controls.
-                              "+ Case" and "+ Bottle" do not announce what they
-                              are for — the column header said DRINK · SELL but
-                              sat a long way from the buttons, so the two verbs
-                              had to be inferred from a violet link being a
-                              different colour.
-                            */}
-                            <span className="text-text-muted mr-1.5 text-[10px] font-semibold uppercase tracking-wider">
-                              Drink
-                            </span>
-                            <span className="inline-flex w-[148px] items-center justify-end gap-0.5">
-                              {pack > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => addToWine(wine, pack)}
-                                  className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
-                                >
-                                  + Case
-                                </button>
-                              )}
+                            {pack > 1 && (
                               <button
                                 type="button"
-                                onClick={() => addToWine(wine, 1)}
-                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted w-[68px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
+                                onClick={() => addToWine(wine, pack)}
+                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
                               >
-                                + Bottle
+                                + Case
                               </button>
-                            </span>
-
-                            <span
-                              aria-hidden
-                              className="bg-border-muted mx-2.5 h-4 w-px"
-                            />
-                            {/*
-                              Selling sits beside drinking because they are the
-                              only two things a member can do, and making one of
-                              them live on another screen would mean deciding
-                              which before looking at what they own.
-                            */}
+                            )}
                             <button
                               type="button"
-                              onClick={() => {
-                                setSellingWine(wine);
-                                setSellLines(new Map());
-                                setSellAsk('');
-                              }}
-                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
+                              onClick={() => addToWine(wine, 1)}
+                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted w-[68px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
                             >
-                              Sell
+                              + Bottle
                             </button>
                           </span>
                         );
                       })()}
+                    </td>
+
+                    {/*
+                      Selling is its own column, under its own header. It sits
+                      beside drinking because they are the only two things a
+                      member can do, but they are different verbs and a shared
+                      cell made the eye parse three links to find which was
+                      which.
+                    */}
+                    <td
+                      className={`${td} text-right`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSellingWine(wine);
+                          setSellLines(new Map());
+                          setSellAsk('');
+                        }}
+                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 opacity-60 transition-all hover:bg-violet-50 group-hover:opacity-100"
+                      >
+                        Sell
+                      </button>
                     </td>
                   </tr>
 
@@ -1411,7 +1401,7 @@ const CellarPage = () => {
                   */}
                   {isOpen && (
                     <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-teal-400">
-                      <td colSpan={10} className="px-3 py-3 sm:px-6 sm:py-4">
+                      <td colSpan={11} className="px-3 py-3 sm:px-6 sm:py-4">
                         <div className="border-border-muted bg-background-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
                         {/*
                           One line per parcel actually held. A wine received on
