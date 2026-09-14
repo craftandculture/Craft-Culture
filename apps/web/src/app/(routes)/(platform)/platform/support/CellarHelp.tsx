@@ -6,10 +6,12 @@ import {
   IconCoin,
   IconId,
   IconMail,
+  IconTag,
   IconTruckDelivery,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 
+import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import CellarHelpNavigation from './CellarHelpNavigation';
@@ -53,9 +55,29 @@ const faqItems = [
       'Membership includes twenty cases. Beyond that, storage is charged per case per month and appears on your regular invoice. Nothing is refused or moved on your behalf.',
   },
   {
-    question: 'Can I sell or move wine out of my cellar?',
+    question: 'Who sees that a wine is mine when it is for sale?',
     answer:
-      'Yes. Wine in bond can be sold, transferred, or shipped onward through the Craft & Culture network without duty being triggered. Contact us and we will set it up.',
+      'Nobody. Wine you have offered appears on our lists as Craft & Culture stock, priced and sold by us. Buyers are not told whose parcel it was, and other members browsing Available now cannot tell your wine from anyone else\u2019s.',
+  },
+  {
+    question: 'When am I paid for wine that sells?',
+    answer:
+      'On the monthly payment run, and only for sales the buyer has actually paid. We do not advance money against wine that has sold but not settled. A parcel may also sell in pieces \u2014 you are paid for each part as it goes.',
+  },
+  {
+    question: 'Can I take my wine back off the market?',
+    answer:
+      'While it is still in bond with us, yes \u2014 withdraw it from the Selling tab and it returns to your cellar immediately. Once it has been placed with a distributor it is duty-paid and out of the building, and it can no longer be withdrawn. Placing wine is our decision and does not need your approval, so treat the moment you offer as the point of commitment.',
+  },
+  {
+    question: 'Can I choose which distributor my wine goes to?',
+    answer:
+      'No. You consign to Craft & Culture, and where wine is placed is ours to decide \u2014 a distributor takes a selection they can sell, not a list a client has chosen. If we are placing something of yours we will usually talk to you about it first, but the decision is not one you make on the platform.',
+  },
+  {
+    question: 'Can I move wine to someone else without selling it?',
+    answer:
+      'Yes. Wine in bond can be transferred or shipped onward through the Craft & Culture network without duty being triggered. That is not something the platform does on its own \u2014 write to us and we will set it up.',
   },
 ];
 
@@ -166,6 +188,113 @@ const CellarHelp = () => {
                 </li>
               ))}
             </ol>
+          </HelpSection>
+
+          {/*
+            Between calling wine forward and what it costs, because those are
+            the two things a member does with wine they own and this is now the
+            second of them. Written before the costs section so the order on the
+            page matches the order of the decision.
+          */}
+          <HelpSection id="selling" icon={IconTag} title="Selling your wine">
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
+              You can ask us to sell any wine you hold. Press Sell on the wine
+              in your cellar, choose how many bottles, and name what you want to
+              receive for each one. You receive that figure in full &mdash; our
+              commission is added on top of it, not taken out of it, so a buyer
+              pays slightly more than your ask and you are unaffected by which
+              buyer it turns out to be.
+            </Typography>
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
+              Commission is {COMMISSION_RATES.collector}% on a sale to another
+              private collector and {COMMISSION_RATES.trade}% on trade and
+              restaurant orders. Nothing else is deducted, and nothing is
+              charged if the wine does not sell.
+            </Typography>
+
+            <ol className="space-y-3">
+              {[
+                {
+                  title: 'You offer it to us',
+                  detail:
+                    'Choose the bottles and set your price. The wine stays in your cellar and nothing moves.',
+                },
+                {
+                  title: 'We accept, or come back to you',
+                  detail:
+                    'If the price will not sell we send it back with a note and you can re-price it. We never change your figure ourselves.',
+                },
+                {
+                  title: 'It goes on our lists',
+                  detail:
+                    'Offered to our trade clients, our private clients, and other members here — as Craft & Culture stock, with no mention of whose it is.',
+                },
+                {
+                  title: 'You are paid when it sells',
+                  detail:
+                    'On the monthly payment run, for sales the buyer has settled. A parcel can sell in pieces and you are paid for each part as it goes.',
+                },
+              ].map((step, index) => (
+                <li key={step.title} className="flex gap-3">
+                  <span className="bg-fill-brand flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <Typography variant="bodySm" className="font-medium">
+                      {step.title}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {step.detail}
+                    </Typography>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {/*
+              The one thing a member must not discover afterwards. Placement is
+              C&C's decision and needs no further approval, so the moment they
+              offer is the moment the wine can be put beyond recall — not the
+              moment we place it, which they neither see coming nor control.
+              Saying it in a notification after the fact would be a nasty
+              surprise dressed as an update.
+            */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+              <Typography variant="bodySm" className="mb-1 font-semibold">
+                Where the commitment becomes final
+              </Typography>
+              <Typography
+                variant="bodyXs"
+                colorRole="muted"
+                className="leading-relaxed"
+              >
+                While your wine is in bond with us you can withdraw it at any
+                time and it returns to your cellar. To reach some buyers we
+                place wine with a licensed distributor on the mainland, which
+                pays the duty and takes it out of the building &mdash; and from
+                that point it cannot be withdrawn. Which wine is placed, and
+                with whom, is our decision and does not need your approval. So
+                the point at which you commit is when you offer, not when we
+                place: offer only wine you are content to sell.
+              </Typography>
+            </div>
+
+            <Typography
+              variant="bodySm"
+              colorRole="muted"
+              className="leading-relaxed"
+            >
+              Everything you have offered, and where each offer has got to, is
+              on the Selling tab in your cellar.
+            </Typography>
           </HelpSection>
 
           <HelpSection id="costs" icon={IconCoin} title="What it costs">

@@ -2256,7 +2256,15 @@ const CellarPage = () => {
                         may withdraw while the wine is still with us. If we
                         place it with a distributor to sell it — our decision,
                         not yours — it leaves bond and can no longer be
-                        withdrawn.
+                        withdrawn.{' '}
+                        <a
+                          href="/platform/terms-of-use"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold underline"
+                        >
+                          Consignment terms
+                        </a>
                       </Typography>
                     </div>
 

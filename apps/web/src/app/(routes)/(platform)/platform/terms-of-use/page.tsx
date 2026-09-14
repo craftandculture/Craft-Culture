@@ -13,7 +13,7 @@ const TermsOfUsePage = () => {
           <CardProse>
             <CardTitle>Terms of Use</CardTitle>
             <CardDescription colorRole="muted">
-              Last updated: December 2025
+              Last updated: September 2026
             </CardDescription>
           </CardProse>
 
@@ -215,10 +215,115 @@ const TermsOfUsePage = () => {
               </Typography>
             </section>
 
+            {/*
+              Private Cellar members hold wine with us rather than buying it
+              from us, and the terms above describe only the buying. Two things
+              a member is bound by appear nowhere else in writing: that title to
+              the goods does not pass to them, and that consigning wine for sale
+              can put it beyond recall without a further approval.
+            */}
+            <section>
+              <Typography variant="headingSm" className="mb-3 font-semibold">
+                9. Private Cellar Storage and Ownership
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Scope:</strong> This section applies to accounts holding wine with us under
+                the Craft &amp; Culture Private Cellar programme. Where it conflicts with the
+                sections above, this section governs the wine you hold with us.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Title and beneficial interest:</strong> Craft &amp; Culture FZ-LLC holds the
+                licence under which alcohol is imported into and stored in the United Arab Emirates.
+                Legal title to wine imported under that licence rests with us and does not pass to
+                you. What you acquire and hold is a beneficial interest in an identified parcel: the
+                right to call it forward, to instruct us to sell it, and to the proceeds of any sale,
+                subject to these Terms. We record your interest in the platform and in our warehouse
+                records, and we do not encumber, pledge or deal in your parcel other than on your
+                instruction.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Bonded storage and duty:</strong> Wine is held in a bonded facility at Ras Al
+                Khaimah under customs supervision. Duty is suspended, not deferred, while it remains
+                there. Duty, value added tax, clearance, licensed distribution and delivery become
+                payable when wine is released to the mainland, are assessed by the relevant
+                authorities at the rates in force on the day of clearance, and are quoted to you for
+                acceptance before any wine moves.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Storage charges:</strong> Membership includes storage of the number of cases
+                stated in your membership terms. Storage beyond that allowance is charged per case
+                per month and invoiced in the ordinary course. We will not move, consolidate or
+                dispose of wine to bring you within an allowance.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+                <strong>Condition and risk:</strong> We store wine in controlled conditions and keep
+                the temperature and handling record that travels with it. We do not value your
+                collection, and figures shown in the platform are the values declared on import, not
+                market valuations. We are not an insurer; you are responsible for insuring your
+                interest in wine held with us unless we have separately agreed otherwise in writing.
+              </Typography>
+            </section>
+
+            <section>
+              <Typography variant="headingSm" className="mb-3 font-semibold">
+                10. Consignment and Sale Mandates
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>What an offer is:</strong> Offering wine for sale through the platform
+                appoints us as your agent to sell that parcel on your behalf. It is a consignment to
+                Craft &amp; Culture, not a listing on an exchange and not a sale by you to any other
+                person. You do not sell alcohol; we do, under our licence, and we account to you for
+                the proceeds.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Price and commission:</strong> You set the amount you wish to receive per
+                bottle. Our commission is added to that amount rather than deducted from it, so the
+                price a buyer pays exceeds your figure and the figure you receive does not vary with
+                the identity of the buyer. Commission is 2.5% on a sale to a private collector and 5%
+                on trade and restaurant orders, determined by the buyer at the time of sale and
+                recorded against that sale. We may decline an offer, or return it to you so that you
+                may re-price it. We will not alter your price ourselves.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Withdrawal, and where it ends:</strong> While a consigned parcel remains in
+                bond with us you may withdraw it at any time through the platform, and it returns to
+                your cellar. To reach buyers who cannot be supplied from bond we may place wine with
+                a licensed distributor on the mainland, at which point duty is paid and the wine
+                leaves our facility.{' '}
+                <strong>
+                  Wine that has been placed with a distributor cannot be withdrawn.
+                </strong>{' '}
+                Whether to place a parcel, and with which distributor, is a decision reserved to us
+                and does not require your further approval. You should therefore treat the moment you
+                offer wine for sale as the moment you commit to selling it.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Settlement:</strong> You are paid on sell-through and not on placement. We
+                account to you monthly for sales completed in the preceding period for which the
+                buyer has paid us; we do not advance funds against sales that have not settled. A
+                parcel may sell in part, and you are paid for each part as it sells. An invoice we
+                raise to a distributor is a customs and licensing document and is not itself a sale
+                on which you become payable.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                <strong>Confidentiality of ownership:</strong> Consigned wine is offered as Craft
+                &amp; Culture stock. We do not disclose to buyers, to other members, or to
+                distributors that a parcel is yours, except where we are required to do so by law or
+                by a customs or licensing authority.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+                <strong>No guarantee of sale:</strong> We give no assurance that consigned wine will
+                sell, or will sell at your price or within any period. Where wine placed with a
+                distributor does not sell, we will agree an outcome with you &mdash; re-pricing,
+                placing it elsewhere, or delivering it to you. Duty already paid on placed wine
+                cannot be reclaimed or re-suspended, and such wine cannot be returned to bond.
+              </Typography>
+            </section>
+
             {/* Acceptable Use */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                9. Acceptable Use Policy
+                11. Acceptable Use Policy
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 You agree not to:
@@ -251,7 +356,7 @@ const TermsOfUsePage = () => {
             {/* Intellectual Property */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                10. Intellectual Property
+                12. Intellectual Property
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 All content on the Platform, including but not limited to text, graphics, logos,
@@ -264,7 +369,7 @@ const TermsOfUsePage = () => {
             {/* Privacy */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                11. Privacy and Data Protection
+                13. Privacy and Data Protection
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 Your use of the Platform is also governed by our Privacy Policy. By using the
@@ -277,7 +382,7 @@ const TermsOfUsePage = () => {
             {/* Disclaimer */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                12. Disclaimer of Warranties
+                14. Disclaimer of Warranties
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 THE PLATFORM AND ALL CONTENT, PRODUCTS, AND SERVICES ARE PROVIDED &quot;AS IS&quot;
@@ -291,7 +396,7 @@ const TermsOfUsePage = () => {
             {/* Limitation of Liability */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                13. Limitation of Liability
+                15. Limitation of Liability
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 TO THE MAXIMUM EXTENT PERMITTED BY LAW, CRAFT & CULTURE AND ITS OFFICERS,
@@ -305,7 +410,7 @@ const TermsOfUsePage = () => {
             {/* Indemnification */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                14. Indemnification
+                16. Indemnification
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 You agree to indemnify, defend, and hold harmless Craft & Culture and its officers,
@@ -318,7 +423,7 @@ const TermsOfUsePage = () => {
             {/* Modifications */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                15. Modifications to Terms
+                17. Modifications to Terms
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 We may modify these Terms at any time by posting the revised Terms on the Platform.
@@ -330,7 +435,7 @@ const TermsOfUsePage = () => {
             {/* Termination */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                16. Termination
+                18. Termination
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 We may suspend or terminate your access to the Platform at any time, without notice,
@@ -343,7 +448,7 @@ const TermsOfUsePage = () => {
             {/* Governing Law */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                17. Governing Law and Dispute Resolution
+                19. Governing Law and Dispute Resolution
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 These Terms shall be governed by and construed in accordance with the laws of the
@@ -359,7 +464,7 @@ const TermsOfUsePage = () => {
             {/* Severability */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                18. Severability
+                20. Severability
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 If any provision of these Terms is found to be unenforceable or invalid, that
@@ -371,7 +476,7 @@ const TermsOfUsePage = () => {
             {/* Entire Agreement */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                19. Entire Agreement
+                21. Entire Agreement
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 These Terms, together with the Privacy Policy and any other agreements or policies
@@ -384,7 +489,7 @@ const TermsOfUsePage = () => {
             {/* Contact */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
-                20. Contact Information
+                22. Contact Information
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 For questions about these Terms or the Platform, please contact us:
