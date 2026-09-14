@@ -1,0 +1,56 @@
+'use client';
+
+import { IconBottle, IconShoppingBag, IconTag } from '@tabler/icons-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+import Icon from '@/app/_ui/components/Icon/Icon';
+
+const tabs = [
+  { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
+  { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
+  { href: '/platform/pool', label: 'The pool', icon: IconShoppingBag },
+];
+
+/**
+ * Navigation across a member's three places
+ *
+ * What they hold, what they have offered, and what else is for sale. Until
+ * now the cellar was a single screen, which was right when the only thing a
+ * member could do was look at their own wine — it stops being right the moment
+ * they can also sell it and buy someone else's.
+ *
+ * Exact matching on the cellar root, because every other tab sits beneath it
+ * and a prefix test would light all three at once.
+ */
+const CellarTabs = () => {
+  const pathname = usePathname();
+
+  return (
+    <nav className="border-border-muted mb-5 flex gap-1 overflow-x-auto border-b">
+      {tabs.map((tab) => {
+        const isActive =
+          tab.href === '/platform/cellar'
+            ? pathname === tab.href
+            : pathname.startsWith(tab.href);
+
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={`-mb-px flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'border-teal-500 text-text-primary'
+                : 'text-text-muted hover:text-text-primary border-transparent'
+            }`}
+          >
+            <Icon icon={tab.icon} size="sm" />
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+};
+
+export default CellarTabs;

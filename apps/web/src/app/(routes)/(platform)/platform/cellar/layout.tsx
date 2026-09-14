@@ -6,6 +6,8 @@ import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
+import CellarTabs from './CellarTabs';
+
 export const metadata: Metadata = {
   title: 'Your Cellar',
   /* Behind a login, and about a named individual's holdings either way. */
@@ -39,7 +41,16 @@ const CellarLayout = async ({ children }: React.PropsWithChildren) => {
     redirect(access.home);
   }
 
-  return <>{children}</>;
+  /*
+    The tabs live here rather than on each page, so a member never lands
+    somewhere that has lost its own navigation.
+  */
+  return (
+    <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 sm:px-6 sm:pt-8">
+      <CellarTabs />
+      {children}
+    </div>
+  );
 };
 
 export default CellarLayout;

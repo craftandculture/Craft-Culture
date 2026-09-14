@@ -4,6 +4,8 @@ import db from '@/database/client';
 import {
   logisticsShipmentItems,
   logisticsShipments,
+  saleMandateLots,
+  saleMandates,
   wmsLocations,
   wmsPartnerRequests,
   wmsProductPricing,
@@ -75,15 +77,59 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       lotNumber: wmsStock.lotNumber,
       receivedAt: wmsStock.receivedAt,
       expiryDate: wmsStock.expiryDate,
+      /*
+        Whether this parcel is currently sellable. The cellar could not show a
+        member their own hold state at all before, so wine they had offered and
+        wine they were keeping looked identical on the screen where they decide
+        between the two.
+      */
+      notForSale: wmsStock.notForSale,
     })
     .from(wmsStock)
     .innerJoin(wmsLocations, eq(wmsStock.locationId, wmsLocations.id))
     .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
     .orderBy(wmsStock.lwin18, wmsLocations.locationCode);
 
+  /*
+    The mandate a parcel sits under, when it has one. Read separately rather
+    than joined so a parcel with no mandate — which is most of a cellar — costs
+    nothing, and so the wine query keeps returning one row per parcel.
+  */
+  const mandateLots = await db
+    .select({
+      stockId: saleMandateLots.stockId,
+      bottles: saleMandateLots.bottlesRemaining,
+      mandateId: saleMandates.id,
+      mandateNumber: saleMandates.mandateNumber,
+      status: saleMandates.status,
+      askPerBottleUsd: saleMandates.askPerBottleUsd,
+    })
+    .from(saleMandateLots)
+    .innerJoin(saleMandates, eq(saleMandates.id, saleMandateLots.mandateId))
+    .where(
+      and(
+        eq(saleMandates.ownerId, partner.id),
+        inArray(saleMandates.status, [
+          'offered',
+          'listed',
+          'placed',
+          'partially_sold',
+        ]),
+      ),
+    );
+
+  const mandateByStock = new Map(
+    mandateLots.map((lot) => [lot.stockId, lot]),
+  );
+
+  const stockWithSaleState = stockByLocation.map((stock) => ({
+    ...stock,
+    mandate: mandateByStock.get(stock.stockId) ?? null,
+  }));
+
   // Group locations by LWIN
-  const locationsByLwin = new Map<string, typeof stockByLocation>();
-  for (const stock of stockByLocation) {
+  const locationsByLwin = new Map<string, typeof stockWithSaleState>();
+  for (const stock of stockWithSaleState) {
     const existing = locationsByLwin.get(stock.lwin18) ?? [];
     existing.push(stock);
     locationsByLwin.set(stock.lwin18, existing);

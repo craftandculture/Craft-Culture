@@ -560,7 +560,7 @@ const CellarPage = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6 sm:py-8">
+    <div className="w-full pb-8">
       <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {/*
