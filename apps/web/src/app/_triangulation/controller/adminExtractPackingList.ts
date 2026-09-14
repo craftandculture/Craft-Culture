@@ -43,6 +43,16 @@ const packingListResultSchema = z.object({
           .optional()
           .describe('Bottles per case, only when the document states or implies it'),
         bottleSize: z.string().optional().describe('Bottle size as printed, e.g. 75cl'),
+        unitPrice: z
+          .number()
+          .optional()
+          .describe(
+            'The Rate for this line exactly as printed — the price of ONE unit of what the Qty column counts, not a per-bottle price and not the line total.',
+          ),
+        currency: z
+          .string()
+          .optional()
+          .describe('Currency the document is billed in, e.g. USD or AED'),
         lwin: z.string().optional().describe('LWIN code if one is printed'),
         consignmentOwner: z
           .string()
@@ -76,6 +86,9 @@ Rules:
   extract it as a line; instead copy it into consignmentOwner on each line it
   covers. An invoice subjected CONSIGNMENT_MIX carries several owners this way,
   and attributing its lines to one owner settles the wrong client.
+- Copy the Rate exactly as printed into unitPrice. It prices one unit of what
+  the Qty column counts, so on a "3x75cl, Qty 2, Rate 1,698, Amount 3,396" line
+  the unitPrice is 1698 — never the amount, and never a price per bottle.
 - Ignore totals rows, subtotals, pallet summaries and freight lines.
 - If a value is not printed, leave the field out rather than guessing.`;
 

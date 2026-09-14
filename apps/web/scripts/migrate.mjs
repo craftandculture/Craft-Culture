@@ -766,6 +766,36 @@ const runMigrations = async () => {
     `);
     console.log('✅ tri_programmes Zoho customer ready');
 
+    /*
+      A wine belongs to the client whose registry it is in.
+
+      tri_skus.owner_name defaults to Crurated, and the seeder never set it, so
+      every wine created for any other client claimed Crurated — which put
+      Cult's bottles under Crurated on the monthly statement. The programme's
+      own consignment tag is the same key the invoice feed attributes by, so
+      taking the owner from it means a wine and an invoice cannot disagree.
+
+      Only rows still holding the default are touched: a wine somebody has
+      deliberately assigned keeps that assignment.
+    */
+    await dataFix('tri_skus owner from their programme', async () => {
+      await client.unsafe(`
+        UPDATE "tri_skus" s
+        SET "owner_name" = CASE p."consignment_tag"
+              WHEN 'CC' THEN 'C&C'
+              WHEN 'CRURATED' THEN 'Crurated'
+              WHEN 'RARE' THEN 'Rare'
+              WHEN 'CRU' THEN 'Cru'
+              WHEN 'CULT' THEN 'Cult'
+            END
+        FROM "tri_programmes" p
+        WHERE p."id" = s."programme_id"
+          AND p."consignment_tag" IS NOT NULL
+          AND p."id" <> '${CRURATED_PROGRAMME_ID}'
+          AND COALESCE(s."owner_name", 'Crurated') = 'Crurated'
+      `);
+    });
+
     // Seeded before the columns that default to it, and with the same match
     // values the browser was holding, so the live figures are unchanged.
     await client.unsafe(`

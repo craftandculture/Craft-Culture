@@ -171,8 +171,9 @@ const ImportWizard = ({
             quantity: line.quantityCases,
             unit: 'case' as const,
             caseConfig: line.caseConfig ?? null,
-            unitPrice: null,
-            currency: null,
+            // The Rate as printed, which prices one of whatever Qty counts
+            unitPrice: line.unitPrice ?? null,
+            currency: line.currency ?? null,
             docRef: result.documentRef ?? null,
             docDate: result.documentDate ?? null,
             /*

@@ -6,6 +6,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import mapImportLines from '../data/mapImportLines';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
 import resolveProgrammeId, { uuidLike } from '../utils/programmeId';
+import { OWNER_BY_TAG } from '../utils/readConsignmentSubject';
 
 interface SeedCandidate {
   normalizedCode: string;
@@ -51,6 +52,26 @@ const adminSeedSkusFromImports = adminProcedure
   .mutation(async ({ input }) => {
     const programmeId = resolveProgrammeId(input.programmeId);
     const { importId } = input;
+
+    /*
+      Whose wine this client's wines are.
+
+      tri_skus.owner_name defaults to Crurated, so every wine seeded for any
+      other client claimed Crurated as its owner — which put Cult's bottles
+      under Crurated on the monthly statement and made a per-owner split
+      impossible however the invoices were tagged.
+
+      Taken from the programme's own consignment tag, which is stated once and
+      is the same key the invoice feed attributes by, so a wine and an invoice
+      cannot disagree about whose it is.
+    */
+    const [claim] = await client<{ consignmentTag: string | null }[]>`
+      SELECT to_jsonb(p) ->> 'consignment_tag' AS "consignmentTag"
+      FROM tri_programmes p WHERE p.id = ${programmeId} LIMIT 1
+    `;
+    const ownerName = claim?.consignmentTag
+      ? (OWNER_BY_TAG[claim.consignmentTag] ?? null)
+      : null;
 
     // DISTINCT ON keeps one row per code — the same wine appears on every
     // invoice that sold it, and each occurrence would otherwise become its own
@@ -104,11 +125,14 @@ const adminSeedSkusFromImports = adminProcedure
 
       const [sku] = await client<{ id: string }[]>`
         INSERT INTO tri_skus (
-          programme_id, w_code, lwin18, product_name, vintage, case_config, notes
+          programme_id, w_code, lwin18, product_name, vintage, case_config,
+          owner_name, notes
         )
         VALUES (
           ${programmeId}, NULL, ${lwin18}, ${productName}, ${vintage},
           ${caseConfig > 0 && caseConfig <= 24 ? caseConfig : 6},
+          -- Null defers to the column default rather than forcing Crurated
+          ${ownerName},
           ${'Created from an imported document.'}
         )
         RETURNING id
