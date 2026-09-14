@@ -13,9 +13,16 @@ export interface CustomerTypeOption {
 
 const customerTypeOptions: CustomerTypeOption[] = [
   {
+    /*
+      One value, two kinds of account. A wine partner and a private collector
+      are both `private_clients`; what separates them is the partner record
+      they are linked to afterwards. Labelling this "Wine Partner" meant
+      somebody onboarding a collector could not find an option that described
+      them, and reasonably concluded there wasn't one.
+    */
     value: 'private_clients',
-    label: 'Wine Partner',
-    description: 'Manage private client orders and inventory',
+    label: 'Wine Partner or Collector',
+    description: 'Owns stock with us — link them to a partner record next',
   },
   {
     value: 'b2b',

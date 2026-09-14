@@ -16,7 +16,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import customerTypeOptions from '@/app/_auth/constants/customerTypeOptions';
+import customerTypeOptions, {
+  getCustomerTypeLabel,
+} from '@/app/_auth/constants/customerTypeOptions';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
 import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
@@ -911,18 +913,11 @@ const UserManagementPage = () => {
     </span>
   );
 
-  const getCustomerTypeLabel = (type: string) => {
-    switch (type) {
-      case 'b2b':
-        return 'Distributor Staff';
-      case 'b2c':
-        return 'Sales Rep';
-      case 'private_clients':
-        return 'Partner Staff';
-      default:
-        return type;
-    }
-  };
+  /*
+    This screen had its own copy of the labels, which had drifted: the shared
+    constant called `private_clients` a Wine Partner and this called it Partner
+    Staff, on the same page. One definition.
+  */
 
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
@@ -989,9 +984,9 @@ const UserManagementPage = () => {
                 {(
                   [
                     { value: 'all', label: 'All Types' },
-                    { value: 'b2b', label: 'Distributor Staff' },
+                    { value: 'b2b', label: 'Distributor' },
                     { value: 'b2c', label: 'Sales Rep' },
-                    { value: 'private_clients', label: 'Partner Staff' },
+                    { value: 'private_clients', label: 'Wine Partner or Collector' },
                   ] as const
                 ).map((type) => (
                   <Button

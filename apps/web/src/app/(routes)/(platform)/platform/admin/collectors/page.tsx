@@ -8,7 +8,6 @@ import {
   IconMail,
   IconMapPin,
   IconPhone,
-  IconPhoto,
   IconPlus,
   IconReceipt,
   IconSearch,
@@ -46,10 +45,12 @@ import PartnerContactsSection from '../wine-partners/PartnerContactsSection';
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
 
 /**
- * Admin page for managing wine partners (wine companies)
+ * Admin page for managing private collectors
  *
- * Wine partners are companies that source stock and bring clients.
- * They create quotes and private client orders.
+ * A collector is a person who stores wine with us, not a business. This screen
+ * was cloned from the wine-partners page, so it asked an individual for a
+ * company name, a trading address and a TRN — none of which they have, and the
+ * last of which the server used to insist on.
  */
 const CollectorsPage = () => {
   const api = useTRPC();
@@ -200,10 +201,10 @@ const CollectorsPage = () => {
     createPartner({
       type: 'private_collector',
       businessName: newPartner.businessName,
-      businessAddress: newPartner.businessAddress,
+      businessAddress: newPartner.businessAddress || undefined,
       businessPhone: newPartner.businessPhone || undefined,
       businessEmail: newPartner.businessEmail || undefined,
-      taxId: newPartner.taxId,
+      taxId: newPartner.taxId || undefined,
       logoUrl: newPartner.logoUrl || undefined,
     });
   };
@@ -232,7 +233,7 @@ const CollectorsPage = () => {
                 <DialogHeader>
                   <DialogTitle>Add Collector</DialogTitle>
                   <DialogDescription>
-                    Add a wine company that will source stock and bring clients
+                    A member of the Private Cellar programme
                   </DialogDescription>
                 </DialogHeader>
                 <form
@@ -246,13 +247,13 @@ const CollectorsPage = () => {
                   <div className="space-y-4">
                     <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
                       <IconBuilding className="h-4 w-4" />
-                      Company Details
+                      Their details
                     </Typography>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-text-primary mb-1">
-                          Company Name *
+                          Full name *
                         </label>
                         <input
                           type="text"
@@ -267,7 +268,7 @@ const CollectorsPage = () => {
 
                       <div>
                         <label className="block text-sm font-medium text-text-primary mb-1">
-                          TRN / Tax ID
+                          Emirates ID or TRN &mdash; optional
                         </label>
                         <input
                           type="text"
@@ -275,14 +276,14 @@ const CollectorsPage = () => {
                           onChange={(e) =>
                             setNewPartner({ ...newPartner, taxId: e.target.value })
                           }
-                          placeholder="e.g., 100123456789003"
+                          placeholder="Leave blank for an individual"
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-text-primary mb-1">
-                          Business Address
+                          Address &mdash; optional
                         </label>
                         <textarea
                           value={newPartner.businessAddress}
@@ -324,40 +325,11 @@ const CollectorsPage = () => {
                     </div>
                   </div>
 
-                  {/* Branding Section */}
-                  <div className="space-y-4 border-t border-border-muted pt-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconPhoto className="h-4 w-4" />
-                      Branding
-                    </Typography>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Logo URL
-                      </label>
-                      <input
-                        type="url"
-                        value={newPartner.logoUrl}
-                        onChange={(e) =>
-                          setNewPartner({ ...newPartner, logoUrl: e.target.value })
-                        }
-                        placeholder="https://example.com/logo.png"
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                      {newPartner.logoUrl && (
-                        <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                          <Image
-                            src={newPartner.logoUrl}
-                            alt="Logo preview"
-                            width={48}
-                            height={48}
-                            className="max-h-12 w-auto object-contain"
-                            unoptimized
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/*
+                    No branding block. A private collector is a person; a logo
+                    field on their record is the clearest sign this form was
+                    cloned from one written for companies.
+                  */}
 
                   <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
                     <Button

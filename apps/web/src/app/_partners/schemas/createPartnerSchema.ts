@@ -28,10 +28,10 @@ const createPartnerSchema = z.object({
    * one name are rare enough to be worth saying so deliberately.
    */
   allowDuplicateName: z.boolean().optional(),
-  businessAddress: z.string().min(1, 'Business address is required'),
+  businessAddress: z.string().optional(),
   businessPhone: z.string().optional(),
   businessEmail: z.string().email().optional().or(z.literal('')),
-  taxId: z.string().min(1, 'TRN/Tax ID is required'),
+  taxId: z.string().optional(),
   // Branding
   logoUrl: z.string().url().optional().or(z.literal('')),
   // Payment configuration (partner can have both bank transfer AND payment link)
@@ -50,7 +50,32 @@ const createPartnerSchema = z.object({
   // Other
   commissionRate: z.number().min(0).max(100).default(0),
   notes: z.string().optional(),
-});
+  })
+  /*
+    A trading address and a TRN are required of a business and meaningless for a
+    person. This schema was written when every partner was a licensed entity;
+    a private collector is an individual who stores wine with us, has no tax
+    registration, and should not be asked to invent one to open an account.
+  */
+  .superRefine((data, ctx) => {
+    if (data.type === 'private_collector') return;
+
+    if (!data.businessAddress?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['businessAddress'],
+        message: 'Business address is required',
+      });
+    }
+
+    if (!data.taxId?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['taxId'],
+        message: 'TRN/Tax ID is required',
+      });
+    }
+  });
 
 export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
 
