@@ -14,15 +14,23 @@ export interface CustomerTypeOption {
 const customerTypeOptions: CustomerTypeOption[] = [
   {
     /*
-      One value, two kinds of account. A wine partner and a private collector
-      are both `private_clients`; what separates them is the partner record
-      they are linked to afterwards. Labelling this "Wine Partner" meant
-      somebody onboarding a collector could not find an option that described
-      them, and reasonably concluded there wasn't one.
+      Two taxonomies, and they are not the same one.
+
+      `customerType` says what kind of LOGIN this is. `partnerType` says what
+      kind of ENTITY it acts for — Cru Wine and Cult Wine are `wine_partner`,
+      Ihab Toma is `private_collector`. Both of those sign in as
+      `private_clients`, which is a poor name for "acts for somebody who holds
+      stock with us" and has caused this exact confusion twice.
+
+      So the label names the function rather than borrowing a partner type:
+      calling it "Wine Partner" hid collectors, and calling it "Wine Partner or
+      Collector" implied Cru Wine is a private client. Neither is true. The
+      distinction between the two lives on the partner record, where it belongs
+      — putting it here as well would be two fields answering one question.
     */
     value: 'private_clients',
-    label: 'Wine Partner or Collector',
-    description: 'Owns stock with us — link them to a partner record next',
+    label: 'Partner Account',
+    description: 'Acts for a wine partner or a collector — link the record next',
   },
   {
     value: 'b2b',

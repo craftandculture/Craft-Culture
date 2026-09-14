@@ -986,7 +986,7 @@ const UserManagementPage = () => {
                     { value: 'all', label: 'All Types' },
                     { value: 'b2b', label: 'Distributor' },
                     { value: 'b2c', label: 'Sales Rep' },
-                    { value: 'private_clients', label: 'Wine Partner or Collector' },
+                    { value: 'private_clients', label: 'Partner Account' },
                   ] as const
                 ).map((type) => (
                   <Button
