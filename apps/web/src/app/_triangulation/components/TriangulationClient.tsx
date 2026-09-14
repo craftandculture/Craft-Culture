@@ -17,6 +17,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 import ImportsTab from './ImportsTab';
 import MappingTab from './MappingTab';
+import MonthlyTab from './MonthlyTab';
 import NextStep from './NextStep';
 import OverviewTab from './OverviewTab';
 import SelectField from './SelectField';
@@ -299,6 +300,7 @@ const TriangulationClient = () => {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="overview">Reconciliation</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly</TabsTrigger>
           <TabsTrigger value="imports">Imports</TabsTrigger>
           <TabsTrigger value="mapping">
             Mapping
@@ -325,6 +327,9 @@ const TriangulationClient = () => {
             periodId={periodId}
             inputProfile={activeProgramme?.inputProfile ?? 'warehouse'}
           />
+        </TabsContent>
+        <TabsContent value="monthly" className="pt-6">
+          <MonthlyTab programmeId={programmeId} />
         </TabsContent>
         <TabsContent value="imports" className="pt-6">
           <ImportsTab

@@ -17,6 +17,7 @@ import adminFixZohoItem from './controller/adminFixZohoItem';
 import adminGetAssumedPacks from './controller/adminGetAssumedPacks';
 import adminGetDuplicateWarnings from './controller/adminGetDuplicateWarnings';
 import adminGetImports from './controller/adminGetImports';
+import adminGetMonthlySales from './controller/adminGetMonthlySales';
 import adminGetOrdersForSku from './controller/adminGetOrdersForSku';
 import adminGetPeriods from './controller/adminGetPeriods';
 import adminGetProgrammes from './controller/adminGetProgrammes';
@@ -101,6 +102,7 @@ const triangulationRouter = createTRPCRouter({
     syncReceiptsFromWms: adminSyncReceiptsFromWms,
     syncSalesFromZoho: adminSyncSalesFromZoho,
     syncSalesFromInvoices: adminSyncSalesFromInvoices,
+    getMonthlySales: adminGetMonthlySales,
     getSalesCoverage: adminGetSalesCoverage,
     getUnmapped: adminGetUnmapped,
     mapAlias: adminMapAlias,
