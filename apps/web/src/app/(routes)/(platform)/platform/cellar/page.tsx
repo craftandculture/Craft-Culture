@@ -1401,7 +1401,7 @@ const CellarPage = () => {
                   {isOpen && (
                     <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-teal-400">
                       <td colSpan={10} className="px-3 py-3 sm:px-6 sm:py-4">
-                        <div className="border-border-muted bg-background-primary rounded-xl border px-4 py-4 shadow-sm">
+                        <div className="border-border-muted bg-background-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
                         {/*
                           One line per parcel actually held. A wine received on
                           two occasions is two holdings with two histories, and
@@ -1416,8 +1416,16 @@ const CellarPage = () => {
                           Cases held
                         </Typography>
 
-                        <div className="border-border-muted bg-background-primary mb-4 max-w-full overflow-x-auto rounded-lg border">
-                          <table className="w-full min-w-[440px] text-xs">
+                        {/*
+                          Sized to its content, not to the screen. Stretched to
+                          full width, seven columns and one parcel put the
+                          release stepper more than a thousand pixels from the
+                          lot it acts on — and left this table looking nothing
+                          like the movement history directly beneath it, which
+                          has always sized to its own content.
+                        */}
+                        <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
+                          <table className="w-auto text-xs">
                             <thead>
                               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
                                 <th className="whitespace-nowrap px-3 py-1.5 text-right">Cases</th>
@@ -1642,7 +1650,7 @@ const CellarPage = () => {
                         </div>
 
                         {history.length > 0 && (
-                          <div className="border-border-muted mt-5 border-t pt-4">
+                          <div className="border-border-muted mt-4 border-t pt-3.5">
                             <div className="mb-2 flex items-center gap-1.5">
                               <Icon
                                 icon={IconHistory}
