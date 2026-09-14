@@ -1153,6 +1153,82 @@ const runMigrations = async () => {
     );
     console.log('✅ ownership transfer integrity ready');
 
+    // A member's instruction to sell. Ownership does not move when wine is
+    // offered — what changes is whether it may be sold, and by whom.
+    await client.unsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "sale_mandate_status" AS ENUM (
+          'draft','offered','listed','placed','partially_sold','sold',
+          'withdrawn','expired','suspended'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "sale_mandates" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "mandate_number" text NOT NULL UNIQUE,
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id"),
+        "owner_name" text NOT NULL,
+        "lwin18" text NOT NULL,
+        "lwin_key" text NOT NULL,
+        "product_name" text NOT NULL,
+        "producer" text,
+        "vintage" integer,
+        "bottle_size" text,
+        "case_config" integer,
+        "bottles_offered" integer NOT NULL,
+        "bottles_remaining" integer NOT NULL,
+        "ask_per_bottle_usd" double precision NOT NULL,
+        "status" "sale_mandate_status" NOT NULL DEFAULT 'draft',
+        "expires_at" timestamp,
+        "owner_notes" text,
+        "admin_notes" text,
+        "offered_at" timestamp,
+        "listed_at" timestamp,
+        "listed_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "withdrawn_at" timestamp,
+        "withdrawn_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now()
+      )`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sale_mandates_owner_idx" ON "sale_mandates" ("owner_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sale_mandates_status_idx" ON "sale_mandates" ("status")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sale_mandates_lwin_key_status_idx"
+         ON "sale_mandates" ("lwin_key", "status")`,
+    );
+
+    // The exact parcels a mandate covers, and the hold state to put back if it
+    // is withdrawn — most of a private cellar is held, so restoring to
+    // "sellable" would quietly list the lot.
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "sale_mandate_lots" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "mandate_id" uuid NOT NULL REFERENCES "sale_mandates"("id") ON DELETE CASCADE,
+        "stock_id" uuid NOT NULL REFERENCES "wms_stock"("id"),
+        "location_id" uuid REFERENCES "wms_locations"("id"),
+        "lot_number" text,
+        "shipment_id" uuid REFERENCES "logistics_shipments"("id"),
+        "re_export_boe_number" text,
+        "bottles_offered" integer NOT NULL,
+        "bottles_remaining" integer NOT NULL,
+        "previous_not_for_sale" boolean NOT NULL DEFAULT true,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now()
+      )`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sale_mandate_lots_mandate_idx" ON "sale_mandate_lots" ("mandate_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "sale_mandate_lots_stock_idx" ON "sale_mandate_lots" ("stock_id")`,
+    );
+    console.log('✅ sale mandates ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

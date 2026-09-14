@@ -25,3 +25,26 @@ const lwinPakKey = (col: SQLWrapper) =>
   sql`split_part(${col}, '-', 1) || '-' || split_part(${col}, '-', 2) || '-' || split_part(${col}, '-', 4)`;
 
 export default lwinPakKey;
+
+/**
+ * The same key, computed in JavaScript
+ *
+ * Needed when the key has to be WRITTEN rather than joined on — a sale mandate
+ * stores it so the catalogue can join live mandates by wine.
+ *
+ * **These two must produce identical output.** They are in one file so that a
+ * change to either is made looking at the other; split across modules they
+ * would drift, and the symptom would be a listed wine that silently fails to
+ * price.
+ *
+ * @example
+ *   lwinPakKeyOf('1104653-2020-06-00750'); // '1104653-2020-00750'
+ *
+ * @param lwin18 - A dashed LWIN18
+ * @returns The pack-agnostic key
+ */
+export const lwinPakKeyOf = (lwin18: string) => {
+  const parts = String(lwin18).split('-');
+
+  return [parts[0] ?? '', parts[1] ?? '', parts[3] ?? ''].join('-');
+};

@@ -4957,6 +4957,160 @@ export const cellarReleaseRequestItems = pgTable(
 export type CellarReleaseRequestItem =
   typeof cellarReleaseRequestItems.$inferSelect;
 
+/* -------------------------------------------------------------------------- */
+/*                          SELLING FROM THE POOL                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How far a member's instruction to sell has got.
+ *
+ * Two of these carry the weight. `listed` is wine on the trade and
+ * private-client lists, still in bond with us, and the member may still change
+ * their mind. `placed` is wine handed to a mainland distributor for retail: it
+ * is duty-paid, out of the building, and cannot be recalled.
+ *
+ * The step between them is C&C's to take and needs no approval from the member
+ * — a distributor will not stock something merely because a client wants to
+ * push it. Which means the member's own point of no return is the moment they
+ * offer, not the moment we place, and the offer screen has to say so plainly.
+ */
+export const saleMandateStatus = pgEnum('sale_mandate_status', [
+  'draft',
+  'offered',
+  'listed',
+  'placed',
+  'partially_sold',
+  'sold',
+  'withdrawn',
+  'expired',
+  'suspended',
+]);
+
+/**
+ * A member's instruction to C&C to sell wine on their behalf
+ *
+ * Ownership does not move when wine is offered. The member keeps it through
+ * the whole chain and is paid on sell-through; what a mandate changes is
+ * whether the wine may be sold, and by whom.
+ *
+ * One mandate per wine, not per basket. A member offering three wines at once
+ * creates three, because each is then listed, priced, placed and sold on its
+ * own timetable — and we may well want one of them and not the others.
+ *
+ * The wine's identity is frozen here rather than joined, so a mandate stays
+ * readable after a repack renames the stock underneath it.
+ */
+export const saleMandates = pgTable(
+  'sale_mandates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mandateNumber: text('mandate_number').notNull().unique(),
+
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+
+    lwin18: text('lwin18').notNull(),
+    /** Pack-agnostic key, so the catalogue joins this the way pricing does */
+    lwinKey: text('lwin_key').notNull(),
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+
+    /** Bottles, because that is the unit a cellar member thinks in */
+    bottlesOffered: integer('bottles_offered').notNull(),
+    bottlesRemaining: integer('bottles_remaining').notNull(),
+
+    /*
+      What the member receives, not the shelf price. They name this number and
+      they get this number; C&C's commission is added on top and shown to them
+      while they are setting it, rather than deducted from it afterwards.
+    */
+    askPerBottleUsd: doublePrecision('ask_per_bottle_usd').notNull(),
+
+    status: saleMandateStatus('status').notNull().default('draft'),
+    expiresAt: timestamp('expires_at', { mode: 'date' }),
+
+    ownerNotes: text('owner_notes'),
+    adminNotes: text('admin_notes'),
+
+    offeredAt: timestamp('offered_at', { mode: 'date' }),
+    listedAt: timestamp('listed_at', { mode: 'date' }),
+    listedBy: uuid('listed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    withdrawnAt: timestamp('withdrawn_at', { mode: 'date' }),
+    withdrawnBy: uuid('withdrawn_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    index('sale_mandates_owner_idx').on(table.ownerId),
+    index('sale_mandates_status_idx').on(table.status),
+    /* The catalogue joins live mandates by wine, to price them from the ask. */
+    index('sale_mandates_lwin_key_status_idx').on(table.lwinKey, table.status),
+  ],
+);
+
+export type SaleMandate = typeof saleMandates.$inferSelect;
+
+/**
+ * The exact parcels a mandate covers
+ *
+ * Twelve bottles of one wine can sit in three bays as three stock rows, so a
+ * mandate names them rather than trusting a later search to find the same wine
+ * again. That buys three things: the lot and customs references travel with any
+ * sale, a sale can pin the parcel it actually drew down, and withdrawal
+ * restores the hold state each row had BEFORE it was offered instead of
+ * assuming it was sellable.
+ */
+export const saleMandateLots = pgTable(
+  'sale_mandate_lots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mandateId: uuid('mandate_id')
+      .references(() => saleMandates.id, { onDelete: 'cascade' })
+      .notNull(),
+    stockId: uuid('stock_id')
+      .references(() => wmsStock.id)
+      .notNull(),
+
+    locationId: uuid('location_id').references(() => wmsLocations.id),
+    lotNumber: text('lot_number'),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
+    /** The customs trail of the goods, carried so a sale can evidence it */
+    reExportBoeNumber: text('re_export_boe_number'),
+
+    bottlesOffered: integer('bottles_offered').notNull(),
+    bottlesRemaining: integer('bottles_remaining').notNull(),
+
+    /*
+      What the row's hold flag was before we cleared it.
+
+      Withdrawal has to put back what was there, not assume the wine was
+      sellable to begin with — most of a private cellar is held for its owner,
+      and restoring it to `false` would quietly list the lot.
+    */
+    previousNotForSale: boolean('previous_not_for_sale').notNull().default(true),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('sale_mandate_lots_mandate_idx').on(table.mandateId),
+    index('sale_mandate_lots_stock_idx').on(table.stockId),
+  ],
+);
+
+export type SaleMandateLot = typeof saleMandateLots.$inferSelect;
+
 /**
  * What it costs a member to take their own wine out of bond
  *
