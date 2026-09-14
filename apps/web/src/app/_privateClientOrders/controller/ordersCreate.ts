@@ -1,10 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { sql } from 'drizzle-orm';
 
+import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
 import { privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
+
 
 import createOrderSchema from '../schemas/createOrderSchema';
 import generateOrderNumber from '../utils/generateOrderNumber';
@@ -35,6 +37,31 @@ const parseOrderSequence = (orderNumber: string): number => {
 const ordersCreate = winePartnerProcedure
   .input(createOrderSchema)
   .mutation(async ({ input, ctx: { partnerId } }) => {
+    /*
+      Keep the client.
+
+      The form lets the details be typed straight in instead of picking a saved
+      client, and nothing used to keep them — so the same person was retyped
+      every order, and the order had no record to correct, mark verified, or
+      count as a relationship. Over half the orders on file arrived this way,
+      and two of them are stuck awaiting verification against a record that was
+      never created.
+
+      An existing client of this partner with the same name is reused, so this
+      does not quietly multiply records for a regular.
+    */
+    let clientId = input.clientId ?? null;
+
+    if (!clientId && input.clientName?.trim()) {
+      const resolved = await findOrCreateClientForPartner(partnerId, {
+        name: input.clientName,
+        email: input.clientEmail,
+        phone: input.clientPhone,
+        address: input.clientAddress,
+      });
+      clientId = resolved?.clientId ?? null;
+    }
+
     // Get the next sequence number for this year
     const year = new Date().getFullYear();
     const yearStart = `PCO-${year}-`;
@@ -62,7 +89,7 @@ const ordersCreate = winePartnerProcedure
           .values({
             orderNumber,
             partnerId,
-            clientId: input.clientId,
+            clientId,
             clientName: input.clientName,
             clientEmail: input.clientEmail || null,
             clientPhone: input.clientPhone || null,

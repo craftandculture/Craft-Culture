@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
 import { privateClientOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
 
 import generateOrderNumber from '../utils/generateOrderNumber';
 
@@ -43,6 +45,23 @@ const adminCreate = wmsOperatorProcedure
       nextSequence = lastSequence + 1;
     }
 
+    /*
+      Keep the client, exactly as the partner-side create does. An admin can
+      type the details straight in too, and an order without a client record
+      cannot be corrected or marked verified afterwards.
+    */
+    let clientId = input.clientId ?? null;
+
+    if (!clientId && input.clientName?.trim()) {
+      const resolved = await findOrCreateClientForPartner(input.partnerId, {
+        name: input.clientName,
+        email: input.clientEmail,
+        phone: input.clientPhone,
+        address: input.clientAddress,
+      });
+      clientId = resolved?.clientId ?? null;
+    }
+
     const orderNumber = generateOrderNumber(nextSequence);
 
     // Create the order
@@ -51,7 +70,7 @@ const adminCreate = wmsOperatorProcedure
       .values({
         orderNumber,
         partnerId: input.partnerId,
-        clientId: input.clientId,
+        clientId,
         clientName: input.clientName,
         clientEmail: input.clientEmail || null,
         clientPhone: input.clientPhone || null,

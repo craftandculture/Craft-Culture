@@ -3,8 +3,10 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientContacts, privateClientOrders } from '@/database/schema';
+import { privateClientOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+import findOrCreateClientForPartner from '../utils/findOrCreateClientForPartner';
 
 /**
  * Give an order a real client record, so it can be corrected and verified.
@@ -67,42 +69,21 @@ const adminLinkOrCreateForOrder = wmsOperatorProcedure
       });
     }
 
-    const existing = await db
-      .select({ id: privateClientContacts.id })
-      .from(privateClientContacts)
-      .where(
-        and(
-          eq(privateClientContacts.partnerId, order.partnerId),
-          sql`LOWER(TRIM(${privateClientContacts.name})) = LOWER(${name})`,
-        ),
-      )
-      .limit(1);
+    const resolved = await findOrCreateClientForPartner(order.partnerId, {
+      name,
+      email: order.clientEmail,
+      phone: order.clientPhone,
+      address: order.clientAddress,
+    });
 
-    let clientId = existing[0]?.id ?? null;
-    const created = !clientId;
-
-    if (!clientId) {
-      const [inserted] = await db
-        .insert(privateClientContacts)
-        .values({
-          partnerId: order.partnerId,
-          name,
-          email: order.clientEmail || null,
-          phone: order.clientPhone || null,
-          // The order holds one address line; it is kept whole rather than
-          // guessed apart into city, postcode and country.
-          addressLine1: order.clientAddress || null,
-        })
-        .returning({ id: privateClientContacts.id });
-
-      if (!inserted) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Client record was not created',
-        });
-      }
-      clientId = inserted.id;
+    if (!resolved) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Client record was not created',
+      });
     }
+
+    const { clientId, created } = resolved;
 
     await db
       .update(privateClientOrders)
