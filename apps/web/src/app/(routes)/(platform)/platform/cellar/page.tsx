@@ -1159,7 +1159,7 @@ const CellarPage = () => {
                   </TooltipContent>
                 </Tooltip>
               </th>
-              <th className={`${th} w-[230px] min-w-[230px] text-right`}>Drink &middot; Sell</th>
+              <th className={`${th} w-[286px] min-w-[286px] text-right`} />
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
@@ -1345,6 +1345,17 @@ const CellarPage = () => {
                               had a case button beside it — so the eye had to
                               find the control again on every line.
                             */}
+                            {/*
+                              The verb, said once, next to its own controls.
+                              "+ Case" and "+ Bottle" do not announce what they
+                              are for — the column header said DRINK · SELL but
+                              sat a long way from the buttons, so the two verbs
+                              had to be inferred from a violet link being a
+                              different colour.
+                            */}
+                            <span className="text-text-muted mr-1.5 text-[10px] font-semibold uppercase tracking-wider">
+                              Drink
+                            </span>
                             <span className="inline-flex w-[148px] items-center justify-end gap-0.5">
                               {pack > 1 && (
                                 <button
@@ -1366,7 +1377,7 @@ const CellarPage = () => {
 
                             <span
                               aria-hidden
-                              className="bg-border-muted mx-2 h-3.5 w-px"
+                              className="bg-border-muted mx-2.5 h-4 w-px"
                             />
                             {/*
                               Selling sits beside drinking because they are the
@@ -1381,7 +1392,7 @@ const CellarPage = () => {
                                 setSellLines(new Map());
                                 setSellAsk('');
                               }}
-                              className="w-[44px] whitespace-nowrap rounded px-2 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-50"
+                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
                             >
                               Sell
                             </button>
