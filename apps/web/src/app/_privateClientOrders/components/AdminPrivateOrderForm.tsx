@@ -70,17 +70,27 @@ const AdminPrivateOrderForm = () => {
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  // The chosen partner's own clients. Skipped until a partner is picked,
-  // since a client bank only means anything in the context of whose it is.
-  const clientsQuery = useQuery({
-    ...api.privateClientContacts.adminGetManyForPartner.queryOptions({
-      partnerId,
+  // Every client, not just the selected partner's. C&C raise orders for all of
+  // them, and a client introduced by one partner is still a person C&C may be
+  // selling to — scoping the list to the partner on the form hid most of the
+  // book behind a dropdown nobody thinks to change.
+  const clientsQuery = useQuery(
+    api.privateClientContacts.adminGetAll.queryOptions({
       search: clientName.trim() || undefined,
+      limit: 50,
     }),
-    enabled: !!partnerId,
-  });
+  );
 
-  const clientMatches = clientsQuery.data ?? [];
+  const clientMatches = (clientsQuery.data?.rows ?? [])
+    // The selected partner's own clients first: most orders are for them, and
+    // a cross-partner pick should be a deliberate scroll rather than a slip.
+    .slice()
+    .sort((a, b) => {
+      const aMine = a.partnerId === partnerId ? 0 : 1;
+      const bMine = b.partnerId === partnerId ? 0 : 1;
+
+      return aMine - bMine || a.name.localeCompare(b.name);
+    });
 
   // Fetch partners list (wine partners for creating orders)
   const partnersQuery = useQuery({
@@ -306,7 +316,7 @@ const AdminPrivateOrderForm = () => {
                   required
                 />
 
-                {showClients && partnerId && clientMatches.length > 0 && (
+                {showClients && clientMatches.length > 0 && (
                   <div className="border-border-primary bg-fill-primary absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border shadow-lg">
                     {clientMatches.map((contact) => (
                       <button
@@ -328,6 +338,12 @@ const AdminPrivateOrderForm = () => {
                         <span className="text-text-primary text-sm font-medium">
                           {contact.name}
                           {contact.verifiedAt ? '' : ' · not yet verified'}
+                          {partnerId && contact.partnerId !== partnerId ? (
+                            <span className="text-text-warning">
+                              {' '}
+                              · {contact.partnerName ?? 'another partner'}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="text-text-muted text-xs">
                           {[contact.email, contact.phone, contact.address]
