@@ -1,8 +1,8 @@
 'use client';
 
-import { IconSearch } from '@tabler/icons-react';
+import { IconFilter, IconSearch, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
@@ -27,6 +27,18 @@ const money = (value: number) =>
 */
 const displayName = displayWineName;
 
+type SortKey = 'name' | 'priceAsc' | 'priceDesc' | 'vintageDesc' | 'available';
+
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: 'name', label: 'Wine A–Z' },
+  { id: 'priceAsc', label: 'Price, low first' },
+  { id: 'priceDesc', label: 'Price, high first' },
+  { id: 'vintageDesc', label: 'Vintage, newest' },
+  { id: 'available', label: 'Most available' },
+];
+
+const PAGE = 50;
+
 /**
  * What a member can add to their cellar
  *
@@ -34,11 +46,25 @@ const displayName = displayWineName;
  * member inside the platform. Wine another member has consigned appears here
  * without being marked as such, because a buyer is buying from C&C — which is
  * legally what is happening — and whose wine it was is nobody else's business.
+ *
+ * Four hundred wines is a catalogue, not a list, and a search box over a flat
+ * table is not how anyone finds wine in one. Country, producer and vintage
+ * narrow it; the rest is sorting and a page at a time.
+ *
+ * Filtering happens here rather than on the server because the whole catalogue
+ * is fetched already — the trade and PC lists need it whole — so a round trip
+ * per keystroke would buy nothing and cost the responsiveness.
  */
 const AvailablePage = () => {
   const api = useTRPC();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | undefined>();
+  const [country, setCountry] = useState('');
+  const [producer, setProducer] = useState('');
+  const [vintage, setVintage] = useState('');
+  const [sort, setSort] = useState<SortKey>('name');
+  const [showFilters, setShowFilters] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
 
   const { data, isLoading } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
@@ -47,15 +73,72 @@ const AvailablePage = () => {
     }),
   });
 
-  const wines = data?.wines ?? [];
+  const wines = useMemo(() => data?.wines ?? [], [data]);
 
   /*
-    What is actually here, before a member starts reading rows. The page opened
-    on a bare search box and a flat table, which gave no sense of whether the
-    list was worth scrolling.
+    Built from what is actually in the list, so a member is never offered a
+    filter that returns nothing. Recomputed when the category or search changes,
+    which is why the options shrink as the list does.
   */
-  const totalBottles = wines.reduce((sum, wine) => sum + wine.availableBottles, 0);
-  const producers = new Set(wines.map((wine) => wine.producer).filter(Boolean));
+  const countries = useMemo(
+    () =>
+      [...new Set(wines.map((wine) => wine.country).filter(Boolean))].sort() as string[],
+    [wines],
+  );
+
+  const producers = useMemo(
+    () =>
+      [...new Set(wines.map((wine) => wine.producer).filter(Boolean))].sort() as string[],
+    [wines],
+  );
+
+  const vintages = useMemo(
+    () =>
+      [...new Set(wines.map((wine) => wine.vintage).filter(Boolean))].sort(
+        (a, b) => Number(b) - Number(a),
+      ) as number[],
+    [wines],
+  );
+
+  const filtered = useMemo(() => {
+    const rows = wines.filter(
+      (wine) =>
+        (!country || wine.country === country) &&
+        (!producer || wine.producer === producer) &&
+        (!vintage || String(wine.vintage) === vintage),
+    );
+
+    const sorted = [...rows];
+
+    sorted.sort((a, b) => {
+      if (sort === 'priceAsc') return a.pricePerBottleUsd - b.pricePerBottleUsd;
+      if (sort === 'priceDesc') return b.pricePerBottleUsd - a.pricePerBottleUsd;
+      if (sort === 'vintageDesc') return (b.vintage ?? 0) - (a.vintage ?? 0);
+      if (sort === 'available') return b.availableBottles - a.availableBottles;
+
+      return displayName(a.product).localeCompare(displayName(b.product));
+    });
+
+    return sorted;
+  }, [wines, country, producer, vintage, sort]);
+
+  const shown = filtered.slice(0, limit);
+  const totalBottles = filtered.reduce(
+    (sum, wine) => sum + wine.availableBottles,
+    0,
+  );
+  const shownProducers = new Set(
+    filtered.map((wine) => wine.producer).filter(Boolean),
+  );
+
+  const activeFilters = [
+    country && { label: country, clear: () => setCountry('') },
+    producer && { label: producer, clear: () => setProducer('') },
+    vintage && { label: vintage, clear: () => setVintage('') },
+  ].filter(Boolean) as { label: string; clear: () => void }[];
+
+  const selectClass =
+    'border-border-muted text-text-primary bg-background-primary h-9 rounded-lg border px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/40';
 
   return (
     <div className="w-full pb-8">
@@ -94,7 +177,10 @@ const AvailablePage = () => {
             <button
               key={chip.label}
               type="button"
-              onClick={() => setCategory(chip.id)}
+              onClick={() => {
+                setCategory(chip.id);
+                setLimit(PAGE);
+              }}
               className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 category === chip.id
                   ? 'bg-fill-brand text-text-on-brand'
@@ -105,7 +191,126 @@ const AvailablePage = () => {
             </button>
           ))}
         </div>
+
+        {/*
+          Country, producer and vintage are how anyone actually narrows a wine
+          list. Hidden behind a toggle on small screens, because three selects
+          above the fold on a phone pushes the wine itself off it.
+        */}
+        <button
+          type="button"
+          onClick={() => setShowFilters((open) => !open)}
+          className="border-border-muted text-text-muted hover:text-text-primary mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors lg:hidden"
+        >
+          <Icon icon={IconFilter} size="xs" />
+          {showFilters ? 'Hide filters' : 'Filters'}
+          {activeFilters.length > 0 && (
+            <span className="bg-fill-brand text-text-on-brand rounded-full px-1.5 text-[10px]">
+              {activeFilters.length}
+            </span>
+          )}
+        </button>
+
+        <div
+          className={`${showFilters ? 'flex' : 'hidden'} mt-2 flex-wrap gap-2 lg:mt-0 lg:flex lg:flex-nowrap`}
+        >
+          <select
+            value={country}
+            onChange={(event) => {
+              setCountry(event.target.value);
+              setLimit(PAGE);
+            }}
+            className={selectClass}
+            aria-label="Country"
+          >
+            <option value="">All countries</option>
+            {countries.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={producer}
+            onChange={(event) => {
+              setProducer(event.target.value);
+              setLimit(PAGE);
+            }}
+            className={`${selectClass} max-w-[180px]`}
+            aria-label="Producer"
+          >
+            <option value="">All producers</option>
+            {producers.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={vintage}
+            onChange={(event) => {
+              setVintage(event.target.value);
+              setLimit(PAGE);
+            }}
+            className={selectClass}
+            aria-label="Vintage"
+          >
+            <option value="">All vintages</option>
+            {vintages.map((option) => (
+              <option key={option} value={String(option)}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value as SortKey)}
+            className={`${selectClass} lg:ml-auto`}
+            aria-label="Sort"
+          >
+            {SORTS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {/*
+        What is currently being excluded, and a one-click way out of each. A
+        filter that cannot be seen is a filter somebody forgets they set, and
+        then the catalogue looks empty for no reason.
+      */}
+      {activeFilters.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {activeFilters.map((filter) => (
+            <button
+              key={filter.label}
+              type="button"
+              onClick={filter.clear}
+              className="border-border-muted text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors"
+            >
+              {filter.label}
+              <Icon icon={IconX} size="xs" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setCountry('');
+              setProducer('');
+              setVintage('');
+            }}
+            className="text-text-brand px-1 text-xs font-medium"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="block py-6">
@@ -113,15 +318,17 @@ const AvailablePage = () => {
         </Typography>
       )}
 
-      {!isLoading && wines.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <div className="border-border-muted rounded-xl border px-6 py-14 text-center">
           <Typography variant="bodyMd" colorRole="muted" className="block">
-            {search ? 'Nothing matches that.' : 'Nothing available just now.'}
+            {search || activeFilters.length > 0
+              ? 'Nothing matches that.'
+              : 'Nothing available just now.'}
           </Typography>
         </div>
       )}
 
-      {!isLoading && wines.length > 0 && (
+      {!isLoading && filtered.length > 0 && (
         <>
           {/*
             One line, not a link on every row. The per-row "Enquire" was a
@@ -132,9 +339,9 @@ const AvailablePage = () => {
           */}
           <dl className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: 'Wines', value: String(wines.length) },
+              { label: 'Wines', value: filtered.length.toLocaleString('en-US') },
               { label: 'Bottles', value: totalBottles.toLocaleString('en-US') },
-              { label: 'Producers', value: String(producers.size) },
+              { label: 'Producers', value: String(shownProducers.size) },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -150,12 +357,13 @@ const AvailablePage = () => {
             ))}
           </dl>
 
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <Typography variant="bodyXs" colorRole="muted">
-              Held in bond &middot; duty suspended
+              Showing {shown.length.toLocaleString('en-US')} of{' '}
+              {filtered.length.toLocaleString('en-US')}
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              To buy anything here, speak to your account team at{' '}
+              To buy, speak to your account team at{' '}
               <a
                 className="text-text-brand font-medium"
                 href="mailto:enquiries@craftculture.xyz"
@@ -169,7 +377,9 @@ const AvailablePage = () => {
             <table className="w-full min-w-[780px] text-sm">
               <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
                 <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
-                  <th className="min-w-[240px] px-3 py-2 text-left">Wine</th>
+                  <th className="w-[38%] min-w-[220px] px-3 py-2 text-left">
+                    Wine
+                  </th>
                   <th className="hidden px-3 py-2 text-left md:table-cell">
                     Producer
                   </th>
@@ -185,19 +395,28 @@ const AvailablePage = () => {
                 </tr>
               </thead>
               <tbody className="divide-border-muted divide-y">
-                {wines.map((wine) => (
+                {shown.map((wine) => (
                   <tr
                     key={`${wine.lwin18}-${wine.vintage ?? ''}`}
                     className="hover:bg-fill-muted/40 group transition-colors"
                   >
-                    <td className="text-text-primary px-3 py-2 text-[13px] font-medium">
-                      {displayName(wine.product)}
-                      <span className="text-text-muted block text-xs md:hidden">
+                    <td className="text-text-primary max-w-0 px-3 py-2 text-[13px] font-medium">
+                      {/*
+                        Truncated rather than allowed to set the table's width.
+                        Names run to seventy characters here, and one long one
+                        pushed the price columns off the right of the page.
+                      */}
+                      <span className="block truncate" title={wine.product}>
+                        {displayName(wine.product)}
+                      </span>
+                      <span className="text-text-muted block truncate text-xs md:hidden">
                         {wine.producer}
                       </span>
                     </td>
-                    <td className="text-text-muted hidden px-3 py-2 text-[13px] md:table-cell">
-                      {wine.producer ?? '—'}
+                    <td className="text-text-muted hidden max-w-0 px-3 py-2 text-[13px] md:table-cell">
+                      <span className="block truncate" title={wine.producer ?? ''}>
+                        {wine.producer ?? '—'}
+                      </span>
                     </td>
                     <td className="text-text-muted hidden px-3 py-2 text-center text-[13px] tabular-nums sm:table-cell">
                       {wine.vintage ?? 'NV'}
@@ -227,6 +446,23 @@ const AvailablePage = () => {
               </tbody>
             </table>
           </div>
+
+          {/*
+            A page at a time, on request. A hard cut with no control reads as
+            "that is all there is", which for a catalogue of four hundred is
+            the one thing it must not say.
+          */}
+          {filtered.length > shown.length && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setLimit((current) => current + PAGE)}
+                className="border-border-muted text-text-primary hover:bg-fill-muted rounded-lg border px-4 py-2 text-xs font-medium transition-colors"
+              >
+                Show {Math.min(PAGE, filtered.length - shown.length)} more
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
