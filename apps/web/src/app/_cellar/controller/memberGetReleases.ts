@@ -7,6 +7,8 @@ import {
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import backfillReleaseItems from '../data/backfillReleaseItems';
+
 /**
  * A member's release requests, newest first
  *
@@ -86,6 +88,7 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       id: cellarReleaseRequestItems.id,
       requestId: cellarReleaseRequestItems.requestId,
       stockId: cellarReleaseRequestItems.stockId,
+      lwin18: cellarReleaseRequestItems.lwin18,
       lotNumber: cellarReleaseRequestItems.lotNumber,
       productName: cellarReleaseRequestItems.productName,
       vintage: cellarReleaseRequestItems.vintage,
@@ -101,6 +104,14 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       ),
     )
     .orderBy(cellarReleaseRequestItems.productName);
+
+
+  /*
+    The same repair the admin view does. Without it a member saw NV and no
+    format on lines a merge had stripped, while the admin quoting the same
+    request saw the real vintage — two screens disagreeing about one wine.
+  */
+  await backfillReleaseItems(items);
 
   const byRequest = new Map<string, typeof items>();
 

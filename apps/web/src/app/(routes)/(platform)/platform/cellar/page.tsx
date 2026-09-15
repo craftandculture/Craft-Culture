@@ -858,45 +858,12 @@ const CellarPage = () => {
                   {needsDecision && (
                     <div className="flex flex-shrink-0 items-center gap-1.5">
                       {/*
-                        One figure, and the detail behind an ⓘ. An itemised
-                        quote invites a line-by-line negotiation of costs the
-                        member cannot change, and naming the amounts would
-                        publish our rates to anyone who knows what their own
-                        wine cost.
+                        The ⓘ that used to stand in for the whole quote is
+                        gone. It explained a single figure in prose; the panel
+                        below now names every line with its own ⓘ, so keeping
+                        it meant two explanations of the same thing, one of
+                        them vaguer.
                       */}
-                      <Tooltip>
-                        <TooltipTrigger aria-label="What this figure includes">
-                          <Icon
-                            icon={IconInfoCircle}
-                            size="xs"
-                            colorRole="muted"
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="left"
-                          className="max-w-[240px] text-left lg:max-w-[240px]"
-                        >
-                          <div className="flex flex-col gap-1.5 text-left">
-                            <Typography
-                              variant="bodyXs"
-                              className="font-semibold"
-                            >
-                              You already own the wine. This is the cost of
-                              releasing it.
-                            </Typography>
-                            <Typography variant="bodyXs">
-                              Duty, VAT, clearance, transfer out of bond,
-                              licensed delivery, and our handling.
-                              {request.additionalChargeLabel
-                                ? ` Also ${request.additionalChargeLabel.toLowerCase()}.`
-                                : ''}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              Nothing further is charged.
-                            </Typography>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
                       <Button
                         size="sm"
                         colorRole="brand"
@@ -936,7 +903,7 @@ const CellarPage = () => {
                       decision before the detail, and move right on a desktop
                       where the eye starts at the list.
                     */}
-                    <div className="mb-3 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-4">
+                    <div className="mb-3 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-4">
                       <div className="mb-3 lg:order-2 lg:mb-0">
                     {/*
                           The quote, itemised. It was one figure behind an ⓘ, on
