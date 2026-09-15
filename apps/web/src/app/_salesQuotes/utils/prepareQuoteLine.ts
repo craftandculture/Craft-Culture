@@ -65,6 +65,8 @@ const prepareQuoteLine = (
     caseAed: round(caseAed),
     caseUsd: round(caseUsd),
     baseKey: wineBaseKey(line.wine),
+    // A non-vintage wine sorts to the front of its producer's run, which is
+    // where a house NV belongs — before the dated cuvées, not after them.
     vintageYear: Number(line.vintage) || 0,
   };
 };

@@ -4,7 +4,15 @@ import { z } from 'zod';
 export const salesQuoteLineSchema = z.object({
   lwin18: z.string().default(''),
   wine: z.string().min(1),
-  vintage: z.string().min(1),
+  /**
+   * The vintage as it should print, or empty for a wine that has none.
+   *
+   * Champagne, sherry and most vermouth are non-vintage, and a blend of years
+   * has no year to give. Requiring one made an NV line unsaveable: the quote
+   * failed validation with a message about lines[1].vintage and no indication
+   * that the offending wine was Bereche Reflet d'Antan.
+   */
+  vintage: z.string().default(''),
   /** bottle volume in cl */
   size: z.number().int().positive().default(75),
   /** bottles per case */

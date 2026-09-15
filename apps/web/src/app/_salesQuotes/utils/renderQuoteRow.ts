@@ -68,6 +68,11 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
     ` data-flags="${escapeHtml(flags)}" data-pack="${line.pack}" data-size="${escapeHtml(line.size)}"` +
     ` data-note2="${escapeHtml(line.note)}"`;
 
+  // A wine with no vintage is non-vintage, not a line someone forgot to fill
+  // in. Champagne, sherry and vermouth are mostly NV, and a blank cell on a
+  // client-facing quote reads as an omission.
+  const vintageText = line.vintage.trim() || 'NV';
+
   const formatText =
     (labels.bottlesOnly ? line.size : `${line.pack} x ${line.size}`) +
     (line.mag ? ` ${largeFormatLabel(line.sizeCl)}` : '');
@@ -75,7 +80,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
   const search = escapeHtml(
     [
       line.wine,
-      line.vintage,
+      vintageText,
       line.region,
       line.promo ? 'promo discount' : '',
       line.pc ? labels.pcLabel : '',
@@ -91,7 +96,7 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
     return (
       `<tr class="oosrow" data-reg="${escapeHtml(line.region)}" data-s="${search}"><td class="cb"></td>` +
       `<td class="w" data-label="Wine"><s>${escapeHtml(line.wine)}</s>${noteLine}</td>` +
-      `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
+      `<td class="c" data-label="Vintage">${escapeHtml(vintageText)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
       `<td class="c" data-label="Avail">0</td><td class="status" colspan="${3 + trailingCols(labels)}"><span class="oos-badge"><span class="oos-dot"></span>Out of Stock</span></td></tr>\n`
     );
   }
@@ -165,13 +170,13 @@ const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
 
   return (
     `<tr class="item" data-reg="${escapeHtml(line.region)}" data-s="${search}" data-maxc="${units}" data-unit="${line.unit}" ` +
-    `data-wine="${escapeHtml(line.wine)}" data-vtg="${escapeHtml(line.vintage)}" data-fmt="${escapeHtml(formatText)}" data-note="${escapeHtml(note)}" data-avail="${units}" ` +
+    `data-wine="${escapeHtml(line.wine)}" data-vtg="${escapeHtml(vintageText)}" data-fmt="${escapeHtml(formatText)}" data-note="${escapeHtml(note)}" data-avail="${units}" ` +
     `data-baed="${line.bottleAed}" data-busd="${line.bottleUsd}" data-caed="${unitAed}" data-cusd="${unitUsd}"${extraAttrs}${exportAttrs} onclick="rowClick(event,this)">` +
     `<td class="cb"><div class="qty"><button class="qb" onclick="event.stopPropagation();chg(event,-1)">&minus;</button>` +
     `<input class="qi" type="number" min="0" max="${units}" value="${line.qty}" onclick="event.stopPropagation()" oninput="clampQ(this);upd()">` +
     `<button class="qb" onclick="event.stopPropagation();chg(event,1)">+</button></div></td>` +
     `<td class="w" data-label="Wine">${escapeHtml(line.wine)}${stockChip}${promoChip}${pcChip}${repackChip}${noteLine}</td>` +
-    `<td class="c" data-label="Vintage">${escapeHtml(line.vintage)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
+    `<td class="c" data-label="Vintage">${escapeHtml(vintageText)}</td><td class="c" data-label="Format">${format}${magnumChip}</td>` +
     `<td class="c" data-label="Avail">${availCell}</td>${bottleCell}${caseCell}<td class="tp r" data-label="Total"></td>${extraCell}${scenarioCells}</tr>\n`
   );
 };

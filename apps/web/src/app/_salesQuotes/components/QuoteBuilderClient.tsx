@@ -55,6 +55,43 @@ const emptyForm = (): QuoteFormState => ({
  * sent to a client must not silently reprice itself afterwards. Re-add a line
  * to pick up a new price.
  */
+/**
+ * Turn a validation failure into the name of the wine that caused it
+ *
+ * A save refused with a raw Zod array — lines, 1, vintage, "expected string to
+ * have >=1 characters" — which says nothing about which of thirty lines is at
+ * fault or what to do about it. The index is in there; the wine's name is one
+ * lookup away.
+ */
+const describeSaveError = (
+  message: string,
+  lines: { wine?: string; vintage?: string }[],
+) => {
+  if (!message.trim().startsWith('[')) return message;
+
+  try {
+    const issues = JSON.parse(message) as {
+      path: (string | number)[];
+      message: string;
+    }[];
+
+    const described = issues.slice(0, 3).map((issue) => {
+      const index = issue.path.find((part) => typeof part === 'number');
+      const field = issue.path[issue.path.length - 1];
+      const line = typeof index === 'number' ? lines[index] : undefined;
+      const who = line
+        ? `${line.wine ?? 'a line'}${line.vintage ? ` ${line.vintage}` : ''}`
+        : `line ${typeof index === 'number' ? index + 1 : '?'}`;
+
+      return `${who} — ${String(field)}: ${issue.message}`;
+    });
+
+    return `Could not save: ${described.join('; ')}${issues.length > 3 ? ` (and ${issues.length - 3} more)` : ''}`;
+  } catch {
+    return message;
+  }
+};
+
 const QuoteBuilderClient = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -77,7 +114,7 @@ const QuoteBuilderClient = () => {
       setForm((current) => ({ ...current, id: saved.id }));
       void invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(describeSaveError(error.message, lines)),
   });
 
   const setStatus = useMutation({
