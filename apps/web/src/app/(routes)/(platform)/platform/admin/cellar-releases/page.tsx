@@ -184,8 +184,20 @@ const CellarReleasesPage = () => {
                     service: request.suggested?.priced
                       ? String(request.suggested.serviceFeeUsd)
                       : '',
-                    extra: '',
-                    extraLabel: '',
+                    /*
+                      The repack has to land in a field or it never reaches the
+                      member. clearanceTotalUsd is duty, VAT, transfer and the
+                      distributor — deliberately not this — so the breakdown
+                      showed a repack the quote then dropped. The additional
+                      charge is where a named pass-through belongs, and it
+                      arrives with its own explanation.
+                    */
+                    extra: request.suggested?.priced && request.suggested.repackUsd
+                      ? String(request.suggested.repackUsd)
+                      : '',
+                    extraLabel: request.suggested?.priced && request.suggested.repackUsd
+                      ? 'Opening sealed cases to make up part quantities'
+                      : '',
                     goods: request.suggested?.priced
                       ? String(request.suggested.goodsValueUsd)
                       : '',
@@ -359,6 +371,12 @@ const CellarReleasesPage = () => {
                                     service: String(
                                       request.suggested.serviceFeeUsd,
                                     ),
+                                    extra: request.suggested.repackUsd
+                                      ? String(request.suggested.repackUsd)
+                                      : '',
+                                    extraLabel: request.suggested.repackUsd
+                                      ? 'Opening sealed cases to make up part quantities'
+                                      : '',
                                     goods: String(
                                       request.suggested.goodsValueUsd,
                                     ),
