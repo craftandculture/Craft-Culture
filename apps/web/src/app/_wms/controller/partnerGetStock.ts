@@ -1,5 +1,7 @@
 import { and, desc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 
+import getCostPerBottle from '@/app/_cellar/data/getCostPerBottle';
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -8,7 +10,6 @@ import {
   saleMandates,
   wmsLocations,
   wmsPartnerRequests,
-  wmsProductPricing,
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
@@ -168,28 +169,14 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     Preferring the pricing record and falling back to the most recent shipment
     line mirrors how the Pricing Manager resolves the same number.
   */
-  const costRows = await db
-    .select({
-      lwin18: wmsStock.lwin18,
-      costPerBottle: sql<number | null>`COALESCE(
-        NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0),
-        MAX(${logisticsShipmentItems.productCostPerBottle})
-      )`,
-    })
-    .from(wmsStock)
-    .leftJoin(
-      wmsProductPricing,
-      eq(wmsProductPricing.lwin18, wmsStock.lwin18),
-    )
-    .leftJoin(
-      logisticsShipmentItems,
-      eq(logisticsShipmentItems.lwin, wmsStock.lwin18),
-    )
-    .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
-    .groupBy(wmsStock.lwin18);
-
-  const costByLwin = new Map(
-    costRows.map((row) => [row.lwin18, Number(row.costPerBottle ?? 0)]),
+  /*
+    One lookup, shared with the release quote. These were separate queries that
+    disagreed: this one fell back to the shipment cost without a pricing row and
+    the quote did not, so a member's cellar showed a value per bottle while the
+    release it priced valued the same wine at nothing.
+  */
+  const costByLwin = await getCostPerBottle(
+    products.map((product) => product.lwin18),
   );
 
   /*
@@ -269,7 +256,8 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     products: products.map((product) => ({
       ...product,
       locations: locationsByLwin.get(product.lwin18) ?? [],
-      costPerBottle: costByLwin.get(product.lwin18) ?? null,
+      costPerBottle:
+        costByLwin.get(lwinPakKeyOf(product.lwin18)) ?? null,
     })),
     inbound,
     openRequests,

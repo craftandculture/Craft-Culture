@@ -231,7 +231,12 @@ const CellarReleasesPage = () => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
-                          <th className="px-3 py-1.5 text-left">Wine</th>
+                          {/*
+                            A width, not just a truncate. max-w-0 with nothing
+                            to size against collapsed the column to almost
+                            nothing and cut every name to two words.
+                          */}
+                          <th className="w-[55%] px-3 py-1.5 text-left">Wine</th>
                           <th className="px-3 py-1.5 text-center">Vintage</th>
                           <th className="px-3 py-1.5 text-center">Format</th>
                           <th className="px-3 py-1.5 text-left">Lot</th>
@@ -247,7 +252,7 @@ const CellarReleasesPage = () => {
                               them — so every row read the vintage twice and
                               carried an abv nobody is deciding on.
                             */}
-                            <td className="max-w-0 px-3 py-2">
+                            <td className="w-[55%] max-w-0 px-3 py-2">
                               <span
                                 className="block truncate"
                                 title={item.productName}
