@@ -925,6 +925,110 @@ const CellarPage = () => {
                         </Typography>
                       </div>
                     )}
+                    {/*
+                      The quote, itemised. It was one figure behind an ⓘ, on
+                      the reasoning that naming amounts publishes our rates and
+                      invites a line-by-line negotiation. Bundling duty, VAT,
+                      transfer and the distributor into a single clearance
+                      figure keeps that true — no individual rate can be worked
+                      back out of it — while still letting a member see what
+                      they are actually paying for, and challenge a repack that
+                      should not be there.
+                    */}
+                    {needsDecision && (
+                      <div className="border-border-muted mb-3 rounded-lg border px-3 py-2.5">
+                        <dl className="flex flex-col gap-1.5">
+                          {[
+                            {
+                              label: 'Duty, VAT and clearance',
+                              value: request.clearanceCostUsd ?? 0,
+                              tip: 'Duty assessed on the value declared when the wine came into bond, VAT on the released value as a whole, moving it out of the free zone, and the licensed partner who carries it on the mainland. Rates are set by UAE customs, not by us.',
+                            },
+                            {
+                              label: 'Delivery',
+                              value: request.deliveryCostUsd ?? 0,
+                              tip: 'The drive to your address.',
+                            },
+                            ...(request.repackCostUsd
+                              ? [
+                                  {
+                                    label: `Repacking${request.repackCases ? ` · ${request.repackCases} ${request.repackCases === 1 ? 'case' : 'cases'}` : ''}`,
+                                    value: request.repackCostUsd,
+                                    tip: `You have asked for part of a sealed case. Someone opens it, checks and records every bottle, repacks what you are taking into a new carton with fresh inserts, and restacks and relabels the remainder so it stays findable and stays yours. It is charged per case opened rather than per bottle, because the work is the same whether you take one bottle or all but one${request.repackCases && request.repackCases > 1 ? `, and ${request.repackCases} separate cases have to be opened here` : ''}. Take whole cases and there is nothing to charge.`,
+                                  },
+                                ]
+                              : []),
+                            ...(request.additionalChargeUsd
+                              ? [
+                                  {
+                                    label:
+                                      request.additionalChargeLabel ??
+                                      'Additional charge',
+                                    value: request.additionalChargeUsd,
+                                    tip: null,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: 'Craft & Culture',
+                              value: request.serviceFeeUsd ?? 0,
+                              tip: 'What we earn for handling the release: the paperwork, the customs filing, coordinating the licensed distributor, and standing behind the wine until it reaches you.',
+                            },
+                          ].map((line) => (
+                            <div
+                              key={line.label}
+                              className="flex items-baseline justify-between gap-3"
+                            >
+                              <dt className="text-text-muted inline-flex items-center gap-1 text-xs">
+                                {line.label}
+                                {line.tip && (
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      aria-label={`Why ${line.label} is charged`}
+                                    >
+                                      <Icon
+                                        icon={IconInfoCircle}
+                                        size="xs"
+                                        colorRole="muted"
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="top"
+                                      className="max-w-[300px] text-left lg:max-w-[300px]"
+                                    >
+                                      <Typography variant="bodyXs">
+                                        {line.tip}
+                                      </Typography>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </dt>
+                              <dd className="text-text-primary m-0 text-xs tabular-nums">
+                                {money(line.value)}
+                              </dd>
+                            </div>
+                          ))}
+
+                          <div className="border-border-muted mt-1 flex items-baseline justify-between gap-3 border-t pt-2">
+                            <dt className="text-text-primary text-xs font-semibold">
+                              Total to deliver
+                            </dt>
+                            <dd className="text-text-brand m-0 text-sm font-semibold tabular-nums">
+                              {money(request.totalCostUsd ?? 0)}
+                            </dd>
+                          </div>
+                        </dl>
+                        <Typography
+                          variant="bodyXs"
+                          colorRole="muted"
+                          className="mt-2 block"
+                        >
+                          You already own the wine &mdash; it is not charged for
+                          again. Nothing further is added.
+                        </Typography>
+                      </div>
+                    )}
+
                     <div className="border-border-muted mb-3 overflow-hidden rounded-lg border">
                       <table className="w-full text-xs">
                         <tbody className="divide-border-muted/60 divide-y">

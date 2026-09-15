@@ -1453,6 +1453,18 @@ const runMigrations = async () => {
     }
     console.log('✅ cellar purchases ready');
 
+    // Repack as its own quote line, so it can carry an explanation and be
+    // checked against the cases it is for.
+    for (const [column, type] of [
+      ['repack_cost_usd', 'double precision'],
+      ['repack_cases', 'integer'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "cellar_release_requests" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ release repack line ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

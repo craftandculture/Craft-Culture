@@ -36,8 +36,28 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       memberNotes: cellarReleaseRequests.memberNotes,
       /* What we asked them to change — written to be read by them. */
       adminNotes: cellarReleaseRequests.adminNotes,
-      /* The one figure, and the label for anything unusual inside it. */
+      /*
+        The quote, itemised as far as it can safely go.
+
+        This used to be the total alone, because naming the amounts would let
+        anyone who knows what their own wine cost work our rates back out of
+        them. Bundling duty, VAT, transfer out of bond and the licensed
+        distributor into one clearance figure keeps that true — none of those
+        four can be separated from the sum — while still letting a member see
+        what they are paying for and question a repack that should not be on
+        there.
+
+        goodsValueUsd stays out. It is the divisor every percentage on the card
+        is taken against, and publishing it beside the figures would hand over
+        the card itself.
+      */
       totalCostUsd: cellarReleaseRequests.totalCostUsd,
+      clearanceCostUsd: cellarReleaseRequests.clearanceCostUsd,
+      deliveryCostUsd: cellarReleaseRequests.deliveryCostUsd,
+      serviceFeeUsd: cellarReleaseRequests.serviceFeeUsd,
+      repackCostUsd: cellarReleaseRequests.repackCostUsd,
+      repackCases: cellarReleaseRequests.repackCases,
+      additionalChargeUsd: cellarReleaseRequests.additionalChargeUsd,
       additionalChargeLabel: cellarReleaseRequests.additionalChargeLabel,
       quotedAt: cellarReleaseRequests.quotedAt,
       submittedAt: cellarReleaseRequests.submittedAt,

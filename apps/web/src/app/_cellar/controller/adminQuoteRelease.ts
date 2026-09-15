@@ -29,6 +29,8 @@ const adminQuoteRelease = adminProcedure
       deliveryCostUsd: z.number().min(0).optional(),
       serviceFeeUsd: z.number().min(0).optional(),
       /** Anything the rate card does not foresee, with its reason */
+      repackCostUsd: z.number().min(0).optional(),
+      repackCases: z.number().int().min(0).optional(),
       additionalChargeUsd: z.number().min(0).optional(),
       additionalChargeLabel: z.string().max(120).optional(),
       clearanceRateVersion: z.string().max(60).optional(),
@@ -109,6 +111,7 @@ const adminQuoteRelease = adminProcedure
     const clearance = input.clearanceCostUsd ?? 0;
     const delivery = input.deliveryCostUsd ?? 0;
     const service = input.serviceFeeUsd ?? 0;
+    const repack = input.repackCostUsd ?? 0;
     const extra = input.additionalChargeUsd ?? 0;
 
     if (clearance === 0 && delivery === 0) {
@@ -127,9 +130,11 @@ const adminQuoteRelease = adminProcedure
         clearanceCostUsd: clearance,
         deliveryCostUsd: delivery,
         serviceFeeUsd: service,
+        repackCostUsd: repack || null,
+        repackCases: input.repackCases ?? null,
         additionalChargeUsd: extra || null,
         additionalChargeLabel: extra ? (input.additionalChargeLabel ?? null) : null,
-        totalCostUsd: clearance + delivery + service + extra,
+        totalCostUsd: clearance + delivery + service + repack + extra,
         clearanceRateVersion: input.clearanceRateVersion,
         adminNotes: input.adminNotes,
         quotedAt: new Date(),

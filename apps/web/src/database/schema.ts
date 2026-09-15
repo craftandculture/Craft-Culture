@@ -4926,6 +4926,14 @@ export const cellarReleaseRequests = pgTable(
       a figure that differs from the card can be explained later without
       anyone remembering.
     */
+    /*
+      Breaking sealed cases, kept as its own line rather than folded into the
+      additional charge. A member is entitled to know why a fee exists, and a
+      charge that arrives inside a generic bucket cannot carry its own
+      explanation — nor be checked against the cases it is for.
+    */
+    repackCostUsd: doublePrecision('repack_cost_usd'),
+    repackCases: integer('repack_cases'),
     additionalChargeUsd: doublePrecision('additional_charge_usd'),
     additionalChargeLabel: text('additional_charge_label'),
     totalCostUsd: doublePrecision('total_cost_usd'),

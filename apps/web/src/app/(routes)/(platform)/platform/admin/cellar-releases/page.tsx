@@ -55,6 +55,7 @@ const CellarReleasesPage = () => {
     clearance: '',
     delivery: '',
     service: '',
+    repack: '',
     extra: '',
     extraLabel: '',
     goods: '',
@@ -192,12 +193,11 @@ const CellarReleasesPage = () => {
                       charge is where a named pass-through belongs, and it
                       arrives with its own explanation.
                     */
-                    extra: request.suggested?.priced && request.suggested.repackUsd
+                    repack: request.suggested?.priced
                       ? String(request.suggested.repackUsd)
                       : '',
-                    extraLabel: request.suggested?.priced && request.suggested.repackUsd
-                      ? 'Opening sealed cases to make up part quantities'
-                      : '',
+                    extra: '',
+                    extraLabel: '',
                     goods: request.suggested?.priced
                       ? String(request.suggested.goodsValueUsd)
                       : '',
@@ -371,12 +371,9 @@ const CellarReleasesPage = () => {
                                     service: String(
                                       request.suggested.serviceFeeUsd,
                                     ),
-                                    extra: request.suggested.repackUsd
-                                      ? String(request.suggested.repackUsd)
-                                      : '',
-                                    extraLabel: request.suggested.repackUsd
-                                      ? 'Opening sealed cases to make up part quantities'
-                                      : '',
+                                    repack: String(
+                                      request.suggested.repackUsd,
+                                    ),
                                     goods: String(
                                       request.suggested.goodsValueUsd,
                                     ),
@@ -397,46 +394,80 @@ const CellarReleasesPage = () => {
                         )}
                       </div>
 
+                      {/*
+                        A list, not a sentence. Eight figures in one run-on
+                        line could not be read at all: nothing lined up, and
+                        telling which number belonged to which name meant
+                        counting separators.
+                      */}
                       {request.suggested?.priced && (
-                        <Typography
-                          variant="bodyXs"
-                          colorRole="muted"
-                          className="mb-3 block"
-                        >
-                          Card {request.suggested.version} on goods valued at{' '}
-                          {request.suggested.goodsValueUsd}: duty{' '}
-                          {request.suggested.dutyUsd} &middot; transfer{' '}
-                          {request.suggested.transferUsd}
-                          {/*
-                            Only when a case is actually broken. Showing a zero
-                            repack on every whole-case release would make the
-                            line longer and say nothing.
-                          */}
-                          {request.suggested.repackUsd > 0 && (
-                            <>
-                              {' '}
-                              &middot; repack {request.suggested.repackUsd} (
-                              {request.suggested.repackCases}{' '}
-                              {request.suggested.repackCases === 1
-                                ? 'case'
-                                : 'cases'}{' '}
-                              opened)
-                            </>
-                          )}{' '}
-                          &middot; distributor{' '}
-                          {request.suggested.distributorMarginUsd} &middot;
-                          delivery {request.suggested.deliveryUsd} &middot; VAT{' '}
-                          {request.suggested.vatUsd} &middot;{' '}
-                          <strong className="text-text-brand">
-                            C&amp;C {request.suggested.ccMarginUsd}
-                          </strong>
-                        </Typography>
+                        <dl className="border-border-muted bg-background-primary mb-3 grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-lg border px-4 py-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {[
+                            {
+                              label: 'Goods value',
+                              value: request.suggested.goodsValueUsd,
+                              note: 'declared on import',
+                            },
+                            {
+                              label: 'Duty',
+                              value: request.suggested.dutyUsd,
+                              note: 'on the declared value',
+                            },
+                            {
+                              label: 'VAT',
+                              value: request.suggested.vatUsd,
+                              note: 'on everything else',
+                            },
+                            {
+                              label: 'Transfer',
+                              value: request.suggested.transferUsd,
+                              note: 'out of the free zone',
+                            },
+                            {
+                              label: 'Distributor',
+                              value: request.suggested.distributorMarginUsd,
+                              note: 'licensed delivery',
+                            },
+                            {
+                              label: 'Delivery',
+                              value: request.suggested.deliveryUsd,
+                              note: 'the drive',
+                            },
+                            {
+                              label: 'Repack',
+                              value: request.suggested.repackUsd,
+                              note: `${request.suggested.repackCases} ${request.suggested.repackCases === 1 ? 'case' : 'cases'} opened`,
+                            },
+                            {
+                              label: 'C&C',
+                              value: request.suggested.ccMarginUsd,
+                              note: 'our handling',
+                              strong: true,
+                            },
+                          ].map((line) => (
+                            <div key={line.label}>
+                              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                                {line.label}
+                              </dt>
+                              <dd
+                                className={`m-0 text-sm tabular-nums ${line.strong ? 'text-text-brand font-semibold' : 'text-text-primary'}`}
+                              >
+                                {line.value.toFixed(2)}
+                              </dd>
+                              <dd className="text-text-muted m-0 text-[10px]">
+                                {line.note}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
                       )}
+
                       <div className="mb-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
                         {[
                           { key: 'clearance', label: 'Duty, VAT & clearance $' },
                           { key: 'delivery', label: 'Delivery $' },
                           { key: 'service', label: 'Service fee $' },
+                          { key: 'repack', label: 'Repack $' },
                           { key: 'extra', label: 'Additional charge $' },
                           /*
                             Text, not money. Both of these were getting the
@@ -506,6 +537,8 @@ const CellarReleasesPage = () => {
                               clearanceCostUsd: Number(form.clearance) || 0,
                               deliveryCostUsd: Number(form.delivery) || 0,
                               serviceFeeUsd: Number(form.service) || 0,
+                              repackCostUsd: Number(form.repack) || 0,
+                              repackCases: request.suggested?.repackCases ?? 0,
                               additionalChargeUsd: Number(form.extra) || 0,
                               additionalChargeLabel:
                                 form.extraLabel || undefined,
