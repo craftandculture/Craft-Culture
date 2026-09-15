@@ -1,6 +1,11 @@
 'use client';
 
-import { IconBottle, IconSparkles, IconTag } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconShoppingBag,
+  IconSparkles,
+  IconTag,
+} from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -15,6 +20,12 @@ const tabs = [
     under the cellar rather than at its own root so it keeps this navigation.
   */
   { href: '/platform/cellar/available', label: 'Available now', icon: IconSparkles },
+  /*
+    Buying is not finished when the order is placed — there is a transfer to
+    send and a confirmation to wait for — so it needs somewhere to live that is
+    not the catalogue it was bought from.
+  */
+  { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
 ];
 
 /**

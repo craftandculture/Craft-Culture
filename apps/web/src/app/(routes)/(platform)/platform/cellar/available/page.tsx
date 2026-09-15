@@ -1,9 +1,12 @@
 'use client';
 
 import { IconFilter, IconSearch, IconX } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
+import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -65,8 +68,13 @@ const AvailablePage = () => {
   const [sort, setSort] = useState<SortKey>('name');
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(PAGE);
+  /*
+    Cases, keyed by wine. Whole cases only — the book transfer moves a stock
+    row's cases and a part case would have to be a fraction of one.
+  */
+  const [basket, setBasket] = useState<Map<string, number>>(new Map());
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
       search: search || undefined,
       category,
@@ -136,6 +144,49 @@ const AvailablePage = () => {
     producer && { label: producer, clear: () => setProducer('') },
     vintage && { label: vintage, clear: () => setVintage('') },
   ].filter(Boolean) as { label: string; clear: () => void }[];
+
+  const { mutate: placeOrder, isPending: isPlacing } = useMutation(
+    api.consignment.member.createPurchase.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.purchaseNumber} reserved — pay by bank transfer within 48 hours.`,
+        );
+        setBasket(new Map());
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const addCases = (lwin18: string, delta: number, maxCases: number) =>
+    setBasket((current) => {
+      const next = new Map(current);
+      const chosen = Math.min(maxCases, Math.max(0, (next.get(lwin18) ?? 0) + delta));
+
+      if (chosen === 0) next.delete(lwin18);
+      else next.set(lwin18, chosen);
+
+      return next;
+    });
+
+  const basketLines = [...basket.entries()]
+    .map(([lwin18, cases]) => {
+      const wine = wines.find((row) => row.lwin18 === lwin18);
+
+      return wine ? { wine, cases } : null;
+    })
+    .filter(Boolean) as { wine: (typeof wines)[number]; cases: number }[];
+
+  const basketTotal = basketLines.reduce(
+    (sum, line) =>
+      sum + line.cases * line.wine.caseConfig * line.wine.pricePerBottleUsd,
+    0,
+  );
+
+  const basketBottles = basketLines.reduce(
+    (sum, line) => sum + line.cases * line.wine.caseConfig,
+    0,
+  );
 
   const selectClass =
     'border-border-muted text-text-primary bg-background-primary h-9 rounded-lg border px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/40';
@@ -363,7 +414,7 @@ const AvailablePage = () => {
               {filtered.length.toLocaleString('en-US')}
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              To buy, speak to your account team at{' '}
+              Something not here? Ask your account team at{' '}
               <a
                 className="text-text-brand font-medium"
                 href="mailto:enquiries@craftculture.xyz"
@@ -392,6 +443,7 @@ const AvailablePage = () => {
                     $ / case
                   </th>
                   <th className="px-3 py-2 text-right">$ / btl</th>
+                  <th className="w-[132px] px-3 py-2 text-right">Cases</th>
                 </tr>
               </thead>
               <tbody className="divide-border-muted divide-y">
@@ -441,6 +493,59 @@ const AvailablePage = () => {
                     <td className="text-text-primary px-3 py-2 text-right text-[13px] font-semibold tabular-nums">
                       {money(wine.pricePerBottleUsd)}
                     </td>
+                    {/*
+                      Whole cases. A part case in bond would be a fraction of a
+                      stock row, and nothing is physically opened anyway until
+                      the wine is called forward.
+                    */}
+                    <td className="px-3 py-2 text-right">
+                      {wine.availableCases > 0 ? (
+                        <span className="inline-flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            aria-label={`One fewer case of ${wine.product}`}
+                            disabled={!basket.get(wine.lwin18)}
+                            onClick={() =>
+                              addCases(wine.lwin18, -1, wine.availableCases)
+                            }
+                            className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-25"
+                          >
+                            &minus;
+                          </button>
+                          <span
+                            className={`min-w-[28px] text-center text-xs font-semibold tabular-nums ${
+                              basket.get(wine.lwin18)
+                                ? 'text-text-brand'
+                                : 'text-text-muted'
+                            }`}
+                          >
+                            {basket.get(wine.lwin18) ?? 0}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`One more case of ${wine.product}`}
+                            disabled={
+                              (basket.get(wine.lwin18) ?? 0) >= wine.availableCases
+                            }
+                            onClick={() =>
+                              addCases(wine.lwin18, 1, wine.availableCases)
+                            }
+                            className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-25"
+                          >
+                            +
+                          </button>
+                        </span>
+                      ) : (
+                        /*
+                          Loose bottles with no whole case behind them cannot be
+                          bought in bond. A disabled stepper would invite a click
+                          to find out why.
+                        */
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Ask us
+                        </Typography>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -452,6 +557,56 @@ const AvailablePage = () => {
             "that is all there is", which for a catalogue of four hundred is
             the one thing it must not say.
           */}
+          {/*
+            A bar rather than a separate basket page. Choosing wine and
+            committing to it are one motion here, and sending someone to another
+            screen to find the total is how a half-built order gets abandoned.
+          */}
+          {basketLines.length > 0 && (
+            <div className="border-border-muted bg-background-primary sticky bottom-0 z-20 -mx-3 mt-3 flex flex-col gap-2 border-t px-3 py-3 sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:rounded-xl sm:border sm:px-4">
+              <div className="min-w-0">
+                <Typography variant="bodySm" className="block font-semibold">
+                  {basketLines.length}{' '}
+                  {basketLines.length === 1 ? 'wine' : 'wines'} &middot;{' '}
+                  {basketBottles} {basketBottles === 1 ? 'bottle' : 'bottles'}
+                  <span className="text-text-brand ml-2 tabular-nums">
+                    {money(basketTotal)}
+                  </span>
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="block">
+                  Held in bond, duty suspended. Reserved 48 hours for your bank
+                  transfer &mdash; the wine moves once we confirm it has landed.
+                </Typography>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBasket(new Map())}
+                  className="text-text-muted hover:text-text-primary px-2 py-1 text-xs font-medium transition-colors"
+                >
+                  Clear
+                </button>
+                <Button
+                  colorRole="brand"
+                  size="sm"
+                  isDisabled={isPlacing}
+                  onClick={() =>
+                    placeOrder({
+                      lines: basketLines.map((line) => ({
+                        lwin18: line.wine.lwin18,
+                        cases: line.cases,
+                      })),
+                    })
+                  }
+                >
+                  <ButtonContent>
+                    {isPlacing ? 'Reserving…' : 'Reserve and pay'}
+                  </ButtonContent>
+                </Button>
+              </div>
+            </div>
+          )}
+
           {filtered.length > shown.length && (
             <div className="mt-3 flex justify-center">
               <button
