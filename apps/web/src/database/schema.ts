@@ -5405,6 +5405,109 @@ export const consignmentPayoutRuns = pgTable(
 export type ConsignmentPayoutRun = typeof consignmentPayoutRuns.$inferSelect;
 
 /**
+ * A member buying wine that stays in bond
+ *
+ * The book transfer: beneficial ownership moves and the case does not. No
+ * freight, no duty event, no customs filing, no handling — which is the whole
+ * reason to build this rather than take the order by email.
+ *
+ * Whole cases only. `transferStockOwnership` works in cases, and a part case
+ * would have to be expressed as a fraction of a row. The physical repack a part
+ * case eventually needs happens at release, not here, and is charged there.
+ */
+export const cellarPurchases = pgTable(
+  'cellar_purchases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    purchaseNumber: text('purchase_number').notNull().unique(),
+    buyerPartnerId: uuid('buyer_partner_id')
+      .references(() => partners.id)
+      .notNull(),
+    buyerName: text('buyer_name').notNull(),
+    /*
+      reserved → the member has 48 hours to pay
+      payment_claimed → they say they have sent it; we have not seen it
+      paid → an admin confirmed the money landed
+      completed → ownership has moved
+    */
+    status: text('status').notNull().default('reserved'),
+    subtotalUsd: doublePrecision('subtotal_usd').notNull().default(0),
+    totalUsd: doublePrecision('total_usd').notNull().default(0),
+    /*
+      When the hold lapses. Forty-eight hours by default because a bank
+      transfer will not always clear inside twenty-four.
+    */
+    reservedUntil: timestamp('reserved_until', { mode: 'date' }),
+    extendedAt: timestamp('extended_at', { mode: 'date' }),
+    /** The member's claim, which is not a receipt */
+    paymentClaimedAt: timestamp('payment_claimed_at', { mode: 'date' }),
+    paymentReference: text('payment_reference'),
+    /** Someone at C&C confirming the money is actually in */
+    paymentConfirmedAt: timestamp('payment_confirmed_at', { mode: 'date' }),
+    paymentConfirmedBy: uuid('payment_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+    notes: text('notes'),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_purchases_buyer_idx').on(table.buyerPartnerId),
+    index('cellar_purchases_status_idx').on(table.status),
+    index('cellar_purchases_reserved_until_idx').on(table.reservedUntil),
+  ],
+);
+
+export type CellarPurchase = typeof cellarPurchases.$inferSelect;
+
+/**
+ * One wine on a purchase, pinned to the exact parcel it will come from
+ *
+ * The parcel is chosen when the order is placed, not when it is paid, because
+ * that is what the reservation is against. A line that found its stock at
+ * payment time could find none.
+ */
+export const cellarPurchaseItems = pgTable(
+  'cellar_purchase_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    purchaseId: uuid('purchase_id')
+      .references(() => cellarPurchases.id, { onDelete: 'cascade' })
+      .notNull(),
+    stockId: uuid('stock_id')
+      .references(() => wmsStock.id)
+      .notNull(),
+    /** Set when the parcel is a member's, so the sale settles back to them */
+    mandateId: uuid('mandate_id').references(() => saleMandates.id),
+    mandateLotId: uuid('mandate_lot_id').references(() => saleMandateLots.id),
+    /** Whose it was. Never shown to the buyer. */
+    sellerPartnerId: uuid('seller_partner_id').references(() => partners.id),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+    cases: integer('cases').notNull(),
+    bottles: integer('bottles').notNull(),
+    pricePerBottleUsd: doublePrecision('price_per_bottle_usd').notNull(),
+    lineTotalUsd: doublePrecision('line_total_usd').notNull(),
+    reservationId: uuid('reservation_id'),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_purchase_items_purchase_idx').on(table.purchaseId),
+    index('cellar_purchase_items_stock_idx').on(table.stockId),
+  ],
+);
+
+export type CellarPurchaseItem = typeof cellarPurchaseItems.$inferSelect;
+
+/**
  * WMS Receiving Draft Status
  */
 export const wmsReceivingDraftStatus = pgEnum('wms_receiving_draft_status', [

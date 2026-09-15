@@ -1395,6 +1395,64 @@ const runMigrations = async () => {
     );
     console.log('✅ pool sales and payout runs ready');
 
+    // The book transfer: ownership moves, the case does not.
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_purchases" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "purchase_number" text NOT NULL UNIQUE,
+        "buyer_partner_id" uuid NOT NULL REFERENCES "partners"("id"),
+        "buyer_name" text NOT NULL,
+        "status" text NOT NULL DEFAULT 'reserved',
+        "subtotal_usd" double precision NOT NULL DEFAULT 0,
+        "total_usd" double precision NOT NULL DEFAULT 0,
+        "reserved_until" timestamp,
+        "extended_at" timestamp,
+        "payment_claimed_at" timestamp,
+        "payment_reference" text,
+        "payment_confirmed_at" timestamp,
+        "payment_confirmed_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "completed_at" timestamp,
+        "cancelled_at" timestamp,
+        "notes" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      )`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_purchase_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "purchase_id" uuid NOT NULL REFERENCES "cellar_purchases"("id") ON DELETE CASCADE,
+        "stock_id" uuid NOT NULL REFERENCES "wms_stock"("id"),
+        "mandate_id" uuid REFERENCES "sale_mandates"("id"),
+        "mandate_lot_id" uuid REFERENCES "sale_mandate_lots"("id"),
+        "seller_partner_id" uuid REFERENCES "partners"("id"),
+        "lwin18" text NOT NULL,
+        "product_name" text NOT NULL,
+        "producer" text,
+        "vintage" integer,
+        "bottle_size" text,
+        "case_config" integer,
+        "cases" integer NOT NULL,
+        "bottles" integer NOT NULL,
+        "price_per_bottle_usd" double precision NOT NULL,
+        "line_total_usd" double precision NOT NULL,
+        "reservation_id" uuid,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      )`);
+
+    for (const idx of [
+      `CREATE INDEX IF NOT EXISTS "cellar_purchases_buyer_idx" ON "cellar_purchases" ("buyer_partner_id")`,
+      `CREATE INDEX IF NOT EXISTS "cellar_purchases_status_idx" ON "cellar_purchases" ("status")`,
+      `CREATE INDEX IF NOT EXISTS "cellar_purchases_reserved_until_idx" ON "cellar_purchases" ("reserved_until")`,
+      `CREATE INDEX IF NOT EXISTS "cellar_purchase_items_purchase_idx" ON "cellar_purchase_items" ("purchase_id")`,
+      `CREATE INDEX IF NOT EXISTS "cellar_purchase_items_stock_idx" ON "cellar_purchase_items" ("stock_id")`,
+    ]) {
+      await client.unsafe(idx);
+    }
+    console.log('✅ cellar purchases ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.
