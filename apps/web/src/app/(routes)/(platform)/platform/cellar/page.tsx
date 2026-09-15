@@ -936,13 +936,13 @@ const CellarPage = () => {
                       should not be there.
                     */}
                     {needsDecision && (
-                      <div className="border-border-muted mb-3 rounded-lg border px-3 py-2.5">
-                        <dl className="flex flex-col gap-1.5">
+                      <div className="border-border-muted mb-3 rounded-lg border px-3 py-2">
+                        <dl className="flex flex-col gap-0.5">
                           {[
                             {
                               label: 'Duty, VAT and clearance',
                               value: request.clearanceCostUsd ?? 0,
-                              tip: 'Duty assessed on the value declared when the wine came into bond, VAT on the released value as a whole, moving it out of the free zone, and the licensed partner who carries it on the mainland. Rates are set by UAE customs, not by us.',
+                              tip: 'Duty and VAT at the rates UAE customs sets, plus moving the wine out of the free zone and the licensed partner who delivers it.',
                             },
                             {
                               label: 'Delivery',
@@ -954,7 +954,7 @@ const CellarPage = () => {
                                   {
                                     label: `Repacking${request.repackCases ? ` · ${request.repackCases} ${request.repackCases === 1 ? 'case' : 'cases'}` : ''}`,
                                     value: request.repackCostUsd,
-                                    tip: `You have asked for part of a sealed case. Someone opens it, checks and records every bottle, repacks what you are taking into a new carton with fresh inserts, and restacks and relabels the remainder so it stays findable and stays yours. It is charged per case opened rather than per bottle, because the work is the same whether you take one bottle or all but one${request.repackCases && request.repackCases > 1 ? `, and ${request.repackCases} separate cases have to be opened here` : ''}. Take whole cases and there is nothing to charge.`,
+                                    tip: `Part of a sealed case means opening it, checking the bottles, boxing what you are taking and relabelling the rest. Charged per case opened, not per bottle. Whole cases are free of it.`,
                                   },
                                 ]
                               : []),
@@ -970,9 +970,9 @@ const CellarPage = () => {
                                 ]
                               : []),
                             {
-                              label: 'Craft & Culture',
+                              label: 'C&C platform fee',
                               value: request.serviceFeeUsd ?? 0,
-                              tip: 'What we earn for handling the release: the paperwork, the customs filing, coordinating the licensed distributor, and standing behind the wine until it reaches you.',
+                              tip: 'Our fee for handling the release — paperwork, customs filing and the distributor.',
                             },
                           ].map((line) => (
                             <div
@@ -1009,7 +1009,7 @@ const CellarPage = () => {
                             </div>
                           ))}
 
-                          <div className="border-border-muted mt-1 flex items-baseline justify-between gap-3 border-t pt-2">
+                          <div className="border-border-muted mt-1.5 flex items-baseline justify-between gap-3 border-t pt-1.5">
                             <dt className="text-text-primary text-xs font-semibold">
                               Total to deliver
                             </dt>
@@ -1021,10 +1021,9 @@ const CellarPage = () => {
                         <Typography
                           variant="bodyXs"
                           colorRole="muted"
-                          className="mt-2 block"
+                          className="mt-1.5 block"
                         >
-                          You already own the wine &mdash; it is not charged for
-                          again. Nothing further is added.
+                          You already own the wine. Nothing further is added.
                         </Typography>
                       </div>
                     )}

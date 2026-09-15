@@ -7,6 +7,7 @@ import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
   partners,
+  wmsStock,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -91,6 +92,55 @@ const adminGetReleases = adminProcedure
       the pricing record first, the most recent shipment line behind it — so a
       release is valued the same way everything else in the platform is.
     */
+    /*
+      The stock behind each line, for two jobs.
+
+      Open bottles, because a repack is charged for breaking a seal and a
+      parcel with bottles already outside the case must not be charged to break
+      one again.
+
+      And repair. Merging a second request into an open one wrote its lines
+      with an empty LWIN and no vintage, format or lot, and those rows are
+      already saved. Backfilling from the stock the line still points at fixes
+      them on read, rather than leaving a member's request unidentifiable and —
+      because cost is looked up by LWIN — unpriceable.
+    */
+    const stockIds = items
+      .map((item) => item.stockId)
+      .filter(Boolean) as string[];
+
+    const stockRows =
+      stockIds.length > 0
+        ? await db
+            .select({
+              id: wmsStock.id,
+              lwin18: wmsStock.lwin18,
+              productName: wmsStock.productName,
+              vintage: wmsStock.vintage,
+              bottleSize: wmsStock.bottleSize,
+              caseConfig: wmsStock.caseConfig,
+              lotNumber: wmsStock.lotNumber,
+              openBottles: wmsStock.openBottles,
+            })
+            .from(wmsStock)
+            .where(inArray(wmsStock.id, stockIds))
+        : [];
+
+    const stockById = new Map(stockRows.map((row) => [row.id, row]));
+
+    for (const item of items) {
+      const stock = item.stockId ? stockById.get(item.stockId) : undefined;
+
+      if (!stock) continue;
+
+      if (!item.lwin18) item.lwin18 = stock.lwin18;
+      if (!item.productName) item.productName = stock.productName;
+      if (item.vintage == null) item.vintage = stock.vintage;
+      if (item.bottleSize == null) item.bottleSize = stock.bottleSize;
+      if (item.caseConfig == null) item.caseConfig = stock.caseConfig;
+      if (item.lotNumber == null) item.lotNumber = stock.lotNumber;
+    }
+
     const lwins = [...new Set(items.map((item) => item.lwin18))];
 
     const costByLwin = await getCostPerBottle(lwins);
@@ -109,6 +159,9 @@ const adminGetReleases = adminProcedure
           items.map((item) => ({
             bottles: item.bottles,
             caseConfig: item.caseConfig,
+            openBottles: item.stockId
+              ? (stockById.get(item.stockId)?.openBottles ?? 0)
+              : 0,
             costPerBottle:
               costByLwin.get(lwinPakKeyOf(item.lwin18)) ?? null,
           })),

@@ -74,7 +74,12 @@ const memberSaveRelease = stockOwnerProcedure
         ),
       );
 
-    const ownedById = new Map(owned.map((row) => [row.id, row]));
+    /*
+      Rebuilt after a merge, which is why this is not const. Merging pushes the
+      open request's lines onto input.lines, and a map built before that does
+      not contain them.
+    */
+    let ownedById = new Map(owned.map((row) => [row.id, row]));
 
     for (const line of input.lines) {
       const stock = ownedById.get(line.stockId);
@@ -161,13 +166,28 @@ const memberSaveRelease = stockOwnerProcedure
       */
       const mergedStockIds = input.lines.map((line) => line.stockId);
 
+      /*
+        Every column the insert below copies, not just the ones this loop
+        validates against.
+
+        This selected four fields and the insert then read the pre-merge map,
+        so a line pushed here was written with an empty LWIN and no vintage,
+        format or lot — the wine's own identity, lost by adding a second
+        request to it. It also broke the quote, since cost is looked up by
+        LWIN and an empty one matches nothing, which is how a merged request
+        came to be valued at nought.
+      */
       const mergedStock = await db
         .select({
           id: wmsStock.id,
+          lwin18: wmsStock.lwin18,
           productName: wmsStock.productName,
+          vintage: wmsStock.vintage,
+          bottleSize: wmsStock.bottleSize,
           caseConfig: wmsStock.caseConfig,
           quantityCases: wmsStock.quantityCases,
           openBottles: wmsStock.openBottles,
+          lotNumber: wmsStock.lotNumber,
         })
         .from(wmsStock)
         .where(
@@ -176,6 +196,8 @@ const memberSaveRelease = stockOwnerProcedure
             eq(wmsStock.ownerId, ctx.partner.id),
           ),
         );
+
+      ownedById = new Map(mergedStock.map((row) => [row.id, row]));
 
       for (const line of input.lines) {
         const stock = mergedStock.find((row) => row.id === line.stockId);
