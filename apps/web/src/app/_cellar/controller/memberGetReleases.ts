@@ -47,11 +47,15 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
         what they are paying for and question a repack that should not be on
         there.
 
-        goodsValueUsd stays out. It is the divisor every percentage on the card
-        is taken against, and publishing it beside the figures would hand over
-        the card itself.
+        goodsValueUsd is included after all. It was held back on the grounds
+        that it is the divisor every percentage is taken against — but a member
+        can already add it up from their own cellar, which prints the value
+        recorded on import against every wine and totals it on a summary card.
+        Withholding it here protected nothing and left them unable to see what
+        the release is being assessed on.
       */
       totalCostUsd: cellarReleaseRequests.totalCostUsd,
+      goodsValueUsd: cellarReleaseRequests.goodsValueUsd,
       clearanceCostUsd: cellarReleaseRequests.clearanceCostUsd,
       deliveryCostUsd: cellarReleaseRequests.deliveryCostUsd,
       serviceFeeUsd: cellarReleaseRequests.serviceFeeUsd,

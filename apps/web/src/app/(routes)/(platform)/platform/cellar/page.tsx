@@ -937,6 +937,29 @@ const CellarPage = () => {
                     */}
                     {needsDecision && (
                       <div className="border-border-muted mb-3 rounded-lg border px-3 py-2">
+                        {/*
+                          The wine's own value, above the rule and not in the
+                          sum. It is what duty is assessed on, so a member
+                          reading a duty figure has no way to judge it without
+                          this — and every number below is reached from it.
+                        */}
+                        {(request.goodsValueUsd ?? 0) > 0 && (
+                          <div className="border-border-muted mb-1.5 flex items-baseline justify-between gap-3 border-b pb-1.5">
+                            <Typography variant="bodyXs" colorRole="muted">
+                              Value of the wine
+                              <span className="text-text-muted/70 ml-1.5">
+                                declared on import &middot; not charged
+                              </span>
+                            </Typography>
+                            <Typography
+                              variant="bodyXs"
+                              colorRole="muted"
+                              className="tabular-nums"
+                            >
+                              {money(request.goodsValueUsd ?? 0)}
+                            </Typography>
+                          </div>
+                        )}
                         <dl className="flex flex-col gap-0.5">
                           {[
                             {
