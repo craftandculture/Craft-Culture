@@ -924,11 +924,18 @@ const CellarPage = () => {
                               this — and every number below is reached from it.
                             */}
                             {(request.goodsValueUsd ?? 0) > 0 && (
-                              <div className="border-border-muted mb-1.5 flex items-baseline justify-between gap-3 border-b pb-1.5">
+                              <div className="bg-fill-muted/50 -mx-3 -mt-2 mb-2 flex items-start justify-between gap-3 px-3 py-2">
+                                {/*
+                                  On one line this wrapped in a 340px column and
+                                  took the figure out of line with every figure
+                                  below it, which is the one thing a column of
+                                  money must not do. The qualifier sits under the
+                                  label, where wrapping costs nothing.
+                                */}
                                 <Typography variant="bodyXs" colorRole="muted">
-                                  Value of the wine
-                                  <span className="text-text-muted/70 ml-1.5">
-                                    declared on import &middot; not charged
+                                  Wine value
+                                  <span className="block text-[10px] opacity-70">
+                                    declared on import, not charged
                                   </span>
                                 </Typography>
                                 <Typography
@@ -940,7 +947,7 @@ const CellarPage = () => {
                                 </Typography>
                               </div>
                             )}
-                            <dl className="flex flex-col gap-0.5">
+                            <dl className="flex flex-col gap-1">
                               {[
                                 {
                                   label: 'Duty, VAT and clearance',
@@ -1012,11 +1019,17 @@ const CellarPage = () => {
                                 </div>
                               ))}
 
-                              <div className="border-border-muted mt-1.5 flex items-baseline justify-between gap-3 border-t pt-1.5">
+                              {/*
+                                The figure being agreed to, set apart from the
+                                lines that make it. At the same size as its own
+                                components it read as a fifth charge rather than
+                                their sum.
+                              */}
+                              <div className="border-border-muted mt-2 flex items-baseline justify-between gap-3 border-t pt-2">
                                 <dt className="text-text-primary text-xs font-semibold">
                                   Total to deliver
                                 </dt>
-                                <dd className="text-text-brand m-0 text-sm font-semibold tabular-nums">
+                                <dd className="text-text-brand m-0 text-base font-semibold tabular-nums">
                                   {money(request.totalCostUsd ?? 0)}
                                 </dd>
                               </div>
@@ -1024,7 +1037,7 @@ const CellarPage = () => {
                             <Typography
                               variant="bodyXs"
                               colorRole="muted"
-                              className="mt-1.5 block"
+                              className="mt-2 block text-[11px] opacity-80"
                             >
                               You already own the wine. Nothing further is added.
                             </Typography>
@@ -1049,11 +1062,18 @@ const CellarPage = () => {
                                         item.bottleSize,
                                         item.caseConfig,
                                       )}
-                                      {item.lotNumber && (
-                                        <span className="text-text-muted ml-2 font-mono text-[11px]">
-                                          lot {item.lotNumber}
-                                        </span>
-                                      )}
+                                    </td>
+                                    {/*
+                                      Its own column. Run on after the format
+                                      the lot read as part of the wine's name,
+                                      and seven of them at seven different
+                                      horizontal positions gave the eye nothing
+                                      to follow — which is the whole use of a
+                                      lot number, checking it against what is on
+                                      the shelf.
+                                    */}
+                                    <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-[11px] sm:table-cell">
+                                      {item.lotNumber ?? '—'}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-2 text-right">
                                       {isEditable ? (
