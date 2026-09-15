@@ -5073,6 +5073,12 @@ export const saleMandates = pgTable(
       undone — duty is paid and the wine leaves the building — so the record of
       who decided it has to survive the mandate closing.
     */
+    /*
+      A rate agreed with this member for this parcel, overriding the standard
+      2.5/5. commissionPctFor has always described this; the column it described
+      did not exist, so a negotiated rate had no way to be honoured.
+    */
+    commissionPctOverride: doublePrecision('commission_pct_override'),
     placedAt: timestamp('placed_at', { mode: 'date' }),
     placedBy: uuid('placed_by').references(() => users.id, {
       onDelete: 'set null',
@@ -5249,11 +5255,16 @@ export const consignmentSettlements = pgTable(
     invoicePaidAt: timestamp('invoice_paid_at', { mode: 'date' }),
     settledAt: timestamp('settled_at', { mode: 'date' }),
     settledBy: uuid('settled_by').references(() => users.id),
+    /** Which monthly run paid it, once one has */
+    payoutRunId: uuid('payout_run_id'),
+    /** Platform sale, distributor report, or typed in by hand */
+    source: text('source').notNull().default('in_app'),
     notes: text('notes'),
     ...timestamps,
   },
   (table) => [
     index('consignment_settlements_owner_id_idx').on(table.ownerId),
+    index('consignment_settlements_payout_run_idx').on(table.payoutRunId),
     index('consignment_settlements_status_idx').on(table.status),
     index('consignment_settlements_order_id_idx').on(table.orderId),
   ],
@@ -5284,6 +5295,114 @@ export const consignmentSettlementItems = pgTable(
 );
 
 export type ConsignmentSettlementItem = typeof consignmentSettlementItems.$inferSelect;
+
+/**
+ * Where a settlement came from
+ *
+ * A sale in the platform and a line on a distributor's monthly report settle
+ * the same way and must be told apart, because only one of them can be
+ * reconciled against an order in our own system.
+ */
+export const settlementSource = pgEnum('settlement_source', [
+  'in_app',
+  'distributor',
+  'manual',
+]);
+
+/**
+ * A sale of consigned wine
+ *
+ * The moment a member's parcel is sold, whoever sold it. Separate from the
+ * settlement because these are two different facts with two different clocks:
+ * the sale happens when a buyer takes the wine, and the settlement is what we
+ * owe for it — which is only payable once the buyer's money is actually in.
+ *
+ * Commission is frozen here rather than read back from the rate constants. The
+ * rate depends on who bought, the constants can change, and a settlement has to
+ * stay explicable years after both.
+ */
+export const poolSales = pgTable(
+  'pool_sales',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    saleNumber: text('sale_number').notNull().unique(),
+    mandateId: uuid('mandate_id')
+      .references(() => saleMandates.id)
+      .notNull(),
+    mandateLotId: uuid('mandate_lot_id').references(() => saleMandateLots.id),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    /** The consignor — who is owed */
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+    /** Who bought, where we know. A distributor's end customer we do not. */
+    buyerPartnerId: uuid('buyer_partner_id').references(() => partners.id),
+    buyerName: text('buyer_name'),
+    /** Decides the commission rate, and is the reason it cannot live on the mandate */
+    buyerAudience: text('buyer_audience').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    bottles: integer('bottles').notNull(),
+    caseConfig: integer('case_config'),
+    salePricePerBottleUsd: doublePrecision('sale_price_per_bottle_usd').notNull(),
+    saleTotalUsd: doublePrecision('sale_total_usd').notNull(),
+    /** Frozen from the mandate: what the member agreed to receive */
+    askPerBottleUsd: doublePrecision('ask_per_bottle_usd').notNull(),
+    owedToOwnerUsd: doublePrecision('owed_to_owner_usd').notNull(),
+    commissionPct: doublePrecision('commission_pct').notNull(),
+    commissionUsd: doublePrecision('commission_usd').notNull(),
+    source: settlementSource('source').notNull().default('in_app'),
+    settlementId: uuid('settlement_id').references(
+      () => consignmentSettlements.id,
+    ),
+    soldAt: timestamp('sold_at', { mode: 'date' }).notNull().defaultNow(),
+    recordedBy: uuid('recorded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('pool_sales_mandate_idx').on(table.mandateId),
+    index('pool_sales_owner_idx').on(table.ownerId),
+    index('pool_sales_settlement_idx').on(table.settlementId),
+    index('pool_sales_sold_at_idx').on(table.soldAt),
+  ],
+);
+
+export type PoolSale = typeof poolSales.$inferSelect;
+
+/**
+ * A month's payout to consignors
+ *
+ * Members are paid monthly, and only for sales the buyer has actually paid, so
+ * a run is a batch of settlements that have reached payment_received. One Zoho
+ * bill per member per run, with a line per sale.
+ */
+export const consignmentPayoutRuns = pgTable(
+  'consignment_payout_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    runNumber: text('run_number').notNull().unique(),
+    periodStart: timestamp('period_start', { mode: 'date' }).notNull(),
+    periodEnd: timestamp('period_end', { mode: 'date' }).notNull(),
+    /** draft | approved | paid */
+    status: text('status').notNull().default('draft'),
+    totalUsd: doublePrecision('total_usd').notNull().default(0),
+    memberCount: integer('member_count').notNull().default(0),
+    approvedAt: timestamp('approved_at', { mode: 'date' }),
+    approvedBy: uuid('approved_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [index('consignment_payout_runs_status_idx').on(table.status)],
+);
+
+export type ConsignmentPayoutRun = typeof consignmentPayoutRuns.$inferSelect;
 
 /**
  * WMS Receiving Draft Status

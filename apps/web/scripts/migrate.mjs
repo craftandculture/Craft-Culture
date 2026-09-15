@@ -1286,6 +1286,7 @@ const runMigrations = async () => {
       ['placed_by', 'uuid REFERENCES "users"("id") ON DELETE SET NULL'],
       ['placed_with_partner_id', 'uuid REFERENCES "partners"("id")'],
       ['placed_location_id', 'uuid'],
+      ['commission_pct_override', 'double precision'],
     ]) {
       await client.unsafe(
         `ALTER TABLE "sale_mandates" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
@@ -1310,6 +1311,89 @@ const runMigrations = async () => {
       `UPDATE "cellar_release_rates" SET "repack_per_case" = 6.81 WHERE "repack_per_case" = 0`,
     );
     console.log('✅ repack fee ready');
+
+    // Selling a member's wine and owing them for it are two facts with two
+    // clocks: the sale happens when a buyer takes it, the debt is payable when
+    // the buyer's money is in. consignment_settlements has been migrated and
+    // unwritten for a long time; this is what finally fills it.
+    await client.unsafe(`DO $$ BEGIN
+      CREATE TYPE "settlement_source" AS ENUM ('in_app', 'distributor', 'manual');
+    EXCEPTION WHEN duplicate_object THEN null; END $$`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "pool_sales" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "sale_number" text NOT NULL UNIQUE,
+        "mandate_id" uuid NOT NULL REFERENCES "sale_mandates"("id"),
+        "mandate_lot_id" uuid REFERENCES "sale_mandate_lots"("id"),
+        "stock_id" uuid REFERENCES "wms_stock"("id"),
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id"),
+        "owner_name" text NOT NULL,
+        "buyer_partner_id" uuid REFERENCES "partners"("id"),
+        "buyer_name" text,
+        "buyer_audience" text NOT NULL,
+        "lwin18" text NOT NULL,
+        "product_name" text NOT NULL,
+        "bottles" integer NOT NULL,
+        "case_config" integer,
+        "sale_price_per_bottle_usd" double precision NOT NULL,
+        "sale_total_usd" double precision NOT NULL,
+        "ask_per_bottle_usd" double precision NOT NULL,
+        "owed_to_owner_usd" double precision NOT NULL,
+        "commission_pct" double precision NOT NULL,
+        "commission_usd" double precision NOT NULL,
+        "source" "settlement_source" NOT NULL DEFAULT 'in_app',
+        "settlement_id" uuid REFERENCES "consignment_settlements"("id"),
+        "sold_at" timestamp NOT NULL DEFAULT now(),
+        "recorded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "notes" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      )`);
+
+    for (const idx of [
+      `CREATE INDEX IF NOT EXISTS "pool_sales_mandate_idx" ON "pool_sales" ("mandate_id")`,
+      `CREATE INDEX IF NOT EXISTS "pool_sales_owner_idx" ON "pool_sales" ("owner_id")`,
+      `CREATE INDEX IF NOT EXISTS "pool_sales_settlement_idx" ON "pool_sales" ("settlement_id")`,
+      `CREATE INDEX IF NOT EXISTS "pool_sales_sold_at_idx" ON "pool_sales" ("sold_at")`,
+    ]) {
+      await client.unsafe(idx);
+    }
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "consignment_payout_runs" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "run_number" text NOT NULL UNIQUE,
+        "period_start" timestamp NOT NULL,
+        "period_end" timestamp NOT NULL,
+        "status" text NOT NULL DEFAULT 'draft',
+        "total_usd" double precision NOT NULL DEFAULT 0,
+        "member_count" integer NOT NULL DEFAULT 0,
+        "approved_at" timestamp,
+        "approved_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "paid_at" timestamp,
+        "notes" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      )`);
+
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "consignment_payout_runs_status_idx" ON "consignment_payout_runs" ("status")`,
+    );
+
+    for (const [column, type] of [
+      ['payout_run_id', 'uuid'],
+      ['source', `text NOT NULL DEFAULT 'in_app'`],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "consignment_settlements" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "consignment_settlements_payout_run_idx" ON "consignment_settlements" ("payout_run_id")`,
+    );
+    console.log('✅ pool sales and payout runs ready');
 
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
