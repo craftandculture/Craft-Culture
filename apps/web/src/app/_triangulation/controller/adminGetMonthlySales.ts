@@ -48,13 +48,22 @@ const adminGetMonthlySales = adminProcedure
   .input(
     z.object({
       programmeId: uuidLike.optional().nullable(),
+      /**
+       * Read every client at once rather than the one on screen.
+       *
+       * A mixed invoice belongs to several owners and can only be filed under
+       * one client, so scoped to a programme its other owners' bottles are
+       * invisible — and a settlement that cannot see an owner's wine is the
+       * one thing this view exists to prevent.
+       */
+      allProgrammes: z.boolean().default(false),
       /** Limit to one owner; omit for every owner in the programme */
       ownerName: z.string().max(120).optional().nullable(),
     }),
   )
   .query(async ({ input }) => {
     const programmeId = resolveProgrammeId(input.programmeId);
-    const { ownerName } = input;
+    const { ownerName, allProgrammes } = input;
 
     const rows = await client<MonthlySalesRow[]>`
       WITH lines AS (
@@ -77,7 +86,7 @@ const adminGetMonthlySales = adminProcedure
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
         LEFT JOIN tri_skus s ON s.id = l.sku_id
-        WHERE i.programme_id = ${programmeId}
+        WHERE ${allProgrammes ? client`TRUE` : client`i.programme_id = ${programmeId}`}
           AND i.status = 'committed'
           AND l.status <> 'ignored'
           AND i.kind IN ('cc_sales_to_cd', 'cd_sales')

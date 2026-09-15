@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
@@ -40,8 +41,18 @@ const formatValue = (value: number, currencies: string[]) => {
  */
 const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
   const api = useTRPC();
+  /*
+    A mixed invoice belongs to several owners and can only be filed under one
+    client, so its other owners' bottles are invisible scoped to a programme.
+    Every client is the default here because settling is a question about an
+    owner, not about whose tab the document happened to be uploaded under.
+  */
+  const [allProgrammes, setAllProgrammes] = useState(true);
   const monthly = useQuery(
-    api.triangulation.admin.getMonthlySales.queryOptions({ programmeId }),
+    api.triangulation.admin.getMonthlySales.queryOptions({
+      programmeId,
+      allProgrammes,
+    }),
   );
 
   const rows = monthly.data ?? [];
@@ -70,6 +81,26 @@ const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { label: 'Every client', value: true },
+          { label: 'This client only', value: false },
+        ].map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            onClick={() => setAllProgrammes(option.value)}
+            className={`rounded-full border px-3 py-1 text-xs ${
+              allProgrammes === option.value
+                ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                : 'border-border-primary text-text-muted'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-2xl">
           What left us and what the outlet sold on, by month and by owner. Value
