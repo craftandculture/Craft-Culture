@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarPurchaseItems, cellarPurchases } from '@/database/schema';
@@ -35,7 +35,19 @@ const memberGetPurchases = stockOwnerProcedure.query(async ({ ctx }) => {
       pricePerBottleUsd: cellarPurchaseItems.pricePerBottleUsd,
       lineTotalUsd: cellarPurchaseItems.lineTotalUsd,
     })
-    .from(cellarPurchaseItems);
+    .from(cellarPurchaseItems)
+    /*
+      Scoped to this member's own purchases. Without the filter this read every
+      purchase line in the system and leaned on the Map lookup below to show
+      only the right ones — so the rows never rendered, but they were fetched,
+      and the query grew with everybody else's buying.
+    */
+    .where(
+      inArray(
+        cellarPurchaseItems.purchaseId,
+        purchases.map((purchase) => purchase.id),
+      ),
+    );
 
   const byPurchase = new Map<string, typeof items>();
 

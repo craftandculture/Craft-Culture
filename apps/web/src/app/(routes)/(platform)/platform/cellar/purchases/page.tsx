@@ -1,6 +1,6 @@
 'use client';
 
-import { IconShoppingBag } from '@tabler/icons-react';
+import { IconShoppingBag, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
@@ -70,10 +70,26 @@ const PurchasesPage = () => {
   const api = useTRPC();
   const [openId, setOpenId] = useState<string | null>(null);
   const [reference, setReference] = useState('');
+  /*
+    Cancelling gives wine back to the list and the member loses their hold on
+    it, so it asks once rather than acting on a single click.
+  */
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.consignment.member.getPurchases.queryOptions(),
   });
+
+  const { mutate: cancelPurchase, isPending: isCancelling } = useMutation(
+    api.consignment.member.cancelPurchase.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.purchaseNumber} cancelled — the wine is back on the list.`);
+        setConfirmCancelId(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
 
   const { mutate: markPaid, isPending } = useMutation(
     api.consignment.member.markPurchasePaid.mutationOptions({
@@ -160,7 +176,7 @@ const PurchasesPage = () => {
                     {purchase.items.length}{' '}
                     {purchase.items.length === 1 ? 'wine' : 'wines'}
                     {purchase.status === 'reserved' && purchase.reservedUntil
-                      ? ` · held ${formatDistanceToNowStrict(new Date(purchase.reservedUntil), { addSuffix: true })}`
+                      ? ` · reserved for another ${formatDistanceToNowStrict(new Date(purchase.reservedUntil))}`
                       : ''}
                   </Typography>
                 </div>
@@ -193,28 +209,122 @@ const PurchasesPage = () => {
               </div>
 
               <div className="border-border-muted bg-fill-muted/30 border-t px-4 py-3">
-                <ul className="mb-2 flex flex-col gap-1">
-                  {purchase.items.map((item) => (
-                    <li key={item.id} className="flex justify-between gap-3">
-                      <Typography variant="bodyXs" className="min-w-0 truncate">
-                        {displayWineName(item.productName)}
-                        {item.vintage ? ` · ${item.vintage}` : ''} &middot;{' '}
-                        {item.cases} {item.cases === 1 ? 'case' : 'cases'}
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="flex-shrink-0 tabular-nums"
-                      >
-                        {money(item.lineTotalUsd)}
-                      </Typography>
-                    </li>
-                  ))}
-                </ul>
+                {/*
+                  A table, not a sentence. "Charmes · 2020 · 1 case" left the
+                  producer, the format and the per-bottle price out, which are
+                  the three things anyone checks an order against — and a case
+                  of six and a case of twelve at the same total are not the
+                  same purchase.
+                */}
+                <div className="border-border-muted bg-background-primary mb-3 overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead>
+                      <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-[0.08em]">
+                        <th className="px-3 py-1.5 text-left">Wine</th>
+                        <th className="hidden px-3 py-1.5 text-left sm:table-cell">
+                          Producer
+                        </th>
+                        <th className="px-3 py-1.5 text-center">Vintage</th>
+                        <th className="px-3 py-1.5 text-center">Format</th>
+                        <th className="px-3 py-1.5 text-right">Qty</th>
+                        <th className="px-3 py-1.5 text-right">$ / btl</th>
+                        <th className="px-3 py-1.5 text-right">Line</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-border-muted/60 divide-y">
+                      {purchase.items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="text-text-primary max-w-0 px-3 py-2 text-[13px] font-medium">
+                            <span
+                              className="block truncate"
+                              title={item.productName}
+                            >
+                              {displayWineName(item.productName)}
+                            </span>
+                            <span className="text-text-muted block truncate text-[11px] sm:hidden">
+                              {item.producer}
+                            </span>
+                          </td>
+                          <td className="text-text-muted hidden max-w-0 px-3 py-2 text-[13px] sm:table-cell">
+                            <span
+                              className="block truncate"
+                              title={item.producer ?? ''}
+                            >
+                              {item.producer ?? '—'}
+                            </span>
+                          </td>
+                          <td className="text-text-muted px-3 py-2 text-center text-[13px] tabular-nums">
+                            {item.vintage ?? 'NV'}
+                          </td>
+                          <td className="text-text-primary px-3 py-2 text-center text-[13px]">
+                            {(item.caseConfig ?? 1) > 1
+                              ? `${item.caseConfig}×`
+                              : ''}
+                            {item.bottleSize ?? '—'}
+                          </td>
+                          <td className="px-3 py-2 text-right text-[13px] tabular-nums">
+                            <span className="text-text-primary">
+                              {item.cases}{' '}
+                              {item.cases === 1 ? 'case' : 'cases'}
+                            </span>
+                            <span className="text-text-muted block text-[11px]">
+                              {item.bottles}{' '}
+                              {item.bottles === 1 ? 'bottle' : 'bottles'}
+                            </span>
+                          </td>
+                          <td className="text-text-muted px-3 py-2 text-right text-[13px] tabular-nums">
+                            {money(item.pricePerBottleUsd)}
+                          </td>
+                          <td className="text-text-primary px-3 py-2 text-right text-[13px] font-semibold tabular-nums">
+                            {money(item.lineTotalUsd)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                <Typography variant="bodyXs" colorRole="muted" className="block">
-                  {state.detail}
-                </Typography>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {state.detail}
+                  </Typography>
+
+                  {canPay &&
+                    (confirmCancelId === purchase.id ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Release this wine back to the list?
+                        </Typography>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorRole="danger"
+                          isDisabled={isCancelling}
+                          onClick={() =>
+                            cancelPurchase({ purchaseId: purchase.id })
+                          }
+                        >
+                          <ButtonContent>Yes, cancel</ButtonContent>
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmCancelId(null)}
+                          className="text-text-muted hover:text-text-primary px-1 text-xs font-medium"
+                        >
+                          Keep it
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmCancelId(purchase.id)}
+                        className="text-text-muted inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors hover:text-red-700"
+                      >
+                        <Icon icon={IconX} size="xs" />
+                        Cancel order
+                      </button>
+                    ))}
+                </div>
 
                 {isOpen && canPay && (
                   <div className="mt-3">

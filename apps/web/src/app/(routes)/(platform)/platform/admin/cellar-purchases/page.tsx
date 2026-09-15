@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconRefresh } from '@tabler/icons-react';
+import { IconCheck, IconRefresh, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import displayWineName from '@/app/_wms/utils/displayWineName';
@@ -51,10 +52,22 @@ const CellarPurchasesPage = () => {
   const [status, setStatus] = useState<StatusFilter>('open');
   const [openId, setOpenId] = useState<string | null>(null);
   const [reference, setReference] = useState('');
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.consignment.admin.getPurchases.queryOptions({ status }),
   });
+
+  const { mutate: cancelPurchase, isPending: isCancelling } = useMutation(
+    api.consignment.admin.cancelPurchase.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.purchaseNumber} cancelled — the wine is back on the list.`);
+        setConfirmCancelId(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
 
   const { mutate: confirm, isPending } = useMutation(
     api.consignment.admin.confirmPurchasePayment.mutationOptions({
@@ -273,6 +286,46 @@ const CellarPurchasesPage = () => {
                           <Typography variant="bodyXs" colorRole="muted">
                             They have not said they have paid yet.
                           </Typography>
+                        )}
+
+                        {/*
+                          Cancelling releases the holds so the wine goes back on
+                          the list. Pushed right and quiet: it is the answer for
+                          money that never arrived, not a routine action.
+                        */}
+                        {confirmCancelId === purchase.id ? (
+                          <span className="ml-auto inline-flex items-center gap-2">
+                            <Typography variant="bodyXs" colorRole="muted">
+                              Release the wine?
+                            </Typography>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorRole="danger"
+                              isDisabled={isCancelling}
+                              onClick={() =>
+                                cancelPurchase({ purchaseId: purchase.id })
+                              }
+                            >
+                              <ButtonContent>Yes, cancel</ButtonContent>
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmCancelId(null)}
+                              className="text-text-muted hover:text-text-primary px-1 text-xs font-medium"
+                            >
+                              Keep it
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmCancelId(purchase.id)}
+                            className="text-text-muted ml-auto inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors hover:text-red-700"
+                          >
+                            <Icon icon={IconX} size="xs" />
+                            Cancel
+                          </button>
                         )}
                       </div>
                     </>
