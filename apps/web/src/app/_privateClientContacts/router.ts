@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminCreateForPartner from './controller/adminCreateForPartner';
 import adminGetAll from './controller/adminGetAll';
 import adminGetManyForPartner from './controller/adminGetManyForPartner';
 import adminLinkOrCreateForOrder from './controller/adminLinkOrCreateForOrder';
@@ -18,6 +19,7 @@ const privateClientContactsRouter = createTRPCRouter({
   update,
   // Admins belong to no wine partner, so `update` and `getMany` are closed
   // to them — these take the partner from the form instead
+  adminCreateForPartner,
   adminGetAll,
   adminGetManyForPartner,
   adminUpdate,

@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -19,9 +20,45 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const AdminClientsPage = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
   const [unverifiedOnly, setUnverifiedOnly] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({
+    partnerId: '',
+    name: '',
+    email: '',
+    phone: '',
+    addressLine1: '',
+    city: '',
+    verified: false,
+  });
+
+  // The simple list: id and name, which is all a chooser needs.
+  const partners = useQuery(api.partners.list.queryOptions({}));
+
+  const createClient = useMutation({
+    ...api.privateClientContacts.adminCreateForPartner.mutationOptions(),
+    onSuccess: async (created) => {
+      toast.success(
+        `${created.name} added${created.verified ? ' and marked verified' : ''}`,
+      );
+      setDraft((current) => ({
+        ...current,
+        name: '',
+        email: '',
+        phone: '',
+        addressLine1: '',
+        city: '',
+      }));
+      setAdding(false);
+      await queryClient.invalidateQueries({
+        queryKey: api.privateClientContacts.adminGetAll.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   const clients = useQuery(
     api.privateClientContacts.adminGetAll.queryOptions({
@@ -67,6 +104,101 @@ const AdminClientsPage = () => {
         </div>
       ) : null}
 
+      {adding ? (
+        <div className="border-border-primary rounded-xl border p-4">
+          <Typography variant="labelSm">Add a client</Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-0.5 mb-3">
+              Tick verified only where the distributor has already cleared them
+              — it is their word, and an order for an unverified client stops at
+              verification.
+            </p>
+          </Typography>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-text-muted text-xs">Partner *</span>
+              <select
+                value={draft.partnerId}
+                onChange={(event) =>
+                  setDraft((d) => ({ ...d, partnerId: event.target.value }))
+                }
+                className="border-border-primary bg-fill-primary min-h-9 rounded-md border px-2 text-sm"
+              >
+                <option value="">Choose a partner…</option>
+                {(partners.data ?? []).map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(
+              [
+                ['name', 'Client name *'],
+                ['email', 'Email'],
+                ['phone', 'Phone'],
+                ['addressLine1', 'Address'],
+                ['city', 'City'],
+              ] as const
+            ).map(([field, label]) => (
+              <label key={field} className="flex flex-col gap-1">
+                <span className="text-text-muted text-xs">{label}</span>
+                <Input
+                  value={draft[field]}
+                  onChange={(event) =>
+                    setDraft((d) => ({ ...d, [field]: event.target.value }))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={draft.verified}
+                onChange={(event) =>
+                  setDraft((d) => ({ ...d, verified: event.target.checked }))
+                }
+              />
+              <Typography variant="bodySm">
+                Verified by the distributor
+              </Typography>
+            </label>
+            <Button
+              size="sm"
+              colorRole="brand"
+              isDisabled={
+                createClient.isPending ||
+                !draft.partnerId ||
+                !draft.name.trim()
+              }
+              onClick={() =>
+                createClient.mutate({
+                  partnerId: draft.partnerId,
+                  name: draft.name,
+                  email: draft.email || undefined,
+                  phone: draft.phone || undefined,
+                  addressLine1: draft.addressLine1 || undefined,
+                  city: draft.city || undefined,
+                  verified: draft.verified,
+                })
+              }
+            >
+              {createClient.isPending ? 'Adding…' : 'Add client'}
+            </Button>
+            <Button
+              size="sm"
+              colorRole="muted"
+              variant="ghost"
+              onClick={() => setAdding(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-80">
           <Input
@@ -86,6 +218,13 @@ const AdminClientsPage = () => {
         <Typography variant="bodySm" colorRole="muted">
           {rows.length} shown
         </Typography>
+        <Button
+          size="sm"
+          colorRole="brand"
+          onClick={() => setAdding((current) => !current)}
+        >
+          Add client
+        </Button>
       </div>
 
       {clients.isLoading ? (
