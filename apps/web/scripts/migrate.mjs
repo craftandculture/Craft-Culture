@@ -1465,6 +1465,13 @@ const runMigrations = async () => {
     }
     console.log('✅ release repack line ready');
 
+    // A member whose hold lapsed has to hear about it, not find out when the
+    // wine is gone.
+    await client.unsafe(
+      `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'cellar_purchase_expired'`,
+    );
+    console.log('✅ purchase expiry notification ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

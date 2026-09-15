@@ -795,6 +795,8 @@ export const notificationType = pgEnum('notification_type', [
   'mandate_offered',
   'mandate_listed',
   'mandate_sent_back',
+  /* A 48-hour hold that lapsed before the money arrived */
+  'cellar_purchase_expired',
 ]);
 
 /**
