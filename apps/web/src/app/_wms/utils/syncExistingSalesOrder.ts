@@ -193,6 +193,11 @@ const syncExistingSalesOrder = async ({
         zohoLastModifiedTime: zohoModifiedAt,
         total: fullOrder.total,
         subTotal: fullOrder.sub_total,
+        // Only the insert captured this, so a reference typed into Zoho after
+        // the order first synced never reached us — SO-00133 carried "CD
+        // Platform Stock - Spirits" in Zoho and no tag on the pick list, while
+        // SO-00134, created with its reference already set, showed one.
+        referenceNumber: fullOrder.reference_number,
         ...invoiceUpdate,
         lastSyncAt: new Date(),
       })
@@ -238,6 +243,7 @@ const syncExistingSalesOrder = async ({
       zohoLastModifiedTime: zohoModifiedAt,
       total: fullOrder.total,
       subTotal: fullOrder.sub_total,
+      referenceNumber: fullOrder.reference_number,
       ...invoiceUpdate,
       ...(shouldFlag
         ? { soModifiedAfterRelease: true, soModifiedAt: new Date() }
