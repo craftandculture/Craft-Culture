@@ -53,6 +53,14 @@ const AvailablePage = () => {
 
   const wines = data?.wines ?? [];
 
+  /*
+    What is actually here, before a member starts reading rows. The page opened
+    on a bare search box and a flat table, which gave no sense of whether the
+    list was worth scrolling.
+  */
+  const totalBottles = wines.reduce((sum, wine) => sum + wine.availableBottles, 0);
+  const producers = new Set(wines.map((wine) => wine.producer).filter(Boolean));
+
   return (
     <div className="w-full pb-8">
       <div className="mb-4">
@@ -126,9 +134,29 @@ const AvailablePage = () => {
             built, so a control on each line promised something no click could
             deliver.
           */}
+          <dl className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+            {[
+              { label: 'Wines', value: String(wines.length) },
+              { label: 'Bottles', value: totalBottles.toLocaleString('en-US') },
+              { label: 'Producers', value: String(producers.size) },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="border-border-muted rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+              >
+                <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                  {stat.label}
+                </dt>
+                <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
+                  {stat.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <Typography variant="bodyXs" colorRole="muted">
-              {wines.length} {wines.length === 1 ? 'wine' : 'wines'}
+              Held in bond &middot; duty suspended
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
               To buy anything here, speak to your account team at{' '}
@@ -142,7 +170,7 @@ const AvailablePage = () => {
           </div>
 
           <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[68vh] sm:overflow-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[780px] text-sm">
               <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
                 <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                   <th className="min-w-[240px] px-3 py-2 text-left">Wine</th>
@@ -154,6 +182,9 @@ const AvailablePage = () => {
                   </th>
                   <th className="px-3 py-2 text-center">Format</th>
                   <th className="px-3 py-2 text-right">Available</th>
+                  <th className="hidden px-3 py-2 text-right lg:table-cell">
+                    $ / case
+                  </th>
                   <th className="px-3 py-2 text-right">$ / btl</th>
                 </tr>
               </thead>
@@ -179,8 +210,18 @@ const AvailablePage = () => {
                       {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
                       {wine.bottleSize ?? '—'}
                     </td>
-                    <td className="text-text-muted px-3 py-2 text-right text-[13px] tabular-nums">
-                      {wine.availableBottles}
+                    <td className="px-3 py-2 text-right text-[13px] tabular-nums">
+                      <span className="text-text-primary">
+                        {wine.availableBottles}
+                      </span>
+                      <span className="text-text-muted block text-[11px]">
+                        {wine.caseConfig > 1
+                          ? `${wine.availableCases} ${wine.availableCases === 1 ? 'case' : 'cases'}`
+                          : 'bottles'}
+                      </span>
+                    </td>
+                    <td className="text-text-muted hidden px-3 py-2 text-right text-[13px] tabular-nums lg:table-cell">
+                      {wine.caseConfig > 1 ? money(wine.pricePerCaseUsd) : '—'}
                     </td>
                     <td className="text-text-primary px-3 py-2 text-right text-[13px] font-semibold tabular-nums">
                       {money(wine.pricePerBottleUsd)}

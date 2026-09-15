@@ -91,6 +91,27 @@ const SellingPage = () => {
 
   const mandates = data?.mandates ?? [];
 
+  /*
+    The questions a member actually arrives with: how much have I got out
+    there, what is it worth to me if it sells, and has any of it gone live yet.
+    Without these the page was a single row in a lot of white space, and the
+    totals had to be worked out by reading down a column.
+  */
+  const live = mandates.filter((mandate) =>
+    ['listed', 'placed', 'partially_sold'].includes(mandate.status),
+  );
+
+  const openBottles = mandates
+    .filter((mandate) => !['withdrawn', 'sold', 'expired'].includes(mandate.status))
+    .reduce((sum, mandate) => sum + mandate.bottlesRemaining, 0);
+
+  const openValue = mandates
+    .filter((mandate) => !['withdrawn', 'sold', 'expired'].includes(mandate.status))
+    .reduce(
+      (sum, mandate) => sum + mandate.askPerBottleUsd * mandate.bottlesRemaining,
+      0,
+    );
+
   return (
     <div className="w-full pb-8">
       {/*
@@ -108,6 +129,48 @@ const SellingPage = () => {
           it.
         </Typography>
       </div>
+
+      {!isLoading && mandates.length > 0 && (
+        <dl className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          {[
+            {
+              label: 'Bottles offered',
+              value: String(openBottles),
+              detail: `across ${mandates.length} ${mandates.length === 1 ? 'offer' : 'offers'}`,
+            },
+            {
+              label: 'You receive if it sells',
+              value: money(openValue),
+              detail: 'before anything is placed',
+            },
+            {
+              label: 'On the lists',
+              value: String(live.length),
+              detail: live.length === 1 ? 'offer live' : 'offers live',
+            },
+            {
+              label: 'Awaiting review',
+              value: String(
+                mandates.filter((mandate) => mandate.status === 'offered').length,
+              ),
+              detail: 'with us now',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="border-border-muted rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+            >
+              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                {stat.label}
+              </dt>
+              <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
+                {stat.value}
+              </dd>
+              <dd className="text-text-muted m-0 text-[11px]">{stat.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
@@ -128,10 +191,10 @@ const SellingPage = () => {
       )}
 
       {!isLoading && mandates.length > 0 && (
-        <div className="border-border-muted mt-6 overflow-x-auto rounded-xl border">
+        <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[68vh] sm:overflow-auto">
           <table className="w-full min-w-[860px] text-sm">
-            <thead>
-              <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
+            <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
+              <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                 <th className="px-4 py-2 text-left">Wine</th>
                 <th className="px-3 py-2 text-right">Bottles</th>
                 <th className="px-3 py-2 text-right">Your ask</th>
@@ -141,7 +204,7 @@ const SellingPage = () => {
                 <th className="px-4 py-2 text-right" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-border-muted divide-y">
               {mandates.map((mandate) => {
                 const state = STATES[mandate.status] ?? {
                   label: mandate.status,
@@ -156,7 +219,7 @@ const SellingPage = () => {
                 return (
                   <tr
                     key={mandate.id}
-                    className="border-border-muted border-b last:border-b-0"
+                    className="hover:bg-fill-muted/40 transition-colors"
                   >
                     <td className="px-4 py-3">
                       <Typography variant="bodySm" className="font-medium">
