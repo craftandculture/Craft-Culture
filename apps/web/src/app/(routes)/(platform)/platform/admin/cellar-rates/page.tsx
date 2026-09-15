@@ -24,6 +24,7 @@ const EMPTY_FORM: RateForm = {
   distributorMarginPct: 0,
   ccMarginPct: 0,
   transferPerBottle: 0,
+  repackPerCase: 0,
   deliveryFlat: 0,
   deliveryPerCase: 0,
   notes: '',
@@ -54,6 +55,11 @@ const FIELD_GROUPS: {
     hint: 'Moving it out of the free zone, then the run itself',
     fields: [
       { key: 'transferPerBottle', label: 'Transfer, per bottle', suffix: '$' },
+      {
+        key: 'repackPerCase',
+        label: 'Repack, per case opened (AED 25)',
+        suffix: '$',
+      },
       { key: 'deliveryFlat', label: 'Delivery call-out, flat', suffix: '$' },
       { key: 'deliveryPerCase', label: 'Delivery, per case', suffix: '$' },
     ],
@@ -117,9 +123,15 @@ const CellarRatesPage = () => {
     Cases are rounded up from bottles exactly as the quote does it — half a
     case still gets opened, handled and carried.
   */
+  /*
+    The preview assumes a whole number of cases, so it shows no repack. Type a
+    quantity that is not a multiple of the case and the fee appears, which is
+    the only way to see what it does before saving the card.
+  */
   const volume = {
     bottles,
     cases: Math.ceil(bottles / caseConfig),
+    repackCases: caseConfig > 1 && bottles % caseConfig !== 0 ? 1 : 0,
     goodsValueUsd: bottles * perBottle,
   };
 
@@ -136,6 +148,7 @@ const CellarRatesPage = () => {
           distributorMarginPct: rate.distributorMarginPct,
           ccMarginPct: rate.ccMarginPct,
           transferPerBottle: rate.transferPerBottle,
+          repackPerCase: rate.repackPerCase,
           deliveryFlat: rate.deliveryFlat,
           deliveryPerCase: rate.deliveryPerCase,
           notes: rate.notes ?? '',
@@ -321,6 +334,7 @@ const CellarRatesPage = () => {
               distributorMarginPct: form.distributorMarginPct,
               ccMarginPct: form.ccMarginPct,
               transferPerBottle: form.transferPerBottle,
+              repackPerCase: form.repackPerCase,
               deliveryFlat: form.deliveryFlat,
               deliveryPerCase: form.deliveryPerCase,
               notes: form.notes || undefined,

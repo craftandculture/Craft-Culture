@@ -3,6 +3,7 @@ import { and, desc, eq, gt, like, sql } from 'drizzle-orm';
 import type { wmsStock as wmsStockTable } from '@/database/schema';
 import { wmsStock, wmsStockReservations } from '@/database/schema';
 
+import inOurWarehouse from './inOurWarehouse';
 import normalizeLwin18 from './normalizeLwin18';
 
 interface ReservationItem {
@@ -103,6 +104,12 @@ const reserveStockForOrderItems = async ({
           eq(wmsStock.lwin18, normalizedLwin),
           gt(wmsStock.availableCases, 0),
           eq(wmsStock.notForSale, false),
+          /*
+            Never from a distributor's premises. That wine is out of bond and
+            out of the building; a pick list naming it would send somebody to a
+            bay that does not hold it.
+          */
+          inOurWarehouse(),
         ),
       )
       .orderBy(desc(wmsStock.availableCases));
@@ -117,6 +124,7 @@ const reserveStockForOrderItems = async ({
             like(wmsStock.lwin18, `${normalizedLwin}%`),
             gt(wmsStock.availableCases, 0),
             eq(wmsStock.notForSale, false),
+            inOurWarehouse(),
           ),
         )
         .orderBy(desc(wmsStock.availableCases));

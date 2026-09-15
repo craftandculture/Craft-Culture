@@ -71,6 +71,16 @@ const computeReleaseQuote = async (
     0,
   );
 
+  /*
+    A line taking a part case breaks exactly one sealed case, however many
+    bottles it takes from it. Singles can never break anything.
+  */
+  const repackCases = lines.reduce((sum, line) => {
+    const pack = Math.max(1, line.caseConfig ?? 1);
+
+    return sum + (pack > 1 && line.bottles % pack !== 0 ? 1 : 0);
+  }, 0);
+
   const goodsValueUsd = lines.reduce(
     (sum, line) => sum + line.bottles * (line.costPerBottle ?? 0),
     0,
@@ -84,6 +94,7 @@ const computeReleaseQuote = async (
       vatUsd: 0,
       transferUsd: 0,
       deliveryUsd: 0,
+      repackUsd: 0,
       distributorMarginUsd: 0,
       ccMarginUsd: 0,
       clearanceTotalUsd: 0,
@@ -94,7 +105,7 @@ const computeReleaseQuote = async (
   }
 
   return {
-    ...priceFromRateCard(rate, { bottles, cases, goodsValueUsd }),
+    ...priceFromRateCard(rate, { bottles, cases, repackCases, goodsValueUsd }),
     priced: true,
   };
 };

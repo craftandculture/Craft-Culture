@@ -5068,6 +5068,19 @@ export const saleMandates = pgTable(
     listedBy: uuid('listed_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /*
+      Where a parcel went, and who sent it. Placement is the hop that cannot be
+      undone — duty is paid and the wine leaves the building — so the record of
+      who decided it has to survive the mandate closing.
+    */
+    placedAt: timestamp('placed_at', { mode: 'date' }),
+    placedBy: uuid('placed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    placedWithPartnerId: uuid('placed_with_partner_id').references(
+      () => partners.id,
+    ),
+    placedLocationId: uuid('placed_location_id'),
     withdrawnAt: timestamp('withdrawn_at', { mode: 'date' }),
     withdrawnBy: uuid('withdrawn_by').references(() => users.id, {
       onDelete: 'set null',
@@ -5179,6 +5192,16 @@ export const cellarReleaseRates = pgTable(
       .default(0),
     /** What C&C earns for handling the release */
     ccMarginPct: doublePrecision('cc_margin_pct').notNull().default(0),
+    /*
+      Breaking a sealed case.
+
+      A member taking six bottles out of a twelve is not a book entry: somebody
+      opens the case, counts, relabels and restacks both halves, and the
+      remainder is worth less as a broken case than it was sealed. Charged per
+      case opened, not per bottle taken, because the work is the same whether
+      one bottle leaves or eleven.
+    */
+    repackPerCase: doublePrecision('repack_per_case').notNull().default(0),
     /** Moving it out of the free zone */
     transferPerBottle: doublePrecision('transfer_per_bottle')
       .notNull()

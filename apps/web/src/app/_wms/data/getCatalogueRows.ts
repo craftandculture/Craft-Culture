@@ -13,6 +13,7 @@ import {
   wmsStock,
 } from '@/database/schema';
 
+import inOurWarehouse from '../utils/inOurWarehouse';
 import lwinPakKey from '../utils/lwinPakKey';
 
 export interface CatalogueRow {
@@ -73,6 +74,12 @@ const getCatalogueRows = async (
   const where = [
     gt(wmsStock.availableCases, 0),
     eq(wmsStock.notForSale, false),
+    /*
+      Wine placed with a distributor is theirs to sell. Leaving it here would
+      offer the same bottles twice, by us and by them, and one of those sales
+      could not be honoured.
+    */
+    inOurWarehouse(),
   ];
   if (filters.category) {
     where.push(

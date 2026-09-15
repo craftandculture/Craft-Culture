@@ -1279,6 +1279,38 @@ const runMigrations = async () => {
     );
     console.log('✅ consignment locations ready');
 
+    // Placement is the hop that cannot be undone, so who decided it and where
+    // it went outlive the mandate closing.
+    for (const [column, type] of [
+      ['placed_at', 'timestamp'],
+      ['placed_by', 'uuid REFERENCES "users"("id") ON DELETE SET NULL'],
+      ['placed_with_partner_id', 'uuid REFERENCES "partners"("id")'],
+      ['placed_location_id', 'uuid'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "sale_mandates" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ mandate placement columns ready');
+
+    // Breaking a sealed case is real work and was priced nowhere: wms_repacks
+    // tracked that it happened without anyone being charged for it.
+    await client.unsafe(
+      `ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "repack_per_case" double precision NOT NULL DEFAULT 0`,
+    );
+    /*
+      AED 25 per case opened, at the peg (25 × 0.2723 = 6.81). The card is
+      denominated in USD like every other figure on it, so the dirham amount is
+      converted once here rather than stored in a second currency.
+
+      Guarded on 0 so it seeds an unconfigured card and never overwrites a rate
+      somebody has since set deliberately.
+    */
+    await client.unsafe(
+      `UPDATE "cellar_release_rates" SET "repack_per_case" = 6.81 WHERE "repack_per_case" = 0`,
+    );
+    console.log('✅ repack fee ready');
+
     // Trigram similarity is what lets a supplier's product name be matched
     // against 208k LWIN records without a person reading a result list per
     // line. Guarded so a database that already has it is untouched.

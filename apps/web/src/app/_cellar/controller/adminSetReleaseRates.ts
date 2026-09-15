@@ -21,6 +21,8 @@ const adminSetReleaseRates = adminProcedure
       distributorMarginPct: z.number().min(0).max(200).default(0),
       ccMarginPct: z.number().min(0).max(200).default(0),
       transferPerBottle: z.number().min(0).default(0),
+      /** Charged once per sealed case that has to be broken */
+      repackPerCase: z.number().min(0).default(0),
       deliveryFlat: z.number().min(0).default(0),
       deliveryPerCase: z.number().min(0).default(0),
       notes: z.string().max(500).optional(),

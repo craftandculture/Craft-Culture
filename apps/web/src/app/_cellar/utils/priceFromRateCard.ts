@@ -7,6 +7,8 @@ export interface ReleaseRateCard {
   distributorMarginPct: number;
   ccMarginPct: number;
   transferPerBottle: number;
+  /** Charged once per sealed case that has to be opened */
+  repackPerCase: number;
   deliveryFlat: number;
   deliveryPerCase: number;
 }
@@ -14,6 +16,13 @@ export interface ReleaseRateCard {
 export interface ReleaseVolume {
   bottles: number;
   cases: number;
+  /**
+   * Sealed cases that have to be broken to make up this quantity.
+   *
+   * One per line taking a part case, not one per bottle: opening a twelve to
+   * take seven is the same work as opening it to take one.
+   */
+  repackCases: number;
   goodsValueUsd: number;
 }
 
@@ -24,6 +33,8 @@ export interface ReleasePricing {
   vatUsd: number;
   transferUsd: number;
   deliveryUsd: number;
+  /** Breaking sealed cases to make up a part quantity */
+  repackUsd: number;
   /** The licensed partner's cut of a mainland delivery */
   distributorMarginUsd: number;
   /** What C&C earns for handling it */
@@ -62,13 +73,20 @@ const priceFromRateCard = (
   rate: ReleaseRateCard,
   volume: ReleaseVolume,
 ): ReleasePricing => {
-  const { bottles, cases, goodsValueUsd } = volume;
+  const { bottles, cases, repackCases, goodsValueUsd } = volume;
 
   const dutyUsd = round(goodsValueUsd * (rate.dutyPct / 100));
   const transferUsd = round(bottles * rate.transferPerBottle);
   const deliveryUsd = round(
     (bottles > 0 ? rate.deliveryFlat : 0) + cases * rate.deliveryPerCase,
   );
+
+  /*
+    Breaking a case is real work — open, count, relabel, restack both halves —
+    and the remainder is worth less broken than it was sealed. It was tracked in
+    wms_repacks and charged nowhere.
+  */
+  const repackUsd = round(repackCases * rate.repackPerCase);
 
   const distributorMarginUsd = round(
     goodsValueUsd * (rate.distributorMarginPct / 100),
@@ -80,6 +98,7 @@ const priceFromRateCard = (
       dutyUsd +
       transferUsd +
       deliveryUsd +
+      repackUsd +
       distributorMarginUsd +
       ccMarginUsd) *
       (rate.vatPct / 100),
@@ -96,11 +115,12 @@ const priceFromRateCard = (
     vatUsd,
     transferUsd,
     deliveryUsd,
+    repackUsd,
     distributorMarginUsd,
     ccMarginUsd,
     clearanceTotalUsd,
     serviceFeeUsd: ccMarginUsd,
-    totalUsd: round(clearanceTotalUsd + deliveryUsd + ccMarginUsd),
+    totalUsd: round(clearanceTotalUsd + deliveryUsd + repackUsd + ccMarginUsd),
   };
 };
 
