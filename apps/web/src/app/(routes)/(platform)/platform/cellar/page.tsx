@@ -33,6 +33,7 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 interface CellarParcel {
@@ -553,12 +554,7 @@ const CellarPage = () => {
     reading identically, so the vintage goes too — what remains is the wine
     itself, and the columns say which bottle of it.
   */
-  const displayName = (name: string) =>
-    name
-      .replace(/\s+\d+(\.\d+)?%\s*abv\s*$/i, '')
-      .replace(/\s+\d+(\.\d+)?L\s*$/i, '')
-      .replace(/\s+(19|20)\d{2}\s*$/, '')
-      .trim();
+  const displayName = displayWineName;
 
   /*
     The table can trim the vintage and format because it has columns for them.

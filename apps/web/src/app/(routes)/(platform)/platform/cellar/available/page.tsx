@@ -7,6 +7,7 @@ import { useState } from 'react';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 /*
@@ -24,12 +25,7 @@ const money = (value: number) =>
   The catalogue name repeats the vintage and format that both have their own
   columns here, exactly as it does in the cellar.
 */
-const displayName = (name: string) =>
-  name
-    .replace(/\s+\d+(\.\d+)?%\s*abv\s*$/i, '')
-    .replace(/\s+\d+(\.\d+)?L\s*$/i, '')
-    .replace(/\s+(19|20)\d{2}\s*$/, '')
-    .trim();
+const displayName = displayWineName;
 
 /**
  * What a member can add to their cellar
@@ -68,8 +64,8 @@ const AvailablePage = () => {
           Available now
         </Typography>
         <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Held in bond with us and ready to add to your cellar. Prices are per
-          bottle, duty suspended.
+          Held in bond with us and ready to add to your cellar. Prices are in
+          bond, duty suspended &mdash; wine bought here stays where it is.
         </Typography>
       </div>
 

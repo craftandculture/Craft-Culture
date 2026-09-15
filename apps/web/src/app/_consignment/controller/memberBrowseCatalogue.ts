@@ -11,8 +11,14 @@ import { stockOwnerProcedure } from '@/lib/trpc/procedures';
  * offered joins it the moment we accept — so there is one list, and consigned
  * stock is simply supply that arrived a different way.
  *
- * Priced at the private-client rate, because that is what a collector is. The
- * owner of each parcel is deliberately dropped: a buyer is buying from C&C,
+ * Priced **in bond**, not at the private-client rate. A collector buying here is
+ * buying wine that stays exactly where it is, under the same suspension, and
+ * adds it to a cellar they already hold with us. The private-client price is a
+ * duty-paid, home-delivered price and carries the margin that goes with
+ * delivering it — quoting it for a book transfer charges for a journey nobody
+ * is making.
+ *
+ * The owner of each parcel is deliberately dropped: a buyer is buying from C&C,
  * which is legally what is happening, and whose wine it was is nobody else's
  * business.
  */
@@ -44,8 +50,8 @@ const memberBrowseCatalogue = stockOwnerProcedure
         bottleSize: row.bottleSize,
         availableBottles: row.availableBottles,
         availableCases: row.availableCases,
-        pricePerBottleUsd: row.pcPerBottle,
-        pricePerCaseUsd: row.pcPerCase,
+        pricePerBottleUsd: row.ibPerBottle,
+        pricePerCaseUsd: row.ibPerCase,
       })),
     };
   });

@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'open' | 'all' | 'offered' | 'listed' | 'placed' | 'sold';
@@ -127,6 +129,66 @@ const ConsignmentPage = () => {
         ))}
       </div>
 
+      {/*
+        The queue is a decision list, so the header should say how much is
+        waiting and what it is worth before anyone starts reading cards. The
+        same summary language as the member's Selling tab and the cellar.
+      */}
+      {!isLoading && mandates.length > 0 && (
+        <dl className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          {[
+            {
+              label: 'Awaiting review',
+              value: String(
+                mandates.filter((mandate) => mandate.status === 'offered').length,
+              ),
+              detail: 'need a decision',
+            },
+            {
+              label: 'On the lists',
+              value: String(
+                mandates.filter((mandate) => mandate.status === 'listed').length,
+              ),
+              detail: 'live now',
+            },
+            {
+              label: 'Bottles out',
+              value: String(
+                mandates.reduce(
+                  (sum, mandate) => sum + mandate.bottlesRemaining,
+                  0,
+                ),
+              ),
+              detail: 'in this view',
+            },
+            {
+              label: 'Owed if it all sells',
+              value: money(
+                mandates.reduce(
+                  (sum, mandate) =>
+                    sum + mandate.askPerBottleUsd * mandate.bottlesRemaining,
+                  0,
+                ),
+              ),
+              detail: 'to members',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="border-border-muted rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+            >
+              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                {stat.label}
+              </dt>
+              <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
+                {stat.value}
+              </dd>
+              <dd className="text-text-muted m-0 text-[11px]">{stat.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted">
           Loading&hellip;
@@ -152,7 +214,10 @@ const ConsignmentPage = () => {
             the member's net with the margin worked out in somebody's head.
           */
           const listed =
-            mandate.askPerBottleUsd / (1 - COMMISSION_RATES.trade / 100);
+            mandate.askPerBottleUsd /
+            (1 -
+              Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) /
+                100);
 
           return (
             <div
@@ -174,13 +239,20 @@ const ConsignmentPage = () => {
                       {mandate.mandateNumber}
                     </span>
                   </Typography>
+                  {/*
+                    The stored name ends in its own vintage, size and strength —
+                    "Dom Pérignon P2 2006 0.75L 12.5%abv" — and the line then
+                    printed the vintage again straight after it.
+                  */}
                   <Typography
                     variant="bodyXs"
                     colorRole="muted"
                     className="mt-0.5 block"
                   >
-                    {mandate.productName}
-                    {mandate.vintage ? ` · ${mandate.vintage}` : ''} ·{' '}
+                    {displayWineName(mandate.productName)}
+                    {' · '}
+                    {mandate.vintage ?? 'NV'}
+                    {mandate.bottleSize ? ` · ${mandate.bottleSize}` : ''} ·{' '}
                     {mandate.bottlesRemaining}{' '}
                     {mandate.bottlesRemaining === 1 ? 'bottle' : 'bottles'}
                     {mandate.offeredAt
@@ -192,7 +264,13 @@ const ConsignmentPage = () => {
                   <div className="text-right">
                     <Typography variant="bodySm" className="font-semibold tabular-nums">
                       {money(mandate.askPerBottleUsd)}
+                      <span className="text-text-muted font-normal"> / btl</span>
                     </Typography>
+                    {/*
+                      The same two figures the member is shown on their Selling
+                      tab. One number here and a range there meant two screens
+                      describing one sale differently.
+                    */}
                     <Typography variant="bodyXs" colorRole="muted" className="block">
                       lists at {money(listed)}
                     </Typography>
@@ -210,8 +288,8 @@ const ConsignmentPage = () => {
 
               {isOpen && (
                 <div className="border-border-muted bg-fill-muted/30 border-t px-4 py-4">
-                  <div className="border-border-muted bg-background-primary mb-4 overflow-x-auto rounded-lg border">
-                    <table className="w-full text-sm">
+                  <div className="border-border-muted bg-background-primary mb-4 inline-block max-w-full overflow-x-auto rounded-lg border align-top">
+                    <table className="text-sm">
                       <thead>
                         <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
                           <th className="px-3 py-1.5 text-left">Lot</th>
@@ -260,7 +338,32 @@ const ConsignmentPage = () => {
                         />
                       </label>
 
-                      <div className="flex flex-wrap gap-2">
+                      {/*
+                        Read before acting, not after. This sat below the row of
+                        buttons, where it explained a decision that had already
+                        been taken.
+                      */}
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="mb-3 block max-w-[68ch]"
+                      >
+                        Accepting clears the hold on these exact parcels, which
+                        puts them on the trade list, the private-client list and
+                        the in-app picker. The member&rsquo;s price is theirs
+                        &mdash; if it will not sell, send it back and let them
+                        re-price it.
+                      </Typography>
+
+                      {/*
+                        Three buttons at equal weight, one of them filled red,
+                        made declining the loudest thing on the card — and
+                        declining is the rarest of the three and the only one
+                        that ends the offer outright. Accept leads, sending back
+                        is the ordinary second answer, and Decline recedes to
+                        the right where a deliberate reach is needed.
+                      */}
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
                           colorRole="brand"
@@ -291,11 +394,9 @@ const ConsignmentPage = () => {
                         >
                           <ButtonContent>Send back</ButtonContent>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="danger"
-                          isDisabled={isPending}
+                        <button
+                          type="button"
+                          disabled={isPending}
                           onClick={() =>
                             decide({
                               mandateId: mandate.id,
@@ -303,22 +404,12 @@ const ConsignmentPage = () => {
                               adminNotes: note || undefined,
                             })
                           }
+                          className="text-text-muted ml-auto inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors hover:text-red-700 disabled:opacity-40"
                         >
-                          <ButtonContent iconLeft={IconX}>Decline</ButtonContent>
-                        </Button>
+                          <Icon icon={IconX} size="xs" />
+                          Decline
+                        </button>
                       </div>
-
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="mt-3 block max-w-[68ch]"
-                      >
-                        Accepting clears the hold on these exact parcels, which
-                        puts them on the trade list, the private-client list and
-                        the in-app picker. The member&rsquo;s price is theirs
-                        &mdash; if it will not sell, send it back and let them
-                        re-price it.
-                      </Typography>
                     </>
                   ) : (
                     <Typography variant="bodyXs" colorRole="muted">

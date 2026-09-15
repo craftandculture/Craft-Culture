@@ -257,19 +257,25 @@ const SellingPage = () => {
                       told is right to ask why; the rate depends on who buys, so
                       it is a range until one does.
                     */}
+                    {/*
+                      One figure, not a range. The range implied the price moved
+                      with the buyer; it does not. Wine lists at one number, and
+                      what varies behind it is our commission — 2.5% or 5%
+                      depending on who buys — which never changes what the
+                      member receives.
+                    */}
                     <td className="text-text-muted px-3 py-3 text-right tabular-nums">
                       {money(
                         mandate.askPerBottleUsd /
-                          (1 - COMMISSION_RATES.collector / 100),
-                      )}
-                      <span className="text-text-muted">&ndash;</span>
-                      {money(
-                        mandate.askPerBottleUsd /
-                          (1 - COMMISSION_RATES.trade / 100),
+                          (1 -
+                            Math.max(
+                              COMMISSION_RATES.trade,
+                              COMMISSION_RATES.collector,
+                            ) /
+                              100),
                       )}
                       <span className="text-text-muted block text-[11px]">
-                        {COMMISSION_RATES.collector}% collector &middot;{' '}
-                        {COMMISSION_RATES.trade}% trade
+                        listed in bond
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right font-semibold tabular-nums">

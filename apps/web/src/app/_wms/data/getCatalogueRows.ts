@@ -290,10 +290,26 @@ const getCatalogueRows = async (
       more. An ask too high to sell is what the review step exists to refuse.
     */
     const ask = r.mandateAsk ? Number(r.mandateAsk) : 0;
-    const ibFloor = ask > 0 ? ask / (1 - COMMISSION_RATES.trade / 100) : 0;
-    const pcFloor = ask > 0 ? ask / (1 - COMMISSION_RATES.collector / 100) : 0;
-    const ibFinal = Math.max(ib, ibFloor);
-    const pcFinal = Math.max(pc, pcFloor);
+
+    /*
+      Grossed up at the HIGHER of the two commission rates, on both surfaces.
+
+      The rate depends on who buys, not on which list they bought from — a
+      collector and a trade buyer can take the same bottle off the same in-bond
+      price at 2.5% and 5%. Applying the collector rate to the private-client
+      price treated the surface as if it decided the rate, which would let a
+      trade sale off that list return the member less than they asked for. The
+      member receives their ask in full either way, so the floor has to cover
+      the worst case and the surplus on a collector sale is ours.
+    */
+    const floor =
+      ask > 0
+        ? ask /
+          (1 - Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100)
+        : 0;
+
+    const ibFinal = Math.max(ib, floor);
+    const pcFinal = Math.max(pc, floor);
 
     const cc = r.caseConfig || 1;
     const region = regionMap.get(lwin7Of(r.lwin18));
