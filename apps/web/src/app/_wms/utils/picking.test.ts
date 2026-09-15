@@ -319,6 +319,61 @@ describe('resolveRepackFromStock', () => {
     expect(result.hasStock).toBe(false);
   });
 
+  /*
+    The producer is its own column in stock and is not repeated in the product
+    name, while Zoho's line name leads with it. Requiring every word of the
+    order name to appear in the product name alone therefore failed on the one
+    word the warehouse keeps somewhere else — eleven lines of SO-00133, every
+    one of them a spirit whose maker is named separately.
+  */
+  it('matches when the maker is in the producer column, not the name', () => {
+    const whisky = stockRow({
+      lwin18: 'ORCHARDHOU-0000-06-00700',
+      productName: 'ORCHARD HOUSE Blended Malt Scottish Whiskey',
+      producer: 'Compass Box',
+      vintage: null,
+      caseConfig: 6,
+      quantityCases: 250,
+      availableCases: 250,
+      locationCode: 'D-01-02',
+    });
+
+    const result = resolveRepackFromStock([whisky], {
+      name: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      sku: 'ORCHARDHOU-0000-06-00700',
+      description: '6x70cl - 46%',
+      quantity: 3,
+      unit: 'Cases',
+    });
+
+    expect(result.hasStock).toBe(true);
+    expect(result.suggestedLocation).toBe('D-01-02');
+  });
+
+  /*
+    The producer must widen the haystack, not loosen the match: every Compass
+    Box bottling shares "Compass Box Blended Malt Scottish Whiskey", and only
+    the bottling name tells them apart.
+  */
+  it('does not match a different bottling from the same producer', () => {
+    const artist = stockRow({
+      lwin18: 'ARTISTBLEN-0000-06-00700',
+      productName: 'ARTIST BLEND Blended Malt Scottish Whiskey',
+      producer: 'Compass Box',
+      vintage: null,
+    });
+
+    const result = resolveRepackFromStock([artist], {
+      name: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      sku: 'ORCHARDHOU-0000-06-00700',
+      description: '6x70cl - 46%',
+      quantity: 1,
+      unit: 'Cases',
+    });
+
+    expect(result.hasStock).toBe(false);
+  });
+
   it('suggests a bay that holds enough, not merely the best pack fit', () => {
     const result = resolveRepackFromStock(
       [

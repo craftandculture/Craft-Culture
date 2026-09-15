@@ -80,9 +80,20 @@ const resolveLineRepack = async ({
   if (nameTerms.length > 0 && (vintage || isNonVintage)) {
     conditions.push(
       and(
-        ...nameTerms.map((term) =>
-          ilike(wmsStock.productName, `%${term.replace(/[^\x20-\x7E]/g, '%')}%`),
-        ),
+        /*
+          Each word has to appear in the name OR the maker. Stock keeps the
+          producer in its own column — "ORCHARD HOUSE …" made by "Compass Box" —
+          while the order names both together, so a name-only match failed on
+          the maker's own name.
+        */
+        ...nameTerms.map((term) => {
+          const pattern = `%${term.replace(/[^\x20-\x7E]/g, '%')}%`;
+
+          return or(
+            ilike(wmsStock.productName, pattern),
+            ilike(wmsStock.producer, pattern),
+          );
+        }),
         vintage
           ? eq(wmsStock.vintage, vintage)
           : or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0)),
@@ -97,6 +108,7 @@ const resolveLineRepack = async ({
     .select({
       lwin18: wmsStock.lwin18,
       productName: wmsStock.productName,
+      producer: wmsStock.producer,
       vintage: wmsStock.vintage,
       caseConfig: wmsStock.caseConfig,
       quantityCases: wmsStock.quantityCases,

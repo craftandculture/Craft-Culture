@@ -5,6 +5,15 @@ import readLineVintage from './readLineVintage';
 export interface RepackStockRow {
   lwin18: string;
   productName: string;
+  /**
+   * The maker, which stock keeps in its own column.
+   *
+   * Zoho's line name leads with it — "Compass Box ORCHARD HOUSE …" — while the
+   * warehouse calls the same bottle "ORCHARD HOUSE …" and files Compass Box
+   * beside it. Matched on together, or the producer's name is a word the order
+   * states and no stock name contains.
+   */
+  producer?: string | null;
   vintage: number | null;
   caseConfig: number | null;
   quantityCases: number;
@@ -34,6 +43,16 @@ const PACK_SUFFIX =
  */
 const deburr = (value: string) =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/**
+ * Settle the spellings that are one word written two ways.
+ *
+ * Scotch is whisky and bourbon is whiskey, and no two systems agree on which
+ * to write where — stock holds "Blended Malt Scottish Whiskey" for wine that
+ * every label spells whisky. A substring match sees nothing in common between
+ * them, so the whole line is refused over a single e.
+ */
+const spelling = (value: string) => value.replace(/whiskey/g, 'whisky');
 
 /**
  * Strip the pack/vintage noise off a line or stock name so the two can be
@@ -95,7 +114,7 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
     .split(/[\s,\-]+/)
     .filter((term) => term.length > 2)
     .slice(0, 8)
-    .map((term) => deburr(term).toLowerCase());
+    .map((term) => spelling(deburr(term).toLowerCase()));
 
   // Any wine code, not just a 7-digit LWIN — stock received under a supplier
   // code (e.g. `W12008024-2021-06-00750`) is still the same wine in the same
@@ -118,7 +137,15 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
     } else if (row.vintage !== vintage) {
       return false;
     }
-    const haystack = deburr(row.productName).toLowerCase();
+    /*
+      Name and maker together. Widening the haystack, not loosening the match:
+      every Compass Box bottling shares "Compass Box Blended Malt Scottish
+      Whiskey", and it is still only the bottling name that tells them apart —
+      every term must appear, as before.
+    */
+    const haystack = spelling(
+      deburr(`${row.productName} ${row.producer ?? ''}`).toLowerCase(),
+    );
     return terms.every((term) => haystack.includes(term));
   });
 

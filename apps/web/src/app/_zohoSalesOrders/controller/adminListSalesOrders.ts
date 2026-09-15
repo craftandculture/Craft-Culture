@@ -64,6 +64,8 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         .select({
           lwin18: wmsStock.lwin18,
           productName: wmsStock.productName,
+          // The maker, which the order names and the product name does not
+          producer: wmsStock.producer,
           vintage: wmsStock.vintage,
           caseConfig: wmsStock.caseConfig,
           quantityCases: wmsStock.quantityCases,
