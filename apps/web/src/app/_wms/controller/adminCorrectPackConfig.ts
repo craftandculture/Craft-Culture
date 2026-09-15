@@ -72,7 +72,18 @@ const adminCorrectPackConfig = wmsOperatorProcedure
     // reads as stock having appeared from nowhere. An unset pack is unknown,
     // not none.
     const oldCaseConfig = stock.caseConfig ?? null;
-    if (oldCaseConfig === newCaseConfig) {
+    const newLwin18 = buildLwin18WithConfig(stock.lwin18, newCaseConfig);
+
+    /*
+      Nothing to do only when the pack AND the code already agree.
+
+      They can disagree on their own: HAMA Rum Signature sat as
+      RUMHAM700B-0000-12-00700 with a 6-pack config, and 58 cases × 6 was the
+      348 bottles the row itself reported — so the config was right and the
+      code was wrong. Returning early on the config alone made that row
+      unfixable from here, and the code is what every SKU-keyed lookup reads.
+    */
+    if (oldCaseConfig === newCaseConfig && newLwin18 === stock.lwin18) {
       return {
         success: true,
         noChange: true,
@@ -80,8 +91,6 @@ const adminCorrectPackConfig = wmsOperatorProcedure
         caseConfig: newCaseConfig,
       };
     }
-
-    const newLwin18 = buildLwin18WithConfig(stock.lwin18, newCaseConfig);
     const newProductName = withPackSuffix(stock.productName, newCaseConfig);
     const cases = stock.quantityCases;
     const oldBottles = oldCaseConfig === null ? null : cases * oldCaseConfig;
@@ -189,7 +198,11 @@ const adminCorrectPackConfig = wmsOperatorProcedure
         quantityCases: 0, // cases unchanged — only the pack size was wrong
         fromLocationId: stock.locationId,
         toLocationId: stock.locationId,
-        notes: `PACK CORRECTION: ${reason} (${stock.lwin18} ${oldCaseConfig ?? 'unset'}-pack → ${newLwin18} ${newCaseConfig}-pack; ${cases} cases unchanged, bottles ${oldBottles ?? 'unknown'} → ${newBottles})`,
+        notes:
+          oldCaseConfig === newCaseConfig
+            ? // The pack was already right; only the code disagreed with it.
+              `CODE CORRECTION: ${reason} (${stock.lwin18} → ${newLwin18}; ${cases} cases of ${newCaseConfig}, ${newBottles} bottles, unchanged)`
+            : `PACK CORRECTION: ${reason} (${stock.lwin18} ${oldCaseConfig ?? 'unset'}-pack → ${newLwin18} ${newCaseConfig}-pack; ${cases} cases unchanged, bottles ${oldBottles ?? 'unknown'} → ${newBottles})`,
         reasonCode: 'pack_correction',
         performedBy: ctx.user.id,
         performedAt: new Date(),

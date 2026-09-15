@@ -698,6 +698,18 @@ const ProductRow = ({
   const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
+  /*
+    The pack the CODE claims, which is not always the pack the row holds.
+
+    HAMA Rum Signature sat as RUMHAM700B-0000-12-00700 with a 6-pack config,
+    and 58 cases x 6 was the 348 bottles the row itself reported. The config
+    was right and the code was wrong — and every SKU-keyed lookup reads the
+    code, so it is worth correcting on its own.
+  */
+  const codePack = Number(product.lwin18.split('-').at(-2)) || 0;
+  const codeDisagrees =
+    codePack > 0 && codePack !== (product.caseConfig ?? 0);
+
   const editingName = editingLwin18 === product.lwin18;
   const isSaving = editingLwin18 === `saving:${product.lwin18}`;
   const [editName, setEditName] = useState(product.productName);
@@ -1316,6 +1328,14 @@ const ProductRow = ({
                                   <span className="text-text-muted text-xs font-medium">
                                     Bottles per case:
                                   </span>
+                                  {codeDisagrees && (
+                                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                                      The code says {codePack} a case, this row
+                                      holds {product.caseConfig ?? 0}. Saving{' '}
+                                      {product.caseConfig ?? 0} rewrites the
+                                      code to match.
+                                    </span>
+                                  )}
                                   <input
                                     type="number"
                                     min={1}
@@ -1361,8 +1381,9 @@ const ProductRow = ({
                                   <button
                                     type="button"
                                     disabled={
-                                      packConfig ===
-                                        (product.caseConfig ?? 0) ||
+                                      (packConfig ===
+                                        (product.caseConfig ?? 0) &&
+                                        packConfig === codePack) ||
                                       packConfig < 1 ||
                                       !packReason.trim() ||
                                       isCorrectingPack
