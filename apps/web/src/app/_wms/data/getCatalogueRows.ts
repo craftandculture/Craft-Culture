@@ -1,10 +1,13 @@
 import { and, desc, eq, gt, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
+import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
+import { SELLABLE_STATUSES } from '@/app/_consignment/utils/mandateStatuses';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
   products,
+  saleMandates,
   wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
@@ -100,9 +103,28 @@ const getCatalogueRows = async (
       MAX(${col})
     )`;
 
+  /*
+    The highest price a member has asked for this wine, across every mandate
+    still live on it. The catalogue prices from the cost model — landed cost and
+    our margins — which knows nothing about what a member agreed to receive, so
+    accepting a mandate would have listed their wine at our number rather than
+    theirs. Joined pack-agnostically because the ask is per bottle; bottle size
+    is still kept apart, since a magnum is a different thing.
+  */
+  const liveMandates = db
+    .select({
+      lwinKey: saleMandates.lwinKey,
+      ask: sql<number>`MAX(${saleMandates.askPerBottleUsd})`.as('ask'),
+    })
+    .from(saleMandates)
+    .where(inArray(saleMandates.status, [...SELLABLE_STATUSES]))
+    .groupBy(saleMandates.lwinKey)
+    .as('live_mandates');
+
   const rows = await db
     .select({
       lwin18: wmsStock.lwin18,
+      mandateAsk: sql<number | null>`MAX(${liveMandates.ask})`,
       product: sql<string>`MAX(${wmsStock.productName})`,
       producer: sql<string | null>`MAX(${wmsStock.producer})`,
       vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
@@ -154,6 +176,10 @@ const getCatalogueRows = async (
     .leftJoin(
       wmsOwnerPricingSettings,
       eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+    )
+    .leftJoin(
+      liveMandates,
+      sql`${liveMandates.lwinKey} = ${lwinPakKey(wmsStock.lwin18)}`,
     )
     .where(and(...where))
     .groupBy(wmsStock.lwin18);
@@ -254,6 +280,21 @@ const getCatalogueRows = async (
           ? ib / (1 - r.pcPct / 100)
           : 0
         : (r.selling ?? 0);
+    /*
+      A member's ask is a floor, not a replacement. One line per wine is kept
+      deliberately: splitting the row per owner would put the same wine on the
+      price list twice at two prices, let a buyer infer that parcels belong to
+      different people, and silently break the LPO matcher, which keys a Map on
+      lwin18 alone. Taking the higher figure instead means a member is never
+      undersold, and where we hold the same wine ourselves it simply sells for
+      more. An ask too high to sell is what the review step exists to refuse.
+    */
+    const ask = r.mandateAsk ? Number(r.mandateAsk) : 0;
+    const ibFloor = ask > 0 ? ask / (1 - COMMISSION_RATES.trade / 100) : 0;
+    const pcFloor = ask > 0 ? ask / (1 - COMMISSION_RATES.collector / 100) : 0;
+    const ibFinal = Math.max(ib, ibFloor);
+    const pcFinal = Math.max(pc, pcFloor);
+
     const cc = r.caseConfig || 1;
     const region = regionMap.get(lwin7Of(r.lwin18));
     return {
@@ -269,10 +310,10 @@ const getCatalogueRows = async (
       bottleSize: r.bottleSize,
       availableCases: r.availableCases,
       availableBottles: r.availableCases * cc,
-      ibPerBottle: round2(ib),
-      ibPerCase: round2(ib * cc),
-      pcPerBottle: round2(pc),
-      pcPerCase: round2(pc * cc),
+      ibPerBottle: round2(ibFinal),
+      ibPerCase: round2(ibFinal * cc),
+      pcPerBottle: round2(pcFinal),
+      pcPerCase: round2(pcFinal * cc),
     };
   });
 };
