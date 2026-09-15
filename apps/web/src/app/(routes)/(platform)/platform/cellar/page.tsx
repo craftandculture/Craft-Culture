@@ -850,8 +850,7 @@ const CellarPage = () => {
 
                     {needsDecision && (
                       <Typography variant="bodySm" className="font-semibold">
-                        &middot; {money(request.totalCostUsd ?? 0)} to deliver,
-                        all in
+                        &middot; {money(request.totalCostUsd ?? 0)}
                       </Typography>
                     )}
                   </button>
@@ -926,219 +925,238 @@ const CellarPage = () => {
                       </div>
                     )}
                     {/*
-                      The quote, itemised. It was one figure behind an ⓘ, on
-                      the reasoning that naming amounts publishes our rates and
-                      invites a line-by-line negotiation. Bundling duty, VAT,
-                      transfer and the distributor into a single clearance
-                      figure keeps that true — no individual rate can be worked
-                      back out of it — while still letting a member see what
-                      they are actually paying for, and challenge a repack that
-                      should not be there.
+                      Two columns once there is room for them. Stacked, each
+                      row ran the full width of the screen with its label at one
+                      end and its figure at the other, and a metre of nothing
+                      between — the wine list and the costs are both narrow
+                      things and the page is wide. Side by side they read as one
+                      document: what is going, and what it costs.
+
+                      Costs come first in the source so a phone shows the
+                      decision before the detail, and move right on a desktop
+                      where the eye starts at the list.
                     */}
-                    {needsDecision && (
-                      <div className="border-border-muted mb-3 rounded-lg border px-3 py-2">
-                        {/*
-                          The wine's own value, above the rule and not in the
-                          sum. It is what duty is assessed on, so a member
-                          reading a duty figure has no way to judge it without
-                          this — and every number below is reached from it.
+                    <div className="mb-3 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-4">
+                      <div className="mb-3 lg:order-2 lg:mb-0">
+                    {/*
+                          The quote, itemised. It was one figure behind an ⓘ, on
+                          the reasoning that naming amounts publishes our rates and
+                          invites a line-by-line negotiation. Bundling duty, VAT,
+                          transfer and the distributor into a single clearance
+                          figure keeps that true — no individual rate can be worked
+                          back out of it — while still letting a member see what
+                          they are actually paying for, and challenge a repack that
+                          should not be there.
                         */}
-                        {(request.goodsValueUsd ?? 0) > 0 && (
-                          <div className="border-border-muted mb-1.5 flex items-baseline justify-between gap-3 border-b pb-1.5">
-                            <Typography variant="bodyXs" colorRole="muted">
-                              Value of the wine
-                              <span className="text-text-muted/70 ml-1.5">
-                                declared on import &middot; not charged
-                              </span>
-                            </Typography>
+                        {needsDecision && (
+                          <div className="border-border-muted rounded-lg border px-3 py-2">
+                            {/*
+                              The wine's own value, above the rule and not in the
+                              sum. It is what duty is assessed on, so a member
+                              reading a duty figure has no way to judge it without
+                              this — and every number below is reached from it.
+                            */}
+                            {(request.goodsValueUsd ?? 0) > 0 && (
+                              <div className="border-border-muted mb-1.5 flex items-baseline justify-between gap-3 border-b pb-1.5">
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Value of the wine
+                                  <span className="text-text-muted/70 ml-1.5">
+                                    declared on import &middot; not charged
+                                  </span>
+                                </Typography>
+                                <Typography
+                                  variant="bodyXs"
+                                  colorRole="muted"
+                                  className="tabular-nums"
+                                >
+                                  {money(request.goodsValueUsd ?? 0)}
+                                </Typography>
+                              </div>
+                            )}
+                            <dl className="flex flex-col gap-0.5">
+                              {[
+                                {
+                                  label: 'Duty, VAT and clearance',
+                                  value: request.clearanceCostUsd ?? 0,
+                                  tip: 'Duty and VAT at the rates UAE customs sets, plus moving the wine out of the free zone and the licensed partner who delivers it.',
+                                },
+                                {
+                                  label: 'Delivery',
+                                  value: request.deliveryCostUsd ?? 0,
+                                  tip: 'The drive to your address.',
+                                },
+                                ...(request.repackCostUsd
+                                  ? [
+                                      {
+                                        label: `Repacking${request.repackCases ? ` · ${request.repackCases} ${request.repackCases === 1 ? 'case' : 'cases'}` : ''}`,
+                                        value: request.repackCostUsd,
+                                        tip: `Part of a sealed case means opening it, checking the bottles, boxing what you are taking and relabelling the rest. Charged per case opened, not per bottle. Whole cases are free of it.`,
+                                      },
+                                    ]
+                                  : []),
+                                ...(request.additionalChargeUsd
+                                  ? [
+                                      {
+                                        label:
+                                          request.additionalChargeLabel ??
+                                          'Additional charge',
+                                        value: request.additionalChargeUsd,
+                                        tip: null,
+                                      },
+                                    ]
+                                  : []),
+                                {
+                                  label: 'C&C platform fee',
+                                  value: request.serviceFeeUsd ?? 0,
+                                  tip: 'Our fee for handling the release — paperwork, customs filing and the distributor.',
+                                },
+                              ].map((line) => (
+                                <div
+                                  key={line.label}
+                                  className="flex items-baseline justify-between gap-3"
+                                >
+                                  <dt className="text-text-muted inline-flex items-center gap-1 text-xs">
+                                    {line.label}
+                                    {line.tip && (
+                                      <Tooltip>
+                                        <TooltipTrigger
+                                          aria-label={`Why ${line.label} is charged`}
+                                        >
+                                          <Icon
+                                            icon={IconInfoCircle}
+                                            size="xs"
+                                            colorRole="muted"
+                                          />
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          className="max-w-[300px] text-left lg:max-w-[300px]"
+                                        >
+                                          <Typography variant="bodyXs">
+                                            {line.tip}
+                                          </Typography>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </dt>
+                                  <dd className="text-text-primary m-0 text-xs tabular-nums">
+                                    {money(line.value)}
+                                  </dd>
+                                </div>
+                              ))}
+
+                              <div className="border-border-muted mt-1.5 flex items-baseline justify-between gap-3 border-t pt-1.5">
+                                <dt className="text-text-primary text-xs font-semibold">
+                                  Total to deliver
+                                </dt>
+                                <dd className="text-text-brand m-0 text-sm font-semibold tabular-nums">
+                                  {money(request.totalCostUsd ?? 0)}
+                                </dd>
+                              </div>
+                            </dl>
                             <Typography
                               variant="bodyXs"
                               colorRole="muted"
-                              className="tabular-nums"
+                              className="mt-1.5 block"
                             >
-                              {money(request.goodsValueUsd ?? 0)}
+                              You already own the wine. Nothing further is added.
                             </Typography>
                           </div>
                         )}
-                        <dl className="flex flex-col gap-0.5">
-                          {[
-                            {
-                              label: 'Duty, VAT and clearance',
-                              value: request.clearanceCostUsd ?? 0,
-                              tip: 'Duty and VAT at the rates UAE customs sets, plus moving the wine out of the free zone and the licensed partner who delivers it.',
-                            },
-                            {
-                              label: 'Delivery',
-                              value: request.deliveryCostUsd ?? 0,
-                              tip: 'The drive to your address.',
-                            },
-                            ...(request.repackCostUsd
-                              ? [
-                                  {
-                                    label: `Repacking${request.repackCases ? ` · ${request.repackCases} ${request.repackCases === 1 ? 'case' : 'cases'}` : ''}`,
-                                    value: request.repackCostUsd,
-                                    tip: `Part of a sealed case means opening it, checking the bottles, boxing what you are taking and relabelling the rest. Charged per case opened, not per bottle. Whole cases are free of it.`,
-                                  },
-                                ]
-                              : []),
-                            ...(request.additionalChargeUsd
-                              ? [
-                                  {
-                                    label:
-                                      request.additionalChargeLabel ??
-                                      'Additional charge',
-                                    value: request.additionalChargeUsd,
-                                    tip: null,
-                                  },
-                                ]
-                              : []),
-                            {
-                              label: 'C&C platform fee',
-                              value: request.serviceFeeUsd ?? 0,
-                              tip: 'Our fee for handling the release — paperwork, customs filing and the distributor.',
-                            },
-                          ].map((line) => (
-                            <div
-                              key={line.label}
-                              className="flex items-baseline justify-between gap-3"
-                            >
-                              <dt className="text-text-muted inline-flex items-center gap-1 text-xs">
-                                {line.label}
-                                {line.tip && (
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      aria-label={`Why ${line.label} is charged`}
-                                    >
-                                      <Icon
-                                        icon={IconInfoCircle}
-                                        size="xs"
-                                        colorRole="muted"
-                                      />
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="top"
-                                      className="max-w-[300px] text-left lg:max-w-[300px]"
-                                    >
-                                      <Typography variant="bodyXs">
-                                        {line.tip}
-                                      </Typography>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </dt>
-                              <dd className="text-text-primary m-0 text-xs tabular-nums">
-                                {money(line.value)}
-                              </dd>
-                            </div>
-                          ))}
 
-                          <div className="border-border-muted mt-1.5 flex items-baseline justify-between gap-3 border-t pt-1.5">
-                            <dt className="text-text-primary text-xs font-semibold">
-                              Total to deliver
-                            </dt>
-                            <dd className="text-text-brand m-0 text-sm font-semibold tabular-nums">
-                              {money(request.totalCostUsd ?? 0)}
-                            </dd>
-                          </div>
-                        </dl>
-                        <Typography
-                          variant="bodyXs"
-                          colorRole="muted"
-                          className="mt-1.5 block"
-                        >
-                          You already own the wine. Nothing further is added.
-                        </Typography>
                       </div>
-                    )}
 
-                    <div className="border-border-muted mb-3 overflow-hidden rounded-lg border">
-                      <table className="w-full text-xs">
-                        <tbody className="divide-border-muted/60 divide-y">
-                          {request.items.map((item) => {
-                            const bottles = lineFor(item.id, item.bottles);
+                      <div className="lg:order-1">
+                        <div className="border-border-muted overflow-hidden rounded-lg border">
+                          <table className="w-full text-xs">
+                            <tbody className="divide-border-muted/60 divide-y">
+                              {request.items.map((item) => {
+                                const bottles = lineFor(item.id, item.bottles);
 
-                            return (
-                              <tr key={item.id}>
-                                <td className="px-3 py-2">
-                                  {lineLabel(
-                                    item.productName,
-                                    item.vintage,
-                                    item.bottleSize,
-                                    item.caseConfig,
-                                  )}
-                                  {item.lotNumber && (
-                                    <span className="text-text-muted ml-2 font-mono text-[11px]">
-                                      lot {item.lotNumber}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="whitespace-nowrap px-3 py-2 text-right">
-                                  {isEditable ? (
-                                    <span className="inline-flex items-center gap-0.5">
-                                      <button
-                                        type="button"
-                                        aria-label="One fewer bottle"
-                                        disabled={bottles <= 1}
-                                        onClick={() =>
-                                          setEditLines((current) =>
-                                            new Map(current).set(
-                                              item.id,
-                                              bottles - 1,
-                                            ),
-                                          )
-                                        }
-                                        className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors disabled:opacity-30"
-                                      >
-                                        &minus;
-                                      </button>
-                                      <span className="min-w-[24px] text-center tabular-nums">
-                                        {bottles}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        aria-label="One more bottle"
-                                        onClick={() =>
-                                          setEditLines((current) =>
-                                            new Map(current).set(
-                                              item.id,
-                                              bottles + 1,
-                                            ),
-                                          )
-                                        }
-                                        className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors"
-                                      >
-                                        +
-                                      </button>
-                                      <span className="text-text-muted ml-1">
-                                        {bottles === 1 ? 'bottle' : 'bottles'}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        aria-label={`Remove ${item.productName}`}
-                                        onClick={() =>
-                                          setEditLines((current) =>
-                                            new Map(current).set(item.id, 0),
-                                          )
-                                        }
-                                        className="text-text-muted hover:text-text-primary ml-1 px-1 transition-colors"
-                                      >
-                                        &times;
-                                      </button>
-                                    </span>
-                                  ) : (
-                                    <span className="tabular-nums">
-                                      {item.bottles}{' '}
-                                      {item.bottles === 1
-                                        ? 'bottle'
-                                        : 'bottles'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                                return (
+                                  <tr key={item.id}>
+                                    <td className="px-3 py-1.5">
+                                      {lineLabel(
+                                        item.productName,
+                                        item.vintage,
+                                        item.bottleSize,
+                                        item.caseConfig,
+                                      )}
+                                      {item.lotNumber && (
+                                        <span className="text-text-muted ml-2 font-mono text-[11px]">
+                                          lot {item.lotNumber}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                                      {isEditable ? (
+                                        <span className="inline-flex items-center gap-0.5">
+                                          <button
+                                            type="button"
+                                            aria-label="One fewer bottle"
+                                            disabled={bottles <= 1}
+                                            onClick={() =>
+                                              setEditLines((current) =>
+                                                new Map(current).set(
+                                                  item.id,
+                                                  bottles - 1,
+                                                ),
+                                              )
+                                            }
+                                            className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors disabled:opacity-30"
+                                          >
+                                            &minus;
+                                          </button>
+                                          <span className="min-w-[24px] text-center tabular-nums">
+                                            {bottles}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            aria-label="One more bottle"
+                                            onClick={() =>
+                                              setEditLines((current) =>
+                                                new Map(current).set(
+                                                  item.id,
+                                                  bottles + 1,
+                                                ),
+                                              )
+                                            }
+                                            className="text-text-muted hover:bg-fill-muted h-6 w-6 rounded transition-colors"
+                                          >
+                                            +
+                                          </button>
+                                          <span className="text-text-muted ml-1">
+                                            {bottles === 1 ? 'bottle' : 'bottles'}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            aria-label={`Remove ${item.productName}`}
+                                            onClick={() =>
+                                              setEditLines((current) =>
+                                                new Map(current).set(item.id, 0),
+                                              )
+                                            }
+                                            className="text-text-muted hover:text-text-primary ml-1 px-1 transition-colors"
+                                          >
+                                            &times;
+                                          </button>
+                                        </span>
+                                      ) : (
+                                        <span className="tabular-nums">
+                                          {item.bottles}{' '}
+                                          {item.bottles === 1
+                                            ? 'bottle'
+                                            : 'bottles'}
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
 
                     {isEditable ? (
