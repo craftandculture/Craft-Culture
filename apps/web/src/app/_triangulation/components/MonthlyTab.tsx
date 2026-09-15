@@ -105,7 +105,10 @@ const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
         <p className="max-w-2xl">
           What left us and what the outlet sold on, by month and by owner. Value
           is the invoice&rsquo;s own — rate times quantity, in the currency it
-          was billed in. Unattributed rows are lines no invoice named an owner
+          was billed in. <strong>Unbilled</strong> is wine City Drinks sold
+          that its owner has not yet invoiced us for — the question this view
+          exists to answer. Upload an owner&rsquo;s invoice on the Imports tab
+          to settle it. Unattributed rows are lines no invoice named an owner
           for and whose wine has none set.
         </p>
       </Typography>
@@ -144,8 +147,20 @@ const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
                     <th className="py-2 pr-3 text-right font-medium">
                       Bottles sold on
                     </th>
-                    <th className="py-2 pr-4 text-right font-medium">
+                    <th className="py-2 pr-3 text-right font-medium">
                       Sold for
+                    </th>
+                    <th
+                      className="border-border-primary border-l py-2 pr-3 text-right font-medium"
+                      title="What the owner has invoiced us for"
+                    >
+                      Billed to us
+                    </th>
+                    <th
+                      className="py-2 pr-4 text-right font-medium"
+                      title="Sold on by the outlet that no owner has billed us for yet"
+                    >
+                      Unbilled
                     </th>
                   </tr>
                 </thead>
@@ -175,10 +190,33 @@ const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
                       <td className="py-2 pr-3 text-right tabular-nums">
                         {formatBottles(row.outletSoldBottles)}
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">
+                      <td className="py-2 pr-3 text-right tabular-nums">
                         {row.outletSoldValue > 0
                           ? formatValue(row.outletSoldValue, row.currencies)
                           : '—'}
+                      </td>
+                      <td className="border-border-primary border-l py-2 pr-3 text-right tabular-nums">
+                        {row.billedBottles > 0
+                          ? `${formatBottles(row.billedBottles)} · ${formatValue(row.billedValue, row.currencies)}`
+                          : '—'}
+                      </td>
+                      {/*
+                        The point of the whole view: wine the outlet sold that
+                        its owner has not billed us for. Zero is the settled
+                        state, so only a gap is coloured.
+                      */}
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {row.unbilledBottles > 0 ? (
+                          <span className="text-text-warning">
+                            {formatBottles(row.unbilledBottles)}
+                          </span>
+                        ) : row.unbilledBottles < 0 ? (
+                          <span className="text-text-danger">
+                            {formatBottles(row.unbilledBottles)}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     </tr>
                   ))}

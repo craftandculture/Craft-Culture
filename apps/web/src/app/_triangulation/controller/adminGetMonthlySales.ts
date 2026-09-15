@@ -18,6 +18,12 @@ export interface MonthlySalesRow {
   outletSoldBottles: number;
   /** What the outlet sold it for, where their file states a price */
   outletSoldValue: number;
+  /** Bottles the owner has invoiced us for */
+  billedBottles: number;
+  /** What the owner billed us, in their invoice's currency */
+  billedValue: number;
+  /** Bottles sold on by the outlet that no owner has billed us for yet */
+  unbilledBottles: number;
   /** Currencies seen in the month, so a mixed one cannot read as a single total */
   currencies: string[];
   /** Lines contributing, so a thin month is visibly thin */
@@ -77,6 +83,17 @@ const adminGetMonthlySales = adminProcedure
           COALESCE(
             NULLIF(TRIM(l.stated_owner_name), ''),
             NULLIF(TRIM(s.owner_name), ''),
+            /*
+              An owner's own invoice is theirs by definition — it is the client
+              billing us — so the programme it was uploaded under names the
+              owner when the line itself does not. Sales lines get no such
+              fallback: "Unattributed" there is real work outstanding, and
+              folding it into a client would hide it.
+            */
+            CASE WHEN i.kind = 'owner_invoice' THEN CASE p.consignment_tag
+              WHEN 'CC' THEN 'C&C' WHEN 'CRURATED' THEN 'Crurated'
+              WHEN 'RARE' THEN 'Rare' WHEN 'CRU' THEN 'Cru'
+              WHEN 'CULT' THEN 'Cult' END END,
             'Unattributed'
           ) AS owner_name,
           i.kind,
@@ -85,11 +102,12 @@ const adminGetMonthlySales = adminProcedure
           NULLIF(TRIM(l.currency), '') AS currency
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
+        JOIN tri_programmes p ON p.id = i.programme_id
         LEFT JOIN tri_skus s ON s.id = l.sku_id
         WHERE ${allProgrammes ? client`TRUE` : client`i.programme_id = ${programmeId}`}
           AND i.status = 'committed'
           AND l.status <> 'ignored'
-          AND i.kind IN ('cc_sales_to_cd', 'cd_sales')
+          AND i.kind IN ('cc_sales_to_cd', 'cd_sales', 'owner_invoice')
           AND COALESCE(l.doc_date, i.as_of_date) IS NOT NULL
       )
       SELECT
@@ -103,6 +121,19 @@ const adminGetMonthlySales = adminProcedure
           AS "outletSoldBottles",
         COALESCE(SUM(line_value) FILTER (WHERE kind = 'cd_sales'), 0)::float8
           AS "outletSoldValue",
+        COALESCE(SUM(quantity_bottles) FILTER (WHERE kind = 'owner_invoice'), 0)::float8
+          AS "billedBottles",
+        COALESCE(SUM(line_value) FILTER (WHERE kind = 'owner_invoice'), 0)::float8
+          AS "billedValue",
+        /*
+          What the outlet sold that nobody has billed us for. Negative would
+          mean an owner billed for more than sold, which is worth seeing rather
+          than clamping to zero.
+        */
+        (
+          COALESCE(SUM(quantity_bottles) FILTER (WHERE kind = 'cd_sales'), 0)
+          - COALESCE(SUM(quantity_bottles) FILTER (WHERE kind = 'owner_invoice'), 0)
+        )::float8 AS "unbilledBottles",
         COALESCE(
           ARRAY_AGG(DISTINCT currency) FILTER (WHERE currency IS NOT NULL),
           ARRAY[]::text[]

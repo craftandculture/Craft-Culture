@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminGetAll from './controller/adminGetAll';
 import adminGetManyForPartner from './controller/adminGetManyForPartner';
 import adminLinkOrCreateForOrder from './controller/adminLinkOrCreateForOrder';
 import adminSetVerified from './controller/adminSetVerified';
@@ -17,6 +18,7 @@ const privateClientContactsRouter = createTRPCRouter({
   update,
   // Admins belong to no wine partner, so `update` and `getMany` are closed
   // to them — these take the partner from the form instead
+  adminGetAll,
   adminGetManyForPartner,
   adminUpdate,
   // The flag ordersAssignDistributor reads to skip the verification steps

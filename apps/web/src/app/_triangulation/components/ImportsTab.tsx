@@ -63,6 +63,10 @@ const KIND_ORDER: TriImportKind[] = [
   'cc_count',
   'cd_sales',
   'cd_count',
+  // What the owner has billed us for. The card existed in everything but the
+  // list that renders it, so the one input answering "has Cru invoiced us for
+  // that wine?" could not be supplied at all.
+  'owner_invoice',
 ];
 
 /**
@@ -76,6 +80,7 @@ const CONSIGNMENT_KINDS: TriImportKind[] = [
   'cc_sales_to_cd',
   'cd_sales',
   'cd_count',
+  'owner_invoice',
 ];
 
 /**

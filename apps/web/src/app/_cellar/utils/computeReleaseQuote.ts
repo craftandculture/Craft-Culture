@@ -95,6 +95,7 @@ const computeReleaseQuote = async (
       transferUsd: 0,
       deliveryUsd: 0,
       repackUsd: 0,
+      repackCases: 0,
       distributorMarginUsd: 0,
       ccMarginUsd: 0,
       clearanceTotalUsd: 0,

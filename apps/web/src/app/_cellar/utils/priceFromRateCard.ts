@@ -35,6 +35,14 @@ export interface ReleasePricing {
   deliveryUsd: number;
   /** Breaking sealed cases to make up a part quantity */
   repackUsd: number;
+  /**
+   * How many seals that figure is for.
+   *
+   * Shown beside the money so the charge can be checked against the lines
+   * rather than taken on trust — a repack total is the one figure on this
+   * quote nobody can verify by looking at the wine.
+   */
+  repackCases: number;
   /** The licensed partner's cut of a mainland delivery */
   distributorMarginUsd: number;
   /** What C&C earns for handling it */
@@ -116,6 +124,7 @@ const priceFromRateCard = (
     transferUsd,
     deliveryUsd,
     repackUsd,
+    repackCases,
     distributorMarginUsd,
     ccMarginUsd,
     clearanceTotalUsd,

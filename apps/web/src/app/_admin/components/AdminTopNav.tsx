@@ -67,6 +67,7 @@ const getSectionFromPathname = (pathname: string) => {
   // Partners
   if (
     pathname.startsWith('/platform/admin/users') ||
+    pathname.startsWith('/platform/admin/clients') ||
     pathname.startsWith('/platform/admin/partners') ||
     pathname.startsWith('/platform/admin/wine-partners')
   )

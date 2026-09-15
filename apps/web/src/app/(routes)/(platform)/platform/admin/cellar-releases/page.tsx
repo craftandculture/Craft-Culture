@@ -413,7 +413,15 @@ const CellarReleasesPage = () => {
                             line longer and say nothing.
                           */}
                           {request.suggested.repackUsd > 0 && (
-                            <> &middot; repack {request.suggested.repackUsd}</>
+                            <>
+                              {' '}
+                              &middot; repack {request.suggested.repackUsd} (
+                              {request.suggested.repackCases}{' '}
+                              {request.suggested.repackCases === 1
+                                ? 'case'
+                                : 'cases'}{' '}
+                              opened)
+                            </>
                           )}{' '}
                           &middot; distributor{' '}
                           {request.suggested.distributorMarginUsd} &middot;
