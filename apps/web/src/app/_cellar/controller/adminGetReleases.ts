@@ -1,16 +1,16 @@
-import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
-  logisticsShipmentItems,
   partners,
-  wmsProductPricing,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getCostPerBottle from '../data/getCostPerBottle';
 import computeReleaseQuote from '../utils/computeReleaseQuote';
 
 /**
@@ -93,27 +93,7 @@ const adminGetReleases = adminProcedure
     */
     const lwins = [...new Set(items.map((item) => item.lwin18))];
 
-    const costRows = lwins.length
-      ? await db
-          .select({
-            lwin18: wmsProductPricing.lwin18,
-            cost: sql<number | null>`COALESCE(
-              NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0),
-              MAX(${logisticsShipmentItems.productCostPerBottle})
-            )`,
-          })
-          .from(wmsProductPricing)
-          .leftJoin(
-            logisticsShipmentItems,
-            eq(logisticsShipmentItems.lwin, wmsProductPricing.lwin18),
-          )
-          .where(inArray(wmsProductPricing.lwin18, lwins))
-          .groupBy(wmsProductPricing.lwin18)
-      : [];
-
-    const costByLwin = new Map(
-      costRows.map((row) => [row.lwin18, Number(row.cost ?? 0)]),
-    );
+    const costByLwin = await getCostPerBottle(lwins);
 
     /*
       Each request arrives with the figures its member's own rate card
@@ -129,7 +109,8 @@ const adminGetReleases = adminProcedure
           items.map((item) => ({
             bottles: item.bottles,
             caseConfig: item.caseConfig,
-            costPerBottle: costByLwin.get(item.lwin18) ?? null,
+            costPerBottle:
+              costByLwin.get(lwinPakKeyOf(item.lwin18)) ?? null,
           })),
         );
 

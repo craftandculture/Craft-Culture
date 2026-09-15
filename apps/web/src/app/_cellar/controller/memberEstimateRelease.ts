@@ -1,14 +1,14 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
-  logisticsShipmentItems,
-  wmsProductPricing,
   wmsStock,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import getCostPerBottle from '../data/getCostPerBottle';
 import computeReleaseQuote from '../utils/computeReleaseQuote';
 
 /**
@@ -67,25 +67,7 @@ const memberEstimateRelease = stockOwnerProcedure
 
     const lwins = [...new Set(owned.map((row) => row.lwin18))];
 
-    const costRows = await db
-      .select({
-        lwin18: wmsProductPricing.lwin18,
-        cost: sql<number | null>`COALESCE(
-          NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0),
-          MAX(${logisticsShipmentItems.productCostPerBottle})
-        )`,
-      })
-      .from(wmsProductPricing)
-      .leftJoin(
-        logisticsShipmentItems,
-        eq(logisticsShipmentItems.lwin, wmsProductPricing.lwin18),
-      )
-      .where(inArray(wmsProductPricing.lwin18, lwins))
-      .groupBy(wmsProductPricing.lwin18);
-
-    const costByLwin = new Map(
-      costRows.map((row) => [row.lwin18, Number(row.cost ?? 0)]),
-    );
+    const costByLwin = await getCostPerBottle(lwins);
 
     const quote = await computeReleaseQuote(
       ctx.partner.id,
@@ -98,7 +80,8 @@ const memberEstimateRelease = stockOwnerProcedure
           {
             bottles: line.bottles,
             caseConfig: stock.caseConfig,
-            costPerBottle: costByLwin.get(stock.lwin18) ?? null,
+            costPerBottle:
+              costByLwin.get(lwinPakKeyOf(stock.lwin18)) ?? null,
           },
         ];
       }),

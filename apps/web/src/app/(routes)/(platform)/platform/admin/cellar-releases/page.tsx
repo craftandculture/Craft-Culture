@@ -8,8 +8,10 @@ import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter =
@@ -239,7 +241,20 @@ const CellarReleasesPage = () => {
                       <tbody className="divide-border-muted/60 divide-y">
                         {request.items.map((item) => (
                           <tr key={item.id}>
-                            <td className="px-3 py-2">{item.productName}</td>
+                            {/*
+                              The stored name ends in its own vintage, size and
+                              strength, and this table has columns for two of
+                              them — so every row read the vintage twice and
+                              carried an abv nobody is deciding on.
+                            */}
+                            <td className="max-w-0 px-3 py-2">
+                              <span
+                                className="block truncate"
+                                title={item.productName}
+                              >
+                                {displayWineName(item.productName)}
+                              </span>
+                            </td>
                             <td className="px-3 py-2 text-center tabular-nums">
                               {item.vintage ?? 'NV'}
                             </td>
@@ -368,7 +383,16 @@ const CellarReleasesPage = () => {
                           Card {request.suggested.version} on goods valued at{' '}
                           {request.suggested.goodsValueUsd}: duty{' '}
                           {request.suggested.dutyUsd} &middot; transfer{' '}
-                          {request.suggested.transferUsd} &middot; distributor{' '}
+                          {request.suggested.transferUsd}
+                          {/*
+                            Only when a case is actually broken. Showing a zero
+                            repack on every whole-case release would make the
+                            line longer and say nothing.
+                          */}
+                          {request.suggested.repackUsd > 0 && (
+                            <> &middot; repack {request.suggested.repackUsd}</>
+                          )}{' '}
+                          &middot; distributor{' '}
                           {request.suggested.distributorMarginUsd} &middot;
                           delivery {request.suggested.deliveryUsd} &middot; VAT{' '}
                           {request.suggested.vatUsd} &middot;{' '}
@@ -383,9 +407,23 @@ const CellarReleasesPage = () => {
                           { key: 'delivery', label: 'Delivery $' },
                           { key: 'service', label: 'Service fee $' },
                           { key: 'extra', label: 'Additional charge $' },
-                          { key: 'extraLabel', label: 'What it is for' },
+                          /*
+                            Text, not money. Both of these were getting the
+                            0.00 placeholder because only rateVersion was
+                            special-cased, so a field asking what a charge is
+                            for invited a number.
+                          */
+                          {
+                            key: 'extraLabel',
+                            label: 'What it is for',
+                            placeholder: 'Repack, storage, courier…',
+                          },
                           { key: 'goods', label: 'Goods value $' },
-                          { key: 'rateVersion', label: 'Rate version' },
+                          {
+                            key: 'rateVersion',
+                            label: 'Rate version',
+                            placeholder: '2026-Q3',
+                          },
                         ].map((field) => (
                           <label key={field.key} className="block">
                             <span className="text-text-muted mb-1 block text-[11px] uppercase tracking-wider">
@@ -404,9 +442,7 @@ const CellarReleasesPage = () => {
                                 }));
                               }
                               }
-                              placeholder={
-                                field.key === 'rateVersion' ? '2026-Q3' : '0.00'
-                              }
+                              placeholder={field.placeholder ?? '0.00'}
                             />
                           </label>
                         ))}
@@ -472,11 +508,14 @@ const CellarReleasesPage = () => {
                         >
                           <ButtonContent>Ask for revisions</ButtonContent>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="danger"
-                          isDisabled={isPending}
+                        {/*
+                          Quiet, and pushed right. Cancelling ends the request
+                          outright and is the rarest of the three answers, but
+                          it was the loudest thing on the card.
+                        */}
+                        <button
+                          type="button"
+                          disabled={isPending}
                           onClick={() =>
                             decide({
                               requestId: request.id,
@@ -484,9 +523,11 @@ const CellarReleasesPage = () => {
                               adminNotes: form.notes || undefined,
                             })
                           }
+                          className="text-text-muted ml-auto inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors hover:text-red-700 disabled:opacity-40"
                         >
-                          <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
-                        </Button>
+                          <Icon icon={IconX} size="xs" />
+                          Cancel request
+                        </button>
                       </div>
                     </>
                   )}
