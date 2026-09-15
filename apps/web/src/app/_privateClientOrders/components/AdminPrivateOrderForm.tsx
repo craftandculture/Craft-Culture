@@ -20,7 +20,7 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
 
@@ -51,12 +51,16 @@ interface LineItem {
 const AdminPrivateOrderForm = () => {
   const router = useRouter();
   const trpcClient = useTRPCClient();
+  const api = useTRPC();
 
   // Partner selection state
   const [partnerId, setPartnerId] = useState('');
 
   // Client info state
   const [clientName, setClientName] = useState('');
+  /** The contact chosen from the partner's client bank, when one was */
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [showClients, setShowClients] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
@@ -65,6 +69,18 @@ const AdminPrivateOrderForm = () => {
 
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+  // The chosen partner's own clients. Skipped until a partner is picked,
+  // since a client bank only means anything in the context of whose it is.
+  const clientsQuery = useQuery({
+    ...api.privateClientContacts.adminGetManyForPartner.queryOptions({
+      partnerId,
+      search: clientName.trim() || undefined,
+    }),
+    enabled: !!partnerId,
+  });
+
+  const clientMatches = clientsQuery.data ?? [];
 
   // Fetch partners list (wine partners for creating orders)
   const partnersQuery = useQuery({
@@ -76,6 +92,8 @@ const AdminPrivateOrderForm = () => {
   const createOrder = useMutation({
     mutationFn: async (data: {
       partnerId: string;
+      /** Set when the client came from the partner's bank rather than typed */
+      clientId?: string;
       clientName: string;
       clientEmail?: string;
       clientPhone?: string;
@@ -173,6 +191,7 @@ const AdminPrivateOrderForm = () => {
     // Create the order first
     const order = await createOrder.mutateAsync({
       partnerId,
+      clientId: clientId ?? undefined,
       clientName,
       clientEmail: clientEmail || undefined,
       clientPhone: clientPhone || undefined,
@@ -268,12 +287,63 @@ const AdminPrivateOrderForm = () => {
               <Typography variant="bodySm" className="font-medium">
                 Client Name *
               </Typography>
-              <Input
-                placeholder="Enter client name"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                required
-              />
+              {/* Typing still works for a client who has never ordered, but
+                  the partner's existing clients are offered first — otherwise
+                  the same person is retyped each time and ends up in the
+                  system three times under three spellings, none verified. */}
+              <div className="relative">
+                <Input
+                  placeholder="Enter client name"
+                  value={clientName}
+                  onChange={(e) => {
+                    setClientName(e.target.value);
+                    // Typing over a chosen client makes it a different client.
+                    setClientId(null);
+                    setShowClients(true);
+                  }}
+                  onFocus={() => setShowClients(true)}
+                  onBlur={() => window.setTimeout(() => setShowClients(false), 150)}
+                  required
+                />
+
+                {showClients && partnerId && clientMatches.length > 0 && (
+                  <div className="border-border-primary bg-fill-primary absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border shadow-lg">
+                    {clientMatches.map((contact) => (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        className="hover:bg-fill-muted/40 flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left"
+                        onMouseDown={(event) => {
+                          // mousedown, not click: blur fires first and would
+                          // close the list before the click landed.
+                          event.preventDefault();
+                          setClientId(contact.id);
+                          setClientName(contact.name);
+                          if (contact.email) setClientEmail(contact.email);
+                          if (contact.phone) setClientPhone(contact.phone);
+                          if (contact.address) setClientAddress(contact.address);
+                          setShowClients(false);
+                        }}
+                      >
+                        <span className="text-text-primary text-sm font-medium">
+                          {contact.name}
+                          {contact.verifiedAt ? '' : ' · not yet verified'}
+                        </span>
+                        <span className="text-text-muted text-xs">
+                          {[contact.email, contact.phone, contact.address]
+                            .filter(Boolean)
+                            .join(' · ') || 'no contact details on file'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {clientId ? (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Existing client — the order will attach to their record
+                </Typography>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-1.5">
