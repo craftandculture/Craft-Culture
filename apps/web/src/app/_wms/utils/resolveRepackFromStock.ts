@@ -1,6 +1,6 @@
-import parseSkuPack from './parseSkuPack';
 import rankStockByPack from './rankStockByPack';
 import readLineVintage from './readLineVintage';
+import readOrderedPack from './readOrderedPack';
 
 export interface RepackStockRow {
   lwin18: string;
@@ -91,13 +91,7 @@ const baseName = (name: string) =>
  * @returns The ordered pack, the repack decision and the suggested bay
  */
 const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
-  // The SKU is the source of truth for the pack, but only when its pack digits
-  // are plausible — see parseSkuPack. Otherwise the description ("6x75cl").
-  const skuPack = parseSkuPack(line.sku)?.pack ?? 0;
-  const packMatch = /^(\d+)\s*[x×]/i.exec(line.description ?? '');
-  const descPack =
-    packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 0;
-  const orderedPack = skuPack > 0 ? skuPack : descPack > 0 ? descPack : 1;
+  const orderedPack = readOrderedPack(line.sku, line.description);
 
   // A mixed-vintage case, a whisky and a canned wine are all non-vintage, and
   // their stock rows carry no vintage — so they have to match NV stock rather

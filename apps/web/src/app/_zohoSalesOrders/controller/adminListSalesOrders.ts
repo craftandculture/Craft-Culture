@@ -9,6 +9,7 @@
 
 import { desc, eq, gt, inArray, or } from 'drizzle-orm';
 
+import readOrderedPack from '@/app/_wms/utils/readOrderedPack';
 import resolveRepackFromStock from '@/app/_wms/utils/resolveRepackFromStock';
 import type { RepackStockRow } from '@/app/_wms/utils/resolveRepackFromStock';
 import db from '@/database/client';
@@ -97,9 +98,10 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
       let cases = 0;
       let bottleCount = 0;
       for (const item of items) {
-        const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
-        const perCase =
-          packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
+        // The SKU before the description — see readOrderedPack. This card's
+        // bottle count was the description's alone, so a corrected code in
+        // Zoho left the total reading a twelfth of the order.
+        const perCase = readOrderedPack(item.sku, item.description);
         cases += item.quantity;
         bottleCount += item.quantity * perCase;
       }

@@ -22,6 +22,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import parseSkuPack from '../utils/parseSkuPack';
+import readOrderedPack from '../utils/readOrderedPack';
 import resolvePickQuantities from '../utils/resolvePickQuantities';
 import resolvePickStock from '../utils/resolvePickStock';
 
@@ -139,9 +140,10 @@ const adminResyncPickList = wmsOperatorProcedure
 
         // Compare like with like: everything in bottles, then back to the
         // ordered pack for the line we write.
-        const orderedPack =
-          parseSkuPack(item.sku ?? resolvedLwin18)?.pack ??
-          (Number(/^(\d+)\s*[x×]/i.exec(item.description ?? '')?.[1]) || 1);
+        const orderedPack = readOrderedPack(
+          item.sku ?? resolvedLwin18,
+          item.description,
+        );
         const orderedBottles = item.quantity * orderedPack;
         const alreadyPicked = pickedBottlesByWine.get(wineKey(resolvedLwin18)) ?? 0;
         const remainingBottles = orderedBottles - alreadyPicked;

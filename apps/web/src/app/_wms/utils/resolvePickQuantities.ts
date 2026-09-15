@@ -1,4 +1,4 @@
-import parseSkuPack from './parseSkuPack';
+import readOrderedPack from './readOrderedPack';
 
 interface PickQuantityParams {
   /** Ordered quantity, in the line's own unit. */
@@ -44,10 +44,7 @@ const resolvePickQuantities = ({
 }: PickQuantityParams) => {
   const isBottleUnit = /^bottle/i.test((unit ?? '').trim());
 
-  const descMatch = /^(\d+)\s*[x×]/i.exec((description ?? '').trim());
-  const descPack =
-    descMatch && Number(descMatch[1]) > 0 ? Number(descMatch[1]) : 0;
-  const orderedPack = parseSkuPack(sku)?.pack ?? (descPack > 0 ? descPack : 1);
+  const orderedPack = readOrderedPack(sku, description);
 
   const stockPack =
     stockCaseConfig && stockCaseConfig > 0 ? stockCaseConfig : orderedPack;

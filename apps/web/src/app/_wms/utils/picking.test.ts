@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import lwinPackAgnosticPattern from './lwinPackAgnosticPattern';
 import parseSkuPack from './parseSkuPack';
 import rankStockByPack from './rankStockByPack';
+import readOrderedPack from './readOrderedPack';
 import resolvePickQuantities from './resolvePickQuantities';
 import resolveRepackFromStock from './resolveRepackFromStock';
 
@@ -119,6 +120,29 @@ describe('parseSkuPack', () => {
 
   it('reads a single-bottle pack', () => {
     expect(parseSkuPack('1007808-2017-01-00750')?.pack).toBe(1);
+  });
+});
+
+describe('readOrderedPack', () => {
+  /*
+    A corrected code in Zoho has to reach the quantities, not only the match.
+    NICE is twelve 180ml cans to a case and its Zoho item said "1x75cl": the
+    order card read 40 cases as 40 bottles, and release would have shipped a
+    twelfth of what was bought.
+  */
+  it('takes the pack from the SKU over a stale description', () => {
+    expect(readOrderedPack('NICECANMAL-0000-12-00180', '1x75cl')).toBe(12);
+    expect(readOrderedPack('BROTHERSB-0000-06-00750', '1x75cl')).toBe(6);
+  });
+
+  it('falls back to the description when the SKU carries no pack', () => {
+    expect(readOrderedPack(null, '6x75cl')).toBe(6);
+    expect(readOrderedPack('CB-ORCHARD', '6 x 70cl')).toBe(6);
+  });
+
+  it('is one bottle when neither says', () => {
+    expect(readOrderedPack(null, null)).toBe(1);
+    expect(readOrderedPack('', 'Blended Malt')).toBe(1);
   });
 });
 

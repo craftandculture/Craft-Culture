@@ -14,6 +14,7 @@ import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import rankStockByPack from '@/app/_wms/utils/rankStockByPack';
+import readOrderedPack from '@/app/_wms/utils/readOrderedPack';
 import db from '@/database/client';
 import {
   wmsLocations,
@@ -233,9 +234,7 @@ const adminReleaseToPick = wmsOperatorProcedure
       // description ('1x75cl', '6x75cl'). The ordered pack is the bottles per
       // ordered "case"; the stock pack is how the wine is physically cased.
       const isBottleUnit = /^bottle/i.test((item.unit ?? '').trim());
-      const packMatch = /^(\d+)\s*[x×]/i.exec(item.description ?? '');
-      const orderedPack =
-        packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 1;
+      const orderedPack = readOrderedPack(item.sku, item.description);
       // True bottle count the customer ordered.
       const orderedBottles = isBottleUnit
         ? item.quantity
