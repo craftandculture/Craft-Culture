@@ -115,6 +115,39 @@ const adminSyncSalesFromInvoices = adminProcedure
       : null;
     const takesUnattributed = claim?.takesUnattributed ?? false;
 
+    /*
+      Whose wine each product code is, according to the registry.
+
+      A CONSIGNMENT_MIX invoice names its owners in heading rows that Zoho
+      drops on read, so the document itself says nothing and every line of it
+      went to whoever takes the unattributed. But the owner of a wine does not
+      change between invoices — Bouchard Vosne-Romanée is Rare's on every one —
+      so the registry can answer what the document will not.
+
+      Read across every programme, not just this one: the wine may well be
+      registered in another client's list, and it is still their wine.
+
+      Built once per sync rather than queried per line; a few hundred codes
+      against seventy invoices is one small query against several thousand.
+    */
+    const ownerRows = await client<
+      { normalizedCode: string; ownerName: string }[]
+    >`
+      SELECT DISTINCT
+        UPPER(REGEXP_REPLACE(COALESCE(s.lwin18, s.w_code), '[^A-Za-z0-9]', '', 'g'))
+          AS "normalizedCode",
+        s.owner_name AS "ownerName"
+      FROM tri_skus s
+      WHERE COALESCE(NULLIF(TRIM(s.owner_name), ''), '') <> ''
+        AND COALESCE(s.lwin18, s.w_code) IS NOT NULL
+    `;
+
+    const ownerByCode = new Map(
+      ownerRows.map((row) => [row.normalizedCode, row.ownerName]),
+    );
+    /** Lines the registry attributed that the document could not */
+    let attributedByRegistry = 0;
+
     const rows: Record<string, unknown>[] = [];
     const invoiceNumbers: string[] = [];
     /** Invoices belonging to another client, which this one must not absorb */
@@ -307,12 +340,24 @@ const adminSyncSalesFromInvoices = adminProcedure
 
         if (!line.quantity) continue;
 
+        const code = line.sku ?? '';
+        const normalized = normalizeCode(code);
+        const description = `${line.name}${line.description ? ` (${line.description})` : ''}`;
+
         /*
-          Now the line's owner is known, decide whether it is this client's.
+          Whose line this is: the document first, since naming an owner on an
+          invoice is a deliberate act, then the registry. A mixed invoice names
+          nobody the API will return, so the registry is the only thing that
+          can split it — and a wine's owner does not change between invoices.
+
           Lines belonging elsewhere are counted and left for their own client
           rather than absorbed into this one.
         */
-        const owner = lineTagged ?? lineOwner;
+        const fromRegistry = normalized ? ownerByCode.get(normalized) : null;
+        const owner = lineTagged ?? lineOwner ?? fromRegistry ?? null;
+
+        if (!lineTagged && !lineOwner && fromRegistry) attributedByRegistry += 1;
+
         const belongsHere = owner ? owner === ownerClaimed : takesUnattributed;
 
         if (!belongsHere) {
@@ -321,10 +366,6 @@ const adminSyncSalesFromInvoices = adminProcedure
           otherOwners.set(label, (otherOwners.get(label) ?? 0) + 1);
           continue;
         }
-
-        const code = line.sku ?? '';
-        const normalized = normalizeCode(code);
-        const description = `${line.name}${line.description ? ` (${line.description})` : ''}`;
 
         // An item with no SKU in Zoho used to be dropped here, and dropping it
         // put the line beyond reach of every diagnostic the tool has: absent
@@ -424,6 +465,8 @@ const adminSyncSalesFromInvoices = adminProcedure
       withSubject,
       /** How many invoices were read in total, so the sample can be judged */
       invoicesRead: headers.length,
+      /** Lines the registry attributed because the document named nobody */
+      attributedByRegistry,
       /** Owner headings found inside invoices, which is how a MIX splits */
       headings: [...headingsSeen].slice(0, 25),
       /** Consignment lines belonging to other clients, by owner */

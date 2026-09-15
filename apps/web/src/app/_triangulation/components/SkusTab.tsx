@@ -11,6 +11,8 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import { OWNER_BY_TAG } from '../utils/readConsignmentSubject';
+
 /**
  * The canonical W code registry and the external codes attached to each
  *
@@ -25,6 +27,15 @@ export interface SkusTabProps {
   /** The programme whose registry is on screen */
   programmeId: string | null;
 }
+
+/**
+ * The owners a wine can belong to.
+ *
+ * Taken from the consignment tags the invoices use, so a wine and an invoice
+ * name the same owner the same way — the alternative is free text, and two
+ * spellings of Rare would split a settlement in half.
+ */
+const OWNERS = [...new Set(Object.values(OWNER_BY_TAG))].sort();
 
 const SkusTab = ({ programmeId }: SkusTabProps) => {
   const api = useTRPC();
@@ -428,6 +439,7 @@ const SkusTab = ({ programmeId }: SkusTabProps) => {
                 <th className="py-2 pr-3">W code</th>
                 <th className="py-2 pr-3">Product</th>
                 <th className="py-2 pr-3">Vintage</th>
+                <th className="py-2 pr-3">Owner</th>
                 <th className="py-2 pr-3 text-right">Bottles/case</th>
                 <th className="py-2 pr-3">Mapped codes</th>
               </tr>
@@ -454,6 +466,41 @@ const SkusTab = ({ programmeId }: SkusTabProps) => {
                     ) : null}
                   </td>
                   <td className="py-2 pr-3 tabular-nums">{sku.vintage ?? '—'}</td>
+                  {/*
+                    Whose wine it is. A mixed invoice names its owners in
+                    heading rows Zoho drops on read, so the document cannot
+                    split itself — the registry does, and this is where it is
+                    told. Blank until someone says, rather than defaulted to a
+                    client who may not own it.
+                  */}
+                  <td className="py-2 pr-3">
+                    <select
+                      value={sku.ownerName ?? ''}
+                      onChange={(event) =>
+                        upsertSku.mutate({
+                          programmeId,
+                          skuId: sku.id,
+                          wCode: sku.wCode,
+                          lwin18: sku.lwin18,
+                          productName: sku.productName,
+                          producer: sku.producer,
+                          vintage: sku.vintage,
+                          bottleSize: sku.bottleSize,
+                          caseConfig: sku.caseConfig,
+                          ownerName: event.target.value || null,
+                          notes: sku.notes,
+                        })
+                      }
+                      className="border-border-primary bg-fill-primary text-text-primary min-h-8 rounded-md border px-2 text-sm"
+                    >
+                      <option value="">— not set —</option>
+                      {OWNERS.map((owner) => (
+                        <option key={owner} value={owner}>
+                          {owner}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="py-2 pr-3 text-right">
                     <input
                       type="number"

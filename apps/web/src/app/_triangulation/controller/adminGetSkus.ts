@@ -16,6 +16,8 @@ export interface TriSkuRow {
   id: string;
   /** Crurated's house code; null for clients identified by LWIN */
   wCode: string | null;
+  /** Whose wine it is — what a mixed invoice is split by */
+  ownerName: string | null;
   lwin18: string | null;
   productName: string;
   producer: string | null;
@@ -50,6 +52,7 @@ const adminGetSkus = adminProcedure
       SELECT
         s.id,
         s.w_code AS "wCode",
+        s.owner_name AS "ownerName",
         s.lwin18,
         s.product_name AS "productName",
         s.producer,
