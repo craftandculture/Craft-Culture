@@ -20,7 +20,17 @@ export default defineConfig({
     ],
   },
   logLevel: 'log',
-  runtime: 'node',
+  /*
+    Node 21 is deprecated: from 5 October 2026 a deployment on it is refused,
+    and a bare 'node' means 21.
+
+    22 rather than the 24 the notice asks for, because 24 needs the SDK taken
+    from 4.3.3 to 4.6.0 and this is the config for a project whose deploys have
+    been blocked since August — the next one carries a month of job changes on
+    its own. 22 is LTS into 2027, is what CI already builds on, and needs
+    nothing moved to get there. 24 is a separate step once that has landed.
+  */
+  runtime: 'node-22',
   machine: machineConfig.default,
   // The max compute seconds a task is allowed to run. If the task run exceeds this duration, it will be stopped.
   // You can override this on an individual task.
