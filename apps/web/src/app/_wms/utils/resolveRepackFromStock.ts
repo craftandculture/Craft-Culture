@@ -1,6 +1,6 @@
-import normalizeLwin18 from './normalizeLwin18';
 import parseSkuPack from './parseSkuPack';
 import rankStockByPack from './rankStockByPack';
+import readLineVintage from './readLineVintage';
 
 export interface RepackStockRow {
   lwin18: string;
@@ -80,19 +80,14 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
     packMatch && Number(packMatch[1]) > 0 ? Number(packMatch[1]) : 0;
   const orderedPack = skuPack > 0 ? skuPack : descPack > 0 ? descPack : 1;
 
-  const normalized = normalizeLwin18(String(line.sku ?? ''));
-  const parts = normalized.split('-');
-  const lwin7 = parts[0] ?? '';
-  const vintageStr =
-    parts[1] ?? (line.name.match(/\b(19|20)\d{2}\b/)?.[0] ?? '');
-
-  // LWIN's non-vintage codes. A mixed-vintage case (e.g. a 6-bottle
-  // anniversary case spanning 2012-2017) is NV, and its stock row carries no
-  // vintage — so an NV line has to match NV stock, not be dropped for having
-  // no year to compare. '1000' must be caught HERE: Number('1000') is truthy,
-  // so it would otherwise be compared as if the wine were vintage 1000.
-  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
-  const vintage = isNonVintage ? null : Number(vintageStr) || null;
+  // A mixed-vintage case, a whisky and a canned wine are all non-vintage, and
+  // their stock rows carry no vintage — so they have to match NV stock rather
+  // than be dropped for having no year to compare. See readLineVintage for
+  // what counts, and why it is read in one place.
+  const { parts, lwin7, vintageStr, vintage, isNonVintage } = readLineVintage(
+    line.sku,
+    line.name,
+  );
   const rowIsNonVintage = (row: RepackStockRow) =>
     row.vintage == null || row.vintage === 0;
 
@@ -118,11 +113,9 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
     if (terms.length === 0) return false;
     // Vintage must agree before a name match is trusted — picking the wrong
     // year of the right label is worse than reporting no stock.
-    if (vintage) {
-      if (row.vintage !== vintage) return false;
-    } else if (isNonVintage) {
+    if (isNonVintage) {
       if (!rowIsNonVintage(row)) return false;
-    } else {
+    } else if (row.vintage !== vintage) {
       return false;
     }
     const haystack = deburr(row.productName).toLowerCase();

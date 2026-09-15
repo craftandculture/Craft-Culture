@@ -270,6 +270,55 @@ describe('resolveRepackFromStock', () => {
     }
   });
 
+  /*
+    SO-00133 reported 20 of 21 lines with no stock. Every one of them was a
+    spirit or a canned wine — products with no vintage and a supplier SKU that
+    is not a LWIN — so nothing anywhere in the line yielded a year, and the
+    matcher refused every candidate on the "vintage must agree" guard rather
+    than reading the line as non-vintage.
+  */
+  it('matches a spirit that states no vintage anywhere', () => {
+    const whisky = stockRow({
+      lwin18: 'W99000121-0000-06-00700',
+      productName: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      vintage: null,
+      caseConfig: 6,
+      quantityCases: 4,
+      availableCases: 4,
+      locationCode: 'D-01-02',
+    });
+
+    const result = resolveRepackFromStock([whisky], {
+      name: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      sku: 'CB-ORCHARD-6X70',
+      description: '6x70cl - 46%',
+      quantity: 3,
+      unit: 'Cases',
+    });
+
+    expect(result.hasStock).toBe(true);
+    expect(result.needsRepack).toBe(false);
+    expect(result.suggestedLocation).toBe('D-01-02');
+  });
+
+  it('still refuses a vintaged row for a line that states no vintage', () => {
+    const vintaged = stockRow({
+      lwin18: '1104695-2015-06-00750',
+      productName: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      vintage: 2015,
+    });
+
+    const result = resolveRepackFromStock([vintaged], {
+      name: 'Compass Box ORCHARD HOUSE Blended Malt Scottish Whisky',
+      sku: 'CB-ORCHARD-6X70',
+      description: '6x70cl - 46%',
+      quantity: 1,
+      unit: 'Cases',
+    });
+
+    expect(result.hasStock).toBe(false);
+  });
+
   it('suggests a bay that holds enough, not merely the best pack fit', () => {
     const result = resolveRepackFromStock(
       [

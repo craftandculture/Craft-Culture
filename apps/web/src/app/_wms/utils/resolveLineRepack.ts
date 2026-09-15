@@ -2,7 +2,7 @@ import { and, eq, gt, ilike, isNull, like, or } from 'drizzle-orm';
 
 import { wmsLocations, wmsStock } from '@/database/schema';
 
-import normalizeLwin18 from './normalizeLwin18';
+import readLineVintage from './readLineVintage';
 import resolveRepackFromStock from './resolveRepackFromStock';
 
 interface RepackParams {
@@ -46,15 +46,12 @@ const resolveLineRepack = async ({
   unit,
   db,
 }: RepackParams) => {
-  const normalized = normalizeLwin18(String(sku ?? ''));
-  const parts = normalized.split('-');
-  const lwin7 = parts[0] ?? '';
-  const vintageStr = parts[1] ?? (name.match(/\b(19|20)\d{2}\b/)?.[0] ?? '');
-  // A mixed-vintage case is NV in LWIN ('0000'/'1000') and its stock row holds
-  // no vintage. '1000' must be caught before the Number() — it is truthy, so it
-  // would otherwise be compared as if the wine were vintage 1000.
-  const isNonVintage = vintageStr === '0000' || vintageStr === '1000';
-  const vintage = isNonVintage ? null : Number(vintageStr) || null;
+  // Read in one place, because this screen and the pick-list picker were
+  // answering "does this line have a vintage" differently — see readLineVintage.
+  const { parts, lwin7, vintageStr, vintage, isNonVintage } = readLineVintage(
+    sku,
+    name,
+  );
 
   // Underscores first — `Latour_1993` is one word to the vintage strip and the
   // term split, so the term would be "latour_1993" and match no stock.
