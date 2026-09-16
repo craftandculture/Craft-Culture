@@ -23,6 +23,7 @@ import {
   IconLayoutRows,
   IconLoader2,
   IconLock,
+  IconLockOpen,
   IconMinus,
   IconPackage,
   IconPencil,
@@ -52,6 +53,7 @@ import { toast } from 'sonner';
 
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -499,6 +501,10 @@ const ImportPriceCell = ({
 
 interface ReservationHoldersProps {
   stockIds: string[];
+  /** Cases the product row says are reserved, used for the orphan case. */
+  reservedCases: number;
+  /** Stock row to hand an orphaned counter back to. */
+  primaryStockId: string | null;
 }
 
 /**
@@ -511,13 +517,43 @@ interface ReservationHoldersProps {
  * Loaded only when a row is expanded and something is actually reserved, so
  * the common case costs nothing.
  */
-const ReservationHolders = ({ stockIds }: ReservationHoldersProps) => {
+const ReservationHolders = ({
+  stockIds,
+  reservedCases,
+  primaryStockId,
+}: ReservationHoldersProps) => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     ...api.wms.admin.ownership.getStockReservations.queryOptions({ stockIds }),
     enabled: stockIds.length > 0,
   });
+
+  /*
+   * Hand held cases back to availableCases. Needed because a hold can outlive
+   * the thing that made it — a PCO approved before the WMS/PCO decoupling, or
+   * an order released without its reservation being cleared — and until now the
+   * only remedy was a database query.
+   */
+  const releaseMutation = useMutation({
+    ...api.wms.admin.ownership.release.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries();
+      toast.success(result.message);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to release reservation');
+    },
+  });
+
+  const release = (stockId: string, quantityCases: number, label: string) => {
+    releaseMutation.mutate({
+      stockId,
+      quantityCases,
+      reason: `Released from Stock Explorer (${label})`,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -536,11 +572,30 @@ const ReservationHolders = ({ stockIds }: ReservationHoldersProps) => {
       cleared. Saying so is more use than an empty panel.
     */
     return (
-      <div className="border-border-muted border-t px-4 py-3 sm:px-8">
-        <Typography variant="bodyXs" className="text-amber-600">
+      <div className="border-border-muted flex flex-wrap items-center gap-3 border-t px-4 py-3 sm:px-8">
+        <Typography variant="bodyXs" className="flex-1 text-amber-600">
           Cases are marked reserved but no active order holds them — the
           reservation was left behind when an order was released or removed.
         </Typography>
+        {primaryStockId && reservedCases > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 border-amber-400 text-amber-700"
+            onClick={() =>
+              release(primaryStockId, reservedCases, 'stuck counter')
+            }
+            disabled={releaseMutation.isPending}
+          >
+            <ButtonContent
+              iconLeft={releaseMutation.isPending ? IconLoader2 : IconLockOpen}
+            >
+              {releaseMutation.isPending
+                ? 'Releasing…'
+                : `Release ${reservedCases}`}
+            </ButtonContent>
+          </Button>
+        )}
       </div>
     );
   }
@@ -567,6 +622,21 @@ const ReservationHolders = ({ stockIds }: ReservationHoldersProps) => {
             <span className="text-text-muted uppercase">
               {reservation.orderType}
             </span>
+            <button
+              type="button"
+              title={`Release ${reservation.quantityCases} case${reservation.quantityCases === 1 ? '' : 's'} held by ${reservation.orderNumber}`}
+              onClick={() =>
+                release(
+                  reservation.stockId,
+                  reservation.quantityCases,
+                  reservation.orderNumber,
+                )
+              }
+              disabled={releaseMutation.isPending}
+              className="text-text-muted hover:bg-surface-muted hover:text-amber-700 -mr-1 rounded p-0.5 transition-colors disabled:opacity-40"
+            >
+              <IconLockOpen className="h-3.5 w-3.5" />
+            </button>
           </span>
         ))}
       </div>
@@ -1548,6 +1618,8 @@ const ProductRow = ({
               {product.reservedCases > 0 && (
                 <ReservationHolders
                   stockIds={product.locations.map((loc) => loc.stockId)}
+                  reservedCases={product.reservedCases}
+                  primaryStockId={product.locations[0]?.stockId ?? null}
                 />
               )}
 
