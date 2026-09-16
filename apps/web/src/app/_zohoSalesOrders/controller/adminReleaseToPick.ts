@@ -239,13 +239,25 @@ const adminReleaseToPick = wmsOperatorProcedure
       // settled once the stock is known.
       const orderedPack = knownPack ?? 1;
 
+      /*
+        Bottles to rank bays against, before a bay is chosen.
+
+        Resolving the true figure needs the stock's pack, which needs a bay,
+        which needs this — so ranking uses the stated pack (or one) and the
+        quantities are settled again below once a bay is known. Reading the
+        final value here instead would touch it before it is defined.
+      */
+      const rankingBottles = isBottleUnit
+        ? item.quantity
+        : orderedPack * item.quantity;
+
       // Cases to pull from a bay holding this pack. A whole-case pick ONLY when
       // full cases of the pack the stock is held in were ordered; otherwise the
       // pick engine cracks the case at pick time (e.g. a 3x75cl off a 6-pack).
       const casesNeededFor = (pack: number) =>
         !isBottleUnit && pack === orderedPack
           ? item.quantity
-          : Math.max(1, Math.ceil(orderedBottles / pack));
+          : Math.max(1, Math.ceil(rankingBottles / pack));
 
       // Rank the candidate bays by pack fit — shared with the pick-list screen's
       // preview so the bay an operator was shown is the bay they're sent to.
