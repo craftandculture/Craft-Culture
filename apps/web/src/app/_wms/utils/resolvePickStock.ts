@@ -1,6 +1,8 @@
-import { and, eq, gt, ilike, like, or } from 'drizzle-orm';
+import { and, eq, gt, ilike, isNull, like, or } from 'drizzle-orm';
 
 import { wmsStock } from '@/database/schema';
+
+import normalizeLwin18 from './normalizeLwin18';
 
 interface ResolvePickStockParams {
   /*
@@ -81,10 +83,23 @@ const resolvePickStock = async ({
     if (pinned) return { ...pinned, matchedBy: 'pinned' as const };
   }
 
-  const digits = String(lwin18 ?? '').replace(/\D/g, '');
-  const lwin7 = digits.length >= 11 ? digits.slice(0, 7) : '';
-  const vintageStr = digits.length >= 11 ? digits.slice(7, 11) : '';
-  const orderedPack = digits.length === 18 ? Number(digits.slice(11, 13)) : 0;
+  /*
+    Split the code on its dashes rather than stripping everything that is not a
+    digit.
+
+    Plenty of our codes are not numeric — Compass Box ships as
+    ORCHARDHOU-0000-06-00700, and supplier W codes look the same. Stripping
+    non-digits from that leaves 00000600700, which was then read as wine
+    0000006 in vintage 0070: a wine that does not exist, so the lookup found
+    nothing and the picker was told there was no location while Stock Explorer
+    showed one plainly. Every alphanumeric code failed this way, and so did
+    every NV line, whose 0000 vintage also disabled the name fallback below.
+  */
+  const code = normalizeLwin18(String(lwin18 ?? '').trim());
+  const parts = code.split('-');
+  const wineCode = parts.length === 4 ? (parts[0] ?? '') : '';
+  const vintageStr = parts.length === 4 ? (parts[1] ?? '') : '';
+  const orderedPack = parts.length === 4 ? Number(parts[2]) || 0 : 0;
 
   const select = {
     stockId: wmsStock.id,
@@ -116,14 +131,14 @@ const resolvePickStock = async ({
     );
   };
 
-  // Primary — LWIN7 + vintage, pack-agnostic, in stock.
-  if (lwin7 && vintageStr) {
+  // Primary — wine code + vintage, pack-agnostic, in stock.
+  if (wineCode && vintageStr) {
     const rows: StockRow[] = await db
       .select(select)
       .from(wmsStock)
       .where(
         and(
-          like(wmsStock.lwin18, `${lwin7}-${vintageStr}-%`),
+          like(wmsStock.lwin18, `${wineCode}-${vintageStr}-%`),
           or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
@@ -151,14 +166,22 @@ const resolvePickStock = async ({
     .filter((t) => t.length > 2)
     .slice(0, 8);
   const vintage = Number(vintageStr) || null;
-  if (terms.length > 0 && vintage) {
+  /*
+    NV is a vintage, not a missing one. Treating 0000 as absent skipped this
+    fallback entirely for every non-vintage wine and spirit — the products most
+    likely to need it, since their codes are the alphanumeric ones.
+  */
+  const isNonVintage = vintageStr === '0000';
+  if (terms.length > 0 && (vintage || isNonVintage)) {
     const rows: StockRow[] = await db
       .select(select)
       .from(wmsStock)
       .where(
         and(
           ...terms.map((t) => ilike(wmsStock.productName, `%${t}%`)),
-          eq(wmsStock.vintage, vintage),
+          isNonVintage
+            ? or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0))
+            : eq(wmsStock.vintage, vintage as number),
           or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
