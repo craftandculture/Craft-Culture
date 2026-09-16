@@ -1,14 +1,11 @@
-import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import {
-  users,
-  wmsLocations,
-  wmsStock,
-  wmsStockMovements,
-} from '@/database/schema';
+import { users, wmsLocations, wmsStockMovements } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import partnerMovementScope from '../utils/partnerMovementScope';
 
 /**
  * What a partner is shown.
@@ -65,52 +62,14 @@ const partnerGetMovements = winePartnerProcedure
     }),
   )
   .query(async ({ input, ctx: { partner } }) => {
-    /*
-      Every wine this partner holds or has held — zero-quantity rows included,
-      because a depleted wine is the one they most want the history of.
-    */
-    const owned = await db
-      .selectDistinct({ lwin18: wmsStock.lwin18 })
-      .from(wmsStock)
-      .where(eq(wmsStock.ownerId, partner.id));
+    const scope = await partnerMovementScope(partner.id);
 
-    const ownedLwins = owned.map((row) => row.lwin18);
-
-    if (ownedLwins.length === 0) {
+    if (scope.ownedLwins.length === 0) {
       // Same shape as the answer below, so a caller has one thing to read.
       return { movements: [], hasMore: false, sharedWineCount: 0 };
     }
 
-    /*
-      Wines a second owner also holds. The movement row cannot say which of them
-      it belonged to, so for these only an explicitly stamped movement counts.
-    */
-    const shared = await db
-      .select({ lwin18: wmsStock.lwin18 })
-      .from(wmsStock)
-      .where(inArray(wmsStock.lwin18, ownedLwins))
-      .groupBy(wmsStock.lwin18)
-      .having(sql`COUNT(DISTINCT ${wmsStock.ownerId}) > 1`);
-
-    const sharedLwins = new Set(shared.map((row) => row.lwin18));
-    const exclusive = ownedLwins.filter((lwin) => !sharedLwins.has(lwin));
-
-    const ownershipClauses = [
-      // Stamped as this partner's — always theirs, shared wine or not.
-      eq(wmsStockMovements.fromOwnerId, partner.id),
-      eq(wmsStockMovements.toOwnerId, partner.id),
-    ];
-
-    // Or a wine only they own, and unstamped, which is most of the ledger.
-    if (exclusive.length > 0) {
-      ownershipClauses.push(
-        sql`(${wmsStockMovements.lwin18} IN ${exclusive}
-             AND ${wmsStockMovements.fromOwnerId} IS NULL
-             AND ${wmsStockMovements.toOwnerId} IS NULL)`,
-      );
-    }
-
-    const mine = or(...ownershipClauses);
+    const mine = scope.condition;
 
     const filters = and(
       mine,
@@ -163,7 +122,7 @@ const partnerGetMovements = winePartnerProcedure
       movements: hasMore ? rows.slice(0, input.limit) : rows,
       hasMore,
       /** Wines held with another owner, whose unstamped history is withheld. */
-      sharedWineCount: sharedLwins.size,
+      sharedWineCount: scope.sharedWineCount,
     };
   });
 

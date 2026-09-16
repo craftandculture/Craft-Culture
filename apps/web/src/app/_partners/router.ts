@@ -8,6 +8,7 @@ import contactsCreate from './controllers/contactsCreate';
 import contactsDelete from './controllers/contactsDelete';
 import contactsGetMany from './controllers/contactsGetMany';
 import contactsUpdate from './controllers/contactsUpdate';
+import partnerGetActivity from './controllers/partnerGetActivity';
 import partnersCreate from './controllers/partnersCreate';
 import partnersDelete from './controllers/partnersDelete';
 import partnersFindDuplicates from './controllers/partnersFindDuplicates';
@@ -43,6 +44,8 @@ const partnersRouter = createTRPCRouter({
   getPublicInfo: partnersGetPublicInfo,
   list: partnersListSimple,
   update: partnersUpdate,
+  // A partner's own feed: stock, their orders and the RFQs they were invited to
+  getActivity: partnerGetActivity,
   apiKeys: apiKeysRouter,
   contacts: contactsRouter,
 });

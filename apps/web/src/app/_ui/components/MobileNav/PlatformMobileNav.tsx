@@ -30,7 +30,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: access.home, label: access.inventoryLabel },
         // Wine partners only — a collector's cellar is a different screen.
         ...(access.kind === 'wine_partner'
-          ? [{ href: '/platform/partner/movements', label: 'Movements' }]
+          ? [
+              { href: '/platform/partner/movements', label: 'Movements' },
+              { href: '/platform/partner/activity', label: 'Activity' },
+            ]
           : []),
       ],
     });
