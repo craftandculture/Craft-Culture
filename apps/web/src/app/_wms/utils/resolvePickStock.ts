@@ -1,4 +1,4 @@
-import { and, eq, gt, ilike, isNull, like, or } from 'drizzle-orm';
+import { and, eq, gt, ilike, isNull, like, or, sql } from 'drizzle-orm';
 
 import { wmsStock } from '@/database/schema';
 
@@ -157,7 +157,18 @@ const resolvePickStock = async ({
   }
 
   // Fallback — strict name + vintage, in stock. Only trusted when every match
-  // shares one LWIN7, so a lookalike cuvée is never picked by accident.
+  // shares one wine code, so a lookalike cuvée is never picked by accident.
+  /*
+    Match the producer and the product name together.
+
+    A Zoho line names the wine the way a customer reads it — "Compass Box
+    CRIMSON CASKS Blended Malt Scottish Whiskey" — while the shelf holds the
+    producer in its own column and the name as "CRIMSON CASKS Blended Malt
+    Scottish Whiskey". Requiring every word against product_name alone meant
+    "Compass" and "Box" could never match, so an operator standing at the right
+    bay with the bottle in hand was told there was no stock. Every producer-
+    prefixed line failed this way.
+  */
   const terms = productName
     .replace(/\(single bottle\)/gi, '')
     .replace(/\(\d+x\)/gi, '')
@@ -178,7 +189,12 @@ const resolvePickStock = async ({
       .from(wmsStock)
       .where(
         and(
-          ...terms.map((t) => ilike(wmsStock.productName, `%${t}%`)),
+          ...terms.map((t) =>
+            ilike(
+              sql`coalesce(${wmsStock.producer}, '') || ' ' || ${wmsStock.productName}`,
+              `%${t}%`,
+            ),
+          ),
           isNonVintage
             ? or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0))
             : eq(wmsStock.vintage, vintage as number),

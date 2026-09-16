@@ -139,6 +139,17 @@ const adminPickItem = wmsOperatorProcedure
         .slice(0, 8);
 
       if (terms.length > 0) {
+        /*
+    Match the producer and the product name together.
+
+    A Zoho line names the wine the way a customer reads it — "Compass Box
+    CRIMSON CASKS Blended Malt Scottish Whiskey" — while the shelf holds the
+    producer in its own column and the name as "CRIMSON CASKS Blended Malt
+    Scottish Whiskey". Requiring every word against product_name alone meant
+    "Compass" and "Box" could never match, so an operator standing at the right
+    bay with the bottle in hand was told there was no stock. Every producer-
+    prefixed line failed this way.
+  */
         const byName = await db
           .select()
           .from(wmsStock)
@@ -147,7 +158,7 @@ const adminPickItem = wmsOperatorProcedure
               eq(wmsStock.locationId, pickedFromLocationId),
               ...terms.map((term) =>
                 ilike(
-                  wmsStock.productName,
+                  sql`coalesce(${wmsStock.producer}, '') || ' ' || ${wmsStock.productName}`,
                   `%${term.replace(/[^\x20-\x7E]/g, '%')}%`,
                 ),
               ),
