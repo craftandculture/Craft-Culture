@@ -1,4 +1,4 @@
-import readOrderedPack from './readOrderedPack';
+import { readOrderedPackOrNull } from './readOrderedPack';
 
 interface PickQuantityParams {
   /** Ordered quantity, in the line's own unit. */
@@ -44,10 +44,17 @@ const resolvePickQuantities = ({
 }: PickQuantityParams) => {
   const isBottleUnit = /^bottle/i.test((unit ?? '').trim());
 
-  const orderedPack = readOrderedPack(sku, description);
+  const knownPack = readOrderedPackOrNull(sku, description);
 
   const stockPack =
-    stockCaseConfig && stockCaseConfig > 0 ? stockCaseConfig : orderedPack;
+    stockCaseConfig && stockCaseConfig > 0 ? stockCaseConfig : (knownPack ?? 1);
+
+  /*
+    Nobody stated a pack. On a Cases line that means the pack the stock is held
+    in, not one bottle — assuming singles turned an order for 20 cases into 20
+    bottles and cracked four 6-packs to fill it.
+  */
+  const orderedPack = knownPack ?? (isBottleUnit ? 1 : stockPack);
 
   // The true bottle count the customer ordered.
   const orderedBottles = isBottleUnit ? quantity : quantity * orderedPack;

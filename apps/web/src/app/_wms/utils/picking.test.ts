@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import lwinPackAgnosticPattern from './lwinPackAgnosticPattern';
 import parseSkuPack from './parseSkuPack';
 import rankStockByPack from './rankStockByPack';
-import readOrderedPack from './readOrderedPack';
+import readOrderedPack, { readOrderedPackOrNull } from './readOrderedPack';
 import resolvePickQuantities from './resolvePickQuantities';
 import resolveRepackFromStock from './resolveRepackFromStock';
 
@@ -143,6 +143,49 @@ describe('readOrderedPack', () => {
   it('is one bottle when neither says', () => {
     expect(readOrderedPack(null, null)).toBe(1);
     expect(readOrderedPack('', 'Blended Malt')).toBe(1);
+  });
+
+  /*
+    The quantity path has to tell "one bottle" from "nobody said". CASA LOTOS
+    came through as SOT-CAS-750-BTL-UAE-BLC — six segments, no pack — and the
+    1 default read 20 cases as 20 bottles.
+  */
+  it('reports an unknown pack as null rather than one', () => {
+    expect(readOrderedPackOrNull('SOT-CAS-750-BTL-UAE-BLC', null)).toBeNull();
+    expect(readOrderedPackOrNull(null, 'Blended Malt')).toBeNull();
+    expect(readOrderedPackOrNull(null, '6x75cl')).toBe(6);
+    expect(readOrderedPackOrNull('1007808-2017-01-00750', null)).toBe(1);
+  });
+});
+
+describe('resolvePickQuantities with an unreadable pack', () => {
+  it('treats a Cases line as whole cases of the pack the stock is held in', () => {
+    const result = resolvePickQuantities({
+      sku: 'SOT-CAS-750-BTL-UAE-BLC',
+      description: null,
+      unit: 'Cases',
+      quantity: 20,
+      stockCaseConfig: 6,
+    });
+
+    expect(result.wholeCase).toBe(true);
+    expect(result.casesNeeded).toBe(20);
+    expect(result.quantityBottles).toBeNull();
+    expect(result.orderedBottles).toBe(120);
+  });
+
+  it('still cracks a case for a Bottle line', () => {
+    const result = resolvePickQuantities({
+      sku: 'SOT-CAS-750-BTL-UAE-BLC',
+      description: null,
+      unit: 'Bottle',
+      quantity: 20,
+      stockCaseConfig: 6,
+    });
+
+    expect(result.wholeCase).toBe(false);
+    expect(result.quantityBottles).toBe(20);
+    expect(result.casesNeeded).toBe(4);
   });
 });
 

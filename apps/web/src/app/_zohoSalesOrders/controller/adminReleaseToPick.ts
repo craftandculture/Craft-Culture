@@ -14,7 +14,7 @@ import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import rankStockByPack from '@/app/_wms/utils/rankStockByPack';
-import readOrderedPack from '@/app/_wms/utils/readOrderedPack';
+import { readOrderedPackOrNull } from '@/app/_wms/utils/readOrderedPack';
 import db from '@/database/client';
 import {
   wmsLocations,
@@ -234,11 +234,10 @@ const adminReleaseToPick = wmsOperatorProcedure
       // description ('1x75cl', '6x75cl'). The ordered pack is the bottles per
       // ordered "case"; the stock pack is how the wine is physically cased.
       const isBottleUnit = /^bottle/i.test((item.unit ?? '').trim());
-      const orderedPack = readOrderedPack(item.sku, item.description);
-      // True bottle count the customer ordered.
-      const orderedBottles = isBottleUnit
-        ? item.quantity
-        : orderedPack * item.quantity;
+      const knownPack = readOrderedPackOrNull(item.sku, item.description);
+      // Only for ranking the bays below; the pack that decides quantities is
+      // settled once the stock is known.
+      const orderedPack = knownPack ?? 1;
 
       // Cases to pull from a bay holding this pack. A whole-case pick ONLY when
       // full cases of the pack the stock is held in were ordered; otherwise the
@@ -269,9 +268,20 @@ const adminReleaseToPick = wmsOperatorProcedure
         availableStock[0];
 
       const stockPack = packOf(suggestedStock?.caseConfig ?? null);
-      const wholeCase = !isBottleUnit && orderedPack === stockPack;
+      /*
+        Nobody stated a pack. On a Cases line that means the pack the stock is
+        held in, not one bottle. SOT-CAS-750-BTL-UAE-BLC carries no pack and its
+        description none either, so 20 cases released as 20 bottles: the pick
+        cracked four 6-packs, moved 4 cases off the bay instead of 20, and left
+        four loose bottles on a singles row.
+      */
+      const effectiveOrderedPack = knownPack ?? (isBottleUnit ? 1 : stockPack);
+      const orderedBottles = isBottleUnit
+        ? item.quantity
+        : effectiveOrderedPack * item.quantity;
+      const wholeCase = !isBottleUnit && effectiveOrderedPack === stockPack;
       const quantityBottles = wholeCase ? null : orderedBottles;
-      const casesNeeded = casesNeededFor(stockPack);
+      const casesNeeded = wholeCase ? item.quantity : casesNeededFor(stockPack);
 
       if (!suggestedStock) {
         unresolvedItems.push(item.name);

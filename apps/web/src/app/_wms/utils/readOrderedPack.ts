@@ -22,7 +22,21 @@ import parseSkuPack from './parseSkuPack';
  * @param description - The line's pack text, e.g. "6x75cl"
  * @returns Bottles per ordered case; 1 when neither says
  */
-const readOrderedPack = (
+/**
+ * The ordered pack when it is actually stated, or null when nothing says.
+ *
+ * The distinction matters where quantities are decided. Defaulting an unknown
+ * pack to 1 reads a Cases line as singles: CASA LOTOS came through as
+ * SOT-CAS-750-BTL-UAE-BLC with no pack in the SKU and none in the description,
+ * so 20 cases were released as 20 bottles and the pick cracked four 6-packs
+ * instead of pulling twenty. Callers that decide how much to move must know
+ * the difference between "one bottle" and "nobody said".
+ *
+ * @param sku - The line's SKU, LWIN-shaped or a supplier code
+ * @param description - The line's pack text, e.g. "6x75cl"
+ * @returns Bottles per ordered case, or null when neither states it
+ */
+export const readOrderedPackOrNull = (
   sku: string | null | undefined,
   description: string | null | undefined,
 ) => {
@@ -33,7 +47,12 @@ const readOrderedPack = (
   const match = /^(\d+)\s*[x×]/i.exec((description ?? '').trim());
   const descPack = match && Number(match[1]) > 0 ? Number(match[1]) : 0;
 
-  return descPack > 0 ? descPack : 1;
+  return descPack > 0 ? descPack : null;
 };
+
+const readOrderedPack = (
+  sku: string | null | undefined,
+  description: string | null | undefined,
+) => readOrderedPackOrNull(sku, description) ?? 1;
 
 export default readOrderedPack;
