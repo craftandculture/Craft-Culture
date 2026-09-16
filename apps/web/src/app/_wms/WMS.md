@@ -316,6 +316,42 @@ Scan a case barcode to see total stock across all locations.
 
 ---
 
+### 7b. Correcting a Mis-Recorded Pack ("Fix pack")
+**Path**: Stock Explorer → expand a product → **Fix pack** (beside Adjust)
+
+**Controller**: `adminCorrectPackConfig` (`wms.admin.stock.correctPackConfig`)
+
+**This is not a repack, and the difference matters.** A repack conserves BOTTLES,
+because bottles physically move between cases: 18×6 becomes 36×3, still 108
+bottles. Use it when the warehouse actually opened cases.
+
+Fix pack is for when nothing was touched and the pack size was simply recorded
+wrongly — 18 cases logged as 6-packs that were always 3-packs. There the CASE
+count is the counted truth and must be preserved, so the bottle count moves with
+the corrected pack: 108 → 54.
+
+| | Cases | Bottles |
+|---|---|---|
+| Repack 6 → 3 | 18 → 36 | 108 → 108 |
+| Fix pack 6 → 3 | 18 → 18 | 108 → **54** |
+
+**What it does beyond the number:**
+- **Re-keys the SKU.** The pack is encoded in the LWIN-18, so correcting it
+  rewrites `…-06-…` to `…-03-…`, merging into an existing line if one already
+  sits at that location for the same owner and lot.
+- **Reissues case labels.** Their barcodes embed the LWIN-18, so the old ones no
+  longer describe what is on the shelf. Old labels are deactivated and new ones
+  minted — **the physical labels need reprinting**.
+- **Records the change.** An `adjust` movement with `reason_code`
+  `pack_correction`, noting the bottle change, so the drop is not a mystery in a
+  later reconciliation.
+
+**Known consequence:** stored pricing is keyed to the old LWIN-18, so the
+corrected SKU shows no import price until it is set again in Pricing Manager —
+and until then the line drops out of the consumer catalogue feeds as unpriced.
+
+---
+
 ### 8. Picking (✅ Tested)
 **Path**: `/platform/admin/wms/pick` (desktop) and `/platform/admin/wms/pick/[pickListId]` (mobile picking)
 
