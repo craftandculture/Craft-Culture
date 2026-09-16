@@ -131,6 +131,44 @@ const resolvePickStock = async ({
     );
   };
 
+  /*
+    A code that is not an LWIN at all.
+
+    Zoho items are supposed to carry the LWIN as their SKU, but plenty carry a
+    house code instead — SOT-CAS-750-BTL-UAE-BLC against stock shelved as
+    SOTCAS750B-0000-06-00700. It has six segments rather than four, so nothing
+    below could parse it, and with no vintage to compare the name fallback was
+    skipped too. The line arrived at the scanner with no bay and no explanation.
+
+    Stock keeps the supplier's own reference, so try the code as given against
+    both that and the LWIN before giving up on it.
+  */
+  const rawCode = String(lwin18 ?? '').trim();
+  if (rawCode && parts.length !== 4) {
+    const rows: StockRow[] = await db
+      .select(select)
+      .from(wmsStock)
+      .where(
+        and(
+          or(
+            eq(wmsStock.supplierSku, rawCode),
+            eq(wmsStock.lwin18, rawCode),
+          ),
+          or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+        ),
+      );
+    const best = pick(rows);
+    if (best) {
+      return {
+        stockId: best.stockId,
+        locationId: best.locationId,
+        lwin18: best.lwin18,
+        caseConfig: best.caseConfig,
+        matchedBy: 'supplierSku' as const,
+      };
+    }
+  }
+
   // Primary — wine code + vintage, pack-agnostic, in stock.
   if (wineCode && vintageStr) {
     const rows: StockRow[] = await db
@@ -183,7 +221,13 @@ const resolvePickStock = async ({
     likely to need it, since their codes are the alphanumeric ones.
   */
   const isNonVintage = vintageStr === '0000';
-  if (terms.length > 0 && (vintage || isNonVintage)) {
+  /*
+    No vintage at all — a house SKU carries none. Matching on name alone is
+    still safe here because of the single-wine guard below; refusing to try was
+    what left these lines with no bay.
+  */
+  const hasNoVintage = vintageStr === '';
+  if (terms.length > 0 && (vintage || isNonVintage || hasNoVintage)) {
     const rows: StockRow[] = await db
       .select(select)
       .from(wmsStock)
@@ -195,9 +239,13 @@ const resolvePickStock = async ({
               `%${t}%`,
             ),
           ),
-          isNonVintage
-            ? or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0))
-            : eq(wmsStock.vintage, vintage as number),
+          ...(hasNoVintage
+            ? []
+            : [
+                isNonVintage
+                  ? or(isNull(wmsStock.vintage), eq(wmsStock.vintage, 0))
+                  : eq(wmsStock.vintage, vintage as number),
+              ]),
           or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
