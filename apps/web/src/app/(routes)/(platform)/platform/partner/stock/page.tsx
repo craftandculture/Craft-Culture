@@ -28,6 +28,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
+import PartnerMovementsPanel from '@/app/_wms/components/PartnerMovementsPanel';
 import useTRPC from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage';
@@ -190,11 +191,6 @@ const PartnerStockPage = () => {
       return next;
     });
   }, []);
-
-  const getProductMovements = useCallback((lwin18: string) => {
-    if (!data?.recentMovements) return [];
-    return data.recentMovements.filter((m) => m.lwin18 === lwin18);
-  }, [data?.recentMovements]);
 
   const isInbound = useCallback((movement: { toOwnerId: string | null; fromOwnerId: string | null }) => {
     return movement.toOwnerId === data?.partner.id;
@@ -379,7 +375,6 @@ const PartnerStockPage = () => {
             filteredProducts.map((product) => {
               const key = rowKey(product);
               const isExpanded = expandedProducts.has(key);
-              const productMovements = isExpanded ? getProductMovements(product.lwin18) : [];
               const availPct = product.totalCases > 0
                 ? Math.round((product.availableCases / product.totalCases) * 100)
                 : 0;
@@ -486,36 +481,25 @@ const PartnerStockPage = () => {
                         </div>
                       )}
 
-                      {/* Movements */}
-                      {productMovements.length > 0 && (
-                        <div>
-                          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
-                            <IconClock size={13} />
-                            Recent Movements
-                          </div>
-                          <div className="space-y-1">
-                            {productMovements.map((m) => (
-                              <div
-                                key={m.id}
-                                className="flex items-center justify-between rounded-lg bg-background-primary px-3 py-2 border border-border-muted/50"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] tabular-nums text-text-muted">
-                                    {format(new Date(m.performedAt), 'dd MMM')}
-                                  </span>
-                                  <MovementBadge type={m.movementType} isInbound={isInbound(m)} qty={m.quantityCases} />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {/*
+                        History, fetched per wine.
 
-                      {productMovements.length === 0 && (!product.locations || product.locations.length === 0) && (
-                        <div className="py-2 text-center text-xs text-text-muted">
-                          No location or movement data available
+                        This used to filter the order's `recentMovements`, which
+                        is scoped on the movement's owner columns — and only an
+                        ownership transfer ever sets those, so a pick or a
+                        receipt never appeared and the panel read as empty.
+                      */}
+                      <div>
+                        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+                          <IconClock size={13} />
+                          History
                         </div>
-                      )}
+                        <PartnerMovementsPanel
+                          lwin18={product.lwin18}
+                          variant="compact"
+                          limit={25}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -600,8 +584,7 @@ const PartnerStockPage = () => {
                     filteredProducts.map((product) => {
                       const key = rowKey(product);
                       const isExpanded = expandedProducts.has(key);
-                      const productMovements = isExpanded ? getProductMovements(product.lwin18) : [];
-                      const availPct = product.totalCases > 0
+                              const availPct = product.totalCases > 0
                         ? Math.round((product.availableCases / product.totalCases) * 100)
                         : 0;
 
@@ -776,76 +759,17 @@ const PartnerStockPage = () => {
                                     </div>
                                   )}
 
-                                  {/* Product Movement History */}
-                                  {productMovements.length > 0 && (
-                                    <div>
-                                      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
-                                        <IconClock size={13} />
-                                        Movement History
-                                      </div>
-                                      <div className="overflow-x-auto rounded-lg border border-border-muted bg-background-primary">
-                                        <table className="w-full">
-                                          <thead>
-                                            <tr className="border-b border-border-muted bg-surface-muted/30">
-                                              <th className="px-3 py-2 text-left">
-                                                <Typography variant="labelSm">Date</Typography>
-                                              </th>
-                                              <th className="px-3 py-2 text-left">
-                                                <Typography variant="labelSm">Type</Typography>
-                                              </th>
-                                              <th className="px-3 py-2 text-right">
-                                                <Typography variant="labelSm">Cases</Typography>
-                                              </th>
-                                              <th className="hidden px-3 py-2 text-left lg:table-cell">
-                                                <Typography variant="labelSm">Notes</Typography>
-                                              </th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {productMovements.map((m) => (
-                                              <tr
-                                                key={m.id}
-                                                className="border-b border-border-muted/50 last:border-0"
-                                              >
-                                                <td className="px-3 py-2">
-                                                  <span className="text-xs tabular-nums text-text-muted">
-                                                    {format(new Date(m.performedAt), 'dd MMM yy')}
-                                                  </span>
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                  <MovementBadge
-                                                    type={m.movementType}
-                                                    isInbound={isInbound(m)}
-                                                    qty={m.quantityCases}
-                                                  />
-                                                </td>
-                                                <td className="px-3 py-2 text-right">
-                                                  <span
-                                                    className={`text-sm font-semibold tabular-nums ${isInbound(m) ? 'text-emerald-600' : 'text-amber-600'}`}
-                                                  >
-                                                    {isInbound(m) ? '+' : '-'}{m.quantityCases}
-                                                  </span>
-                                                </td>
-                                                <td className="hidden px-3 py-2 lg:table-cell">
-                                                  {m.notes ? (
-                                                    <span className="text-xs text-text-muted">{m.notes}</span>
-                                                  ) : (
-                                                    <span className="text-xs text-text-muted">—</span>
-                                                  )}
-                                                </td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
+                                  <div>
+                                    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+                                      <IconClock size={13} />
+                                      Movement History
                                     </div>
-                                  )}
-
-                                  {productMovements.length === 0 && (!product.locations || product.locations.length === 0) && (
-                                    <div className="py-2 text-center text-xs text-text-muted">
-                                      No location or movement data available
-                                    </div>
-                                  )}
+                                    <PartnerMovementsPanel
+                                      lwin18={product.lwin18}
+                                      variant="compact"
+                                      limit={25}
+                                    />
+                                  </div>
                                 </div>
                               </td>
                             </tr>

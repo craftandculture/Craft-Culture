@@ -124,6 +124,7 @@ import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
 import adminValidateImportItems from './controller/adminValidateImportItems';
 import deviceGetBayTotems from './controller/deviceGetBayTotems';
 import deviceGetLocationLabels from './controller/deviceGetLocationLabels';
+import partnerGetMovements from './controller/partnerGetMovements';
 import partnerGetStock from './controller/partnerGetStock';
 import partnerRequestConditionReport from './controller/partnerRequestConditionReport';
 
@@ -304,6 +305,8 @@ const adminRouter = createTRPCRouter({
 
 const partnerRouter = createTRPCRouter({
   getStock: partnerGetStock,
+  // Their own ledger: what arrived, moved bay, was picked or went
+  getMovements: partnerGetMovements,
   requestConditionReport: partnerRequestConditionReport,
 });
 
