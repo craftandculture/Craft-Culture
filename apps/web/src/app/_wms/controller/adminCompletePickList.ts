@@ -6,6 +6,8 @@ import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/sche
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { completePickListSchema } from '../schemas/pickListSchema';
+import releaseStockReservations from '../utils/releaseStockReservations';
+
 
 /**
  * Complete a pick list
@@ -75,6 +77,28 @@ const adminCompletePickList = wmsOperatorProcedure
       })
       .where(eq(wmsPickLists.id, pickListId))
       .returning();
+
+    /*
+      Hand back anything this order still holds.
+
+      Picking converts the reservation on the bay it picked FROM. Release puts
+      the hold on the bay it expected to pick from, and those need not be the
+      same: the picker walks to another bay because that one was empty, short,
+      or closer. The original hold is then never converted, and once the list
+      is complete nothing will ever convert it — the cases sit reserved against
+      an order that has already shipped.
+
+      Every line is picked by this point (guarded above), so whatever is still
+      active is a leftover, not a promise.
+    */
+    if (pickList.orderId) {
+      await releaseStockReservations({
+        orderId: pickList.orderId,
+        orderType: 'zoho',
+        reason: `Pick list ${pickList.pickListNumber} completed`,
+        db,
+      });
+    }
 
     // Update linked Zoho Sales Order status to 'picked' if this is a Zoho order
     if (pickList.orderId) {
