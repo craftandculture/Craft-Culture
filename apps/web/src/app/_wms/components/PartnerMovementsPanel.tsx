@@ -287,30 +287,18 @@ const PartnerMovementsPanel = ({
         </div>
       )}
 
-      {/*
-        Shown only when a repack is actually on screen. A legend of every
-        movement type would be a manual nobody reads; this appears exactly when
-        it answers the question in front of you.
-      */}
+      {/* Only when a repack is on screen — a legend nobody reads is worse. */}
       {movements.some((row) => row.movementType.startsWith('repack')) && (
-        <p className="mt-2 text-[11.5px] leading-snug text-text-muted">
-          <strong className="font-medium text-text-primary">
-            About the repack lines:
-          </strong>{' '}
-          a case was opened and its bottles moved to a different pack size — a
-          6-pack becoming singles, for example. The wine stays yours and stays
-          in the warehouse; only the pack size it is recorded under changes, so
-          nothing is gained or lost. The matching line sits under the other pack
-          size of the same wine.
+        <p className="mt-2 text-[11.5px] text-text-muted">
+          A case was opened into another pack size. Nothing gained or lost — the
+          matching line sits under that pack.
         </p>
       )}
 
       {!compact && (data?.sharedWineCount ?? 0) > 0 && (
-        <p className="text-[11.5px] leading-snug text-text-muted">
-          {data?.sharedWineCount} of your wines are also held in the warehouse for
-          another owner. Movements on those are only shown where the record says
-          which owner they belonged to, so none of someone else&apos;s stock
-          appears as yours.
+        <p className="text-[11.5px] text-text-muted">
+          {data?.sharedWineCount} of your wines are also stored for another
+          owner. Only movements we can attribute to you are shown.
         </p>
       )}
     </div>
