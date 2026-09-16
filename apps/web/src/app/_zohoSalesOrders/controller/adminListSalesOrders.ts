@@ -26,7 +26,13 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
   const orders = await db
     .select()
     .from(zohoSalesOrders)
-    .orderBy(desc(zohoSalesOrders.createdAt))
+    /*
+      The order's own date, not when the sync happened to insert it. Those are
+      not the same: an order raised on the 24th that syncs on the 31st was
+      sorting above one raised on the 26th, so the list read as shuffled. The
+      insert time stays as the tie-break for orders sharing a date.
+    */
+    .orderBy(desc(zohoSalesOrders.orderDate), desc(zohoSalesOrders.createdAt))
     .limit(100);
 
   // Batch-resolve the linked invoice for each order (reference_number = SO number)

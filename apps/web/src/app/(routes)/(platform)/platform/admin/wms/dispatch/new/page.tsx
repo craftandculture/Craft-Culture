@@ -11,6 +11,7 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -44,6 +45,8 @@ interface SelectedOrder {
   salesOrderNumber: string | null;
   pickListNumber: string | null;
   customerName: string | null;
+  /** What the list is sorted by — the Zoho order date, or the PCO's raised date. */
+  orderedAt: Date | null;
   totalCases: number;
   pickedBottles: number;
   orderedCases: number;
@@ -124,6 +127,11 @@ const DispatchWizardPage = () => {
   });
 
   // Build combined order list
+  /*
+    Both sources arrive sorted, but concatenating them does not stay sorted —
+    it put every Zoho order ahead of every PCO regardless of date. The merged
+    list is re-sorted here so the two read as one queue, newest first.
+  */
   const allOrders: SelectedOrder[] = [
     ...(zohoOrders?.orders ?? []).map((o) => ({
       id: o.id,
@@ -132,6 +140,7 @@ const DispatchWizardPage = () => {
       salesOrderNumber: o.salesOrderNumber,
       pickListNumber: o.pickListNumber,
       customerName: o.customerName,
+      orderedAt: o.orderDate ? new Date(o.orderDate) : null,
       totalCases: o.totalCases,
       pickedBottles: o.pickedBottles,
       orderedCases: o.orderedCases,
@@ -148,6 +157,7 @@ const DispatchWizardPage = () => {
       salesOrderNumber: null,
       pickListNumber: null,
       customerName: o.clientName ?? null,
+      orderedAt: o.createdAt ? new Date(o.createdAt) : null,
       totalCases: o.caseCount ?? 0,
       pickedBottles: 0,
       orderedCases: o.caseCount ?? 0,
@@ -157,7 +167,13 @@ const DispatchWizardPage = () => {
       totalLines: 0,
       lines: [] as DispatchLine[],
     })),
-  ];
+  ].sort((a, b) => {
+    // A missing date sorts last rather than jumping to the top of the queue.
+    const at = a.orderedAt?.getTime() ?? -Infinity;
+    const bt = b.orderedAt?.getTime() ?? -Infinity;
+    if (at !== bt) return bt - at;
+    return (b.orderNumber ?? '').localeCompare(a.orderNumber ?? '');
+  });
 
   // Filter by search
   const filteredOrders = allOrders.filter((order) => {
@@ -383,6 +399,10 @@ const DispatchWizardPage = () => {
                                 ) : null}
                                 {order.pickListNumber ? (
                                   <span>{order.pickListNumber}</span>
+                                ) : null}
+                                {/* The key the queue is sorted by, so the run order is readable. */}
+                                {order.orderedAt ? (
+                                  <span>{format(order.orderedAt, 'dd MMM yyyy')}</span>
                                 ) : null}
                               </div>
                               <div className="mt-1 flex flex-wrap items-center gap-2">

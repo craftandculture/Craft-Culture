@@ -6,7 +6,7 @@
  * Optionally filter by distributor name.
  */
 
-import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -77,7 +77,15 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
         status: zohoSalesOrders.status,
       })
       .from(zohoSalesOrders)
-      .where(and(...baseConditions, statusCondition));
+      .where(and(...baseConditions, statusCondition))
+      /*
+        Newest order first, oldest last. There was no ordering at all, so
+        Postgres returned whatever the scan happened to produce and the queue
+        reshuffled between refreshes — the same order sat in a different place
+        each time you opened the wizard. The sales order number breaks ties,
+        because several orders a day share a date.
+      */
+      .orderBy(desc(zohoSalesOrders.orderDate), desc(zohoSalesOrders.salesOrderNumber));
 
     // Look up invoice numbers for the orders
     const soNumbers = orders.map((o) => o.salesOrderNumber);
