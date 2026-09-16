@@ -1,9 +1,12 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminApprovePayoutRun from './controller/adminApprovePayoutRun';
 import adminCancelPurchase from './controller/adminCancelPurchase';
 import adminConfirmPurchasePayment from './controller/adminConfirmPurchasePayment';
+import adminCreatePayoutRun from './controller/adminCreatePayoutRun';
 import adminDecideMandate from './controller/adminDecideMandate';
 import adminGetMandates from './controller/adminGetMandates';
+import adminGetPayoutRuns from './controller/adminGetPayoutRuns';
 import adminGetPurchases from './controller/adminGetPurchases';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
 import memberCancelPurchase from './controller/memberCancelPurchase';
@@ -31,6 +34,9 @@ const adminRouter = createTRPCRouter({
   getPurchases: adminGetPurchases,
   confirmPurchasePayment: adminConfirmPurchasePayment,
   cancelPurchase: adminCancelPurchase,
+  getPayoutRuns: adminGetPayoutRuns,
+  createPayoutRun: adminCreatePayoutRun,
+  approvePayoutRun: adminApprovePayoutRun,
 });
 
 const consignmentRouter = createTRPCRouter({
