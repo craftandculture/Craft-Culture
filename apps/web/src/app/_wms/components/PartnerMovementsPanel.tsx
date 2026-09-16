@@ -34,8 +34,14 @@ const TYPES = [
   { key: 'putaway', label: 'Put away', dir: 'move', tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
   { key: 'pick', label: 'Picked', dir: 'out', tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
   { key: 'transfer', label: 'Moved', dir: 'move', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
-  { key: 'repack_in', label: 'Repacked in', dir: 'in', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  { key: 'repack_out', label: 'Repacked out', dir: 'out', tone: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  /*
+    Repacks read as wine appearing and vanishing unless they are named for what
+    they are. A case is opened and the bottles move from the case's code to the
+    singles code — same wine, same warehouse, nothing gained or lost. "Repacked
+    in / out" describes our records; these describe the shelf.
+  */
+  { key: 'repack_in', label: 'From an opened case', dir: 'in', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  { key: 'repack_out', label: 'Made into other packs', dir: 'out', tone: 'bg-rose-50 text-rose-700 ring-rose-200' },
   { key: 'count', label: 'Counted', dir: 'unknown', tone: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
   { key: 'adjust', label: 'Adjusted', dir: 'unknown', tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
   { key: 'dispatch', label: 'Dispatched', dir: 'out', tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
@@ -44,6 +50,19 @@ const TYPES = [
 type TypeKey = (typeof TYPES)[number]['key'];
 
 const meta = (key: string) => TYPES.find((t) => t.key === key);
+
+/**
+ * Bottles per case, read off the code.
+ *
+ * LWIN18 is wine-vintage-pack-size, so the pack is the third segment. Pack is
+ * always taken from the code and never from a description — the house rule,
+ * because a description goes stale when a pack changes and the code does not.
+ */
+const packOf = (lwin18: string) => {
+  const parts = String(lwin18 ?? '').split('-');
+  const pack = parts.length === 4 ? Number(parts[2]) : NaN;
+  return Number.isFinite(pack) && pack > 0 ? pack : null;
+};
 
 /** "Picked from C-01-00", "Moved C-01-00 → B-02-01" — said, not abbreviated. */
 const describeMove = (row: {
@@ -230,14 +249,27 @@ const PartnerMovementsPanel = ({
                     <td
                       className={`px-3 py-2 text-right whitespace-nowrap tabular-nums font-medium ${qtyTone}`}
                     >
-                      {sign}
-                      {row.quantityCases} cs
-                      {row.quantityBottles ? (
-                        <span className="ml-1.5 font-normal opacity-70">
+                      {/*
+                        On a singles code a case IS a bottle, so "5 cs 5 btl"
+                        says one thing twice and reads as ten.
+                      */}
+                      {packOf(row.lwin18) === 1 ? (
+                        <>
                           {sign}
-                          {row.quantityBottles} btl
-                        </span>
-                      ) : null}
+                          {row.quantityCases} btl
+                        </>
+                      ) : (
+                        <>
+                          {sign}
+                          {row.quantityCases} cs
+                          {row.quantityBottles ? (
+                            <span className="ml-1.5 font-normal opacity-70">
+                              {sign}
+                              {row.quantityBottles} btl
+                            </span>
+                          ) : null}
+                        </>
+                      )}
                     </td>
                     {balances && (
                       <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums text-text-muted">
@@ -253,6 +285,24 @@ const PartnerMovementsPanel = ({
             </tbody>
           </table>
         </div>
+      )}
+
+      {/*
+        Shown only when a repack is actually on screen. A legend of every
+        movement type would be a manual nobody reads; this appears exactly when
+        it answers the question in front of you.
+      */}
+      {movements.some((row) => row.movementType.startsWith('repack')) && (
+        <p className="mt-2 text-[11.5px] leading-snug text-text-muted">
+          <strong className="font-medium text-text-primary">
+            About the repack lines:
+          </strong>{' '}
+          a case was opened and its bottles moved to a different pack size — a
+          6-pack becoming singles, for example. The wine stays yours and stays
+          in the warehouse; only the pack size it is recorded under changes, so
+          nothing is gained or lost. The matching line sits under the other pack
+          size of the same wine.
+        </p>
       )}
 
       {!compact && (data?.sharedWineCount ?? 0) > 0 && (
