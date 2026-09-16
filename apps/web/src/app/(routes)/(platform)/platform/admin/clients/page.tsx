@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import OrphanOrderBackfill from '@/app/_privateClientContacts/components/OrphanOrderBackfill';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Input from '@/app/_ui/components/Input/Input';
@@ -81,6 +82,8 @@ const AdminClientsPage = () => {
           </p>
         </Typography>
       </div>
+
+      <OrphanOrderBackfill />
 
       {summary ? (
         <div className="flex flex-wrap gap-5">
