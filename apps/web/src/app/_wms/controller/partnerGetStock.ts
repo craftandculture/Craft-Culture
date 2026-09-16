@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 
 import getCostPerBottle from '@/app/_cellar/data/getCostPerBottle';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
@@ -16,6 +16,7 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import partnerMovementScope from '../utils/partnerMovementScope';
 
 /**
  * Get stock owned by the current partner
@@ -62,6 +63,46 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   const totalCases = products.reduce((sum, p) => sum + p.totalCases, 0);
   const totalAvailable = products.reduce((sum, p) => sum + p.availableCases, 0);
   const totalReserved = products.reduce((sum, p) => sum + p.reservedCases, 0);
+
+  /*
+    Figures a partner can act on.
+
+    "Available" and a 100% bar restated the case count whenever nothing was
+    reserved, which is nearly always, and a "0 Reserved" card spent a quarter
+    of the screen saying nothing happened. What a partner actually wants to
+    know is how much wine there is, what it is worth, how fast it is going and
+    what is nearly gone.
+  */
+  const totalBottles = products.reduce(
+    (sum, p) => sum + p.totalCases * (p.caseConfig ?? 1),
+    0,
+  );
+
+  // Cases at one or two: the same thresholds the row badges use, so the card
+  // and the list cannot disagree about what "low" means.
+  const runningLow = products.filter(
+    (p) => p.availableCases > 0 && p.availableCases <= 2,
+  ).length;
+
+  // Picked over the last 30 days — the only figure here that says which way
+  // the stock is moving. Scoped by the shared rule, not by the owner columns.
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const scope = await partnerMovementScope(partner.id);
+  const [depletion] = await db
+    .select({
+      cases: sql<number>`COALESCE(SUM(${wmsStockMovements.quantityCases}), 0)::int`,
+      bottles: sql<number>`COALESCE(SUM(${wmsStockMovements.quantityBottles}), 0)::int`,
+    })
+    .from(wmsStockMovements)
+    .where(
+      and(
+        scope.condition,
+        inArray(wmsStockMovements.movementType, ['pick', 'dispatch']),
+        gte(wmsStockMovements.performedAt, thirtyDaysAgo),
+      ),
+    );
 
   // Get location breakdown for each product
   const stockByLocation = await db
@@ -252,6 +293,29 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       availableCases: totalAvailable,
       reservedCases: totalReserved,
       productCount: products.length,
+      totalBottles,
+      runningLow,
+      casesPickedLast30: depletion?.cases ?? 0,
+      bottlesPickedLast30: depletion?.bottles ?? 0,
+      inboundCases: inbound.reduce((sum, line) => sum + (line.cases ?? 0), 0),
+      nextEta: inbound.find((line) => line.eta)?.eta ?? null,
+      /*
+        What the wine cost on import, not a market valuation — C&C does not
+        value collections, and an insurance declaration is built from this.
+        The count of wines without a recorded cost travels with it, because a
+        total drawn from two thirds of the stock should say so.
+      */
+      importValueUsd:
+        Math.round(
+          products.reduce((sum, product) => {
+            const cost = costByLwin.get(lwinPakKeyOf(product.lwin18));
+            if (!cost) return sum;
+            return sum + cost * product.totalCases * (product.caseConfig ?? 1);
+          }, 0) * 100,
+        ) / 100,
+      productsWithoutCost: products.filter(
+        (product) => !costByLwin.get(lwinPakKeyOf(product.lwin18)),
+      ).length,
     },
     products: products.map((product) => ({
       ...product,

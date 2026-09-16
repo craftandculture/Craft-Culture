@@ -16,6 +16,7 @@ import {
   IconSortAscending,
   IconSortDescending,
   IconTags,
+  IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -273,67 +274,95 @@ const PartnerStockPage = () => {
           </div>
         </div>
 
-        {/* KPI Cards — Stock Explorer style with colored icon circles */}
+        {/*
+          Figures a partner can act on.
+
+          "Available" with a 100% bar restated the case count whenever nothing
+          was reserved — which is nearly always — and "0 Reserved" spent a
+          quarter of the row reporting that nothing had happened. These say how
+          much wine there is, which way it is going, and what needs attention.
+        */}
         {data?.summary && (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {/* Products */}
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+            {/* What you hold */}
             <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
               <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100/70 text-blue-500">
                 <IconTags size={14} />
               </div>
-              <div className="text-xl font-bold leading-tight">{data.summary.productCount}</div>
-              <div className="text-[11px] text-text-muted">Products</div>
+              <div className="text-xl font-bold leading-tight">
+                {data.summary.totalCases.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-text-muted">cases in bond</div>
+              <div className="mt-0.5 text-[10px] text-text-muted">
+                {data.summary.totalBottles.toLocaleString()} bottles ·{' '}
+                {data.summary.productCount} wines
+              </div>
             </div>
 
-            {/* Total Cases */}
-            <div className="rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100/70 text-purple-500">
+            {/* Which way it is going */}
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-amber-500">
                 <IconPackage size={14} />
               </div>
-              <div className="text-xl font-bold leading-tight">{data.summary.totalCases.toLocaleString()}</div>
-              <div className="text-[11px] text-text-muted">Total Cases</div>
+              <div className="text-xl font-bold leading-tight text-amber-600">
+                {data.summary.casesPickedLast30.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-text-muted">picked, 30 days</div>
+              <div className="mt-0.5 text-[10px] text-text-muted">
+                {data.summary.bottlesPickedLast30 > 0
+                  ? `${data.summary.bottlesPickedLast30.toLocaleString()} bottles`
+                  : 'nothing shipped out'}
+              </div>
             </div>
 
-            {/* Available */}
-            <div className="rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+            {/* What needs attention — same thresholds as the row badges */}
+            <div className="rounded-xl border border-red-100 bg-gradient-to-b from-red-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.availableCases > 0 ? 'bg-emerald-100/70 text-emerald-500' : 'bg-surface-muted text-text-muted'
+                data.summary.runningLow > 0 ? 'bg-red-100/70 text-red-500' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconCircleCheck size={14} />
               </div>
-              <div className={`text-xl font-bold leading-tight ${data.summary.availableCases > 0 ? 'text-emerald-600' : ''}`}>
-                {data.summary.availableCases.toLocaleString()}
+              <div className={`text-xl font-bold leading-tight ${data.summary.runningLow > 0 ? 'text-red-600' : ''}`}>
+                {data.summary.runningLow}
               </div>
-              <div className="text-[11px] text-text-muted">Available</div>
-              {data.summary.totalCases > 0 && (
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-emerald-100">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all"
-                      style={{ width: `${Math.round((data.summary.availableCases / data.summary.totalCases) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] tabular-nums text-text-muted">
-                    {Math.round((data.summary.availableCases / data.summary.totalCases) * 100)}%
-                  </span>
-                </div>
-              )}
+              <div className="text-[11px] text-text-muted">running low</div>
+              <div className="mt-0.5 text-[10px] text-text-muted">
+                {data.summary.runningLow > 0 ? '2 cases or fewer' : 'all healthy'}
+              </div>
             </div>
 
-            {/* Reserved */}
-            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+            {/* What is coming */}
+            <div className="rounded-xl border border-violet-100 bg-gradient-to-b from-violet-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.reservedCases > 0 ? 'bg-amber-100/70 text-amber-500' : 'bg-surface-muted text-text-muted'
+                data.summary.inboundCases > 0 ? 'bg-violet-100/70 text-violet-500' : 'bg-surface-muted text-text-muted'
               }`}>
+                <IconTruck size={14} />
+              </div>
+              <div className={`text-xl font-bold leading-tight ${data.summary.inboundCases > 0 ? 'text-violet-600' : ''}`}>
+                {data.summary.inboundCases.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-text-muted">arriving</div>
+              <div className="mt-0.5 text-[10px] text-text-muted">
+                {data.summary.nextEta
+                  ? `next ${format(new Date(data.summary.nextEta), 'd MMM')}`
+                  : 'nothing in transit'}
+              </div>
+            </div>
+
+            {/* What it cost — not what it is worth */}
+            <div className="col-span-2 rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-3 text-center shadow-sm lg:col-span-1">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100/70 text-emerald-500">
                 <IconLock size={14} />
               </div>
-              <div className={`text-xl font-bold leading-tight ${data.summary.reservedCases > 0 ? 'text-amber-600' : ''}`}>
-                {data.summary.reservedCases.toLocaleString()}
+              <div className="text-xl font-bold leading-tight">
+                ${Math.round(data.summary.importValueUsd).toLocaleString()}
               </div>
-              <div className="text-[11px] text-text-muted">Reserved</div>
-              {data.summary.reservedCases > 0 && (
-                <div className="text-[10px] text-text-muted">Allocated to orders</div>
-              )}
+              <div className="text-[11px] text-text-muted">at import cost</div>
+              <div className="mt-0.5 text-[10px] text-text-muted">
+                {data.summary.productsWithoutCost > 0
+                  ? `${data.summary.productsWithoutCost} without a cost on file`
+                  : 'not a valuation'}
+              </div>
             </div>
           </div>
         )}
