@@ -71,6 +71,14 @@ const adminUpdateStatus = wmsOperatorProcedure
       .where(eq(privateClientOrders.id, orderId))
       .returning();
 
+    /*
+     * LEGACY CLEANUP. Approving a PCO no longer reserves WMS stock — the PCO
+     * module is standalone and the WMS is the source of truth — so no new
+     * reservation can appear here. Orders approved before that change may still
+     * be holding cases, and these two calls hand them back as the order moves
+     * on. Both are a no-op once the backlog is clear; keep them until it is.
+     */
+
     // Release stock reservations on cancellation
     if (status === 'cancelled') {
       await releaseStockReservations({
@@ -82,13 +90,9 @@ const adminUpdateStatus = wmsOperatorProcedure
     }
 
     /*
-     * Once an order reaches a stage where stock has physically left the
-     * warehouse, release any reservations that are still active. Orders
-     * dispatched through WMS Quick Dispatch already had their reservations
-     * converted to picks, so nothing active remains and this is a no-op.
-     * Orders advanced manually (bypassing dispatch) would otherwise leave
-     * stale holds in Stock Explorer. Release returns the held cases to
-     * availableCases and leaves the total on-hand count unchanged.
+     * Legacy cleanup, as above: hand back any pre-existing hold once the order
+     * reaches a stage where the stock has physically left. Returns the held
+     * cases to availableCases and leaves the total on-hand count unchanged.
      */
     const stockDepartedStatuses = [
       'stock_in_transit',

@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 import getPartnerPricingOverrides from '@/app/_pricing/data/getPartnerPricingOverrides';
 import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
-import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import db from '@/database/client';
 import {
   orderPricingOverrides,
@@ -98,48 +97,23 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
     }
   }
 
-  // Reserve WMS stock for cc_inventory items
-  if (lineItems && lineItems.length > 0) {
-    const ccInventoryItemIds = lineItems
-      .filter((item) => item.source === 'cc_inventory')
-      .map((item) => item.itemId);
-
-    if (ccInventoryItemIds.length > 0) {
-      const ccItems = await db
-        .select({
-          id: privateClientOrderItems.id,
-          lwin: privateClientOrderItems.lwin,
-          productName: privateClientOrderItems.productName,
-          quantity: privateClientOrderItems.quantity,
-        })
-        .from(privateClientOrderItems)
-        .where(
-          eq(privateClientOrderItems.orderId, orderId),
-        );
-
-      const reservationItems = ccItems
-        .filter(
-          (item) =>
-            item.lwin && ccInventoryItemIds.includes(item.id),
-        )
-        .map((item) => ({
-          orderItemId: item.id,
-          lwin18: item.lwin!,
-          productName: item.productName,
-          quantityCases: item.quantity,
-        }));
-
-      if (reservationItems.length > 0) {
-        await reserveStockForOrderItems({
-          orderType: 'pco',
-          orderId,
-          orderNumber: order.orderNumber ?? orderId,
-          items: reservationItems,
-          db,
-        });
-      }
-    }
-  }
+  /*
+   * Approving a PCO deliberately does NOT touch wms_stock.
+   *
+   * The PCO module is a standalone tracking record; the WMS is the source of
+   * truth for what we hold. Stock leaves on a pick, and a pick only ever comes
+   * from an invoice raised in Zoho — a PCO never reaches the warehouse on its
+   * own. Reserving here used to decrement availableCases at approval, but the
+   * hold was only given back when the PCO reached stock_in_transit/delivered,
+   * which in practice it never does because fulfilment runs through the Zoho
+   * side and the PCO stays a tracking record. Every approved order therefore
+   * left a permanent hold, and because the subsequent pick decrements the same
+   * stock independently, wines could go availableCases-negative — the Fèvre
+   * Vaulorent read -1 against 1 case on hand.
+   *
+   * If stock ever needs earmarking again, it belongs on pick-list release, not
+   * here, so that one system owns the decrement.
+   */
 
   // Update order status
   const [updatedOrder] = await db
