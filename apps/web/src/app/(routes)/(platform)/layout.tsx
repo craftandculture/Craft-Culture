@@ -134,6 +134,18 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   >
                     {access.inventoryLabel}
                   </Link>
+                  {/*
+                    Wine partners only. A collector's cellar is a different
+                    screen with a different procedure behind it.
+                  */}
+                  {access.kind === 'wine_partner' && (
+                    <Link
+                      href="/platform/partner/movements"
+                      className="text-text-primary hover:bg-fill-muted ml-0.5 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
+                      Movements
+                    </Link>
+                  )}
                 </div>
               )}
               {/* Private Clients section - for Wine Partners */}

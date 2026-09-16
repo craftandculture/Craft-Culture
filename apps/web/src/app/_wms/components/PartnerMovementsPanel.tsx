@@ -11,23 +11,52 @@ export interface PartnerMovementsPanelProps {
   /** Compact drops the filters and the summary, for inline use. */
   variant?: 'full' | 'compact';
   limit?: number;
+  /**
+   * Cases held now, which anchors the running balance.
+   *
+   * Counting forward from the oldest row would be wrong whenever the history
+   * is longer than the page; counting back from what is actually on the shelf
+   * is right however much of it is shown.
+   */
+  currentCases?: number;
 }
 
+/**
+ * Whether a movement adds stock, removes it, or only moves it.
+ *
+ * A transfer and a putaway change the bay, not the holding. A count or an
+ * adjustment can go either way and the row does not say which, so neither is
+ * given a direction — and their presence suppresses the running balance rather
+ * than quietly reporting one that does not add up.
+ */
 const TYPES = [
-  { key: 'receive', label: 'Received', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
-  { key: 'putaway', label: 'Put away', tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  { key: 'pick', label: 'Picked', tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
-  { key: 'transfer', label: 'Transfer', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
-  { key: 'repack_in', label: 'Repack in', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  { key: 'repack_out', label: 'Repack out', tone: 'bg-rose-50 text-rose-700 ring-rose-200' },
-  { key: 'count', label: 'Count', tone: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
-  { key: 'adjust', label: 'Adjusted', tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
-  { key: 'dispatch', label: 'Dispatched', tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  { key: 'receive', label: 'Received', dir: 'in', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  { key: 'putaway', label: 'Put away', dir: 'move', tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  { key: 'pick', label: 'Picked', dir: 'out', tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
+  { key: 'transfer', label: 'Moved', dir: 'move', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  { key: 'repack_in', label: 'Repacked in', dir: 'in', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  { key: 'repack_out', label: 'Repacked out', dir: 'out', tone: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  { key: 'count', label: 'Counted', dir: 'unknown', tone: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
+  { key: 'adjust', label: 'Adjusted', dir: 'unknown', tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
+  { key: 'dispatch', label: 'Dispatched', dir: 'out', tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
 ] as const;
 
 type TypeKey = (typeof TYPES)[number]['key'];
 
 const meta = (key: string) => TYPES.find((t) => t.key === key);
+
+/** "Picked from C-01-00", "Moved C-01-00 → B-02-01" — said, not abbreviated. */
+const describeMove = (row: {
+  movementType: string;
+  fromLocation: string | null;
+  toLocation: string | null;
+}) => {
+  const { fromLocation: from, toLocation: to } = row;
+  if (from && to) return `${from} → ${to}`;
+  if (from) return `from ${from}`;
+  if (to) return `into ${to}`;
+  return '—';
+};
 
 /** "16 Sept, 15:20" — the warehouse reads dates that way. */
 const when = (value: Date | string) =>
@@ -52,6 +81,7 @@ const PartnerMovementsPanel = ({
   lwin18,
   variant = 'full',
   limit = 50,
+  currentCases,
 }: PartnerMovementsPanelProps) => {
   const api = useTRPC();
   const [selected, setSelected] = useState<TypeKey[]>([]);
@@ -67,6 +97,34 @@ const PartnerMovementsPanel = ({
 
   const movements = data?.movements ?? [];
   const compact = variant === 'compact';
+
+  /*
+    The running balance, worked back from what is on the shelf now.
+
+    It is only shown for a single wine, and only when every row on screen has a
+    known direction — a count or an adjustment does not say whether it added or
+    removed, so a balance drawn through one would be arithmetic nobody could
+    check. Better no column than a column that does not add up.
+  */
+  const balances = (() => {
+    if (!lwin18 || currentCases === undefined) return null;
+    if (movements.some((row) => meta(row.movementType)?.dir === 'unknown')) {
+      return null;
+    }
+
+    const result = new Map<string, number>();
+    let running = currentCases;
+
+    // Newest first, so each step undoes the movement above it.
+    for (const row of movements) {
+      result.set(row.id, running);
+      const dir = meta(row.movementType)?.dir;
+      if (dir === 'in') running -= row.quantityCases;
+      else if (dir === 'out') running += row.quantityCases;
+    }
+
+    return result;
+  })();
 
   if (isLoading) {
     return (
@@ -124,17 +182,28 @@ const PartnerMovementsPanel = ({
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-border-muted text-left text-[10.5px] uppercase tracking-wide text-text-muted">
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Ref</th>
+                <th className="px-3 py-2 font-medium">What happened</th>
                 {!lwin18 && <th className="px-3 py-2 font-medium">Product</th>}
-                <th className="px-3 py-2 font-medium">Move</th>
-                <th className="px-3 py-2 text-right font-medium">Qty</th>
+                <th className="px-3 py-2 font-medium">Where</th>
+                <th className="px-3 py-2 text-right font-medium">Change</th>
+                {balances && (
+                  <th className="px-3 py-2 text-right font-medium">Balance</th>
+                )}
                 <th className="px-3 py-2 font-medium">When</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-muted">
               {movements.map((row) => {
                 const m = meta(row.movementType);
+                const dir = m?.dir;
+                const sign = dir === 'in' ? '+' : dir === 'out' ? '−' : '';
+                const qtyTone =
+                  dir === 'in'
+                    ? 'text-emerald-600'
+                    : dir === 'out'
+                      ? 'text-amber-700'
+                      : 'text-text-muted';
+
                 return (
                   <tr key={row.id}>
                     <td className="px-3 py-2">
@@ -143,9 +212,9 @@ const PartnerMovementsPanel = ({
                       >
                         {m?.label ?? row.movementType}
                       </span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[11.5px] text-text-muted">
-                      {row.movementNumber}
+                      <div className="mt-0.5 font-mono text-[10px] text-text-muted">
+                        {row.movementNumber}
+                      </div>
                     </td>
                     {!lwin18 && (
                       <td className="px-3 py-2">
@@ -156,34 +225,25 @@ const PartnerMovementsPanel = ({
                       </td>
                     )}
                     <td className="px-3 py-2 whitespace-nowrap font-mono text-[11.5px]">
-                      {row.fromLocation && row.toLocation ? (
-                        <>
-                          {row.fromLocation} <span className="text-text-muted">→</span>{' '}
-                          {row.toLocation}
-                        </>
-                      ) : row.fromLocation ? (
-                        <>
-                          {row.fromLocation}{' '}
-                          <span className="text-text-muted">out</span>
-                        </>
-                      ) : row.toLocation ? (
-                        <>
-                          {row.toLocation} <span className="text-text-muted">in</span>
-                        </>
-                      ) : (
-                        <span className="text-text-muted">—</span>
-                      )}
+                      {describeMove(row)}
                     </td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                      {row.quantityCases > 0 && (
-                        <span className="font-medium">{row.quantityCases} cs</span>
-                      )}
+                    <td
+                      className={`px-3 py-2 text-right whitespace-nowrap tabular-nums font-medium ${qtyTone}`}
+                    >
+                      {sign}
+                      {row.quantityCases} cs
                       {row.quantityBottles ? (
-                        <span className="ml-1.5 text-text-muted">
+                        <span className="ml-1.5 font-normal opacity-70">
+                          {sign}
                           {row.quantityBottles} btl
                         </span>
                       ) : null}
                     </td>
+                    {balances && (
+                      <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums text-text-muted">
+                        {balances.get(row.id)} cs
+                      </td>
+                    )}
                     <td className="px-3 py-2 whitespace-nowrap text-text-muted">
                       {when(row.performedAt)}
                     </td>

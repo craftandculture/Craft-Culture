@@ -28,6 +28,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
       title: access.kind === 'collector' ? 'Cellar' : 'Inventory',
       links: [
         { href: access.home, label: access.inventoryLabel },
+        // Wine partners only — a collector's cellar is a different screen.
+        ...(access.kind === 'wine_partner'
+          ? [{ href: '/platform/partner/movements', label: 'Movements' }]
+          : []),
       ],
     });
   } else if (user.role !== 'admin') {

@@ -498,6 +498,7 @@ const PartnerStockPage = () => {
                           lwin18={product.lwin18}
                           variant="compact"
                           limit={25}
+                          currentCases={product.totalCases}
                         />
                       </div>
                     </div>
@@ -768,6 +769,7 @@ const PartnerStockPage = () => {
                                       lwin18={product.lwin18}
                                       variant="compact"
                                       limit={25}
+                                      currentCases={product.totalCases}
                                     />
                                   </div>
                                 </div>
