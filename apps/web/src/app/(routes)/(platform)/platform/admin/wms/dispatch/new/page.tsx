@@ -26,12 +26,25 @@ import useTRPC from '@/lib/trpc/browser';
 
 type Step = 'select-orders' | 'confirm';
 
+interface DispatchLine {
+  productName: string;
+  lwin18: string | null;
+  cases: number;
+  picked: boolean;
+}
+
 interface SelectedOrder {
   id: string;
   type: 'zoho' | 'pco';
   orderNumber: string;
+  /** The sales order, kept alongside the invoice number so both are findable. */
+  salesOrderNumber: string | null;
+  pickListNumber: string | null;
   customerName: string | null;
   totalCases: number;
+  orderedCases: number;
+  isShort: boolean;
+  lines: DispatchLine[];
 }
 
 /**
@@ -43,6 +56,7 @@ const DispatchWizardPage = () => {
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('select-orders');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrders, setSelectedOrders] = useState<SelectedOrder[]>([]);
   const [selectedDistributorId, setSelectedDistributorId] = useState<
@@ -52,16 +66,23 @@ const DispatchWizardPage = () => {
   const [notes, setNotes] = useState('');
 
   // Fetch picked Zoho orders ready for dispatch
-  const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
+  /*
+    Always refetch on mount. Dispatch is opened after work has happened
+    elsewhere — a pick finished, an order released — so a cached list is stale
+    by definition at the moment someone arrives to use it.
+  */
+  const { data: zohoOrders, isLoading: isLoadingZoho, refetch: refetchZoho } = useQuery({
     ...api.zohoSalesOrders.getPickedForDispatch.queryOptions({}),
+    refetchOnMount: 'always',
   });
 
   // Fetch approved PCO orders
-  const { data: pcoOrders, isLoading: isLoadingPco } = useQuery({
+  const { data: pcoOrders, isLoading: isLoadingPco, refetch: refetchPco } = useQuery({
     ...api.privateClientOrders.adminGetMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
     }),
+    refetchOnMount: 'always',
   });
 
   // Fetch distributors
@@ -73,9 +94,14 @@ const DispatchWizardPage = () => {
   const syncMutation = useMutation({
     ...api.zohoSalesOrders.sync.mutationOptions(),
     onSuccess: (data) => {
+      // Refresh both sources: a Zoho sync changes what is ready to dispatch,
+      // but the operator reads one list and does not care which half of it
+      // went stale.
       void queryClient.invalidateQueries({
         queryKey: api.zohoSalesOrders.getPickedForDispatch.queryKey({}),
       });
+      void refetchZoho();
+      void refetchPco();
       toast.success(data.message);
     },
   });
@@ -95,29 +121,42 @@ const DispatchWizardPage = () => {
       id: o.id,
       type: 'zoho' as const,
       orderNumber: o.invoiceNumber ?? o.salesOrderNumber,
+      salesOrderNumber: o.salesOrderNumber,
+      pickListNumber: o.pickListNumber,
       customerName: o.customerName,
       totalCases: o.totalCases,
+      orderedCases: o.orderedCases,
+      isShort: o.isShort,
+      lines: o.lines,
     })),
     ...(pcoOrders?.data ?? []).map((o) => ({
       id: o.id,
       type: 'pco' as const,
       orderNumber: o.orderNumber,
+      salesOrderNumber: null,
+      pickListNumber: null,
       customerName: o.clientName ?? null,
       totalCases: o.caseCount ?? 0,
+      orderedCases: o.caseCount ?? 0,
+      isShort: false,
+      lines: [] as DispatchLine[],
     })),
   ];
 
   // Filter by search
-  const filteredOrders = allOrders.filter((order) =>
-    searchQuery
-      ? order.orderNumber
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customerName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      : true,
-  );
+  const filteredOrders = allOrders.filter((order) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    // Searching the contents matters as much as the reference: the question on
+    // the dock is usually "which order has the Compass Box in it".
+    return (
+      order.orderNumber?.toLowerCase().includes(q) ||
+      order.salesOrderNumber?.toLowerCase().includes(q) ||
+      order.pickListNumber?.toLowerCase().includes(q) ||
+      order.customerName?.toLowerCase().includes(q) ||
+      order.lines.some((l) => l.productName.toLowerCase().includes(q))
+    );
+  });
 
   const isLoading = isLoadingZoho || isLoadingPco;
   const totalSelectedCases = selectedOrders.reduce(
@@ -313,13 +352,51 @@ const DispatchWizardPage = () => {
                               <Typography variant="bodyXs" colorRole="muted">
                                 {order.customerName ?? 'Unknown customer'}
                               </Typography>
-                              <Typography
-                                variant="bodyXs"
-                                colorRole="muted"
-                                className="mt-0.5"
-                              >
-                                {order.totalCases} cases
-                              </Typography>
+                              {/*
+                                Every reference the order is known by, on one
+                                line. The card showed whichever of the invoice
+                                or SO number happened to exist, so two orders
+                                for the same customer were told apart only by a
+                                number that might not be the one written on the
+                                paperwork in the operator's hand.
+                              */}
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] text-text-muted">
+                                {order.salesOrderNumber &&
+                                order.salesOrderNumber !== order.orderNumber ? (
+                                  <span>{order.salesOrderNumber}</span>
+                                ) : null}
+                                {order.pickListNumber ? (
+                                  <span>{order.pickListNumber}</span>
+                                ) : null}
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {order.totalCases} cases
+                                </Typography>
+                                {order.isShort ? (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                    short — {order.orderedCases} ordered
+                                  </span>
+                                ) : null}
+                                {order.lines.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="text-[11px] font-medium text-text-brand underline-offset-2 hover:underline"
+                                    onClick={(e) => {
+                                      // The card itself toggles selection, so
+                                      // opening the contents must not also tick it.
+                                      e.stopPropagation();
+                                      setExpandedOrderId((prev) =>
+                                        prev === order.id ? null : order.id,
+                                      );
+                                    }}
+                                  >
+                                    {expandedOrderId === order.id
+                                      ? 'Hide items'
+                                      : `Show ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`}
+                                  </button>
+                                ) : null}
+                              </div>
                             </div>
                             <div
                               className={`flex h-6 w-6 items-center justify-center rounded border-2 ${
@@ -337,6 +414,49 @@ const DispatchWizardPage = () => {
                               )}
                             </div>
                           </div>
+
+                          {/*
+                            What is actually going on the pallet. The wizard
+                            showed a case count and nothing else, so checking
+                            an order against the goods meant leaving the screen
+                            and opening the pick.
+                          */}
+                          {expandedOrderId === order.id && order.lines.length > 0 ? (
+                            <div
+                              className="mt-3 border-t border-border-primary pt-3"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex flex-col gap-1.5">
+                                {order.lines.map((line, i) => (
+                                  <div
+                                    key={`${line.lwin18 ?? line.productName}-${i}`}
+                                    className="flex items-start justify-between gap-3"
+                                  >
+                                    <div className="min-w-0">
+                                      <Typography variant="bodyXs" className="truncate">
+                                        {line.productName}
+                                      </Typography>
+                                      {line.lwin18 ? (
+                                        <div className="font-mono text-[10px] text-text-muted">
+                                          {line.lwin18}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <span className="font-mono text-xs tabular-nums">
+                                        {line.cases}
+                                      </span>
+                                      {!line.picked ? (
+                                        <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                          not picked
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                         </CardContent>
                       </Card>
                     );
