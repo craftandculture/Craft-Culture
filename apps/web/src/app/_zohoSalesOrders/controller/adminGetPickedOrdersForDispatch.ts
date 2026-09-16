@@ -28,13 +28,25 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
       .optional(),
   )
   .query(async ({ input }) => {
-    // First get IDs of orders with completed pick lists
-    const completedPickLists = await db
-      .select({ orderId: wmsPickLists.orderId })
-      .from(wmsPickLists)
-      .where(eq(wmsPickLists.status, 'completed'));
+    /*
+      Orders whose pick has been worked on, finished or not.
 
-    const orderIdsWithCompletedPicks = completedPickLists.map((p) => p.orderId);
+      Only completed picks used to qualify, and a pick list cannot be completed
+      while a single line is unpicked. So one line nobody could pick — a code
+      the resolver could not match, a bottle that was not on the shelf — kept
+      the whole order out of dispatch, with nothing on this screen to say why.
+      The order simply was not there. Orders mid-pick are listed too, marked as
+      such, so the operator decides what ships rather than the absence of a row
+      deciding for them.
+    */
+    const workedPickLists = await db
+      .select({ orderId: wmsPickLists.orderId, status: wmsPickLists.status })
+      .from(wmsPickLists)
+      .where(
+        inArray(wmsPickLists.status, ['completed', 'in_progress']),
+      );
+
+    const orderIdsWithCompletedPicks = workedPickLists.map((p) => p.orderId);
 
     // Build conditions: must not have dispatch batch, and either:
     // 1. Status is 'picked', OR
@@ -204,6 +216,8 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
 
     const ordersWithCases = orders.map((order) => {
       const pick = pickByOrder.get(order.id);
+      const pickedLines = pick?.lines.filter((l) => l.isPicked).length ?? 0;
+      const totalLines = pick?.lines.length ?? 0;
       const orderedCases = orderedByOrder.get(order.id) ?? 0;
       const lines = pick?.lines ?? [];
       return {
@@ -219,6 +233,9 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
         totalCases: pick ? pick.pickedCases : orderedCases,
         // Judged line by line, each in its own unit — never cases against bottles.
         isShort: lines.some((l) => l.picked < l.requested),
+        isPickComplete: pick?.pickListStatus === 'completed',
+        pickedLines,
+        totalLines,
         lines,
       };
     });

@@ -48,6 +48,10 @@ interface SelectedOrder {
   pickedBottles: number;
   orderedCases: number;
   isShort: boolean;
+  /** False while the pick is still being worked. */
+  isPickComplete: boolean;
+  pickedLines: number;
+  totalLines: number;
   lines: DispatchLine[];
 }
 
@@ -132,6 +136,9 @@ const DispatchWizardPage = () => {
       pickedBottles: o.pickedBottles,
       orderedCases: o.orderedCases,
       isShort: o.isShort,
+      isPickComplete: o.isPickComplete,
+      pickedLines: o.pickedLines,
+      totalLines: o.totalLines,
       lines: o.lines,
     })),
     ...(pcoOrders?.data ?? []).map((o) => ({
@@ -145,6 +152,9 @@ const DispatchWizardPage = () => {
       pickedBottles: 0,
       orderedCases: o.caseCount ?? 0,
       isShort: false,
+      isPickComplete: true,
+      pickedLines: 0,
+      totalLines: 0,
       lines: [] as DispatchLine[],
     })),
   ];
@@ -382,7 +392,11 @@ const DispatchWizardPage = () => {
                                     ? ` · ${order.pickedBottles} btl`
                                     : ''}
                                 </Typography>
-                                {order.isShort ? (
+                                {!order.isPickComplete && order.totalLines > 0 ? (
+                                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                    still picking — {order.pickedLines}/{order.totalLines}
+                                  </span>
+                                ) : order.isShort ? (
                                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                                     short pick
                                   </span>
