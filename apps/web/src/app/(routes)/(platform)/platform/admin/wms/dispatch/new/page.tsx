@@ -29,8 +29,11 @@ type Step = 'select-orders' | 'confirm';
 interface DispatchLine {
   productName: string;
   lwin18: string | null;
-  cases: number;
-  picked: boolean;
+  /** Cases and bottles are counted separately — a split-case line is in bottles. */
+  unit: 'cases' | 'bottles';
+  requested: number;
+  picked: number;
+  isPicked: boolean;
 }
 
 interface SelectedOrder {
@@ -42,6 +45,7 @@ interface SelectedOrder {
   pickListNumber: string | null;
   customerName: string | null;
   totalCases: number;
+  pickedBottles: number;
   orderedCases: number;
   isShort: boolean;
   lines: DispatchLine[];
@@ -125,6 +129,7 @@ const DispatchWizardPage = () => {
       pickListNumber: o.pickListNumber,
       customerName: o.customerName,
       totalCases: o.totalCases,
+      pickedBottles: o.pickedBottles,
       orderedCases: o.orderedCases,
       isShort: o.isShort,
       lines: o.lines,
@@ -137,6 +142,7 @@ const DispatchWizardPage = () => {
       pickListNumber: null,
       customerName: o.clientName ?? null,
       totalCases: o.caseCount ?? 0,
+      pickedBottles: 0,
       orderedCases: o.caseCount ?? 0,
       isShort: false,
       lines: [] as DispatchLine[],
@@ -372,10 +378,13 @@ const DispatchWizardPage = () => {
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <Typography variant="bodyXs" colorRole="muted">
                                   {order.totalCases} cases
+                                  {order.pickedBottles > 0
+                                    ? ` · ${order.pickedBottles} btl`
+                                    : ''}
                                 </Typography>
                                 {order.isShort ? (
                                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                    short — {order.orderedCases} ordered
+                                    short pick
                                   </span>
                                 ) : null}
                                 {order.lines.length > 0 ? (
@@ -444,9 +453,15 @@ const DispatchWizardPage = () => {
                                     </div>
                                     <div className="shrink-0 text-right">
                                       <span className="font-mono text-xs tabular-nums">
-                                        {line.cases}
+                                        {line.picked}
+                                        {line.picked < line.requested
+                                          ? ` / ${line.requested}`
+                                          : ''}
                                       </span>
-                                      {!line.picked ? (
+                                      <span className="ml-1 text-[10px] text-text-muted">
+                                        {line.unit === 'bottles' ? 'btl' : 'cs'}
+                                      </span>
+                                      {!line.isPicked ? (
                                         <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                                           not picked
                                         </span>

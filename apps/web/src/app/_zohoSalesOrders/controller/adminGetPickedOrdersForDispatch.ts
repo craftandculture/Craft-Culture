@@ -138,12 +138,26 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
             .where(inArray(wmsPickLists.orderId, orderIds))
         : [];
 
+    /*
+      Cases and bottles are different units and must not be added together.
+
+      wms_pick_list_items.picked_quantity holds BOTTLES on a split-case line
+      (quantity_bottles set) and CASES on a whole-case line. Summing the column
+      as if it were all cases inflated the total on any order containing a
+      bottle pick, and comparing that total against Zoho's ordered quantity —
+      itself in bottles when the Zoho unit is Bottle — produced shortfalls that
+      were units, not stock. A short badge nobody can trust is worse than none.
+
+      So shortfall is judged per line, in that line's own unit, and never
+      across the two.
+    */
     interface DispatchLine {
       productName: string;
       lwin18: string | null;
-      cases: number;
-      bottles: number | null;
-      picked: boolean;
+      unit: 'cases' | 'bottles';
+      requested: number;
+      picked: number;
+      isPicked: boolean;
     }
 
     const pickByOrder = new Map<
@@ -152,6 +166,7 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
         pickListNumber: string | null;
         pickListStatus: string | null;
         pickedCases: number;
+        pickedBottles: number;
         lines: DispatchLine[];
       }
     >();
@@ -161,19 +176,27 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
         pickListNumber: row.pickListNumber,
         pickListStatus: row.pickListStatus,
         pickedCases: 0,
+        pickedBottles: 0,
         lines: [],
       };
       if (row.productName) {
-        // An unpicked line contributes nothing to the pallet but still belongs
-        // on the manifest, so the gap is named rather than silently missing.
-        const cases = row.pickedQuantity ?? (row.isPicked ? (row.quantityCases ?? 0) : 0);
-        entry.pickedCases += cases;
+        // NULL quantity_bottles means a whole-case line — see wms_pick_list_items.
+        const isBottleLine = row.quantityBottles != null;
+        const requested = isBottleLine
+          ? (row.quantityBottles ?? 0)
+          : (row.quantityCases ?? 0);
+        const picked = row.pickedQuantity ?? (row.isPicked ? requested : 0);
+
+        if (isBottleLine) entry.pickedBottles += picked;
+        else entry.pickedCases += picked;
+
         entry.lines.push({
           productName: row.productName,
           lwin18: row.lwin18,
-          cases,
-          bottles: row.quantityBottles,
-          picked: row.isPicked ?? false,
+          unit: isBottleLine ? 'bottles' : 'cases',
+          requested,
+          picked,
+          isPicked: row.isPicked ?? false,
         });
       }
       pickByOrder.set(row.orderId, entry);
@@ -182,19 +205,21 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
     const ordersWithCases = orders.map((order) => {
       const pick = pickByOrder.get(order.id);
       const orderedCases = orderedByOrder.get(order.id) ?? 0;
-      const pickedCases = pick?.pickedCases ?? 0;
+      const lines = pick?.lines ?? [];
       return {
         ...order,
         invoiceNumber: invoiceMap.get(order.salesOrderNumber) ?? null,
         pickListNumber: pick?.pickListNumber ?? null,
         pickListStatus: pick?.pickListStatus ?? null,
         orderedCases,
-        pickedCases,
-        // Kept as `totalCases` so existing callers keep working, but it now
-        // reports what was picked once a pick exists.
-        totalCases: pick ? pickedCases : orderedCases,
-        isShort: pick != null && pickedCases < orderedCases,
-        lines: pick?.lines ?? [],
+        pickedCases: pick?.pickedCases ?? 0,
+        pickedBottles: pick?.pickedBottles ?? 0,
+        // Kept as `totalCases` for existing callers; reports picked cases once
+        // a pick exists, with loose bottles carried separately.
+        totalCases: pick ? pick.pickedCases : orderedCases,
+        // Judged line by line, each in its own unit — never cases against bottles.
+        isShort: lines.some((l) => l.picked < l.requested),
+        lines,
       };
     });
 
