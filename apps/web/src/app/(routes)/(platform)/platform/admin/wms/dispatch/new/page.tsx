@@ -224,8 +224,13 @@ const DispatchWizardPage = () => {
       : true,
   );
 
+  /*
+    Width: capped at max-w-2xl, which on the landscape tablet this runs on left
+    two thirds of the screen empty and the order cards squeezed into a column.
+    Widened from lg up only — the handheld stays a single column.
+  */
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8">
+    <div className="container mx-auto max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8 lg:max-w-6xl">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -311,14 +316,14 @@ const DispatchWizardPage = () => {
               <Icon
                 icon={IconSearch}
                 size="sm"
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search orders..."
-                className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="Search order, customer, pick list or wine..."
+                className="h-12 w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-11 pr-4 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
             </div>
 
@@ -336,7 +341,10 @@ const DispatchWizardPage = () => {
 
             {/* Orders list */}
             {!isLoading && (
-              <div className="space-y-2">
+              // Two columns once there is room. A dispatch queue is scanned for
+              // a known order, not read top to bottom, so more rows visible at
+              // once is the whole job.
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {filteredOrders.length === 0 ? (
                   <Card>
                     <CardContent className="p-8 text-center">
@@ -354,17 +362,33 @@ const DispatchWizardPage = () => {
                     return (
                       <Card
                         key={order.id}
-                        className={`cursor-pointer transition-all ${
+                        /*
+                          Selection has to read across a room, not from a
+                          ring that only shows up close. Tinting the card
+                          keeps the state legible on a bright loading bay.
+                          It is a real control, so it takes focus and the
+                          keyboard, which a bare div never did.
+                        */
+                        className={`cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                           selected
-                            ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                            ? 'border-2 border-brand-500 bg-brand-50 ring-2 ring-brand-500/20 dark:bg-brand-900/20'
                             : 'hover:border-border-brand'
                         }`}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={selected}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleOrder(order);
+                          }
+                        }}
                         onClick={() => toggleOrder(order)}
                       >
                         <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Typography
                                   variant="bodySm"
                                   className="font-semibold"
@@ -442,7 +466,7 @@ const DispatchWizardPage = () => {
                               </div>
                             </div>
                             <div
-                              className={`flex h-6 w-6 items-center justify-center rounded border-2 ${
+                              className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
                                 selected
                                   ? 'border-brand-500 bg-brand-500'
                                   : 'border-border-primary'
@@ -469,14 +493,16 @@ const DispatchWizardPage = () => {
                               className="mt-3 border-t border-border-primary pt-3"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="flex flex-col gap-1.5">
+                              {/* 49-line orders exist; scroll the manifest rather than
+                                  pushing every other order off the screen. */}
+                              <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
                                 {order.lines.map((line, i) => (
                                   <div
                                     key={`${line.lwin18 ?? line.productName}-${i}`}
                                     className="flex items-start justify-between gap-3"
                                   >
                                     <div className="min-w-0">
-                                      <Typography variant="bodyXs" className="truncate">
+                                      <Typography variant="bodyXs" className="break-words">
                                         {line.productName}
                                       </Typography>
                                       {line.lwin18 ? (
