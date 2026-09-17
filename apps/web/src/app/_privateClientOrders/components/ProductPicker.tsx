@@ -157,10 +157,46 @@ const ProductPicker = ({
     });
   };
 
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = parseFloat(e.target.value);
-    const roundedValue = isNaN(rawValue) ? 0 : Math.round(rawValue * 100) / 100;
+    const roundedValue = isNaN(rawValue) ? 0 : round2(rawValue);
     onChange({ ...value, pricePerCaseUsd: roundedValue });
+  };
+
+  /*
+    Cost per bottle is what anyone actually knows about a wine; the case price
+    is an artefact of how it happens to be packed. Typing $/btl and multiplying
+    up by hand is an arithmetic step per line, and a 3-pack quoted at the
+    6-pack case price is a mistake nobody spots until the invoice.
+  */
+  const pack = value.caseConfig || 1;
+  const pricePerBottle = value.pricePerCaseUsd
+    ? round2(value.pricePerCaseUsd / pack)
+    : 0;
+
+  const handleBottlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = parseFloat(e.target.value);
+    const perBottle = isNaN(rawValue) ? 0 : rawValue;
+    onChange({ ...value, pricePerCaseUsd: round2(perBottle * pack) });
+  };
+
+  /*
+    Changing the pack holds the BOTTLE price and re-derives the case price.
+    The wine costs what it costs; moving from a 6 to a 3 halves the case, it
+    does not double the price of the wine. Holding the case price instead
+    silently changed the cost per bottle, which is the number every margin
+    downstream is applied to.
+  */
+  const handleCaseConfigChange = (config: string) => {
+    const nextPack = parseInt(config);
+    const perBottle = pricePerBottle;
+    onChange({
+      ...value,
+      caseConfig: nextPack,
+      pricePerCaseUsd: perBottle ? round2(perBottle * nextPack) : value.pricePerCaseUsd,
+    });
   };
 
   const lineTotal = (value.quantity || 0) * (value.pricePerCaseUsd || 0);
@@ -352,7 +388,7 @@ const ProductPicker = ({
           </Select>
           <Select
             value={value.caseConfig?.toString() || '12'}
-            onValueChange={(config) => onChange({ ...value, caseConfig: parseInt(config) })}
+            onValueChange={handleCaseConfigChange}
           >
             <SelectTrigger className="h-8 w-full text-xs sm:w-[65px]">
               <SelectValue />
@@ -379,10 +415,29 @@ const ProductPicker = ({
           />
         </div>
 
+        {/* Cost per bottle — type either, the other follows */}
+        <div
+          className="flex items-center gap-1.5"
+          title="The C&C cost per bottle. Type this or the case cost — whichever you know — and the other is worked out from the pack."
+        >
+          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
+            Cost $/btl:
+          </Typography>
+          <Input
+            type="number"
+            min={0}
+            step={0.01}
+            value={pricePerBottle || ''}
+            onChange={handleBottlePriceChange}
+            placeholder="per bottle"
+            className="h-8 w-full text-right text-xs sm:w-24"
+          />
+        </div>
+
         {/* Cost per case — the C&C buy price, NOT the final client price */}
         <div
           className="flex items-center gap-1.5"
-          title="The C&C cost — what C&C pays for this wine (your invoice price to C&C). NOT the final client price; margins are added automatically."
+          title="The C&C cost per case — what C&C pays for this wine. NOT the final client price; margins are added automatically."
         >
           <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
             Cost $/case:
@@ -393,7 +448,7 @@ const ProductPicker = ({
             step={0.01}
             value={value.pricePerCaseUsd || ''}
             onChange={handlePriceChange}
-            placeholder="C&C cost"
+            placeholder={pack > 1 ? `= $/btl × ${pack}` : 'C&C cost'}
             className="h-8 w-full text-right text-xs sm:w-24"
           />
         </div>
