@@ -1,6 +1,11 @@
 'use client';
 
-import { IconAlertTriangle, IconFileInvoice, IconPlus } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconFileInvoice,
+  IconPlus,
+  IconUnlink,
+} from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -103,6 +108,25 @@ const ZohoSalesOrderButton = ({
     },
   });
 
+  const { mutate: unlink, isPending: isUnlinking } = useMutation({
+    ...api.privateClientOrders.adminUnlinkZohoSalesOrder.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(`${result.unlinked} unlinked from this order`, {
+        description:
+          'It still exists in Zoho — delete or void it there if you meant to ' +
+          'replace it, or the next press will raise a second one alongside it.',
+        duration: 15000,
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: api.privateClientOrders.adminGetOne.queryKey({ id: orderId }),
+      });
+    },
+    onError: (error) => {
+      toast.error('Could not unlink', { description: error.message });
+    },
+  });
+
   /*
     The preview is asked for on the press rather than kept fresh in the
     background: it costs a Zoho lookup per line against a rate-limited API, and
@@ -151,7 +175,7 @@ const ZohoSalesOrderButton = ({
 
   if (hasSalesOrder) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-lg border border-border-muted bg-surface-secondary/50 px-3 py-1.5">
+      <div className="inline-flex items-center gap-1.5 rounded-lg border border-border-muted bg-surface-secondary/50 py-1.5 pl-3 pr-1.5">
         <Icon icon={IconFileInvoice} size="sm" className="text-text-muted" />
         <Typography variant="bodySm" className="text-text-muted">
           Zoho SO
@@ -159,6 +183,21 @@ const ZohoSalesOrderButton = ({
         <Typography variant="bodySm" className="font-medium">
           {zohoSalesOrderNumber ?? 'raised'}
         </Typography>
+        {/*
+          The way back. Raising writes the id here so a second press cannot
+          duplicate it, and without this that guard has no counterpart: an
+          order deleted in Zoho left the PCO pointing at nothing, refusing to
+          raise another, recoverable only with a hand on the database.
+        */}
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Unlink this sales order so another can be raised. Nothing is deleted in Zoho."
+          onClick={() => unlink({ orderId })}
+          disabled={isUnlinking}
+        >
+          <Icon icon={IconUnlink} size="sm" />
+        </Button>
       </div>
     );
   }

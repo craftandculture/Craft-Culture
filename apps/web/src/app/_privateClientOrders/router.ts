@@ -12,6 +12,7 @@ import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminMarkPayment from './controller/adminMarkPayment';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import checkLocalStock from './controller/checkLocalStock';
@@ -115,6 +116,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   // PCO → Zoho sales order
   adminPreviewZohoSalesOrder,
   adminCreateZohoSalesOrder,
+  adminUnlinkZohoSalesOrder,
 
   // Distributor procedures
   distributorDashboard,
