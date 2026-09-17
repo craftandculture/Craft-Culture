@@ -1279,6 +1279,21 @@ export const privateClientOrders = pgTable(
     zohoInvoiceStatus: text('zoho_invoice_status'),
     zohoLastSyncAt: timestamp('zoho_last_sync_at', { mode: 'date' }),
 
+    /*
+     * The Zoho sales order raised from this PCO.
+     *
+     * Until now the two systems were joined only by the PCO number sitting in
+     * the sales order's reference_number — a string, readable by a person and
+     * by nothing else. Holding the id here makes the link real: the PCO page
+     * can show the order it raised, and the button that raises it can refuse to
+     * run twice.
+     */
+    zohoSalesOrderId: text('zoho_salesorder_id'),
+    zohoSalesOrderNumber: text('zoho_salesorder_number'),
+    zohoSalesOrderCreatedAt: timestamp('zoho_salesorder_created_at', {
+      mode: 'date',
+    }),
+
     ...timestamps,
   },
   (table) => [

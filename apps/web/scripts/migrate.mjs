@@ -1679,6 +1679,29 @@ const runMigrations = async () => {
       `);
     });
 
+    /*
+      The Zoho sales order raised from a private client order.
+
+      The two systems were joined only by the PCO number written into the
+      sales order's reference_number — readable by a person and by nothing
+      else. A button that raises the order needs somewhere to record what it
+      raised, so the PCO can link to it and so a second press cannot create a
+      second order for the same wine.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "zoho_salesorder_id" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "zoho_salesorder_number" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "zoho_salesorder_created_at" timestamp`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "private_client_orders_zoho_so_idx" ON "private_client_orders"("zoho_salesorder_id")`,
+    );
+    console.log('✅ PCO → Zoho sales order link ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

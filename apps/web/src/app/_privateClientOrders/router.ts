@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
 import adminCreate from './controller/adminCreate';
+import adminCreateZohoSalesOrder from './controller/adminCreateZohoSalesOrder';
 import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
@@ -9,6 +10,7 @@ import adminGetOne from './controller/adminGetOne';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminMarkPayment from './controller/adminMarkPayment';
+import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
@@ -109,6 +111,10 @@ const privateClientOrdersRouter = createTRPCRouter({
   itemsBulkUpdateStockStatus,
   checkLocalStock,
   adminWmsStock: adminGetWmsStockForOrder,
+
+  // PCO → Zoho sales order
+  adminPreviewZohoSalesOrder,
+  adminCreateZohoSalesOrder,
 
   // Distributor procedures
   distributorDashboard,

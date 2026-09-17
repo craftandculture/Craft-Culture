@@ -33,6 +33,7 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
+import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -515,6 +516,12 @@ const AdminPrivateOrderDetailPage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            <ZohoSalesOrderButton
+              orderId={order.id}
+              zohoSalesOrderNumber={order.zohoSalesOrderNumber}
+              hasSalesOrder={Boolean(order.zohoSalesOrderId)}
+            />
 
             {/* Delete button - only for draft/cancelled orders */}
             {canDelete && (
