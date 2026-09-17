@@ -154,6 +154,14 @@ const LinkZohoCustomerDialog = ({
                         .join(' · ')}
                     </Typography>
                   )}
+                  {/*
+                    The id, because two records of one company often differ by
+                    nothing a person can see — same name, same address, one of
+                    them the account the invoices actually sit under.
+                  */}
+                  <code className="mt-0.5 block font-mono text-[11px] text-text-muted">
+                    {candidate.contactId}
+                  </code>
                 </div>
               </button>
             ))}

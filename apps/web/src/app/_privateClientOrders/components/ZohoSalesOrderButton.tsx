@@ -3,7 +3,6 @@
 import {
   IconAlertTriangle,
   IconFileInvoice,
-  IconPlus,
   IconUnlink,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +20,8 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+
+import ZohoSalesOrderReview from './ZohoSalesOrderReview';
 
 export interface ZohoSalesOrderButtonProps {
   orderId: string;
@@ -236,7 +237,7 @@ const ZohoSalesOrderButton = ({
         open={preview !== null}
         onOpenChange={(open) => !open && setPreview(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Raise sales order in Zoho</DialogTitle>
             <DialogDescription>
@@ -246,110 +247,50 @@ const ZohoSalesOrderButton = ({
           </DialogHeader>
 
           <div className="flex flex-col gap-4">
+            {preview && (
+              <ZohoSalesOrderReview
+                lines={preview.lines}
+                customerName={preview.customer?.name ?? 'the distributor'}
+                orderTotal={preview.orderTotal}
+                clientTotal={preview.order.clientTotalUsd}
+              />
+            )}
+
+            {/*
+              What the table cannot say in a chip. Each is one sentence about
+              what happens next, and only appears when it applies.
+            */}
             {preview && preview.toCreate.length > 0 && (
-              <div className="rounded-lg border border-border-muted p-3">
-                <div className="mb-2 flex items-center gap-1.5">
-                  <Icon icon={IconPlus} size="sm" />
-                  <Typography variant="bodySm" className="font-medium">
-                    {preview.toCreate.length} new item code
-                    {preview.toCreate.length === 1 ? '' : 's'} will be created
-                  </Typography>
-                </div>
-                <ul className="flex flex-col gap-1">
-                  {preview.toCreate.map((name) => (
-                    <li key={name}>
-                      <Typography variant="bodySm" className="text-text-muted">
-                        {name}
-                      </Typography>
-                    </li>
-                  ))}
-                </ul>
-                <Typography
-                  variant="bodyXs"
-                  className="mt-2 text-text-muted"
-                >
-                  Check the pack on each is what the client is buying — these
-                  stay in the Zoho catalogue.
-                </Typography>
-              </div>
+              <Typography variant="bodyXs" className="text-text-muted">
+                New codes stay in the Zoho catalogue once created — check the
+                pack on each is what the client is buying.
+              </Typography>
             )}
 
             {preview && preview.unpriced.length > 0 && (
-              <div className="rounded-lg border border-fill-warning/50 bg-fill-warning/5 p-3">
-                <div className="mb-2 flex items-center gap-1.5">
-                  <Icon
-                    icon={IconAlertTriangle}
-                    size="sm"
-                    className="text-fill-warning"
-                  />
-                  <Typography variant="bodySm" className="font-medium">
-                    No trade price on file — sent at zero
-                  </Typography>
-                </div>
-                <ul className="flex flex-col gap-1">
-                  {preview.unpriced.map((name) => (
-                    <li key={name}>
-                      <Typography variant="bodySm" className="text-text-muted">
-                        {name}
-                      </Typography>
-                    </li>
-                  ))}
-                </ul>
-                <Typography variant="bodyXs" className="mt-2 text-text-muted">
-                  The order still goes through. Put a price on these in Zoho
-                  before you invoice — the invoice is the customs value for the
+              <div className="flex items-start gap-2 rounded-lg border border-fill-warning/50 bg-fill-warning/5 px-3 py-2">
+                <Icon
+                  icon={IconAlertTriangle}
+                  size="sm"
+                  className="mt-0.5 shrink-0 text-fill-warning"
+                />
+                <Typography variant="bodyXs" className="text-text-muted">
+                  <span className="font-medium text-text-primary">
+                    {preview.unpriced.length} line
+                    {preview.unpriced.length === 1 ? '' : 's'} will go at zero.
+                  </span>{' '}
+                  The order still goes through, but put a price on these before
+                  you invoice — the invoice is the customs value for the
                   free-zone transfer.
                 </Typography>
               </div>
             )}
 
             {preview && preview.belowTrade.length > 0 && (
-              <div className="rounded-lg border border-border-muted p-3">
-                <div className="mb-2 flex items-center gap-1.5">
-                  <Icon icon={IconAlertTriangle} size="sm" />
-                  <Typography variant="bodySm" className="font-medium">
-                    Below the cost model&rsquo;s price
-                  </Typography>
-                </div>
-                <ul className="flex flex-col gap-1">
-                  {preview.belowTrade.map((line) => (
-                    <li key={line}>
-                      <Typography variant="bodySm" className="text-text-muted">
-                        {line}
-                      </Typography>
-                    </li>
-                  ))}
-                </ul>
-                <Typography variant="bodyXs" className="mt-2 text-text-muted">
-                  Not a problem if it was a deliberate price. Worth one look if
-                  it was not.
-                </Typography>
-              </div>
-            )}
-
-            {preview && (
-              <div className="flex flex-col gap-1.5 rounded-lg bg-surface-secondary/50 px-3 py-2.5">
-                <div className="flex items-baseline justify-between">
-                  <Typography variant="bodySm" className="font-medium">
-                    Billed to {preview.customer?.name ?? 'the distributor'}
-                  </Typography>
-                  <Typography variant="bodyMd" className="font-medium">
-                    {money(preview.orderTotal)}
-                  </Typography>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <Typography variant="bodySm" className="text-text-muted">
-                    What the client pays, per the PCO
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    {money(preview.order.clientTotalUsd)}
-                  </Typography>
-                </div>
-                <Typography variant="bodyXs" className="text-text-muted">
-                  Priced at what each line was agreed at. The distributor adds
-                  their margin and VAT to reach the client&rsquo;s price.
-                </Typography>
-              </div>
+              <Typography variant="bodyXs" className="text-text-muted">
+                Some lines are under the cost model&rsquo;s price. Not a problem
+                if that was deliberate; worth a look if it was not.
+              </Typography>
             )}
           </div>
 
