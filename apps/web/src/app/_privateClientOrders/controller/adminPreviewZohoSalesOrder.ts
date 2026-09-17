@@ -75,7 +75,10 @@ const adminPreviewZohoSalesOrder = adminProcedure
         Nothing new in Zoho and nothing unpriced is a press with no question in
         it. Anything else gets looked at first.
       */
-      needsConfirmation: toCreate.length > 0 || plan.unpriced.length > 0,
+      needsConfirmation:
+        toCreate.length > 0 ||
+        plan.unpriced.length > 0 ||
+        plan.belowTrade.length > 0,
     };
   });
 

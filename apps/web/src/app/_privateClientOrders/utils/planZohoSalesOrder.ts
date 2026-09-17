@@ -75,8 +75,10 @@ export interface PlannedLine {
   /** Trade price per bottle, or null where we cannot price it */
   tradePerBottle: number | null;
   tradeSource: 'stock' | 'inbound' | null;
-  /** What the line will be billed at per case */
+  /** What the line will be billed at per case — the price it was agreed at */
   ratePerCase: number;
+  /** What the cost model would charge per case, for comparison only */
+  tradeRatePerCase: number | null;
   /** What the PCO itself has for this line, for comparison */
   pcoPricePerCase: number;
 }
@@ -210,9 +212,21 @@ const planZohoSalesOrder = async (orderId: string) => {
     const bottleSizeMl =
       Number.isFinite(sizeFromLwin) && sizeFromLwin > 0 ? sizeFromLwin : 750;
 
-    const price = prices.get(lwinPakKeyOf(saleLwin18)) ?? null;
+    /*
+      The catalogue's trade price is a CHECK here, not the price.
 
-    if (!price) unpriced.push(label);
+      The order is billed at the price the line was agreed at; this is only
+      what the cost model would have charged, so a line struck below trade can
+      be pointed out before it is invoiced.
+    */
+    const trade = prices.get(lwinPakKeyOf(saleLwin18)) ?? null;
+
+    /*
+      A line with no price is the one that must not go quietly. Everything else
+      has a number somebody agreed; this would reach a customs document as a
+      zero, so it is named on the confirmation and on the order itself.
+    */
+    if (!item.pricePerCaseUsd || item.pricePerCaseUsd <= 0) unpriced.push(label);
 
     const vintage = item.vintage ? Number(item.vintage) : null;
     const sizeCl = Math.round(bottleSizeMl / 10);
@@ -239,12 +253,40 @@ const planZohoSalesOrder = async (orderId: string) => {
       bottleSizeMl,
       cases: item.quantity,
       bottles: item.quantity * pack,
-      tradePerBottle: price?.perBottle ?? null,
-      tradeSource: price?.source ?? null,
-      ratePerCase: price ? Math.round(price.perBottle * pack * 100) / 100 : 0,
+      tradePerBottle: trade?.perBottle ?? null,
+      tradeSource: trade?.source ?? null,
+      /*
+        The price this line was agreed at. The distributor is invoiced what was
+        struck with them, not what the cost model would compute today — a
+        catalogue that moves between the order and the invoice must not quietly
+        change the amount somebody is billed.
+      */
+      ratePerCase: item.pricePerCaseUsd,
+      tradeRatePerCase: trade
+        ? Math.round(trade.perBottle * pack * 100) / 100
+        : null,
       pcoPricePerCase: item.pricePerCaseUsd,
     });
   }
+
+  /*
+    Lines struck below what the cost model says they are worth.
+
+    Not a blocker — a price agreed is a price agreed, and there are good reasons
+    to go under. But it is worth one look before it becomes an invoice, because
+    the usual cause is a stale figure rather than a decision.
+  */
+  const belowTrade = lines
+    .filter(
+      (line) =>
+        line.tradeRatePerCase !== null &&
+        line.ratePerCase > 0 &&
+        line.ratePerCase < line.tradeRatePerCase,
+    )
+    .map(
+      (line) =>
+        `${line.wine} — ${line.ratePerCase.toFixed(2)} vs ${line.tradeRatePerCase?.toFixed(2)} trade`,
+    );
 
   if (noLwin.length > 0) {
     blockers.push(
@@ -277,10 +319,17 @@ const planZohoSalesOrder = async (orderId: string) => {
     needsZohoContact,
     /** Lines we could not price, which are created at zero and must be filled in */
     unpriced,
-    tradeTotal: lines.reduce(
+    /** What the sales order bills — the agreed line prices */
+    orderTotal: lines.reduce(
       (sum, line) => sum + line.ratePerCase * line.cases,
       0,
     ),
+    /** What the cost model would have charged, where it knows the wine */
+    tradeTotal: lines.reduce(
+      (sum, line) => sum + (line.tradeRatePerCase ?? line.ratePerCase) * line.cases,
+      0,
+    ),
+    belowTrade,
     /*
       The PCO's line prices summed — a PRIVATE CLIENT figure, not what anybody
       is billed here. Kept for comparison against trade, since the gap between

@@ -85,7 +85,7 @@ const ZohoSalesOrderButton = ({
         `Draft sales order ${result.salesOrderNumber ?? ''} created in Zoho`.trim(),
         {
           description:
-            `${result.lineCount} line${result.lineCount === 1 ? '' : 's'}, ${money(result.tradeTotal)} at trade.` +
+            `${result.lineCount} line${result.lineCount === 1 ? '' : 's'}, ${money(result.orderTotal)}.` +
             (result.itemsCreated.length > 0
               ? ` ${result.itemsCreated.length} new item code${result.itemsCreated.length === 1 ? '' : 's'}.`
               : '') +
@@ -303,22 +303,38 @@ const ZohoSalesOrderButton = ({
               </div>
             )}
 
+            {preview && preview.belowTrade.length > 0 && (
+              <div className="rounded-lg border border-border-muted p-3">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <Icon icon={IconAlertTriangle} size="sm" />
+                  <Typography variant="bodySm" className="font-medium">
+                    Below the cost model&rsquo;s price
+                  </Typography>
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {preview.belowTrade.map((line) => (
+                    <li key={line}>
+                      <Typography variant="bodySm" className="text-text-muted">
+                        {line}
+                      </Typography>
+                    </li>
+                  ))}
+                </ul>
+                <Typography variant="bodyXs" className="mt-2 text-text-muted">
+                  Not a problem if it was a deliberate price. Worth one look if
+                  it was not.
+                </Typography>
+              </div>
+            )}
+
             {preview && (
               <div className="flex flex-col gap-1.5 rounded-lg bg-surface-secondary/50 px-3 py-2.5">
                 <div className="flex items-baseline justify-between">
                   <Typography variant="bodySm" className="font-medium">
-                    On this sales order — in-bond (B2B)
+                    Billed to {preview.customer?.name ?? 'the distributor'}
                   </Typography>
                   <Typography variant="bodyMd" className="font-medium">
-                    {money(preview.tradeTotal)}
-                  </Typography>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <Typography variant="bodySm" className="text-text-muted">
-                    PCO lines, at private-client price
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    {money(preview.pcoLinesTotal)}
+                    {money(preview.orderTotal)}
                   </Typography>
                 </div>
                 <div className="flex items-baseline justify-between">
@@ -330,9 +346,8 @@ const ZohoSalesOrderButton = ({
                   </Typography>
                 </div>
                 <Typography variant="bodyXs" className="text-text-muted">
-                  Three different price levels, all expected to differ: you bill
-                  the distributor at in-bond, they add their margin and VAT to
-                  reach the client&rsquo;s price.
+                  Priced at what each line was agreed at. The distributor adds
+                  their margin and VAT to reach the client&rsquo;s price.
                 </Typography>
               </div>
             )}

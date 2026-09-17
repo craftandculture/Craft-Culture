@@ -30,17 +30,16 @@ import planZohoSalesOrder, {
  * document that moves wine out of the free zone and bills a distributor for it;
  * the last press should be a human one.
  *
- * **It prices at trade, not at what the PCO says.** The PCO total is what the
- * end client pays — cost plus the distributor's margin plus VAT. What we bill
- * the distributor is the in-bond trade price, which is a different number and
- * the right one for this document. The two totals are returned together so the
- * difference is visible rather than surprising.
+ * **It bills what was agreed, not what the cost model says today.** The price
+ * on each line is the one struck for this order; the catalogue's trade price is
+ * only a check, and a line below it is pointed out rather than overwritten. A
+ * catalogue that moves between the order and the invoice must not quietly
+ * change the amount somebody is billed.
  *
- * **A line we cannot price is included at zero, and named.** Refusing the order
- * would stop a sale over a wine still on the water, which is a normal thing to
- * sell. But a zero on this document is a customs value, so it is not left to be
- * noticed — it comes back in `unpriced` for the screen to show and for the
- * person confirming in Zoho to fill in.
+ * **A line with no price at all is included at zero, and named.** Refusing the
+ * order would stop a sale over a missing figure. But a zero on this document is
+ * a customs value, so it comes back in `unpriced` for the screen to show and for
+ * the person confirming in Zoho to fill in.
  */
 const adminCreateZohoSalesOrder = adminProcedure
   .input(
@@ -223,10 +222,13 @@ const adminCreateZohoSalesOrder = adminProcedure
         line_items: lineItems,
         notes:
           `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}. ` +
-          'Priced at in-bond trade — this is what the distributor is billed, ' +
-          'not what the end client pays. Check before confirming.' +
+          'Priced at the agreed line prices — what the distributor is billed, ' +
+          'before their own margin and VAT. Check before confirming.' +
           (plan.unpriced.length > 0
-            ? ` NEEDS A PRICE — no trade price on file, sent at zero: ${plan.unpriced.join('; ')}.`
+            ? ` NEEDS A PRICE — no price on the order line, sent at zero: ${plan.unpriced.join('; ')}.`
+            : '') +
+          (plan.belowTrade.length > 0
+            ? ` Below the cost model's price: ${plan.belowTrade.join('; ')}.`
             : ''),
       });
 
@@ -261,7 +263,8 @@ const adminCreateZohoSalesOrder = adminProcedure
         lineCount: lineItems.length,
         itemsCreated: created,
         unpriced: plan.unpriced,
-        tradeTotal: Math.round(plan.tradeTotal * 100) / 100,
+        orderTotal: Math.round(plan.orderTotal * 100) / 100,
+        belowTrade: plan.belowTrade,
       };
     } catch (error) {
       await unclaim();
