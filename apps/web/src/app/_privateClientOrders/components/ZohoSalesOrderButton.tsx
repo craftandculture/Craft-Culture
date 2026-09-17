@@ -265,23 +265,36 @@ const ZohoSalesOrderButton = ({
             )}
 
             {preview && (
-              <div className="flex items-center justify-between rounded-lg bg-surface-secondary/50 px-3 py-2">
-                <div>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Billed to distributor at trade
+              <div className="flex flex-col gap-1.5 rounded-lg bg-surface-secondary/50 px-3 py-2.5">
+                <div className="flex items-baseline justify-between">
+                  <Typography variant="bodySm" className="font-medium">
+                    On this sales order — in-bond (B2B)
                   </Typography>
                   <Typography variant="bodyMd" className="font-medium">
                     {money(preview.tradeTotal)}
                   </Typography>
                 </div>
-                <div className="text-right">
+                <div className="flex items-baseline justify-between">
                   <Typography variant="bodySm" className="text-text-muted">
-                    PCO total (what the client pays)
+                    PCO lines, at private-client price
                   </Typography>
-                  <Typography variant="bodyMd" className="font-medium">
-                    {money(preview.pcoTotal)}
+                  <Typography variant="bodySm" className="text-text-muted">
+                    {money(preview.pcoLinesTotal)}
                   </Typography>
                 </div>
+                <div className="flex items-baseline justify-between">
+                  <Typography variant="bodySm" className="text-text-muted">
+                    What the client pays, per the PCO
+                  </Typography>
+                  <Typography variant="bodySm" className="text-text-muted">
+                    {money(preview.order.clientTotalUsd)}
+                  </Typography>
+                </div>
+                <Typography variant="bodyXs" className="text-text-muted">
+                  Three different price levels, all expected to differ: you bill
+                  the distributor at in-bond, they add their margin and VAT to
+                  reach the client&rsquo;s price.
+                </Typography>
               </div>
             )}
           </div>

@@ -216,8 +216,17 @@ const planZohoSalesOrder = async (orderId: string) => {
 
     const vintage = item.vintage ? Number(item.vintage) : null;
     const sizeCl = Math.round(bottleSizeMl / 10);
-    const named = vintage && item.productName.includes(String(vintage));
-    const packName = `${item.productName}${named || !vintage ? '' : ` ${vintage}`} (${pack}x${sizeCl}cl)`;
+
+    /*
+      A pack already written into the stored name is dropped before ours is
+      added. These names carry the pack they were RECEIVED in — "Bruno Clair
+      Vosne-Romanee Aux Champs Perdrix (3x)" — and appending the pack being
+      SOLD produced "... (3x) 2023 (2x75cl)", which names two different packs
+      in one breath and is read by whoever picks it in Zoho.
+    */
+    const bareName = item.productName.replace(/\s*\(\d+\s*x\)\s*/gi, ' ').trim();
+    const named = vintage && bareName.includes(String(vintage));
+    const packName = `${bareName}${named || !vintage ? '' : ` ${vintage}`} (${pack}x${sizeCl}cl)`;
 
     lines.push({
       orderItemId: item.id,
@@ -251,6 +260,13 @@ const planZohoSalesOrder = async (orderId: string) => {
       clientName: order.clientName,
       zohoSalesOrderId: order.zohoSalesOrderId,
       zohoSalesOrderNumber: order.zohoSalesOrderNumber,
+      /*
+        What the end client actually pays: the PCO's own grand total, with the
+        distributor's margin and VAT on top of the line prices. Distinct from
+        the sum of the lines, which is a private-client figure and was labelled
+        as the client's for a day.
+      */
+      clientTotalUsd: order.totalUsd,
     },
     customer: distributor?.zohoContactId
       ? { contactId: distributor.zohoContactId, name: distributor.businessName }
@@ -265,7 +281,12 @@ const planZohoSalesOrder = async (orderId: string) => {
       (sum, line) => sum + line.ratePerCase * line.cases,
       0,
     ),
-    pcoTotal: lines.reduce(
+    /*
+      The PCO's line prices summed — a PRIVATE CLIENT figure, not what anybody
+      is billed here. Kept for comparison against trade, since the gap between
+      them is the whole reason the two totals are shown together.
+    */
+    pcoLinesTotal: lines.reduce(
       (sum, line) => sum + line.pcoPricePerCase * line.cases,
       0,
     ),
