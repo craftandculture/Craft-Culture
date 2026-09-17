@@ -53,6 +53,17 @@ export interface ProductPickerProps {
 }
 
 /**
+ * Selectable bottles-per-case values.
+ *
+ * Not just the standard 1/3/6/12/24: clients buy odd counts and we repack to
+ * suit — a case of 4, a pair, a five-pack out of a broken six. Offering only
+ * the tidy configs forced those onto the wrong pack, and the pack is what the
+ * picker, the repack and the price per bottle are all derived from, so an
+ * approximation there is wrong everywhere downstream.
+ */
+const CASE_CONFIGS = [1, 2, 3, 4, 5, 6, 9, 12, 15, 18, 24] as const;
+
+/**
  * Product picker for private client orders.
  * Supports WMS stock, catalog search, and manual entry modes.
  */
@@ -347,11 +358,11 @@ const ProductPicker = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">×1</SelectItem>
-              <SelectItem value="3">×3</SelectItem>
-              <SelectItem value="6">×6</SelectItem>
-              <SelectItem value="12">×12</SelectItem>
-              <SelectItem value="24">×24</SelectItem>
+              {CASE_CONFIGS.map((config) => (
+                <SelectItem key={config} value={config.toString()}>
+                  ×{config}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
