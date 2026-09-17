@@ -120,6 +120,10 @@ const planZohoSalesOrder = async (orderId: string) => {
   const prices = await resolveTradePrices();
 
   const blockers: string[] = [];
+  let needsZohoContact: {
+    partnerId: string;
+    partnerName: string;
+  } | null = null;
 
   if (!RAISEABLE.has(order.status)) {
     blockers.push(
@@ -150,8 +154,18 @@ const planZohoSalesOrder = async (orderId: string) => {
     blockers.push('The assigned distributor no longer exists.');
   } else if (!distributor.zohoContactId) {
     blockers.push(
-      `${distributor.businessName} has no Zoho customer linked. Link it on the partner record — creating one from here is how a duplicate customer gets into the accounts.`,
+      `${distributor.businessName} has no Zoho customer linked. Pick the customer it is billed as — creating one from here is how a duplicate gets into the accounts.`,
     );
+
+    /*
+      Named separately from the prose so the screen can offer to fix it rather
+      than only explain it. This is the one blocker that is a missing link
+      rather than a mistake, and it is answerable on the spot.
+    */
+    needsZohoContact = {
+      partnerId: distributor.id,
+      partnerName: distributor.businessName,
+    };
   }
 
   if (items.length === 0) blockers.push('This order has no lines.');
@@ -243,6 +257,8 @@ const planZohoSalesOrder = async (orderId: string) => {
       : null,
     lines,
     blockers,
+    /** Set when the only thing missing is the distributor's Zoho customer */
+    needsZohoContact,
     /** Lines we could not price, which are created at zero and must be filled in */
     unpriced,
     tradeTotal: lines.reduce(

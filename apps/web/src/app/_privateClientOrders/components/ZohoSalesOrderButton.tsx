@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import LinkZohoCustomerDialog from '@/app/_partners/components/LinkZohoCustomerDialog';
 import Button from '@/app/_ui/components/Button/Button';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
 import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
@@ -59,6 +60,16 @@ const ZohoSalesOrderButton = ({
       >
     > | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  /*
+    The one blocker that is a missing link rather than a mistake, and the one
+    worth answering here: the distributor has no Zoho customer. Explaining it
+    and leaving would send someone to another screen to do a thing they could
+    do on the spot.
+  */
+  const [linking, setLinking] = useState<{
+    partnerId: string;
+    partnerName: string;
+  } | null>(null);
 
   const { mutate: create, isPending: isCreating } = useMutation({
     ...api.privateClientOrders.adminCreateZohoSalesOrder.mutationOptions(),
@@ -107,6 +118,12 @@ const ZohoSalesOrderButton = ({
         });
 
       if (result.blockers.length > 0) {
+        if (result.needsZohoContact && result.blockers.length === 1) {
+          setLinking(result.needsZohoContact);
+
+          return;
+        }
+
         toast.error('Cannot raise a sales order yet', {
           description: result.blockers.join(' '),
           duration: 15000,
@@ -161,6 +178,20 @@ const ZohoSalesOrderButton = ({
             ? 'Creating...'
             : 'Create Zoho SO'}
       </Button>
+
+      {linking && (
+        <LinkZohoCustomerDialog
+          partnerId={linking.partnerId}
+          partnerName={linking.partnerName}
+          open
+          onOpenChange={(isOpen) => !isOpen && setLinking(null)}
+          onLinked={() => {
+            setLinking(null);
+            // Straight back to what they pressed the button for
+            void handleClick();
+          }}
+        />
+      )}
 
       <Dialog
         open={preview !== null}

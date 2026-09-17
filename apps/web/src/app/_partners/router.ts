@@ -18,6 +18,8 @@ import partnersGetPublicInfo from './controllers/partnersGetPublicInfo';
 import partnersListSimple from './controllers/partnersListSimple';
 import partnersMerge from './controllers/partnersMerge';
 import partnersUpdate from './controllers/partnersUpdate';
+import zohoContactLink from './controllers/zohoContactLink';
+import zohoContactsFind from './controllers/zohoContactsFind';
 
 const apiKeysRouter = createTRPCRouter({
   create: apiKeysCreate,
@@ -46,6 +48,14 @@ const partnersRouter = createTRPCRouter({
   update: partnersUpdate,
   // A partner's own feed: stock, their orders and the RFQs they were invited to
   getActivity: partnerGetActivity,
+  /*
+    The Zoho customer a partner is billed as. Only ever set as a side effect of
+    raising an invoice, so a partner never invoiced had no link and no way to
+    make one — which is the wrong way round for a distributor whose sales order
+    comes first.
+  */
+  findZohoContacts: zohoContactsFind,
+  linkZohoContact: zohoContactLink,
   apiKeys: apiKeysRouter,
   contacts: contactsRouter,
 });
