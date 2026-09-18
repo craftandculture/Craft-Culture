@@ -10,6 +10,8 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import SalesUpload from './SalesUpload';
+
 
 /** Money as the document states it, with no currency assumed */
 const formatValue = (value: number, currency: string | null) => {
@@ -216,6 +218,8 @@ const DistributionClient = () => {
           ) : null}
         </div>
       ) : null}
+
+      <SalesUpload outletId={outletId} onImported={invalidate} />
 
       {balances.isLoading ? (
         <Typography variant="bodySm" colorRole="muted" asChild>
