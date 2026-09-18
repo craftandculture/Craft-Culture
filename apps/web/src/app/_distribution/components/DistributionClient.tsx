@@ -129,7 +129,7 @@ const DistributionClient = () => {
       <div className="border-border-primary bg-fill-muted/20 flex flex-col gap-3 rounded-xl border p-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-end">
           <label className="flex flex-col gap-1">
-            <span className="text-text-muted text-xs">Outlet</span>
+            <span className="text-text-muted text-xs">Distributor</span>
             <select
               value={outletId ?? ''}
               onChange={(event) => setOutletId(event.target.value)}
@@ -183,7 +183,7 @@ const DistributionClient = () => {
             isDisabled={pull.isPending}
             onClick={() => pull.mutate({})}
           >
-            {pull.isPending ? 'Pulling…' : 'Pull outlet stock'}
+            {pull.isPending ? 'Pulling…' : 'Pull their stock'}
           </Button>
         </div>
       </div>
@@ -257,12 +257,44 @@ const DistributionClient = () => {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SalesUpload outletId={outletId} onImported={invalidate} />
-        <StatementPanel
-          outletId={outletId}
-          owners={setup.data?.owners ?? []}
-        />
+      <div>
+        <Typography variant="labelSm" asChild>
+          <h2 className="mb-2">The month</h2>
+        </Typography>
+        {/*
+          Upload then statement, in that order and numbered. A statement read
+          before the month is loaded is empty, which reads as nothing having
+          sold rather than as nothing having been uploaded.
+        */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="relative">
+            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+              1
+            </span>
+            <SalesUpload outletId={outletId} onImported={invalidate} />
+          </div>
+          <div className="relative">
+            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+              2
+            </span>
+            <StatementPanel
+              outletId={outletId}
+              owners={setup.data?.owners ?? []}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Typography variant="labelSm" asChild>
+          <h2 className="mb-2">Every wine</h2>
+        </Typography>
+        <Typography variant="bodyXs" colorRole="muted" asChild>
+          <p className="mb-2 max-w-2xl">
+            What we invoiced out against what they say they hold. Sold and
+            Billed live on the statement above.
+          </p>
+        </Typography>
       </div>
 
       {balances.isLoading ? (

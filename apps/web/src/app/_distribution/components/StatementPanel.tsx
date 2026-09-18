@@ -126,7 +126,7 @@ const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
                   <th className="py-2 pr-3 text-right font-medium">Cost/btl</th>
                   <th className="py-2 pr-3 text-right font-medium">Due to them</th>
                   <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
-                    Billed to outlet
+                    Billed to them
                   </th>
                 </tr>
               </thead>
@@ -178,7 +178,7 @@ const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
               {[
                 ['Bottles sold', formatBottles(summary.bottles)],
                 ['Due to them', money(summary.dueToOwner, lines[0]?.currency ?? null)],
-                ['Billed to outlet', money(summary.billedToOutlet, lines[0]?.currency ?? null)],
+                ['Billed to them', money(summary.billedToOutlet, lines[0]?.currency ?? null)],
                 ['C&C margin', money(summary.margin, lines[0]?.currency ?? null)],
               ].map(([label, value]) => (
                 <div key={label}>

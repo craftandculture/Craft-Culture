@@ -17,8 +17,8 @@ const DistributionPage = () => {
         </Typography>
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p className="mt-1">
-            Wine placed with an outlet on consignment — what went out, what they
-            hold, and whose it is. In bottles.
+            Wine placed with a distributor on consignment — what went out,
+            what they hold, what sold, and whose it is. In bottles.
           </p>
         </Typography>
       </div>
