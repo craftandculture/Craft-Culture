@@ -23,9 +23,20 @@ const writeSnapshot = async (
   outletId: string,
   parsed: ParsedCityDrinksStock,
 ) => {
+  /*
+    The same instant in both statements, as a string.
+
+    insertRows binds through `client.unsafe`, which does not serialise a Date
+    the way a tagged template does — it rejects one outright. Converting here
+    rather than teaching the shared helper about dates keeps the change inside
+    this module, and using the identical value in the DELETE guarantees the
+    replace actually matches what the insert wrote.
+  */
+  const takenAt = parsed.takenAt.toISOString();
+
   await client`
     DELETE FROM cons_snapshots
-    WHERE outlet_id = ${outletId} AND taken_at = ${parsed.takenAt}
+    WHERE outlet_id = ${outletId} AND taken_at = ${takenAt}
   `;
 
   if (parsed.rows.length > 0) {
@@ -45,7 +56,7 @@ const writeSnapshot = async (
       ],
       parsed.rows.map((row) => ({
         outlet_id: outletId,
-        taken_at: parsed.takenAt,
+        taken_at: takenAt,
         outlet_code: row.outletCode,
         our_code: row.ourCode,
         product_name: row.productName,
