@@ -8,6 +8,8 @@ import Badge from '@/app/_ui/components/Badge/Badge';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import ownerColour from '../utils/ownerColour';
+
 
 export interface StatementPanelProps {
   outletId: string | null;
@@ -46,6 +48,8 @@ const lastMonth = () => {
 const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
   const api = useTRPC();
   const [ownerId, setOwnerId] = useState('');
+  /* The same colour the owner carries on the table, so the two screens agree */
+  const colour = ownerColour(owners.findIndex((row) => row.id === ownerId));
   const [month, setMonth] = useState(lastMonth());
 
   const statement = useQuery({
@@ -64,7 +68,14 @@ const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
     <div className="border-border-primary space-y-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Typography variant="labelSm">Owner statement</Typography>
+          <Typography variant="labelSm" asChild>
+            <span className="flex items-center gap-2">
+              {ownerId ? (
+                <span className={`size-2 rounded-full ${colour.dot}`} />
+              ) : null}
+              Owner statement
+            </span>
+          </Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1 max-w-xl">
               What sold, and what we owe for it at the import price. Send this

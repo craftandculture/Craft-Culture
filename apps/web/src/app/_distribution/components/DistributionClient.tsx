@@ -12,6 +12,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
+import ownerColour from '../utils/ownerColour';
 
 
 /** Money as the document states it, with no currency assumed */
@@ -121,6 +122,13 @@ const DistributionClient = () => {
   const outlet = setup.data?.outlets.find((row) => row.id === outletId);
   /** Narrowed to one owner or a search — so the totals are a slice, not the whole */
   const isFiltered = Boolean(ownerId || search.trim());
+
+  /*
+    Colour is keyed on the owner's place in this list, so it is stable while
+    the list is and nobody changes colour because someone else was renamed.
+  */
+  const colourOf = (id: string) =>
+    ownerColour(setup.data?.owners.findIndex((row) => row.id === id) ?? -1);
   const rows = balances.data?.rows ?? [];
   const summary = balances.data?.summary;
 
@@ -234,6 +242,24 @@ const DistributionClient = () => {
             ))}
           </div>
 
+          <div className="border-border-primary flex flex-wrap gap-2 border-t pt-2">
+            {(setup.data?.owners ?? []).map((owner) => (
+              <button
+                key={owner.id}
+                type="button"
+                onClick={() => setOwnerId(ownerId === owner.id ? '' : owner.id)}
+                className={`rounded-full px-2.5 py-1 text-xs transition ${colourOf(owner.id).chip} ${
+                  ownerId === owner.id ? 'ring-border-brand ring-2' : ''
+                }`}
+              >
+                {owner.name}
+                <span className="ml-1.5 tabular-nums opacity-70">
+                  {formatBottles(owner.outBottles)}
+                </span>
+              </button>
+            ))}
+          </div>
+
           {outlet.unmatchedAtOutlet > 0 || (summary?.unmatched ?? 0) > 0 ? (
             <div className="border-border-primary flex flex-wrap gap-x-6 gap-y-1 border-t pt-2">
               {outlet.unmatchedAtOutlet > 0 ? (
@@ -335,24 +361,28 @@ const DistributionClient = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
+              {rows.map((row) => (
                 <tr
                   key={`${row.ownerId}-${row.lwin18 ?? row.productName}`}
-                  className="border-border-primary hover:bg-fill-muted/20 border-b last:border-0"
+                  className={`border-border-primary hover:bg-fill-muted/20 border-b border-l-[3px] last:border-b-0 ${colourOf(row.ownerId).edge}`}
                 >
-                  {/* Repeating the owner on every line is noise; a change of
-                      owner is the thing worth seeing */}
-                  <td className="py-2 pl-4 pr-3">
-                    {index === 0 || rows[index - 1]?.ownerId !== row.ownerId ? (
-                      row.ownerName
-                    ) : (
-                      <span className="text-text-faint" aria-hidden="true">
-                        ·
-                      </span>
-                    )}
+                  {/*
+                    The name on every line, not only when it changes. The table
+                    sorts by bottles, so owners alternate constantly and a
+                    "same as above" mark means the eye has to count upwards to
+                    answer the one question this page exists for. Colour does
+                    the scanning; the name does the certainty.
+                  */}
+                  <td className="whitespace-nowrap py-2 pl-3 pr-3">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className={`size-2 shrink-0 rounded-full ${colourOf(row.ownerId).dot}`}
+                      />
+                      {row.ownerName}
+                    </span>
                   </td>
                   <td className="py-2 pr-3">{row.productName}</td>
-                  <td className="text-text-muted py-2 pr-3 font-mono text-xs">
+                  <td className="text-text-faint py-2 pr-3 font-mono text-[11px] leading-tight">
                     <span className="block">{row.lwin18 ?? '—'}</span>
                     <span className="block">{row.outletCode ?? ''}</span>
                   </td>
@@ -365,7 +395,7 @@ const DistributionClient = () => {
                       </Badge>
                     ) : null}
                   </td>
-                  <td className="border-border-primary border-l py-2 pr-3 text-right tabular-nums">
+                  <td className="border-border-primary text-text-primary border-l py-2 pr-3 text-right font-medium tabular-nums">
                     {formatBottles(row.outBottles)}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">
@@ -381,11 +411,14 @@ const DistributionClient = () => {
                   <td className="border-border-primary border-l py-2 pr-4 text-right tabular-nums">
                     {row.heldDeclared === null ? (
                       <span
-                        className="text-text-muted"
+                        className="text-text-faint"
                         title="They have no code of ours for this wine, so their position is unknown — not nil."
                       >
-                        unknown
+                        —
                       </span>
+                    ) : row.heldDeclared === 0 ? (
+                      /* Nil is a real answer and must not look like no answer */
+                      <span className="text-text-muted">0</span>
                     ) : (
                       formatBottles(row.heldDeclared)
                     )}
@@ -402,6 +435,9 @@ const DistributionClient = () => {
           <span className="tabular-nums">
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
             {formatBottles(summary.heldDeclared)} still with them
+            {summary.unmatched > 0
+              ? ` · ${summary.unmatched} position unknown`
+              : ''}
           </span>
           {summary.packAssumed > 0 ? (
             <span className="text-text-warning">
