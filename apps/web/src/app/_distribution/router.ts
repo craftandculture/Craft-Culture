@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminGetBalances from './controller/adminGetBalances';
 import adminGetSetup from './controller/adminGetSetup';
+import adminImportOutletSales from './controller/adminImportOutletSales';
 import adminPullOutletStock from './controller/adminPullOutletStock';
 import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 
@@ -25,6 +26,7 @@ import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
     getBalances: adminGetBalances,
+    importOutletSales: adminImportOutletSales,
     getSetup: adminGetSetup,
     pullOutletStock: adminPullOutletStock,
     syncOutFromZoho: adminSyncOutFromZoho,
