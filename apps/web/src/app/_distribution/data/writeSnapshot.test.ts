@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import writeSnapshot from './writeSnapshot';
 import type { ParsedCityDrinksStock } from '../utils/parseCityDrinksStock';
