@@ -10,6 +10,7 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -28,7 +29,13 @@ type StatusFilter = 'all' | 'draft' | 'picking' | 'staged' | 'dispatched' | 'del
  */
 const WMSDispatchBatchesPage = () => {
   const api = useTRPC();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('draft');
+  /*
+    Opens on everything. It opened on Draft, but Quick Dispatch creates and
+    dispatches in one step, so a draft batch barely exists in practice — the
+    screen greeted you with "No Dispatch Batches" while a dozen sat one tab
+    over.
+  */
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.admin.dispatch.getMany.queryOptions({
@@ -38,12 +45,15 @@ const WMSDispatchBatchesPage = () => {
     }),
   });
 
+  // 'All' leads, and Delivered is reachable — it was the status most batches
+  // end up in, and the only way to see one was to pick All.
   const statusFilters: { id: StatusFilter; label: string }[] = [
+    { id: 'all', label: 'All' },
     { id: 'draft', label: 'Draft' },
     { id: 'picking', label: 'Picking' },
     { id: 'staged', label: 'Staged' },
     { id: 'dispatched', label: 'Dispatched' },
-    { id: 'all', label: 'All' },
+    { id: 'delivered', label: 'Delivered' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -99,39 +109,45 @@ const WMSDispatchBatchesPage = () => {
         {/* Summary Cards */}
         {data?.summary && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Typography variant="headingLg" className="text-gray-600">
-                  {data.summary.draftCount}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Draft
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Typography variant="headingLg" className="text-blue-600">
-                  {data.summary.pickingCount}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Picking
-                </Typography>
-              </CardContent>
-            </Card>
+            {/*
+              Draft, Picking and Staged each had a card of their own and each
+              read zero, because Quick Dispatch skips all three. They are one
+              "needs attention" figure now, and the counts that actually move
+              get the space.
+            */}
             <Card>
               <CardContent className="p-4 text-center">
                 <Typography variant="headingLg" className="text-amber-600">
-                  {data.summary.stagedCount}
+                  {data.summary.openCount}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Staged
+                  In progress
                 </Typography>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <Typography variant="headingMd">{data.pagination.total}</Typography>
+                <Typography variant="headingLg" className="text-emerald-600">
+                  {data.summary.dispatchedCount}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  En route
+                </Typography>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Typography variant="headingLg" className="text-purple-600">
+                  {data.summary.deliveredCount}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Delivered
+                </Typography>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Typography variant="headingMd">{data.summary.totalCount}</Typography>
                 <Typography variant="bodyXs" colorRole="muted">
                   Total Batches
                 </Typography>
@@ -175,9 +191,9 @@ const WMSDispatchBatchesPage = () => {
                     No Dispatch Batches
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    {statusFilter === 'draft'
-                      ? 'Create a new batch to start batching orders'
-                      : 'No batches match this filter'}
+                    {statusFilter === 'all'
+                      ? 'Nothing has been dispatched yet. Tap New to pick picked orders and send them out.'
+                      : `No batches are ${statusFilter}. Try All.`}
                   </Typography>
                 </CardContent>
               </Card>
@@ -201,6 +217,15 @@ const WMSDispatchBatchesPage = () => {
                             <Typography variant="bodyXs" colorRole="muted">
                               {batch.distributorName}
                             </Typography>
+                            {/* The date the list is ordered by. */}
+                            {(batch.dispatchedAt ?? batch.createdAt) && (
+                              <Typography variant="bodyXs" colorRole="muted" className="opacity-70">
+                                {format(
+                                  new Date(batch.dispatchedAt ?? batch.createdAt),
+                                  'dd MMM yyyy',
+                                )}
+                              </Typography>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6">

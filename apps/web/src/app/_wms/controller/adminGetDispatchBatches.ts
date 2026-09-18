@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsDispatchBatches } from '@/database/schema';
@@ -44,7 +44,15 @@ const adminGetDispatchBatches = wmsOperatorProcedure
       .from(wmsDispatchBatches)
       .leftJoin(users, eq(wmsDispatchBatches.dispatchedBy, users.id))
       .where(whereConditions)
-      .orderBy(desc(wmsDispatchBatches.createdAt))
+      /*
+        When the batch shipped, not when its row was written. These are the
+        same for a batch dispatched live, but not for one recorded after the
+        fact — a backlog entered today for goods that left in May belongs in
+        May, otherwise the list opens on the oldest shipments.
+      */
+      .orderBy(
+        sql`COALESCE(${wmsDispatchBatches.dispatchedAt}, ${wmsDispatchBatches.createdAt}) DESC`,
+      )
       .limit(limit)
       .offset(offset);
 
@@ -63,9 +71,21 @@ const adminGetDispatchBatches = wmsOperatorProcedure
       .from(wmsDispatchBatches)
       .groupBy(wmsDispatchBatches.status);
 
-    const draftCount = statusSummary.find((s) => s.status === 'draft')?.count ?? 0;
-    const pickingCount = statusSummary.find((s) => s.status === 'picking')?.count ?? 0;
-    const stagedCount = statusSummary.find((s) => s.status === 'staged')?.count ?? 0;
+    const countOf = (value: string) =>
+      statusSummary.find((s) => s.status === value)?.count ?? 0;
+
+    const draftCount = countOf('draft');
+    const pickingCount = countOf('picking');
+    const stagedCount = countOf('staged');
+    const dispatchedCount = countOf('dispatched');
+    const deliveredCount = countOf('delivered');
+
+    /*
+      Every batch, whatever its status. The page was showing the FILTERED count
+      under a "Total Batches" heading, so opening on a status with nothing in it
+      reported a total of zero while a dozen batches sat behind the other tabs.
+    */
+    const totalCount = statusSummary.reduce((sum, s) => sum + s.count, 0);
 
     return {
       batches,
@@ -78,6 +98,11 @@ const adminGetDispatchBatches = wmsOperatorProcedure
         draftCount,
         pickingCount,
         stagedCount,
+        dispatchedCount,
+        deliveredCount,
+        // Batches still needing someone to act on them.
+        openCount: draftCount + pickingCount + stagedCount,
+        totalCount,
         byStatus: statusSummary,
       },
     };
