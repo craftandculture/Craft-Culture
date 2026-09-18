@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -93,7 +93,18 @@ const getCatalogueInboundRows = async (
       prompted the change went missing from the in-transit price list. They are
       bought, in transit and sellable; only the packaging is shared.
     */
-    gt(logisticsShipmentItems.totalBottles, 0),
+    /*
+      Either column may carry the quantity.
+
+      A cased line fills `cases`; a line billed loose fills `total_bottles`.
+      Testing only one of them dropped whichever kind the other describes —
+      first cases-only hid bottle-billed wine, then bottles-only hid cased
+      wine, and the Pricing Manager, which tests neither, went on showing 51
+      in transit while this feed served 50 rows of nothing. Accept a line that
+      has either.
+    */
+    sql`(COALESCE(${logisticsShipmentItems.cases}, 0) > 0
+         OR COALESCE(${logisticsShipmentItems.totalBottles}, 0) > 0)`,
 
     // Same allowlist the Pricing Manager's inbound toggle uses. It deliberately
     // omits draft, partially_received, delivered and cancelled: once a shipment
@@ -167,10 +178,22 @@ const getCatalogueInboundRows = async (
       bottleSizeMl: sql<
         number | null
       >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
-      cases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
-      // What is actually offered. Cases times pack understates any line whose
-      // bottles were billed loose, and reports zero where none were cased.
-      bottles: sql<number>`SUM(${logisticsShipmentItems.totalBottles})::int`,
+      cases: sql<number>`SUM(COALESCE(${logisticsShipmentItems.cases}, 0))::int`,
+      /*
+        What is actually offered, from whichever column holds it.
+
+        total_bottles alone reports zero for a cased line that never had it
+        filled in; cases times pack understates a line billed loose. Prefer the
+        explicit bottle count and fall back to the cased arithmetic, so a row
+        can no longer be served with a price and no quantity.
+      */
+      bottles: sql<number>`SUM(
+        COALESCE(
+          NULLIF(${logisticsShipmentItems.totalBottles}, 0),
+          COALESCE(${logisticsShipmentItems.cases}, 0)
+            * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
+        )
+      )::int`,
       costPerBottle: sql<
         number | null
       >`MAX(${logisticsShipmentItems.productCostPerBottle})`,
