@@ -54,6 +54,9 @@ const DistributionClient = () => {
   const [outletId, setOutletId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<
+    'all' | 'attention' | 'holding' | 'empty' | 'unknown'
+  >('all');
 
   const setup = useQuery(api.distribution.admin.getSetup.queryOptions());
 
@@ -129,8 +132,27 @@ const DistributionClient = () => {
   */
   const colourOf = (id: string) =>
     ownerColour(setup.data?.owners.findIndex((row) => row.id === id) ?? -1);
-  const rows = balances.data?.rows ?? [];
+  const allRows = balances.data?.rows ?? [];
   const summary = balances.data?.summary;
+
+  /** Out less what they hold — what has left their shelf, or null if unknown */
+  const goneOf = (row: (typeof allRows)[number]) =>
+    row.heldDeclared === null ? null : row.outBottles - row.heldDeclared;
+
+  /*
+    Four questions, each a different kind of work. A hundred and sixty-seven
+    rows sorted by size buries the three that are actually wrong, and those are
+    the only ones anybody can act on today.
+  */
+  const views = {
+    attention: (row: (typeof allRows)[number]) =>
+      (goneOf(row) ?? 0) < 0 || row.packAssumed,
+    holding: (row: (typeof allRows)[number]) => (row.heldDeclared ?? 0) > 0,
+    empty: (row: (typeof allRows)[number]) => row.heldDeclared === 0,
+    unknown: (row: (typeof allRows)[number]) => row.heldDeclared === null,
+  } as const;
+
+  const rows = view === 'all' ? allRows : allRows.filter(views[view]);
 
   return (
     <div className="space-y-5">
@@ -311,16 +333,53 @@ const DistributionClient = () => {
         </div>
       </div>
 
-      <div>
+      <div className="space-y-2">
         <Typography variant="labelSm" asChild>
-          <h2 className="mb-2">Every wine</h2>
+          <h2>Every wine</h2>
         </Typography>
         <Typography variant="bodyXs" colorRole="muted" asChild>
-          <p className="mb-2 max-w-2xl">
+          <p className="max-w-2xl">
             What we invoiced out against what they say they hold. Sold and
             Billed live on the statement above.
           </p>
         </Typography>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {(
+            [
+              ['all', 'All', allRows.length, false],
+              [
+                'attention',
+                'Needs a look',
+                allRows.filter(views.attention).length,
+                true,
+              ],
+              ['holding', 'Still holding', allRows.filter(views.holding).length, false],
+              ['empty', 'Sold through', allRows.filter(views.empty).length, false],
+              [
+                'unknown',
+                'Position unknown',
+                allRows.filter(views.unknown).length,
+                false,
+              ],
+            ] as const
+          ).map(([key, label, count, urgent]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              className={`rounded-full border px-2.5 py-1 text-xs transition ${
+                view === key
+                  ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                  : urgent && count > 0
+                    ? 'border-border-primary text-text-warning hover:bg-fill-muted/30'
+                    : 'border-border-primary text-text-muted hover:bg-fill-muted/30'
+              }`}
+            >
+              {label}
+              <span className="ml-1.5 tabular-nums opacity-70">{count}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {balances.isLoading ? (
@@ -331,9 +390,17 @@ const DistributionClient = () => {
         <div className="border-border-primary rounded-xl border p-8 text-center">
           <Typography variant="bodySm" colorRole="muted" asChild>
             <p>
-              Nothing invoiced out to this outlet yet. Press{' '}
-              <strong>Read invoices</strong> to take the consignment invoices
-              from Zoho.
+              {allRows.length === 0 ? (
+                <>
+                  Nothing invoiced out to this distributor yet. Press{' '}
+                  <strong>Read invoices</strong> to take the consignment
+                  invoices from Zoho.
+                </>
+              ) : view === 'attention' ? (
+                'Nothing needs a look — every wine they hold reconciles against what we sent.'
+              ) : (
+                'No wine matches that view. Clear the filters to see the rest.'
+              )}
             </p>
           </Typography>
         </div>
@@ -387,7 +454,23 @@ const DistributionClient = () => {
                       {row.ownerName}
                     </span>
                   </td>
-                  <td className="py-2 pr-3">{row.productName}</td>
+                  <td className="py-2 pr-3">
+                    {row.productName}
+                    {/*
+                      Why this row is flagged, said here rather than left to be
+                      worked out from three columns.
+                    */}
+                    {(goneOf(row) ?? 0) < 0 ? (
+                      <Badge size="xs" colorRole="danger" className="ml-2">
+                        they hold {Math.abs(goneOf(row) ?? 0)} more than we sent
+                      </Badge>
+                    ) : null}
+                    {row.packAssumed ? (
+                      <Badge size="xs" colorRole="warning" className="ml-2">
+                        pack assumed
+                      </Badge>
+                    ) : null}
+                  </td>
                   <td className="text-text-faint py-2 pr-3 font-mono text-[11px] leading-tight">
                     <span className="block">{row.lwin18 ?? '—'}</span>
                     <span className="block">{row.outletCode ?? ''}</span>
