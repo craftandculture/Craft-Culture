@@ -178,6 +178,16 @@ const getCatalogueInboundRows = async (
         number | null
       >`MAX(${logisticsShipmentItems.landedCostPerBottle})`,
       eta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
+      /*
+        Already on our floor, or still on the move?
+
+        at_warehouse means the pallet is at goods-in awaiting booking in. It is
+        not in wms_stock so it belongs on this feed, but calling it "arriving in
+        ~7 days" is wrong when it is already here. True only when every shipment
+        behind the row is at the warehouse — a wine arriving on two shipments is
+        still partly in transit.
+      */
+      atWarehouse: sql<boolean>`BOOL_AND(${logisticsShipments.status} = 'at_warehouse')`,
       category: CATEGORY_CASE,
       owner: sql<string | null>`MAX(${partners.businessName})`,
       importPrice: sql<
@@ -309,6 +319,7 @@ const getCatalogueInboundRows = async (
       bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
       availableCases: r.cases,
       availableBottles: r.bottles,
+      stage: r.atWarehouse ? ('at_warehouse' as const) : ('in_transit' as const),
       ibPerBottle: round2(ib),
       ibPerCase: round2(ib * cc),
       pcPerBottle: round2(pc),

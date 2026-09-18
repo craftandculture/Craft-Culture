@@ -21,4 +21,29 @@ const INBOUND_SHIPMENT_STATUSES = [
   'at_warehouse',
 ] as const;
 
+/**
+ * Of those, the ones still genuinely on the move.
+ *
+ * `at_warehouse` means the pallet is on our floor at goods-in, waiting to be
+ * booked in. It is inbound — it is not in wms_stock, so it still has to be
+ * counted somewhere — but telling a customer it is "arriving in ~7 days" is
+ * wrong when it is already here, and telling them nothing is worse: until it
+ * is received it appears on no list at all and falls between the two.
+ *
+ * Kept as a separate list rather than removed from the one above, because the
+ * stock counts, owner totals and LPO preview all want everything not yet in
+ * wms_stock. Only the customer-facing in-transit view wants this narrower cut.
+ */
+export const IN_TRANSIT_SHIPMENT_STATUSES = [
+  'booked',
+  'picked_up',
+  'in_transit',
+  'arrived_port',
+  'customs_clearance',
+  'cleared',
+] as const;
+
+/** At our warehouse, not yet booked in — neither in transit nor sellable. */
+export const AT_WAREHOUSE_STATUSES = ['at_warehouse'] as const;
+
 export default INBOUND_SHIPMENT_STATUSES;
