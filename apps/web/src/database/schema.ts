@@ -6550,3 +6550,223 @@ export const salesQuotes = pgTable(
 
 export type SalesQuote = typeof salesQuotes.$inferSelect;
 export type NewSalesQuote = typeof salesQuotes.$inferInsert;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONSIGNMENT
+   ───────────────────────────────────────────────────────────────────────────
+   Wine we own, or hold for an owner, placed with a retail outlet on
+   consignment. Four positions per wine: what went Out to the outlet, what they
+   still Hold, what they Sold, and what the owner has Billed us and been paid.
+
+   The unit that carries the rules is neither the owner nor the outlet but the
+   pairing — Crurated are open-ended at City Drinks and 90 days at The Bottle
+   Store, so terms cannot belong to either alone. That pairing is an
+   arrangement, and every movement hangs off one.
+
+   Deliberately separate from `tri_*`, which reconciles Crurated's warehouse
+   stock and stays in service until this is proven against real months.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** A movement is one line of one document, in bottles */
+export const consMovementKind = pgEnum('cons_movement_kind', [
+  /** Invoiced out to the outlet */
+  'out',
+  /** The outlet sold it on to a consumer */
+  'sold',
+  /** The owner invoiced us for wine that sold */
+  'billed',
+  /** Credited back — damaged stock, a correction. No UI yet; see CONSIGNMENT.md */
+  'credit',
+]);
+
+export const consOutlets = pgTable('cons_outlets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  partnerId: uuid('partner_id').references(() => partners.id, {
+    onDelete: 'set null',
+  }),
+  /**
+   * How their stock position reaches us: `api` or `upload`.
+   *
+   * City Drinks publish a live feed; others send a spreadsheet. The ledger is
+   * identical either way — only the connector differs.
+   */
+  connector: text('connector').notNull().default('upload'),
+  apiUrl: text('api_url'),
+  /**
+   * The environment variable holding the token, never the token itself.
+   * A credential in a database row is a credential in every backup of it.
+   */
+  apiTokenEnv: text('api_token_env'),
+  /** What their figures count. City Drinks count bottles; we invoice cases. */
+  units: text('units').notNull().default('bottle'),
+  /** Which code vocabulary their files speak, for alias matching */
+  aliasSource: text('alias_source').notNull().default('city_drinks'),
+  /** Matched against the Zoho customer name when reading our invoices to them */
+  zohoCustomerMatch: text('zoho_customer_match'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  ...timestamps,
+});
+
+export type ConsOutlet = typeof consOutlets.$inferSelect;
+
+export const consOwners = pgTable('cons_owners', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  partnerId: uuid('partner_id').references(() => partners.id, {
+    onDelete: 'set null',
+  }),
+  /**
+   * The tag that names this owner on a document — CC, CRU, CULT, CRURATED, RARE.
+   *
+   * Unique, so resolving a tag to an owner is a join rather than a lookup table
+   * copied into three places, which is how the old tool came to have five
+   * disagreeing answers to "whose wine is this?".
+   */
+  consignmentTag: text('consignment_tag').unique(),
+  /** Other spellings seen on documents, so one owner is not two */
+  ownerAliases: text('owner_aliases').array(),
+  /** Matched against `wms_stock.owner_name` — every owner's wine lands with us first */
+  wmsOwnerMatch: text('wms_owner_match'),
+  /** Takes lines no document attributed. Exactly one owner should. */
+  takesUnattributed: boolean('takes_unattributed').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  ...timestamps,
+});
+
+export type ConsOwner = typeof consOwners.$inferSelect;
+
+/**
+ * The consignment agreement: this owner's wine, at this outlet, on these terms.
+ *
+ * Terms live here because they belong to neither party alone — Crurated are
+ * open-ended at City Drinks and 90 days at The Bottle Store.
+ */
+export const consArrangements = pgTable(
+  'cons_arrangements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .references(() => consOwners.id, { onDelete: 'cascade' })
+      .notNull(),
+    outletId: uuid('outlet_id')
+      .references(() => consOutlets.id, { onDelete: 'cascade' })
+      .notNull(),
+    /**
+     * Days from invoice until payment falls due, or month end if sold before.
+     * Null is open-ended: settle when it sells, and never age it.
+     */
+    termsDays: integer('terms_days'),
+    startedOn: date('started_on'),
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cons_arrangements_owner_outlet_unique').on(
+      table.ownerId,
+      table.outletId,
+    ),
+    index('cons_arrangements_outlet_idx').on(table.outletId),
+  ],
+);
+
+export type ConsArrangement = typeof consArrangements.$inferSelect;
+
+export const consMovements = pgTable(
+  'cons_movements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    arrangementId: uuid('arrangement_id')
+      .references(() => consArrangements.id, { onDelete: 'cascade' })
+      .notNull(),
+    kind: consMovementKind('kind').notNull(),
+    /** The wine's identity. Names are for reading, LWIN is for matching. */
+    lwin18: text('lwin18'),
+    productName: text('product_name').notNull(),
+    /** The outlet's own code for it, e.g. City Drinks' CDR… */
+    outletCode: text('outlet_code'),
+    /**
+     * Bottles, always — `sourceQty * pack`, computed once at ingestion.
+     *
+     * The outlet counts bottles and we invoice cases, so pack size is the only
+     * multiplier in the system and the quietest way to be wrong by six.
+     */
+    bottles: doublePrecision('bottles').notNull().default(0),
+    /** What the document actually said, kept so a misread pack is a correction */
+    sourceQty: doublePrecision('source_qty'),
+    sourceUnit: text('source_unit'),
+    pack: integer('pack'),
+    /** True when the pack was inferred rather than stated on the document */
+    packAssumed: boolean('pack_assumed').notNull().default(false),
+    /** Per the unit sold, as the document states it — never per bottle */
+    unitPrice: doublePrecision('unit_price'),
+    currency: text('currency'),
+    docRef: text('doc_ref'),
+    docDate: date('doc_date'),
+    /** Where the line came from: `zoho-invoices`, `cd-api`, an upload id */
+    source: text('source'),
+    raw: jsonb('raw'),
+    ...timestamps,
+  },
+  (table) => [
+    index('cons_movements_arrangement_idx').on(table.arrangementId),
+    index('cons_movements_kind_date_idx').on(table.kind, table.docDate),
+    index('cons_movements_lwin18_idx').on(table.lwin18),
+    index('cons_movements_outlet_code_idx').on(table.outletCode),
+  ],
+);
+
+export type ConsMovement = typeof consMovements.$inferSelect;
+
+/**
+ * What an outlet holds, as at a moment.
+ *
+ * A position, not an event — which is why it is not a movement. Snapshots are
+ * also how Sold is derived: the difference between two of them, less what we
+ * delivered in between. The feed carries no history, so a boundary missed is a
+ * boundary gone; the job runs daily rather than monthly for that reason.
+ */
+export const consSnapshots = pgTable(
+  'cons_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    outletId: uuid('outlet_id')
+      .references(() => consOutlets.id, { onDelete: 'cascade' })
+      .notNull(),
+    takenAt: timestamp('taken_at', { mode: 'date' }).notNull(),
+    outletCode: text('outlet_code').notNull(),
+    ourCode: text('our_code'),
+    lwin18: text('lwin18'),
+    productName: text('product_name'),
+    bottlesOnHand: doublePrecision('bottles_on_hand').notNull().default(0),
+    bottlesInTransit: doublePrecision('bottles_in_transit').notNull().default(0),
+    /**
+     * `consigned` or `bought`.
+     *
+     * The same wine sits at City Drinks under both at once — 50 codes exist as
+     * CCW101 and CCW101CON. Keying on the wine alone would merge their own
+     * stock into ours, which is the check this whole module exists to make.
+     * A line moving from consigned to bought is a purchase, not a sale.
+     */
+    regime: text('regime').notNull().default('consigned'),
+    soldLast30d: doublePrecision('sold_last_30d'),
+    soldLast90d: doublePrecision('sold_last_90d'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cons_snapshots_outlet_taken_code_unique').on(
+      table.outletId,
+      table.takenAt,
+      table.outletCode,
+    ),
+    index('cons_snapshots_outlet_taken_idx').on(table.outletId, table.takenAt),
+    index('cons_snapshots_our_code_idx').on(table.ourCode),
+  ],
+);
+
+export type ConsSnapshot = typeof consSnapshots.$inferSelect;

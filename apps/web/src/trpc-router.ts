@@ -4,6 +4,7 @@ import usersRouter from '@/app/_auth/router';
 import cellarRouter from '@/app/_cellar/router';
 import commissionsRouter from '@/app/_commissions/router';
 import consignmentRouter from '@/app/_consignment/router';
+import distributionRouter from '@/app/_distribution/router';
 import logisticsRouter from '@/app/_logistics/router';
 import lpoRouter from '@/app/_lpo/router';
 import lwinRouter from '@/app/_lwin/router';
@@ -52,6 +53,7 @@ export const appRouter = createTRPCRouter({
   warehouse: warehouseRouter,
   cellar: cellarRouter,
   consignment: consignmentRouter,
+  distribution: distributionRouter,
   wms: wmsRouter,
   settings: settingsRouter,
   zohoImport: zohoImportRouter,

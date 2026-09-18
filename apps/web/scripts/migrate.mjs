@@ -1702,6 +1702,187 @@ const runMigrations = async () => {
     );
     console.log('✅ PCO → Zoho sales order link ready');
 
+
+    /* ───────────────────────── CONSIGNMENT ─────────────────────────────
+       Wine placed with a retail outlet on consignment. Separate from tri_*,
+       which keeps running for Crurated until this is proven.
+
+       The unit carrying the rules is the arrangement — this owner's wine, at
+       this outlet, on these terms — because Crurated are open-ended at City
+       Drinks and 90 days at The Bottle Store.
+    ─────────────────────────────────────────────────────────────────────── */
+    await createEnum('cons_movement_kind', [
+      'out',
+      'sold',
+      'billed',
+      'credit',
+    ]);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_outlets" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL,
+        "slug" text NOT NULL UNIQUE,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "connector" text NOT NULL DEFAULT 'upload',
+        "api_url" text,
+        "api_token_env" text,
+        "units" text NOT NULL DEFAULT 'bottle',
+        "alias_source" text NOT NULL DEFAULT 'city_drinks',
+        "zoho_customer_match" text,
+        "is_active" boolean NOT NULL DEFAULT true,
+        "notes" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_owners" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL,
+        "slug" text NOT NULL UNIQUE,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "consignment_tag" text UNIQUE,
+        "owner_aliases" text[],
+        "wms_owner_match" text,
+        "takes_unattributed" boolean NOT NULL DEFAULT false,
+        "is_active" boolean NOT NULL DEFAULT true,
+        "notes" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_arrangements" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "cons_owners"("id") ON DELETE CASCADE,
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "terms_days" integer,
+        "started_on" date,
+        "is_active" boolean NOT NULL DEFAULT true,
+        "notes" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_arrangements_owner_outlet_unique" ON "cons_arrangements"("owner_id","outlet_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_arrangements_outlet_idx" ON "cons_arrangements"("outlet_id")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_movements" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "arrangement_id" uuid NOT NULL REFERENCES "cons_arrangements"("id") ON DELETE CASCADE,
+        "kind" "cons_movement_kind" NOT NULL,
+        "lwin18" text,
+        "product_name" text NOT NULL,
+        "outlet_code" text,
+        "bottles" double precision NOT NULL DEFAULT 0,
+        "source_qty" double precision,
+        "source_unit" text,
+        "pack" integer,
+        "pack_assumed" boolean NOT NULL DEFAULT false,
+        "unit_price" double precision,
+        "currency" text,
+        "doc_ref" text,
+        "doc_date" date,
+        "source" text,
+        "raw" jsonb,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    for (const [name, cols] of [
+      ['cons_movements_arrangement_idx', '"arrangement_id"'],
+      ['cons_movements_kind_date_idx', '"kind","doc_date"'],
+      ['cons_movements_lwin18_idx', '"lwin18"'],
+      ['cons_movements_outlet_code_idx', '"outlet_code"'],
+    ]) {
+      await client.unsafe(
+        `CREATE INDEX IF NOT EXISTS "${name}" ON "cons_movements"(${cols})`,
+      );
+    }
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_snapshots" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "taken_at" timestamp NOT NULL,
+        "outlet_code" text NOT NULL,
+        "our_code" text,
+        "lwin18" text,
+        "product_name" text,
+        "bottles_on_hand" double precision NOT NULL DEFAULT 0,
+        "bottles_in_transit" double precision NOT NULL DEFAULT 0,
+        "regime" text NOT NULL DEFAULT 'consigned',
+        "sold_last_30d" double precision,
+        "sold_last_90d" double precision,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_snapshots_outlet_taken_code_unique" ON "cons_snapshots"("outlet_id","taken_at","outlet_code")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_snapshots_outlet_taken_idx" ON "cons_snapshots"("outlet_id","taken_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_snapshots_our_code_idx" ON "cons_snapshots"("our_code")`,
+    );
+    console.log('✅ consignment tables ready');
+
+    /*
+      Seed the outlets and owners we already trade with, and the arrangements
+      between them. Terms per arrangement, not per party: Crurated are
+      open-ended at City Drinks and 90 days everywhere else.
+
+      A data fix rather than fatal DDL — a seed that fails should not hold back
+      an unrelated deploy, and every row is ON CONFLICT DO NOTHING so it is
+      safe to re-run and never overwrites a value someone has since edited.
+    */
+    await dataFix('consignment outlets, owners and arrangements', async () => {
+      await client.unsafe(`
+        INSERT INTO "cons_outlets"
+          ("name","slug","connector","api_url","api_token_env","units","alias_source","zoho_customer_match")
+        VALUES
+          ('City Drinks','city-drinks','api',
+           'https://craftculture.citydrinks.com/api/stock',
+           'CITYDRINKS_API_TOKEN','bottle','city_drinks','CD General'),
+          ('The Bottle Store','the-bottle-store','upload',
+           NULL,NULL,'bottle','other','Bottle Store')
+        ON CONFLICT ("slug") DO NOTHING
+      `);
+
+      await client.unsafe(`
+        INSERT INTO "cons_owners"
+          ("name","slug","consignment_tag","wms_owner_match","takes_unattributed")
+        VALUES
+          ('Craft & Culture','craft-culture','CC','CRAFT',false),
+          ('Cru Wine','cru-wine','CRU','CRU WINE',false),
+          ('Cult Wines','cult-wines','CULT','CULT',false),
+          ('Crurated','crurated','CRURATED','CRURATED',true),
+          ('Rare','rare','RARE','RARE',false)
+        ON CONFLICT ("slug") DO NOTHING
+      `);
+
+      await client.unsafe(`
+        INSERT INTO "cons_arrangements" ("owner_id","outlet_id","terms_days")
+        SELECT ow."id", ou."id",
+               CASE WHEN ow."slug" = 'crurated' AND ou."slug" = 'city-drinks'
+                    THEN NULL ELSE 90 END
+        FROM "cons_owners" ow
+        CROSS JOIN "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks'
+        ON CONFLICT ("owner_id","outlet_id") DO NOTHING
+      `);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {
