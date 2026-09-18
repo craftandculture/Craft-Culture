@@ -119,19 +119,21 @@ const DistributionClient = () => {
   });
 
   const outlet = setup.data?.outlets.find((row) => row.id === outletId);
+  /** Narrowed to one owner or a search — so the totals are a slice, not the whole */
+  const isFiltered = Boolean(ownerId || search.trim());
   const rows = balances.data?.rows ?? [];
   const summary = balances.data?.summary;
 
   return (
     <div className="space-y-5">
-      <div className="border-border-primary bg-fill-muted/20 flex flex-wrap items-end justify-between gap-3 rounded-xl border p-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <div className="border-border-primary bg-fill-muted/20 flex flex-col gap-3 rounded-xl border p-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-end">
           <label className="flex flex-col gap-1">
             <span className="text-text-muted text-xs">Outlet</span>
             <select
               value={outletId ?? ''}
               onChange={(event) => setOutletId(event.target.value)}
-              className="border-border-primary bg-fill-primary text-text-primary min-h-9 rounded-md border px-2 text-sm"
+              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-auto"
             >
               {setup.data?.outlets.map((row) => (
                 <option key={row.id} value={row.id}>
@@ -145,7 +147,7 @@ const DistributionClient = () => {
             <select
               value={ownerId}
               onChange={(event) => setOwnerId(event.target.value)}
-              className="border-border-primary bg-fill-primary text-text-primary min-h-9 rounded-md border px-2 text-sm"
+              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-auto"
             >
               <option value="">Every owner</option>
               {setup.data?.owners.map((row) => (
@@ -162,11 +164,11 @@ const DistributionClient = () => {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Name or LWIN…"
-              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-56 rounded-md border px-2 text-sm"
+              className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-56"
             />
           </label>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Button
             colorRole="muted"
             size="sm"
@@ -187,35 +189,70 @@ const DistributionClient = () => {
       </div>
 
       {outlet ? (
-        <div className="border-border-primary flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border px-4 py-3">
-          <span className="flex items-center gap-2">
-            <Typography variant="labelSm">{outlet.name}</Typography>
-            <Badge size="xs" colorRole={outlet.connector === 'api' ? 'success' : 'muted'}>
-              {outlet.connector === 'api' ? 'live feed' : 'upload'}
-            </Badge>
-          </span>
-          {[
-            ['Position read', formatWhen(outlet.lastSnapshotAt)],
-            ['Consigned lines', String(outlet.consignedLines)],
-            ['They hold', `${formatBottles(outlet.consignedBottles)} btl`],
-            ['We sent', summary ? `${formatBottles(summary.outBottles)} btl` : '—'],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <Typography variant="bodyXs" colorRole="muted" asChild>
-                <p>{label}</p>
-              </Typography>
-              <Typography variant="labelMd" asChild>
-                <p className="tabular-nums">{value}</p>
-              </Typography>
+        <div className="border-border-primary space-y-3 rounded-xl border px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <span className="flex items-center gap-2">
+              <Typography variant="labelSm">{outlet.name}</Typography>
+              <Badge
+                size="xs"
+                colorRole={outlet.connector === 'api' ? 'success' : 'muted'}
+              >
+                {outlet.connector === 'api' ? 'live feed' : 'upload'}
+              </Badge>
+              {/*
+                A filtered total and an outlet total look identical as a
+                number, and reading one as the other is how someone concludes
+                stock has gone missing.
+              */}
+              {isFiltered ? (
+                <Badge size="xs" colorRole="warning">
+                  filtered
+                </Badge>
+              ) : null}
+            </span>
+            {[
+              ['Position read', formatWhen(outlet.lastSnapshotAt)],
+              ['Their consigned lines', String(outlet.consignedLines)],
+              ['They hold, all owners', `${formatBottles(outlet.consignedBottles)} btl`],
+              [
+                isFiltered ? 'Out, this selection' : 'Out, all owners',
+                summary ? `${formatBottles(summary.outBottles)} btl` : '—',
+              ],
+              [
+                isFiltered ? 'Held, this selection' : 'Held, matched',
+                summary ? `${formatBottles(summary.heldDeclared)} btl` : '—',
+              ],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <Typography variant="bodyXs" colorRole="muted" asChild>
+                  <p>{label}</p>
+                </Typography>
+                <Typography variant="labelMd" asChild>
+                  <p className="tabular-nums">{value}</p>
+                </Typography>
+              </div>
+            ))}
+          </div>
+
+          {outlet.unmatchedAtOutlet > 0 || (summary?.unmatched ?? 0) > 0 ? (
+            <div className="border-border-primary flex flex-wrap gap-x-6 gap-y-1 border-t pt-2">
+              {outlet.unmatchedAtOutlet > 0 ? (
+                <Typography variant="bodyXs" colorRole="warning" asChild>
+                  <p>
+                    {outlet.unmatchedAtOutlet} wines they hold carry no code of
+                    ours — their bottles cannot reach an owner.
+                  </p>
+                </Typography>
+              ) : null}
+              {(summary?.unmatched ?? 0) > 0 ? (
+                <Typography variant="bodyXs" colorRole="muted" asChild>
+                  <p>
+                    {summary?.unmatched} of ours are not coded at their end, so
+                    their position is unknown rather than nil.
+                  </p>
+                </Typography>
+              ) : null}
             </div>
-          ))}
-          {outlet.unmatchedAtOutlet > 0 ? (
-            <Typography variant="bodyXs" colorRole="warning" asChild>
-              <p className="max-w-sm">
-                {outlet.unmatchedAtOutlet} wines they hold carry no code of ours,
-                so their bottles cannot be attributed to an owner.
-              </p>
-            </Typography>
           ) : null}
         </div>
       ) : null}
@@ -243,30 +280,45 @@ const DistributionClient = () => {
           </Typography>
         </div>
       ) : (
-        <div className="border-border-primary overflow-x-auto rounded-xl border">
+        <div className="border-border-primary max-h-[32rem] overflow-auto rounded-xl border">
           <table className="w-full min-w-[54rem] text-left text-sm">
-            <thead className="text-text-muted border-border-primary border-b">
+            {/* Sticky, because the columns stop meaning anything once scrolled past */}
+            <thead className="text-text-muted bg-fill-primary border-border-primary sticky top-0 z-10 border-b">
               <tr>
-                <th className="py-2 pl-4 pr-3 font-medium">Owner</th>
-                <th className="py-2 pr-3 font-medium">Wine</th>
-                <th className="py-2 pr-3 font-medium">Codes</th>
-                <th className="py-2 pr-3 text-right font-medium">Pack</th>
-                <th className="border-border-primary border-l py-2 pr-3 text-right font-medium">
+                <th className="bg-fill-primary py-2 pl-4 pr-3 font-medium">Owner</th>
+                <th className="bg-fill-primary py-2 pr-3 font-medium">Wine</th>
+                <th className="bg-fill-primary py-2 pr-3 font-medium">Codes</th>
+                <th className="bg-fill-primary py-2 pr-3 text-right font-medium">
+                  Pack
+                </th>
+                <th className="border-border-primary bg-fill-primary border-l py-2 pr-3 text-right font-medium">
                   Out
                 </th>
-                <th className="py-2 pr-3 text-right font-medium">Value</th>
-                <th className="border-border-primary border-l py-2 pr-4 text-right font-medium">
+                <th className="bg-fill-primary py-2 pr-3 text-right font-medium">
+                  Value
+                </th>
+                <th className="border-border-primary bg-fill-primary border-l py-2 pr-4 text-right font-medium">
                   They hold
                 </th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <tr
                   key={`${row.ownerId}-${row.lwin18 ?? row.productName}`}
-                  className="border-border-primary border-b last:border-0"
+                  className="border-border-primary hover:bg-fill-muted/20 border-b last:border-0"
                 >
-                  <td className="py-2 pl-4 pr-3">{row.ownerName}</td>
+                  {/* Repeating the owner on every line is noise; a change of
+                      owner is the thing worth seeing */}
+                  <td className="py-2 pl-4 pr-3">
+                    {index === 0 || rows[index - 1]?.ownerId !== row.ownerId ? (
+                      row.ownerName
+                    ) : (
+                      <span className="text-text-faint" aria-hidden="true">
+                        ·
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-3">{row.productName}</td>
                   <td className="text-text-muted py-2 pr-3 font-mono text-xs">
                     <span className="block">{row.lwin18 ?? '—'}</span>
@@ -296,7 +348,12 @@ const DistributionClient = () => {
                   */}
                   <td className="border-border-primary border-l py-2 pr-4 text-right tabular-nums">
                     {row.heldDeclared === null ? (
-                      <span className="text-text-muted">not coded</span>
+                      <span
+                        className="text-text-muted"
+                        title="They have no code of ours for this wine, so their position is unknown — not nil."
+                      >
+                        unknown
+                      </span>
                     ) : (
                       formatBottles(row.heldDeclared)
                     )}
@@ -309,20 +366,21 @@ const DistributionClient = () => {
       )}
 
       {summary && summary.wines > 0 ? (
-        <Typography variant="bodyXs" colorRole="muted" asChild>
-          <p>
-            {summary.wines} wines · {formatBottles(summary.outBottles)} bottles
-            out · {formatBottles(summary.heldDeclared)} still with the outlet
-            {summary.unmatched > 0
-              ? ` · ${summary.unmatched} not coded at their end`
-              : ''}
-            {summary.packAssumed > 0
-              ? ` · ${summary.packAssumed} with an assumed pack`
-              : ''}
-            . Sold and Billed arrive once there are two snapshot boundaries to
-            difference, or the month&rsquo;s report.
-          </p>
-        </Typography>
+        <div className="text-text-muted flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+          <span className="tabular-nums">
+            {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
+            {formatBottles(summary.heldDeclared)} still with them
+          </span>
+          {summary.packAssumed > 0 ? (
+            <span className="text-text-warning">
+              {summary.packAssumed} with an assumed pack
+            </span>
+          ) : null}
+          <span>
+            Sold and Billed arrive with the month&rsquo;s report, or once two
+            snapshots can be differenced.
+          </span>
+        </div>
       ) : null}
     </div>
   );
