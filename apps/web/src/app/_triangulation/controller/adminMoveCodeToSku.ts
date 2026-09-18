@@ -74,10 +74,15 @@ const adminMoveCodeToSku = adminProcedure
 
     for (const source of targets) {
       await client`
+        -- The programme comes from the SKU rather than the column default.
+        -- Defaulted, every alias landed in Crurated's namespace whatever
+        -- client it belonged to, and the ON CONFLICT below then repointed
+        -- Crurated's alias at the other client's SKU.
         INSERT INTO tri_sku_aliases (
-          sku_id, source, alias_code, normalized_code, created_by
+          programme_id, sku_id, source, alias_code, normalized_code, created_by
         )
         VALUES (
+          (SELECT programme_id FROM tri_skus WHERE id = ${skuId}),
           ${skuId}, ${source.aliasSource}, ${source.rawCode},
           ${normalizedCode}, ${ctx.user.id}
         )

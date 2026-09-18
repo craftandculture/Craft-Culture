@@ -6082,6 +6082,14 @@ export const triImportKind = pgEnum('tri_import_kind', [
   'cc_count',
   'cd_sales',
   'cd_count',
+  /**
+   * What the wine's owner has invoiced us for.
+   *
+   * The database has carried this since migrate.mjs added it; the declaration
+   * here did not, so the two had drifted. A `drizzle-kit generate` would have
+   * tried to recreate the type without it.
+   */
+  'owner_invoice',
 ]);
 
 export const triImportStatus = pgEnum('tri_import_status', ['draft', 'committed']);

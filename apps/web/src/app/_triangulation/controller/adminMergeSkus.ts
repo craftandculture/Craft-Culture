@@ -36,13 +36,54 @@ const adminMergeSkus = adminProcedure
       });
     }
 
-    const skus = await client<{ id: string; wCode: string }[]>`
-      SELECT id, w_code AS "wCode" FROM tri_skus
+    const skus = await client<
+      {
+        id: string;
+        wCode: string | null;
+        lwin18: string | null;
+        programmeId: string;
+        ownerName: string | null;
+      }[]
+    >`
+      SELECT id, w_code AS "wCode", lwin18,
+             programme_id AS "programmeId", owner_name AS "ownerName"
+      FROM tri_skus
       WHERE id IN (${fromSkuId}, ${intoSkuId})
     `;
 
     if (skus.length !== 2) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'SKU not found' });
+    }
+
+    const from = skus.find((sku) => sku.id === fromSkuId)!;
+    const into = skus.find((sku) => sku.id === intoSkuId)!;
+
+    /*
+      Two clients' wines are not the same wine.
+
+      Nothing compared programmes, so a merge could fold one client's registry
+      entry into another's — taking its aliases and its import lines with it,
+      and quietly moving bottles between owners. Duplicates within one client
+      are the case this tool is for.
+    */
+    if (from.programmeId !== into.programmeId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'These wines belong to different clients. Merging would move one client’s bottles onto another’s registry — set the owner instead.',
+      });
+    }
+
+    /*
+      A LWIN is the wine's identity. Two different ones are two different
+      wines however alike the names read, and merging them is unrecoverable
+      once the aliases and lines have moved.
+    */
+    if (from.lwin18 && into.lwin18 && from.lwin18 !== into.lwin18) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `These carry different LWINs (${into.lwin18} and ${from.lwin18}), so they are different wines. Correct the wrong one first.`,
+      });
     }
 
     // Captured before the move, since afterwards nothing points at the source.
@@ -51,6 +92,24 @@ const adminMergeSkus = adminProcedure
       FROM tri_imports i
       JOIN tri_import_lines l ON l.import_id = i.id
       WHERE l.sku_id IN (${fromSkuId}, ${intoSkuId})
+    `;
+
+    /*
+      An alias the survivor already holds cannot be moved onto it — the key is
+      (programme_id, source, normalized_code) and the UPDATE would violate it,
+      failing the whole merge. The duplicate's copy is dropped instead: it
+      points at the same code for the same client, so nothing is lost.
+    */
+    await client`
+      DELETE FROM tri_sku_aliases a
+      WHERE a.sku_id = ${fromSkuId}
+        AND EXISTS (
+          SELECT 1 FROM tri_sku_aliases b
+          WHERE b.sku_id = ${intoSkuId}
+            AND b.programme_id = a.programme_id
+            AND b.source = a.source
+            AND b.normalized_code = a.normalized_code
+        )
     `;
 
     const [aliases] = await client<{ moved: number }[]>`
@@ -69,6 +128,19 @@ const adminMergeSkus = adminProcedure
         RETURNING id
       )
       SELECT COUNT(*)::int AS moved FROM moved
+    `;
+
+    /*
+      The survivor inherits anything it is missing. A duplicate often carries
+      the LWIN or the owner that the row being kept never had, and dropping it
+      would throw away the better record of the two.
+    */
+    await client`
+      UPDATE tri_skus SET
+        lwin18 = COALESCE(lwin18, ${from.lwin18}),
+        owner_name = COALESCE(owner_name, ${from.ownerName}),
+        updated_at = NOW()
+      WHERE id = ${intoSkuId}
     `;
 
     await client`DELETE FROM tri_skus WHERE id = ${fromSkuId}`;

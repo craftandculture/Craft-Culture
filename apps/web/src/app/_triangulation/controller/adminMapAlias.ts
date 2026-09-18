@@ -32,8 +32,18 @@ const adminMapAlias = adminProcedure
       });
     }
 
-    const [sku] = await client<{ id: string }[]>`
-      SELECT id FROM tri_skus WHERE id = ${skuId} LIMIT 1
+    /*
+      The programme is taken from the SKU, not left to the column default.
+
+      Without it every alias was written into Crurated's namespace whatever
+      client it belonged to, and the ON CONFLICT below — keyed on
+      (programme_id, source, normalized_code) — then repointed Crurated's
+      existing alias at the other client's SKU. One client's mapping silently
+      rewrote another's.
+    */
+    const [sku] = await client<{ id: string; programmeId: string }[]>`
+      SELECT id, programme_id AS "programmeId"
+      FROM tri_skus WHERE id = ${skuId} LIMIT 1
     `;
 
     if (!sku) {
@@ -42,11 +52,12 @@ const adminMapAlias = adminProcedure
 
     await client`
       INSERT INTO tri_sku_aliases (
-        sku_id, source, alias_code, normalized_code, alias_name, created_by
+        programme_id, sku_id, source, alias_code, normalized_code,
+        alias_name, created_by
       )
       VALUES (
-        ${skuId}, ${source}, ${aliasCode.trim()}, ${normalizedCode},
-        ${aliasName ?? null}, ${ctx.user.id}
+        ${sku.programmeId}, ${skuId}, ${source}, ${aliasCode.trim()},
+        ${normalizedCode}, ${aliasName ?? null}, ${ctx.user.id}
       )
       ON CONFLICT (programme_id, source, normalized_code) DO UPDATE SET
         sku_id = ${skuId},

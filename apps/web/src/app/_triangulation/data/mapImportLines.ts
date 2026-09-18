@@ -48,6 +48,10 @@ const mapImportLines = async (importId: string, source: TriAliasSource) => {
         WHERE s2.lwin18 IS NOT NULL
           AND UPPER(REGEXP_REPLACE(s2.lwin18, '[^A-Za-z0-9]', '', 'g'))
               = l2.normalized_code
+        -- Ordered, because a LIMIT without one lets the plan decide which
+        -- duplicate wins. The same line then maps to a different SKU between
+        -- runs, which reads as figures moving on their own.
+        ORDER BY s2.id
         LIMIT 1
       ) w ON TRUE
       WHERE l2.import_id = ${importId}

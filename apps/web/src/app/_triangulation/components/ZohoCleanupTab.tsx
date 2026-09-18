@@ -214,8 +214,17 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
         forceRefreshOrderNumbers: orderNumbers,
       });
 
+      /*
+        Rebuilt from the invoices, not the sales orders.
+
+        Both feeds wrote Sold to City Drinks and both deleted the other's
+        import, so the figure was decided by whichever ran last — and this
+        button, fired after correcting a Zoho item, was the one that ran last
+        most often. The invoice feed is the survivor: an issued invoice is the
+        sale, and reading orders lost every legacy sale that never had one.
+      */
       const result =
-        await trpcClient.triangulation.admin.syncSalesFromZoho.mutate({
+        await trpcClient.triangulation.admin.syncSalesFromInvoices.mutate({
           programmeId,
           customerMatch: 'CD General',
         });

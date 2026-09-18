@@ -226,10 +226,14 @@ const adminAutoMapSuggestions = adminProcedure
 
         if (!dryRun) {
           await client`
+            -- Programme from the SKU, never the column default: see
+            -- adminMapAlias for what defaulting cost.
             INSERT INTO tri_sku_aliases (
-              sku_id, source, alias_code, normalized_code, alias_name, created_by
+              programme_id, sku_id, source, alias_code, normalized_code,
+              alias_name, created_by
             )
             VALUES (
+              (SELECT programme_id FROM tri_skus WHERE id = ${certain.sku.id}),
               ${certain.sku.id}, ${candidate.aliasSource},
               ${candidate.rawCode?.trim() || candidate.normalizedCode},
               ${candidate.normalizedCode}, ${candidate.rawDescription},
@@ -298,10 +302,13 @@ const adminAutoMapSuggestions = adminProcedure
       }
 
       await client`
+        -- Programme from the SKU, never the column default.
         INSERT INTO tri_sku_aliases (
-          sku_id, source, alias_code, normalized_code, alias_name, created_by
+          programme_id, sku_id, source, alias_code, normalized_code,
+          alias_name, created_by
         )
         VALUES (
+          (SELECT programme_id FROM tri_skus WHERE id = ${bestSkuId}),
           ${bestSkuId}, ${candidate.aliasSource},
           ${candidate.rawCode?.trim() || candidate.normalizedCode},
           ${candidate.normalizedCode}, ${candidate.rawDescription}, ${ctx.user.id}

@@ -283,61 +283,6 @@ const ImportsTab = ({
     onError: (error) => toast.error(error.message),
   });
 
-  const syncZoho = useMutation({
-    ...api.triangulation.admin.syncSalesFromZoho.mutationOptions(),
-    onSuccess: async (result) => {
-      report({
-        feed: 'Zoho sales to City Drinks',
-        tone:
-          result.unknownPack > 0 || result.skippedOrders.length > 0
-            ? 'warn'
-            : 'ok',
-        summary: `${result.orderLines} lines from ${result.invoices.length} invoices · ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles`,
-        detail: [
-          result.unknownPack > 0
-            ? `${result.unknownPack} lines state no pack size, counted as single bottles`
-            : null,
-          result.packFromSibling > 0
-            ? `${result.packFromSibling} lines took their pack from the same wine's other invoices`
-            : null,
-          result.packDisagreements > 0
-            ? `${result.packDisagreements} where the SKU's pack contradicts the printed format`
-            : null,
-          result.skippedOrders.length > 0
-            ? `Not counted as sold, no invoice on the order: ${result.skippedOrders.join(', ')}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      });
-
-      toast.success(
-        `Synced ${result.orderLines} lines from ${result.invoices.length} invoices — ${Math.round(result.totalBottles).toLocaleString('en-GB')} bottles` +
-          (result.unknownPack > 0
-            ? `; ${result.unknownPack} with no stated pack size`
-            : '') +
-          (result.packDisagreements > 0
-            ? `; ${result.packDisagreements} where the SKU's pack contradicts the printed format`
-            : '') +
-          (result.skippedOrders.length > 0
-            ? `. Not counted as sold (no invoice on the order): ${result.skippedOrders.slice(0, 5).join(', ')}${result.skippedOrders.length > 5 ? '…' : ''}`
-            : ''),
-      );
-      // Logged rather than shown: the list is long, and it is only wanted when
-      // a specific invoice is being hunted for.
-       
-      console.info('[Triangulation] Zoho invoices synced:', result.invoices);
-      await invalidate();
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  /**
-   * Every City Drinks invoice against what the reconciliation counted for it.
-   *
-   * Checking this wine by wine is how three missing invoices took two days to
-   * surface. One list of documents settles it.
-   */
   const coverage = useQuery({
     ...api.triangulation.admin.getSalesCoverage.queryOptions({
       customerMatch: zohoCustomer,
@@ -440,7 +385,6 @@ const ImportsTab = ({
   const isSyncing =
     syncCount.isPending ||
     syncReceipts.isPending ||
-    syncZoho.isPending ||
     syncInvoices.isPending ||
     syncCycleCount.isPending;
 
