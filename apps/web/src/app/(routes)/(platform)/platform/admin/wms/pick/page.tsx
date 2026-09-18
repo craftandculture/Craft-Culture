@@ -228,6 +228,9 @@ const WMSPickListsPage = () => {
                             )}
                           </div>
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-text-muted">
+                            {pickList.orderDate && (
+                              <span>Ordered {format(new Date(pickList.orderDate), 'dd MMM yyyy')}</span>
+                            )}
                             <span>Created {formatDistanceToNow(new Date(pickList.createdAt), { addSuffix: true })}</span>
                             {pickList.completedAt && (
                               <span>Completed {format(new Date(pickList.completedAt), 'dd MMM yyyy')}</span>

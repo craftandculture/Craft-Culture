@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -42,6 +42,8 @@ const adminGetPickLists = wmsOperatorProcedure
         completedAt: wmsPickLists.completedAt,
         notes: wmsPickLists.notes,
         createdAt: wmsPickLists.createdAt,
+        // The date the list is sorted by, so the run order is readable.
+        orderDate: zohoSalesOrders.orderDate,
         // Linked order edited in Zoho after release — drives the list badge.
         soModifiedAfterRelease: zohoSalesOrders.soModifiedAfterRelease,
       })
@@ -49,7 +51,21 @@ const adminGetPickLists = wmsOperatorProcedure
       .leftJoin(users, eq(wmsPickLists.assignedTo, users.id))
       .leftJoin(zohoSalesOrders, eq(wmsPickLists.orderId, zohoSalesOrders.id))
       .where(whereConditions)
-      .orderBy(desc(wmsPickLists.createdAt))
+      /*
+        The date of the ORDER being picked, not of the pick list row. Sorting
+        on the row's own timestamp meant nine picks released within the same
+        few minutes came out in click order — SO-00135, 133, 134, 137, 130,
+        138 — which reads as random to anyone holding the paperwork. A pick
+        with no linked Zoho order falls back to when it was raised, so it
+        still lands somewhere sensible rather than at the top.
+      */
+      .orderBy(
+        sql`COALESCE(${zohoSalesOrders.orderDate}, ${wmsPickLists.createdAt}::date) DESC`,
+        // Then the order number, not the pick list number — several orders
+        // share a date, and this is the sequence the dispatch queue uses, so
+        // the same jobs read the same way on both screens.
+        desc(wmsPickLists.orderNumber),
+      )
       .limit(limit)
       .offset(offset);
 
