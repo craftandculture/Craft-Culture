@@ -8,6 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 
+import readOwnerTag from '../utils/readOwnerTag';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
 
@@ -147,6 +148,13 @@ const adminSyncOutFromZoho = adminProcedure
         continue;
       }
 
+      /*
+        MIX names several owners and resolves to none, so its lines fall
+        through to the wine's own history rather than taking a tag that would
+        be wrong for most of them.
+      */
+      const invoiceTag = readOwnerTag(subject);
+
       for (const line of invoice.line_items ?? []) {
         if (!line.quantity) continue;
 
@@ -164,7 +172,7 @@ const adminSyncOutFromZoho = adminProcedure
         const pack = packStated ? parsedPack! : 1;
 
         const { ownerId, reason } = resolveOwner({
-          tag: consignment.ownerName ? subject : null,
+          tag: invoiceTag,
           knownOwnerId: lwin18 ? knownOwnerByLwin.get(squash(lwin18)) : null,
           owners,
         });
@@ -221,6 +229,25 @@ const adminSyncOutFromZoho = adminProcedure
       lines: rows.length,
       bottles: rows.reduce((sum, row) => sum + Number(row.bottles ?? 0), 0),
       packAssumed: rows.filter((row) => row.pack_assumed).length,
+      /*
+        Bottles per owner. Everything landing on one owner is what a broken
+        tag read looks like, and it is indistinguishable from a real total
+        unless the split is stated.
+      */
+      byArrangement: Object.entries(
+        rows.reduce<Record<string, number>>((totals, row) => {
+          const key = String(row.arrangement_id);
+
+          totals[key] = (totals[key] ?? 0) + Number(row.bottles ?? 0);
+
+          return totals;
+        }, {}),
+      ).map(([arrangementId, bottles]) => ({
+        owner:
+          arrangements.find((row) => row.id === arrangementId)?.ownerId ??
+          arrangementId,
+        bottles,
+      })),
       notConsignment: notConsignment.slice(0, 25),
       unattributed: unattributed.slice(0, 25),
     };
