@@ -355,8 +355,14 @@ const DistributionClient = () => {
                 <th className="bg-fill-primary py-2 pr-3 text-right font-medium">
                   Value
                 </th>
-                <th className="border-border-primary bg-fill-primary border-l py-2 pr-4 text-right font-medium">
+                <th className="border-border-primary bg-fill-primary border-l py-2 pr-3 text-right font-medium">
                   They hold
+                </th>
+                <th
+                  className="bg-fill-primary py-2 pr-4 text-right font-medium"
+                  title="Out less what they still hold — what has left their shelf. Replaced by the month's actual sales once uploaded."
+                >
+                  Gone
                 </th>
               </tr>
             </thead>
@@ -408,7 +414,7 @@ const DistributionClient = () => {
                     unknown position, and reading that as none invents a
                     variance against what we sent.
                   */}
-                  <td className="border-border-primary border-l py-2 pr-4 text-right tabular-nums">
+                  <td className="border-border-primary border-l py-2 pr-3 text-right tabular-nums">
                     {row.heldDeclared === null ? (
                       <span
                         className="text-text-faint"
@@ -423,6 +429,28 @@ const DistributionClient = () => {
                       formatBottles(row.heldDeclared)
                     )}
                   </td>
+                  {/*
+                    What has left their shelf: everything we sent, less what
+                    they still have. Not the month's sales — it is all-time,
+                    and it assumes nothing came back, which is true today and
+                    would stop being true the first time a credit note is
+                    raised. A negative means they hold more than we ever sent
+                    them, which is a wrong pack or a mis-matched code.
+                  */}
+                  <td className="py-2 pr-4 text-right tabular-nums">
+                    {row.heldDeclared === null ? (
+                      <span className="text-text-faint">—</span>
+                    ) : row.outBottles - row.heldDeclared < 0 ? (
+                      <span
+                        className="text-text-danger"
+                        title="They hold more than we ever invoiced out — a wrong pack, or a code matched to the wrong wine."
+                      >
+                        {formatBottles(row.outBottles - row.heldDeclared)}
+                      </span>
+                    ) : (
+                      formatBottles(row.outBottles - row.heldDeclared)
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -434,7 +462,8 @@ const DistributionClient = () => {
         <div className="text-text-muted flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="tabular-nums">
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
-            {formatBottles(summary.heldDeclared)} still with them
+            {formatBottles(summary.heldDeclared)} still with them ·{' '}
+            {formatBottles(summary.gone)} gone
             {summary.unmatched > 0
               ? ` · ${summary.unmatched} position unknown`
               : ''}

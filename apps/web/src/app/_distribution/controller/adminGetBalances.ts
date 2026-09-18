@@ -151,6 +151,14 @@ const adminGetBalances = adminProcedure
         outValue: totals.outValue + row.outValue,
         heldDeclared: totals.heldDeclared + (row.heldDeclared ?? 0),
         unmatched: totals.unmatched + (row.heldDeclared === null ? 1 : 0),
+        /*
+          What has left their shelf across the wines we can see: everything we
+          sent, less what they still hold. Only counted where their position is
+          known — an unknown position would otherwise read as everything gone.
+        */
+        gone:
+          totals.gone +
+          (row.heldDeclared === null ? 0 : row.outBottles - row.heldDeclared),
         packAssumed: totals.packAssumed + (row.packAssumed ? 1 : 0),
       }),
       {
@@ -159,6 +167,7 @@ const adminGetBalances = adminProcedure
         outValue: 0,
         heldDeclared: 0,
         unmatched: 0,
+        gone: 0,
         packAssumed: 0,
       },
     );
