@@ -9,7 +9,10 @@ export const catalogueQuerySchema = z.object({
    * 'available' (default) = landed stock in the UAE warehouse. 'inbound' =
    * bought and in transit, not yet received — carries an eta.
    */
-  stock: z.enum(['available', 'inbound']).optional().default('available'),
+  stock: z
+    .enum(['available', 'inbound', 'all'])
+    .optional()
+    .default('available'),
 });
 
 export type CatalogueQuery = z.infer<typeof catalogueQuerySchema>;
@@ -26,15 +29,19 @@ export interface CatalogueResponseItem {
   format: string;
   caseConfig: number;
   bottleSize: string | null;
+  /** Sellable now, coming, or neither */
+  status: 'available' | 'in_transit' | 'unavailable';
   availableCases: number;
   availableBottles: number;
+  /** Bought and on its way, not yet received */
+  inTransitBottles: number;
   /** Price for the requested feed (IB for trade, PC for retail) */
   pricePerBottle: number;
   pricePerCase: number;
   /** In-Bond B2B (trade) price */
   ib: { perBottle: number; perCase: number };
-  /** Private-Client (retail) price */
-  pc: { perBottle: number; perCase: number };
+  /** Private-Client (retail) price. Absent on a partner feed. */
+  pc?: { perBottle: number; perCase: number };
   /** Estimated arrival, ISO date — inbound stock only, null otherwise */
   eta?: string | null;
 }
