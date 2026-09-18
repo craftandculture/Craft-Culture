@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminPullOutletStock from './controller/adminPullOutletStock';
+import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 
 /**
  * Distribution — our wine placed with a retail outlet, and whose it is
@@ -22,6 +23,7 @@ import adminPullOutletStock from './controller/adminPullOutletStock';
 const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
     pullOutletStock: adminPullOutletStock,
+    syncOutFromZoho: adminSyncOutFromZoho,
   }),
 });
 
