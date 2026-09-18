@@ -220,6 +220,18 @@ export interface ZohoBill {
 }
 
 /**
+ * Bills list response
+ */
+export interface ZohoBillsListResponse {
+  bills: ZohoBill[];
+  page_context?: {
+    page: number;
+    per_page: number;
+    has_more_page: boolean;
+  };
+}
+
+/**
  * Create bill request
  */
 export interface ZohoCreateBillRequest {

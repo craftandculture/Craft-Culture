@@ -6770,3 +6770,49 @@ export const consSnapshots = pgTable(
 );
 
 export type ConsSnapshot = typeof consSnapshots.$inferSelect;
+
+/**
+ * Bills from Zoho — what an owner has invoiced us, and whether it is paid
+ *
+ * Mirrors `zohoInvoices` on the other side of the ledger. An owner's invoice
+ * for consigned wine that sold IS a supplier bill, so once it is in Zoho the
+ * question "has Cru billed us?" is "does a bill exist", and "have we paid?" is
+ * its balance. The accounts and the reconciliation then agree by construction
+ * rather than by someone keeping two records in step.
+ */
+export const zohoBills = pgTable(
+  'zoho_bills',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoBillId: text('zoho_bill_id').notNull().unique(),
+    billNumber: text('bill_number').notNull(),
+    zohoVendorId: text('zoho_vendor_id'),
+    vendorName: text('vendor_name').notNull(),
+    status: text('status').notNull(),
+    billDate: date('bill_date').notNull(),
+    dueDate: date('due_date'),
+    /**
+     * What the bill refers to. A consignment settlement names the month or the
+     * statement; a purchase names a PO. The two are different transactions and
+     * booking one as the other understates what an owner is still owed for.
+     */
+    referenceNumber: text('reference_number'),
+    notes: text('notes'),
+    subTotal: doublePrecision('sub_total').notNull().default(0),
+    total: doublePrecision('total').notNull().default(0),
+    /** Nil means settled. This is the "have we paid?" answer. */
+    balance: doublePrecision('balance').notNull().default(0),
+    currencyCode: text('currency_code'),
+    /** Line items as Zoho returns them — some owners bill per wine, some a lump */
+    lineItems: jsonb('line_items'),
+    lastSyncAt: timestamp('last_sync_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('zoho_bills_vendor_idx').on(table.vendorName),
+    index('zoho_bills_date_idx').on(table.billDate),
+    index('zoho_bills_status_idx').on(table.status),
+  ],
+);
+
+export type ZohoBillRow = typeof zohoBills.$inferSelect;

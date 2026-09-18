@@ -5,6 +5,7 @@ import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
 import adminImportOutletSales from './controller/adminImportOutletSales';
 import adminPullOutletStock from './controller/adminPullOutletStock';
+import adminSyncBills from './controller/adminSyncBills';
 import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 
 /**
@@ -31,6 +32,7 @@ const distributionRouter = createTRPCRouter({
     getSetup: adminGetSetup,
     getStatement: adminGetStatement,
     pullOutletStock: adminPullOutletStock,
+    syncBills: adminSyncBills,
     syncOutFromZoho: adminSyncOutFromZoho,
   }),
 });

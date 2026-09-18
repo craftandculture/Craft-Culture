@@ -1883,6 +1883,47 @@ const runMigrations = async () => {
       `);
     });
 
+
+    /*
+      Bills — the other side of the money.
+
+      An owner's invoice for consigned wine that sold is a supplier bill, so
+      once it is in Zoho "has Cru billed us?" is "does a bill exist" and "have
+      we paid?" is its balance. Mirrors zoho_invoices deliberately.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_bills" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_bill_id" text NOT NULL UNIQUE,
+        "bill_number" text NOT NULL,
+        "zoho_vendor_id" text,
+        "vendor_name" text NOT NULL,
+        "status" text NOT NULL,
+        "bill_date" date NOT NULL,
+        "due_date" date,
+        "reference_number" text,
+        "notes" text,
+        "sub_total" double precision NOT NULL DEFAULT 0,
+        "total" double precision NOT NULL DEFAULT 0,
+        "balance" double precision NOT NULL DEFAULT 0,
+        "currency_code" text,
+        "line_items" jsonb,
+        "last_sync_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    for (const [name, col] of [
+      ['zoho_bills_vendor_idx', '"vendor_name"'],
+      ['zoho_bills_date_idx', '"bill_date"'],
+      ['zoho_bills_status_idx', '"status"'],
+    ]) {
+      await client.unsafe(
+        `CREATE INDEX IF NOT EXISTS "${name}" ON "zoho_bills"(${col})`,
+      );
+    }
+    console.log('✅ zoho_bills ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
