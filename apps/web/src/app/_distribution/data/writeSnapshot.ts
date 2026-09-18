@@ -31,15 +31,26 @@ const writeSnapshot = async (
   outletId: string,
   parsed: ParsedCityDrinksStock,
 ) => {
+  /*
+    The instant as an ISO string, in both statements.
+
+    A Date reaches the driver as an object it will not serialise — "the string
+    argument must be of type string or an instance of Buffer" — and it fails at
+    the write, after the whole feed has been fetched. Using the identical value
+    in the DELETE also guarantees the replace matches what the insert wrote,
+    which a Date and a string would not.
+  */
+  const takenAt = parsed.takenAt.toISOString();
+
   await sql`
     DELETE FROM cons_snapshots
-    WHERE outlet_id = ${outletId} AND taken_at = ${parsed.takenAt}
+    WHERE outlet_id = ${outletId} AND taken_at = ${takenAt}
   `;
 
   if (parsed.rows.length > 0) {
     const values = parsed.rows.map((row) => ({
       outlet_id: outletId,
-      taken_at: parsed.takenAt,
+      taken_at: takenAt,
       outlet_code: row.outletCode,
       our_code: row.ourCode,
       product_name: row.productName,
