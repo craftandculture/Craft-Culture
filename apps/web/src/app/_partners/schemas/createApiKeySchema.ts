@@ -14,6 +14,14 @@ import z from 'zod';
  */
 export const PARTNER_FEED_PERMISSION = 'feed:partner';
 
+/**
+ * Opt-out, applied by `apiKeysCreate` and askable only in code.
+ *
+ * The consumer portals hold such a key: they serve Private Client prices, which
+ * is exactly what the partner feed withholds.
+ */
+export const UNRESTRICTED_FEED_PERMISSION = 'feed:unrestricted';
+
 const createApiKeySchema = z.object({
   partnerId: z.string().uuid(),
   name: z.string().min(1, 'API key name is required'),

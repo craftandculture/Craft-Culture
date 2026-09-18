@@ -6,12 +6,16 @@ import { partnerApiKeys, partners } from '@/database/schema';
 import generateApiKey from '@/lib/apiKeys/generateApiKey';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import createApiKeySchema from '../schemas/createApiKeySchema';
+import createApiKeySchema, {
+  PARTNER_FEED_PERMISSION,
+  UNRESTRICTED_FEED_PERMISSION,
+} from '../schemas/createApiKeySchema';
 
 /**
  * Create a new API key for a partner
  *
- * Admin-only endpoint. Returns the full key only once - it cannot be retrieved later.
+ * Admin-only endpoint. Returns the full key only once - it cannot be retrieved
+ * later.
  */
 const apiKeysCreate = adminProcedure
   .input(createApiKeySchema)
@@ -38,6 +42,25 @@ const apiKeysCreate = adminProcedure
       });
     }
 
+    /*
+      Restricted unless someone deliberately asks otherwise.
+
+      The schema's default only applies when `permissions` is omitted, and the
+      Generate Key dialog always sends the array from its checkboxes — so the
+      default never fired and a key made from that screen read the whole book:
+      both price tiers, and which owner holds what. Enforced here because this
+      is the one place a key is minted, so no caller can route around it.
+
+      `feed:unrestricted` is the opt-out, and nothing in the UI can ask for it:
+      an unrestricted key is a deliberate act, made on purpose, not the thing
+      you get by clicking the obvious button.
+    */
+    const grantedPermissions = permissions.includes(
+      UNRESTRICTED_FEED_PERMISSION,
+    )
+      ? permissions
+      : [...new Set([...permissions, PARTNER_FEED_PERMISSION])];
+
     // Generate the API key
     const { key, keyHash, keyPrefix } = generateApiKey();
 
@@ -49,7 +72,7 @@ const apiKeysCreate = adminProcedure
         name,
         keyPrefix,
         keyHash,
-        permissions,
+        permissions: grantedPermissions,
         expiresAt: expiresAt ?? null,
       })
       .returning({
