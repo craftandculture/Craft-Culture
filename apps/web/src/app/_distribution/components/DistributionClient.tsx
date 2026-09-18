@@ -11,6 +11,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import SalesUpload from './SalesUpload';
+import StatementPanel from './StatementPanel';
 
 
 /** Money as the document states it, with no currency assumed */
@@ -219,7 +220,13 @@ const DistributionClient = () => {
         </div>
       ) : null}
 
-      <SalesUpload outletId={outletId} onImported={invalidate} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SalesUpload outletId={outletId} onImported={invalidate} />
+        <StatementPanel
+          outletId={outletId}
+          owners={setup.data?.owners ?? []}
+        />
+      </div>
 
       {balances.isLoading ? (
         <Typography variant="bodySm" colorRole="muted" asChild>
