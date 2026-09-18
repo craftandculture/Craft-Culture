@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminGetBalances from './controller/adminGetBalances';
+import adminGetOwed from './controller/adminGetOwed';
 import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
 import adminImportOutletSales from './controller/adminImportOutletSales';
@@ -29,6 +30,7 @@ const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
     getBalances: adminGetBalances,
     importOutletSales: adminImportOutletSales,
+    getOwed: adminGetOwed,
     getSetup: adminGetSetup,
     getStatement: adminGetStatement,
     pullOutletStock: adminPullOutletStock,
