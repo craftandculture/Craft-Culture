@@ -59,7 +59,7 @@ const adminPullOutletStock = adminProcedure
       */
       try {
         const parsed = await fetchCityDrinksStock(outlet);
-        const written = await writeSnapshot(outlet.id, parsed);
+        const written = await writeSnapshot(client, outlet.id, parsed);
 
         results.push({ outlet: outlet.name, ok: true as const, ...written });
       } catch (error) {
