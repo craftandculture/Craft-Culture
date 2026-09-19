@@ -99,13 +99,21 @@ const ApiDocsPage = () => {
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-12">
           <Typography variant="displaySm" className="mb-4">
-            Partner API Documentation
+            C&amp;C Pre-Order Integration
           </Typography>
           <Typography variant="bodyLg" colorRole="muted">
             One live feed of everything Craft &amp; Culture holds — what is on
             the shelf, what is on its way, and what it costs — for building
-            orders against.
+            pre-orders against.
           </Typography>
+          <div className="border-border-brand bg-fill-brand-secondary mt-6 rounded-lg border p-4">
+            <Typography variant="bodySm">
+              <strong>Available to trusted partners only.</strong> Access is
+              granted by Craft &amp; Culture and issued against a named key. The
+              feed is not public, and nothing in it may be redistributed beyond
+              your own business.
+            </Typography>
+          </div>
         </div>
 
         {/* Quick start */}
@@ -232,12 +240,57 @@ const ApiDocsPage = () => {
             </Table>
 
             <Typography variant="headingMd" className="mb-3 mt-8">
+              Understanding lwin18
+            </Typography>
+            <div className="space-y-3">
+              <Typography variant="bodyMd">
+                Every wine in the trade has a standard identifier called an{' '}
+                <strong>LWIN</strong>, maintained by Liv-ex, the London exchange
+                for fine wine. It is to wine what an ISBN is to a book: one
+                agreed number, so two businesses can be certain they mean the
+                same thing without comparing spellings. The standard and the
+                free wine database are at{' '}
+                <a
+                  href="https://www.liv-ex.com/lwin/"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-text-brand underline"
+                >
+                  liv-ex.com/lwin
+                </a>
+                .
+              </Typography>
+              <Typography variant="bodyMd">
+                We use the eighteen-digit form, which identifies not just the
+                wine but the exact thing in the warehouse. We write it with
+                dashes:
+              </Typography>
+              <CodeBlock title="1104653-2020-05-00750">
+                {`1104653   the wine — Guidalberto, Tenuta San Guido, any vintage
+2020      the vintage (0000 or 1000 means non-vintage)
+05        bottles per case — here a 5-pack
+00750     bottle size in millilitres — a magnum reads 01500`}
+              </CodeBlock>
+              <Typography variant="bodyMd">
+                The same wine reaches us as &ldquo;Ch. Lynch Bages&rdquo;,
+                &ldquo;Chateau Lynch-Bages&rdquo; and &ldquo;Lynch Bages
+                Pauillac&rdquo;. Matching on names means reconciling those
+                forever; matching on the LWIN18 is exact. Note that the same
+                wine in a 6-pack and a 3-pack are <strong>different</strong>{' '}
+                LWIN18s, because they are different things to ship — and that
+                the number is printed on the physical case label in our
+                warehouse, so it is what a picker reads off the box.
+              </Typography>
+            </div>
+
+            <Typography variant="headingMd" className="mb-3 mt-8">
               Response fields
             </Typography>
             <Table head={['Field', 'Type', 'Description']}>
               <Row name="lwin18" type="string">
-                Stable product identifier. Use this as your key — it encodes
-                wine, vintage, pack and bottle size, and does not change.
+                The Liv-ex identifier explained above. Use it as your key — it
+                encodes wine, vintage, pack and bottle size, and does not change
+                when a name is tidied.
               </Row>
               <Row name="product" type="string">
                 Wine name as we hold it.
