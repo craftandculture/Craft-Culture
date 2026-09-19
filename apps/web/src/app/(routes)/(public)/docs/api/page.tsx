@@ -4,20 +4,26 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 
 export const metadata: Metadata = {
   title: 'Partner API Documentation | Craft & Culture',
-  description: 'API documentation for Craft & Culture retail partners',
+  description: 'API documentation for Craft & Culture trade partners',
 };
 
-const CodeBlock = ({ children, title }: { children: string; title?: string }) => (
-  <div className="rounded-lg border border-border-muted bg-background-secondary overflow-hidden">
+const CodeBlock = ({
+  children,
+  title,
+}: {
+  children: string;
+  title?: string;
+}) => (
+  <div className="border-border-muted bg-background-secondary overflow-hidden rounded-lg border">
     {title && (
-      <div className="px-4 py-2 border-b border-border-muted bg-fill-secondary">
-        <Typography variant="bodySm" className="font-mono text-text-muted">
+      <div className="border-border-muted bg-fill-secondary border-b px-4 py-2">
+        <Typography variant="bodySm" className="text-text-muted font-mono">
           {title}
         </Typography>
       </div>
     )}
-    <pre className="p-4 overflow-x-auto">
-      <code className="text-sm font-mono text-text-primary">{children}</code>
+    <pre className="overflow-x-auto p-4">
+      <code className="text-text-primary font-mono text-sm">{children}</code>
     </pre>
   </div>
 );
@@ -31,14 +37,8 @@ const Endpoint = ({
   path: string;
   description: string;
 }) => (
-  <div className="flex items-start gap-3 p-4 rounded-lg border border-border-muted bg-white dark:bg-background-secondary">
-    <span
-      className={`px-2 py-1 rounded text-xs font-bold ${
-        method === 'GET'
-          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-      }`}
-    >
+  <div className="border-border-muted dark:bg-background-secondary flex items-start gap-3 rounded-lg border bg-white p-4">
+    <span className="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">
       {method}
     </span>
     <div>
@@ -52,38 +52,99 @@ const Endpoint = ({
   </div>
 );
 
+const Row = ({
+  name,
+  type,
+  children,
+}: {
+  name: string;
+  type: string;
+  children: React.ReactNode;
+}) => (
+  <tr className="border-border-muted border-t align-top">
+    <td className="whitespace-nowrap px-4 py-3 font-mono text-sm">{name}</td>
+    <td className="text-text-muted whitespace-nowrap px-4 py-3 font-mono text-sm">
+      {type}
+    </td>
+    <td className="px-4 py-3 text-sm">{children}</td>
+  </tr>
+);
+
+const Table = ({
+  head,
+  children,
+}: {
+  head: string[];
+  children: React.ReactNode;
+}) => (
+  <div className="border-border-muted overflow-x-auto rounded-lg border">
+    <table className="w-full">
+      <thead className="bg-fill-secondary">
+        <tr>
+          {head.map((h) => (
+            <th key={h} className="px-4 py-3 text-left text-sm font-medium">
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
+  </div>
+);
+
 const ApiDocsPage = () => {
   return (
-    <div className="min-h-screen bg-background-primary">
-      <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        {/* Header */}
+    <div className="bg-background-primary min-h-screen">
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-12">
           <Typography variant="displaySm" className="mb-4">
             Partner API Documentation
           </Typography>
           <Typography variant="bodyLg" colorRole="muted">
-            Integrate Craft & Culture inventory into your point-of-sale system
+            One live feed of everything Craft &amp; Culture holds — what is on
+            the shelf, what is on its way, and what it costs — for building
+            orders against.
           </Typography>
         </div>
 
-        {/* Quick Start */}
+        {/* Quick start */}
         <section className="mb-12">
           <Typography variant="headingLg" className="mb-4">
-            Quick Start
+            Quick start
           </Typography>
           <div className="space-y-4">
             <Typography variant="bodyMd">
-              The Craft & Culture Partner API provides real-time access to our wine inventory.
-              Use it to sync product availability, pricing, and stock levels with your POS system.
+              Every wine we hold, in one call. Each row tells you whether it can
+              be sold now or is still in transit, how much there is, and the
+              trade price. Availability is read live from the warehouse, so a
+              case sold is gone from the next response.
             </Typography>
-            <div className="p-4 rounded-lg border border-border-brand bg-fill-brand-secondary">
-              <Typography variant="bodySm" className="font-medium text-text-brand">
+            <div className="border-border-brand bg-fill-brand-secondary rounded-lg border p-4">
+              <Typography
+                variant="bodySm"
+                className="text-text-brand font-medium"
+              >
                 Base URL
               </Typography>
-              <Typography variant="bodyMd" className="font-mono mt-1">
+              <Typography variant="bodyMd" className="mt-1 font-mono">
                 https://wine.craftculture.xyz/api/v1
               </Typography>
             </div>
+            <Typography variant="bodySm" colorRole="muted">
+              Prefer to generate a client? The same API is described at{' '}
+              <a
+                href="/api/v1/openapi.json"
+                className="text-text-brand font-mono underline"
+              >
+                /api/v1/openapi.json
+              </a>{' '}
+              (OpenAPI 3.1) — import it into Postman or your codegen of choice.
+            </Typography>
+            <CodeBlock title="The only call most integrations need">
+              {`curl -H "Authorization: Bearer YOUR_API_KEY" \\
+  "https://wine.craftculture.xyz/api/v1/catalogue?stock=all"`}
+            </CodeBlock>
           </div>
         </section>
 
@@ -94,283 +155,323 @@ const ApiDocsPage = () => {
           </Typography>
           <div className="space-y-4">
             <Typography variant="bodyMd">
-              All API requests require a Bearer token in the Authorization header.
-              Contact your account manager to obtain an API key.
+              Pass your key as a bearer token on every request. Keys are issued
+              by Craft &amp; Culture and shown once, at creation — we cannot
+              retrieve one later, so store it somewhere you can recover it. If a
+              key is lost or exposed, tell us and we will revoke it and issue
+              another.
             </Typography>
-            <CodeBlock title="Request Header">
-              {`Authorization: Bearer cc_live_xxxxxxxxxxxxxxxxxxxx`}
+            <CodeBlock>
+              Authorization: Bearer cc_live_xxxxxxxxxxxxxxxx
             </CodeBlock>
-            <div className="p-4 rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20">
-              <Typography variant="bodySm" className="font-medium text-yellow-800 dark:text-yellow-300">
-                Keep your API key secure
-              </Typography>
-              <Typography variant="bodyXs" className="mt-1 text-yellow-700 dark:text-yellow-400">
-                Never expose your API key in client-side code or public repositories.
-                If compromised, contact us immediately to revoke and regenerate your key.
-              </Typography>
-            </div>
+            <Typography variant="bodySm" colorRole="muted">
+              Keys belong on your server. A key in browser or app code is a key
+              published to anyone who opens the developer tools.
+            </Typography>
           </div>
         </section>
 
-        {/* Rate Limits */}
+        {/* Rate limits */}
         <section className="mb-12">
           <Typography variant="headingLg" className="mb-4">
-            Rate Limits
+            Rate limits
           </Typography>
           <div className="space-y-4">
             <Typography variant="bodyMd">
-              API requests are rate limited to ensure fair usage and system stability.
+              <strong>60 requests per minute</strong>, per key, on a rolling
+              window. The feed is cached for two minutes, so polling faster than
+              that returns the same data — once every few minutes is plenty for
+              catalogue sync.
             </Typography>
-            <div className="overflow-hidden rounded-lg border border-border-muted">
-              <table className="min-w-full divide-y divide-border-muted">
-                <thead className="bg-fill-secondary">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-text-primary">
-                      Limit
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-text-primary">
-                      Window
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-text-primary">
-                      Scope
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-background-secondary divide-y divide-border-muted">
-                  <tr>
-                    <td className="px-4 py-3 text-sm">60 requests</td>
-                    <td className="px-4 py-3 text-sm">1 minute</td>
-                    <td className="px-4 py-3 text-sm">Per API key</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <Typography variant="bodySm" colorRole="muted">
-              Rate limit headers are included in all responses:
+            <Typography variant="bodyMd">
+              Exceeding the limit returns <code className="font-mono">429</code>{' '}
+              with <code className="font-mono">Retry-After</code>,{' '}
+              <code className="font-mono">X-RateLimit-Limit</code>,{' '}
+              <code className="font-mono">X-RateLimit-Remaining</code> and{' '}
+              <code className="font-mono">X-RateLimit-Reset</code>. Those
+              headers are sent <strong>only on a 429</strong>, not on successful
+              responses — wait for{' '}
+              <code className="font-mono">Retry-After</code> and retry.
             </Typography>
-            <CodeBlock>
-              {`X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 58
-X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
-            </CodeBlock>
           </div>
         </section>
 
-        {/* Endpoints */}
+        {/* The feed */}
         <section className="mb-12">
           <Typography variant="headingLg" className="mb-4">
-            Endpoints
+            The catalogue feed
           </Typography>
           <div className="space-y-4">
             <Endpoint
               method="GET"
-              path="/api/v1/inventory"
-              description="List all products with stock levels and pricing"
+              path="/catalogue"
+              description="Every wine we hold, one row each, with live availability and trade price"
             />
-            <Endpoint
-              method="GET"
-              path="/api/v1/inventory/:lwin18"
-              description="Get a specific product by LWIN18 identifier"
-            />
-          </div>
-        </section>
 
-        {/* List Inventory */}
-        <section className="mb-12">
-          <Typography variant="headingMd" className="mb-4">
-            List Inventory
-          </Typography>
-          <CodeBlock title="GET /api/v1/inventory">{`curl -X GET "https://wine.craftculture.xyz/api/v1/inventory?limit=50&inStock=true" \\
-  -H "Authorization: Bearer cc_live_xxxxxxxxxxxxxxxxxxxx"`}</CodeBlock>
+            <Typography variant="headingMd" className="mb-3 mt-8">
+              Query parameters
+            </Typography>
+            <Table head={['Parameter', 'Type', 'Description']}>
+              <Row name="stock" type="string">
+                <code className="font-mono">available</code> (default) returns
+                landed stock only. <code className="font-mono">inbound</code>{' '}
+                returns what is in transit.{' '}
+                <strong>
+                  <code className="font-mono">all</code>
+                </strong>{' '}
+                returns both, merged one row per wine — use this one.
+              </Row>
+              <Row name="category" type="string">
+                <code className="font-mono">Wine</code>,{' '}
+                <code className="font-mono">Spirits</code> or{' '}
+                <code className="font-mono">RTD</code>. Omit for everything.
+              </Row>
+              <Row name="search" type="string">
+                Free text across wine and producer name.
+              </Row>
+            </Table>
 
-          <Typography variant="bodySm" className="font-medium mt-6 mb-3">
-            Query Parameters
-          </Typography>
-          <div className="overflow-hidden rounded-lg border border-border-muted">
-            <table className="min-w-full divide-y divide-border-muted">
-              <thead className="bg-fill-secondary">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Parameter</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-background-secondary divide-y divide-border-muted">
-                <tr>
-                  <td className="px-4 py-3 text-sm font-mono">cursor</td>
-                  <td className="px-4 py-3 text-sm">number</td>
-                  <td className="px-4 py-3 text-sm">Pagination offset (default: 0)</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm font-mono">limit</td>
-                  <td className="px-4 py-3 text-sm">number</td>
-                  <td className="px-4 py-3 text-sm">Items per page, max 100 (default: 50)</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm font-mono">source</td>
-                  <td className="px-4 py-3 text-sm">string</td>
-                  <td className="px-4 py-3 text-sm">
-                    Filter by source: <code className="px-1 py-0.5 bg-fill-secondary rounded">local_inventory</code> or{' '}
-                    <code className="px-1 py-0.5 bg-fill-secondary rounded">cultx</code>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm font-mono">inStock</td>
-                  <td className="px-4 py-3 text-sm">boolean</td>
-                  <td className="px-4 py-3 text-sm">Filter to only in-stock items</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            <Typography variant="headingMd" className="mb-3 mt-8">
+              Response fields
+            </Typography>
+            <Table head={['Field', 'Type', 'Description']}>
+              <Row name="lwin18" type="string">
+                Stable product identifier. Use this as your key — it encodes
+                wine, vintage, pack and bottle size, and does not change.
+              </Row>
+              <Row name="product" type="string">
+                Wine name as we hold it.
+              </Row>
+              <Row name="producer" type="string | null">
+                Producer, where recorded.
+              </Row>
+              <Row name="vintage" type="number | null">
+                Year. <code className="font-mono">null</code> for non-vintage.
+              </Row>
+              <Row name="region / country" type="string | null">
+                Where recorded against the wine.
+              </Row>
+              <Row name="category" type="string | null">
+                Wine, Spirits or RTD.
+              </Row>
+              <Row name="format" type="string">
+                Human-readable pack, e.g.{' '}
+                <code className="font-mono">6×75cl</code>.
+              </Row>
+              <Row name="caseConfig" type="number">
+                Bottles per case.
+              </Row>
+              <Row name="bottleSize" type="string | null">
+                e.g. <code className="font-mono">75cl</code>,{' '}
+                <code className="font-mono">150cl</code>.
+              </Row>
+              <Row name="status" type="string">
+                <code className="font-mono">available</code>,{' '}
+                <code className="font-mono">in_transit</code> or{' '}
+                <code className="font-mono">unavailable</code>. See below.
+              </Row>
+              <Row name="availableCases" type="number">
+                Whole cases on the shelf now.
+              </Row>
+              <Row name="availableBottles" type="number">
+                Bottles on the shelf now. This is{' '}
+                <code className="font-mono">availableCases × caseConfig</code> —
+                not a separate loose-bottle count, so do not add the two.
+              </Row>
+              <Row name="inTransitBottles" type="number">
+                Bottles bought and on their way, not yet landed.
+              </Row>
+              <Row name="pricePerBottle" type="number">
+                Trade price per bottle, USD, in bond.
+              </Row>
+              <Row name="pricePerCase" type="number">
+                Trade price per case, USD, in bond.
+              </Row>
+              <Row name="eta" type="string | null">
+                ISO date of the earliest expected arrival, when something is in
+                transit. <code className="font-mono">null</code> otherwise, and{' '}
+                <code className="font-mono">null</code> where a shipment has no
+                confirmed date yet.
+              </Row>
+            </Table>
 
-          <Typography variant="bodySm" className="font-medium mt-6 mb-3">
-            Response
-          </Typography>
-          <CodeBlock title="200 OK">
-            {`{
+            <Typography variant="headingMd" className="mb-3 mt-8">
+              What status means
+            </Typography>
+            <Table head={['Status', 'Meaning', 'What you can do']}>
+              <Row name="available" type="on the shelf">
+                Physically in our UAE bonded warehouse.{' '}
+                <code className="font-mono">availableBottles</code> is sellable
+                now.
+              </Row>
+              <Row name="in_transit" type="on its way">
+                Bought and shipping to us. Nothing sellable today;{' '}
+                <code className="font-mono">inTransitBottles</code> with an{' '}
+                <code className="font-mono">eta</code> is what to take
+                pre-orders against.
+              </Row>
+              <Row name="unavailable" type="neither">
+                Known to us but nothing on hand or inbound.
+              </Row>
+            </Table>
+            <Typography variant="bodySm" colorRole="muted">
+              A wine can be both: cases on the shelf and more arriving. Then{' '}
+              <code className="font-mono">status</code> is{' '}
+              <code className="font-mono">available</code>, and{' '}
+              <code className="font-mono">inTransitBottles</code> and{' '}
+              <code className="font-mono">eta</code> describe what is still to
+              come. Where several shipments carry the same wine, the{' '}
+              <code className="font-mono">eta</code> given is the soonest.
+            </Typography>
+
+            <Typography variant="headingMd" className="mb-3 mt-8">
+              Example
+            </Typography>
+            <CodeBlock title="GET /api/v1/catalogue?stock=all">
+              {`{
   "data": [
     {
-      "lwin18": "100209520092019750",
-      "name": "Chateau Margaux 2019",
-      "producer": "Chateau Margaux",
-      "region": "Margaux",
-      "country": "France",
-      "vintage": 2019,
-      "imageUrl": "https://...",
-      "offers": [
-        {
-          "id": "offer_123",
-          "source": "local_inventory",
-          "price": 850.00,
-          "currency": "USD",
-          "unitCount": 6,
-          "unitSize": "750ml",
-          "availableQuantity": 12,
-          "inStock": true
-        }
-      ]
+      "lwin18": "1104653-2020-05-00750",
+      "product": "Guidalberto, Tenuta San Guido, Toscana",
+      "producer": "Tenuta San Guido",
+      "vintage": 2020,
+      "region": "Tuscany",
+      "country": "Italy",
+      "category": "Wine",
+      "owner": "Craft & Culture",
+      "format": "5×75cl",
+      "caseConfig": 5,
+      "bottleSize": "75cl",
+      "status": "available",
+      "availableCases": 1,
+      "availableBottles": 5,
+      "inTransitBottles": 0,
+      "pricePerBottle": 40.78,
+      "pricePerCase": 203.91,
+      "eta": null
     }
   ],
-  "meta": {
-    "nextCursor": 50,
-    "totalCount": 1250
-  }
-}`}
-          </CodeBlock>
-        </section>
-
-        {/* Get Single Product */}
-        <section className="mb-12">
-          <Typography variant="headingMd" className="mb-4">
-            Get Product by LWIN18
-          </Typography>
-          <CodeBlock title="GET /api/v1/inventory/:lwin18">{`curl -X GET "https://wine.craftculture.xyz/api/v1/inventory/100209520092019750" \\
-  -H "Authorization: Bearer cc_live_xxxxxxxxxxxxxxxxxxxx"`}</CodeBlock>
-
-          <Typography variant="bodySm" className="font-medium mt-6 mb-3">
-            Response
-          </Typography>
-          <CodeBlock title="200 OK">
-            {`{
-  "data": {
-    "lwin18": "100209520092019750",
-    "name": "Chateau Margaux 2019",
-    "producer": "Chateau Margaux",
-    "region": "Margaux",
-    "country": "France",
-    "vintage": 2019,
-    "imageUrl": "https://...",
-    "offers": [
-      {
-        "id": "offer_123",
-        "source": "local_inventory",
-        "price": 850.00,
-        "currency": "USD",
-        "unitCount": 6,
-        "unitSize": "750ml",
-        "availableQuantity": 12,
-        "inStock": true
-      }
-    ]
-  }
-}`}
-          </CodeBlock>
-        </section>
-
-        {/* Error Responses */}
-        <section className="mb-12">
-          <Typography variant="headingLg" className="mb-4">
-            Error Responses
-          </Typography>
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border border-border-muted">
-              <table className="min-w-full divide-y divide-border-muted">
-                <thead className="bg-fill-secondary">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-background-secondary divide-y divide-border-muted">
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">400</td>
-                    <td className="px-4 py-3 text-sm">Invalid request parameters</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">401</td>
-                    <td className="px-4 py-3 text-sm">Missing or invalid API key</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">403</td>
-                    <td className="px-4 py-3 text-sm">Insufficient permissions</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">404</td>
-                    <td className="px-4 py-3 text-sm">Product not found</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">429</td>
-                    <td className="px-4 py-3 text-sm">Rate limit exceeded</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-mono">500</td>
-                    <td className="px-4 py-3 text-sm">Internal server error</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <CodeBlock title="Error Response Format">
-              {`{
-  "error": "Rate limit exceeded",
-  "retryAfter": 60
+  "meta": { "feed": "trade", "stock": "all", "totalCount": 468 }
 }`}
             </CodeBlock>
+            <Typography variant="bodySm" colorRole="muted">
+              The whole book is returned in one response — there is no
+              pagination on this endpoint today. Expect several hundred rows.
+            </Typography>
+          </div>
+        </section>
+
+        {/* Product lookup */}
+        <section className="mb-12">
+          <Typography variant="headingLg" className="mb-4">
+            Product lookup
+          </Typography>
+          <div className="space-y-4">
+            <Endpoint
+              method="GET"
+              path="/inventory"
+              description="Product reference data with merchant offers. Paginated via cursor and limit."
+            />
+            <Endpoint
+              method="GET"
+              path="/inventory/{lwin18}"
+              description="A single product by its identifier"
+            />
+            <Typography variant="bodySm" colorRole="muted">
+              These cover product reference data rather than what we hold. For
+              availability and price, use the catalogue feed above.
+            </Typography>
+          </div>
+        </section>
+
+        {/* Errors */}
+        <section className="mb-12">
+          <Typography variant="headingLg" className="mb-4">
+            Errors
+          </Typography>
+          <div className="space-y-4">
+            <Table head={['Code', 'Meaning', 'What to do']}>
+              <Row name="401" type="Unauthorized">
+                Key missing, malformed, revoked or expired. Check the{' '}
+                <code className="font-mono">Authorization</code> header.
+              </Row>
+              <Row name="403" type="Forbidden">
+                The key lacks the permission for this endpoint. Contact us.
+              </Row>
+              <Row name="400" type="Bad request">
+                A query parameter is not a permitted value.{' '}
+                <code className="font-mono">details</code> names the field.
+              </Row>
+              <Row name="429" type="Too many requests">
+                Rate limited. Wait for{' '}
+                <code className="font-mono">Retry-After</code> seconds.
+              </Row>
+              <Row name="500" type="Server error">
+                Our side. Retry with backoff; tell us if it persists.
+              </Row>
+            </Table>
+            <CodeBlock title="Error shape">
+              {`{
+  "error": "Rate limit exceeded",
+  "retryAfter": 42
+}`}
+            </CodeBlock>
+          </div>
+        </section>
+
+        {/* Notes */}
+        <section className="mb-12">
+          <Typography variant="headingLg" className="mb-4">
+            Notes for integrators
+          </Typography>
+          <div className="space-y-3">
+            <Typography variant="bodyMd">
+              <strong>Key on lwin18.</strong> Names get tidied and producers get
+              corrected; the identifier does not move.
+            </Typography>
+            <Typography variant="bodyMd">
+              <strong>Do not add availableBottles and inTransitBottles.</strong>{' '}
+              They answer different questions — one is sellable today, the other
+              is not yet here.
+            </Typography>
+            <Typography variant="bodyMd">
+              <strong>A missing wine means none held.</strong> Rows appear and
+              disappear as stock moves, so treat each response as the full
+              current picture rather than a delta.
+            </Typography>
+            <Typography variant="bodyMd">
+              <strong>Prices are USD, in bond</strong>, exclusive of duty, tax
+              and delivery.
+            </Typography>
+            <Typography variant="bodyMd">
+              <strong>Every line is supplied by Craft &amp; Culture.</strong>{' '}
+              The <code className="font-mono">owner</code> field reads Craft
+              &amp; Culture throughout and carries no information — you can
+              ignore it.
+            </Typography>
           </div>
         </section>
 
         {/* Support */}
-        <section className="mb-12">
+        <section>
           <Typography variant="headingLg" className="mb-4">
             Support
           </Typography>
           <Typography variant="bodyMd">
-            For API support, technical questions, or to request additional features,
-            contact your account manager or email{' '}
+            Questions, a key that needs rotating, or a field you need that is
+            not here — email{' '}
             <a
               href="mailto:partners@craftculture.xyz"
-              className="text-text-brand hover:underline"
+              className="text-text-brand underline"
             >
               partners@craftculture.xyz
             </a>
+            .
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" className="mt-8">
+            Last updated: September 2026
           </Typography>
         </section>
-
-        {/* Footer */}
-        <footer className="pt-8 border-t border-border-muted">
-          <Typography variant="bodySm" colorRole="muted">
-            Last updated: March 2026
-          </Typography>
-        </footer>
       </div>
     </div>
   );
