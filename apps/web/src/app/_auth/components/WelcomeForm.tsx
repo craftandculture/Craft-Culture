@@ -221,11 +221,15 @@ const WelcomeForm = () => {
             </Typography>
             <div className="mb-3 space-y-2 text-xs text-text-muted">
               <p>By continuing, you acknowledge that:</p>
+              {/* Private collectors sign up here too, so "approved business
+                  users" was both wrong and the first thing a collector read
+                  about whether they belonged. */}
               <ul className="ml-4 list-disc space-y-1">
                 <li>This platform is a pricing and quotation tool only</li>
                 <li>All payments are processed through licensed distribution partners</li>
+                <li>Wine you store or consign remains yours; we never take title to it</li>
                 <li>You are at least 21 years of age</li>
-                <li>Access is restricted to approved business users</li>
+                <li>Access is by approval, for trade accounts and private collectors</li>
               </ul>
             </div>
             <div className="flex items-start gap-3">
@@ -240,8 +244,11 @@ const WelcomeForm = () => {
                 className="cursor-pointer text-xs leading-relaxed text-text-secondary"
               >
                 I agree to the{' '}
+                {/* Not /platform/terms-of-use: the platform layout redirects
+                    anyone without a completed profile back here, so that tab
+                    opened and bounced straight to this form. */}
                 <a
-                  href="/platform/terms-of-use"
+                  href="/terms-of-use"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-text-brand underline"
