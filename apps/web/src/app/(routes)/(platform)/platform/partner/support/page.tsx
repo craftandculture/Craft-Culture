@@ -20,7 +20,7 @@ const faqItems = [
   {
     question: 'Who owns the wine while it is with you?',
     answer:
-      'You do. Stock is held against your account and is not ours to sell. It appears under your own inventory, separately from anybody else’s, and moves only on your instruction.',
+      'You do. It is held against your account, shown separately from anybody else’s, and moves only on your instruction. We never take title to it.',
   },
   {
     question: 'Do I pay duty while wine is stored?',
@@ -30,7 +30,7 @@ const faqItems = [
   {
     question: 'What do you need from me before a shipment arrives?',
     answer:
-      'A commercial invoice and packing list for the consignment. We use these to record what is coming, match each line to the wine it is, and prepare the customs entry. Sending them early is the single biggest thing that keeps a shipment moving.',
+      'A commercial invoice and packing list. We use them to record what is coming, match each line to the wine it is, and prepare the customs entry. Send them before the wine travels: an entry cannot be prepared without them, and a shipment that arrives ahead of its paperwork waits.',
   },
   {
     question: 'Can I combine purchases from several suppliers into one shipment?',
@@ -40,7 +40,17 @@ const faqItems = [
   {
     question: 'How accurate is what I see in my inventory?',
     answer:
-      'It is the warehouse record, not a report compiled afterwards. Every receipt, move, pick and dispatch is written against the case as it happens, so what you read is what stands on the shelf.',
+      'It is the warehouse record itself, not a report compiled from it. Every receipt, move, pick and dispatch is written against the case as it happens, so what you read is what stands on the shelf.',
+  },
+  {
+    question: 'What if a bottle is damaged or goes missing?',
+    answer:
+      'While your wine is with us the risk is ours and it is insured, so a breakage or a shortfall is ours to make good rather than yours to absorb. Damage found on arrival is recorded against the receipt and raised with the sender, since that happened before the wine reached us.',
+  },
+  {
+    question: 'How do I instruct a release, a shipment or a sale?',
+    answer:
+      'Tell us in writing — email is enough. We confirm what we have understood before anything moves, because an instruction acted on from a half-remembered conversation is how the wrong case goes out.',
   },
   {
     question: 'Can I take part of a case?',
@@ -60,7 +70,7 @@ const faqItems = [
   {
     question: 'How quickly can wine be delivered?',
     answer:
-      'Picking is same or next working day once an instruction is confirmed. Delivery into the UAE depends on the customs entry and the licensed distributor; export timing depends on the route and the airline or vessel. We confirm dates as they are booked.',
+      'Picking is same or next working day once an instruction is confirmed. After that it is the customs entry and the licensed distributor for a UAE delivery, or the route and the carrier for an export — neither of which we set. We confirm dates as they are booked rather than estimating them.',
   },
 ];
 
@@ -126,6 +136,11 @@ const PartnerSupportPage = () => {
                   term: 'Ownership',
                   detail:
                     'Stock is held against your account and moves only on your instruction.',
+                },
+                {
+                  term: 'Risk and insurance',
+                  detail:
+                    'While your wine is in our warehouse the risk is ours, and it is insured. You do not need cover of your own for stock held here.',
                 },
                 {
                   term: 'Handling',
