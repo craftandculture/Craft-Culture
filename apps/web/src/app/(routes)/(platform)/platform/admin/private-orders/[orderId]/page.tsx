@@ -119,6 +119,15 @@ interface NewItem {
   caseConfig: number;
   quantity: number;
   pricePerCaseUsd: number;
+  /*
+    The wine's code, when the line was chosen from stock.
+
+    A line typed by hand has none, and without one the order cannot raise a
+    Zoho sales order — "No LWIN on 1 line". The add row offered only free text,
+    so every wine a client asked for that was not already on the order arrived
+    code-less and blocked it.
+  */
+  lwin: string;
 }
 
 /**
@@ -154,7 +163,9 @@ const AdminPrivateOrderDetailPage = () => {
     caseConfig: 12,
     quantity: 1,
     pricePerCaseUsd: 0,
+    lwin: '',
   });
+  const [stockQuery, setStockQuery] = useState('');
   const [currency, setCurrency] = useState<Currency>('USD');
   const [resetTarget, setResetTarget] = useState<ResetTargetStatus>('awaiting_distributor_verification');
   const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
@@ -241,6 +252,7 @@ const AdminPrivateOrderDetailPage = () => {
       onSuccess: () => {
         toast.success('Item added');
         setIsAddingItem(false);
+        setStockQuery('');
         setNewItem({
           productName: '',
           producer: '',
@@ -249,6 +261,7 @@ const AdminPrivateOrderDetailPage = () => {
           caseConfig: 12,
           quantity: 1,
           pricePerCaseUsd: 0,
+          lwin: '',
         });
         void refetch();
       },
@@ -391,8 +404,25 @@ const AdminPrivateOrderDetailPage = () => {
       caseConfig: newItem.caseConfig,
       quantity: newItem.quantity,
       pricePerCaseUsd: newItem.pricePerCaseUsd,
+      lwin: newItem.lwin || undefined,
+      source: newItem.lwin ? 'cc_inventory' : 'manual',
     });
   };
+
+  /*
+    Stock matching what is being typed into the add row, landed or in transit.
+
+    Searching only after three characters keeps this off every keystroke of a
+    long Burgundy name, and the row stays free text so a wine we genuinely do
+    not hold can still be entered — it just will not carry a code.
+  */
+  const { data: stockMatches } = useQuery({
+    ...api.privateClientOrders.adminWmsStock.queryOptions({
+      search: stockQuery.trim(),
+      limit: 8,
+    }),
+    enabled: isAddingItem && stockQuery.trim().length >= 3,
+  });
 
   const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
   const canEditItems = order && !NON_EDITABLE_STATUSES.includes(order.status);
@@ -825,13 +855,55 @@ const AdminPrivateOrderDetailPage = () => {
                     {/* Add new item row */}
                     {isAddingItem && (
                       <tr className="bg-surface-brand/10">
-                        <td className="px-2 py-1">
+                        <td className="relative px-2 py-1">
                           <Input
-                            placeholder="Product name *"
+                            placeholder="Search stock, or type a name"
                             value={newItem.productName}
-                            onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
+                            onChange={(e) => {
+                              setNewItem({ ...newItem, productName: e.target.value, lwin: '' });
+                              setStockQuery(e.target.value);
+                            }}
                             className="h-8 text-sm"
                           />
+                          {newItem.lwin ? (
+                            <span className="mt-0.5 block font-mono text-[10px] text-text-muted">
+                              {newItem.lwin}
+                            </span>
+                          ) : null}
+                          {stockQuery.trim().length >= 3 && !newItem.lwin && (stockMatches?.data.length ?? 0) > 0 ? (
+                            <div className="absolute left-2 right-2 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border-primary bg-fill-primary shadow-lg">
+                              {(stockMatches?.data ?? []).map((m) => (
+                                <button
+                                  key={`${m.lwin18}-${m.caseConfig}`}
+                                  type="button"
+                                  className="flex w-full flex-col items-start gap-0.5 border-b border-border-muted/50 px-3 py-2 text-left last:border-b-0 hover:bg-fill-secondary"
+                                  onClick={() => {
+                                    setNewItem({
+                                      ...newItem,
+                                      productName: m.productName,
+                                      producer: m.producer ?? '',
+                                      vintage: m.vintage != null ? String(m.vintage) : '',
+                                      bottleSize: m.bottleSize ?? '750ml',
+                                      caseConfig: m.caseConfig ?? 12,
+                                      lwin: m.lwin18,
+                                    });
+                                    setStockQuery('');
+                                  }}
+                                >
+                                  <span className="text-xs font-medium">{m.productName}</span>
+                                  <span className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] text-text-muted">
+                                    {m.lwin18}
+                                    <span>{m.availableCases} cs</span>
+                                    {m.isInTransit ? (
+                                      <span className="rounded bg-amber-100 px-1 py-0.5 font-sans font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                        in transit
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-2 py-1">
                           <Input
