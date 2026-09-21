@@ -129,10 +129,29 @@ const WMSPickListDetailPage = () => {
     setCurrentItemIndex(0);
   };
 
+  /*
+    Say that the pick landed.
+
+    Neither pick mutation confirmed anything: the screen simply blanked and
+    re-sorted to the next unpicked line. After a re-sync splits an order line,
+    that next line is the SAME wine at the SAME bay, so a pick that had already
+    committed looked to the operator like one that had failed — and the retry
+    lands on the remainder line, which is a different row and does commit. The
+    guard above only refuses the same line twice; it cannot see this. A
+    shortage is all that stopped a double-pick shipping.
+  */
   // Whole-case pick — routes through local NUC when available
   const pickItemMutation = useMutation({
     ...wmsApi.pickItemMutationOptions(),
-    onSuccess: resetAfterPick,
+    onSuccess: () => {
+      // Built before the reset clears it. The local NUC returns a thinner
+      // shape than the cloud, so this says it from what the screen knows.
+      const where = pickedLocationCode || pickedLocationId ? ` from ${pickedLocationCode}` : '';
+      const qty = pickedQuantity;
+
+      resetAfterPick();
+      toast.success(`Picked ${qty} case(s)${where}`);
+    },
   });
 
   // Bottle (split-case) pick — always cloud tRPC; the local NUC server has no
@@ -141,6 +160,7 @@ const WMSPickListDetailPage = () => {
     ...api.wms.admin.picking.pickItem.mutationOptions(),
     onSuccess: (result) => {
       resetAfterPick();
+      toast.success(result?.message ?? 'Picked');
 
       // Only a cracked case leaves one; a clean pick returns null.
       if (result?.remainder) setRemainderToRelabel(result.remainder);
