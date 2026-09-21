@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ilike, like, sql } from 'drizzle-orm';
+import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -282,11 +282,44 @@ const adminPickItem = wmsOperatorProcedure
       );
       const needed = isBottlePick ? pickedBottles : pickedQuantity * (linePack || 1);
 
+      /*
+        Where the rest of it is, if the system knows.
+
+        Short at this bay is only half an answer — the picker is standing in
+        the aisle and the next question is always "so where do I walk". Same
+        pack-agnostic net used when nothing matched here at all, minus this
+        bay, because a split leaves the same wine spread across several.
+      */
+      const otherBays = packPattern
+        ? await db
+            .select({
+              bottles: sql<number>`(${wmsStock.quantityCases} * COALESCE(${wmsStock.caseConfig}, 12)) + ${wmsStock.openBottles}`,
+              locationCode: wmsLocations.locationCode,
+            })
+            .from(wmsStock)
+            .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(
+              and(
+                like(wmsStock.lwin18, packPattern),
+                ne(wmsStock.locationId, pickedFromLocationId),
+                gt(wmsStock.quantityCases, 0),
+              ),
+            )
+        : [];
+
+      const alsoAt = otherBays
+        .filter((row) => row.bottles > 0)
+        .map((row) => `${row.locationCode ?? '—'} (${row.bottles} btl)`)
+        .join(', ');
+
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message:
           `Not enough at ${location.locationCode} for ${pickListItem.productName}. ` +
-          `Need ${needed} bottle(s); the system holds ${onShelf} here across ${ranked.length} row(s).`,
+          `Need ${needed} bottle(s); the system holds ${onShelf} here across ${ranked.length} row(s).` +
+          (alsoAt
+            ? ` Also held at ${alsoAt}.`
+            : ' The system holds none of it anywhere else — the count needs correcting.'),
       });
     }
 
