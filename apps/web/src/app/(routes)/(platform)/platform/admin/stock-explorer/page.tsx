@@ -2761,24 +2761,69 @@ const StockExplorerPage = () => {
               ships short or long. Correct the pack on the row, or the LWIN,
               against what is physically in the bay.
             </p>
-            <div className="mt-2 max-h-40 space-y-1 overflow-auto">
+            <div className="mt-2 max-h-60 space-y-1 overflow-auto">
               {packMismatches.slice(0, 25).map((row) => (
-                <div key={row.stockId} className="text-xs">
-                  <span className="font-medium">{row.productName}</span>
-                  <span className="text-text-muted ml-1 font-mono">
-                    {row.lwin18}
-                  </span>
-                  {row.locationCode ? (
+                <div
+                  key={row.stockId}
+                  className="flex items-start justify-between gap-3 border-t border-amber-200/60 py-1.5 text-xs first:border-t-0 dark:border-amber-800/40"
+                >
+                  <div className="min-w-0">
+                    <span className="font-medium">{row.productName}</span>
                     <span className="text-text-muted ml-1 font-mono">
-                      @ {row.locationCode}
+                      {row.lwin18}
                     </span>
+                    {row.locationCode ? (
+                      <span className="text-text-muted ml-1 font-mono">
+                        @ {row.locationCode}
+                      </span>
+                    ) : null}
+                    <span className="block text-amber-700 dark:text-amber-400">
+                      {row.differs.join(' · ')}
+                      {row.bottlesByRow !== row.bottlesByLwin
+                        ? ` — ${row.bottlesByRow} bottles by the row, ${row.bottlesByLwin} by the LWIN`
+                        : ''}
+                    </span>
+                  </div>
+                  {/*
+                    Two ways out, both stated as an outcome rather than a
+                    mechanism. Listing the faults without a way to act on them
+                    meant finding each wine by hand and re-entering a pack it
+                    already had — which is why these sat here.
+                  */}
+                  {row.caseConfig ? (
+                    <div className="flex flex-none gap-1">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        disabled={isCorrectingPack}
+                        title={`Rewrite the LWIN to ${row.caseConfig}-pack. Use when the bay really holds ${row.bottlesByRow} bottle${row.bottlesByRow === 1 ? '' : 's'}.`}
+                        onClick={() =>
+                          handleCorrectPack(
+                            row.stockId,
+                            row.caseConfig as number,
+                            `Pack mismatch: LWIN said ${row.lwinPack}, bay holds ${row.caseConfig} to a case`,
+                          )
+                        }
+                      >
+                        Keep {row.caseConfig}×
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        disabled={isCorrectingPack}
+                        title={`Set the row to ${row.lwinPack}-pack. Use when the bay really holds ${row.bottlesByLwin} bottles.`}
+                        onClick={() =>
+                          handleCorrectPack(
+                            row.stockId,
+                            row.lwinPack as number,
+                            `Pack mismatch: row said ${row.caseConfig}, bay holds ${row.lwinPack} to a case`,
+                          )
+                        }
+                      >
+                        Use {row.lwinPack}×
+                      </Button>
+                    </div>
                   ) : null}
-                  <span className="block text-amber-700 dark:text-amber-400">
-                    {row.differs.join(' · ')}
-                    {row.bottlesByRow !== row.bottlesByLwin
-                      ? ` — ${row.bottlesByRow} bottles by the row, ${row.bottlesByLwin} by the LWIN`
-                      : ''}
-                  </span>
                 </div>
               ))}
             </div>
