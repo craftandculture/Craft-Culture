@@ -95,9 +95,13 @@ const ZohoSalesOrderReview = ({
         )}
       </div>
 
-      {/* Wide on purpose; the page behind must never scroll sideways for it */}
+      {/*
+        Wide on purpose; the page behind must never scroll sideways for it.
+        The minimum drops on a narrow screen so the table scrolls inside its own
+        box instead of forcing the dialog wider than the window.
+      */}
       <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[34rem] border-collapse">
+        <table className="w-full min-w-[22rem] border-collapse sm:min-w-[34rem]">
           <thead>
             <tr className="border-b border-border-muted">
               <th className="pb-1.5 text-left">

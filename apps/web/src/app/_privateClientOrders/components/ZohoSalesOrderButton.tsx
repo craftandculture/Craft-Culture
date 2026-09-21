@@ -237,7 +237,17 @@ const ZohoSalesOrderButton = ({
         open={preview !== null}
         onOpenChange={(open) => !open && setPreview(null)}
       >
-        <DialogContent className="max-w-3xl">
+        {/*
+          Wide enough for the table it contains.
+
+          The dialog's base width is w-lg — 32rem — while the review table is
+          34rem at its narrowest, so Rate and Total were cut off at the right
+          edge and the amounts could only be reached by scrolling a table whose
+          scrollbar was itself off-screen. max-w-3xl raised the ceiling but
+          never the width. The wrapper still caps this to the viewport, so a
+          small screen is unaffected.
+        */}
+        <DialogContent className="w-full sm:w-[44rem]">
           <DialogHeader>
             <DialogTitle>Raise sales order in Zoho</DialogTitle>
             <DialogDescription>
@@ -246,7 +256,7 @@ const ZohoSalesOrderButton = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
             {preview && (
               <ZohoSalesOrderReview
                 lines={preview.lines}
