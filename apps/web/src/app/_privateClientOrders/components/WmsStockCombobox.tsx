@@ -26,6 +26,8 @@ export interface WmsStockItem {
   caseConfig: number | null;
   availableCases: number;
   totalCases: number;
+  /** Not landed yet — on a shipment, offered so it can still be ordered. */
+  isInTransit?: boolean;
 }
 
 interface WmsStockComboboxProps {
@@ -132,6 +134,11 @@ const WmsStockCombobox = ({
               <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
                 {value.availableCases} cs
               </span>
+              {value.isInTransit ? (
+                <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                  in transit
+                </span>
+              ) : null}
             </div>
           ) : (
             <span className="font-normal text-text-muted">{placeholder}</span>
@@ -188,6 +195,11 @@ const WmsStockCombobox = ({
                   <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
                     {item.availableCases} cs
                   </span>
+                  {item.isInTransit ? (
+                    <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      in transit
+                    </span>
+                  ) : null}
                 </CommandItem>
               ))
             )}
