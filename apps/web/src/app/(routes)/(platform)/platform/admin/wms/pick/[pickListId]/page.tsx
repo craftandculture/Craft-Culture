@@ -27,6 +27,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
+import RelabelRemainderPrompt from '@/app/_wms/components/RelabelRemainderPrompt';
+import type { RemainderToRelabel } from '@/app/_wms/components/RelabelRemainderPrompt';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
@@ -95,6 +97,13 @@ const WMSPickListDetailPage = () => {
     enabled: !!pcoRef?.orderId,
   });
   const { printLabels, isPrinting: isPrintingLabels } = usePrintPcoLabels();
+  /*
+    Set when a pick cracked a case. The bottles left over are physically still
+    in the box they came out of, wearing its label, so the picker is asked to
+    print the new one before that box goes back on the shelf.
+  */
+  const [remainderToRelabel, setRemainderToRelabel] =
+    useState<RemainderToRelabel | null>(null);
 
   // Invalidate both cloud tRPC and local NUC pick queries
   const invalidatePickQueries = () => {
@@ -129,7 +138,12 @@ const WMSPickListDetailPage = () => {
   // bottle/auto-split logic.
   const pickBottlesMutation = useMutation({
     ...api.wms.admin.picking.pickItem.mutationOptions(),
-    onSuccess: resetAfterPick,
+    onSuccess: (result) => {
+      resetAfterPick();
+
+      // Only a cracked case leaves one; a clean pick returns null.
+      if (result?.remainder) setRemainderToRelabel(result.remainder);
+    },
   });
 
   // Complete pick list mutation — routes through local NUC when available
@@ -594,6 +608,17 @@ const WMSPickListDetailPage = () => {
           ) : null}
           <Icon icon={IconChevronRight} size="sm" className="shrink-0 text-text-muted" />
         </button>
+      )}
+
+      {/*
+        Stands between the pick and the next one, because the only moment this
+        is easy is while the box is still in someone's hands.
+      */}
+      {remainderToRelabel && (
+        <RelabelRemainderPrompt
+          remainder={remainderToRelabel}
+          onDone={() => setRemainderToRelabel(null)}
+        />
       )}
 
       {/* Completed State */}

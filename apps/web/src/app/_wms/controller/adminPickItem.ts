@@ -263,6 +263,16 @@ const adminPickItem = wmsOperatorProcedure
     let casesRemoved: number;
     let recordedPickedQuantity: number;
     let resultMessage: string;
+    /*
+      The single-bottle row left behind when a case is cracked.
+
+      Surfaced because the bottles it represents are PHYSICALLY still in the
+      case they came out of, wearing that case's label. The system now says
+      1x75cl and the box on the shelf says 3x75cl, and the next person to read
+      it believes the box. So the screen has to be able to offer a new label,
+      which it cannot do without knowing the row was made.
+    */
+    let remainderStockId: string | null = null;
 
     if (isBottlePick) {
       // --- Split-case (bottle) pick ---
@@ -303,6 +313,8 @@ const adminPickItem = wmsOperatorProcedure
               db,
             })
           : null;
+
+      remainderStockId = singlesId;
 
       // A pick straight off a singles row leaves nothing over to move.
       if (!singlesId && leftover > 0 && pack === 1) {
@@ -444,10 +456,37 @@ const adminPickItem = wmsOperatorProcedure
       })
       .where(eq(wmsPickLists.id, pickList.id));
 
+    /*
+      What the picker now has to relabel.
+
+      Read back rather than assembled from what we just wrote, so the label
+      carries the row as it actually stands — the singles row is merged into an
+      existing one where the bay already held singles, and its count is then
+      the total on the shelf, not the bottles from this case alone.
+    */
+    const [remainder] = remainderStockId
+      ? await db
+          .select({
+            stockId: wmsStock.id,
+            lwin18: wmsStock.lwin18,
+            productName: wmsStock.productName,
+            bottles: wmsStock.quantityCases,
+            locationCode: wmsLocations.locationCode,
+          })
+          .from(wmsStock)
+          .leftJoin(wmsLocations, eq(wmsStock.locationId, wmsLocations.id))
+          .where(eq(wmsStock.id, remainderStockId))
+      : [];
+
     return {
       success: true,
       item: updatedItem,
       message: resultMessage,
+      /*
+        Null on an ordinary pick. Present when a case was cracked, and then the
+        shelf is carrying a box whose printed pack is now wrong.
+      */
+      remainder: remainder ?? null,
     };
   });
 
