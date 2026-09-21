@@ -33,6 +33,7 @@ import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
+import caseScanMatchesLwin from '@/app/_wms/utils/caseScanMatchesLwin';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -278,15 +279,28 @@ const WMSPickListDetailPage = () => {
 
     if (!pickingItem) return;
 
-    // Verify case barcode contains the item's LWIN
-    // Case barcodes are formatted as CASE-{lwin18}-{seq} (e.g. CASE-1110487-2022-06-00750-001)
-    // Also accept a raw LWIN18 scan or an LWIN18 embedded in any barcode format
+    /*
+      Matched on wine, vintage and bottle size — not on the pack.
+
+      A cracked case keeps the label it was printed with: two bottles off a
+      3-pack leaves a `…-01-…` stock row inside a box still marked `…-03-…`.
+      Comparing the whole code could never match that box, and the only way
+      past it was "Skip Scan — Confirm Manually", which verifies nothing. The
+      pack digit is the one part of that label already known to be stale.
+    */
     const normalizedScan = barcode.replace(/-/g, '').toLowerCase();
     const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
+    const exactMatch =
+      normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan);
 
-    if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan)) {
+    if (exactMatch || caseScanMatchesLwin(barcode, pickingItem.lwin18)) {
       setCaseVerified(true);
       setScannedBarcodes((prev) => new Set(prev).add(barcode.toUpperCase()));
+
+      // Say so, because the box is wrong and only the picker can put that right.
+      if (!exactMatch) {
+        toast.info('Right wine — case label shows the old pack, relabel it');
+      }
     } else {
       toast.error('Wrong case — barcode does not match this product');
     }

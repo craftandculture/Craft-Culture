@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import caseScanMatchesLwin, { extractScannedLwin18 } from './caseScanMatchesLwin';
 import lwinPackAgnosticPattern from './lwinPackAgnosticPattern';
 import parseSkuPack from './parseSkuPack';
 import rankStockByPack from './rankStockByPack';
@@ -469,5 +470,59 @@ describe('resolveRepackFromStock', () => {
     );
 
     expect(result.suggestedLocation).toBe('B-02-01');
+  });
+});
+
+describe('caseScanMatchesLwin', () => {
+  it('pulls the LWIN out of a case label, a bare scan and a compact code', () => {
+    expect(extractScannedLwin18('CASE-1010279-2015-06-00750-001')).toBe(
+      '1010279-2015-06-00750',
+    );
+    expect(extractScannedLwin18('1010279-2015-06-00750')).toBe(
+      '1010279-2015-06-00750',
+    );
+    expect(extractScannedLwin18('101027920150600750')).toBe(
+      '1010279-2015-06-00750',
+    );
+  });
+
+  /*
+    PL-2026-0069. Two bottles came off a 3-pack, so the shelf held a singles
+    row inside a box still labelled 3x75cl. Scanning that box read "Wrong case
+    — barcode does not match this product", and the only way on was to skip the
+    scan entirely.
+  */
+  it('accepts a cracked case still wearing its original pack label', () => {
+    expect(
+      caseScanMatchesLwin('CASE-1010279-2015-03-00750-001', '1010279-2015-01-00750'),
+    ).toBe(true);
+  });
+
+  it('still rejects a different wine or vintage', () => {
+    expect(
+      caseScanMatchesLwin('CASE-1104695-2015-06-00750-001', '1010279-2015-01-00750'),
+    ).toBe(false);
+    expect(
+      caseScanMatchesLwin('CASE-1010279-2016-06-00750-001', '1010279-2015-01-00750'),
+    ).toBe(false);
+  });
+
+  // A magnum is a different physical thing and must never satisfy a 75cl line.
+  it('still rejects a different bottle size', () => {
+    expect(
+      caseScanMatchesLwin('CASE-1010279-2015-03-01500-001', '1010279-2015-01-00750'),
+    ).toBe(false);
+  });
+
+  // Spirits carry non-numeric LWINs; working on dashes keeps them intact.
+  it('handles a non-numeric LWIN', () => {
+    expect(
+      caseScanMatchesLwin('CASE-SOTCAS750B-0000-06-00700-002', 'SOTCAS750B-0000-01-00700'),
+    ).toBe(true);
+  });
+
+  it('does not match on blanks from a partial scan', () => {
+    expect(caseScanMatchesLwin('CASE-', '1010279-2015-01-00750')).toBe(false);
+    expect(caseScanMatchesLwin('', '1010279-2015-01-00750')).toBe(false);
   });
 });
