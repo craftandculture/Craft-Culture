@@ -226,7 +226,16 @@ const adminPickItem = wmsOperatorProcedure
       if (isBottlePick) {
         const fromOpen = Math.min(pickedBottles, row.openBottles);
         const casesToCrack = Math.ceil((pickedBottles - fromOpen) / packOf(row));
-        return row.availableCases >= casesToCrack;
+        /*
+          Physical cases, for the same reason the whole-case branch below uses
+          them: availableCases excludes cases reserved for THIS order, so a
+          bottle line whose stock was set aside at approval could satisfy
+          nothing. Every row failed, selection fell through to the empty
+          singles row left by an earlier crack, and the picker was told the
+          shelf held 0 cases and 0 loose bottles while a full case sat in the
+          bay. The reservation is converted below, not stepped around.
+        */
+        return row.quantityCases >= casesToCrack;
       }
       if (linePack > 0 && packOf(row) !== linePack) return false;
       // Physical cases, not unreserved ones — see the whole-case branch below.
@@ -257,6 +266,30 @@ const adminPickItem = wmsOperatorProcedure
       });
     }
 
+    /*
+      Nothing here can cover the pick, so say what IS here.
+
+      Falling through to the best-ranked row meant reporting that row's counts,
+      and the best-ranked row for a bottle pick is often an emptied singles row
+      — hence "0 case(s), 0 loose bottle(s)" told to a picker looking straight
+      at a full case of the same wine. Add up every row for this wine in the
+      bay instead.
+    */
+    if (usable.length === 0) {
+      const onShelf = ranked.reduce(
+        (sum, row) => sum + row.quantityCases * packOf(row) + row.openBottles,
+        0,
+      );
+      const needed = isBottlePick ? pickedBottles : pickedQuantity * (linePack || 1);
+
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          `Not enough at ${location.locationCode} for ${pickListItem.productName}. ` +
+          `Need ${needed} bottle(s); the system holds ${onShelf} here across ${ranked.length} row(s).`,
+      });
+    }
+
     const pack = stock.caseConfig ?? 12;
 
     // How many sealed cases this pick removes, and what to store on the line.
@@ -274,6 +307,43 @@ const adminPickItem = wmsOperatorProcedure
     */
     let remainderStockId: string | null = null;
 
+    // Cases held for THIS order are pickable; cases held for another order
+    // are not. convertReservationToPick caps the unreserved portion at
+    // availableCases, so without this check the line would be marked picked
+    // and a movement recorded while the stock was never decremented.
+    const [heldForThisOrder] = await db
+      .select({
+        cases: sql<number>`COALESCE(SUM(${wmsStockReservations.quantityCases}), 0)::int`,
+        ownerId: sql<string | null>`MAX(${wmsStockReservations.ownerId}::text)`,
+      })
+      .from(wmsStockReservations)
+      .where(
+        and(
+          eq(wmsStockReservations.stockId, stock.id),
+          eq(wmsStockReservations.orderId, pickList.orderId ?? ''),
+          eq(wmsStockReservations.status, 'active'),
+        ),
+      );
+
+    /*
+      The wine was set aside when it belonged to someone else.
+
+      A reservation binds to a stock row, and ownership of that row can move
+      underneath it. Picking anyway would ship this owner's wine against an
+      order reserved from another's, and settle the proceeds to the wrong
+      partner. Older reservations carry no owner, so those are let through
+      rather than blocking a warehouse that has done nothing wrong.
+    */
+    if (
+      heldForThisOrder?.ownerId &&
+      heldForThisOrder.ownerId !== stock.ownerId
+    ) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: `This stock has changed owner since it was reserved. It is now held for ${stock.ownerName}. Re-reserve the order before picking it.`,
+      });
+    }
+
     if (isBottlePick) {
       // --- Split-case (bottle) pick ---
       // Draw from already-open bottles first, then crack sealed cases as needed.
@@ -288,16 +358,44 @@ const adminPickItem = wmsOperatorProcedure
         });
       }
 
+      // Same rule as a whole-case pick: this order's own hold is pickable,
+      // another order's is not.
+      const pickableCases = stock.availableCases + (heldForThisOrder?.cases ?? 0);
+
+      if (pickableCases < casesRemoved) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `${stock.quantityCases} case(s) are at ${location.locationCode} but reserved for another order. Free them there, or pick from a different bay.`,
+        });
+      }
+
       // Bottles left over once this pick is taken. They become REAL single
       // bottle stock rather than an open_bottles counter nothing else reads —
       // see moveBottlesToSingles for why that counter made stock invisible.
       const leftover = stock.openBottles + casesRemoved * pack - pickedBottles;
 
+      /*
+        Cracking a reserved case goes through the same conversion a whole-case
+        pick uses.
+
+        Decrementing availableCases by hand here double-counted every reserved
+        case: availableCases had already been reduced when the order was
+        approved, so subtracting again drove it negative, and reservedCases was
+        left pointing at a case that had physically gone. That is the residue
+        behind bays reading as held with nothing holding them.
+      */
+      if (casesRemoved > 0) {
+        await convertReservationToPick({
+          stockId: stock.id,
+          orderId: pickList.orderId ?? '',
+          quantityCases: casesRemoved,
+          db,
+        });
+      }
+
       await db
         .update(wmsStock)
         .set({
-          quantityCases: sql`${wmsStock.quantityCases} - ${casesRemoved}`,
-          availableCases: sql`${wmsStock.availableCases} - ${casesRemoved}`,
           // Whatever this row was carrying loose has been moved into singles.
           openBottles: 0,
           updatedAt: new Date(),
@@ -344,43 +442,6 @@ const adminPickItem = wmsOperatorProcedure
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Insufficient stock at ${location.locationCode}. On the shelf: ${stock.quantityCases} case(s), requested: ${pickedQuantity}.`,
-        });
-      }
-
-      // Cases held for THIS order are pickable; cases held for another order
-      // are not. convertReservationToPick caps the unreserved portion at
-      // availableCases, so without this check the line would be marked picked
-      // and a movement recorded while the stock was never decremented.
-      const [heldForThisOrder] = await db
-        .select({
-          cases: sql<number>`COALESCE(SUM(${wmsStockReservations.quantityCases}), 0)::int`,
-          ownerId: sql<string | null>`MAX(${wmsStockReservations.ownerId}::text)`,
-        })
-        .from(wmsStockReservations)
-        .where(
-          and(
-            eq(wmsStockReservations.stockId, stock.id),
-            eq(wmsStockReservations.orderId, pickList.orderId ?? ''),
-            eq(wmsStockReservations.status, 'active'),
-          ),
-        );
-
-      /*
-        The wine was set aside when it belonged to someone else.
-
-        A reservation binds to a stock row, and ownership of that row can move
-        underneath it. Picking anyway would ship this owner's wine against an
-        order reserved from another's, and settle the proceeds to the wrong
-        partner. Older reservations carry no owner, so those are let through
-        rather than blocking a warehouse that has done nothing wrong.
-      */
-      if (
-        heldForThisOrder?.ownerId &&
-        heldForThisOrder.ownerId !== stock.ownerId
-      ) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: `This stock has changed owner since it was reserved. It is now held for ${stock.ownerName}. Re-reserve the order before picking it.`,
         });
       }
 
