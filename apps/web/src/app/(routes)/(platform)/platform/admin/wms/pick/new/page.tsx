@@ -12,6 +12,7 @@ import {
   IconReplace,
   IconSearch,
   IconTag,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -74,6 +75,19 @@ const NewPickListPage = () => {
 
   const releaseToPickMutation = useMutation({
     ...api.zohoSalesOrders.releaseToPick.mutationOptions(),
+  });
+
+  // Remove an order Zoho no longer has. Refuses unless Zoho confirms a 404,
+  // so a network wobble can never clear a live order off the floor's queue.
+  const dismissMutation = useMutation({
+    ...api.zohoSalesOrders.dismissDeleted.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: [['zohoSalesOrders']] });
+      toast.success(result.message);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Could not remove that order');
+    },
   });
 
   const syncMutation = useMutation({
@@ -482,6 +496,31 @@ const NewPickListPage = () => {
                             </p>
                           )}
                         </div>
+
+                        {/*
+                          Escape hatch for an order deleted in Zoho.
+
+                          The sync only writes what Zoho returns, so a deleted
+                          order keeps its local row at synced/invoiced — the
+                          exact filter this queue runs on — and no other action
+                          on this screen can shift it. Checks Zoho before
+                          removing anything.
+                        */}
+                        <button
+                          type="button"
+                          title="Not in Zoho? Check and remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissMutation.mutate({ salesOrderId: order.id });
+                          }}
+                          disabled={dismissMutation.isPending}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted/60 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-900/20"
+                        >
+                          <Icon
+                            icon={dismissMutation.isPending ? IconLoader2 : IconTrash}
+                            size="sm"
+                          />
+                        </button>
 
                         {/* Expand chevron */}
                         <button
