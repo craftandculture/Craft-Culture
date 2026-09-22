@@ -94,6 +94,11 @@ const adminSyncOutFromZoho = adminProcedure
       arrangements.map((row) => [row.ownerId, row.id]),
     );
 
+    /** The tags on file, so a word can be tested for being one */
+    const knownTags = owners
+      .map((owner) => owner.consignmentTag)
+      .filter((tag): tag is string => Boolean(tag));
+
     /*
       Whose wine each code was last time. A mixed invoice names its owners in
       heading rows Zoho drops on read, so for those lines the registry is the
@@ -153,14 +158,35 @@ const adminSyncOutFromZoho = adminProcedure
         through to the wine's own history rather than taking a tag that would
         be wrong for most of them.
       */
-      const invoiceTag = readOwnerTag(
-        subject,
-        owners
-          .map((owner) => owner.consignmentTag)
-          .filter((tag): tag is string => Boolean(tag)),
-      );
+      const invoiceTag = readOwnerTag(subject, knownTags);
+
+      /*
+        A MIX invoice says whose each wine is, in header rows above the lines.
+
+        INV-000236 carries CONSIGNMENT_CC over thirteen lines, CONSIGNMENT_RARE
+        over one and CONSIGNMENT_CRU over three, and every line on it was
+        attributed to whoever takes the unattributed — because a header row has
+        no quantity and the loop skipped it on the way past. The document had
+        the answer on it the whole time.
+
+        Read in order, so a header applies to everything beneath it until the
+        next one. Where a header names nobody the invoice's own tag stands,
+        which for MIX is nothing, and those lines fall through as before.
+      */
+      let headerTag: string | null = null;
 
       for (const line of invoice.line_items ?? []) {
+        const asHeader =
+          line.item_type === 'header' || (!line.quantity && !line.sku);
+
+        if (asHeader) {
+          const named = readOwnerTag(line.name, knownTags);
+
+          if (named) headerTag = named;
+
+          continue;
+        }
+
         if (!line.quantity) continue;
 
         const lwin18 = line.sku?.trim() || null;
@@ -177,7 +203,8 @@ const adminSyncOutFromZoho = adminProcedure
         const pack = packStated ? parsedPack! : 1;
 
         const { ownerId, reason } = resolveOwner({
-          tag: invoiceTag,
+          /* The line's own header beats the invoice's tag, being narrower */
+          tag: headerTag ?? invoiceTag,
           knownOwnerId: lwin18 ? knownOwnerByLwin.get(squash(lwin18)) : null,
           owners,
         });

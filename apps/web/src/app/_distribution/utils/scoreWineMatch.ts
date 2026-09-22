@@ -1,6 +1,14 @@
-/** Words that appear on half the labels in Bordeaux and distinguish nothing */
+/**
+ * Words that appear on half the labels in Bordeaux and distinguish nothing
+ *
+ * The colours belong here as much as the estate words do. "Chateau Smith Haut
+ * Lafitte Pessac Leognan 2019 Rouge" was proposed as "Chateau Puygueraud Rouge
+ * 2019" on the strength of one shared word, and that word was the colour: once
+ * chateau is stripped, a two-word name of which one is `rouge` matches
+ * anything red from the same year.
+ */
 const NOISE =
-  /\b(chateau|château|domaine|tenuta|cru|classe|classé|grand|premier|1er|2eme|3eme|4eme|5eme|eme|the|de|di|du|des|la|le|les|el|and|et|wine|wines|bottle|bottles|case|nv)\b/g;
+  /\b(chateau|château|domaine|tenuta|cru|classe|classé|grand|premier|1er|2eme|3eme|4eme|5eme|eme|the|de|di|du|des|la|le|les|el|and|et|wine|wines|bottle|bottles|case|nv|rouge|blanc|blanche|rosso|bianco|rosato|rose|rosé|red|white|tinto|blanco)\b/g;
 
 /** Vintage anywhere in the name */
 const VINTAGE = /\b(19|20)\d{2}\b/;
@@ -21,8 +29,20 @@ const SIZE = /(\d+(?:\.\d+)?)\s*(cl|ml|l)\b/i;
 const VINTAGE_ALL = /\b(19|20)\d{2}\b/g;
 const SIZE_ALL = /(\d+(?:\.\d+)?)\s*(cl|ml|l)\b/gi;
 
+/*
+  Accents off first, or they take the word with them.
+
+  Stripping anything outside a-z turns "château" into "ch" and "teau", and
+  those two fragments are shared by every chateau in Bordeaux — enough on their
+  own to propose Puygueraud as Smith Haut Lafitte. Folded to plain letters the
+  word becomes "chateau" and the noise list removes it, as it was always meant
+  to.
+*/
+const plain = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const words = (value: string) =>
-  value
+  plain(value)
     .toLowerCase()
     .replace(/[^a-z0-9\s.]/g, ' ')
     .replace(NOISE, ' ')

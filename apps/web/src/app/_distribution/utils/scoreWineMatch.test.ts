@@ -94,6 +94,19 @@ describe('scoreWineMatch', () => {
     ).toBeGreaterThan(0.55);
   });
 
+  /*
+    Two different Bordeaux, proposed as each other because both are red and
+    both are 2019. A colour is not an identity.
+  */
+  it('does not let a shared colour carry a match', () => {
+    expect(
+      scoreWineMatch(
+        'Château Puygueraud Rouge 2019',
+        'Château Smith Haut Lafitte Pessac Léognan 2019 Rouge',
+      ).score,
+    ).toBe(0);
+  });
+
   it('refuses a different bottle size outright', () => {
     expect(
       scoreWineMatch('Chateau Latour 1993 75cl', 'Chateau Latour 1993 150cl')
