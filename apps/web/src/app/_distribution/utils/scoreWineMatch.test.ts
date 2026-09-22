@@ -51,6 +51,36 @@ describe('scoreWineMatch', () => {
     expect(result.rejected).toMatch(/vintage/);
   });
 
+  /*
+    A shared vintage is not a shared wine. Left counting, it made "Tignanello
+    2022" the one suggestion offered for every 2022 on the page, because two
+    words of which one matches scores high enough to clear any useful
+    threshold.
+  */
+  it('does not let a shared vintage carry a match', () => {
+    expect(
+      scoreWineMatch(
+        'Domaine Lafouge Meursault Clos de Rougeot 2022',
+        'Tignanello 2022',
+      ).score,
+    ).toBe(0);
+  });
+
+  it('does not let a shared bottle size carry a match', () => {
+    expect(
+      scoreWineMatch('Chateau Palmer 75cl', 'Sassicaia 75cl').score,
+    ).toBe(0);
+  });
+
+  it('still ranks the right wine top among wines of one vintage', () => {
+    expect(
+      best('Domaine de Montille Bourgogne Blanc 2022', [
+        'Tignanello 2022',
+        'Montille Bourgogne Blanc 2022',
+      ]).theirs,
+    ).toBe('Montille Bourgogne Blanc 2022');
+  });
+
   it('refuses a different bottle size outright', () => {
     expect(
       scoreWineMatch('Chateau Latour 1993 75cl', 'Chateau Latour 1993 150cl')

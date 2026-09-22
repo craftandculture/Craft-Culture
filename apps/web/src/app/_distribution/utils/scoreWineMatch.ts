@@ -8,11 +8,26 @@ const VINTAGE = /\b(19|20)\d{2}\b/;
 /** "6x75cl", "75cl", "1.5L" — the format, where the name states one */
 const SIZE = /(\d+(?:\.\d+)?)\s*(cl|ml|l)\b/i;
 
+/*
+  The same two, global, to strike them out of the words being compared.
+
+  Vintage and size are decided above as hard filters, so by the time the names
+  are compared the two either agree on them or one side never said. Either way
+  they distinguish nothing, and left in they do real harm: "Tignanello 2022" is
+  two words, so a wine sharing only the vintage scores 0.33 against it and
+  clears any threshold low enough to be useful. That is how one Tuscan red came
+  to be the sole suggestion for every 2022 Burgundy on the page.
+*/
+const VINTAGE_ALL = /\b(19|20)\d{2}\b/g;
+const SIZE_ALL = /(\d+(?:\.\d+)?)\s*(cl|ml|l)\b/gi;
+
 const words = (value: string) =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9\s.]/g, ' ')
     .replace(NOISE, ' ')
+    .replace(SIZE_ALL, ' ')
+    .replace(VINTAGE_ALL, ' ')
     .split(/\s+/)
     .filter((word) => word.length > 1);
 
@@ -54,7 +69,9 @@ export interface WineMatchScore {
  *
  * Vintage and size are hard filters rather than contributions. A 2017 is not a
  * near-miss for a 2019 and a magnum is not a near-miss for a bottle; treating
- * either as similarity is how a confident wrong answer gets produced.
+ * either as similarity is how a confident wrong answer gets produced. Having
+ * filtered on them, this also strikes them from the words compared, so that
+ * agreeing on the vintage cannot stand in for agreeing on the wine.
  *
  * @param ours - The wine as our invoice names it
  * @param theirs - The wine as the distributor names it

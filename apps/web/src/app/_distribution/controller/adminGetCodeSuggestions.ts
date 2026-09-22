@@ -63,11 +63,22 @@ export interface CodeSuggestion {
  * invoiced out. A link that fails that is almost certainly the wrong wine, and
  * it is shown rather than hidden so the judgement is made with it in view.
  *
+ * Our side honours the owner filter the rest of the page is under, because the
+ * banner counting unknown positions does. Two counts of the same thing that
+ * disagree are read as a fault in the mapping, and this one said 108 against
+ * the banner's 4 purely by counting every owner.
+ *
  * @param outletId - The distributor to link against
+ * @param ownerId - Restrict to one owner, as the page's filter does
  * @returns Our unlinked wines, each with ranked candidates
  */
 const adminGetCodeSuggestions = adminProcedure
-  .input(z.object({ outletId: z.string().uuid() }))
+  .input(
+    z.object({
+      outletId: z.string().uuid(),
+      ownerId: z.string().uuid().nullable().optional(),
+    }),
+  )
   .query(async ({ input }) => {
     const hasLinks = await confirmedLinksReady();
 
@@ -110,6 +121,7 @@ const adminGetCodeSuggestions = adminProcedure
       WHERE a.outlet_id = ${input.outletId}
         AND m.kind = 'out'
         AND m.lwin18 IS NOT NULL
+        ${input.ownerId ? client`AND a.owner_id = ${input.ownerId}` : client``}
       GROUP BY m.lwin18, a.owner_id
       ORDER BY SUM(m.bottles) DESC
     `;

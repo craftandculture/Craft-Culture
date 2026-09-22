@@ -337,7 +337,11 @@ const DistributionClient = () => {
         </div>
       </div>
 
-      <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
+      <CodeLinkPanel
+        outletId={outletId}
+        ownerId={ownerId || null}
+        onLinked={invalidate}
+      />
 
       <div className="space-y-2">
         <Typography variant="labelSm" asChild>

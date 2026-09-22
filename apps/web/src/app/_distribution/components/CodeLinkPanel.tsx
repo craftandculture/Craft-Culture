@@ -9,6 +9,8 @@ import useTRPC from '@/lib/trpc/browser';
 
 interface CodeLinkPanelProps {
   outletId: string | null;
+  /** The owner the page is filtered to, so this agrees with the banner */
+  ownerId: string | null;
   onLinked: () => void | Promise<void>;
 }
 
@@ -28,12 +30,13 @@ interface CodeLinkPanelProps {
  *
  * Confirmed once, kept forever.
  */
-const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
+const CodeLinkPanel = ({ outletId, ownerId, onLinked }: CodeLinkPanelProps) => {
   const api = useTRPC();
 
   const suggestions = useQuery({
     ...api.distribution.admin.getCodeSuggestions.queryOptions({
       outletId: outletId ?? '',
+      ownerId: ownerId || null,
     }),
     enabled: Boolean(outletId),
   });
@@ -53,6 +56,16 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
 
   if (!outletId || suggestions.isPending) return null;
 
+  /*
+    A wine with no candidate is a row that says nothing and cannot be acted on.
+    Worth a count, not a hundred lines of "no candidate close enough" — that is
+    what the page looked like when a shared vintage was scoring as a match.
+  */
+  const actionable = data?.suggestions.filter(
+    (wine) => wine.candidates.length > 0,
+  );
+  const silent = (data?.suggestions.length ?? 0) - (actionable?.length ?? 0);
+
   /* Nothing to do is worth saying once, quietly, rather than an empty card */
   if (!data || data.suggestions.length === 0) {
     return (
@@ -65,6 +78,22 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
     );
   }
 
+  /*
+    Unreached, but nothing to offer — say that rather than claim every wine
+    is mapped, which is the opposite of the truth.
+  */
+  if (!actionable || actionable.length === 0) {
+    return (
+      <Typography variant="bodyXs" colorRole="muted" asChild>
+        <p className="max-w-3xl">
+          {silent} of ours reach the distributor under no code, and none of
+          their {data.unlinkedTheirs} unclaimed lines shares a word with ours.
+          Nothing here can be closed by name.
+        </p>
+      </Typography>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Typography variant="labelSm" asChild>
@@ -72,15 +101,16 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.unlinkedOurs} of ours against {data.unlinkedTheirs} of theirs.
-          Names are ranked as a suggestion only — check the vintage and the
-          bottle count before confirming, because a wrong link settles money
-          against the wrong wine.
+          {actionable.length} of ours can be offered a candidate, out of{' '}
+          {data.unlinkedOurs} under no code against {data.unlinkedTheirs} of
+          theirs. Names are ranked as a suggestion only — check the vintage and
+          the bottle count before confirming, because a wrong link settles
+          money against the wrong wine.
         </p>
       </Typography>
 
       <div className="border-border-primary divide-border-muted divide-y rounded-xl border">
-        {data.suggestions.map((wine) => (
+        {actionable?.map((wine) => (
           <div key={`${wine.lwin18}-${wine.ownerName}`} className="p-3">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <Typography variant="bodySm" asChild>
@@ -96,15 +126,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
               </Typography>
             </div>
 
-            {wine.candidates.length === 0 ? (
-              <Typography variant="bodyXs" colorRole="muted" asChild>
-                <p className="mt-1">
-                  No candidate close enough to suggest. Either they do not hold
-                  it, or their name for it shares no words with ours.
-                </p>
-              </Typography>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
                 {wine.candidates.map((candidate) => (
                   <button
                     key={candidate.outletCode}
@@ -145,12 +167,21 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                       </Typography>
                     )}
                   </button>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         ))}
       </div>
+
+      {silent > 0 ? (
+        <Typography variant="bodyXs" colorRole="muted" asChild>
+          <p>
+            {silent} more of ours reach no candidate by name. Either they hold
+            none of it, or their name for it shares no word with ours — neither
+            is something a guess should close.
+          </p>
+        </Typography>
+      ) : null}
 
       {data.unlinkedTheirs > 0 ? (
         <Typography variant="bodyXs" colorRole="muted" asChild>
