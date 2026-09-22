@@ -4,6 +4,11 @@ import { z } from 'zod';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import {
+  codeBridgeCtes,
+  codeBridgeJoins,
+  resolvedSnapshotCode,
+} from '../utils/codeBridge';
 import parseOutletSalesReport from '../utils/parseOutletSalesReport';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
@@ -76,39 +81,21 @@ const adminImportOutletSales = adminProcedure
         SELECT MAX(taken_at) AS taken_at
         FROM cons_snapshots WHERE outlet_id = ${input.outletId}
       ),
-      code_map AS (
-        SELECT DISTINCT
-          UPPER(REGEXP_REPLACE(w.supplier_sku, '[^A-Za-z0-9]', '', 'g')) AS w_code,
-          UPPER(REGEXP_REPLACE(w.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
-        FROM wms_stock w
-        WHERE NULLIF(TRIM(w.supplier_sku), '') IS NOT NULL
-          AND NULLIF(TRIM(w.lwin18), '') IS NOT NULL
-        UNION
-        SELECT DISTINCT
-          UPPER(REGEXP_REPLACE(t.w_code, '[^A-Za-z0-9]', '', 'g')),
-          UPPER(REGEXP_REPLACE(t.lwin18, '[^A-Za-z0-9]', '', 'g'))
-        FROM tri_skus t
-        WHERE NULLIF(TRIM(t.w_code), '') IS NOT NULL
-          AND NULLIF(TRIM(t.lwin18), '') IS NOT NULL
-      ),
+${codeBridgeCtes(input.outletId)},
+      /*
+        Their report names wines by CDR code and nothing else, so this is the
+        one feed where the CDR path is not a fallback but the main road.
+      */
       ours AS (
-        SELECT s.outlet_code,
-               COALESCE(
-                 cm.lwin,
-                 UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
-               ) AS code
+        SELECT s.outlet_code, ${resolvedSnapshotCode()} AS code
         FROM cons_snapshots s
         CROSS JOIN latest
-        LEFT JOIN code_map cm
-          ON cm.w_code = REGEXP_REPLACE(
-               UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g')),
-               'CON$', ''
-             )
+        ${codeBridgeJoins()}
         WHERE s.outlet_id = ${input.outletId}
           AND s.taken_at = latest.taken_at
-          AND NULLIF(TRIM(s.our_code), '') IS NOT NULL
+          AND ${resolvedSnapshotCode()} IS NOT NULL
       ),
-      sent AS (
+            sent AS (
         SELECT DISTINCT ON (code) code, lwin18, owner_id, arrangement_id, product_name
         FROM (
           SELECT UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g')) AS code,

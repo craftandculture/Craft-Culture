@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import {
+  codeBridgeCtes,
+  codeBridgeJoins,
+  resolvedSnapshotCode,
+} from '../utils/codeBridge';
+
 export interface BalanceRow {
   ownerName: string;
   ownerId: string;
@@ -30,11 +36,13 @@ export interface BalanceRow {
  * Sold is not here yet — it needs either two snapshot boundaries to difference
  * or the distributor's monthly report, and neither exists for a full month.
  *
- * Held joins on the outlet's code for the wine, because that is the only key
- * the two sides share: City Drinks publish our code beside theirs, so the
- * snapshot carries both. A wine we invoiced that they have never coded shows
- * Held as null rather than zero — an unknown position and an empty one are
- * different facts, and reading one as the other invents a variance.
+ * Held is joined through `codeBridge`, which is the single definition of how
+ * their codes reach ours — a confirmed link first, then their CDR code through
+ * the mapping already done by hand, then the W code through the warehouse.
+ *
+ * A wine we invoiced that no path reaches shows Held as null rather than zero.
+ * An unknown position and an empty one are different facts, and reading one as
+ * the other invents a variance out of nothing.
  *
  * @param outletId - The outlet to reconcile
  * @returns One row per wine per owner, heaviest position first
@@ -55,83 +63,25 @@ const adminGetBalances = adminProcedure
         SELECT MAX(taken_at) AS taken_at
         FROM cons_snapshots WHERE outlet_id = ${input.outletId}
       ),
-      /*
-        The bridge between the two code systems.
-
-        Our invoices carry LWINs, because that is what Zoho's item SKU holds.
-        City Drinks carry our W codes — W2104324, CCW73CON — because that is
-        what we gave them. Neither side can join to the other directly, and
-        the only place both appear against one wine is our own warehouse.
-
-        tri_skus is included because its W-code-to-LWIN pairs were curated by
-        hand for exactly these wines; it is read as data, not as a dependency
-        on the tool being replaced.
-      */
-      code_map AS (
-        SELECT DISTINCT
-          UPPER(REGEXP_REPLACE(w.supplier_sku, '[^A-Za-z0-9]', '', 'g')) AS w_code,
-          UPPER(REGEXP_REPLACE(w.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
-        FROM wms_stock w
-        WHERE NULLIF(TRIM(w.supplier_sku), '') IS NOT NULL
-          AND NULLIF(TRIM(w.lwin18), '') IS NOT NULL
-        UNION
-        SELECT DISTINCT
-          UPPER(REGEXP_REPLACE(t.w_code, '[^A-Za-z0-9]', '', 'g')),
-          UPPER(REGEXP_REPLACE(t.lwin18, '[^A-Za-z0-9]', '', 'g'))
-        FROM tri_skus t
-        WHERE NULLIF(TRIM(t.w_code), '') IS NOT NULL
-          AND NULLIF(TRIM(t.lwin18), '') IS NOT NULL
-      ),
-      /*
-        City Drinks' own code, mapped to a wine by hand in the old tool.
-
-        This is the path the W-code bridge cannot reach. The code they hold
-        for us is only genuinely ours for Crurated, who issue W codes; for
-        everyone else it is a label City Drinks invented (CCW73CON) and no
-        table of ours has ever held it. But their own CDR code HAS been mapped,
-        one wine at a time, in tri_sku_aliases, and that work should not be
-        repeated just because it was done somewhere else.
-      */
-      outlet_code_map AS (
-        SELECT DISTINCT
-          UPPER(REGEXP_REPLACE(a.alias_code, '[^A-Za-z0-9]', '', 'g')) AS outlet_code,
-          UPPER(REGEXP_REPLACE(s.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
-        FROM tri_sku_aliases a
-        JOIN tri_skus s ON s.id = a.sku_id
-        WHERE a.source = 'city_drinks'
-          AND NULLIF(TRIM(s.lwin18), '') IS NOT NULL
-      ),
+      ${codeBridgeCtes(input.outletId)},
       held AS (
-        SELECT
-          /*
-            Their code, translated to a LWIN where we can. The trailing CON
-            marks the consignment copy of a wine they also stock outright —
-            fifty codes exist as both CCW101 and CCW101CON — so it is stripped
-            before matching, having already done its job in the regime filter.
-          */
-          COALESCE(
-            cm.lwin,
-            ocm.lwin,
-            UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
-          ) AS code,
+        SELECT ${resolvedSnapshotCode()} AS code,
                SUM(s.bottles_on_hand)::float8 AS bottles,
                MIN(s.outlet_code) AS outlet_code,
                MIN(s.regime) AS regime
         FROM cons_snapshots s
         CROSS JOIN latest
-        LEFT JOIN code_map cm
-          ON cm.w_code = REGEXP_REPLACE(
-               UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g')),
-               'CON$', ''
-             )
-        LEFT JOIN outlet_code_map ocm
-          ON ocm.outlet_code =
-             UPPER(REGEXP_REPLACE(s.outlet_code, '[^A-Za-z0-9]', '', 'g'))
+        ${codeBridgeJoins()}
         WHERE s.outlet_id = ${input.outletId}
           AND s.taken_at = latest.taken_at
           AND s.regime = 'consigned'
-          AND NULLIF(TRIM(s.our_code), '') IS NOT NULL
         GROUP BY 1
+        /*
+          A line whose code reaches nothing is dropped here rather than joined
+          as null — the four City Drinks hold under no code of ours would
+          otherwise all collapse into one phantom wine.
+        */
+        HAVING ${resolvedSnapshotCode()} IS NOT NULL
       ),
       out_lines AS (
         SELECT a.owner_id, o.name AS owner_name, ou.name AS outlet_name,

@@ -1924,6 +1924,36 @@ const runMigrations = async () => {
     }
     console.log('✅ zoho_bills ready');
 
+
+    /*
+      A distributor's code tied to a wine of ours — the join the data cannot
+      make alone. Only Crurated issue codes the distributor holds and our
+      warehouse can translate; everyone else's are labels the distributor
+      invented. Proposed from the wine's name, confirmed by a person, then
+      never asked again.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_code_links" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "outlet_code" text NOT NULL,
+        "lwin18" text NOT NULL,
+        "outlet_product_name" text,
+        "our_product_name" text,
+        "source" text NOT NULL DEFAULT 'confirmed',
+        "confirmed_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_code_links_outlet_code_unique" ON "cons_code_links"("outlet_id","outlet_code")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_code_links_lwin18_idx" ON "cons_code_links"("lwin18")`,
+    );
+    console.log('✅ cons_code_links ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

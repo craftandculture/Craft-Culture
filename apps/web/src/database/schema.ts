@@ -6816,3 +6816,49 @@ export const zohoBills = pgTable(
 );
 
 export type ZohoBillRow = typeof zohoBills.$inferSelect;
+
+/**
+ * A distributor's code, tied to a wine of ours
+ *
+ * The join the data cannot make on its own. Only Crurated issue W codes, which
+ * City Drinks hold and our warehouse can translate; for every other owner the
+ * code the distributor holds is one they invented, and no table of ours has
+ * ever contained it.
+ *
+ * The one field both sides share is the wine's name, so a link is proposed
+ * from that and confirmed by a person — and then never asked again. Confirmed
+ * rather than inferred because a wrong link settles money against the wrong
+ * bottle, and because names alone have already been shown to match confidently
+ * and wrongly on this data.
+ */
+export const consCodeLinks = pgTable(
+  'cons_code_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    outletId: uuid('outlet_id')
+      .references(() => consOutlets.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** Their code for it — City Drinks' CDR… */
+    outletCode: text('outlet_code').notNull(),
+    /** Ours */
+    lwin18: text('lwin18').notNull(),
+    /** Both names as they stood when linked, so a bad link can be recognised */
+    outletProductName: text('outlet_product_name'),
+    ourProductName: text('our_product_name'),
+    /** How it was arrived at: `suggested` then confirmed, or entered by hand */
+    source: text('source').notNull().default('confirmed'),
+    confirmedBy: uuid('confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cons_code_links_outlet_code_unique').on(
+      table.outletId,
+      table.outletCode,
+    ),
+    index('cons_code_links_lwin18_idx').on(table.lwin18),
+  ],
+);
+
+export type ConsCodeLink = typeof consCodeLinks.$inferSelect;
