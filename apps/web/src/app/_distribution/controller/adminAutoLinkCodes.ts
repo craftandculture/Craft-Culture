@@ -21,6 +21,8 @@ const MARGIN = 0.15;
 interface OursRow {
   lwin18: string;
   productName: string;
+  ownerName: string;
+  outBottles: number;
 }
 
 interface TheirsRow {
@@ -46,6 +48,11 @@ const VINTAGE = /\b(19|20)\d{2}\b/;
  * "Rauzan-Segla Margaux 2017" share the word that matters, so on those the
  * runner-up sits close and nothing is written. Those stay on the screen for a
  * person, which is the job this leaves behind rather than the job it does.
+ *
+ * A tie between two of our own wines is not a doubt where they share an owner:
+ * the same wine reaches us under several LWINs, and only the owners
+ * disagreeing makes the choice matter. That check is on the owner rather than
+ * the score, because the owner is what a wrong answer costs.
  *
  * The margin rule is not a proof. Where the distributor names a wine briefly
  * and the brief name is exactly a chateau — "Margaux 2017" — it matches that
@@ -111,9 +118,12 @@ const adminAutoLinkCodes = adminProcedure
     const mappedCodes = new Set(reached.map((row) => norm(row.outletCode)));
 
     const ours = await client<OursRow[]>`
-      SELECT m.lwin18, MIN(m.product_name) AS "productName"
+      SELECT m.lwin18, MIN(m.product_name) AS "productName",
+             MIN(ow.name) AS "ownerName",
+             SUM(m.bottles)::float8 AS "outBottles"
       FROM cons_movements m
       JOIN cons_arrangements a ON a.id = m.arrangement_id
+      JOIN cons_owners ow ON ow.id = a.owner_id
       WHERE a.outlet_id = ${input.outletId}
         AND m.kind = 'out'
         AND m.lwin18 IS NOT NULL
@@ -155,23 +165,43 @@ const adminAutoLinkCodes = adminProcedure
         .sort((a, b) => b.score - a.score);
 
       const best = ranked[0];
-      const second = ranked[1];
 
       if (!best || best.score < ACCEPT_AT) {
         heldBack += 1;
         continue;
       }
 
-      if (second && best.score - second.score < MARGIN) {
+      /*
+        Everything close enough to the winner to be the winner.
+
+        A tie is not automatically a doubt. Our own side carries the same wine
+        under more than one LWIN — an invoice in 6x75cl and another in
+        bottles — so "Elio Grasso, Barolo, Ginestra Casa Mate 2020" ties with
+        itself and the margin rule refused the easiest row on the page. What
+        makes a tie dangerous is the owners disagreeing, because then the
+        choice decides who gets paid. Where they agree, the wine is the same
+        wine and the largest position takes it.
+      */
+      const tied = ranked.filter((entry) => best.score - entry.score < MARGIN);
+      const owners = new Set(tied.map((entry) => entry.wine.ownerName));
+
+      if (owners.size > 1) {
         heldBack += 1;
         continue;
       }
+
+      const winner = tied.reduce((most, entry) =>
+        entry.wine.outBottles > most.wine.outBottles ? entry : most,
+      );
 
       /*
         A wine named without a year cannot be told from the year either side
         of it, and the distributor names several that way.
       */
-      if (!VINTAGE.test(line.productName) || !VINTAGE.test(best.wine.productName)) {
+      if (
+        !VINTAGE.test(line.productName) ||
+        !VINTAGE.test(winner.wine.productName)
+      ) {
         heldBack += 1;
         continue;
       }
@@ -179,10 +209,10 @@ const adminAutoLinkCodes = adminProcedure
       proposals.push({
         outletCode: line.outletCode,
         theirProductName: line.productName,
-        lwin18: best.wine.lwin18,
-        ourProductName: best.wine.productName,
+        lwin18: winner.wine.lwin18,
+        ourProductName: winner.wine.productName,
         score: best.score,
-        runnerUp: second?.score ?? 0,
+        runnerUp: tied.length > 1 ? best.score : 0,
       });
     }
 

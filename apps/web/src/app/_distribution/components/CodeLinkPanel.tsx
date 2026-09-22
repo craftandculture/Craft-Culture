@@ -109,24 +109,11 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.unreachedTotal} of their consigned lines reach no wine of ours.
-          That, not a handful of odd wines, is why Sold reads blank across the
-          page: City Drinks file our wine under labels of their own — CCW76,
-          W210022423B — and a label of theirs is not a key of ours. The{' '}
-          {data.lines.length} they hold stock of are below, largest first
-          {data.beyondList > 0 ? `, with ${data.beyondList} more behind them` : ''}
-          {data.dormant > 0
-            ? `; ${data.dormant} others they hold nothing of, so nothing is owed on them`
-            : ''}
-          . Most of these name the same wine we do, in a different order —
-          &ldquo;Guidalberto, Tenuta San Guido, Toscana 2020&rdquo; against our
-          &ldquo;Tenuta San Guido Guidalberto Toscana 2020&rdquo; — and those
-          link themselves. What is left after that is where two names are close
-          enough to be each other, which is a judgement rather than a match.
-          Claiming one is permanent and survives every pull. Where a line
-          carries no code at all it is usually their own stock mis-flagged as
-          consignment — Tignanello 2022 was invoiced to them as an outright
-          sale — and the bottle count is what tells the two apart.
+          {data.unreachedTotal} of their lines reach no wine of ours, so those
+          bottles cannot be counted. {data.lines.length} they hold stock of are
+          below
+          {data.beyondList > 0 ? `, ${data.beyondList} more behind them` : ''}
+          {data.dormant > 0 ? `; ${data.dormant} hold nothing` : ''}.
         </p>
       </Typography>
 
@@ -151,11 +138,16 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
 
       <div className="border-border-primary divide-border-muted divide-y rounded-xl border">
         {data.lines.map((line) => {
-          const matches = data.ourUnmatched
-            .filter((wine) =>
-              wine.productName.toLowerCase().includes(term.trim().toLowerCase()),
-            )
-            .slice(0, SEARCH_LIMIT);
+          /* Nothing typed is not a query; listing wines at random reads as noise */
+          const matches = term.trim()
+            ? data.ourUnmatched
+                .filter((wine) =>
+                  wine.productName
+                    .toLowerCase()
+                    .includes(term.trim().toLowerCase()),
+                )
+                .slice(0, SEARCH_LIMIT)
+            : [];
 
           return (
             <div key={line.outletCode} className="p-3">
@@ -176,9 +168,8 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
               {line.candidates.length === 0 ? (
                 <Typography variant="bodyXs" colorRole="muted" asChild>
                   <p className="mt-1">
-                    Nothing of ours on consignment resembles it, which is what
-                    an outright sale mis-flagged at their end looks like.
-                    Search only if you know it is ours.
+                    No wine of ours resembles it — likely their own stock,
+                    mis-flagged.
                   </p>
                 </Typography>
               ) : (
@@ -276,7 +267,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                       </Typography>
                     </button>
                   ))}
-                  {matches.length === 0 ? (
+                  {term.trim() && matches.length === 0 ? (
                     <Typography variant="bodyXs" colorRole="muted" asChild>
                       <p>No wine of ours matches that.</p>
                     </Typography>
@@ -303,9 +294,8 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
 
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.ourUnmatched.length} wines of ours, across every owner, show no
-          position at this outlet — in almost every case because they hold none
-          of it, which is the ordinary end of a consignment.
+          {data.ourUnmatched.length} of ours show no position here, mostly
+          because they hold none.
         </p>
       </Typography>
     </div>
