@@ -11,6 +11,7 @@ import {
 } from '../utils/codeBridge';
 import ownerReasonReady from '../utils/ownerReasonReady';
 import scoreWineMatch from '../utils/scoreWineMatch';
+import wineKey from '../utils/wineKey';
 
 /** As many as a person will work through in a sitting */
 const LIST_LIMIT = 20;
@@ -119,10 +120,9 @@ const adminGetCodeSuggestions = adminProcedure
         AND ${resolvedSnapshotCode()} IS NOT NULL
     `;
 
-    const norm = (value: string) =>
-      value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const mappedWines = new Set(reached.map((row) => row.lwin));
-    const mappedCodes = new Set(reached.map((row) => norm(row.outletCode)));
+    /* Through the same key, or a wine reconciled in the table reads as unreached here */
+    const mappedWines = new Set(reached.map((row) => wineKey(row.lwin)));
+    const mappedCodes = new Set(reached.map((row) => wineKey(row.outletCode)));
 
     const ours = await client<OursRow[]>`
       SELECT m.lwin18,
@@ -158,10 +158,10 @@ const adminGetCodeSuggestions = adminProcedure
     `;
 
     const unmappedOurs = ours.filter(
-      (wine) => !mappedWines.has(norm(wine.lwin18)),
+      (wine) => !mappedWines.has(wineKey(wine.lwin18)),
     );
     const unmappedTheirs = theirs.filter(
-      (line) => !mappedCodes.has(norm(line.outletCode)),
+      (line) => !mappedCodes.has(wineKey(line.outletCode)),
     );
 
     const lines: UnclaimedLine[] = unmappedTheirs.map((line) => ({

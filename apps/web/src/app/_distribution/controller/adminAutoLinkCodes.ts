@@ -11,6 +11,7 @@ import {
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 import scoreWineMatch from '../utils/scoreWineMatch';
+import wineKey from '../utils/wineKey';
 
 /** Alike enough that the two names are describing one wine */
 const ACCEPT_AT = 0.55;
@@ -113,9 +114,7 @@ const adminAutoLinkCodes = adminProcedure
         AND ${resolvedSnapshotCode()} IS NOT NULL
     `;
 
-    const norm = (value: string) =>
-      value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const mappedCodes = new Set(reached.map((row) => norm(row.outletCode)));
+    const mappedCodes = new Set(reached.map((row) => wineKey(row.outletCode)));
 
     const ours = await client<OursRow[]>`
       SELECT m.lwin18, MIN(m.product_name) AS "productName",
@@ -154,7 +153,7 @@ const adminAutoLinkCodes = adminProcedure
     let heldBack = 0;
 
     for (const line of theirs) {
-      if (mappedCodes.has(norm(line.outletCode))) continue;
+      if (mappedCodes.has(wineKey(line.outletCode))) continue;
 
       const ranked = ours
         .map((wine) => ({
