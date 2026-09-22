@@ -71,7 +71,9 @@ const adminGetSetup = adminProcedure.query(async () => {
   const history = await client<{ outletId: string; takenAt: string }[]>`
     SELECT DISTINCT outlet_id AS "outletId", taken_at::text AS "takenAt"
     FROM cons_snapshots
-    ORDER BY taken_at DESC
+    -- Ordered by the output name, not the column: after DISTINCT, Postgres
+    -- only knows what is in the select list, and taken_at itself is not.
+    ORDER BY "takenAt" DESC
   `;
 
   const owners = await client<DistributionOwner[]>`
