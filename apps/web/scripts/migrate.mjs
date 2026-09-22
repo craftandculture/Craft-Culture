@@ -1982,6 +1982,32 @@ const runMigrations = async () => {
     `);
     console.log('✅ OpenCellar reads as Crurated');
 
+    /*
+      Whose a wine is, said by a person, when no document can say it.
+
+      Zoho returns none of the header rows a CONSIGNMENT_MIX invoice uses to
+      group its lines — 292 rows read, 0 headers among them — so INV-000236
+      prints three owners on its face and sends seventeen anonymous lines. No
+      parser recovers that. Somebody has to say it once per wine, and be
+      believed ever after.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_wine_owners" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "lwin18" text NOT NULL,
+        "owner_id" uuid NOT NULL REFERENCES "cons_owners"("id") ON DELETE CASCADE,
+        "product_name" text,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_wine_owners_unique" ON "cons_wine_owners"("outlet_id","lwin18")`,
+    );
+    console.log('✅ cons_wine_owners ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -111,6 +111,20 @@ const DistributionClient = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  /*
+    Said by hand, and believed ever after. Applied on the next read of the
+    invoices, which is why the toast says to run one.
+  */
+  const setOwner = useMutation(
+    api.distribution.admin.setWineOwner.mutationOptions({
+      onSuccess: async () => {
+        toast.success('Owner recorded — read the invoices to apply it');
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const syncOut = useMutation({
     ...api.distribution.admin.syncOutFromZoho.mutationOptions(),
     onSuccess: async (result) => {
@@ -478,12 +492,43 @@ const DistributionClient = () => {
                     answer the one question this page exists for. Colour does
                     the scanning; the name does the certainty.
                   */}
+                  {/*
+                    Editable, because for some invoices this is the only place
+                    the answer can come from. Zoho returns none of the header
+                    rows a CONSIGNMENT_MIX invoice groups its lines under — 292
+                    rows read at City Drinks, 0 headers — so those lines arrive
+                    anonymous however carefully the document was written, and
+                    land on whoever takes the unattributed.
+                  */}
                   <td className="whitespace-nowrap py-2 pl-3 pr-3">
                     <span className="flex items-center gap-1.5">
                       <span
                         className={`size-2 shrink-0 rounded-full ${colourOf(row.ownerId).dot}`}
                       />
-                      {row.ownerName}
+                      {row.lwin18 ? (
+                        <select
+                          value={row.ownerId}
+                          disabled={setOwner.isPending}
+                          onChange={(event) =>
+                            setOwner.mutate({
+                              outletId: outletId ?? '',
+                              lwin18: row.lwin18 ?? '',
+                              ownerId: event.target.value || null,
+                              productName: row.productName,
+                            })
+                          }
+                          className="hover:border-border-primary cursor-pointer rounded border border-transparent bg-transparent py-0.5 pr-1"
+                          title="Whose wine this is. Set here when the invoice could not say."
+                        >
+                          {(setup.data?.owners ?? []).map((owner) => (
+                            <option key={owner.id} value={owner.id}>
+                              {owner.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        row.ownerName
+                      )}
                     </span>
                   </td>
                   <td className="py-2 pr-3">

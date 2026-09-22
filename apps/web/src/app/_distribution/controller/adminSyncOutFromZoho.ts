@@ -11,6 +11,7 @@ import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 import readOwnerTag from '../utils/readOwnerTag';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
+import wineOwnersReady from '../utils/wineOwnersReady';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
 const MAX_PAGES = 40;
@@ -102,6 +103,22 @@ const adminSyncOutFromZoho = adminProcedure
       only once a tag has been picked out of the subject, so a word nobody
       looks for is a word nobody resolves.
     */
+    /*
+      Whose a wine is, said by a person. Outranks the document, because a
+      person correcting an attribution is more current than the subject line
+      that got it wrong — and for a MIX invoice it is the only word there is.
+    */
+    const overrides = (await wineOwnersReady())
+      ? await client<{ lwin18: string; ownerId: string }[]>`
+          SELECT lwin18, owner_id AS "ownerId"
+          FROM cons_wine_owners WHERE outlet_id = ${input.outletId}
+        `
+      : [];
+
+    const ownerByWine = new Map(
+      overrides.map((row) => [squash(row.lwin18), row.ownerId]),
+    );
+
     const knownTags = owners
       .flatMap((owner) => [owner.consignmentTag, ...(owner.ownerAliases ?? [])])
       .filter((tag): tag is string => Boolean(tag));
@@ -226,12 +243,21 @@ const adminSyncOutFromZoho = adminProcedure
           !isBottles && parsedPack !== null && parsedPack >= 1 && parsedPack <= 24;
         const pack = packStated ? parsedPack! : 1;
 
-        const { ownerId, reason } = resolveOwner({
-          /* The line's own header beats the invoice's tag, being narrower */
-          tag: headerTag ?? invoiceTag,
-          knownOwnerId: lwin18 ? knownOwnerByLwin.get(squash(lwin18)) : null,
-          owners,
-        });
+        const saidByHand = lwin18 ? ownerByWine.get(squash(lwin18)) : null;
+
+        const { ownerId, reason } = saidByHand
+          ? {
+              ownerId: saidByHand,
+              reason: 'Set by hand against the wine',
+            }
+          : resolveOwner({
+              /* The line's own header beats the invoice's tag, being narrower */
+              tag: headerTag ?? invoiceTag,
+              knownOwnerId: lwin18
+                ? knownOwnerByLwin.get(squash(lwin18))
+                : null,
+              owners,
+            });
 
         const arrangementId = ownerId ? arrangementByOwner.get(ownerId) : null;
 
