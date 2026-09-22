@@ -115,7 +115,7 @@ const DistributionClient = () => {
     ...api.distribution.admin.syncOutFromZoho.mutationOptions(),
     onSuccess: async (result) => {
       toast.success(
-        `${result.invoicesTaken} consignment invoices · ${result.lines} lines · ${formatBottles(result.bottles)} bottles`,
+        `${result.invoicesTaken} consignment invoices · ${result.lines} lines · ${formatBottles(result.bottles)} bottles · ${result.headerRowsSeen} owner headers in ${result.lineRowsSeen} rows`,
       );
 
       if (result.unattributed.length > 0) {

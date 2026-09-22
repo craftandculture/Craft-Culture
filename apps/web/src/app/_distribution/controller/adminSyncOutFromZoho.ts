@@ -139,6 +139,10 @@ const adminSyncOutFromZoho = adminProcedure
     const notConsignment: string[] = [];
     const unattributed: string[] = [];
     const taken = new Set<string>();
+    /* Evidence about the header rows, since the codebase disagrees with itself */
+    const headerNames: string[] = [];
+    let seenLines = 0;
+    let seenHeaders = 0;
 
     for (const header of headers) {
       const invoice = await getInvoice(header.id);
@@ -175,11 +179,24 @@ const adminSyncOutFromZoho = adminProcedure
       */
       let headerTag: string | null = null;
 
+      /*
+        Whether Zoho returns the header rows at all.
+
+        The types say they come back like any other row; the notes on
+        readInvoiceSubject say seventy invoices were read and they were not.
+        Both cannot be true, and guessing produced a fix that changed nothing.
+        So the sync counts what it actually saw and says so.
+      */
+      seenLines += invoice.line_items?.length ?? 0;
+
       for (const line of invoice.line_items ?? []) {
         const asHeader =
           line.item_type === 'header' || (!line.quantity && !line.sku);
 
         if (asHeader) {
+          seenHeaders += 1;
+          headerNames.push(`${header.number}: ${line.name}`);
+
           const named = readOwnerTag(line.name, knownTags);
 
           if (named) headerTag = named;
@@ -258,6 +275,14 @@ const adminSyncOutFromZoho = adminProcedure
     return {
       outlet: outlet.outletName,
       invoicesRead: headers.length,
+      /*
+        What the API actually returned about grouping rows. A MIX invoice names
+        its owners in headers; if none arrive, the document's answer never
+        reaches us and no amount of parsing recovers it.
+      */
+      headerRowsSeen: seenHeaders,
+      lineRowsSeen: seenLines,
+      headerRowsFound: headerNames.slice(0, 10),
       invoicesTaken: taken.size,
       lines: rows.length,
       bottles: rows.reduce((sum, row) => sum + Number(row.bottles ?? 0), 0),
