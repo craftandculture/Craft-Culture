@@ -83,9 +83,25 @@ const adminGetPickList = wmsOperatorProcedure
       .where(eq(zohoInvoices.referenceNumber, pickList.orderNumber))
       .limit(1);
 
-    // Calculate progress
+    /*
+      Progress, counted in cases at both ends.
+
+      `pickedQuantity` is in BOTTLES on a split-case line and in CASES on every
+      other, while the total is always cases. Adding them straight together
+      reported a finished eight-line pick as 24/20 — two lines of three bottles
+      counted three each against a total that counted them one each, which
+      reads as four cases picked that nobody ordered.
+
+      A line that is picked contributes the cases it was asked for. A part-
+      picked bottle line contributes nothing, because a fraction of a case has
+      no honest case figure.
+    */
     const totalToPick = items.reduce((sum, i) => sum + i.quantityCases, 0);
-    const totalPicked = items.reduce((sum, i) => sum + (i.pickedQuantity ?? 0), 0);
+    const totalPicked = items.reduce((sum, i) => {
+      if (i.isPicked) return sum + i.quantityCases;
+      if (i.quantityBottles) return sum;
+      return sum + (i.pickedQuantity ?? 0);
+    }, 0);
     const progressPercent = totalToPick > 0 ? Math.round((totalPicked / totalToPick) * 100) : 0;
 
     return {
