@@ -73,6 +73,18 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
     }),
   );
 
+  /* Theirs, and therefore answered — see adminLinkCode for what is written */
+  const dismiss = useMutation(
+    api.distribution.admin.linkCode.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(`${result.outletCode} marked as their own stock`);
+        await suggestions.refetch();
+        await onLinked();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const link = useMutation(
     api.distribution.admin.linkCode.mutationOptions({
       onSuccess: async (result) => {
@@ -110,7 +122,8 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
           {data.unreachedTotal} of their lines reach no wine of ours, so those
-          bottles cannot be counted. {data.lines.length} they hold stock of are
+          bottles cannot be counted. Claim the ones that are ours; mark the rest
+          as theirs and they stop coming back. {data.lines.length} they hold stock of are
           below
           {data.beyondList > 0 ? `, ${data.beyondList} more behind them` : ''}
           {data.dormant > 0 ? `; ${data.dormant} hold nothing` : ''}.
@@ -274,18 +287,36 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                   ) : null}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchFor(line.outletCode);
-                    setTerm('');
-                  }}
-                  className="text-text-muted hover:text-text-primary mt-2 text-xs underline"
-                >
-                  {line.candidates.length === 0
-                    ? 'It is ours — find the wine'
-                    : 'None of these — search'}
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchFor(line.outletCode);
+                      setTerm('');
+                    }}
+                    className="text-text-muted hover:text-text-primary text-xs underline"
+                  >
+                    {line.candidates.length === 0
+                      ? 'It is ours — find the wine'
+                      : 'None of these — search'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={dismiss.isPending}
+                    onClick={() =>
+                      dismiss.mutate({
+                        outletId,
+                        outletCode: line.outletCode,
+                        lwin18: null,
+                        notOurs: true,
+                        outletProductName: line.theirProductName,
+                      })
+                    }
+                    className="text-text-muted hover:text-text-primary text-xs underline disabled:opacity-50"
+                  >
+                    Not ours — their stock
+                  </button>
+                </div>
               )}
             </div>
           );

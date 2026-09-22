@@ -17,7 +17,8 @@ import { confirmedLinksReady } from '../utils/codeBridge';
  *
  * @param outletId - The distributor
  * @param outletCode - Their code
- * @param lwin18 - Our wine
+ * @param lwin18 - Our wine, or null to remove the link
+ * @param notOurs - Record the line as their own stock instead
  * @returns The link, or the removal
  */
 const adminLinkCode = adminProcedure
@@ -26,6 +27,8 @@ const adminLinkCode = adminProcedure
       outletId: z.string().uuid(),
       outletCode: z.string().min(1).max(120),
       lwin18: z.string().min(1).max(50).nullable(),
+      /** Their own stock, wearing a Consigned flag — settled, not matched */
+      notOurs: z.boolean().optional(),
       outletProductName: z.string().max(300).optional(),
       ourProductName: z.string().max(300).optional(),
     }),
@@ -43,6 +46,40 @@ const adminLinkCode = adminProcedure
           'Code links are not available yet — the cons_code_links migration ' +
           'has not run on this database.',
       });
+    }
+
+    /*
+      A line that is theirs is answered, not unanswered.
+
+      City Drinks flag stock as consigned that they bought outright — Tignanello
+      2022 sits on an invoice they paid — and until this there was no way to say
+      so. Left alone such a line returns every time the page loads, which is how
+      a list of four real questions hides inside a list of forty.
+
+      It is recorded as a link to a code no wine carries. The bridge then
+      resolves the line to something that matches nothing of ours, which is
+      exactly what is true of it: counted nowhere, and never asked about again.
+    */
+    if (input.notOurs) {
+      await client`
+        INSERT INTO cons_code_links (
+          outlet_id, outlet_code, lwin18, outlet_product_name,
+          our_product_name, source, confirmed_by
+        )
+        VALUES (
+          ${input.outletId}, ${input.outletCode}, 'NOT-OURS',
+          ${input.outletProductName ?? null}, NULL,
+          'not-ours', ${ctx.user.id}
+        )
+        ON CONFLICT (outlet_id, outlet_code) DO UPDATE SET
+          lwin18 = 'NOT-OURS',
+          our_product_name = NULL,
+          source = 'not-ours',
+          confirmed_by = EXCLUDED.confirmed_by,
+          updated_at = NOW()
+      `;
+
+      return { linked: false, outletCode: input.outletCode };
     }
 
     if (input.lwin18 === null) {
