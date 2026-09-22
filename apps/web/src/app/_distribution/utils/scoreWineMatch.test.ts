@@ -81,6 +81,19 @@ describe('scoreWineMatch', () => {
     ).toBe('Montille Bourgogne Blanc 2022');
   });
 
+  /*
+    The shape the automatic sweep relies on: the distributor writes the same
+    words in a different order, and that is not a judgement call.
+  */
+  it('scores a reordered name high enough to link unaided', () => {
+    expect(
+      scoreWineMatch(
+        'Guidalberto, Tenuta San Guido, Toscana 2020 (1x75cl)',
+        'Tenuta San Guido Guidalberto Toscana 2020',
+      ).score,
+    ).toBeGreaterThan(0.55);
+  });
+
   it('refuses a different bottle size outright', () => {
     expect(
       scoreWineMatch('Chateau Latour 1993 75cl', 'Chateau Latour 1993 150cl')

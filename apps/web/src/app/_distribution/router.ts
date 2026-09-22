@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
 import adminDeriveSold from './controller/adminDeriveSold';
 import adminGetBalances from './controller/adminGetBalances';
 import adminGetCodeSuggestions from './controller/adminGetCodeSuggestions';
@@ -31,6 +32,7 @@ import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
  */
 const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
+    autoLinkCodes: adminAutoLinkCodes,
     deriveSold: adminDeriveSold,
     getBalances: adminGetBalances,
     getCodeSuggestions: adminGetCodeSuggestions,

@@ -54,6 +54,25 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
     enabled: Boolean(outletId),
   });
 
+  /*
+    The sweep, and the way back from it. Auto links are written under their own
+    source, so undoing one never touches a link made by hand.
+  */
+  const sweep = useMutation(
+    api.distribution.admin.autoLinkCodes.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(
+          result.mode === 'undo'
+            ? `Undid ${result.linked} automatic links`
+            : `Linked ${result.linked} by name — ${result.heldBack ?? 0} left for you`,
+        );
+        await suggestions.refetch();
+        await onLinked();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const link = useMutation(
     api.distribution.admin.linkCode.mutationOptions({
       onSuccess: async (result) => {
@@ -99,12 +118,36 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
           {data.dormant > 0
             ? `; ${data.dormant} others they hold nothing of, so nothing is owed on them`
             : ''}
-          . Claiming one is permanent and survives every pull. Where a line
+          . Most of these name the same wine we do, in a different order —
+          &ldquo;Guidalberto, Tenuta San Guido, Toscana 2020&rdquo; against our
+          &ldquo;Tenuta San Guido Guidalberto Toscana 2020&rdquo; — and those
+          link themselves. What is left after that is where two names are close
+          enough to be each other, which is a judgement rather than a match.
+          Claiming one is permanent and survives every pull. Where a line
           carries no code at all it is usually their own stock mis-flagged as
           consignment — Tignanello 2022 was invoiced to them as an outright
           sale — and the bottle count is what tells the two apart.
         </p>
       </Typography>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={sweep.isPending || !outletId}
+          onClick={() => sweep.mutate({ outletId: outletId, mode: 'apply' })}
+          className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+        >
+          {sweep.isPending ? 'Matching…' : 'Match the names that agree'}
+        </button>
+        <button
+          type="button"
+          disabled={sweep.isPending || !outletId}
+          onClick={() => sweep.mutate({ outletId: outletId, mode: 'undo' })}
+          className="border-border-primary hover:bg-fill-muted/30 rounded-lg border px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          Undo the automatic ones
+        </button>
+      </div>
 
       <div className="border-border-primary divide-border-muted divide-y rounded-xl border">
         {data.lines.map((line) => {
