@@ -8,6 +8,8 @@ import Badge from '@/app/_ui/components/Badge/Badge';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import describeLwin18 from '../utils/describeLwin18';
+
 interface CodeLinkPanelProps {
   outletId: string | null;
   onLinked: () => void | Promise<void>;
@@ -283,10 +285,10 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                             No position is not a reason to refuse the wine — it
                             is the reason it needed finding.
                           */}
+                          {describeLwin18(wine.lwin18) ?? wine.lwin18} ·{' '}
                           {wine.outBottles === null
-                            ? 'none consigned here yet'
-                            : `${wine.outBottles} btl out`}{' '}
-                          · {wine.lwin18}
+                            ? 'none consigned here'
+                            : `${wine.outBottles} btl out`}
                         </span>
                       </Typography>
                     </button>

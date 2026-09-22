@@ -1966,6 +1966,22 @@ const runMigrations = async () => {
     );
     console.log('✅ cons_movements.owner_reason ready');
 
+    /*
+      OpenCellar is Crurated.
+
+      Four City Drinks invoices name the wine as OpenCellar's, which matches no
+      owner, so every line on them went to whoever takes the unattributed. That
+      happened to be Crurated, so the answer was right by accident and would
+      have become wrong the moment the catch-all changed hands.
+    */
+    await client.unsafe(`
+      UPDATE "cons_owners"
+      SET "owner_aliases" = array_append(COALESCE("owner_aliases", '{}'), 'OPENCELLAR')
+      WHERE UPPER("consignment_tag") = 'CRURATED'
+        AND NOT ('OPENCELLAR' = ANY(COALESCE("owner_aliases", '{}')))
+    `);
+    console.log('✅ OpenCellar reads as Crurated');
+
     await client.end();
     process.exit(0);
   } catch (error) {

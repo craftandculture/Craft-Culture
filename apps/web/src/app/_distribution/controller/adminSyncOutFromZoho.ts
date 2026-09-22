@@ -94,9 +94,16 @@ const adminSyncOutFromZoho = adminProcedure
       arrangements.map((row) => [row.ownerId, row.id]),
     );
 
-    /** The tags on file, so a word can be tested for being one */
+    /*
+      Every name an owner answers to, tags and aliases alike.
+
+      Scanning for tags alone would never find OPENCELLAR, which is what
+      Crurated is called on four invoices — and resolveOwner checks aliases
+      only once a tag has been picked out of the subject, so a word nobody
+      looks for is a word nobody resolves.
+    */
     const knownTags = owners
-      .map((owner) => owner.consignmentTag)
+      .flatMap((owner) => [owner.consignmentTag, ...(owner.ownerAliases ?? [])])
       .filter((tag): tag is string => Boolean(tag));
 
     /*

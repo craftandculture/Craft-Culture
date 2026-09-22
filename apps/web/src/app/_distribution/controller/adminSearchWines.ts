@@ -58,9 +58,17 @@ const adminSearchWines = adminProcedure
         WHERE a.outlet_id = ${input.outletId} AND m.kind = 'out'
         GROUP BY m.lwin18
       ) out_lines ON out_lines.lwin18 = p.lwin18
-      WHERE p.name ILIKE ${like}
-         OR p.producer ILIKE ${like}
-         OR p.lwin18 ILIKE ${like}
+      /*
+        A LWIN is eighteen digits. The catalogue carries rows keyed
+        "1360983:row131" from an import that never finished, and offering one
+        as a wine to settle money against is worse than offering nothing.
+      */
+      WHERE p.lwin18 ~ '^[0-9]{18}$'
+        AND (
+          p.name ILIKE ${like}
+          OR p.producer ILIKE ${like}
+          OR p.lwin18 ILIKE ${like}
+        )
       /* A wine already consigned here is the likelier answer, so it leads */
       ORDER BY out_lines.bottles DESC NULLS LAST, p.name
       LIMIT 20
