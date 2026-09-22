@@ -11,6 +11,9 @@ import {
 } from '../utils/codeBridge';
 import scoreWineMatch from '../utils/scoreWineMatch';
 
+/** As many as a person will work through in a sitting */
+const LIST_LIMIT = 20;
+
 interface OursRow {
   lwin18: string;
   productName: string;
@@ -180,9 +183,28 @@ const adminGetCodeSuggestions = adminProcedure
         })),
     }));
 
+    /*
+      Bottles first, and only lines they actually hold.
+
+      Turning off the bridge's raw-string fallback revealed that 88 of 163
+      consigned lines reach no wine of ours — the fallback had been handing
+      back their own label as a key, so they read as mapped while matching
+      nothing. That is the reason Sold is blank across the page, and it is a
+      mapping job rather than a list of questions: dumped whole it is 88 rows
+      to click through. A line they hold no bottles of moves no money, so the
+      ones with stock come first and the tail is counted rather than listed.
+    */
+    const worthClaiming = lines
+      .filter((line) => line.bottlesOnHand > 0 || (line.soldLast30d ?? 0) > 0)
+      .sort((a, b) => b.bottlesOnHand - a.bottlesOnHand);
+
     return {
-      /* Lines with something to suggest first; every one still listed */
-      lines: lines.sort((a, b) => b.candidates.length - a.candidates.length),
+      lines: worthClaiming.slice(0, LIST_LIMIT),
+      /** Lines reaching nothing that they hold no stock of, so nothing is owed */
+      dormant: lines.length - worthClaiming.length,
+      /** Held back from the list, not from the problem */
+      beyondList: Math.max(worthClaiming.length - LIST_LIMIT, 0),
+      unreachedTotal: lines.length,
       /* To pick past the ranking, since names are a suggestion and not more */
       ourUnmatched: unmappedOurs.map((wine) => ({
         lwin18: wine.lwin18,

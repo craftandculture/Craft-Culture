@@ -90,15 +90,19 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.lines.length} of their consigned lines reach no wine of ours, and
-          they are two different problems. A line carrying a code of their own
-          invention — CCW76, CCW77 — is almost always our wine under their
-          filing system: claim it, and the bottles they hold stop reading as an
-          unknown position. A line carrying no code at all is usually their own
-          stock mis-flagged as consignment, like Tignanello 2022, which was
-          invoiced to them as an outright sale; leave those and have the status
-          corrected at their end. The bottle count tells them apart — theirs
-          plus their sales cannot exceed what we ever sent.
+          {data.unreachedTotal} of their consigned lines reach no wine of ours.
+          That, not a handful of odd wines, is why Sold reads blank across the
+          page: City Drinks file our wine under labels of their own — CCW76,
+          W210022423B — and a label of theirs is not a key of ours. The{' '}
+          {data.lines.length} they hold stock of are below, largest first
+          {data.beyondList > 0 ? `, with ${data.beyondList} more behind them` : ''}
+          {data.dormant > 0
+            ? `; ${data.dormant} others they hold nothing of, so nothing is owed on them`
+            : ''}
+          . Claiming one is permanent and survives every pull. Where a line
+          carries no code at all it is usually their own stock mis-flagged as
+          consignment — Tignanello 2022 was invoiced to them as an outright
+          sale — and the bottle count is what tells the two apart.
         </p>
       </Typography>
 
