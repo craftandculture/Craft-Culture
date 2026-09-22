@@ -11,6 +11,14 @@ export interface DistributionOutlet {
   consignedBottles: number;
   /** Consigned wines the outlet holds under no code of ours */
   unmatchedAtOutlet: number;
+  /**
+   * Every moment we have their position for, newest first.
+   *
+   * The feed carries no history and takes no date, so this list IS the history
+   * — and differencing two of them is what turns a position into a movement.
+   * A month with no snapshot at either end can only ever come from an upload.
+   */
+  snapshotDates: string[];
 }
 
 export interface DistributionOwner {
@@ -55,6 +63,17 @@ const adminGetSetup = adminProcedure.query(async () => {
     ORDER BY o.name
   `;
 
+  /*
+    Taken separately rather than aggregated into the outlet query: the join
+    there is already narrowed to the latest moment, and widening it to every
+    snapshot would multiply the line counts by the number of days held.
+  */
+  const history = await client<{ outletId: string; takenAt: string }[]>`
+    SELECT DISTINCT outlet_id AS "outletId", taken_at::text AS "takenAt"
+    FROM cons_snapshots
+    ORDER BY taken_at DESC
+  `;
+
   const owners = await client<DistributionOwner[]>`
     SELECT ow.id, ow.name, ow.consignment_tag AS "consignmentTag",
            ow.takes_unattributed AS "takesUnattributed",
@@ -69,7 +88,15 @@ const adminGetSetup = adminProcedure.query(async () => {
     ORDER BY ow.name
   `;
 
-  return { outlets, owners };
+  return {
+    outlets: outlets.map((outlet) => ({
+      ...outlet,
+      snapshotDates: history
+        .filter((row) => row.outletId === outlet.id)
+        .map((row) => row.takenAt),
+    })),
+    owners,
+  };
 });
 
 export default adminGetSetup;
