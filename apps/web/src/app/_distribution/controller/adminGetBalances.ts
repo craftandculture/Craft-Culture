@@ -82,6 +82,25 @@ const adminGetBalances = adminProcedure
         WHERE NULLIF(TRIM(t.w_code), '') IS NOT NULL
           AND NULLIF(TRIM(t.lwin18), '') IS NOT NULL
       ),
+      /*
+        City Drinks' own code, mapped to a wine by hand in the old tool.
+
+        This is the path the W-code bridge cannot reach. The code they hold
+        for us is only genuinely ours for Crurated, who issue W codes; for
+        everyone else it is a label City Drinks invented (CCW73CON) and no
+        table of ours has ever held it. But their own CDR code HAS been mapped,
+        one wine at a time, in tri_sku_aliases, and that work should not be
+        repeated just because it was done somewhere else.
+      */
+      outlet_code_map AS (
+        SELECT DISTINCT
+          UPPER(REGEXP_REPLACE(a.alias_code, '[^A-Za-z0-9]', '', 'g')) AS outlet_code,
+          UPPER(REGEXP_REPLACE(s.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
+        FROM tri_sku_aliases a
+        JOIN tri_skus s ON s.id = a.sku_id
+        WHERE a.source = 'city_drinks'
+          AND NULLIF(TRIM(s.lwin18), '') IS NOT NULL
+      ),
       held AS (
         SELECT
           /*
@@ -92,6 +111,7 @@ const adminGetBalances = adminProcedure
           */
           COALESCE(
             cm.lwin,
+            ocm.lwin,
             UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
           ) AS code,
                SUM(s.bottles_on_hand)::float8 AS bottles,
@@ -104,6 +124,9 @@ const adminGetBalances = adminProcedure
                UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g')),
                'CON$', ''
              )
+        LEFT JOIN outlet_code_map ocm
+          ON ocm.outlet_code =
+             UPPER(REGEXP_REPLACE(s.outlet_code, '[^A-Za-z0-9]', '', 'g'))
         WHERE s.outlet_id = ${input.outletId}
           AND s.taken_at = latest.taken_at
           AND s.regime = 'consigned'
