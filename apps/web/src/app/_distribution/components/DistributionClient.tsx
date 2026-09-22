@@ -10,6 +10,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import CodeLinkPanel from './CodeLinkPanel';
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
 import ownerColour from '../utils/ownerColour';
@@ -352,6 +353,8 @@ const DistributionClient = () => {
           </div>
         </div>
       </div>
+
+      <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
 
       <div className="space-y-2">
         <Typography variant="labelSm" asChild>

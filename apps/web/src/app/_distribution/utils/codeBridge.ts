@@ -134,7 +134,23 @@ export const resolvedSnapshotCode = () => client`
     conf.lwin,
     ocm.lwin,
     cm.lwin,
-    UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
+    /*
+      Their string, but only where it is actually a LWIN.
+
+      Taken unconditionally this is worse than no answer: City Drinks label our
+      wine CCW76, CCW77, CCW78 — codes they invented, which nothing of ours has
+      ever held. Passed through, each became a valid-looking code matching no
+      wine in existence, so the line counted as resolved, never showed up as
+      unclaimed, and four Cult wines they demonstrably hold six bottles of
+      each read as position unknown with nothing anywhere saying why.
+
+      A LWIN is digits. Anything else is their filing system, not a key.
+    */
+    CASE
+      WHEN UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
+           ~ '^[0-9]{11,}$'
+      THEN UPPER(REGEXP_REPLACE(s.our_code, '[^A-Za-z0-9]', '', 'g'))
+    END
   )
 `;
 

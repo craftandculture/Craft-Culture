@@ -25,15 +25,17 @@ const SEARCH_LIMIT = 8;
  * system still flags it Consigned, so it arrives here as consigned stock with
  * no code of ours against it, because there is no consignment of it to find.
  *
- * So these are not wines waiting to be matched. A line reaching no wine of
- * ours, with nothing we ever invoiced out on consignment to reach, is their
- * own stock wearing our label. It is excluded from the position already; what
- * it needs is correcting at their end, not linking at ours.
+ * So some of these are not wines to match at all. What tells them apart is the
+ * code on the line. Nothing at all, as on Tignanello, means their own stock
+ * mis-flagged; that wants correcting at their end.
  *
- * The link stays for the other case, which is real but rarer: a wine genuinely
- * on consignment whose supplier code they left blank. That one is ours and
- * belongs in the report, so it can be claimed — deliberately as a secondary
- * action, because the likelier answer is that the line is not ours at all.
+ * A code of their own invention means the opposite. City Drinks file our wine
+ * as CCW76, CCW77, CCW78 — labels nothing of ours has ever held — and behind
+ * each sits stock they really are holding on consignment for us. Those are
+ * ours, they belong in the report, and claiming one is what puts them there.
+ * Until the bridge stopped treating an invented code as a resolved one, they
+ * could not even be seen: four Cult wines with six bottles apiece sitting at
+ * the distributor, reading as position unknown.
  *
  * Candidates span every owner and never narrow to the owner chip: an unclaimed
  * line has no owner, and choosing the wine is what would give it one.
@@ -84,18 +86,19 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
   return (
     <div className="space-y-2">
       <Typography variant="labelSm" asChild>
-        <h2>They call these consignment — we never consigned them</h2>
+        <h2>Lines they hold that reach no wine of ours</h2>
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.lines.length} lines carry a Consigned status on their feed and no
-          consignment of ours to match it. The regime is read from their status
-          field and nothing else, so a wine we sold them outright shows up here
-          the moment their record says consignment — Tignanello 2022 is one, on
-          an invoice they bought against. None of these count towards the
-          position; they are listed so the status gets corrected at their end.
-          If one truly is on consignment and they simply left the supplier code
-          blank, claim it.
+          {data.lines.length} of their consigned lines reach no wine of ours, and
+          they are two different problems. A line carrying a code of their own
+          invention — CCW76, CCW77 — is almost always our wine under their
+          filing system: claim it, and the bottles they hold stop reading as an
+          unknown position. A line carrying no code at all is usually their own
+          stock mis-flagged as consignment, like Tignanello 2022, which was
+          invoiced to them as an outright sale; leave those and have the status
+          corrected at their end. The bottle count tells them apart — theirs
+          plus their sales cannot exceed what we ever sent.
         </p>
       </Typography>
 
@@ -128,6 +131,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                   <p className="mt-1">
                     Nothing of ours on consignment resembles it, which is what
                     an outright sale mis-flagged at their end looks like.
+                    Search only if you know it is ours.
                   </p>
                 </Typography>
               ) : (
