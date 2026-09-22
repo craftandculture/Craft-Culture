@@ -35,8 +35,36 @@ import { client } from '@/database/client';
  * bet.
  */
 
-/** The CTEs every query over distributor positions needs */
-export const codeBridgeCtes = (outletId: string) => client`
+/**
+ * Whether the confirmed-link table has actually been created yet
+ *
+ * Schema changes are applied by `migrate.mjs` after the build, which exits
+ * quietly when it cannot reach the database — so a deploy can ship code that
+ * reads a table nobody created. Every query here joins that table, and a
+ * missing relation fails at parse time, taking the whole page down rather than
+ * degrading. Asking first costs one trivial round trip per process.
+ */
+let linksTableReady: boolean | null = null;
+
+export const confirmedLinksReady = async () => {
+  if (linksTableReady !== null) return linksTableReady;
+
+  const [row] = await client<{ present: boolean }[]>`
+    SELECT to_regclass('public.cons_code_links') IS NOT NULL AS present
+  `;
+
+  linksTableReady = row?.present ?? false;
+
+  return linksTableReady;
+};
+
+/**
+ * The CTEs every query over distributor positions needs
+ *
+ * @param outletId - The distributor
+ * @param hasLinks - From `confirmedLinksReady`; false stubs the link path out
+ */
+export const codeBridgeCtes = (outletId: string, hasLinks: boolean) => client`
   code_map AS (
     SELECT DISTINCT
       UPPER(REGEXP_REPLACE(w.supplier_sku, '[^A-Za-z0-9]', '', 'g')) AS w_code,
@@ -79,11 +107,17 @@ export const codeBridgeCtes = (outletId: string) => client`
   ),
   /* Confirmed by a person, and therefore final */
   confirmed_map AS (
-    SELECT
-      UPPER(REGEXP_REPLACE(l.outlet_code, '[^A-Za-z0-9]', '', 'g')) AS outlet_code,
-      UPPER(REGEXP_REPLACE(l.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
-    FROM cons_code_links l
-    WHERE l.outlet_id = ${outletId}
+    ${
+      hasLinks
+        ? client`
+            SELECT
+              UPPER(REGEXP_REPLACE(l.outlet_code, '[^A-Za-z0-9]', '', 'g')) AS outlet_code,
+              UPPER(REGEXP_REPLACE(l.lwin18, '[^A-Za-z0-9]', '', 'g')) AS lwin
+            FROM cons_code_links l
+            WHERE l.outlet_id = ${outletId}
+          `
+        : client`SELECT NULL::text AS outlet_code, NULL::text AS lwin WHERE false`
+    }
   )
 `;
 

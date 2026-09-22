@@ -6,6 +6,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import {
   codeBridgeCtes,
   codeBridgeJoins,
+  confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 
@@ -56,6 +57,8 @@ const adminGetBalances = adminProcedure
     }),
   )
   .query(async ({ input }) => {
+    const hasLinks = await confirmedLinksReady();
+
     const term = input.search?.trim() ? `%${input.search.trim()}%` : null;
 
     const rows = await client<BalanceRow[]>`
@@ -63,7 +66,7 @@ const adminGetBalances = adminProcedure
         SELECT MAX(taken_at) AS taken_at
         FROM cons_snapshots WHERE outlet_id = ${input.outletId}
       ),
-      ${codeBridgeCtes(input.outletId)},
+      ${codeBridgeCtes(input.outletId, hasLinks)},
       held AS (
         SELECT ${resolvedSnapshotCode()} AS code,
                SUM(s.bottles_on_hand)::float8 AS bottles,

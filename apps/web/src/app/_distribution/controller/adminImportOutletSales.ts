@@ -7,6 +7,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import {
   codeBridgeCtes,
   codeBridgeJoins,
+  confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 import parseOutletSalesReport from '../utils/parseOutletSalesReport';
@@ -52,6 +53,8 @@ const adminImportOutletSales = adminProcedure
     }),
   )
   .mutation(async ({ input }) => {
+    const hasLinks = await confirmedLinksReady();
+
     const parsed = parseOutletSalesReport(input.file, input.year);
 
     if (parsed.lines.length === 0) {
@@ -81,7 +84,7 @@ const adminImportOutletSales = adminProcedure
         SELECT MAX(taken_at) AS taken_at
         FROM cons_snapshots WHERE outlet_id = ${input.outletId}
       ),
-${codeBridgeCtes(input.outletId)},
+${codeBridgeCtes(input.outletId, hasLinks)},
       /*
         Their report names wines by CDR code and nothing else, so this is the
         one feed where the CDR path is not a fallback but the main road.

@@ -7,6 +7,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import {
   codeBridgeCtes,
   codeBridgeJoins,
+  confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 
@@ -55,6 +56,8 @@ const adminDeriveSold = adminProcedure
     }),
   )
   .mutation(async ({ input }) => {
+    const hasLinks = await confirmedLinksReady();
+
     if (input.from >= input.to) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -85,7 +88,7 @@ const adminDeriveSold = adminProcedure
     }
 
     const rows = await client<MovementRow[]>`
-      WITH ${codeBridgeCtes(input.outletId)},
+      WITH ${codeBridgeCtes(input.outletId, hasLinks)},
       position AS (
         SELECT ${resolvedSnapshotCode()} AS code,
           MIN(s.outlet_code) AS outlet_code,

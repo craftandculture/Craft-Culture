@@ -1,7 +1,11 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+
 
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import { confirmedLinksReady } from '../utils/codeBridge';
 
 /**
  * Tie one of the distributor's codes to one of our wines
@@ -27,6 +31,20 @@ const adminLinkCode = adminProcedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
+    /*
+      Schema is applied after the build and can quietly not run, so say which
+      step is missing rather than surfacing a relation-does-not-exist error to
+      someone halfway through mapping a hundred wines.
+    */
+    if (!(await confirmedLinksReady())) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Code links are not available yet — the cons_code_links migration ' +
+          'has not run on this database.',
+      });
+    }
+
     if (input.lwin18 === null) {
       await client`
         DELETE FROM cons_code_links

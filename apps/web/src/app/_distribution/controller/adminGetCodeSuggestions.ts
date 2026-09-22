@@ -6,6 +6,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import {
   codeBridgeCtes,
   codeBridgeJoins,
+  confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 import scoreWineMatch from '../utils/scoreWineMatch';
@@ -68,6 +69,8 @@ export interface CodeSuggestion {
 const adminGetCodeSuggestions = adminProcedure
   .input(z.object({ outletId: z.string().uuid() }))
   .query(async ({ input }) => {
+    const hasLinks = await confirmedLinksReady();
+
     /*
       Everything the bridge already reaches, so neither side of the suggestion
       list repeats work that is done. Read from the same definition the
@@ -78,7 +81,7 @@ const adminGetCodeSuggestions = adminProcedure
         SELECT MAX(taken_at) AS taken_at
         FROM cons_snapshots WHERE outlet_id = ${input.outletId}
       ),
-      ${codeBridgeCtes(input.outletId)}
+      ${codeBridgeCtes(input.outletId, hasLinks)}
       SELECT DISTINCT ${resolvedSnapshotCode()} AS lwin,
              s.outlet_code AS "outletCode"
       FROM cons_snapshots s
