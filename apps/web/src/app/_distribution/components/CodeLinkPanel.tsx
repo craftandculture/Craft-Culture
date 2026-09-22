@@ -13,9 +13,6 @@ interface CodeLinkPanelProps {
   onLinked: () => void | Promise<void>;
 }
 
-/** Enough to choose from without becoming a list nobody reads */
-const SEARCH_LIMIT = 8;
-
 /**
  * Lines City Drinks call consignment that we never consigned
  *
@@ -98,6 +95,20 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
     }),
   );
 
+  /*
+    The catalogue, not the consigned. A wine pushed on an invoice nobody could
+    attribute has no position here at all, which is exactly the wine that needs
+    naming — and the old picker, reading only consigned wines, could not offer
+    it.
+  */
+  const found = useQuery({
+    ...api.distribution.admin.searchWines.queryOptions({
+      term: term.trim(),
+      outletId: outletId ?? '',
+    }),
+    enabled: Boolean(outletId) && term.trim().length >= 2,
+  });
+
   const data = suggestions.data;
 
   if (!outletId || suggestions.isPending) return null;
@@ -151,16 +162,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
 
       <div className="border-border-primary divide-border-muted divide-y rounded-xl border">
         {data.lines.map((line) => {
-          /* Nothing typed is not a query; listing wines at random reads as noise */
-          const matches = term.trim()
-            ? data.ourUnmatched
-                .filter((wine) =>
-                  wine.productName
-                    .toLowerCase()
-                    .includes(term.trim().toLowerCase()),
-                )
-                .slice(0, SEARCH_LIMIT)
-            : [];
+          const matches = found.data?.wines ?? [];
 
           return (
             <div key={line.outletCode} className="p-3">
@@ -265,24 +267,35 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                           ourProductName: wine.productName,
                         })
                       }
-                      className="hover:bg-fill-muted/30 block w-full max-w-sm rounded-lg px-2 py-1 text-left disabled:opacity-50"
+                      className="hover:bg-fill-muted/30 block w-full max-w-lg rounded-lg px-2 py-1 text-left disabled:opacity-50"
                     >
                       <Typography variant="bodyXs" asChild>
                         <span className="block">{wine.productName}</span>
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted" asChild>
                         <span className="block tabular-nums">
-                          <Badge colorRole="primary" size="sm">
-                            {wine.ownerName}
-                          </Badge>{' '}
-                          {wine.outBottles} btl out · {wine.lwin18}
+                          {wine.ownerName ? (
+                            <Badge colorRole="primary" size="sm">
+                              {wine.ownerName}
+                            </Badge>
+                          ) : null}{' '}
+                          {/*
+                            No position is not a reason to refuse the wine — it
+                            is the reason it needed finding.
+                          */}
+                          {wine.outBottles === null
+                            ? 'none consigned here yet'
+                            : `${wine.outBottles} btl out`}{' '}
+                          · {wine.lwin18}
                         </span>
                       </Typography>
                     </button>
                   ))}
-                  {term.trim() && matches.length === 0 ? (
+                  {term.trim().length >= 2 &&
+                  !found.isPending &&
+                  matches.length === 0 ? (
                     <Typography variant="bodyXs" colorRole="muted" asChild>
-                      <p>No wine of ours matches that.</p>
+                      <p>Nothing in the catalogue matches that.</p>
                     </Typography>
                   ) : null}
                 </div>
