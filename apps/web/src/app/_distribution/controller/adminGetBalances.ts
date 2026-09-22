@@ -102,7 +102,7 @@ const adminGetBalances = adminProcedure
           as null — the four City Drinks hold under no code of ours would
           otherwise all collapse into one phantom wine.
         */
-        HAVING ${resolvedSnapshotCode()} IS NOT NULL
+        HAVING ${packAgnostic(() => resolvedSnapshotCode())} IS NOT NULL
       ),
       /*
         What they hold under a regime they call bought.
