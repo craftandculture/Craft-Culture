@@ -10,8 +10,6 @@ import useTRPC from '@/lib/trpc/browser';
 
 interface CodeLinkPanelProps {
   outletId: string | null;
-  /** The owner the page is filtered to, so this agrees with the banner */
-  ownerId: string | null;
   onLinked: () => void | Promise<void>;
 }
 
@@ -34,11 +32,16 @@ const SEARCH_LIMIT = 8;
  * check — their stock plus a month's sales above everything we invoiced out is
  * the wrong wine, not a near miss — so it sits against each candidate.
  *
+ * The owner chip does not narrow this, and must not. An unclaimed line has no
+ * owner yet — choosing the wine is what gives it one — so the candidates span
+ * every owner and each says whose it is. Narrowed, it offered Cult's wines as
+ * answers for a line that was never Cult's.
+ *
  * Worth saying plainly: this exists because four fields in their product
  * master are empty. Filled at their end, every one of these lines maps itself
  * on the next pull and this panel disappears.
  */
-const CodeLinkPanel = ({ outletId, ownerId, onLinked }: CodeLinkPanelProps) => {
+const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
   const api = useTRPC();
 
   /** Which line is being searched against, and for what */
@@ -48,7 +51,6 @@ const CodeLinkPanel = ({ outletId, ownerId, onLinked }: CodeLinkPanelProps) => {
   const suggestions = useQuery({
     ...api.distribution.admin.getCodeSuggestions.queryOptions({
       outletId: outletId ?? '',
-      ownerId: ownerId || null,
     }),
     enabled: Boolean(outletId),
   });
@@ -90,10 +92,12 @@ const CodeLinkPanel = ({ outletId, ownerId, onLinked }: CodeLinkPanelProps) => {
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
           {data.lines.length} of their consigned lines carry no code of ours, so
-          their bottles cannot reach an owner. Each needs one wine chosen — the
-          names below are a suggestion only, and the bottle count is the check
-          that catches what a name cannot. The lasting fix is theirs: these
-          lines have an empty supplier code in their product master.
+          their bottles cannot reach an owner. Each needs one wine chosen, from
+          any owner — which owner it belongs to is what choosing decides, so the
+          owner filter above does not apply here. Names are a suggestion only
+          and the bottle count is the check that catches what a name cannot. The
+          lasting fix is theirs: these lines have an empty supplier code in
+          their product master.
         </p>
       </Typography>
 
@@ -238,9 +242,9 @@ const CodeLinkPanel = ({ outletId, ownerId, onLinked }: CodeLinkPanelProps) => {
 
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.ourUnmatched.length} wines of ours show no position at this
-          outlet. Most of those they simply hold none of; only the lines above
-          are unreachable by code.
+          {data.ourUnmatched.length} wines of ours, across every owner, show no
+          position at this outlet. Most of those they simply hold none of; only
+          the lines above are unreachable by code.
         </p>
       </Typography>
     </div>

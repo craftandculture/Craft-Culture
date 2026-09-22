@@ -72,18 +72,18 @@ export interface UnclaimedLine {
  * would suggest, and an earlier attempt to let names decide matched ten wines
  * of thirteen and got every one wrong.
  *
+ * Deliberately not filtered by owner, though the rest of the page is. An
+ * unclaimed line has no owner — that is the whole of what is wrong with it,
+ * and choosing the wine is what decides one. Narrowed to the owner in the
+ * chip, this offered Cult's wines as answers for a line that was never Cult's,
+ * which is a wrong link in the one direction that moves money between owners.
+ *
  * @param outletId - The distributor to link against
- * @param ownerId - Restrict our side to one owner, as the page's filter does
  * @returns Their unclaimed lines with ranked candidates, and every wine of
  *   ours still unreached so a person can pick past the ranking
  */
 const adminGetCodeSuggestions = adminProcedure
-  .input(
-    z.object({
-      outletId: z.string().uuid(),
-      ownerId: z.string().uuid().nullable().optional(),
-    }),
-  )
+  .input(z.object({ outletId: z.string().uuid() }))
   .query(async ({ input }) => {
     const hasLinks = await confirmedLinksReady();
 
@@ -125,7 +125,6 @@ const adminGetCodeSuggestions = adminProcedure
       WHERE a.outlet_id = ${input.outletId}
         AND m.kind = 'out'
         AND m.lwin18 IS NOT NULL
-        ${input.ownerId ? client`AND a.owner_id = ${input.ownerId}` : client``}
       GROUP BY m.lwin18, a.owner_id
       ORDER BY SUM(m.bottles) DESC
     `;
