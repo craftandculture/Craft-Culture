@@ -115,6 +115,21 @@ const DistributionClient = () => {
     Said by hand, and believed ever after. Applied on the next read of the
     invoices, which is why the toast says to run one.
   */
+  const [bulkRef, setBulkRef] = useState('');
+  const [bulkOwner, setBulkOwner] = useState('');
+
+  const setInvoiceOwner = useMutation(
+    api.distribution.admin.setInvoiceOwner.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(
+          `${result.wines} wines on ${result.docRef} set — read the invoices to apply it`,
+        );
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const setOwner = useMutation(
     api.distribution.admin.setWineOwner.mutationOptions({
       onSuccess: async () => {
@@ -374,6 +389,61 @@ const DistributionClient = () => {
         <Typography variant="labelSm" asChild>
           <h2>Every wine</h2>
         </Typography>
+
+        {/*
+          The invoice is the unit of work even though the wine is the unit of
+          storage. INV-000236 carries seventeen lines, thirteen of them one
+          owner's, and saying so one dropdown at a time is how a correct answer
+          goes unrecorded.
+        */}
+        <div className="border-border-primary flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <span>Every wine on invoice</span>
+          </Typography>
+          <input
+            value={bulkRef}
+            onChange={(event) => setBulkRef(event.target.value)}
+            placeholder="INV-000236"
+            className="border-border-primary w-36 rounded border px-2 py-1 text-xs"
+          />
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <span>belongs to</span>
+          </Typography>
+          <select
+            value={bulkOwner}
+            onChange={(event) => setBulkOwner(event.target.value)}
+            className="border-border-primary rounded border px-2 py-1 text-xs"
+          >
+            <option value="">— choose —</option>
+            {(setup.data?.owners ?? []).map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={
+              !bulkRef.trim() || !bulkOwner || setInvoiceOwner.isPending
+            }
+            onClick={() =>
+              setInvoiceOwner.mutate({
+                outletId: outletId ?? '',
+                docRef: bulkRef.trim(),
+                ownerId: bulkOwner,
+              })
+            }
+            className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
+          >
+            Set them
+          </button>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <span>
+              Then correct the few that differ — a MIX invoice is four actions,
+              not seventeen.
+            </span>
+          </Typography>
+        </div>
         <Typography variant="bodyXs" colorRole="muted" asChild>
           <p className="max-w-2xl">
             What we invoiced out against what they say they hold. Sold and

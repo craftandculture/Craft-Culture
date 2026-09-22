@@ -210,10 +210,21 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                       <Typography variant="bodyXs" asChild>
                         <span className="block">{candidate.productName}</span>
                       </Typography>
+                      {/*
+                        The owner here is who the wine is attributed to today,
+                        not what claiming decides. Claiming maps their code to
+                        our wine and touches ownership not at all — but shown
+                        plainly beside a button it reads as agreement, and a
+                        wrong owner then looks like a reason not to claim.
+                      */}
                       <Typography variant="bodyXs" colorRole="muted" asChild>
-                        <span className="block tabular-nums">
-                          {candidate.ownerName} · {candidate.outBottles} btl out
-                          {candidate.docRef ? ` · ${candidate.docRef}` : ''}
+                        <span
+                          className="block tabular-nums"
+                          title="Who this wine is attributed to at the moment. Claiming the line does not change it — set the owner on the table below."
+                        >
+                          {candidate.outBottles} btl out
+                          {candidate.docRef ? ` · ${candidate.docRef}` : ''} ·
+                          now {candidate.ownerName}
                         </span>
                       </Typography>
                       {/*
