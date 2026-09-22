@@ -27,50 +27,55 @@ interface TheirsRow {
   soldLast30d: number | null;
 }
 
-export interface CodeSuggestion {
+export interface OurWine {
   lwin18: string;
-  ourProductName: string;
+  productName: string;
   ownerName: string;
   outBottles: number;
-  candidates: {
-    outletCode: string;
-    theirProductName: string;
-    bottlesOnHand: number;
-    soldLast30d: number | null;
+}
+
+export interface UnclaimedLine {
+  /** Their code — CDR0131177237 — which is what a link is keyed on */
+  outletCode: string;
+  theirProductName: string;
+  bottlesOnHand: number;
+  soldLast30d: number | null;
+  candidates: (OurWine & {
     score: number;
-    /** Whether stock plus sales could have come from what we sent */
+    /** Whether their position could have come from what we sent */
     arithmeticHolds: boolean;
-  }[];
+  })[];
 }
 
 /**
- * Propose which of the distributor's lines is which of our wines
+ * The distributor's lines that reach no wine of ours, and what each might be
  *
- * This is the last resort, and it should be a short list. `codeBridge` reaches
- * most wines by code already — a confirmed link, their CDR code through the
- * mapping done by hand, or the W code through the warehouse — and everything
- * it reaches is excluded here. What is left is the wine City Drinks coded in a
- * way nothing of ours has ever recorded.
+ * Asked from their side, because that is the side the question has. City
+ * Drinks' feed carries their own code and, beside it, the code they hold for
+ * us — a W code where Crurated issued one, otherwise a label they invented.
+ * Every line with that field filled maps itself and never appears here. What
+ * is left is the handful where the field is simply **blank**: four lines, and
+ * four bottles of ours consequently showing no position.
  *
- * For those the only shared field is the name, and names cannot decide this.
- * "Margaux" is a château and also the appellation half of Bordeaux sits in; an
- * earlier attempt to let names decide matched ten wines of thirteen and got
- * every one wrong.
+ * So the durable fix is not here. It is City Drinks filling four fields in
+ * their product master, after which the bridge maps them on the next pull and
+ * keeps doing so. This screen is what closes the gap until they do, and what
+ * closes it if they will not.
  *
- * So this proposes and does not conclude. Each of our unlinked wines gets a
- * short ranked list, and each candidate carries the check that actually
- * matters: whether their stock plus their sales could have come from what we
- * invoiced out. A link that fails that is almost certainly the wrong wine, and
- * it is shown rather than hidden so the judgement is made with it in view.
+ * Asked the other way round — our unlinked wines, each hunting a line — it
+ * produced a hundred rows to settle four questions, which is the same work
+ * multiplied by everything we ever sent them. Their unclaimed lines are the
+ * short list, and each needs exactly one wine chosen.
  *
- * Our side honours the owner filter the rest of the page is under, because the
- * banner counting unknown positions does. Two counts of the same thing that
- * disagree are read as a fault in the mapping, and this one said 108 against
- * the banner's 4 purely by counting every owner.
+ * Names rank the choice and never make it: the full list of our unmatched
+ * wines is returned alongside, because the right wine is sometimes one no name
+ * would suggest, and an earlier attempt to let names decide matched ten wines
+ * of thirteen and got every one wrong.
  *
  * @param outletId - The distributor to link against
- * @param ownerId - Restrict to one owner, as the page's filter does
- * @returns Our unlinked wines, each with ranked candidates
+ * @param ownerId - Restrict our side to one owner, as the page's filter does
+ * @returns Their unclaimed lines with ranked candidates, and every wine of
+ *   ours still unreached so a person can pick past the ranking
  */
 const adminGetCodeSuggestions = adminProcedure
   .input(
@@ -83,9 +88,8 @@ const adminGetCodeSuggestions = adminProcedure
     const hasLinks = await confirmedLinksReady();
 
     /*
-      Everything the bridge already reaches, so neither side of the suggestion
-      list repeats work that is done. Read from the same definition the
-      balances use, so the two can never disagree about what is mapped.
+      Everything the bridge already reaches, read from the same definition the
+      balances use so the two can never disagree about what is mapped.
     */
     const reached = await client<{ lwin: string; outletCode: string }[]>`
       WITH latest AS (
@@ -148,24 +152,24 @@ const adminGetCodeSuggestions = adminProcedure
       (line) => !mappedCodes.has(norm(line.outletCode)),
     );
 
-    const suggestions: CodeSuggestion[] = unmappedOurs.map((wine) => {
-      const candidates = unmappedTheirs
-        .map((line) => {
-          const { score, rejected } = scoreWineMatch(
-            wine.productName,
-            line.productName,
-          );
-
-          return { line, score, rejected };
-        })
+    const lines: UnclaimedLine[] = unmappedTheirs.map((line) => ({
+      outletCode: line.outletCode,
+      theirProductName: line.productName,
+      bottlesOnHand: line.bottlesOnHand,
+      soldLast30d: line.soldLast30d,
+      candidates: unmappedOurs
+        .map((wine) => ({
+          wine,
+          ...scoreWineMatch(wine.productName, line.productName),
+        }))
         .filter((entry) => !entry.rejected && entry.score > 0.3)
         .sort((a, b) => b.score - a.score)
         .slice(0, 4)
-        .map(({ line, score }) => ({
-          outletCode: line.outletCode,
-          theirProductName: line.productName,
-          bottlesOnHand: line.bottlesOnHand,
-          soldLast30d: line.soldLast30d,
+        .map(({ wine, score }) => ({
+          lwin18: wine.lwin18,
+          productName: wine.productName,
+          ownerName: wine.ownerName,
+          outBottles: wine.outBottles,
           score,
           /*
             Could their position have come from what we sent? Stock plus a
@@ -174,24 +178,19 @@ const adminGetCodeSuggestions = adminProcedure
           */
           arithmeticHolds:
             line.bottlesOnHand + (line.soldLast30d ?? 0) <= wine.outBottles,
-        }));
-
-      return {
-        lwin18: wine.lwin18,
-        ourProductName: wine.productName,
-        ownerName: wine.ownerName,
-        outBottles: wine.outBottles,
-        candidates,
-      };
-    });
+        })),
+    }));
 
     return {
-      /* Wines with something to consider first; the rest still listed */
-      suggestions: suggestions.sort(
-        (a, b) => b.candidates.length - a.candidates.length,
-      ),
-      unlinkedOurs: unmappedOurs.length,
-      unlinkedTheirs: unmappedTheirs.length,
+      /* Lines with something to suggest first; every one still listed */
+      lines: lines.sort((a, b) => b.candidates.length - a.candidates.length),
+      /* To pick past the ranking, since names are a suggestion and not more */
+      ourUnmatched: unmappedOurs.map((wine) => ({
+        lwin18: wine.lwin18,
+        productName: wine.productName,
+        ownerName: wine.ownerName,
+        outBottles: wine.outBottles,
+      })),
       /* What the bridge got without anyone being asked */
       mappedByCode: mappedWines.size,
     };
