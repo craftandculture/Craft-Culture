@@ -2008,6 +2008,31 @@ const runMigrations = async () => {
     );
     console.log('✅ cons_wine_owners ready');
 
+    /*
+      Lines the distributor buys rather than holds for us.
+
+      A fast mover they would rather own: City Drinks take the line onto their
+      own book and consignment on it ends. Their stock of it then answers to
+      nobody here, and counting it as a position we are owed against makes a
+      total that reads right and is not.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_wine_bought" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "lwin18" text NOT NULL,
+        "product_name" text,
+        "note" text,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_wine_bought_unique" ON "cons_wine_bought"("outlet_id","lwin18")`,
+    );
+    console.log('✅ cons_wine_bought ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

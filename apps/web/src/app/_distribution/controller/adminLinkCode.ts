@@ -26,6 +26,8 @@ const adminLinkCode = adminProcedure
     z.object({
       outletId: z.string().uuid(),
       outletCode: z.string().min(1).max(120),
+      /** Several at once, for clearing a list of lines that are all theirs */
+      alsoCodes: z.array(z.string().min(1).max(120)).max(200).optional(),
       lwin18: z.string().min(1).max(50).nullable(),
       /** Their own stock, wearing a Consigned flag — settled, not matched */
       notOurs: z.boolean().optional(),
@@ -61,25 +63,28 @@ const adminLinkCode = adminProcedure
       exactly what is true of it: counted nowhere, and never asked about again.
     */
     if (input.notOurs) {
-      await client`
-        INSERT INTO cons_code_links (
-          outlet_id, outlet_code, lwin18, outlet_product_name,
-          our_product_name, source, confirmed_by
-        )
-        VALUES (
-          ${input.outletId}, ${input.outletCode}, 'NOT-OURS',
-          ${input.outletProductName ?? null}, NULL,
-          'not-ours', ${ctx.user.id}
-        )
-        ON CONFLICT (outlet_id, outlet_code) DO UPDATE SET
-          lwin18 = 'NOT-OURS',
-          our_product_name = NULL,
-          source = 'not-ours',
-          confirmed_by = EXCLUDED.confirmed_by,
-          updated_at = NOW()
-      `;
+      const codes = [input.outletCode, ...(input.alsoCodes ?? [])];
 
-      return { linked: false, outletCode: input.outletCode };
+      for (const code of codes) {
+        await client`
+          INSERT INTO cons_code_links (
+            outlet_id, outlet_code, lwin18, outlet_product_name,
+            our_product_name, source, confirmed_by
+          )
+          VALUES (
+            ${input.outletId}, ${code}, 'NOT-OURS',
+            NULL, NULL, 'not-ours', ${ctx.user.id}
+          )
+          ON CONFLICT (outlet_id, outlet_code) DO UPDATE SET
+            lwin18 = 'NOT-OURS',
+            our_product_name = NULL,
+            source = 'not-ours',
+            confirmed_by = EXCLUDED.confirmed_by,
+            updated_at = NOW()
+        `;
+      }
+
+      return { linked: false, outletCode: `${codes.length} lines` };
     }
 
     if (input.lwin18 === null) {

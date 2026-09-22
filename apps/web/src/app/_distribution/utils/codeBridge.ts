@@ -121,6 +121,33 @@ export const codeBridgeCtes = (outletId: string, hasLinks: boolean) => client`
   )
 `;
 
+/** What a `client` tagged template produces, for passing fragments around */
+type SqlFragment = ReturnType<typeof codeBridgeJoins>;
+
+/**
+ * One wine, whatever pack it was invoiced in
+ *
+ * A LWIN-18 carries the pack in two digits, so the same wine reaches us as
+ * 1104653-2020-**01**-00750 on one invoice and -**06**- on another. The
+ * distributor counts bottles on a shelf and knows nothing of either, so
+ * matching on the full code splits our position in two and leaves the smaller
+ * half reading as an unknown position — five bottles of Guidalberto sitting
+ * beside twelve of the same wine, unreconciled.
+ *
+ * Bottle size stays in the key. A magnum is a different wine to a distributor
+ * and to a customer, and merging those would be the mistake this avoids in the
+ * other direction.
+ *
+ * @param expr - A SQL fragment yielding a squashed code
+ */
+export const packAgnostic = (expr: SqlFragment) => client`
+  CASE
+    WHEN ${expr} ~ '^[0-9]{18}$'
+    THEN SUBSTR(${expr}, 1, 11) || SUBSTR(${expr}, 14, 5)
+    ELSE ${expr}
+  END
+`;
+
 /**
  * A snapshot row's wine, as a code our invoices can be joined on
  *

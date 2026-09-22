@@ -7,8 +7,10 @@ import {
   codeBridgeCtes,
   codeBridgeJoins,
   confirmedLinksReady,
+  packAgnostic,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import wineBoughtReady from '../utils/wineBoughtReady';
 
 export interface BalanceRow {
   ownerName: string;
@@ -28,6 +30,21 @@ export interface BalanceRow {
   heldDeclared: number | null;
   /** Their word for it: consigned, or bought outright */
   regime: string | null;
+  /**
+   * They hold it under a bought regime and none on consignment.
+   *
+   * Sold through, then taken into their own stock. The consignment ended; the
+   * bottles are gone, which is a number rather than a silence.
+   */
+  boughtOut: boolean;
+  /**
+   * We have said this line is one they buy now.
+   *
+   * A fast mover they would rather own than hold for us. Their stock of it is
+   * their own, so it leaves the consignment position entirely rather than
+   * sitting in it as a holding nobody owes for.
+   */
+  theirLine: boolean;
 }
 
 /**
@@ -58,6 +75,7 @@ const adminGetBalances = adminProcedure
   )
   .query(async ({ input }) => {
     const hasLinks = await confirmedLinksReady();
+    const hasTheirLines = await wineBoughtReady();
 
     const term = input.search?.trim() ? `%${input.search.trim()}%` : null;
 
@@ -68,7 +86,7 @@ const adminGetBalances = adminProcedure
       ),
       ${codeBridgeCtes(input.outletId, hasLinks)},
       held AS (
-        SELECT ${resolvedSnapshotCode()} AS code,
+        SELECT ${packAgnostic(resolvedSnapshotCode())} AS code,
                SUM(s.bottles_on_hand)::float8 AS bottles,
                MIN(s.outlet_code) AS outlet_code,
                MIN(s.regime) AS regime
@@ -86,10 +104,42 @@ const adminGetBalances = adminProcedure
         */
         HAVING ${resolvedSnapshotCode()} IS NOT NULL
       ),
+      /*
+        What they hold under a regime they call bought.
+
+        A wine sold through on consignment and then taken into their own stock
+        leaves the consigned feed entirely — Margaux 1986 and Latour 1993 both
+        did — and reading that as an unknown position leaves a real sale
+        uncounted. They hold none of it on consignment, which is a number, not
+        a silence.
+      */
+      bought AS (
+        SELECT DISTINCT ${packAgnostic(resolvedSnapshotCode())} AS code
+        FROM cons_snapshots s
+        CROSS JOIN latest
+        ${codeBridgeJoins()}
+        WHERE s.outlet_id = ${input.outletId}
+          AND s.taken_at = latest.taken_at
+          AND s.regime <> 'consigned'
+          AND ${resolvedSnapshotCode()} IS NOT NULL
+      ),
+      /* Lines the outlet now buys rather than holds for us, said by hand */
+      their_lines AS (
+        ${
+          hasTheirLines
+            ? client`
+                SELECT lwin18 FROM cons_wine_bought
+                WHERE outlet_id = ${input.outletId}
+              `
+            : client`SELECT NULL::text AS lwin18 WHERE false`
+        }
+      ),
       out_lines AS (
         SELECT a.owner_id, o.name AS owner_name, ou.name AS outlet_name,
-               m.lwin18,
-               UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g')) AS code,
+               MIN(m.lwin18) AS lwin18,
+               ${packAgnostic(
+                 client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
+               )} AS code,
                MIN(m.product_name) AS product_name,
                MAX(m.pack) AS pack,
                BOOL_OR(m.pack_assumed) AS pack_assumed,
@@ -103,8 +153,10 @@ const adminGetBalances = adminProcedure
         WHERE a.outlet_id = ${input.outletId}
           AND m.kind = 'out'
           ${input.ownerId ? client`AND a.owner_id = ${input.ownerId}` : client``}
-        GROUP BY a.owner_id, o.name, ou.name, m.lwin18,
-                 UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))
+        GROUP BY a.owner_id, o.name, ou.name,
+                 ${packAgnostic(
+                   client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
+                 )}
       )
       SELECT l.owner_name AS "ownerName", l.owner_id AS "ownerId",
              l.outlet_name AS "outletName", l.lwin18,
@@ -112,15 +164,38 @@ const adminGetBalances = adminProcedure
              l.pack, l.pack_assumed AS "packAssumed",
              l.out_bottles AS "outBottles", l.out_value AS "outValue",
              l.currency,
-             h.bottles AS "heldDeclared", h.regime
+             /*
+               Nil where they bought it out of consignment, rather than
+               unknown: the consignment ended, and the bottles are gone.
+             */
+             COALESCE(h.bottles, CASE WHEN b.code IS NOT NULL THEN 0 END)
+               AS "heldDeclared",
+             h.regime,
+             (b.code IS NOT NULL AND h.bottles IS NULL) AS "boughtOut",
+             (tl.lwin18 IS NOT NULL) AS "theirLine"
       FROM out_lines l
       LEFT JOIN held h ON h.code = l.code
+      LEFT JOIN bought b ON b.code = l.code
+      LEFT JOIN their_lines tl
+        ON ${packAgnostic(
+          client`UPPER(REGEXP_REPLACE(tl.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+        )} = l.code
       ${term ? client`WHERE l.product_name ILIKE ${term} OR l.lwin18 ILIKE ${term}` : client``}
       ORDER BY l.out_bottles DESC, l.product_name
       LIMIT 500
     `;
 
-    const summary = rows.reduce(
+    /*
+      A line the outlet buys is not a consignment position.
+
+      Their stock of it is their own and nobody is owed for it, so it is kept
+      out of every total rather than quietly inflating one. The rows remain,
+      under their own filter, because what sold before the switch is still
+      owed and still has to be seen.
+    */
+    const consigned = rows.filter((row) => !row.theirLine);
+
+    const summary = consigned.reduce(
       (totals, row) => ({
         wines: totals.wines + 1,
         outBottles: totals.outBottles + row.outBottles,
@@ -148,7 +223,10 @@ const adminGetBalances = adminProcedure
       },
     );
 
-    return { rows, summary };
+    /** Lines they now buy, counted so their absence from the totals is visible */
+    const theirLines = rows.length - consigned.length;
+
+    return { rows, summary: { ...summary, theirLines } };
   });
 
 export default adminGetBalances;

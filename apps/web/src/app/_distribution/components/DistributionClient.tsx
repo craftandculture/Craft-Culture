@@ -62,7 +62,7 @@ const DistributionClient = () => {
   const [ownerId, setOwnerId] = useState<string>('');
   const [search, setSearch] = useState('');
   const [view, setView] = useState<
-    'all' | 'attention' | 'holding' | 'empty' | 'unknown'
+    'all' | 'attention' | 'holding' | 'empty' | 'unknown' | 'theirs'
   >('all');
 
   const setup = useQuery(api.distribution.admin.getSetup.queryOptions());
@@ -123,6 +123,24 @@ const DistributionClient = () => {
       onSuccess: async (result) => {
         toast.success(
           `${result.wines} wines on ${result.docRef} set — read the invoices to apply it`,
+        );
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  /*
+    A line they buy is not a consignment position. Their stock of it answers to
+    nobody here, so it leaves the totals rather than inflating them.
+  */
+  const setBought = useMutation(
+    api.distribution.admin.setWineBought.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(
+          result.bought
+            ? 'Marked as a line they buy — out of the consignment totals'
+            : 'Back on consignment',
         );
         await invalidate();
       },
@@ -205,6 +223,8 @@ const DistributionClient = () => {
     holding: (row: (typeof allRows)[number]) => (row.heldDeclared ?? 0) > 0,
     empty: (row: (typeof allRows)[number]) => row.heldDeclared === 0,
     unknown: (row: (typeof allRows)[number]) => row.heldDeclared === null,
+    /* Out of the totals, so findable on purpose rather than only by absence */
+    theirs: (row: (typeof allRows)[number]) => row.theirLine,
   } as const;
 
   const rows = view === 'all' ? allRows : allRows.filter(views[view]);
@@ -468,6 +488,7 @@ const DistributionClient = () => {
                 allRows.filter(views.unknown).length,
                 false,
               ],
+              ['theirs', 'They buy', allRows.filter(views.theirs).length, false],
             ] as const
           ).map(([key, label, count, urgent]) => (
             <button
@@ -542,10 +563,16 @@ const DistributionClient = () => {
                   Sold
                 </th>
                 <th
-                  className="bg-fill-primary py-2 pr-4 text-right font-medium"
+                  className="bg-fill-primary py-2 pr-3 text-right font-medium"
                   title="The depleted bottles at the rate we invoiced them out at."
                 >
                   Sold value
+                </th>
+                <th
+                  className="bg-fill-primary py-2 pr-4 font-medium"
+                  title="Consignment, or a line the distributor now buys outright."
+                >
+                  Basis
                 </th>
               </tr>
             </thead>
@@ -687,12 +714,46 @@ const DistributionClient = () => {
                       formatBottles(row.outBottles - row.heldDeclared)
                     )}
                   </td>
-                  <td className="text-text-primary py-2 pr-4 text-right font-medium tabular-nums">
+                  <td className="text-text-primary py-2 pr-3 text-right font-medium tabular-nums">
                     {soldValueOf(row) === null ? (
                       <span className="text-text-faint">—</span>
                     ) : (
                       formatValue(soldValueOf(row) ?? 0, row.currency)
                     )}
+                  </td>
+                  {/*
+                    Said here because it is a fact about this line, and the
+                    line is where it will be noticed — a fast mover they have
+                    taken onto their own book stops being ours to settle.
+                  */}
+                  <td className="whitespace-nowrap py-2 pr-4">
+                    {row.lwin18 ? (
+                      <button
+                        type="button"
+                        disabled={setBought.isPending}
+                        onClick={() =>
+                          setBought.mutate({
+                            outletId: outletId ?? '',
+                            lwin18: row.lwin18 ?? '',
+                            bought: !row.theirLine,
+                            productName: row.productName,
+                          })
+                        }
+                        className="text-text-muted hover:text-text-primary text-xs underline decoration-dotted disabled:opacity-50"
+                        title={
+                          row.theirLine
+                            ? 'They buy this line. Click to put it back on consignment.'
+                            : 'On consignment. Click if they now buy this line outright.'
+                        }
+                      >
+                        {row.theirLine ? 'they buy' : 'consigned'}
+                      </button>
+                    ) : null}
+                    {row.boughtOut && !row.theirLine ? (
+                      <Badge size="xs" colorRole="primary" className="ml-1">
+                        bought out
+                      </Badge>
+                    ) : null}
                   </td>
                 </tr>
               ))}

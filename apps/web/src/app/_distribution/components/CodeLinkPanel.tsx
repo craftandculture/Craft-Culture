@@ -43,6 +43,12 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
   const api = useTRPC();
 
   /** Which line is being searched against, and for what */
+  /*
+    Shut by default. It is a queue of exceptions, not the page's subject, and
+    left open it is the first thing read every time — 88 rows of it on the day
+    the mapping was worst.
+  */
+  const [open, setOpen] = useState(false);
   const [searchFor, setSearchFor] = useState<string | null>(null);
   const [term, setTerm] = useState('');
 
@@ -127,11 +133,42 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
     );
   }
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="border-border-primary hover:bg-fill-muted/30 flex w-full items-center justify-between rounded-xl border border-dashed px-3 py-2 text-left"
+      >
+        <Typography variant="bodyXs" colorRole="muted" asChild>
+          <span>
+            {data.unreachedTotal} of their lines reach no wine of ours
+            {data.lines.length > 0
+              ? ` — ${data.lines.length} with stock on them`
+              : ''}
+          </span>
+        </Typography>
+        <Typography variant="bodyXs" colorRole="muted" asChild>
+          <span>Open</span>
+        </Typography>
+      </button>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      <Typography variant="labelSm" asChild>
-        <h2>Lines they hold that reach no wine of ours</h2>
-      </Typography>
+      <div className="flex items-baseline justify-between gap-2">
+        <Typography variant="labelSm" asChild>
+          <h2>Lines they hold that reach no wine of ours</h2>
+        </Typography>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-text-muted hover:text-text-primary text-xs underline"
+        >
+          Close
+        </button>
+      </div>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
           {data.unreachedTotal} of their lines reach no wine of ours, so those
