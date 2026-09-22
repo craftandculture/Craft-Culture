@@ -10,6 +10,7 @@ import adminApproveSalesOrders from './controller/adminApproveSalesOrders';
 import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListFromSalesOrder';
 import adminDismissDeletedSalesOrder from './controller/adminDismissDeletedSalesOrder';
 import adminGetCustomerInvoiceTotals from './controller/adminGetCustomerInvoiceTotals';
+import adminGetOutstandingOrders from './controller/adminGetOutstandingOrders';
 import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
 import adminListSalesOrders from './controller/adminListSalesOrders';
@@ -27,6 +28,8 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   sync: adminSyncSalesOrders,
   syncInvoices: adminSyncZohoInvoices,
   getPickedForDispatch: adminGetPickedOrdersForDispatch,
+  // Orders picked, then amended in Zoho — what is still owed
+  outstanding: adminGetOutstandingOrders,
   // What a customer has been invoiced, by their Zoho record and by currency
   customerInvoiceTotals: adminGetCustomerInvoiceTotals,
 });

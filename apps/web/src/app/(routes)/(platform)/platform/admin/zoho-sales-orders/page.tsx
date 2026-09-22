@@ -48,11 +48,24 @@ const ZohoSalesOrdersPage = () => {
     refetchInterval: 30000,
   });
 
+  /*
+    Orders picked and then amended in Zoho. The pick list is a record and never
+    changes, and Release only ever appeared on an unreleased order, so added
+    cases had nowhere to show — SO-00127 gained two and no screen said so.
+  */
+  const { data: outstandingData, refetch: refetchOutstanding } = useQuery({
+    ...api.zohoSalesOrders.outstanding.queryOptions(),
+    staleTime: 0,
+  });
+
+  const outstanding = outstandingData?.orders ?? [];
+
   const { mutate: releaseToPick, isPending: isReleasing } = useMutation(
     api.zohoSalesOrders.releaseToPick.mutationOptions({
       onSuccess: (result) => {
         toast.success(result.message);
         void refetch();
+        void refetchOutstanding();
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to release to pick');
@@ -299,6 +312,65 @@ const ZohoSalesOrdersPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {outstanding.length > 0 && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <Typography
+              variant="bodyMd"
+              className="font-semibold text-amber-900 dark:text-amber-200"
+            >
+              {outstanding.length} order
+              {outstanding.length === 1 ? ' has' : 's have'} changed since they
+              were picked
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-0.5">
+                Lines added in Zoho after the pick finished. Releasing raises a
+                second pick list for the difference only &mdash; what was
+                already picked is left alone.
+              </p>
+            </Typography>
+
+            <div className="mt-3 space-y-2">
+              {outstanding.map((order) => (
+                <div
+                  key={order.id}
+                  className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-background-primary"
+                >
+                  <div className="min-w-0">
+                    <Typography variant="bodySm" className="font-semibold">
+                      {order.salesOrderNumber}
+                      <span className="ml-2 font-normal text-text-muted">
+                        {order.customerName}
+                      </span>
+                    </Typography>
+                    <ul className="mt-1 space-y-0.5">
+                      {order.lines.map((line, index) => (
+                        <li key={index} className="text-xs text-text-muted">
+                          {line.name} &mdash;{' '}
+                          <span className="font-medium text-amber-700 dark:text-amber-400">
+                            {line.outstandingBottles} btl
+                          </span>{' '}
+                          ({line.releaseQuantity}{' '}
+                          {/^bottle/i.test(line.unit ?? '') ? 'btl' : 'cs'} to
+                          release)
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={isReleasing}
+                    onClick={() => handleReleaseToPick(order.id)}
+                    className="flex-none"
+                  >
+                    Release the difference
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex gap-1 overflow-x-auto rounded-lg bg-fill-secondary p-1">
