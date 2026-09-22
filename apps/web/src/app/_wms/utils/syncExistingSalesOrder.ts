@@ -23,8 +23,27 @@ interface SyncExistingParams {
 /** Statuses with no pick list yet — the order can be reconciled in full. */
 const PRE_PICK_STATUSES = new Set(['synced', 'approved']);
 
-/** Statuses where a pick list already snapshots the lines. */
-const RELEASED_STATUSES = new Set(['picking', 'picked']);
+/**
+ * Someone is at the shelf with this list right now.
+ *
+ * Its lines are refreshed in the header and flagged for review, never
+ * rewritten — moving the ground under an operator mid-pick is how a case gets
+ * picked twice or not at all.
+ */
+const IN_PICK_STATUSES = new Set(['picking']);
+
+/**
+ * The pick is finished; the order can still change.
+ *
+ * Nobody is walking these, so a line added in Zoho is simply new work and is
+ * taken into our copy. It cannot cause a double pick: what is owed is computed
+ * from what was actually picked, in `planOutstandingRelease`.
+ *
+ * Left out of this set entirely, an order amended after dispatch was skipped
+ * before Zoho was even asked — SO-00127 gained two cases and no amount of
+ * forced syncing could see them.
+ */
+const SETTLED_STATUSES = new Set(['picked', 'dispatched', 'delivered']);
 
 /** The line fields a pick depends on — a change to any must be reviewed. */
 const lineFingerprint = (line: {
@@ -129,7 +148,11 @@ const syncExistingSalesOrder = async ({
 }: SyncExistingParams) => {
   const status = existing.status ?? 'synced';
 
-  if (!PRE_PICK_STATUSES.has(status) && !RELEASED_STATUSES.has(status)) {
+  if (
+    !PRE_PICK_STATUSES.has(status) &&
+    !IN_PICK_STATUSES.has(status) &&
+    !SETTLED_STATUSES.has(status)
+  ) {
     return { outcome: 'skipped' as const };
   }
 
@@ -215,6 +238,12 @@ const syncExistingSalesOrder = async ({
     return { outcome: 'reconciled' as const, reconciled };
   }
 
+  // Nobody is mid-pick on a settled order, so the lines are taken in as well
+  // as flagged — otherwise a case added after dispatch never reaches us and
+  // cannot be picked. Double-picking is prevented downstream, by counting what
+  // was actually picked rather than what was released.
+  const settled = SETTLED_STATUSES.has(status);
+
   // Released to picking/picked. Refresh the header so the total is truthful,
   // and raise the flag so the pick screen can prompt a review. We deliberately
   // do NOT rewrite the pick's lines here — that is an explicit "re-sync pick"
@@ -251,6 +280,16 @@ const syncExistingSalesOrder = async ({
       lastSyncAt: new Date(),
     })
     .where(eq(zohoSalesOrders.id, existing.id));
+
+  if (settled && fullOrder.line_items && fullOrder.line_items.length > 0) {
+    const reconciled = await reconcileZohoSalesOrderItems({
+      orderId: existing.id,
+      zohoLineItems: fullOrder.line_items,
+      db,
+    });
+
+    return { outcome: 'reconciled' as const, reconciled };
+  }
 
   return shouldFlag
     ? ({ outcome: 'flagged' } as const)
