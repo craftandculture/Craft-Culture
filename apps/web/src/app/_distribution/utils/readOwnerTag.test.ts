@@ -28,4 +28,36 @@ describe('readOwnerTag', () => {
     expect(readOwnerTag('August delivery')).toBeNull();
     expect(readOwnerTag(null)).toBeNull();
   });
+
+  /*
+    The two invoices that sent twelve bottles of Guidalberto to the wrong
+    owner. Both name Cru; neither puts the name where the parser looked.
+  */
+  it('finds the owner named before the keyword', () => {
+    expect(readOwnerTag('CRU Consignment Replenish', ['CRU', 'CRURATED'])).toBe(
+      'CRU',
+    );
+  });
+
+  it('finds the owner in a sentence a person wrote', () => {
+    expect(
+      readOwnerTag('Cru wine consignment August 2026', ['CRU', 'CRURATED']),
+    ).toBe('CRU');
+  });
+
+  it('never reads CRURATED as CRU', () => {
+    expect(
+      readOwnerTag('CONSIGNMENT_CRURATED', ['CRU', 'CRURATED']),
+    ).toBe('CRURATED');
+  });
+
+  it('still refuses MIX when the tags are known', () => {
+    expect(readOwnerTag('CONSIGNMENT_MIX', ['CRU', 'CULT'])).toBeNull();
+  });
+
+  it('takes no owner from a subject naming none', () => {
+    expect(
+      readOwnerTag('Consignment Replenish', ['CRU', 'CRURATED']),
+    ).toBeNull();
+  });
 });

@@ -153,7 +153,12 @@ const adminSyncOutFromZoho = adminProcedure
         through to the wine's own history rather than taking a tag that would
         be wrong for most of them.
       */
-      const invoiceTag = readOwnerTag(subject);
+      const invoiceTag = readOwnerTag(
+        subject,
+        owners
+          .map((owner) => owner.consignmentTag)
+          .filter((tag): tag is string => Boolean(tag)),
+      );
 
       for (const line of invoice.line_items ?? []) {
         if (!line.quantity) continue;

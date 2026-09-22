@@ -43,8 +43,12 @@ const readInvoiceSubject = (invoice: ZohoInvoice) => {
     The reference number carries the sales order, so only the consignment tag
     within it is taken — returning the whole string would make "SO-00105" look
     like a subject that simply named no owner.
+
+    The separator is whatever was typed. `CONSIGNMENT_CRU` on one invoice and
+    `CONSIGNMENT CRU` on the next are the same instruction, and insisting on
+    the underscore reads the tag on one and not the other.
   */
-  const tagged = /CONSIGNMENT_[A-Z]+/i.exec(invoice.reference_number ?? '');
+  const tagged = /CONSIGNMENT[_\s-]*[A-Z]+/i.exec(invoice.reference_number ?? '');
 
   return tagged?.[0]?.toUpperCase() ?? null;
 };
