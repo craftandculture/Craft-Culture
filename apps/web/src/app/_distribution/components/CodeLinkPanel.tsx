@@ -205,8 +205,21 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                       <Typography variant="bodyXs" colorRole="muted" asChild>
                         <span className="block tabular-nums">
                           {candidate.ownerName} · {candidate.outBottles} btl out
+                          {candidate.docRef ? ` · ${candidate.docRef}` : ''}
                         </span>
                       </Typography>
+                      {/*
+                        An owner nobody named is a guess that reads as a fact,
+                        and the difference is who gets paid.
+                      */}
+                      {candidate.ownerReason?.startsWith('Nobody named') ? (
+                        <Typography variant="bodyXs" colorRole="warning" asChild>
+                          <span className="block">
+                            Owner not named on the invoice — took the
+                            unattributed.
+                          </span>
+                        </Typography>
+                      ) : null}
                       {/*
                         Shown rather than used to hide the candidate, because
                         the arithmetic can also fail for an honest reason — a

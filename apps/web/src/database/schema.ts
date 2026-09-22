@@ -6710,6 +6710,14 @@ export const consMovements = pgTable(
     docDate: date('doc_date'),
     /** Where the line came from: `zoho-invoices`, `cd-api`, an upload id */
     source: text('source'),
+    /**
+     * Why this owner, in the words `resolveOwner` used.
+     *
+     * A line that went to an owner because nobody named it reads exactly like
+     * one the invoice named, and the difference is who gets paid. Kept so the
+     * guess can be seen as a guess.
+     */
+    ownerReason: text('owner_reason'),
     raw: jsonb('raw'),
     ...timestamps,
   },

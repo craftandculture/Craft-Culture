@@ -1954,6 +1954,18 @@ const runMigrations = async () => {
     );
     console.log('✅ cons_code_links ready');
 
+    /*
+      Why a line's owner is its owner.
+
+      `resolveOwner` works it out on every line and the answer was thrown away,
+      so a line that went to whoever takes unattributed wine read exactly like
+      one the invoice named. That difference is who gets paid.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_movements" ADD COLUMN IF NOT EXISTS "owner_reason" text`,
+    );
+    console.log('✅ cons_movements.owner_reason ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -9,6 +9,7 @@ import {
   confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import ownerReasonReady from '../utils/ownerReasonReady';
 import scoreWineMatch from '../utils/scoreWineMatch';
 
 /** As many as a person will work through in a sitting */
@@ -20,6 +21,10 @@ interface OursRow {
   ownerName: string;
   ownerId: string;
   outBottles: number;
+  /** The invoice that put it there, so the attribution can be traced */
+  docRef: string | null;
+  /** Why that owner — null on rows written before the reason was kept */
+  ownerReason: string | null;
 }
 
 interface TheirsRow {
@@ -35,6 +40,8 @@ export interface OurWine {
   productName: string;
   ownerName: string;
   outBottles: number;
+  docRef: string | null;
+  ownerReason: string | null;
 }
 
 export interface UnclaimedLine {
@@ -89,6 +96,7 @@ const adminGetCodeSuggestions = adminProcedure
   .input(z.object({ outletId: z.string().uuid() }))
   .query(async ({ input }) => {
     const hasLinks = await confirmedLinksReady();
+    const hasReason = await ownerReasonReady();
 
     /*
       Everything the bridge already reaches, read from the same definition the
@@ -121,7 +129,9 @@ const adminGetCodeSuggestions = adminProcedure
              MIN(m.product_name) AS "productName",
              MIN(ow.name) AS "ownerName",
              a.owner_id AS "ownerId",
-             SUM(m.bottles)::float8 AS "outBottles"
+             SUM(m.bottles)::float8 AS "outBottles",
+             MAX(m.doc_ref) AS "docRef",
+             ${hasReason ? client`MAX(m.owner_reason)` : client`NULL::text`} AS "ownerReason"
       FROM cons_movements m
       JOIN cons_arrangements a ON a.id = m.arrangement_id
       JOIN cons_owners ow ON ow.id = a.owner_id
@@ -172,6 +182,8 @@ const adminGetCodeSuggestions = adminProcedure
           productName: wine.productName,
           ownerName: wine.ownerName,
           outBottles: wine.outBottles,
+          docRef: wine.docRef,
+          ownerReason: wine.ownerReason,
           score,
           /*
             Could their position have come from what we sent? Stock plus a
@@ -211,6 +223,8 @@ const adminGetCodeSuggestions = adminProcedure
         productName: wine.productName,
         ownerName: wine.ownerName,
         outBottles: wine.outBottles,
+        docRef: wine.docRef,
+        ownerReason: wine.ownerReason,
       })),
       /* What the bridge got without anyone being asked */
       mappedByCode: mappedWines.size,

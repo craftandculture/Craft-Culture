@@ -195,6 +195,7 @@ const adminSyncOutFromZoho = adminProcedure
           source_unit: isBottles ? 'bottle' : 'case',
           pack,
           pack_assumed: !packStated && !isBottles,
+          owner_reason: reason,
           unit_price: line.rate,
           currency: invoice.currency_code ?? null,
           doc_ref: invoice.invoice_number,
