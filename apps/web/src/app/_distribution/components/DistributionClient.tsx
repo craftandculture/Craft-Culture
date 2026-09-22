@@ -243,13 +243,16 @@ const DistributionClient = () => {
             {[
               ['Position read', formatWhen(outlet.lastSnapshotAt)],
               ['Their consigned lines', String(outlet.consignedLines)],
-              ['They hold, all owners', `${formatBottles(outlet.consignedBottles)} btl`],
+              [
+                'Their stock, all owners',
+                `${formatBottles(outlet.consignedBottles)} btl`,
+              ],
               [
                 isFiltered ? 'Out, this selection' : 'Out, all owners',
                 summary ? `${formatBottles(summary.outBottles)} btl` : '—',
               ],
               [
-                isFiltered ? 'Held, this selection' : 'Held, matched',
+                isFiltered ? 'Their stock, this selection' : 'Their stock, matched',
                 summary ? `${formatBottles(summary.heldDeclared)} btl` : '—',
               ],
             ].map(([label, value]) => (
@@ -353,7 +356,7 @@ const DistributionClient = () => {
                 allRows.filter(views.attention).length,
                 true,
               ],
-              ['holding', 'Still holding', allRows.filter(views.holding).length, false],
+              ['holding', 'In their stock', allRows.filter(views.holding).length, false],
               ['empty', 'Sold through', allRows.filter(views.empty).length, false],
               [
                 'unknown',
@@ -422,14 +425,17 @@ const DistributionClient = () => {
                 <th className="bg-fill-primary py-2 pr-3 text-right font-medium">
                   Value
                 </th>
-                <th className="border-border-primary bg-fill-primary border-l py-2 pr-3 text-right font-medium">
-                  They hold
+                <th
+                  className="border-border-primary bg-fill-primary border-l py-2 pr-3 text-right font-medium"
+                  title="What the distributor reports holding, from their own live feed."
+                >
+                  Distributor stock
                 </th>
                 <th
                   className="bg-fill-primary py-2 pr-4 text-right font-medium"
-                  title="Out less what they still hold — what has left their shelf. Replaced by the month's actual sales once uploaded."
+                  title="What we invoiced out, less what they still hold — so what has sold. Replaced by their own figure once the month's report is in."
                 >
-                  Gone
+                  Sold
                 </th>
               </tr>
             </thead>
@@ -545,8 +551,8 @@ const DistributionClient = () => {
         <div className="text-text-muted flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="tabular-nums">
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
-            {formatBottles(summary.heldDeclared)} still with them ·{' '}
-            {formatBottles(summary.gone)} gone
+            {formatBottles(summary.heldDeclared)} in their stock ·{' '}
+            {formatBottles(summary.gone)} sold
             {summary.unmatched > 0
               ? ` · ${summary.unmatched} position unknown`
               : ''}
