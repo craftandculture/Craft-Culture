@@ -7,12 +7,13 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
+import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
+import planOutstandingRelease from '@/app/_wms/utils/planOutstandingRelease';
 import rankStockByPack from '@/app/_wms/utils/rankStockByPack';
 import { readOrderedPackOrNull } from '@/app/_wms/utils/readOrderedPack';
 import db from '@/database/client';
@@ -45,27 +46,11 @@ const adminReleaseToPick = wmsOperatorProcedure
       });
     }
 
-    // Must be synced status (not yet released)
-    if (order.status !== 'synced') {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Order has already been released. Current status: ${order.status}`,
-      });
-    }
-
     // Must be invoiced in Zoho (finalized, no more changes)
     if (order.zohoStatus !== 'invoiced') {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Order must be invoiced in Zoho before release. Current Zoho status: ${order.zohoStatus}`,
-      });
-    }
-
-    // Check if pick list already exists
-    if (order.pickListId) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Pick list already exists for this order',
       });
     }
 
@@ -82,6 +67,88 @@ const adminReleaseToPick = wmsOperatorProcedure
       });
     }
 
+    /*
+      Release what is still owed, not the order over again.
+
+      An order amended after its pick was finished used to be refused outright
+      — "pick list already exists" — so the added cases were picked by hand and
+      the system never learned of them. What decides the question is not
+      whether the order has been released but whether anything is outstanding.
+    */
+    const priorPickLists = await db
+      .select({ id: wmsPickLists.id, status: wmsPickLists.status })
+      .from(wmsPickLists)
+      .where(eq(wmsPickLists.orderId, salesOrderId));
+
+    /*
+      An open pick list already holds the lines it has not got to yet. Counting
+      those as outstanding would release them a second time and send two people
+      to the same bay for the same case.
+    */
+    const openPick = priorPickLists.find(
+      (list) => list.status === 'pending' || list.status === 'in_progress',
+    );
+
+    if (openPick) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'This order already has a pick list in progress. Finish or cancel it before releasing anything further.',
+      });
+    }
+
+    const priorItems = priorPickLists.length
+      ? await db
+          .select({
+            lwin18: wmsPickListItems.lwin18,
+            quantityCases: wmsPickListItems.quantityCases,
+            quantityBottles: wmsPickListItems.quantityBottles,
+            isPicked: wmsPickListItems.isPicked,
+          })
+          .from(wmsPickListItems)
+          .where(
+            inArray(
+              wmsPickListItems.pickListId,
+              priorPickLists.map((list) => list.id),
+            ),
+          )
+      : [];
+
+    const plan = planOutstandingRelease(
+      orderItems.map((item) => ({
+        id: item.id,
+        sku: item.sku,
+        lwin18: item.lwin18,
+        name: item.name,
+        unit: item.unit,
+        quantity: item.quantity,
+      })),
+      priorItems,
+    );
+
+    const isTopUp = priorPickLists.length > 0;
+
+    if (plan.toRelease.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: isTopUp
+          ? 'Nothing outstanding on this order — every line has already been picked.'
+          : 'Sales order has no items to release',
+      });
+    }
+
+    // The quantity each line still owes, in the unit that line is written in.
+    const outstandingByItem = new Map(
+      plan.toRelease.map((entry) => [entry.line.id, entry.releaseQuantity]),
+    );
+
+    const itemsToRelease = orderItems
+      .filter((item) => outstandingByItem.has(item.id))
+      .map((item) => ({
+        ...item,
+        quantity: outstandingByItem.get(item.id) ?? item.quantity,
+      }));
+
     // Generate pick list number
     const pickListNumber = await generatePickListNumber();
 
@@ -92,7 +159,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         pickListNumber,
         orderId: salesOrderId,
         orderNumber: order.salesOrderNumber,
-        totalItems: orderItems.length,
+        totalItems: itemsToRelease.length,
         pickedItems: 0,
       })
       .returning();
@@ -103,7 +170,7 @@ const adminReleaseToPick = wmsOperatorProcedure
     const shortOnRelease: string[] = [];
     let reservedCases = 0;
 
-    for (const item of orderItems) {
+    for (const item of itemsToRelease) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
       const itemLwin18 = item.lwin18 ? normalizeLwin18(item.lwin18) : null;
 
@@ -400,12 +467,19 @@ const adminReleaseToPick = wmsOperatorProcedure
       unresolvedItems,
       reservedCases,
       shortOnRelease,
+      /** True when this covers an amendment, not the whole order. */
+      isTopUp,
+      /** Picked beyond what the order now asks for — someone must walk it back. */
+      overPicked: plan.overPicked,
       message:
-        unresolvedItems.length > 0
+        (isTopUp
+          ? `Top-up for the ${plan.totalOutstandingBottles} bottles still owed. `
+          : '') +
+        (unresolvedItems.length > 0
           ? `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${unresolvedItems.length} could not be matched to stock and need checking: ${unresolvedItems.join(', ')}`
           : shortOnRelease.length > 0
             ? `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${reservedCases} cases held, short on: ${shortOnRelease.join(', ')}`
-            : `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${reservedCases} cases held`,
+            : `Released to pick: ${pickListNumber} with ${pickListItems.length} items — ${reservedCases} cases held`),
     };
   });
 
