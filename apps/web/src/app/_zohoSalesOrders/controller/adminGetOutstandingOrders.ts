@@ -50,7 +50,11 @@ const adminGetOutstandingOrders = wmsOperatorProcedure.query(async () => {
       .from(zohoSalesOrderItems)
       .where(inArray(zohoSalesOrderItems.salesOrderId, orderIds)),
     db
-      .select({ id: wmsPickLists.id, orderId: wmsPickLists.orderId })
+      .select({
+        id: wmsPickLists.id,
+        orderId: wmsPickLists.orderId,
+        createdAt: wmsPickLists.createdAt,
+      })
       .from(wmsPickLists)
       .where(inArray(wmsPickLists.orderId, orderIds)),
   ]);
@@ -74,11 +78,19 @@ const adminGetOutstandingOrders = wmsOperatorProcedure.query(async () => {
     : [];
 
   const pickListsByOrder = new Map<string, string[]>();
+  // The newest pick per order: a line that reached us after it is new work,
+  // whatever code it carries.
+  const lastPickAtByOrder = new Map<string, Date>();
+
   allPickLists.forEach((list) => {
     pickListsByOrder.set(list.orderId, [
       ...(pickListsByOrder.get(list.orderId) ?? []),
       list.id,
     ]);
+    const seen = lastPickAtByOrder.get(list.orderId);
+    if (list.createdAt && (!seen || list.createdAt > seen)) {
+      lastPickAtByOrder.set(list.orderId, list.createdAt);
+    }
   });
 
   const outstanding = orders
@@ -97,8 +109,10 @@ const adminGetOutstandingOrders = wmsOperatorProcedure.query(async () => {
           name: item.name,
           unit: item.unit,
           quantity: item.quantity,
+          createdAt: item.createdAt,
         })),
         picked,
+        { lastPickListAt: lastPickAtByOrder.get(order.id) ?? null },
       );
 
       if (plan.toRelease.length === 0) return null;

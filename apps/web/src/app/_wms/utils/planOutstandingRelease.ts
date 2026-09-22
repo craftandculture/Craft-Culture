@@ -9,6 +9,8 @@ export interface OrderLine {
   /** 'Case', 'Cases' or 'Bottle' — what `quantity` counts. */
   unit: string | null;
   quantity: number;
+  /** When the line reached us. A line newer than the pick is new work. */
+  createdAt?: Date | null;
 }
 
 export interface PickedLine {
@@ -20,6 +22,17 @@ export interface PickedLine {
   isPicked: boolean | null;
 }
 
+export interface PlanOptions {
+  /**
+   * When the most recent pick list for this order was raised.
+   *
+   * Without it every line is taken at face value, which is right on a first
+   * release. With it, a line that matches nothing picked AND predates the pick
+   * is treated as unverifiable rather than outstanding — see below.
+   */
+  lastPickListAt?: Date | null;
+}
+
 export interface OutstandingLine {
   line: OrderLine;
   orderedBottles: number;
@@ -28,6 +41,8 @@ export interface OutstandingLine {
   outstandingBottles: number;
   /** What to release, in the unit the line is written in. */
   releaseQuantity: number;
+  /** False when we cannot tell whether this line was picked. */
+  verifiable: boolean;
 }
 
 /** Bottles per case, from the code's own pack segment. */
@@ -76,6 +91,7 @@ const keyOf = (line: { sku: string | null; lwin18: string | null }) => {
 const planOutstandingRelease = (
   orderLines: OrderLine[],
   pickedLines: PickedLine[],
+  options: PlanOptions = {},
 ) => {
   const pickedByWine = new Map<string, number>();
 
@@ -116,12 +132,38 @@ const planOutstandingRelease = (
       ? outstandingBottles
       : Math.ceil(outstandingBottles / pack);
 
+    /*
+      Can we believe this figure?
+
+      An order line and the stock it was picked from need not share a code: a
+      supplier SKU on the order (SOT-CAS-750-BTL-UAE-BLC) and an LWIN in the
+      bay (SOTCAS750B-0000-06-00700) are one product under two names, and no
+      key derived from either will match the other. Subtracting nothing from
+      twenty then reports twenty bottles owed on an order that shipped
+      complete — which is what SO-00135 did.
+
+      So a line is only believed when the wine appears among the picks, or when
+      it reached us AFTER the pick was raised and is therefore new work by
+      date rather than by code. Anything else is unverifiable and withheld:
+      sending someone to re-pick a delivered order is far worse than saying
+      nothing.
+    */
+    const wineWasPicked = pickedByWine.has(key);
+    const addedAfterPick = Boolean(
+      options.lastPickListAt &&
+        line.createdAt &&
+        line.createdAt.getTime() > options.lastPickListAt.getTime(),
+    );
+    const verifiable =
+      !options.lastPickListAt || wineWasPicked || addedAfterPick;
+
     return {
       line,
       orderedBottles,
       pickedBottles,
       outstandingBottles,
       releaseQuantity,
+      verifiable,
     };
   });
 
@@ -137,11 +179,16 @@ const planOutstandingRelease = (
 
   return {
     lines,
-    toRelease: lines.filter((entry) => entry.outstandingBottles > 0),
-    totalOutstandingBottles: lines.reduce(
-      (sum, entry) => sum + entry.outstandingBottles,
-      0,
+    toRelease: lines.filter(
+      (entry) => entry.outstandingBottles > 0 && entry.verifiable,
     ),
+    /** Owed on paper but not provable — reported so it is not silent. */
+    unverifiable: lines.filter(
+      (entry) => entry.outstandingBottles > 0 && !entry.verifiable,
+    ),
+    totalOutstandingBottles: lines
+      .filter((entry) => entry.verifiable)
+      .reduce((sum, entry) => sum + entry.outstandingBottles, 0),
     overPicked,
   };
 };

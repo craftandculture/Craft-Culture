@@ -133,6 +133,55 @@ describe('planOutstandingRelease', () => {
     ]);
   });
 
+  it('does not claim a line picked under a different code is owed', () => {
+    // SO-00135: the order carries a supplier SKU, the bay an LWIN. One
+    // product, two names, no shared key — and the order shipped complete.
+    const pickedAt = new Date('2026-09-16T12:00:00Z');
+    const result = planOutstandingRelease(
+      [
+        {
+          id: 'sotol',
+          sku: 'SOT-CAS-750-BTL-UAE-BLC',
+          lwin18: null,
+          name: 'CASA LOTOS - Sotol Blanco',
+          unit: 'Cases',
+          quantity: 20,
+          createdAt: new Date('2026-09-15T09:00:00Z'),
+        },
+      ],
+      [picked('SOTCAS750B-0000-06-00700', 4, 20)],
+      { lastPickListAt: pickedAt },
+    );
+
+    // Reporting twenty bottles owed would send someone to re-pick a delivered
+    // order. Withheld, and surfaced as unverifiable instead.
+    expect(result.toRelease).toEqual([]);
+    expect(result.totalOutstandingBottles).toBe(0);
+    expect(result.unverifiable).toHaveLength(1);
+  });
+
+  it('does believe a line added after the pick was raised', () => {
+    const result = planOutstandingRelease(
+      [
+        {
+          id: 'added',
+          sku: 'SOME-SUPPLIER-CODE',
+          lwin18: null,
+          name: 'Added later',
+          unit: 'Cases',
+          quantity: 2,
+          createdAt: new Date('2026-09-22T08:00:00Z'),
+        },
+      ],
+      [picked('1012781-2003-12-00750', 2)],
+      { lastPickListAt: new Date('2026-09-16T12:00:00Z') },
+    );
+
+    // New by date, even though its code matches nothing picked.
+    expect(result.toRelease).toHaveLength(1);
+    expect(result.toRelease[0]?.releaseQuantity).toBe(2);
+  });
+
   it('owes the whole order when nothing has been picked', () => {
     const result = planOutstandingRelease(SO_00127_ORDER, []);
 

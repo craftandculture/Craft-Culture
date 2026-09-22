@@ -76,7 +76,11 @@ const adminReleaseToPick = wmsOperatorProcedure
       whether the order has been released but whether anything is outstanding.
     */
     const priorPickLists = await db
-      .select({ id: wmsPickLists.id, status: wmsPickLists.status })
+      .select({
+        id: wmsPickLists.id,
+        status: wmsPickLists.status,
+        createdAt: wmsPickLists.createdAt,
+      })
       .from(wmsPickLists)
       .where(eq(wmsPickLists.orderId, salesOrderId));
 
@@ -122,8 +126,18 @@ const adminReleaseToPick = wmsOperatorProcedure
         name: item.name,
         unit: item.unit,
         quantity: item.quantity,
+        createdAt: item.createdAt,
       })),
       priorItems,
+      {
+        lastPickListAt: priorPickLists.reduce<Date | null>(
+          (latest, list) =>
+            list.createdAt && (!latest || list.createdAt > latest)
+              ? list.createdAt
+              : latest,
+          null,
+        ),
+      },
     );
 
     const isTopUp = priorPickLists.length > 0;
