@@ -138,13 +138,18 @@ type SqlFragment = ReturnType<typeof codeBridgeJoins>;
  * and to a customer, and merging those would be the mistake this avoids in the
  * other direction.
  *
- * @param expr - A SQL fragment yielding a squashed code
+ * Takes a builder rather than a fragment, and calls it once per use. A
+ * `postgres` fragment is not a value to be repeated — this file already says
+ * so about its own exports — and handing the same one in four times produced
+ * a query that returned nothing at all while looking well formed.
+ *
+ * @param make - Builds a fresh fragment yielding a squashed code
  */
-export const packAgnostic = (expr: SqlFragment) => client`
+export const packAgnostic = (make: () => SqlFragment) => client`
   CASE
-    WHEN ${expr} ~ '^[0-9]{18}$'
-    THEN SUBSTR(${expr}, 1, 11) || SUBSTR(${expr}, 14, 5)
-    ELSE ${expr}
+    WHEN ${make()} ~ '^[0-9]{18}$'
+    THEN SUBSTR(${make()}, 1, 11) || SUBSTR(${make()}, 14, 5)
+    ELSE ${make()}
   END
 `;
 

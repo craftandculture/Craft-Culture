@@ -514,6 +514,21 @@ const DistributionClient = () => {
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p>Reading the positions…</p>
         </Typography>
+      ) : balances.isError ? (
+        /*
+          A failed query used to fall through to the empty state, so the page
+          announced that nothing had ever been invoiced to this distributor
+          while two hundred bottles sat behind a broken query. Wrong and
+          alarming, and it hid the fault instead of reporting it.
+        */
+        <div className="border-border-danger bg-fill-danger/5 rounded-xl border p-6">
+          <Typography variant="bodySm" colorRole="danger" asChild>
+            <p className="font-medium">The positions could not be read.</p>
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p className="mt-1">{balances.error.message}</p>
+          </Typography>
+        </div>
       ) : rows.length === 0 ? (
         <div className="border-border-primary rounded-xl border p-8 text-center">
           <Typography variant="bodySm" colorRole="muted" asChild>

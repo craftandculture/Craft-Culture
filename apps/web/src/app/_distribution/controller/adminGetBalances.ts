@@ -86,7 +86,7 @@ const adminGetBalances = adminProcedure
       ),
       ${codeBridgeCtes(input.outletId, hasLinks)},
       held AS (
-        SELECT ${packAgnostic(resolvedSnapshotCode())} AS code,
+        SELECT ${packAgnostic(() => resolvedSnapshotCode())} AS code,
                SUM(s.bottles_on_hand)::float8 AS bottles,
                MIN(s.outlet_code) AS outlet_code,
                MIN(s.regime) AS regime
@@ -114,7 +114,7 @@ const adminGetBalances = adminProcedure
         a silence.
       */
       bought AS (
-        SELECT DISTINCT ${packAgnostic(resolvedSnapshotCode())} AS code
+        SELECT DISTINCT ${packAgnostic(() => resolvedSnapshotCode())} AS code
         FROM cons_snapshots s
         CROSS JOIN latest
         ${codeBridgeJoins()}
@@ -138,7 +138,8 @@ const adminGetBalances = adminProcedure
         SELECT a.owner_id, o.name AS owner_name, ou.name AS outlet_name,
                MIN(m.lwin18) AS lwin18,
                ${packAgnostic(
-                 client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
+                 () =>
+                   client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
                )} AS code,
                MIN(m.product_name) AS product_name,
                MAX(m.pack) AS pack,
@@ -155,7 +156,8 @@ const adminGetBalances = adminProcedure
           ${input.ownerId ? client`AND a.owner_id = ${input.ownerId}` : client``}
         GROUP BY a.owner_id, o.name, ou.name,
                  ${packAgnostic(
-                   client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
+                   () =>
+                     client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`,
                  )}
       )
       SELECT l.owner_name AS "ownerName", l.owner_id AS "ownerId",
@@ -178,7 +180,7 @@ const adminGetBalances = adminProcedure
       LEFT JOIN bought b ON b.code = l.code
       LEFT JOIN their_lines tl
         ON ${packAgnostic(
-          client`UPPER(REGEXP_REPLACE(tl.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+          () => client`UPPER(REGEXP_REPLACE(tl.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
         )} = l.code
       ${term ? client`WHERE l.product_name ILIKE ${term} OR l.lwin18 ILIKE ${term}` : client``}
       ORDER BY l.out_bottles DESC, l.product_name
