@@ -520,6 +520,12 @@ const DistributionClient = () => {
                           className="hover:border-border-primary cursor-pointer rounded border border-transparent bg-transparent py-0.5 pr-1"
                           title="Whose wine this is. Set here when the invoice could not say."
                         >
+                          {/*
+                            Unsaying it matters as much as saying it: a wrong
+                            pick should be retractable to "whatever the invoice
+                            says", not merely replaceable with another guess.
+                          */}
+                          <option value="">— from the invoice —</option>
                           {(setup.data?.owners ?? []).map((owner) => (
                             <option key={owner.id} value={owner.id}>
                               {owner.name}
