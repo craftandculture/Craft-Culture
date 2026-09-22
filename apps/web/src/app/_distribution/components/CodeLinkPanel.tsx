@@ -17,29 +17,26 @@ interface CodeLinkPanelProps {
 const SEARCH_LIMIT = 8;
 
 /**
- * Claim the distributor's lines that reach no wine of ours
+ * Lines City Drinks call consignment that we never consigned
  *
- * One row per line of theirs, because that is how many questions there are:
- * City Drinks hold four bottles under a blank supplier code, and each needs
- * one wine of ours chosen. Asked the other way round it became a hundred rows
- * of our wines each guessing at four lines, which is the same four answers
- * buried in everything we ever sent them.
+ * A line's regime comes from one place: the `status` field on their own feed.
+ * That is their record of our commercial relationship, and it is sometimes
+ * wrong — Tignanello 2022 was invoiced to them as an outright sale and their
+ * system still flags it Consigned, so it arrives here as consigned stock with
+ * no code of ours against it, because there is no consignment of it to find.
  *
- * The ranking is by name and decides nothing. "Margaux" is a château and also
- * the appellation half of Bordeaux sits in, so the right wine and the wrong
- * one score alike; a search box sits beside the suggestions because the answer
- * is often a wine no name would have proposed. The arithmetic is the real
- * check — their stock plus a month's sales above everything we invoiced out is
- * the wrong wine, not a near miss — so it sits against each candidate.
+ * So these are not wines waiting to be matched. A line reaching no wine of
+ * ours, with nothing we ever invoiced out on consignment to reach, is their
+ * own stock wearing our label. It is excluded from the position already; what
+ * it needs is correcting at their end, not linking at ours.
  *
- * The owner chip does not narrow this, and must not. An unclaimed line has no
- * owner yet — choosing the wine is what gives it one — so the candidates span
- * every owner and each says whose it is. Narrowed, it offered Cult's wines as
- * answers for a line that was never Cult's.
+ * The link stays for the other case, which is real but rarer: a wine genuinely
+ * on consignment whose supplier code they left blank. That one is ours and
+ * belongs in the report, so it can be claimed — deliberately as a secondary
+ * action, because the likelier answer is that the line is not ours at all.
  *
- * Worth saying plainly: this exists because four fields in their product
- * master are empty. Filled at their end, every one of these lines maps itself
- * on the next pull and this panel disappears.
+ * Candidates span every owner and never narrow to the owner chip: an unclaimed
+ * line has no owner, and choosing the wine is what would give it one.
  */
 const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
   const api = useTRPC();
@@ -87,17 +84,18 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
   return (
     <div className="space-y-2">
       <Typography variant="labelSm" asChild>
-        <h2>Lines of theirs that reach no wine of ours</h2>
+        <h2>They call these consignment — we never consigned them</h2>
       </Typography>
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
-          {data.lines.length} of their consigned lines carry no code of ours, so
-          their bottles cannot reach an owner. Each needs one wine chosen, from
-          any owner — which owner it belongs to is what choosing decides, so the
-          owner filter above does not apply here. Names are a suggestion only
-          and the bottle count is the check that catches what a name cannot. The
-          lasting fix is theirs: these lines have an empty supplier code in
-          their product master.
+          {data.lines.length} lines carry a Consigned status on their feed and no
+          consignment of ours to match it. The regime is read from their status
+          field and nothing else, so a wine we sold them outright shows up here
+          the moment their record says consignment — Tignanello 2022 is one, on
+          an invoice they bought against. None of these count towards the
+          position; they are listed so the status gets corrected at their end.
+          If one truly is on consignment and they simply left the supplier code
+          blank, claim it.
         </p>
       </Typography>
 
@@ -128,9 +126,8 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
               {line.candidates.length === 0 ? (
                 <Typography variant="bodyXs" colorRole="muted" asChild>
                   <p className="mt-1">
-                    No wine of ours shares a word with their name for it. Search
-                    below — the right one is here, under a name neither of us
-                    writes the same way.
+                    Nothing of ours on consignment resembles it, which is what
+                    an outright sale mis-flagged at their end looks like.
                   </p>
                 </Typography>
               ) : (
@@ -231,7 +228,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                   className="text-text-muted hover:text-text-primary mt-2 text-xs underline"
                 >
                   {line.candidates.length === 0
-                    ? 'Find the wine'
+                    ? 'It is ours — find the wine'
                     : 'None of these — search'}
                 </button>
               )}
@@ -243,8 +240,8 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p className="max-w-3xl">
           {data.ourUnmatched.length} wines of ours, across every owner, show no
-          position at this outlet. Most of those they simply hold none of; only
-          the lines above are unreachable by code.
+          position at this outlet — in almost every case because they hold none
+          of it, which is the ordinary end of a consignment.
         </p>
       </Typography>
     </div>

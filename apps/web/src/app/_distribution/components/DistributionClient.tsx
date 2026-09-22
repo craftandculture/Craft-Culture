@@ -10,7 +10,6 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-import CodeLinkPanel from './CodeLinkPanel';
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
 import ownerColour from '../utils/ownerColour';
@@ -43,10 +42,16 @@ const formatWhen = (value: Date | string | null) => {
  * endpoints for a job that is four numbers per wine, and the reading of it
  * suffered for the reach.
  *
- * Sold and Billed are not here yet: Sold needs two snapshot boundaries to
- * difference or the distributor's monthly report, and Billed needs the owner's
- * bill. Showing them as zero would read as nothing having sold, which is a
- * different claim from not yet knowing.
+ * What is consigned comes from our invoice tags and never from the
+ * distributor's own status field. Theirs is a record of our commercial
+ * relationship kept by someone else, and it is wrong often enough to matter:
+ * Tignanello 2022 was invoiced to City Drinks as an outright sale and their
+ * feed still flags it Consigned. Lines of theirs that match no consignment of
+ * ours are not shown at all — they are their stock, whatever they call it.
+ *
+ * Sold is out less what they hold, so it falls as their feed depletes. Billed
+ * still needs the owner's bill. Showing that as zero would read as nothing
+ * having been billed, which is a different claim from not yet knowing.
  */
 const DistributionClient = () => {
   const api = useTRPC();
@@ -139,6 +144,25 @@ const DistributionClient = () => {
   /** Out less what they hold — what has left their shelf, or null if unknown */
   const goneOf = (row: (typeof allRows)[number]) =>
     row.heldDeclared === null ? null : row.outBottles - row.heldDeclared;
+
+  /*
+    What the depleted bottles were invoiced at. The rate comes from the row's
+    own Out value rather than a price list, so it is what we actually billed
+    for these bottles and reconciles against the invoice by construction.
+    Unknown position means unknown depletion — not nil.
+  */
+  const soldValueOf = (row: (typeof allRows)[number]) => {
+    const gone = goneOf(row);
+
+    if (gone === null || row.outBottles <= 0 || row.outValue <= 0) return null;
+
+    return gone * (row.outValue / row.outBottles);
+  };
+
+  const soldValueTotal = allRows.reduce(
+    (total, row) => total + (soldValueOf(row) ?? 0),
+    0,
+  );
 
   /*
     Four questions, each a different kind of work. A hundred and sixty-seven
@@ -286,16 +310,8 @@ const DistributionClient = () => {
             ))}
           </div>
 
-          {outlet.unmatchedAtOutlet > 0 || (summary?.unmatched ?? 0) > 0 ? (
+          {(summary?.unmatched ?? 0) > 0 ? (
             <div className="border-border-primary flex flex-wrap gap-x-6 gap-y-1 border-t pt-2">
-              {outlet.unmatchedAtOutlet > 0 ? (
-                <Typography variant="bodyXs" colorRole="warning" asChild>
-                  <p>
-                    {outlet.unmatchedAtOutlet} wines they hold carry no code of
-                    ours — their bottles cannot reach an owner.
-                  </p>
-                </Typography>
-              ) : null}
               {(summary?.unmatched ?? 0) > 0 ? (
                 <Typography variant="bodyXs" colorRole="muted" asChild>
                   <p>
@@ -336,8 +352,6 @@ const DistributionClient = () => {
           </div>
         </div>
       </div>
-
-      <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
 
       <div className="space-y-2">
         <Typography variant="labelSm" asChild>
@@ -435,10 +449,16 @@ const DistributionClient = () => {
                   Distributor stock
                 </th>
                 <th
-                  className="bg-fill-primary py-2 pr-4 text-right font-medium"
+                  className="bg-fill-primary py-2 pr-3 text-right font-medium"
                   title="What we invoiced out, less what they still hold — so what has sold. Replaced by their own figure once the month's report is in."
                 >
                   Sold
+                </th>
+                <th
+                  className="bg-fill-primary py-2 pr-4 text-right font-medium"
+                  title="The depleted bottles at the rate we invoiced them out at."
+                >
+                  Sold value
                 </th>
               </tr>
             </thead>
@@ -529,7 +549,7 @@ const DistributionClient = () => {
                     raised. A negative means they hold more than we ever sent
                     them, which is a wrong pack or a mis-matched code.
                   */}
-                  <td className="py-2 pr-4 text-right tabular-nums">
+                  <td className="py-2 pr-3 text-right tabular-nums">
                     {row.heldDeclared === null ? (
                       <span className="text-text-faint">—</span>
                     ) : row.outBottles - row.heldDeclared < 0 ? (
@@ -541,6 +561,13 @@ const DistributionClient = () => {
                       </span>
                     ) : (
                       formatBottles(row.outBottles - row.heldDeclared)
+                    )}
+                  </td>
+                  <td className="text-text-primary py-2 pr-4 text-right font-medium tabular-nums">
+                    {soldValueOf(row) === null ? (
+                      <span className="text-text-faint">—</span>
+                    ) : (
+                      formatValue(soldValueOf(row) ?? 0, row.currency)
                     )}
                   </td>
                 </tr>
@@ -555,7 +582,8 @@ const DistributionClient = () => {
           <span className="tabular-nums">
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
             {formatBottles(summary.heldDeclared)} in their stock ·{' '}
-            {formatBottles(summary.gone)} sold
+            {formatBottles(summary.gone)} sold ·{' '}
+            {formatValue(soldValueTotal, rows[0]?.currency ?? null)} sold
             {summary.unmatched > 0
               ? ` · ${summary.unmatched} position unknown`
               : ''}
@@ -566,8 +594,9 @@ const DistributionClient = () => {
             </span>
           ) : null}
           <span>
-            Sold and Billed arrive with the month&rsquo;s report, or once two
-            snapshots can be differenced.
+            Sold is what we consigned out less what their feed says they still
+            hold, so it depletes as their stock does. A month&rsquo;s figure
+            still needs their report, or two snapshots differenced.
           </span>
         </div>
       ) : null}
