@@ -426,6 +426,7 @@ const DistributionClient = () => {
             <StatementPanel
               outletId={outletId}
               owners={setup.data?.owners ?? []}
+              soldMonths={outlet?.soldMonths ?? []}
             />
           </div>
         </div>

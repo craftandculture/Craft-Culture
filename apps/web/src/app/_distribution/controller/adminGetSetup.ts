@@ -19,6 +19,14 @@ export interface DistributionOutlet {
    * A month with no snapshot at either end can only ever come from an upload.
    */
   snapshotDates: string[];
+  /**
+   * Months a sale can be asked about, newest first.
+   *
+   * Only months whose sales were uploaded or derived appear. A live position
+   * carries no history, so every other month has no answer rather than an
+   * answer of nil.
+   */
+  soldMonths: { month: string; bottles: number; source: string }[];
 }
 
 export interface DistributionOwner {
@@ -76,6 +84,29 @@ const adminGetSetup = adminProcedure.query(async () => {
     ORDER BY "takenAt" DESC
   `;
 
+  /*
+    The months a sale can actually be asked about.
+
+    A live position has no history, so "sold in August" exists only where the
+    distributor's own sheet was uploaded for August or two snapshots either
+    side of it were differenced. Listing the months that do exist is more
+    honest than a month picker that silently answers nothing for every month
+    but one.
+  */
+  const soldMonths = await client<
+    { outletId: string; month: string; bottles: number; source: string }[]
+  >`
+    SELECT a.outlet_id AS "outletId",
+           TO_CHAR(m.doc_date, 'YYYY-MM') AS month,
+           SUM(m.bottles)::float8 AS bottles,
+           MIN(m.source) AS source
+    FROM cons_movements m
+    JOIN cons_arrangements a ON a.id = m.arrangement_id
+    WHERE m.kind = 'sold' AND m.doc_date IS NOT NULL
+    GROUP BY a.outlet_id, TO_CHAR(m.doc_date, 'YYYY-MM')
+    ORDER BY month DESC
+  `;
+
   const owners = await client<DistributionOwner[]>`
     SELECT ow.id, ow.name, ow.consignment_tag AS "consignmentTag",
            ow.takes_unattributed AS "takesUnattributed",
@@ -96,6 +127,9 @@ const adminGetSetup = adminProcedure.query(async () => {
       snapshotDates: history
         .filter((row) => row.outletId === outlet.id)
         .map((row) => row.takenAt),
+      soldMonths: soldMonths
+        .filter((row) => row.outletId === outlet.id)
+        .map(({ month, bottles, source }) => ({ month, bottles, source })),
     })),
     owners,
   };

@@ -14,6 +14,8 @@ import ownerColour from '../utils/ownerColour';
 export interface StatementPanelProps {
   outletId: string | null;
   owners: { id: string; name: string }[];
+  /** The months a sale can be asked about, newest first */
+  soldMonths: { month: string; bottles: number; source: string }[];
 }
 
 const money = (value: number, currency: string | null) => {
@@ -45,7 +47,11 @@ const lastMonth = () => {
  * settlement nobody can check is a settlement nobody trusts, so the margin
  * between them is on the page rather than implied.
  */
-const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
+const StatementPanel = ({
+  outletId,
+  owners,
+  soldMonths,
+}: StatementPanelProps) => {
   const api = useTRPC();
   const [ownerId, setOwnerId] = useState('');
   /* The same colour the owner carries on the table, so the two screens agree */
@@ -120,10 +126,30 @@ const StatementPanel = ({ outletId, owners }: StatementPanelProps) => {
           <p>Working it out…</p>
         </Typography>
       ) : lines.length === 0 ? (
+        /*
+          Say which of the two it is. "Nothing sold, or nothing uploaded" left
+          a month reading as settled when in truth it had never been asked,
+          and the difference is an owner who is owed and does not know it.
+        */
         <Typography variant="bodyXs" colorRole="muted" asChild>
-          <p>
-            Nothing of theirs sold in {month}, or the month&rsquo;s sales have
-            not been uploaded yet.
+          <p className="max-w-xl">
+            {soldMonths.length === 0 ? (
+              <>
+                No month has any sales recorded yet at this distributor. Their
+                feed is a live position and carries no history, so a month
+                exists only once their sheet is uploaded above, or two
+                snapshots either side of it are differenced. The Sold column on
+                the table below is all-time, which is why it has figures and
+                this does not.
+              </>
+            ) : soldMonths.some((row) => row.month === month) ? (
+              <>Nothing of theirs sold in {month}.</>
+            ) : (
+              <>
+                {month} has no sales recorded. Months with figures:{' '}
+                {soldMonths.map((row) => row.month).join(', ')}.
+              </>
+            )}
           </p>
         </Typography>
       ) : (
