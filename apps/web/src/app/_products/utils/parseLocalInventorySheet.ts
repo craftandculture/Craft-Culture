@@ -47,21 +47,31 @@ export interface ParseResult {
  * Convert LWIN18 from scientific notation to full string
  *
  * @example
- *   convertLwin18(1.08E+17); // "108000000000000000"
+ *   convertLwin18('1012781-2014-06-00750'); // unchanged
+ *   convertLwin18(1.08e17); // null — the digits are gone
  *
  * @param value - LWIN18 value (may be number in scientific notation)
- * @returns Full LWIN18 string
+ * @returns The LWIN18 as a string, or null when the digits were already lost
  */
 const convertLwin18 = (value: unknown) => {
-  if (typeof value === 'number') {
-    return value.toFixed(0);
+  /*
+    An eighteen-digit LWIN held as a number has already lost its digits — a
+    double carries fifteen or so, and the sheet showed 1.01E+17. Expanding it
+    gives "101000000000000000", which looks like a LWIN, is not one, and was
+    carried onto partner orders and into Zoho. Better no code than that one.
+  */
+  const num =
+    typeof value === 'number'
+      ? value
+      : /e/i.test(String(value))
+        ? parseFloat(String(value))
+        : null;
+
+  if (num !== null) {
+    return Number.isSafeInteger(num) ? num.toFixed(0) : null;
   }
-  const str = String(value);
-  if (str.includes('E') || str.includes('e')) {
-    const num = parseFloat(str);
-    return num.toFixed(0);
-  }
-  return str;
+
+  return String(value);
 };
 
 /**
@@ -234,7 +244,8 @@ const parseLocalInventorySheet = async (
     }
 
     // Use LWIN18 from sheet if available, otherwise use row number as identifier
-    const lwin18 = lwin18Raw ? convertLwin18(lwin18Raw) : `sheet:row${rowNumber}`;
+    const lwin18 =
+      (lwin18Raw ? convertLwin18(lwin18Raw) : null) ?? `sheet:row${rowNumber}`;
 
     // Track as unmatched (no DB lookup for now - can add batch matching later)
     stats.unmatched++;

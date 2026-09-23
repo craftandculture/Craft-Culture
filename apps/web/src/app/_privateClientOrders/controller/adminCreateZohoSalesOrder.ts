@@ -2,11 +2,12 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 
+import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import db from '@/database/client';
 import { privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
-import { createWineItem, searchItems } from '@/lib/zoho/items';
+import { createWineItem, searchItems, updateItem } from '@/lib/zoho/items';
 import { createSalesOrder } from '@/lib/zoho/salesOrders';
 import logger from '@/utils/logger';
 
@@ -188,6 +189,31 @@ const adminCreateZohoSalesOrder = adminProcedure
             item = byName.find((row) => row.name === line.packName);
 
             if (!item) throw error;
+
+            /*
+              Found by name, so its SKU is unchecked. One minted from a
+              placeholder ("…:row28") is ours to correct — it is this wine under
+              a code nothing matches. Any other SKU is a different wine sharing
+              the name, and billing against it would deplete the wrong stock.
+            */
+            if (item.sku !== line.saleLwin18) {
+              if (item.sku && isUsableLwin18(item.sku)) {
+                throw new TRPCError({
+                  code: 'CONFLICT',
+                  message:
+                    `Zoho already has "${line.packName}" under SKU ${item.sku}, ` +
+                    `not ${line.saleLwin18}. Check which code is right before raising.`,
+                });
+              }
+
+              item = await updateItem(item.item_id, { sku: line.saleLwin18 });
+
+              logger.info('[PCO] Repaired placeholder Zoho SKU', {
+                itemId: item?.item_id,
+                name: line.packName,
+                sku: line.saleLwin18,
+              });
+            }
           }
         }
 

@@ -2,11 +2,16 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
 import { privateClientOrderItems } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import { CLAIM } from '../utils/planZohoSalesOrder';
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
+import repairZohoItemCode from '../utils/repairZohoItemCode';
+import saleLwin18Of from '../utils/saleLwin18Of';
 
 const adminUpdateItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -16,6 +21,20 @@ const adminUpdateItemSchema = z.object({
   producer: z.string().optional(),
   vintage: z.string().optional(),
   notes: z.string().optional(),
+  /*
+    The wine's code, set by C&C. Partners order from a catalogue whose keys are
+    not LWINs, so their lines arrive without one; this is where it is given.
+    Held as the pack the line is cased in — the sales order recomposes the
+    pack it sells from the line's case size.
+  */
+  lwin: z
+    .string()
+    .trim()
+    .refine(isUsableLwin18, {
+      message: 'Not a LWIN18 — expected e.g. 1012781-2014-06-00750',
+    })
+    .transform(normalizeLwin18)
+    .optional(),
 });
 
 // Statuses where admin cannot edit (final statuses)
@@ -29,14 +48,15 @@ const NON_EDITABLE_STATUSES = ['delivered', 'cancelled'];
 const adminUpdateItem = wmsOperatorProcedure
   .input(adminUpdateItemSchema)
   .mutation(async ({ input }) => {
-    const { itemId, quantity, pricePerCaseUsd, productName, producer, vintage, notes } = input;
+    const { itemId, quantity, pricePerCaseUsd, productName, producer, vintage, notes, lwin } =
+      input;
 
     // Fetch the item with its order
     const item = await db.query.privateClientOrderItems.findFirst({
       where: { id: itemId },
       with: {
         order: {
-          columns: { id: true, status: true },
+          columns: { id: true, status: true, zohoSalesOrderId: true },
         },
       },
     });
@@ -65,6 +85,7 @@ const adminUpdateItem = wmsOperatorProcedure
       producer?: string;
       vintage?: string;
       notes?: string;
+      lwin?: string;
       updatedAt: Date;
     } = {
       updatedAt: new Date(),
@@ -94,6 +115,10 @@ const adminUpdateItem = wmsOperatorProcedure
       updateData.notes = notes;
     }
 
+    if (lwin !== undefined) {
+      updateData.lwin = lwin;
+    }
+
     // Calculate new total if quantity or price changed
     const newQuantity = quantity ?? item.quantity;
     const newPrice = pricePerCaseUsd ?? Number(item.pricePerCaseUsd);
@@ -109,7 +134,23 @@ const adminUpdateItem = wmsOperatorProcedure
     // Recalculate order totals
     await recalculateOrderTotals(item.order.id);
 
-    return updatedItem;
+    /*
+      A line coded AFTER its sales order was raised: the Zoho item was created
+      under the placeholder, so it is corrected there too. Only when the old
+      code was a placeholder — re-coding a real LWIN is a change of wine, and
+      renaming an item other orders may share is not this screen's call.
+    */
+    const salesOrderId = item.order.zohoSalesOrderId;
+    const zohoRepair =
+      lwin && item.lwin && !isUsableLwin18(item.lwin) && salesOrderId && salesOrderId !== CLAIM
+        ? await repairZohoItemCode(
+            salesOrderId,
+            saleLwin18Of(item.lwin, item.caseConfig),
+            saleLwin18Of(lwin, item.caseConfig),
+          )
+        : null;
+
+    return { ...updatedItem, zohoRepair };
   });
 
 export default adminUpdateItem;

@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm';
 
+import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
@@ -10,6 +11,7 @@ import {
 } from '@/database/schema';
 
 import resolveTradePrices from './resolveTradePrices';
+import saleLwin18Of from './saleLwin18Of';
 
 /**
  * What sits in `zohoSalesOrderId` while an order is being raised
@@ -183,30 +185,21 @@ const planZohoSalesOrder = async (orderId: string) => {
       Without a LWIN there is no SKU, and a Zoho item created without one is a
       code nothing downstream can match — not stock, not pricing, not the next
       order for the same wine. Better to say so than to mint a stray.
+
+      A placeholder is the same as none. Partner lines picked from the local
+      inventory sheet carried its row keys ("1010000000000000000:row28"), and
+      SO-00146 created six Zoho items under them before this checked the shape.
     */
-    if (!item.lwin) {
+    if (!item.lwin || !isUsableLwin18(item.lwin)) {
       noLwin.push(label);
       continue;
     }
 
-    const held = normalizeLwin18(item.lwin);
-    const parts = held.split('-');
+    const parts = normalizeLwin18(item.lwin).split('-');
     const pack = item.caseConfig && item.caseConfig > 0 ? item.caseConfig : 12;
 
-    /*
-      The pack sold, not the pack held. A client taking two bottles out of a six
-      is a different Zoho item from the six — booking it against the case code
-      bills two bottles at a case rate and depletes the wrong thing.
-    */
-    const saleLwin18 =
-      parts.length === 4
-        ? [
-            parts[0],
-            parts[1],
-            String(pack).padStart(2, '0'),
-            parts[3],
-          ].join('-')
-        : held;
+    /* The pack sold, not the pack held */
+    const saleLwin18 = saleLwin18Of(item.lwin, item.caseConfig);
 
     const sizeFromLwin = Number(parts[3]);
     const bottleSizeMl =
@@ -290,7 +283,7 @@ const planZohoSalesOrder = async (orderId: string) => {
 
   if (noLwin.length > 0) {
     blockers.push(
-      `No LWIN on ${noLwin.length} line${noLwin.length === 1 ? '' : 's'}: ${noLwin.join('; ')}. Set the wine on the line first.`,
+      `No LWIN on ${noLwin.length} line${noLwin.length === 1 ? '' : 's'}: ${noLwin.join('; ')}. Set the LWIN on each line (the edit button) first.`,
     );
   }
 

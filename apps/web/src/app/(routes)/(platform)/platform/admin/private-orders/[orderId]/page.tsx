@@ -22,9 +22,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { toast } from 'sonner';
 
+import LwinLookup from '@/app/_lwin/components/LwinLookup';
+import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
@@ -154,6 +156,11 @@ const AdminPrivateOrderDetailPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
+  /*
+    The line whose LWIN is being set. Partner lines arrive without one — they
+    order from a catalogue keyed by sheet row, not by wine — and C&C gives it.
+  */
+  const [codingItemId, setCodingItemId] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState<NewItem>({
     productName: '',
@@ -222,9 +229,13 @@ const AdminPrivateOrderDetailPage = () => {
   // Update item mutation
   const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
     api.privateClientOrders.adminUpdateItem.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (result) => {
         toast.success('Item updated');
+        /* Setting a LWIN on an already-raised line also corrects Zoho — say how that went */
+        if (result.zohoRepair?.status === 'repaired') toast.success(result.zohoRepair.message);
+        else if (result.zohoRepair) toast.warning(result.zohoRepair.message);
         setEditingItem(null);
+        setCodingItemId(null);
         void refetch();
       },
       onError: (error) => {
@@ -1070,14 +1081,29 @@ const AdminPrivateOrderDetailPage = () => {
                         );
                       }
 
+                      const hasLwin = isUsableLwin18(item.lwin);
+
                       return (
-                        <tr key={item.id} className="hover:bg-surface-muted/20">
+                        <Fragment key={item.id}>
+                        <tr className="hover:bg-surface-muted/20">
                           <td className="px-2 py-1.5">
                             <span className="text-xs font-medium">{item.productName}</span>
-                            {item.lwin && (
+                            {hasLwin ? (
                               <span className="ml-1 text-xs text-text-muted">
                                 ({item.lwin})
                               </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCodingItemId(codingItemId === item.id ? null : item.id)
+                                }
+                                disabled={!canEditItems}
+                                className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300"
+                                title={item.lwin ? `Placeholder code: ${item.lwin}` : 'No LWIN'}
+                              >
+                                Set LWIN
+                              </button>
                             )}
                           </td>
                           <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
@@ -1114,6 +1140,38 @@ const AdminPrivateOrderDetailPage = () => {
                             </td>
                           )}
                         </tr>
+                        {codingItemId === item.id && (
+                          <tr className="bg-surface-muted/30">
+                            <td colSpan={canEditItems ? 8 : 7} className="px-3 py-3">
+                              <LwinLookup
+                                productName={item.productName}
+                                defaultVintage={
+                                  item.vintage && /^\d{4}$/.test(item.vintage)
+                                    ? Number(item.vintage)
+                                    : undefined
+                                }
+                                defaultCaseSize={item.caseConfig ?? 12}
+                                defaultBottleSize={
+                                  parseInt(String(item.bottleSize ?? ''), 10) || 750
+                                }
+                                onSelect={(result) =>
+                                  updateItem({
+                                    itemId: item.id,
+                                    lwin: result.lwin18,
+                                    vintage: result.vintage ? String(result.vintage) : undefined,
+                                    producer: item.producer ? undefined : (result.producer ?? undefined),
+                                  })
+                                }
+                              />
+                              <div className="mt-2 flex justify-end">
+                                <Button variant="ghost" size="xs" onClick={() => setCodingItemId(null)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </tbody>

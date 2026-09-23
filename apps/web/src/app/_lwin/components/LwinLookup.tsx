@@ -114,6 +114,19 @@ const LwinLookup = ({
     }, 300);
   };
 
+  /*
+    Wines Liv-ex does not list get a C&C internal code (9000001 upwards). Only
+    fetched in manual mode, where it is offered — alongside any internal code a
+    wine of this name already has, since reusing it is what keeps one wine to
+    one Zoho item.
+  */
+  const { data: internal } = useQuery({
+    ...api.lwin.nextInternal.queryOptions({
+      productName: manualDisplayName || productName,
+    }),
+    enabled: manualMode,
+  });
+
   // Search query
   const { data: searchResults, isLoading } = useQuery({
     ...api.lwin.search.queryOptions({
@@ -246,6 +259,34 @@ const LwinLookup = ({
             <Typography variant="bodyXs" colorRole="muted" className="mt-1">
               Standard LWIN (7 digits) or supplier code (alphanumeric)
             </Typography>
+            {internal && (
+              <div className="mt-2 space-y-1 rounded-lg border border-border-primary p-2">
+                <Typography variant="bodyXs" colorRole="muted">
+                  Not on Liv-ex? Use a C&C internal code:
+                </Typography>
+                <div className="flex flex-wrap gap-1.5">
+                  {internal.existing.map((code) => (
+                    <button
+                      key={`${code.lwin7}-${code.name}`}
+                      type="button"
+                      onClick={() => setManualLwin7(code.lwin7)}
+                      className="rounded-md border border-border-primary px-2 py-1 text-xs hover:bg-fill-secondary"
+                      title="Already used for this wine — reuse it"
+                    >
+                      <span className="font-mono">{code.lwin7}</span>{' '}
+                      <span className="text-text-muted">{code.name}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setManualLwin7(internal.next)}
+                    className="rounded-md border border-brand-500 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:text-brand-400"
+                  >
+                    New: <span className="font-mono">{internal.next}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">
