@@ -62,8 +62,8 @@ const DistributionClient = () => {
   const [ownerId, setOwnerId] = useState<string>('');
   const [search, setSearch] = useState('');
   const [view, setView] = useState<
-    'all' | 'attention' | 'holding' | 'empty' | 'unknown' | 'theirs'
-  >('all');
+    'live' | 'all' | 'attention' | 'holding' | 'empty' | 'unknown' | 'theirs' | 'closed'
+  >('live');
 
   const setup = useQuery(api.distribution.admin.getSetup.queryOptions());
 
@@ -134,6 +134,20 @@ const DistributionClient = () => {
     A line they buy is not a consignment position. Their stock of it answers to
     nobody here, so it leaves the totals rather than inflating them.
   */
+  const setClosed = useMutation(
+    api.distribution.admin.setWineClosed.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(
+          result.closed
+            ? 'Closed — it returns if they hold it again or you send more'
+            : 'Back on the live view',
+        );
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const setBought = useMutation(
     api.distribution.admin.setWineBought.mutationOptions({
       onSuccess: async (result) => {
@@ -225,9 +239,23 @@ const DistributionClient = () => {
     unknown: (row: (typeof allRows)[number]) => row.heldDeclared === null,
     /* Out of the totals, so findable on purpose rather than only by absence */
     theirs: (row: (typeof allRows)[number]) => row.theirLine,
+    /*
+      What is actually running: stock on their shelf, or a replenishment sent
+      and not yet reported. Everything finished falls away, which is the point
+      of landing here rather than on the whole history.
+    */
+    live: (row: (typeof allRows)[number]) =>
+      !row.closed && !row.theirLine && ((row.heldDeclared ?? 0) > 0 || row.heldDeclared === null),
+    closed: (row: (typeof allRows)[number]) => row.closed,
   } as const;
 
   const rows = view === 'all' ? allRows : allRows.filter(views[view]);
+
+  /*
+    Totals stay on every consigned line whatever is filtered. A screen showing
+    the live ones must not also quietly restate what is owed, or the filter
+    becomes a way of under-reporting it.
+  */
 
   return (
     <div className="space-y-5">
@@ -473,6 +501,7 @@ const DistributionClient = () => {
         <div className="flex flex-wrap gap-1.5 pt-1">
           {(
             [
+              ['live', 'Live', allRows.filter(views.live).length, false],
               ['all', 'All', allRows.length, false],
               [
                 'attention',
@@ -489,6 +518,7 @@ const DistributionClient = () => {
                 false,
               ],
               ['theirs', 'They buy', allRows.filter(views.theirs).length, false],
+              ['closed', 'Closed', allRows.filter(views.closed).length, false],
             ] as const
           ).map(([key, label, count, urgent]) => (
             <button
@@ -769,6 +799,33 @@ const DistributionClient = () => {
                         bought out
                       </Badge>
                     ) : null}
+                    {/*
+                      Closing is only ever about the working view. What sold is
+                      still sold and still owed for, and anything sent after
+                      today reopens the line without anybody remembering to.
+                    */}
+                    {row.lwin18 && !row.theirLine ? (
+                      <button
+                        type="button"
+                        disabled={setClosed.isPending}
+                        onClick={() =>
+                          setClosed.mutate({
+                            outletId: outletId ?? '',
+                            lwin18: row.lwin18 ?? '',
+                            closed: !row.closed,
+                            productName: row.productName,
+                          })
+                        }
+                        className="text-text-muted hover:text-text-primary ml-2 text-xs underline decoration-dotted disabled:opacity-50"
+                        title={
+                          row.closed
+                            ? `Closed ${row.closedAt ?? ''}. Click to bring it back.`
+                            : 'Take this finished line off the live view. It returns on its own if they hold it again or you send more.'
+                        }
+                      >
+                        {row.closed ? 'reopen' : 'close'}
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -780,6 +837,7 @@ const DistributionClient = () => {
       {summary && summary.wines > 0 ? (
         <div className="text-text-muted flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="tabular-nums">
+            {view === 'all' ? '' : 'All consigned lines: '}
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
             {formatBottles(summary.heldDeclared)} in their stock ·{' '}
             {formatBottles(summary.gone)} sold ·{' '}

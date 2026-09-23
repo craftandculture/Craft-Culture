@@ -11,6 +11,7 @@ import {
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
 import wineBoughtReady from '../utils/wineBoughtReady';
+import wineClosedReady from '../utils/wineClosedReady';
 
 export interface BalanceRow {
   ownerName: string;
@@ -30,6 +31,18 @@ export interface BalanceRow {
   heldDeclared: number | null;
   /** Their word for it: consigned, or bought outright */
   regime: string | null;
+  /** The last invoice that sent this wine to them */
+  lastOut: string | null;
+  /** When the line was closed, if it was */
+  closedAt: string | null;
+  /**
+   * Closed and still closed.
+   *
+   * Stock on their feed reopens it, and so does anything sent since the day it
+   * was closed — a date remembers itself where a flag would have to be
+   * remembered.
+   */
+  closed: boolean;
   /**
    * They hold it under a bought regime and none on consignment.
    *
@@ -76,6 +89,7 @@ const adminGetBalances = adminProcedure
   .query(async ({ input }) => {
     const hasLinks = await confirmedLinksReady();
     const hasTheirLines = await wineBoughtReady();
+    const hasClosed = await wineClosedReady();
 
     const term = input.search?.trim() ? `%${input.search.trim()}%` : null;
 
@@ -123,6 +137,17 @@ const adminGetBalances = adminProcedure
           AND s.regime <> 'consigned'
           AND ${resolvedSnapshotCode()} IS NOT NULL
       ),
+      /* Lines closed because they held none, with the date it was said */
+      closed_lines AS (
+        ${
+          hasClosed
+            ? client`
+                SELECT lwin18, closed_at FROM cons_wine_closed
+                WHERE outlet_id = ${input.outletId}
+              `
+            : client`SELECT NULL::text AS lwin18, NULL::date AS closed_at WHERE false`
+        }
+      ),
       /* Lines the outlet now buys rather than holds for us, said by hand */
       their_lines AS (
         ${
@@ -144,6 +169,7 @@ const adminGetBalances = adminProcedure
                MIN(m.product_name) AS product_name,
                MAX(m.pack) AS pack,
                BOOL_OR(m.pack_assumed) AS pack_assumed,
+               MAX(m.doc_date) AS last_out,
                SUM(m.bottles)::float8 AS out_bottles,
                SUM(COALESCE(m.unit_price, 0) * COALESCE(m.source_qty, 0))::float8 AS out_value,
                MIN(m.currency) AS currency
@@ -174,10 +200,28 @@ const adminGetBalances = adminProcedure
                AS "heldDeclared",
              h.regime,
              (b.code IS NOT NULL AND h.bottles IS NULL) AS "boughtOut",
-             (tl.lwin18 IS NOT NULL) AS "theirLine"
+             (tl.lwin18 IS NOT NULL) AS "theirLine",
+             l.last_out AS "lastOut",
+             cl.closed_at AS "closedAt",
+             /*
+               Closed only while it stays closed. Stock on their feed reopens
+               it, and so does anything invoiced out since the day it was
+               closed — their position lags ours by a day, and a replenishment
+               should be live when it is sent, not when they get round to
+               reporting it.
+             */
+             (
+               cl.closed_at IS NOT NULL
+               AND COALESCE(h.bottles, 0) = 0
+               AND (l.last_out IS NULL OR l.last_out <= cl.closed_at)
+             ) AS "closed"
       FROM out_lines l
       LEFT JOIN held h ON h.code = l.code
       LEFT JOIN bought b ON b.code = l.code
+      LEFT JOIN closed_lines cl
+        ON ${packAgnostic(
+          () => client`UPPER(REGEXP_REPLACE(cl.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+        )} = l.code
       LEFT JOIN their_lines tl
         ON ${packAgnostic(
           () => client`UPPER(REGEXP_REPLACE(tl.lwin18, '[^A-Za-z0-9]', '', 'g'))`,

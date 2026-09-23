@@ -2033,6 +2033,30 @@ const runMigrations = async () => {
     );
     console.log('✅ cons_wine_bought ready');
 
+    /*
+      Lines closed because the distributor holds none.
+
+      A date rather than a flag, because a closed line is a statement about a
+      moment and replenishment happens. Anything sent after that date, or any
+      stock appearing on their feed, reopens it without anyone remembering to.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_wine_closed" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "lwin18" text NOT NULL,
+        "product_name" text,
+        "closed_at" date NOT NULL DEFAULT CURRENT_DATE,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_wine_closed_unique" ON "cons_wine_closed"("outlet_id","lwin18")`,
+    );
+    console.log('✅ cons_wine_closed ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
