@@ -4,6 +4,7 @@ import {
   IconAlertCircle,
   IconArrowLeft,
   IconBuilding,
+  IconBuildingWarehouse,
   IconCheck,
   IconChevronDown,
   IconCurrencyDollar,
@@ -240,6 +241,34 @@ const AdminPrivateOrderDetailPage = () => {
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to update item');
+      },
+    }),
+  );
+
+  /*
+    Codes every line from the stock it will be picked from. The warehouse
+    already holds these wines under the codes picking, pricing and Zoho know;
+    taking them from there is what keeps one wine to one code.
+  */
+  const { mutate: matchStockLwins, isPending: isMatchingStock } = useMutation(
+    api.privateClientOrders.adminMatchStockLwins.mutationOptions({
+      onSuccess: (result) => {
+        if (result.matched.length > 0) {
+          toast.success(`Coded from stock: ${result.matched.join('; ')}`);
+        }
+        if (result.unmatched.length > 0) {
+          toast.warning(
+            `No clear stock match for ${result.unmatched.join('; ')} — use Set LWIN.`,
+          );
+        }
+        if (result.matched.length === 0 && result.unmatched.length === 0) {
+          toast.success('Every line already carries a code held in stock');
+        }
+        for (const note of result.zohoNotes) toast.warning(note);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to match lines to stock');
       },
     }),
   );
@@ -823,6 +852,21 @@ const AdminPrivateOrderDetailPage = () => {
                   >
                     <Icon icon={IconPlus} size="xs" />
                     <span className="ml-1">Add Item</span>
+                  </Button>
+                )}
+                {canEditItems && order.items && order.items.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => matchStockLwins({ orderId })}
+                    disabled={isMatchingStock}
+                  >
+                    <Icon
+                      icon={isMatchingStock ? IconLoader2 : IconBuildingWarehouse}
+                      size="xs"
+                      className={isMatchingStock ? 'animate-spin' : ''}
+                    />
+                    <span className="ml-1">Match from stock</span>
                   </Button>
                 )}
                 {order.items && order.items.length > 0 && (

@@ -10,6 +10,7 @@ import adminGetOne from './controller/adminGetOne';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminMarkPayment from './controller/adminMarkPayment';
+import adminMatchStockLwins from './controller/adminMatchStockLwins';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
@@ -96,6 +97,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminDashboard,
   adminCreate,
   adminAddItem,
+  adminMatchStockLwins,
   adminUpdateItem,
   adminRemoveItem,
   adminGetMany,

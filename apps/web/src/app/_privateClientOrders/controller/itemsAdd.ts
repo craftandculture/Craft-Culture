@@ -6,6 +6,7 @@ import { privateClientOrderItems, privateClientOrders } from '@/database/schema'
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import addItemSchema from '../schemas/addItemSchema';
+import matchStockLwin from '../utils/matchStockLwin';
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 /**
@@ -43,6 +44,25 @@ const itemsAdd = winePartnerProcedure
         code: 'FORBIDDEN',
         message: 'Order cannot be modified in current status',
       });
+    }
+
+    /*
+      A line without a real LWIN takes the code of the stock it will be picked
+      from, so what is sold and what is picked are one code. Left empty when the
+      match is not clear-cut; C&C sets it on the order.
+    */
+    if (!itemData.lwin) {
+      const match = await matchStockLwin({
+        productName: itemData.productName,
+        vintage: itemData.vintage ?? null,
+        bottleSize: itemData.bottleSize ?? null,
+        caseConfig: itemData.caseConfig,
+      });
+
+      if (match) {
+        itemData.lwin = match.lwin18;
+        itemData.producer ??= match.producer ?? undefined;
+      }
     }
 
     const totalUsd = quantity * pricePerCaseUsd;
