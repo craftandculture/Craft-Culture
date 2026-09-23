@@ -133,7 +133,15 @@ const ProductPicker = ({
       vintage: item.vintage?.toString() ?? '',
       region: '',
       lwin: item.lwin18,
-      bottleSize: item.bottleSize ?? '750ml',
+      /*
+        Some stock rows hold an empty size, which `??` let through as a blank
+        on the order. The LWIN's own size segment is the better fallback.
+      */
+      bottleSize:
+        item.bottleSize ||
+        (Number(item.lwin18.split('-')[3]) > 0
+          ? `${Number(item.lwin18.split('-')[3])}ml`
+          : '750ml'),
       caseConfig: item.caseConfig ?? 12,
       pricePerCaseUsd: 0,
       source: 'cc_inventory',
