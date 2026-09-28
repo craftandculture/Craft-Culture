@@ -9,7 +9,8 @@ import type { CityDrinksRow } from '../../_distribution/utils/parseCityDrinksSto
  *
  * City Drinks' feed already lists each PCO bundle it has created, named by
  * PCO number, with the CDR SKU its system uses. Where one of our orders for
- * that distributor has no SKU yet, it takes the feed's. A SKU someone typed is
+ * that distributor — or not yet assigned to any — has no SKU yet, it takes
+ * the feed's. A SKU someone typed is
  * never overwritten — a disagreement is shown on the order, not settled here.
  *
  * Raw SQL on a passed client, like `writeSnapshot`, so the daily Trigger.dev
@@ -65,7 +66,9 @@ const linkBundleSkusFromFeed = async (
           distributor_sku_set_at = NOW(),
           distributor_sku_set_by = NULL
       WHERE order_number = ${bundle.orderNumber}
-        AND distributor_id = ${outlet.partnerId}
+        -- The bundle is named after this PCO, so it is this order's even
+        -- before a distributor is assigned; never another distributor's
+        AND (distributor_id = ${outlet.partnerId} OR distributor_id IS NULL)
         AND distributor_sku IS NULL
       RETURNING id
     `;

@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { consOutlets, consSnapshots } from '@/database/schema';
+import { consOutlets, consSnapshots, partners } from '@/database/schema';
 
 /**
  * What the distributor's own latest feed says this order's bundle SKU is
@@ -11,14 +11,20 @@ import { consOutlets, consSnapshots } from '@/database/schema';
  * or the feed has no (or no single) bundle for this PCO.
  *
  * @param orderNumber - The PCO number, which is the bundle's product name
- * @param distributorId - The order's distributor
+ * @param distributorId - The order's distributor, or null when unassigned
  * @returns The feed's SKU and reference, or null
  */
-const getFeedBundleSku = async (orderNumber: string, distributorId: string) => {
+const getFeedBundleSku = async (orderNumber: string, distributorId: string | null) => {
+  // Unassigned orders are looked up in the outlet whose distributor uses SKUs
   const [outlet] = await db
     .select({ id: consOutlets.id })
     .from(consOutlets)
-    .where(eq(consOutlets.partnerId, distributorId))
+    .innerJoin(partners, eq(consOutlets.partnerId, partners.id))
+    .where(
+      distributorId
+        ? eq(consOutlets.partnerId, distributorId)
+        : eq(partners.requiresOrderSku, true),
+    )
     .limit(1);
 
   if (!outlet) return null;

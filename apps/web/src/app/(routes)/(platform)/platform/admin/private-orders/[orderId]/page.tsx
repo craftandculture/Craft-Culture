@@ -627,15 +627,17 @@ const AdminPrivateOrderDetailPage = () => {
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
 
-        {/* The distributor's bundle SKU (City Drinks), with its source */}
-        {order.distributor?.requiresOrderSku && (
+        {/* The distributor's bundle SKU (City Drinks), with its source. Shown
+            on unassigned orders too, so the SKU can be recorded whenever it
+            is known; hidden only for a distributor that doesn't use SKUs. */}
+        {(!order.distributor || order.distributor.requiresOrderSku) && (
           <DistributorSkuCard
             key={order.distributorSku ?? 'none'}
             audience="admin"
             orderId={order.id}
             orderNumber={order.orderNumber}
             status={order.status}
-            distributorName={order.distributor.businessName}
+            distributorName={order.distributor?.businessName ?? 'Distributor'}
             sku={order.distributorSku}
             source={order.distributorSkuSource}
             distributorRef={order.distributorRef}

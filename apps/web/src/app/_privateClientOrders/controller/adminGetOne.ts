@@ -93,7 +93,7 @@ const adminGetOne = wmsOperatorProcedure
     // What the distributor's own feed says this order's bundle SKU is, so a
     // typed SKU that disagrees with their system shows on the order
     const feedBundle =
-      distributor?.requiresOrderSku && orderResult.order.distributorId
+      !distributor || distributor.requiresOrderSku
         ? await getFeedBundleSku(
             orderResult.order.orderNumber,
             orderResult.order.distributorId,
