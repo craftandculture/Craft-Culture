@@ -21,6 +21,8 @@ export interface PcoLabelOrder {
   orderNumber?: string | null;
   caseCount?: number | null;
   partner?: { businessName?: string | null } | null;
+  /** The distributor's bundle SKU (City Drinks), printed when there is one */
+  distributorSku?: string | null;
   items?: PcoLabelItem[] | null;
 }
 
@@ -49,6 +51,13 @@ const usePrintPcoLabels = () => {
         order.caseCount ??
         order.items.reduce((sum, i) => sum + (i.quantity ?? 1), 0);
 
+      // The label is unchanged apart from the distributor's SKU, appended to
+      // the order line when there is one. Plain ASCII: the label font has no
+      // middle dot, and ' | ' is the generator's own line separator.
+      const orderLine = `Total Order: ${totalCases} ${totalCases === 1 ? 'Case' : 'Cases'}${
+        order.distributorSku ? `  CD SKU ${order.distributorSku}` : ''
+      }`;
+
       const labels = order.items.map((item) => {
         const lwin = item.lwin || 'UNKNOWN';
         const bottleSizeNum = parseInt(
@@ -69,7 +78,7 @@ const usePrintPcoLabels = () => {
           lwin18: lwin,
           packSize,
           vintage: item.vintage || undefined,
-          lotNumber: `${order.orderNumber || 'PCO'} | Total Order: ${totalCases} ${totalCases === 1 ? 'Case' : 'Cases'}`,
+          lotNumber: `${order.orderNumber || 'PCO'} | ${orderLine}`,
           owner: order.partner?.businessName || undefined,
         };
       });
