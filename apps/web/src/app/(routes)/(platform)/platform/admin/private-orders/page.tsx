@@ -169,6 +169,16 @@ const AdminPrivateOrdersPage = () => {
   const orders = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
 
+  // Counts for the quick filters: one row fetched each, the total is what matters
+  const countOf = (filters: { status?: OrderStatus; distributor?: string }) =>
+    api.privateClientOrders.adminGetMany.queryOptions({ limit: 1, ...filters });
+  const { data: awaitingPayment } = useQuery(countOf({ status: 'awaiting_client_payment' }));
+  const { data: unassigned } = useQuery(countOf({ distributor: 'unassigned' }));
+  const { data: drafts } = useQuery(countOf({ status: 'draft' }));
+  const awaitingPaymentCount = awaitingPayment?.meta.totalCount ?? 0;
+  const unassignedCount = unassigned?.meta.totalCount ?? 0;
+  const draftCount = drafts?.meta.totalCount ?? 0;
+
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     setUpdatingId(orderId);
     updateStatus({ orderId, status: newStatus });
@@ -221,26 +231,65 @@ const AdminPrivateOrdersPage = () => {
           </div>
         </div>
 
-        {/* Summary Card */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                  <Icon icon={IconPackage} size="md" className="text-purple-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
-                    Total Orders
-                  </Typography>
-                  <Typography variant="headingMd" className="text-purple-600">
-                    {totalCount}
-                  </Typography>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Quick filters with counts */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            {
+              key: 'all',
+              label: 'All orders',
+              count: totalCount,
+              active: statusFilter === 'all' && distributorFilter === 'all',
+              apply: () => {
+                setStatusFilter('all');
+                setDistributorFilter('all');
+              },
+            },
+            {
+              key: 'payment',
+              label: 'Awaiting payment',
+              count: awaitingPaymentCount,
+              active: statusFilter === 'awaiting_client_payment',
+              apply: () => setStatusFilter('awaiting_client_payment'),
+            },
+            {
+              key: 'unassigned',
+              label: 'No distributor',
+              count: unassignedCount,
+              warn: true,
+              active: distributorFilter === 'unassigned',
+              apply: () => setDistributorFilter('unassigned'),
+            },
+            {
+              key: 'draft',
+              label: 'Drafts',
+              count: draftCount,
+              active: statusFilter === 'draft',
+              apply: () => setStatusFilter('draft'),
+            },
+          ].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.apply}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                chip.active
+                  ? 'border-border-brand bg-fill-brand/10 text-text-primary'
+                  : 'border-border-muted bg-fill-primary text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {chip.label}
+              <span
+                className={`rounded-full px-1.5 text-xs font-semibold ${
+                  chip.warn && chip.count > 0
+                    ? 'bg-fill-warning/20 text-text-warning'
+                    : 'bg-fill-muted text-text-primary'
+                }`}
+              >
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
 
         {/* Filters */}
         <Card>
@@ -360,29 +409,26 @@ const AdminPrivateOrdersPage = () => {
                           }
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Order
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
-                        Partner
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Client
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
+                        Partner → Distributor
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Items
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Total
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
-                        Created
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
-                        Actions
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
+                        
                       </th>
                     </tr>
                   </thead>
@@ -398,111 +444,117 @@ const AdminPrivateOrdersPage = () => {
                             className="cursor-pointer hover:bg-surface-muted"
                             onClick={() => toggleExpanded(order.id)}
                           >
-                            <td className="w-10 py-4 pl-4" onClick={(e) => e.stopPropagation()}>
+                            <td className="w-10 py-3 pl-4" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 aria-label={`Select ${order.orderNumber}`}
                                 checked={selected.has(order.id)}
                                 onCheckedChange={() => toggleSelected(order.id)}
                               />
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="whitespace-nowrap px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <Icon
                                   icon={isExpanded ? IconChevronUp : IconChevronDown}
                                   size="sm"
                                   colorRole="muted"
                                 />
-                                <Typography variant="bodySm" className="font-medium">
-                                  {order.orderNumber}
-                                </Typography>
+                                <div>
+                                  <Typography variant="bodySm" className="font-mono font-medium">
+                                    {order.orderNumber}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {formatDate(order.createdAt)}
+                                  </Typography>
+                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col items-center gap-1.5">
-                                {order.partner?.logoUrl ? (
-                                  <Image
-                                    src={order.partner.logoUrl}
-                                    alt={order.partner?.businessName ?? 'Partner'}
-                                    width={40}
-                                    height={40}
-                                    className="h-10 w-10 rounded-lg object-contain"
-                                  />
-                                ) : (
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
-                                    <Icon icon={IconBuilding} size="md" className="text-text-muted" />
-                                  </div>
-                                )}
-                                <Typography variant="bodyXs" className="text-center">
-                                  {order.partner?.businessName ?? 'Unknown'}
-                                </Typography>
-                                {order.distributor ? (
-                                  <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                                    → {order.distributor.businessName}
-                                  </Typography>
-                                ) : (
-                                  <span className="rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
-                                    No distributor
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5">
-                                  <Typography variant="bodySm" className="font-medium">
-                                    {order.clientName || 'No name'}
-                                  </Typography>
+                            <td className="px-4 py-3">
+                              <Typography variant="bodySm" className="font-medium">
+                                {order.clientName || 'No name'}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                                {order.clientEmail || '—'}
+                              </Typography>
+                              {(order.client?.cityDrinksVerifiedAt || formatSubscriptionBox(order)) && (
+                                <div className="mt-1 flex flex-wrap gap-1">
                                   {order.client?.cityDrinksVerifiedAt && (
                                     <span
-                                      className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                       title="City Drinks Verified"
                                     >
                                       <Icon icon={IconShieldCheck} size="xs" />
-                                      <span className="text-[10px] font-medium">Verified</span>
+                                      Verified
                                     </span>
                                   )}
                                   {formatSubscriptionBox(order) && (
-                                    <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                    <span className="whitespace-nowrap rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
                                       {formatSubscriptionBox(order)}
                                     </span>
                                   )}
                                 </div>
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {order.clientEmail || '-'}
-                                </Typography>
-                                {order.distributorSku && (
-                                  <Typography variant="bodyXs" colorRole="muted" className="font-mono">
-                                    SKU {order.distributorSku}
-                                  </Typography>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {order.partner?.logoUrl ? (
+                                  <Image
+                                    src={order.partner.logoUrl}
+                                    alt={order.partner?.businessName ?? 'Partner'}
+                                    width={24}
+                                    height={24}
+                                    className="h-6 w-6 shrink-0 rounded object-contain"
+                                  />
+                                ) : (
+                                  <Icon icon={IconBuilding} size="sm" className="shrink-0 text-text-muted" />
                                 )}
+                                <div className="min-w-0">
+                                  <Typography variant="bodySm" className="truncate">
+                                    {order.partner?.businessName ?? 'Unknown'}
+                                  </Typography>
+                                  {order.distributor ? (
+                                    <Typography
+                                      variant="bodyXs"
+                                      colorRole="muted"
+                                      className="whitespace-nowrap"
+                                      title={order.distributor.businessName}
+                                    >
+                                      → {order.distributor.distributorCode || order.distributor.businessName}
+                                      {order.distributorSku && (
+                                        <span className="ml-1 font-mono">· {order.distributorSku}</span>
+                                      )}
+                                    </Typography>
+                                  ) : (
+                                    <span className="whitespace-nowrap rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+                                      No distributor
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-center">
+                            <td className="whitespace-nowrap px-4 py-3 text-right">
                               <Typography variant="bodySm">
-                                {order.itemCount ?? 0} ({order.caseCount ?? 0} cases)
+                                {order.caseCount ?? 0} {(order.caseCount ?? 0) === 1 ? 'case' : 'cases'}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {order.itemCount ?? 0} {(order.itemCount ?? 0) === 1 ? 'line' : 'lines'}
                               </Typography>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="whitespace-nowrap px-4 py-3 text-right">
                               <Typography variant="bodySm" className="font-semibold">
                                 {formatPrice(Number(order.totalUsd) || 0, 'USD')}
                               </Typography>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="whitespace-nowrap px-4 py-3">
                               <PrivateOrderStatusBadge status={order.status} />
                             </td>
-                            <td className="px-6 py-4">
-                              <Typography variant="bodySm" colorRole="muted">
-                                {formatDate(order.createdAt)}
-                              </Typography>
-                            </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-4 py-3 text-right">
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 asChild
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <Link href={`/platform/admin/private-orders/${order.id}`}>
+                                <Link href={`/platform/admin/private-orders/${order.id}`} aria-label={`Open ${order.orderNumber}`}>
                                   <Icon icon={IconEye} size="sm" />
                                 </Link>
                               </Button>
@@ -510,7 +562,7 @@ const AdminPrivateOrdersPage = () => {
                           </tr>
                           {isExpanded && (
                             <tr key={`${order.id}-details`} className="bg-surface-muted">
-                              <td colSpan={9} className="px-6 py-4">
+                              <td colSpan={8} className="px-6 py-4">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                                   {/* Update Status */}
                                   <div>

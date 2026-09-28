@@ -110,6 +110,7 @@ const adminGetMany = wmsOperatorProcedure
         distributor: {
           id: distributorPartner.id,
           businessName: distributorPartner.businessName,
+          distributorCode: distributorPartner.distributorCode,
         },
       })
       .from(privateClientOrders)
