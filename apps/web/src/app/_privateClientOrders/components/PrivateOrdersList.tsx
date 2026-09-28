@@ -29,6 +29,7 @@ import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
+import formatSubscriptionBox from '../utils/formatSubscriptionBox';
 
 type Currency = 'USD' | 'AED';
 
@@ -125,6 +126,11 @@ const PrivateOrdersList = () => {
               >
                 <Icon icon={IconShieldCheck} size="xs" />
                 <span className="text-xs font-medium">Verified</span>
+              </span>
+            )}
+            {formatSubscriptionBox(row.original) && (
+              <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                {formatSubscriptionBox(row.original)}
               </span>
             )}
           </div>
@@ -330,6 +336,11 @@ const PrivateOrdersList = () => {
                   {order.client?.cityDrinksVerifiedAt && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                       <Icon icon={IconShieldCheck} size="xs" />
+                    </span>
+                  )}
+                  {formatSubscriptionBox(order) && (
+                    <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                      {formatSubscriptionBox(order)}
                     </span>
                   )}
                 </div>

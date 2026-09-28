@@ -25,6 +25,8 @@ import {
 } from '../constants';
 
 export interface SubscriptionBoxPickerProps {
+  /** Admin tags any partner's order; a partner only its own */
+  audience: 'admin' | 'partner';
   orderId: string;
   tier: string | null;
   caseSize: number | null;
@@ -48,6 +50,7 @@ const aed = (value: number) =>
  * chosen for a box actually add up to what the member is charged.
  */
 const SubscriptionBoxPicker = ({
+  audience,
   orderId,
   tier,
   caseSize,
@@ -62,32 +65,52 @@ const SubscriptionBoxPicker = ({
   const [draftVariant, setDraftVariant] = useState(variant ?? NONE);
   const [customVariant, setCustomVariant] = useState('');
 
-  const boxesQuery = useQuery(
-    api.privateClientOrders.adminGetSubscriptionBoxes.queryOptions(),
-  );
+  const isAdmin = audience === 'admin';
+
+  const adminBoxesQuery = useQuery({
+    ...api.privateClientOrders.adminGetSubscriptionBoxes.queryOptions(),
+    enabled: isAdmin,
+  });
+  const partnerBoxesQuery = useQuery({
+    ...api.privateClientOrders.getSubscriptionBoxes.queryOptions(),
+    enabled: !isAdmin,
+  });
+  const boxesUsed = (isAdmin ? adminBoxesQuery.data : partnerBoxesQuery.data) ?? [];
 
   const variants = [
     ...new Set([
       ...SUBSCRIPTION_DEFAULT_VARIANTS,
-      ...(boxesQuery.data ?? []).flatMap((b) => (b.variant ? [b.variant] : [])),
+      ...boxesUsed.flatMap((b) => (b.variant ? [b.variant] : [])),
       ...(variant ? [variant] : []),
     ]),
   ];
 
-  const { mutate: save, isPending } = useMutation(
-    api.privateClientOrders.adminSetSubscriptionBox.mutationOptions({
-      onSuccess: () => {
-        toast.success('Subscription box saved');
-        void queryClient.invalidateQueries({
-          queryKey: api.privateClientOrders.adminGetOne.queryKey(),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: api.privateClientOrders.adminGetSubscriptionBoxes.queryKey(),
-        });
-      },
-      onError: (error) => toast.error(error.message),
-    }),
+  const onSaved = {
+    onSuccess: () => {
+      toast.success('Subscription box saved');
+      void queryClient.invalidateQueries({
+        queryKey: isAdmin
+          ? api.privateClientOrders.adminGetOne.queryKey()
+          : api.privateClientOrders.getOne.queryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: isAdmin
+          ? api.privateClientOrders.adminGetSubscriptionBoxes.queryKey()
+          : api.privateClientOrders.getSubscriptionBoxes.queryKey(),
+      });
+    },
+    onError: (error: { message: string }) => toast.error(error.message),
+  };
+
+  const adminSave = useMutation(
+    api.privateClientOrders.adminSetSubscriptionBox.mutationOptions(onSaved),
   );
+  const partnerSave = useMutation(
+    api.privateClientOrders.setSubscriptionBox.mutationOptions(onSaved),
+  );
+  const isPending = adminSave.isPending || partnerSave.isPending;
+  const save = (input: Parameters<typeof adminSave.mutate>[0]) =>
+    isAdmin ? adminSave.mutate(input) : partnerSave.mutate(input);
 
   const chosenVariant =
     draftVariant === OTHER

@@ -29,10 +29,12 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
+import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import ProductPicker from '@/app/_privateClientOrders/components/ProductPicker';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
+import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -135,6 +137,12 @@ const PrivateOrderDetailPage = () => {
     enabled: !!orderId,
     refetchInterval: 5000, // Auto-refresh every 10 seconds
   });
+
+  // Subscription clubs (e.g. a monthly box) get the box tag and clone tool
+  const { data: subscriptionAccess } = useQuery(
+    api.privateClientOrders.subscriptionAccess.queryOptions(),
+  );
+  const subscriptionsEnabled = subscriptionAccess?.enabled ?? false;
 
   // Fetch documents to check for distributor invoice
   const { data: documents } = useQuery({
@@ -461,6 +469,18 @@ const PrivateOrderDetailPage = () => {
                 AED
               </button>
             </div>
+            {subscriptionsEnabled && (
+              <CloneOrderDialog
+                audience="partner"
+                orderId={order.id}
+                orderNumber={order.orderNumber}
+                partnerId={order.partnerId}
+                clientId={order.clientId}
+                subscriptionTier={order.subscriptionTier}
+                subscriptionCaseSize={order.subscriptionCaseSize}
+                subscriptionVariant={order.subscriptionVariant}
+              />
+            )}
             <Typography variant="bodySm" colorRole="muted">
               Created {formatDate(order.createdAt)}
             </Typography>
@@ -469,6 +489,18 @@ const PrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {subscriptionsEnabled && (
+          <SubscriptionBoxPicker
+            audience="partner"
+            key={`${order.subscriptionTier}-${order.subscriptionCaseSize}-${order.subscriptionVariant}`}
+            orderId={order.id}
+            tier={order.subscriptionTier}
+            caseSize={order.subscriptionCaseSize}
+            variant={order.subscriptionVariant}
+            clientTotalAed={order.totalAed}
+          />
+        )}
 
         {/* Partner Verification Prompt - shown when awaiting partner verification */}
         {order.status === 'awaiting_partner_verification' && order.distributor && (

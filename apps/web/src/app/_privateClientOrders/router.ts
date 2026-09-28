@@ -45,12 +45,15 @@ import ordersApprove from './controller/ordersApprove';
 import ordersApproveRevisions from './controller/ordersApproveRevisions';
 import ordersAssignDistributor from './controller/ordersAssignDistributor';
 import ordersCancel from './controller/ordersCancel';
+import ordersClone from './controller/ordersClone';
+import ordersClonePreview from './controller/ordersClonePreview';
 import ordersCreate from './controller/ordersCreate';
 import ordersDistributorPaymentVerification from './controller/ordersDistributorPaymentVerification';
 import ordersDistributorUnlockSuspended from './controller/ordersDistributorUnlockSuspended';
 import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import ordersGetSubscriptionBoxes from './controller/ordersGetSubscriptionBoxes';
 import ordersLogContactAttempt from './controller/ordersLogContactAttempt';
 import ordersMarkDelivered from './controller/ordersMarkDelivered';
 import ordersMarkInTransit from './controller/ordersMarkInTransit';
@@ -59,7 +62,9 @@ import ordersPartnerReinitiateVerification from './controller/ordersPartnerReini
 import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersScheduleDelivery from './controller/ordersScheduleDelivery';
+import ordersSetSubscriptionBox from './controller/ordersSetSubscriptionBox';
 import ordersSubmit from './controller/ordersSubmit';
+import ordersSubscriptionAccess from './controller/ordersSubscriptionAccess';
 import partnerDashboard from './controller/partnerDashboard';
 import partnerGetStockSource from './controller/partnerGetStockSource';
 import paymentsConfirm from './controller/paymentsConfirm';
@@ -75,6 +80,13 @@ const privateClientOrdersRouter = createTRPCRouter({
   partnerVerification: ordersPartnerVerification,
   partnerReinitiateVerification: ordersPartnerReinitiateVerification,
   partnerAcknowledgeInvoice: ordersPartnerAcknowledgeInvoice,
+
+  // Subscription boxes (partners running a club)
+  subscriptionAccess: ordersSubscriptionAccess,
+  clone: ordersClone,
+  clonePreview: ordersClonePreview,
+  setSubscriptionBox: ordersSetSubscriptionBox,
+  getSubscriptionBoxes: ordersGetSubscriptionBoxes,
 
   // Line item management (wine partner)
   addItem: itemsAdd,

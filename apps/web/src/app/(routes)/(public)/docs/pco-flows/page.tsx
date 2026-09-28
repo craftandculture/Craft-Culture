@@ -929,7 +929,8 @@ const AdminTab = () => (
         cases of 3 or 6). Every member on the same box gets the same wines at
         the same price, so you build and check one order per box, then clone it
         for everyone else on that box. Available to C&amp;C admins and warehouse
-        operators.
+        operators, and to wine partners who run a subscription club (switched on
+        per partner), who do the same steps from their own order page.
       </Typography>
 
       <FlowStep

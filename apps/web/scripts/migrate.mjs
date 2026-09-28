@@ -1721,6 +1721,31 @@ const runMigrations = async () => {
     );
     console.log('✅ PCO subscription box columns ready');
 
+    /*
+      Which partners run a subscription club, opening the box tag and clone
+      tool in their own portal. Switched on for Cru Wine — the only partner
+      offering one — on the run that creates the column, and never again, so
+      switching it off later in the database sticks.
+    */
+    const [subscriptionsColumn] = await client`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'partners' AND column_name = 'subscriptions_enabled'
+    `;
+    await client.unsafe(
+      `ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "subscriptions_enabled" boolean NOT NULL DEFAULT false`,
+    );
+    if (!subscriptionsColumn) {
+      await dataFix('Enable subscriptions for Cru Wine', async () => {
+        const enabled = await client`
+          UPDATE partners SET subscriptions_enabled = true
+          WHERE type = 'wine_partner' AND LOWER(TRIM(business_name)) = 'cru wine'
+          RETURNING id
+        `;
+        console.log(`   subscriptions enabled for ${enabled.length} partner(s)`);
+      });
+    }
+    console.log('✅ Partner subscriptions flag ready');
+
 
     /* ───────────────────────── CONSIGNMENT ─────────────────────────────
        Wine placed with a retail outlet on consignment. Separate from tri_*,

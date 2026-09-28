@@ -427,6 +427,13 @@ export const partners = pgTable(
     requiresClientVerification: boolean('requires_client_verification')
       .notNull()
       .default(false),
+    /**
+     * Runs a monthly subscription club (e.g. Cru Wine's Cellar Club). Opens
+     * the subscription box tag and the clone tool in this partner's portal, so
+     * the partner keys its own monthly boxes and C&C only invoices and
+     * fulfils them. Off for every other partner.
+     */
+    subscriptionsEnabled: boolean('subscriptions_enabled').notNull().default(false),
     // Distributor code for payment references (e.g., 'CD', 'TBS')
     distributorCode: text('distributor_code'),
     // Finance department email for proforma invoices (distributors only)

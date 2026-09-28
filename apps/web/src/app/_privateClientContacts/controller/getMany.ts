@@ -6,7 +6,7 @@ import { privateClientContacts } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const getContactsSchema = z.object({
-  limit: z.number().min(1).max(100).default(20),
+  limit: z.number().min(1).max(500).default(20),
   cursor: z.number().min(0).default(0),
   search: z.string().optional(),
 });

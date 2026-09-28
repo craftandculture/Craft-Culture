@@ -30,6 +30,8 @@ import useTRPC from '@/lib/trpc/browser';
 import formatSubscriptionBox from '../utils/formatSubscriptionBox';
 
 export interface CloneOrderDialogProps {
+  /** Admin clones any partner's order; a partner only its own */
+  audience: 'admin' | 'partner';
   orderId: string;
   orderNumber: string;
   partnerId: string | null;
@@ -45,9 +47,6 @@ interface NewClient {
   email?: string;
   phone?: string;
 }
-
-/** A client with an order for this box this recent already has this month's */
-const RECENT_BOX_DAYS = 25;
 
 const PHONE = /^\+?[\d\s()-]{7,}$/;
 
@@ -84,6 +83,7 @@ const parseNewClients = (text: string): NewClient[] =>
  * held back, since a second one is a double shipment rather than a choice.
  */
 const CloneOrderDialog = ({
+  audience,
   orderId,
   orderNumber,
   partnerId,
@@ -110,48 +110,47 @@ const CloneOrderDialog = ({
     subscriptionVariant,
   });
 
-  const clientsQuery = useQuery({
+  const isAdmin = audience === 'admin';
+
+  // The same client list, read through whichever door this user has
+  const adminClientsQuery = useQuery({
     ...api.privateClientContacts.adminGetAll.queryOptions({
       partnerId: partnerId ?? undefined,
       limit: 500,
     }),
-    enabled: open && Boolean(partnerId),
+    enabled: open && isAdmin && Boolean(partnerId),
   });
-
-  // Orders already on this box, to hold back anyone who has this month's
-  const boxOrdersQuery = useQuery({
-    ...api.privateClientOrders.adminGetMany.queryOptions({
-      limit: 100,
-      box: subscriptionTier
-        ? {
-            tier: subscriptionTier,
-            caseSize: subscriptionCaseSize,
-            variant: subscriptionVariant,
-          }
-        : undefined,
-    }),
-    enabled: open && Boolean(subscriptionTier),
+  const partnerClientsQuery = useQuery({
+    ...api.privateClientContacts.getMany.queryOptions({ limit: 500 }),
+    enabled: open && !isAdmin,
   });
+  const clientsLoading = isAdmin
+    ? adminClientsQuery.isLoading
+    : partnerClientsQuery.isLoading;
 
-  const hasBox = useMemo(() => {
-    const since = Date.now() - RECENT_BOX_DAYS * 24 * 60 * 60 * 1000;
-    const map = new Map<string, string>();
-    for (const order of boxOrdersQuery.data?.data ?? []) {
-      if (!order.clientId || order.status === 'cancelled') continue;
-      if (new Date(order.createdAt).getTime() < since) continue;
-      if (!map.has(order.clientId)) map.set(order.clientId, order.orderNumber);
-    }
-    return map;
-  }, [boxOrdersQuery.data]);
+  const clients = useMemo(() => {
+    const rows = isAdmin
+      ? (adminClientsQuery.data?.rows ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone,
+          address: c.address,
+          verifiedAt: c.verifiedAt,
+        }))
+      : (partnerClientsQuery.data?.data ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone,
+          address: [c.addressLine1, c.addressLine2, c.city].filter(Boolean).join(', '),
+          verifiedAt: c.cityDrinksVerifiedAt,
+        }));
 
-  const clients = useMemo(
-    () =>
-      (clientsQuery.data?.rows ?? [])
-        .filter((c) => c.id !== clientId)
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [clientsQuery.data, clientId],
-  );
+    return rows
+      .filter((c) => c.id !== clientId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [isAdmin, adminClientsQuery.data, partnerClientsQuery.data, clientId]);
 
   const term = search.trim().toLowerCase();
   const visible = clients.filter((c) =>
@@ -159,26 +158,36 @@ const CloneOrderDialog = ({
       .filter(Boolean)
       .some((v) => v!.toLowerCase().includes(term)),
   );
-  const selectable = visible.filter((c) => !hasBox.has(c.id));
 
   const newClients = parseNewClients(pasted);
   const copies = selected.size + newClients.length;
 
-  const previewQuery = useQuery({
+  const adminPreviewQuery = useQuery({
     ...api.privateClientOrders.adminClonePreview.queryOptions({ orderId, copies }),
-    enabled: open,
+    enabled: open && isAdmin,
     placeholderData: (previous) => previous,
   });
-  const preview = previewQuery.data;
+  const partnerPreviewQuery = useQuery({
+    ...api.privateClientOrders.clonePreview.queryOptions({ orderId, copies }),
+    enabled: open && !isAdmin,
+    placeholderData: (previous) => previous,
+  });
+  const preview = isAdmin ? adminPreviewQuery.data : partnerPreviewQuery.data;
+
+  // Anyone with this box from the last few weeks is held back
+  const clientsWithBox = preview?.clientsWithBox ?? {};
+  const selectable = visible.filter((c) => !clientsWithBox[c.id]);
 
   const shortLines = (preview?.lines ?? []).filter(
     (l) => l.available !== null && l.available < l.bottlesNeeded,
   );
   const uncodedLines = (preview?.lines ?? []).filter((l) => !l.lwin);
 
-  const { mutate: cloneOrder, isPending } = useMutation(
-    api.privateClientOrders.adminCloneOrder.mutationOptions({
-      onSuccess: (result) => {
+  const onCloned = {
+      onSuccess: (result: {
+        sourceOrderNumber: string;
+        orders: { id: string; orderNumber: string; clientName: string }[];
+      }) => {
         toast.success(
           `Created ${result.orders.length} draft order${result.orders.length === 1 ? '' : 's'} from ${result.sourceOrderNumber}`,
         );
@@ -186,15 +195,26 @@ const CloneOrderDialog = ({
         setSelected(new Set());
         setPasted('');
         void queryClient.invalidateQueries({
-          queryKey: api.privateClientOrders.adminGetMany.queryKey(),
+          queryKey: isAdmin
+            ? api.privateClientOrders.adminGetMany.queryKey()
+            : api.privateClientOrders.getMany.queryKey(),
         });
         void queryClient.invalidateQueries({
-          queryKey: api.privateClientOrders.adminGetSubscriptionBoxes.queryKey(),
+          queryKey: isAdmin
+            ? api.privateClientOrders.adminGetSubscriptionBoxes.queryKey()
+            : api.privateClientOrders.getSubscriptionBoxes.queryKey(),
         });
       },
-      onError: (error) => toast.error(error.message),
-    }),
+      onError: (error: { message: string }) => toast.error(error.message),
+  };
+
+  const adminClone = useMutation(
+    api.privateClientOrders.adminCloneOrder.mutationOptions(onCloned),
   );
+  const partnerClone = useMutation(
+    api.privateClientOrders.clone.mutationOptions(onCloned),
+  );
+  const isPending = adminClone.isPending || partnerClone.isPending;
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -209,14 +229,17 @@ const CloneOrderDialog = ({
 
   const selectedClients = clients.filter((c) => selected.has(c.id));
 
-  const handleClone = () =>
-    cloneOrder({
+  const handleClone = () => {
+    const input = {
       orderId,
       clients: [
         ...selectedClients.map((c) => ({ clientId: c.id, name: c.name })),
         ...newClients,
       ],
-    });
+    };
+    if (isAdmin) adminClone.mutate(input);
+    else partnerClone.mutate(input);
+  };
 
   const close = () => {
     setOpen(false);
@@ -277,7 +300,11 @@ const CloneOrderDialog = ({
                   <li key={o.id} className="flex items-center justify-between px-3 py-2">
                     <Typography variant="bodySm">{o.clientName}</Typography>
                     <Link
-                      href={`/platform/admin/private-orders/${o.id}`}
+                      href={
+                        isAdmin
+                          ? `/platform/admin/private-orders/${o.id}`
+                          : `/platform/private-orders/${o.id}`
+                      }
                       className="text-sm text-text-brand hover:underline"
                     >
                       {o.orderNumber}
@@ -324,7 +351,7 @@ const CloneOrderDialog = ({
                 </div>
 
                 <div className="min-h-[12rem] flex-1 overflow-y-auto rounded-lg border border-border-muted md:max-h-[22rem]">
-                  {clientsQuery.isLoading ? (
+                  {clientsLoading ? (
                     <Typography variant="bodyXs" colorRole="muted" className="p-3">
                       Loading clients…
                     </Typography>
@@ -334,7 +361,7 @@ const CloneOrderDialog = ({
                     </Typography>
                   ) : (
                     visible.map((client) => {
-                      const existing = hasBox.get(client.id);
+                      const existing = clientsWithBox[client.id];
                       const isSelected = selected.has(client.id);
                       return (
                         <label

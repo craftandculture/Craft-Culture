@@ -590,6 +590,7 @@ const AdminPrivateOrderDetailPage = () => {
             </Select>
 
             <CloneOrderDialog
+              audience="admin"
               orderId={order.id}
               orderNumber={order.orderNumber}
               partnerId={order.partnerId}
@@ -626,6 +627,7 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Which subscription box this order is — what the clone tool keys on */}
         <SubscriptionBoxPicker
+          audience="admin"
           key={`${order.subscriptionTier}-${order.subscriptionCaseSize}-${order.subscriptionVariant}`}
           orderId={order.id}
           tier={order.subscriptionTier}
