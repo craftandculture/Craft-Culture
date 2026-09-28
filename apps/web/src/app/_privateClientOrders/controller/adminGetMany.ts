@@ -1,8 +1,9 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
 import db from '@/database/client';
+import type { PrivateClientOrder } from '@/database/schema';
 import {
   partners,
   privateClientContacts,
@@ -10,6 +11,7 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import { DISTRIBUTOR_SKU_LOCKED_STATUSES, PCO_STAGES } from '../constants';
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
 
 const adminGetOrdersSchema = z.object({
@@ -18,6 +20,10 @@ const adminGetOrdersSchema = z.object({
   search: z.string().optional(),
   status: privateClientOrderStatusEnum.optional(),
   partnerId: z.string().uuid().optional(),
+  /** A pipeline stage: a group of statuses (see PCO_STAGES) */
+  stage: z.enum(['review', 'verification', 'payment', 'fulfilment', 'delivered']).optional(),
+  /** Orders whose distributor needs a bundle SKU that isn't recorded yet */
+  skuMissing: z.boolean().optional(),
   /** A distributor's orders, or 'unassigned' for orders with none */
   distributor: z.union([z.literal('unassigned'), z.string().uuid()]).optional(),
   /** One subscription box; a null variant means the box with no variant */
@@ -41,7 +47,7 @@ const distributorPartner = alias(partners, 'distributor_partner');
 const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, search, status, partnerId, box, distributor } = input;
+    const { limit, cursor, search, status, partnerId, box, distributor, stage, skuMissing } = input;
 
     // Build where conditions
     const conditions = [];
@@ -52,6 +58,21 @@ const adminGetMany = wmsOperatorProcedure
 
     if (partnerId) {
       conditions.push(eq(privateClientOrders.partnerId, partnerId));
+    }
+
+    if (stage) {
+      conditions.push(inArray(privateClientOrders.status, [...PCO_STAGES[stage]]));
+    }
+
+    if (skuMissing) {
+      conditions.push(
+        isNull(privateClientOrders.distributorSku),
+        notInArray(
+          privateClientOrders.status,
+          DISTRIBUTOR_SKU_LOCKED_STATUSES as PrivateClientOrder['status'][],
+        ),
+        sql`${privateClientOrders.distributorId} IN (SELECT id FROM partners WHERE requires_order_sku)`,
+      );
     }
 
     if (distributor) {

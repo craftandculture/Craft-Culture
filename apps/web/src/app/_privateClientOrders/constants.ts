@@ -58,3 +58,32 @@ export const PCO_NOTE_EMAIL_TEMPLATE_ID: string | null = null;
 
 /** Longest note accepted on a PCO timeline */
 export const PCO_NOTE_MAX_LENGTH = 2000;
+
+/**
+ * The stages of the PCO pipeline, as groups of statuses. One definition: the
+ * dashboard counts with it and the order list filters with it (`?stage=`), so
+ * a count and the list behind it always agree.
+ */
+export const PCO_STAGES = {
+  review: ['submitted', 'under_cc_review', 'revision_requested'],
+  verification: [
+    'cc_approved',
+    'awaiting_partner_verification',
+    'awaiting_distributor_verification',
+    'verification_suspended',
+  ],
+  payment: ['awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
+  fulfilment: [
+    'distributor_paid',
+    'awaiting_partner_payment',
+    'partner_paid',
+    'stock_in_transit',
+    'with_distributor',
+    'scheduling_delivery',
+    'delivery_scheduled',
+    'out_for_delivery',
+  ],
+  delivered: ['delivered'],
+} as const;
+
+export type PcoStage = keyof typeof PCO_STAGES;

@@ -15,10 +15,11 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import type { PcoStage } from '@/app/_privateClientOrders/constants';
 import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -68,6 +69,14 @@ const statusOptions: { value: OrderStatus | 'all'; label: string }[] = [
  * - Update order status
  * - View order details
  */
+const STAGE_LABELS: Record<PcoStage, string> = {
+  review: 'Pending review',
+  verification: 'Verification',
+  payment: 'Payment',
+  fulfilment: 'Fulfilment',
+  delivered: 'Delivered',
+};
+
 const AdminPrivateOrdersPage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +89,23 @@ const AdminPrivateOrdersPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDistributorId, setBulkDistributorId] = useState('');
   const [bulkStockStatus, setBulkStockStatus] = useState('');
+  // Set from dashboard links: a pipeline stage, or orders missing a CD SKU
+  const [stageFilter, setStageFilter] = useState<PcoStage | null>(null);
+  const [skuMissingFilter, setSkuMissingFilter] = useState(false);
+
+  // Dashboard links arrive as ?stage=, ?status=, ?distributor=, ?skuMissing=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stage = params.get('stage');
+    if (stage && ['review', 'verification', 'payment', 'fulfilment', 'delivered'].includes(stage)) {
+      setStageFilter(stage as PcoStage);
+    }
+    const status = params.get('status');
+    if (status) setStatusFilter(status as OrderStatus);
+    const distributor = params.get('distributor');
+    if (distributor) setDistributorFilter(distributor);
+    if (params.get('skuMissing') === '1') setSkuMissingFilter(true);
+  }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -99,6 +125,8 @@ const AdminPrivateOrdersPage = () => {
       search: searchQuery || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
       distributor: distributorFilter === 'all' ? undefined : distributorFilter,
+      stage: stageFilter ?? undefined,
+      skuMissing: skuMissingFilter || undefined,
       box: selectedBox
         ? {
             tier: selectedBox.tier,
@@ -238,10 +266,16 @@ const AdminPrivateOrdersPage = () => {
               key: 'all',
               label: 'All orders',
               count: totalCount,
-              active: statusFilter === 'all' && distributorFilter === 'all',
+              active:
+                statusFilter === 'all' &&
+                distributorFilter === 'all' &&
+                !stageFilter &&
+                !skuMissingFilter,
               apply: () => {
                 setStatusFilter('all');
                 setDistributorFilter('all');
+                setStageFilter(null);
+                setSkuMissingFilter(false);
               },
             },
             {
@@ -289,6 +323,24 @@ const AdminPrivateOrdersPage = () => {
               </span>
             </button>
           ))}
+          {stageFilter && (
+            <button
+              type="button"
+              onClick={() => setStageFilter(null)}
+              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+            >
+              Stage: {STAGE_LABELS[stageFilter]} <span className="text-text-muted">×</span>
+            </button>
+          )}
+          {skuMissingFilter && (
+            <button
+              type="button"
+              onClick={() => setSkuMissingFilter(false)}
+              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+            >
+              CD SKU missing <span className="text-text-muted">×</span>
+            </button>
+          )}
         </div>
 
         {/* Filters */}
@@ -382,7 +434,7 @@ const AdminPrivateOrdersPage = () => {
                 No Orders Found
               </Typography>
               <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all'
+                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter
                   ? 'No orders match your filters. Try adjusting your search.'
                   : 'No private client orders have been created yet.'}
               </Typography>

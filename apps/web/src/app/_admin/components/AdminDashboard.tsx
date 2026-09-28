@@ -3,18 +3,17 @@
 import {
   IconAlertTriangle,
   IconArrowRight,
-  IconBox,
+  IconBarcode,
   IconBuilding,
-  IconCalendar,
   IconCash,
   IconCheck,
   IconChevronRight,
   IconClock,
   IconFileCheck,
   IconPackage,
+  IconPlus,
   IconShieldCheck,
   IconTruck,
-  IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -112,7 +111,14 @@ const AdminDashboard = () => {
     );
   }
 
-  const { kpis, statusBreakdown, recentOrders, ordersByPartner, ordersNeedingStockUpdate } = data;
+  const {
+    kpis,
+    attention,
+    statusBreakdown,
+    recentOrders,
+    ordersByPartner,
+    ordersNeedingStockUpdate,
+  } = data;
 
   // Status pipeline steps for admin
   const pipelineSteps = [
@@ -123,7 +129,7 @@ const AdminDashboard = () => {
       color: 'bg-amber-500',
       bgColor: 'bg-amber-50 dark:bg-amber-900/20',
       textColor: 'text-amber-700 dark:text-amber-300',
-      href: '/platform/admin/private-orders?status=pending',
+      href: '/platform/admin/private-orders?stage=review',
     },
     {
       label: 'Verification',
@@ -132,7 +138,7 @@ const AdminDashboard = () => {
       color: 'bg-orange-500',
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
       textColor: 'text-orange-700 dark:text-orange-300',
-      href: '/platform/admin/private-orders?status=verification',
+      href: '/platform/admin/private-orders?stage=verification',
     },
     {
       label: 'Payment',
@@ -141,7 +147,7 @@ const AdminDashboard = () => {
       color: 'bg-blue-500',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       textColor: 'text-blue-700 dark:text-blue-300',
-      href: '/platform/admin/private-orders?status=payment',
+      href: '/platform/admin/private-orders?stage=payment',
     },
     {
       label: 'Fulfillment',
@@ -150,7 +156,7 @@ const AdminDashboard = () => {
       color: 'bg-purple-500',
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
       textColor: 'text-purple-700 dark:text-purple-300',
-      href: '/platform/admin/private-orders?status=fulfillment',
+      href: '/platform/admin/private-orders?stage=fulfilment',
     },
     {
       label: 'Delivered',
@@ -159,11 +165,10 @@ const AdminDashboard = () => {
       color: 'bg-green-500',
       bgColor: 'bg-green-50 dark:bg-green-900/20',
       textColor: 'text-green-700 dark:text-green-300',
-      href: '/platform/admin/private-orders?status=delivered',
+      href: '/platform/admin/private-orders?stage=delivered',
     },
   ];
 
-  const totalActive = kpis.totalOrders;
 
   return (
     <div className="flex flex-col gap-6">
@@ -177,6 +182,18 @@ const AdminDashboard = () => {
             Overview of all partner orders
           </Typography>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <Link href="/platform/admin/private-orders/new">
+          <Button size="sm" colorRole="brand" className="gap-1.5">
+            <Icon icon={IconPlus} size="sm" />
+            New order
+          </Button>
+        </Link>
+        <Link href="/platform/admin/private-orders">
+          <Button size="sm" variant="outline" className="gap-1.5">
+            All orders ({kpis.totalOrders})
+          </Button>
+        </Link>
         <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
           <button
             type="button"
@@ -200,6 +217,7 @@ const AdminDashboard = () => {
           >
             AED
           </button>
+        </div>
         </div>
       </div>
 
@@ -245,7 +263,7 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <Link href="/platform/admin/private-orders?status=fulfillment">
+              <Link href="/platform/admin/private-orders?stage=fulfilment">
                 <Button
                   variant="default"
                   size="sm"
@@ -260,150 +278,112 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        {/* Active Orders */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Active Orders
+      {/* What needs someone now — each count opens the list behind it */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        {[
+          {
+            label: 'Pending review',
+            hint: 'Submitted by partners',
+            count: statusBreakdown.pendingReview,
+            href: '/platform/admin/private-orders?stage=review',
+            icon: IconFileCheck,
+          },
+          {
+            label: 'No distributor',
+            hint: 'Approved, not assigned',
+            count: attention.unassigned,
+            href: '/platform/admin/private-orders?distributor=unassigned',
+            icon: IconTruck,
+          },
+          {
+            label: 'CD SKU missing',
+            hint: 'Blocks payment',
+            count: attention.skuMissing,
+            href: '/platform/admin/private-orders?skuMissing=1',
+            icon: IconBarcode,
+          },
+          {
+            label: 'Verification stuck',
+            hint: 'Suspended by distributor',
+            count: attention.suspended,
+            href: '/platform/admin/private-orders?status=verification_suspended',
+            icon: IconShieldCheck,
+          },
+          {
+            label: 'Drafts',
+            hint: 'Not yet submitted',
+            count: statusBreakdown.drafts,
+            href: '/platform/admin/private-orders?status=draft',
+            icon: IconClock,
+            quiet: true,
+          },
+        ].map((item) => {
+          const needsAction = item.count > 0 && !item.quiet;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`group flex flex-col gap-1 rounded-xl border p-4 transition-colors ${
+                needsAction
+                  ? 'border-fill-warning/50 bg-fill-warning/5 hover:bg-fill-warning/10'
+                  : 'border-border-muted bg-fill-primary hover:bg-fill-muted/40'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wider">
+                  {item.label}
                 </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {totalActive}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-fill-brand/10 p-2">
-                <Icon icon={IconPackage} size="sm" className="text-text-brand" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* This Month */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  This Month
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.monthlyOrders}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {kpis.monthlyCases} cases
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
                 <Icon
-                  icon={IconCalendar}
+                  icon={item.icon}
                   size="sm"
-                  className="text-emerald-600 dark:text-emerald-400"
+                  className={needsAction ? 'text-fill-warning' : 'text-text-muted'}
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <Typography
+                variant="headingMd"
+                className={needsAction ? 'text-text-primary' : 'text-text-muted'}
+              >
+                {item.count}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="flex items-center gap-1">
+                {item.count > 0 ? item.hint : 'All clear'}
+                {item.count > 0 && (
+                  <Icon
+                    icon={IconChevronRight}
+                    size="xs"
+                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                  />
+                )}
+              </Typography>
+            </Link>
+          );
+        })}
+      </div>
 
-        {/* Pending Approvals */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Pending Review
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.pendingApprovals}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Need action
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
-                <Icon
-                  icon={IconClock}
-                  size="sm"
-                  className="text-amber-600 dark:text-amber-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Verified Clients */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Verified Clients
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.verifiedClients}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  City Drinks
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
-                <Icon
-                  icon={IconUsers}
-                  size="sm"
-                  className="text-green-600 dark:text-green-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Value */}
-        <Card className="relative overflow-hidden col-span-2 lg:col-span-1">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Total Value
-                </Typography>
-                <Typography variant="headingMd" className="mt-1">
-                  {formatCurrency(kpis.totalValueUsd, kpis.totalValueAed)}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Monthly: {formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed)}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-900/30">
-                <Icon
-                  icon={IconCash}
-                  size="sm"
-                  className="text-violet-600 dark:text-violet-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* The book at a glance */}
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-border-muted bg-fill-primary px-5 py-3">
+        {[
+          { label: 'Active orders', value: String(kpis.totalOrders) },
+          {
+            label: 'Last 30 days',
+            value: `${kpis.monthlyOrders} orders · ${kpis.monthlyCases} cases`,
+          },
+          {
+            label: 'Value, last 30 days',
+            value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed),
+          },
+          { label: 'Total value', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
+          { label: 'Verified clients', value: String(kpis.verifiedClients) },
+        ].map((stat) => (
+          <div key={stat.label} className="flex items-baseline gap-2">
+            <Typography variant="bodyXs" colorRole="muted">
+              {stat.label}
+            </Typography>
+            <Typography variant="bodySm" className="font-semibold">
+              {stat.value}
+            </Typography>
+          </div>
+        ))}
       </div>
 
       {/* Status Pipeline */}
@@ -574,9 +554,14 @@ const AdminDashboard = () => {
             ) : (
               <div className="flex flex-col divide-y divide-border-muted">
                 {ordersByPartner.map((partner) => {
+                  // Share of the book by value, so the bar and the figure agree
+                  const totalPartnerValue = ordersByPartner.reduce(
+                    (sum, p) => sum + p.totalValueUsd,
+                    0,
+                  );
                   const percentage =
-                    kpis.totalOrders > 0
-                      ? Math.round((partner.orderCount / kpis.totalOrders) * 100)
+                    totalPartnerValue > 0
+                      ? Math.round((partner.totalValueUsd / totalPartnerValue) * 100)
                       : 0;
 
                   return (
@@ -624,34 +609,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Typography variant="headingSm" className="mb-4 font-semibold">
-            Quick Actions
-          </Typography>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/platform/admin/private-orders?status=pending">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconFileCheck} size="sm" />
-                Review Orders ({kpis.pendingApprovals})
-              </Button>
-            </Link>
-            <Link href="/platform/admin/private-orders/new">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconPackage} size="sm" />
-                Create Order
-              </Button>
-            </Link>
-            <Link href="/platform/admin/private-orders">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconBox} size="sm" />
-                All Orders ({kpis.totalOrders})
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

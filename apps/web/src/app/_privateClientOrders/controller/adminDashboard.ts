@@ -1,6 +1,7 @@
-import { and, desc, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
+import type { PrivateClientOrder } from '@/database/schema';
 import {
   partners,
   privateClientContacts,
@@ -8,6 +9,8 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+
+import { DISTRIBUTOR_SKU_LOCKED_STATUSES, PCO_STAGES } from '../constants';
 
 /**
  * Get dashboard statistics for admin users
@@ -173,31 +176,44 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
     .limit(5);
 
   // Build status breakdown for pipeline
-  const pendingReviewStatuses = ['submitted', 'under_cc_review', 'revision_requested'];
-  const awaitingVerificationStatuses = [
-    'cc_approved',
-    'awaiting_partner_verification',
-    'awaiting_distributor_verification',
-    'verification_suspended',
-  ];
-  const awaitingPaymentStatuses = [
-    'awaiting_client_payment',
-    'client_paid',
-    'awaiting_distributor_payment',
-  ];
-  const inFulfillmentStatuses = [
-    'distributor_paid',
-    'awaiting_partner_payment',
-    'partner_paid',
-    'stock_in_transit',
-    'with_distributor',
-    'scheduling_delivery',
-    'delivery_scheduled',
-    'out_for_delivery',
-  ];
-  const completedStatuses = ['delivered'];
+  const pendingReviewStatuses: readonly string[] = PCO_STAGES.review;
+  const awaitingVerificationStatuses: readonly string[] = PCO_STAGES.verification;
+  const awaitingPaymentStatuses: readonly string[] = PCO_STAGES.payment;
+  const inFulfillmentStatuses: readonly string[] = PCO_STAGES.fulfilment;
+  const completedStatuses: readonly string[] = PCO_STAGES.delivered;
 
-  const countByStatuses = (statuses: string[]) =>
+  // Needs-attention counts, each matching the list filter it links to
+  const notYetShipped = [
+    ...PCO_STAGES.review,
+    ...PCO_STAGES.verification,
+    ...PCO_STAGES.payment,
+  ];
+  const [unassigned] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(privateClientOrders)
+    .where(
+      and(
+        isNull(privateClientOrders.distributorId),
+        inArray(privateClientOrders.status, [...PCO_STAGES.verification, ...PCO_STAGES.payment]),
+      ),
+    );
+  const [skuMissing] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(privateClientOrders)
+    .innerJoin(partners, eq(privateClientOrders.distributorId, partners.id))
+    .where(
+      and(
+        eq(partners.requiresOrderSku, true),
+        isNull(privateClientOrders.distributorSku),
+        notInArray(
+          privateClientOrders.status,
+          DISTRIBUTOR_SKU_LOCKED_STATUSES as PrivateClientOrder['status'][],
+        ),
+        inArray(privateClientOrders.status, notYetShipped),
+      ),
+    );
+
+  const countByStatuses = (statuses: readonly string[]) =>
     statusCounts
       .filter((s) => statuses.includes(s.status))
       .reduce((sum, s) => sum + Number(s.count), 0);
@@ -214,6 +230,13 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       monthlyValueAed: Number(monthlyTotals?.totalValueAed ?? 0),
       pendingApprovals: Number(pendingApprovals?.count ?? 0),
       verifiedClients: Number(verifiedClientsCount?.count ?? 0),
+    },
+    attention: {
+      unassigned: Number(unassigned?.count ?? 0),
+      skuMissing: Number(skuMissing?.count ?? 0),
+      suspended: statusCounts
+        .filter((c) => c.status === 'verification_suspended')
+        .reduce((sum, c) => sum + Number(c.count), 0),
     },
     statusBreakdown: {
       drafts: countByStatuses(['draft']),
