@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -70,8 +71,15 @@ const AdminPrivateOrdersPage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  // One subscription box, stored as its index in `boxes` ('all' for none)
+  const [boxFilter, setBoxFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const { data: boxes = [] } = useQuery(
+    api.privateClientOrders.adminGetSubscriptionBoxes.queryOptions(),
+  );
+  const selectedBox = boxFilter === 'all' ? undefined : boxes[Number(boxFilter)];
 
   // Fetch orders
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -79,6 +87,13 @@ const AdminPrivateOrdersPage = () => {
       limit: 50,
       search: searchQuery || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
+      box: selectedBox
+        ? {
+            tier: selectedBox.tier,
+            caseSize: selectedBox.caseSize,
+            variant: selectedBox.variant,
+          }
+        : undefined,
     }),
     staleTime: 0, // Always fetch fresh data
     refetchInterval: 5000, // Refresh every 10 seconds
@@ -213,6 +228,28 @@ const AdminPrivateOrdersPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {boxes.length > 0 && (
+                <div className="w-full sm:w-56">
+                  <Select value={boxFilter} onValueChange={setBoxFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filter by box" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All boxes</SelectItem>
+                      {boxes.map((box, index) => (
+                        <SelectItem key={index} value={String(index)}>
+                          {formatSubscriptionBox({
+                            subscriptionTier: box.tier,
+                            subscriptionCaseSize: box.caseSize,
+                            subscriptionVariant: box.variant,
+                          })}{' '}
+                          ({box.orders})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -232,7 +269,7 @@ const AdminPrivateOrdersPage = () => {
                 No Orders Found
               </Typography>
               <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all'
+                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all'
                   ? 'No orders match your filters. Try adjusting your search.'
                   : 'No private client orders have been created yet.'}
               </Typography>
@@ -329,6 +366,11 @@ const AdminPrivateOrdersPage = () => {
                                     >
                                       <Icon icon={IconShieldCheck} size="xs" />
                                       <span className="text-[10px] font-medium">Verified</span>
+                                    </span>
+                                  )}
+                                  {formatSubscriptionBox(order) && (
+                                    <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                      {formatSubscriptionBox(order)}
                                     </span>
                                   )}
                                 </div>
@@ -526,6 +568,11 @@ const AdminPrivateOrdersPage = () => {
                                   title="City Drinks Verified"
                                 >
                                   <Icon icon={IconShieldCheck} size="xs" />
+                                </span>
+                              )}
+                              {formatSubscriptionBox(order) && (
+                                <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                  {formatSubscriptionBox(order)}
                                 </span>
                               )}
                             </div>

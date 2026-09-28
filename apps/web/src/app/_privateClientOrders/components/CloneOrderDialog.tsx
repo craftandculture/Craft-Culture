@@ -26,6 +26,8 @@ export interface CloneOrderDialogProps {
   partnerId: string | null;
   /** The source order's own client, left out of the list — they have their box */
   clientId: string | null;
+  /** The subscription box this order is, e.g. "Discovery 3 · Mix" */
+  boxLabel: string | null;
 }
 
 interface NewClient {
@@ -69,6 +71,7 @@ const CloneOrderDialog = ({
   orderNumber,
   partnerId,
   clientId,
+  boxLabel,
 }: CloneOrderDialogProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -167,10 +170,16 @@ const CloneOrderDialog = ({
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent className="w-full sm:w-[48rem]">
           <DialogHeader>
-            <DialogTitle>Clone {orderNumber}</DialogTitle>
+            <DialogTitle>
+              Clone {orderNumber}
+              {boxLabel ? ` · ${boxLabel}` : ''}
+            </DialogTitle>
             <DialogDescription>
               Each client gets a new draft order with exactly these lines and
-              prices. Check this order once; the clones match it.
+              prices{boxLabel ? ', tagged as the same box' : ''}. Check this
+              order once; the clones match it.
+              {!boxLabel &&
+                ' This order has no subscription box set — set one first so the clones are tagged.'}
             </DialogDescription>
           </DialogHeader>
 

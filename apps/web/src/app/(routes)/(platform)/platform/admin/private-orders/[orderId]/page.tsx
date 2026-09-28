@@ -36,8 +36,10 @@ import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
+import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
+import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -593,6 +595,7 @@ const AdminPrivateOrderDetailPage = () => {
               orderNumber={order.orderNumber}
               partnerId={order.partnerId}
               clientId={order.clientId}
+              boxLabel={formatSubscriptionBox(order)}
             />
 
             <ZohoSalesOrderButton
@@ -619,6 +622,16 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* Which subscription box this order is — what the clone tool keys on */}
+        <SubscriptionBoxPicker
+          key={`${order.subscriptionTier}-${order.subscriptionCaseSize}-${order.subscriptionVariant}`}
+          orderId={order.id}
+          tier={order.subscriptionTier}
+          caseSize={order.subscriptionCaseSize}
+          variant={order.subscriptionVariant}
+          clientTotalAed={order.totalAed}
+        />
 
         {/* Order Completion - Shown prominently for delivered/distributor_paid orders */}
         {['delivered', 'distributor_paid'].includes(order.status) && (

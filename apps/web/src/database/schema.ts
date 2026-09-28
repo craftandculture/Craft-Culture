@@ -1294,6 +1294,18 @@ export const privateClientOrders = pgTable(
       mode: 'date',
     }),
 
+    /**
+     * The subscription box this order is, for a partner running a monthly club
+     * (Cru Wine's Cellar Club): tier, case size and an optional variant such
+     * as "Mix". One order per box is built and checked, then cloned for every
+     * member on it — the tag is how an operator finds the right one to clone,
+     * and how the month's boxes are counted afterwards. Null on ordinary
+     * orders. Values are listed in `_privateClientOrders/constants.ts`.
+     */
+    subscriptionTier: text('subscription_tier'),
+    subscriptionCaseSize: integer('subscription_case_size'),
+    subscriptionVariant: text('subscription_variant'),
+
     ...timestamps,
   },
   (table) => [

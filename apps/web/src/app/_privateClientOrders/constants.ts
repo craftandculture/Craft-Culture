@@ -1,0 +1,30 @@
+/**
+ * Subscription box options for private client orders.
+ *
+ * Taken from Cru Wine's Cellar Club: two tiers, each in a case of 3 or 6 a
+ * month, at an all-in AED price (taxes and delivery included). The club price
+ * sits beside the order's own client total on the PCO page as a price check.
+ */
+
+/** Tiers, in the order the club presents them */
+export const SUBSCRIPTION_TIERS = [
+  {
+    value: 'discovery',
+    label: 'Discovery',
+    priceAed: { 3: 570, 6: 1075 },
+  },
+  {
+    value: 'collector',
+    label: 'The Collector',
+    priceAed: { 3: 1450, 6: 2710 },
+  },
+] as const;
+
+/** Bottles per monthly case */
+export const SUBSCRIPTION_CASE_SIZES = [3, 6] as const;
+
+/**
+ * Variants offered before any have been used. Variants already on orders are
+ * added to these, so a new one typed once is offered from then on.
+ */
+export const SUBSCRIPTION_DEFAULT_VARIANTS = ['Mix', 'B and B'] as const;

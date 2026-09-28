@@ -9,12 +9,14 @@ import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminGetSubscriptionBoxes from './controller/adminGetSubscriptionBoxes';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminMarkPayment from './controller/adminMarkPayment';
 import adminMatchStockLwins from './controller/adminMatchStockLwins';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminSetSubscriptionBox from './controller/adminSetSubscriptionBox';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
@@ -100,6 +102,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminCreate,
   adminCloneOrder,
   adminClonePreview,
+  adminSetSubscriptionBox,
+  adminGetSubscriptionBoxes,
   adminAddItem,
   adminMatchStockLwins,
   adminUpdateItem,

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -17,6 +17,14 @@ const adminGetOrdersSchema = z.object({
   search: z.string().optional(),
   status: privateClientOrderStatusEnum.optional(),
   partnerId: z.string().uuid().optional(),
+  /** One subscription box; a null variant means the box with no variant */
+  box: z
+    .object({
+      tier: z.string(),
+      caseSize: z.number().int().nullable(),
+      variant: z.string().nullable(),
+    })
+    .optional(),
 });
 
 /**
@@ -27,7 +35,7 @@ const adminGetOrdersSchema = z.object({
 const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, search, status, partnerId } = input;
+    const { limit, cursor, search, status, partnerId, box } = input;
 
     // Build where conditions
     const conditions = [];
@@ -38,6 +46,18 @@ const adminGetMany = wmsOperatorProcedure
 
     if (partnerId) {
       conditions.push(eq(privateClientOrders.partnerId, partnerId));
+    }
+
+    if (box) {
+      conditions.push(
+        eq(privateClientOrders.subscriptionTier, box.tier),
+        box.caseSize === null
+          ? isNull(privateClientOrders.subscriptionCaseSize)
+          : eq(privateClientOrders.subscriptionCaseSize, box.caseSize),
+        box.variant === null
+          ? isNull(privateClientOrders.subscriptionVariant)
+          : eq(privateClientOrders.subscriptionVariant, box.variant),
+      );
     }
 
     if (search) {

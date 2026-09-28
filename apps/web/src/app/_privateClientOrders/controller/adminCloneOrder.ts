@@ -187,6 +187,9 @@ const adminCloneOrder = wmsOperatorProcedure
               deliveryNotes: source.deliveryNotes,
               partnerNotes: source.partnerNotes,
               ccNotes: `Cloned from ${source.orderNumber}`,
+              subscriptionTier: source.subscriptionTier,
+              subscriptionCaseSize: source.subscriptionCaseSize,
+              subscriptionVariant: source.subscriptionVariant,
               status: 'draft',
             })
             .returning({

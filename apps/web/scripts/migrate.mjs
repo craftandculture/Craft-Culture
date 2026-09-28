@@ -1702,6 +1702,25 @@ const runMigrations = async () => {
     );
     console.log('✅ PCO → Zoho sales order link ready');
 
+    /*
+      The subscription box an order is (tier, case size, variant). Cloning one
+      checked order per box for every member needs the box named on the
+      order, or the operator is left guessing which order is Discovery 3.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "subscription_tier" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "subscription_case_size" integer`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "subscription_variant" text`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "private_client_orders_subscription_idx" ON "private_client_orders"("subscription_tier", "subscription_case_size")`,
+    );
+    console.log('✅ PCO subscription box columns ready');
+
 
     /* ───────────────────────── CONSIGNMENT ─────────────────────────────
        Wine placed with a retail outlet on consignment. Separate from tri_*,
