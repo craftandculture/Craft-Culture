@@ -122,6 +122,25 @@ const StatusBadge = ({ status, color }: { status: string; color: string }) => (
   </div>
 );
 
+/** Every party can leave notes on an order; shown on each role's tab */
+const NotesCard = ({ internalNote = false }: { internalNote?: boolean }) => (
+  <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+    <Typography variant="headingSm" className="mb-2">
+      Notes on Every Order
+    </Typography>
+    <Typography variant="bodyXs" colorRole="muted">
+      Each order page has an <span className="font-medium">Add note</span> box above its Activity
+      Timeline. Use it instead of messages to tell the other parties anything about the order
+      (&ldquo;client travelling until the 12th&rdquo;, &ldquo;bundle created&rdquo;). The note
+      appears on the timeline with your name and company, and the wine partner, distributor and
+      C&amp;C are each notified in the platform (and by email where enabled) — except your own
+      side.
+      {internalNote &&
+        ' C&C can tick “Internal — C&C only” to keep a note from the partner and distributor: it shows on the admin timeline with a “C&C only” badge and nobody else is told.'}
+    </Typography>
+  </div>
+);
+
 const OverviewTab = () => (
   <div className="space-y-8">
     {/* Holistic Overview Diagram */}
@@ -569,6 +588,8 @@ const PartnerTab = () => (
       </Typography>
     </div>
 
+    <NotesCard />
+
     {/* Club partners: one order per box, cloned for every member */}
     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6">
       <Typography variant="headingSm" className="mb-2">
@@ -771,6 +792,38 @@ const DistributorTab = () => {
     </div>
 
     {/* Stock Status Tracking */}
+    {/* City Drinks: the bundle SKU for each order */}
+    <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-6">
+      <Typography variant="headingSm" className="mb-2">
+        Your Bundle SKU for Each Order
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-3">
+        If you sell each order as its own product (City Drinks), every received order asks for
+        that product&rsquo;s SKU. It is the first card on the order page and stays amber until it
+        is filled; your order list shows a &ldquo;SKU needed&rdquo; badge and a count.
+      </Typography>
+      <ol className="space-y-2">
+        {[
+          'Create the bundle in your system named exactly after the PCO number (e.g. PCO-2026-00068).',
+          'Enter its SKU on the order (e.g. CDR0824592587). Spaces and lower case are fine; it is checked and tidied.',
+          'Often it is already there: once your daily stock feed lists the bundle, the SKU is filled in for you (“from your system”).',
+          'Payment can’t be confirmed until the SKU is in. After payment it is locked; ask C&C if it needs correcting.',
+        ].map((step, index) => (
+          <li key={step} className="flex items-start gap-3">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white">
+              {index + 1}
+            </span>
+            <Typography variant="bodyXs">{step}</Typography>
+          </li>
+        ))}
+      </ol>
+      <Typography variant="bodyXs" colorRole="muted" className="mt-3">
+        The SKU is also printed on the PCO label on every case C&amp;C ships to you.
+      </Typography>
+    </div>
+
+    <NotesCard />
+
     <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
       <Typography variant="headingSm" className="mb-4">
         Stock Status Tracking
@@ -1066,6 +1119,8 @@ const AdminTab = () => (
       </div>
     </div>
 
+    <NotesCard internalNote />
+
     {/* Admin Capabilities */}
     <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
       <Typography variant="headingSm" className="mb-4">
@@ -1084,6 +1139,8 @@ const AdminTab = () => (
           { title: 'Confirm Payments', desc: 'Record distributor and partner payments' },
           { title: 'Tag Subscription Boxes', desc: 'Name the tier, case and variant an order is' },
           { title: 'Clone Orders', desc: 'Copy one checked box order for every member on it' },
+          { title: 'Distributor SKU', desc: 'See or correct City Drinks’ bundle SKU; required before payment' },
+          { title: 'Notes', desc: 'Leave shared or internal notes on any order' },
         ].map((item) => (
           <div key={item.title} className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
             <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />

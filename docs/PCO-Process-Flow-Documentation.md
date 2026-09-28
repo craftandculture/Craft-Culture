@@ -20,6 +20,8 @@
 9. [Notifications](#9-notifications)
 10. [Status Reference](#10-status-reference)
 11. [Subscription Boxes & Cloning](#11-subscription-boxes--cloning)
+12. [Distributor Bundle SKU](#12-distributor-bundle-sku)
+13. [Notes on the Timeline](#13-notes-on-the-timeline)
 
 ---
 
@@ -1188,6 +1190,60 @@ The tag is a label only: it does not change pricing or workflow. Once set, the c
 | Partner gate | `utils/assertSubscriptionsEnabled.ts` |
 | Dialog / picker | `components/CloneOrderDialog.tsx`, `components/SubscriptionBoxPicker.tsx` (`audience: 'admin' \| 'partner'`) |
 
+## 12. Distributor Bundle SKU
+
+*Added September 2026.*
+
+City Drinks sells each PCO as **one bundle product named after the PCO number** (e.g. citydrinks.com/p/pco-2026-00057-7460), with its own SKU: `CDR` + 10 digits. The order records it.
+
+| Column (`private_client_orders`) | Meaning |
+|--------|---------|
+| `distributor_sku` | The bundle's SKU, e.g. `CDR9467555844` |
+| `distributor_ref` | City Drinks' own reference for the bundle, e.g. `CCPC21` |
+| `distributor_sku_source` | `cd_feed` (from their stock feed), `distributor` or `admin` |
+| `distributor_sku_set_at` / `_set_by` | When, and by whom (null when it came from the feed) |
+
+`partners.requires_order_sku` switches this on per distributor. It was set once for City Drinks on the deploy that created the column, and the City Drinks outlet (`cons_outlets.partner_id`) was linked to its partner record in the same step.
+
+### 12.1 Where the SKU comes from
+1. **Their own stock feed.** The daily City Drinks feed already lists each bundle: product name = PCO number, `our_sku` = CDR SKU, `their_sku` = CCPC code (the names are inverted from our side). After each pull (Trigger.dev `outlet-stock-sync`, and "Pull stock" on the distribution page), `linkBundleSkusFromFeed` fills orders assigned to that distributor that have no SKU yet.
+   - It never overwrites a typed SKU.
+   - A PCO with two different SKUs in one feed is skipped rather than guessed.
+   - Consigned rows are ignored.
+2. **Typed by City Drinks** when they receive the order. The SKU card is the first card on their order page, and their list shows a "SKU needed" badge and count. The value is normalised (spaces and dashes dropped, upper-cased) and must match `^CDR\d{10}$`.
+3. **C&C** can enter or correct it at any time. City Drinks can't change it once the order is client-paid.
+
+### 12.2 Gate
+An order whose distributor has `requires_order_sku` cannot move to `client_paid` without a SKU. The check (`assertDistributorSku`) runs on all three paths:
+- `distributorUpdateStatus`, beside the existing distributor-invoice check
+- `ordersDistributorPaymentVerification`
+- `adminUpdateStatus`, before the update, because that path also triggers the Zoho invoice job
+
+Before refusing, it pulls the feed live once for that order. A feed outage counts as "not found".
+
+### 12.3 Where it shows
+- **Admin order page:** chip with source and CCPC ref, plus a mismatch warning when a typed SKU differs from the latest feed.
+- **Admin list:** the SKU in the client column.
+- **Distributor page and list:** the SKU card, and the "SKU needed" badge.
+- **PCO label:** the second line reads `Total Order: 6 Cases  CD SKU CDR…`. Otherwise the label is unchanged.
+- **Not on the Zoho invoice**, by decision.
+
+## 13. Notes on the Timeline
+
+*Added September 2026.*
+
+Every order page (partner, distributor, admin) has a note box above its Activity Timeline. A note is a row in `private_client_order_activity_logs`:
+
+| action | Seen by | Notified |
+|--------|---------|----------|
+| `note_added` | Partner, distributor, C&C | The other two sides: in-app, plus email once the Loops template is set |
+| `internal_note_added` (C&C only) | C&C only | Other C&C users |
+
+- Internal notes are filtered out of `ordersGetOne`, `distributorGetOne` and the partner activity feed (`partnerGetActivity`).
+- Each route only reaches the caller's own orders: `addNote` for the partner, `distributorAddNote` for the assigned distributor, `adminAddNote` for any order.
+- Notes are limited to 2,000 characters, and line breaks are kept.
+- **Email:** set `PCO_NOTE_EMAIL_TEMPLATE_ID` in `_privateClientOrders/constants.ts` to a Loops transactional template with the variables `recipientName`, `orderNumber`, `authorParty`, `authorName`, `note` and `orderUrl`. While it is null, alerts are in-app only.
+
 ---
 
 ## Appendix A: Database Schema Reference
@@ -1213,6 +1269,7 @@ privateClientOrders
 ├── partnerInvoiceAcknowledgedAt
 ├── scheduledDeliveryDate, deliverySignature, deliveryPhoto
 ├── subscriptionTier, subscriptionCaseSize, subscriptionVariant (§11)
+├── distributorSku, distributorRef, distributorSkuSource, distributorSkuSetAt/By (§12)
 └── [all timestamp fields]
 ```
 
@@ -1257,6 +1314,8 @@ privateClientOrderItems
 | `adminSetSubscriptionBox` / `setSubscriptionBox` | Admin / Partner (club) | Tag or clear an order's subscription box |
 | `adminGetSubscriptionBoxes` / `getSubscriptionBoxes` | Admin / Partner | Boxes in use, with counts |
 | `subscriptionAccess` | Partner | Whether the partner's club tools are on |
+| `distributorSetSku` / `adminSetDistributorSku` | Distributor / Admin | Record or correct the bundle SKU (§12) |
+| `addNote` / `distributorAddNote` / `adminAddNote` | Partner / Distributor / Admin | Add a note to the timeline; admin may make it internal (§13) |
 
 ---
 
