@@ -377,6 +377,11 @@ const AdminPrivateOrdersPage = () => {
                                 <Typography variant="bodyXs" colorRole="muted">
                                   {order.clientEmail || '-'}
                                 </Typography>
+                                {order.distributorSku && (
+                                  <Typography variant="bodyXs" colorRole="muted" className="font-mono">
+                                    SKU {order.distributorSku}
+                                  </Typography>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">

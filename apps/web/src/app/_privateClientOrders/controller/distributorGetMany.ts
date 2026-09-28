@@ -14,7 +14,7 @@ import getOrdersSchema from '../schemas/getOrdersSchema';
  */
 const distributorGetMany = distributorProcedure
   .input(getOrdersSchema)
-  .query(async ({ input, ctx: { partnerId } }) => {
+  .query(async ({ input, ctx: { partnerId, partner } }) => {
     const { limit, cursor, search, status } = input;
 
     // Build where conditions - always filter by distributorId for data isolation
@@ -101,6 +101,8 @@ const distributorGetMany = distributorProcedure
         totalCount,
         nextCursor,
         hasMore: nextCursor !== null,
+        // Whether this distributor records a bundle SKU on each order
+        requiresOrderSku: partner.requiresOrderSku,
       },
     };
   });

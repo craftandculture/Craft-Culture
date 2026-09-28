@@ -28,3 +28,23 @@ export const SUBSCRIPTION_CASE_SIZES = [3, 6] as const;
  * added to these, so a new one typed once is offered from then on.
  */
 export const SUBSCRIPTION_DEFAULT_VARIANTS = ['Mix', 'B and B'] as const;
+
+/**
+ * From client payment onwards the distributor's bundle SKU is what was
+ * invoiced against: the distributor can no longer change it (C&C still can),
+ * and an order in these statuses no longer asks for one.
+ */
+export const DISTRIBUTOR_SKU_LOCKED_STATUSES: readonly string[] = [
+  'client_paid',
+  'awaiting_distributor_payment',
+  'distributor_paid',
+  'awaiting_partner_payment',
+  'partner_paid',
+  'scheduling_delivery',
+  'delivery_scheduled',
+  'stock_in_transit',
+  'with_distributor',
+  'out_for_delivery',
+  'delivered',
+  'cancelled',
+];

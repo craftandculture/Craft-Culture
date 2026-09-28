@@ -11,6 +11,7 @@ import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
+import assertDistributorSku from '../utils/assertDistributorSku';
 import ensureClientVerified from '../utils/ensureClientVerified';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
@@ -60,6 +61,11 @@ const adminUpdateStatus = wmsOperatorProcedure
     }
 
     const previousStatus = order.status;
+
+    // Checked before the update: client_paid also triggers the Zoho invoice
+    if (status === 'client_paid' && previousStatus !== 'client_paid') {
+      await assertDistributorSku(orderId);
+    }
 
     // Update the order status
     const [updated] = await db

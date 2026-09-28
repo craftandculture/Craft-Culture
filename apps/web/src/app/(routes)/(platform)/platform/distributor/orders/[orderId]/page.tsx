@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DeliveryPhotoUpload from '@/app/_privateClientOrders/components/DeliveryPhotoUpload';
+import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockReceiptConfirmation from '@/app/_privateClientOrders/components/StockReceiptConfirmation';
@@ -488,6 +489,21 @@ const DistributorOrderDetailPage = () => {
         </div>
 
         {/* Workflow Stepper */}
+        {/* First thing on a received order: the bundle SKU in their system */}
+        {order.distributor?.requiresOrderSku && (
+          <DistributorSkuCard
+            key={order.distributorSku ?? 'none'}
+            audience="distributor"
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            status={order.status}
+            distributorName={order.distributor.businessName}
+            sku={order.distributorSku}
+            source={order.distributorSkuSource}
+            distributorRef={order.distributorRef}
+          />
+        )}
+
         <WorkflowStepper order={order} />
 
         {/* Distributor Verification Prompt - shown when awaiting distributor verification */}

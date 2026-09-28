@@ -434,6 +434,12 @@ export const partners = pgTable(
      * fulfils them. Off for every other partner.
      */
     subscriptionsEnabled: boolean('subscriptions_enabled').notNull().default(false),
+    /**
+     * Distributor-only: the distributor sells each PCO as its own product and
+     * must record that product's SKU on the order before it can be marked
+     * client-paid (City Drinks). Off for every other partner.
+     */
+    requiresOrderSku: boolean('requires_order_sku').notNull().default(false),
     // Distributor code for payment references (e.g., 'CD', 'TBS')
     distributorCode: text('distributor_code'),
     // Finance department email for proforma invoices (distributors only)
@@ -1312,6 +1318,25 @@ export const privateClientOrders = pgTable(
     subscriptionTier: text('subscription_tier'),
     subscriptionCaseSize: integer('subscription_case_size'),
     subscriptionVariant: text('subscription_variant'),
+
+    /**
+     * The distributor's own product for this order. City Drinks sells each
+     * PCO as one bundle product named after the PCO number, with its own SKU
+     * (`CDR` + 10 digits) — the code their system, their stock feed and our
+     * PCO label all use for this delivery. Filled from their daily feed where
+     * the bundle already exists, otherwise typed by the distributor when they
+     * receive the order; required before the order can be marked client-paid
+     * when the distributor has `requiresOrderSku`.
+     */
+    distributorSku: text('distributor_sku'),
+    /** The distributor's reference for the bundle, e.g. City Drinks' "CCPC21" */
+    distributorRef: text('distributor_ref'),
+    /** Where the SKU came from: 'cd_feed' | 'distributor' | 'admin' */
+    distributorSkuSource: text('distributor_sku_source'),
+    distributorSkuSetAt: timestamp('distributor_sku_set_at', { mode: 'date' }),
+    distributorSkuSetBy: uuid('distributor_sku_set_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
 
     ...timestamps,
   },

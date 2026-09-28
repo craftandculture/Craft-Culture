@@ -11,6 +11,8 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import assertDistributorSku from '../utils/assertDistributorSku';
+
 const distributorPaymentVerificationSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
@@ -48,6 +50,9 @@ const ordersDistributorPaymentVerification = distributorProcedure
         message: `Cannot verify payment for order with status "${order.status}". Order must be awaiting payment verification.`,
       });
     }
+
+    // The distributor's bundle SKU must be on the order (City Drinks)
+    await assertDistributorSku(order.id);
 
     const previousStatus = order.status;
     const newStatus = 'client_paid';

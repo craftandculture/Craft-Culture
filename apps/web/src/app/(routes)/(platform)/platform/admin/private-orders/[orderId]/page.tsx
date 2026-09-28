@@ -31,6 +31,7 @@ import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
+import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
@@ -624,6 +625,22 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* The distributor's bundle SKU (City Drinks), with its source */}
+        {order.distributor?.requiresOrderSku && (
+          <DistributorSkuCard
+            key={order.distributorSku ?? 'none'}
+            audience="admin"
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            status={order.status}
+            distributorName={order.distributor.businessName}
+            sku={order.distributorSku}
+            source={order.distributorSkuSource}
+            distributorRef={order.distributorRef}
+            feedSku={order.feedBundle?.sku ?? null}
+          />
+        )}
 
         {/* Which subscription box this order is — what the clone tool keys on */}
         <SubscriptionBoxPicker

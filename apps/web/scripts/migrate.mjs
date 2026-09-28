@@ -1746,6 +1746,64 @@ const runMigrations = async () => {
     }
     console.log('✅ Partner subscriptions flag ready');
 
+    /*
+      The distributor's bundle SKU for each PCO. City Drinks sells every PCO
+      as one product named after the PCO number, with its own CDR SKU; it goes
+      on the order (and the PCO label), and City Drinks must record it before
+      the order can be marked client-paid.
+
+      requires_order_sku is switched on for City Drinks once, on the run that
+      creates the column, so switching it off later sticks. The same run links
+      the City Drinks outlet (whose feed lists the bundles) to its partner
+      record, which nothing had done.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "distributor_sku" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "distributor_ref" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "distributor_sku_source" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "distributor_sku_set_at" timestamp`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "distributor_sku_set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL`,
+    );
+    const [orderSkuColumn] = await client`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'partners' AND column_name = 'requires_order_sku'
+    `;
+    await client.unsafe(
+      `ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "requires_order_sku" boolean NOT NULL DEFAULT false`,
+    );
+    if (!orderSkuColumn) {
+      await dataFix('Require order SKUs from City Drinks', async () => {
+        const cityDrinks = await client`
+          SELECT id FROM partners
+          WHERE type = 'distributor'
+            AND (UPPER(TRIM(distributor_code)) = 'CD'
+              OR LOWER(TRIM(business_name)) LIKE 'city drinks%')
+        `;
+        if (cityDrinks.length !== 1) {
+          console.log(`   ${cityDrinks.length} City Drinks partner(s) found — not switched on; set requires_order_sku by hand`);
+          return;
+        }
+        await client`
+          UPDATE partners SET requires_order_sku = true WHERE id = ${cityDrinks[0].id}
+        `;
+        const linked = await client`
+          UPDATE cons_outlets SET partner_id = ${cityDrinks[0].id}
+          WHERE slug = 'city-drinks' AND partner_id IS NULL
+          RETURNING id
+        `;
+        console.log(`   City Drinks requires order SKUs; ${linked.length} outlet linked`);
+      });
+    }
+    console.log('✅ PCO distributor SKU columns ready');
+
 
     /* ───────────────────────── CONSIGNMENT ─────────────────────────────
        Wine placed with a retail outlet on consignment. Separate from tri_*,

@@ -13,6 +13,7 @@ import {
 import { distributorProcedure } from '@/lib/trpc/procedures';
 import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 
+import assertDistributorSku from '../utils/assertDistributorSku';
 import ensureClientVerified from '../utils/ensureClientVerified';
 
 type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[number];
@@ -126,6 +127,9 @@ const distributorUpdateStatus = distributorProcedure
 
     // Check if invoice is required before confirming client payment
     if (status === 'client_paid') {
+      // The distributor's bundle SKU must be on the order (City Drinks)
+      await assertDistributorSku(orderId);
+
       const [invoice] = await db
         .select()
         .from(privateClientOrderDocuments)

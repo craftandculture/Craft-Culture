@@ -13,6 +13,8 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import getFeedBundleSku from '../data/getFeedBundleSku';
+
 /**
  * Get a single private client order by ID for admin view
  *
@@ -81,11 +83,22 @@ const adminGetOne = wmsOperatorProcedure
           logoUrl: partners.logoUrl,
           brandColor: partners.brandColor,
           requiresClientVerification: partners.requiresClientVerification,
+          requiresOrderSku: partners.requiresOrderSku,
         })
         .from(partners)
         .where(eq(partners.id, orderResult.order.distributorId));
       distributor = distResult ?? null;
     }
+
+    // What the distributor's own feed says this order's bundle SKU is, so a
+    // typed SKU that disagrees with their system shows on the order
+    const feedBundle =
+      distributor?.requiresOrderSku && orderResult.order.distributorId
+        ? await getFeedBundleSku(
+            orderResult.order.orderNumber,
+            orderResult.order.distributorId,
+          ).catch(() => null)
+        : null;
 
     // Get activity logs with user info
     const activityLogs = await db
@@ -111,6 +124,7 @@ const adminGetOne = wmsOperatorProcedure
       ...orderResult.order,
       partner: orderResult.partner,
       distributor,
+      feedBundle,
       client: orderResult.client,
       items,
       activityLogs: activityLogs.map((row) => ({

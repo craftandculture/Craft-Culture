@@ -32,6 +32,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+import { DISTRIBUTOR_SKU_LOCKED_STATUSES } from '../constants';
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
@@ -80,6 +81,14 @@ const DistributorOrdersList = () => {
         search: search || undefined,
       }),
   });
+
+  // An order this distributor has received but not yet given its bundle SKU
+  const requiresOrderSku = data?.meta.requiresOrderSku ?? false;
+  const needsSku = (order: { distributorSku: string | null; status: string }) =>
+    requiresOrderSku &&
+    !order.distributorSku &&
+    !DISTRIBUTOR_SKU_LOCKED_STATUSES.includes(order.status);
+  const skuNeededCount = (data?.data ?? []).filter(needsSku).length;
 
   const updateStatus = useMutation({
     mutationFn: (params: { orderId: string; status: string }) =>
@@ -271,9 +280,16 @@ const DistributorOrdersList = () => {
       accessorKey: 'orderNumber',
       header: 'Order #',
       cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-mono font-medium">
-          {row.original.orderNumber}
-        </Typography>
+        <div className="flex flex-col gap-1">
+          <Typography variant="bodySm" className="font-mono font-medium">
+            {row.original.orderNumber}
+          </Typography>
+          {needsSku(row.original) && (
+            <span className="w-fit rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+              SKU needed
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -403,6 +419,18 @@ const DistributorOrdersList = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      {skuNeededCount > 0 && (
+        <div className="rounded-lg border border-fill-warning/50 bg-fill-warning/5 px-3 py-2">
+          <Typography variant="bodySm" className="font-medium">
+            {skuNeededCount} order{skuNeededCount === 1 ? ' needs' : 's need'} your bundle SKU
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            Create the bundle under the PCO number and enter its SKU on the order.
+            Payment can&rsquo;t be confirmed until it&rsquo;s in.
+          </Typography>
+        </div>
+      )}
+
       {/* Status Filter Tabs */}
       <div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
         {statusFilters.map((filter) => {
@@ -560,6 +588,11 @@ const DistributorOrdersList = () => {
                       <Typography variant="bodyXs" colorRole="muted">
                         {order.partner?.businessName ?? '-'}
                       </Typography>
+                      {needsSku(order) && (
+                        <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+                          SKU needed
+                        </span>
+                      )}
                     </div>
                   </div>
                   <PrivateOrderStatusBadge status={order.status} />

@@ -1,8 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import linkBundleSkusFromFeed from '@/app/_privateClientOrders/utils/linkBundleSkusFromFeed';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import fetchCityDrinksStock from '../data/fetchCityDrinksStock';
 import writeSnapshot from '../data/writeSnapshot';
@@ -61,7 +63,23 @@ const adminPullOutletStock = adminProcedure
         const parsed = await fetchCityDrinksStock(outlet);
         const written = await writeSnapshot(client, outlet.id, parsed);
 
-        results.push({ outlet: outlet.name, ok: true as const, ...written });
+        // PCO bundles in the feed give their orders a distributor SKU; a
+        // failure here is logged, since the snapshot itself is already saved
+        let pcoSkusLinked = 0;
+        try {
+          const bundles = await linkBundleSkusFromFeed(client, {
+            outletId: outlet.id,
+            rows: parsed.rows,
+          });
+          pcoSkusLinked = bundles.linked;
+        } catch (error) {
+          logger.error('Linking PCO bundle SKUs failed', {
+            outlet: outlet.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        results.push({ outlet: outlet.name, ok: true as const, ...written, pcoSkusLinked });
       } catch (error) {
         results.push({
           outlet: outlet.name,

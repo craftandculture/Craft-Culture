@@ -16,6 +16,7 @@ import adminMarkPayment from './controller/adminMarkPayment';
 import adminMatchStockLwins from './controller/adminMatchStockLwins';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminSetDistributorSku from './controller/adminSetDistributorSku';
 import adminSetSubscriptionBox from './controller/adminSetSubscriptionBox';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
@@ -26,6 +27,7 @@ import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
 import distributorResendProformaInvoice from './controller/distributorResendProformaInvoice';
+import distributorSetSku from './controller/distributorSetSku';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
 import distributorUploadDeliveryPhoto from './controller/distributorUploadDeliveryPhoto';
 import documentsDelete from './controller/documentsDelete';
@@ -115,6 +117,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminCloneOrder,
   adminClonePreview,
   adminSetSubscriptionBox,
+  adminSetDistributorSku,
   adminGetSubscriptionBoxes,
   adminAddItem,
   adminMatchStockLwins,
@@ -151,6 +154,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorConfirmStockReceipt,
   distributorUploadDeliveryPhoto,
   distributorResendProformaInvoice,
+  distributorSetSku,
 
   // Delivery workflow (distributor)
   logContactAttempt: ordersLogContactAttempt,

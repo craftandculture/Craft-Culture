@@ -17,6 +17,7 @@ import { logger, schedules } from '@trigger.dev/sdk';
 
 import fetchCityDrinksStock from '@/app/_distribution/data/fetchCityDrinksStock';
 import writeSnapshot from '@/app/_distribution/data/writeSnapshot';
+import linkBundleSkusFromFeed from '@/app/_privateClientOrders/utils/linkBundleSkusFromFeed';
 import { triggerClient } from '@/trigger/triggerDb';
 
 interface OutletRow {
@@ -61,6 +62,20 @@ export const outletStockSyncJob = schedules.task({
 
         logger.info(`Pulled ${outlet.name}`, written);
         pulled.push({ outlet: outlet.name, ...written });
+
+        // PCO bundles in the feed give their orders a distributor SKU. A
+        // failure here must not cost the snapshot, which is already written.
+        try {
+          const bundles = await linkBundleSkusFromFeed(triggerClient, {
+            outletId: outlet.id,
+            rows: parsed.rows,
+          });
+          logger.info(`Linked PCO bundle SKUs from ${outlet.name}`, bundles);
+        } catch (error) {
+          logger.error(`Linking PCO bundle SKUs from ${outlet.name} failed`, {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
 
