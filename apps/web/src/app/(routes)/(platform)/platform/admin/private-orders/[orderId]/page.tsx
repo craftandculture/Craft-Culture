@@ -30,6 +30,7 @@ import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
+import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
@@ -586,6 +587,13 @@ const AdminPrivateOrderDetailPage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            <CloneOrderDialog
+              orderId={order.id}
+              orderNumber={order.orderNumber}
+              partnerId={order.partnerId}
+              clientId={order.clientId}
+            />
 
             <ZohoSalesOrderButton
               orderId={order.id}

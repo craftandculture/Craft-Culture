@@ -1,6 +1,8 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
+import adminCloneOrder from './controller/adminCloneOrder';
+import adminClonePreview from './controller/adminClonePreview';
 import adminCreate from './controller/adminCreate';
 import adminCreateZohoSalesOrder from './controller/adminCreateZohoSalesOrder';
 import adminDashboard from './controller/adminDashboard';
@@ -96,6 +98,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   // Admin procedures
   adminDashboard,
   adminCreate,
+  adminCloneOrder,
+  adminClonePreview,
   adminAddItem,
   adminMatchStockLwins,
   adminUpdateItem,
