@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -80,7 +80,13 @@ const ordersGetOne = winePartnerProcedure
       .from(privateClientOrderActivityLogs)
       .leftJoin(users, eq(privateClientOrderActivityLogs.userId, users.id))
       .leftJoin(partners, eq(privateClientOrderActivityLogs.partnerId, partners.id))
-      .where(eq(privateClientOrderActivityLogs.orderId, input.id))
+      .where(
+        and(
+          eq(privateClientOrderActivityLogs.orderId, input.id),
+          // C&C-only notes never reach the partner or distributor
+          ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+        ),
+      )
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
     return {

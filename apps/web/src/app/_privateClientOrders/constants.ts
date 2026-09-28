@@ -48,3 +48,13 @@ export const DISTRIBUTOR_SKU_LOCKED_STATUSES: readonly string[] = [
   'delivered',
   'cancelled',
 ];
+
+/**
+ * Loops transactional template for "a note was added to your PCO". Variables:
+ * recipientName, orderNumber, authorParty, authorName, note, orderUrl. Null
+ * until the template exists in Loops: notes then alert in-app only.
+ */
+export const PCO_NOTE_EMAIL_TEMPLATE_ID: string | null = null;
+
+/** Longest note accepted on a PCO timeline */
+export const PCO_NOTE_MAX_LENGTH = 2000;

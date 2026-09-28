@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
+import adminAddNote from './controller/adminAddNote';
 import adminCloneOrder from './controller/adminCloneOrder';
 import adminClonePreview from './controller/adminClonePreview';
 import adminCreate from './controller/adminCreate';
@@ -22,6 +23,7 @@ import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import checkLocalStock from './controller/checkLocalStock';
+import distributorAddNote from './controller/distributorAddNote';
 import distributorConfirmStockReceipt from './controller/distributorConfirmStockReceipt';
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
@@ -42,6 +44,7 @@ import itemsRemove from './controller/itemsRemove';
 import itemsUpdate from './controller/itemsUpdate';
 import itemsUpdateStockStatus from './controller/itemsUpdateStockStatus';
 import matchExtractedToLocalStock from './controller/matchExtractedToLocalStock';
+import ordersAddNote from './controller/ordersAddNote';
 import ordersAdminResetVerification from './controller/ordersAdminResetVerification';
 import ordersApprove from './controller/ordersApprove';
 import ordersApproveRevisions from './controller/ordersApproveRevisions';
@@ -83,6 +86,9 @@ const privateClientOrdersRouter = createTRPCRouter({
   partnerReinitiateVerification: ordersPartnerReinitiateVerification,
   partnerAcknowledgeInvoice: ordersPartnerAcknowledgeInvoice,
 
+  // Notes on the timeline, for the other parties
+  addNote: ordersAddNote,
+
   // Subscription boxes (partners running a club)
   subscriptionAccess: ordersSubscriptionAccess,
   clone: ordersClone,
@@ -120,6 +126,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminSetDistributorSku,
   adminGetSubscriptionBoxes,
   adminAddItem,
+  adminAddNote,
   adminMatchStockLwins,
   adminUpdateItem,
   adminRemoveItem,
@@ -155,6 +162,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorUploadDeliveryPhoto,
   distributorResendProformaInvoice,
   distributorSetSku,
+  distributorAddNote,
 
   // Delivery workflow (distributor)
   logContactAttempt: ordersLogContactAttempt,

@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
+import OrderNoteComposer from '@/app/_privateClientOrders/components/OrderNoteComposer';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import ProductPicker from '@/app/_privateClientOrders/components/ProductPicker';
@@ -1437,6 +1438,11 @@ const PrivateOrderDetailPage = () => {
             <Typography variant="headingSm" className="mb-3">
               Activity Timeline
             </Typography>
+            <OrderNoteComposer
+              audience="partner"
+              orderId={order.id}
+              distributorName={order.distributor?.businessName}
+            />
             <ActivityTimeline activities={order.activityLogs ?? []} />
           </CardContent>
         </Card>

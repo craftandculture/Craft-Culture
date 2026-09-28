@@ -79,6 +79,10 @@ interface StockStatusMetadata {
 /**
  * Check if activity is stock-related
  */
+/** A note someone wrote on the order, rather than a system event */
+const isNoteActivity = (action: string) =>
+  action === 'note_added' || action === 'internal_note_added';
+
 const isStockActivity = (action: string) => {
   return action === 'stock_status_updated' || action === 'stock_status_bulk_updated';
 };
@@ -106,6 +110,10 @@ const getActivityStyle = (action: string, metadata?: unknown): { icon: IconType;
     return { icon: IconPackage, colorRole: 'brand' };
   }
 
+  // Notes first: "note_added" would otherwise read as something created
+  if (isNoteActivity(action)) {
+    return { icon: IconMessage, colorRole: 'brand' };
+  }
   if (actionLower.includes('created') || actionLower.includes('added')) {
     return { icon: IconCirclePlus, colorRole: 'brand' };
   }
@@ -147,6 +155,8 @@ const getActivityStyle = (action: string, metadata?: unknown): { icon: IconType;
  * Format action text to be more readable
  */
 const formatAction = (action: string, metadata?: unknown): string => {
+  if (isNoteActivity(action)) return 'Note';
+
   // Stock status updates get special formatting
   if (isStockActivity(action) && metadata) {
     const stockMeta = metadata as StockStatusMetadata;
@@ -201,6 +211,11 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
   const hasMore = maxItems && sortedActivities.length > maxItems;
 
   const getActorName = (activity: ActivityWithUser) => {
+    // Notes name the side as well as the person, so it is clear who is asking
+    if (isNoteActivity(activity.action)) {
+      const side = activity.partner?.businessName ?? 'Craft & Culture';
+      return activity.user?.name ? `${activity.user.name} · ${side}` : side;
+    }
     if (activity.user?.name) return activity.user.name;
     if (activity.partner?.businessName) return activity.partner.businessName;
     return 'System';
@@ -253,6 +268,11 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
                   <Typography variant="bodyXs" colorRole="muted">
                     {formatActivityDate(activity.createdAt)}
                   </Typography>
+                  {activity.action === 'internal_note_added' && (
+                    <span className="rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+                      C&amp;C only
+                    </span>
+                  )}
                 </div>
 
                 {/* Stock-specific details: product name + status transition */}
@@ -287,7 +307,11 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
                 </Typography>
                 {activity.notes && (
                   <div className="mt-1 rounded bg-surface-secondary/50 px-2 py-1.5">
-                    <Typography variant="bodyXs" colorRole="muted">
+                    <Typography
+                      variant="bodyXs"
+                      colorRole={isNoteActivity(activity.action) ? undefined : 'muted'}
+                      className="whitespace-pre-wrap"
+                    >
                       {activity.notes}
                     </Typography>
                   </div>

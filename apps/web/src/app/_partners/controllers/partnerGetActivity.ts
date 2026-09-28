@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
@@ -171,7 +171,13 @@ const partnerGetActivity = winePartnerProcedure
         .leftJoin(users, eq(privateClientOrderActivityLogs.userId, users.id))
         // The order's partner, not the actor's — a change C&C made to their
         // order still happened to them.
-        .where(eq(privateClientOrders.partnerId, partner.id))
+        .where(
+          and(
+            eq(privateClientOrders.partnerId, partner.id),
+            // C&C-only notes never reach the partner
+            ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+          ),
+        )
         .orderBy(desc(privateClientOrderActivityLogs.createdAt))
         .limit(input.limit);
 

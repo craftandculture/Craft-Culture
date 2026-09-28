@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DeliveryPhotoUpload from '@/app/_privateClientOrders/components/DeliveryPhotoUpload';
 import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
+import OrderNoteComposer from '@/app/_privateClientOrders/components/OrderNoteComposer';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockReceiptConfirmation from '@/app/_privateClientOrders/components/StockReceiptConfirmation';
@@ -1258,6 +1259,12 @@ const DistributorOrderDetailPage = () => {
             <Typography variant="headingSm" className="mb-3">
               Activity Timeline
             </Typography>
+            <OrderNoteComposer
+              audience="distributor"
+              orderId={order.id}
+              partnerName={order.partner?.businessName}
+              distributorName={order.distributor?.businessName}
+            />
             <ActivityTimeline activities={order.activityLogs ?? []} />
           </CardContent>
         </Card>

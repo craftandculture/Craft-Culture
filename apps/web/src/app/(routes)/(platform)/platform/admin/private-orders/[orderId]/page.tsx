@@ -33,6 +33,7 @@ import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTime
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
+import OrderNoteComposer from '@/app/_privateClientOrders/components/OrderNoteComposer';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
@@ -1825,6 +1826,12 @@ const AdminPrivateOrderDetailPage = () => {
             <Typography variant="bodyXs" colorRole="muted" className="mb-4">
               Complete order history showing all actions by partners, distributors, and admins
             </Typography>
+            <OrderNoteComposer
+              audience="admin"
+              orderId={order.id}
+              partnerName={order.partner?.businessName}
+              distributorName={order.distributor?.businessName}
+            />
             <ActivityTimeline
               activities={
                 order.activityLogs?.filter((activity) => {
