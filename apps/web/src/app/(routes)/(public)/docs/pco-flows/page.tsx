@@ -919,6 +919,120 @@ const AdminTab = () => (
       />
     </div>
 
+    {/* Subscription boxes: tag one order per box, clone it for every member */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-2">
+        Subscription Boxes &amp; the Clone Tool
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-6">
+        For partners running a monthly club (e.g. Discovery or The Collector, in
+        cases of 3 or 6). Every member on the same box gets the same wines at
+        the same price, so you build and check one order per box, then clone it
+        for everyone else on that box. Available to C&amp;C admins and warehouse
+        operators.
+      </Typography>
+
+      <FlowStep
+        number={1}
+        title="Build one order per box"
+        description="At the start of the month, create a normal PCO for each box type (e.g. Discovery 3 · Mix, Discovery 6, Collector 3), using any member of that box as the client. Add the wines with LWINs, quantities and prices, and get it right: this is the only order per box you check line by line."
+        status="DRAFT"
+        actor="admin"
+      />
+
+      <FlowStep
+        number={2}
+        title="Tag it with its subscription box"
+        description="On the order page, use the Subscription box card below the progress steps: pick the Tier, the Case (3 or 6) and a Variant (Mix, B and B, or New variant… to type one), then Save. The card then shows the club price beside the order's client total, amber if they differ by more than 2%, so fix the lines before cloning if the box is over or under."
+        actor="admin"
+      />
+
+      <FlowStep
+        number={3}
+        title="Open Clone for clients"
+        description="Click Clone for clients at the top right of the order. The dialog title names the box you are cloning, e.g. Clone PCO-2026-00066 · Discovery 3 · Mix. If it names no box, close it and set the box first so the clones are tagged."
+        actor="admin"
+      />
+
+      <FlowStep
+        number={4}
+        title="Check the batch panel"
+        description="The right-hand panel keeps the batch in view. Each box shows bottles per box and the in-bond total, and warns if the box holds a different number of bottles from its case size (e.g. 36 in a case of 3 means the lines are entered as 6-bottle cases: fix the source order). Each wine shows needed/on hand with a tick, Short N in red if there is not enough stock, or No LWIN if the line cannot be checked; code it on the source order and every clone inherits it."
+        actor="admin"
+      />
+
+      <FlowStep
+        number={5}
+        title="Choose the members on this box"
+        description="On the left, tick saved clients (search by name, email or phone; Select all ticks everyone shown). Unverified clients are marked, and anyone who already has this box from the last 25 days is greyed out as Already has this box, so nobody gets two. For someone not on the list, click Add clients not on the list and paste one per line as Name, email, phone; they are saved to the partner's clients, so next month you just tick them. Everyone chosen appears as a chip under Cloning for N, where a click on the × removes them."
+        actor="admin"
+      />
+
+      <FlowStep
+        number={6}
+        title="Create the draft orders"
+        description="Click Create N draft orders. Each member gets a new draft PCO with exactly the source order's lines and prices, tagged with the same box, and totals calculated by the normal pricing engine. The dialog lists the new PCO numbers with links."
+        status="DRAFT"
+        actor="admin"
+      />
+
+      <FlowStep
+        number={7}
+        title="Adjust exceptions, then run the normal flow"
+        description="If a member has a swap (e.g. no white), open their clone and edit its lines. Then each order goes through the usual process: submit, review, distributor verification, payment, Zoho sales order, picking and delivery."
+        actor="admin"
+      />
+
+      <FlowStep
+        number={8}
+        title="Check the month's boxes are complete"
+        description="On the Private Orders list, each order shows its box as a tag next to the client. Use the Box filter (it shows a count per box, e.g. Discovery 3 · Mix (5)) to see the source order and all of its clones together and confirm nobody was missed."
+        actor="admin"
+        isLast
+      />
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {[
+          {
+            title: 'All or nothing',
+            desc: 'If anything fails, no orders are created, so you are never left with half a batch.',
+          },
+          {
+            title: 'No duplicates',
+            desc: 'The same client twice in one batch is refused, so nobody gets two boxes.',
+          },
+          {
+            title: 'Pinned stock is not copied',
+            desc: 'A line pinned to a specific parcel keeps its pin on the source only, so clones never claim the same bottles.',
+          },
+          {
+            title: 'Traceable',
+            desc: 'Each clone’s C&C notes read “Cloned from PCO-…”, naming the order it was copied from.',
+          },
+          {
+            title: 'Stock is on-hand only',
+            desc: 'The preview does not subtract other open orders. Treat a tight figure as tight.',
+          },
+          {
+            title: 'Tag orders created earlier',
+            desc: 'Orders cloned before box tags existed have no box. Set it on each by hand.',
+          },
+        ].map((item) => (
+          <div key={item.title} className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+            <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+            <div>
+              <Typography variant="bodySm" className="font-medium">
+                {item.title}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {item.desc}
+              </Typography>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
     {/* Admin Capabilities */}
     <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
       <Typography variant="headingSm" className="mb-4">
@@ -935,6 +1049,8 @@ const AdminTab = () => (
           { title: 'Assign Distributors', desc: 'Select distributor for fulfillment' },
           { title: 'Reset Verification', desc: 'Override verification status if needed' },
           { title: 'Confirm Payments', desc: 'Record distributor and partner payments' },
+          { title: 'Tag Subscription Boxes', desc: 'Name the tier, case and variant an order is' },
+          { title: 'Clone Orders', desc: 'Copy one checked box order for every member on it' },
         ].map((item) => (
           <div key={item.title} className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
             <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />

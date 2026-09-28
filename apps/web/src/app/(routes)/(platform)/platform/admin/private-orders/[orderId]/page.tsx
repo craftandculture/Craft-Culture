@@ -39,7 +39,6 @@ import StockManagementSection from '@/app/_privateClientOrders/components/StockM
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
-import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -595,7 +594,9 @@ const AdminPrivateOrderDetailPage = () => {
               orderNumber={order.orderNumber}
               partnerId={order.partnerId}
               clientId={order.clientId}
-              boxLabel={formatSubscriptionBox(order)}
+              subscriptionTier={order.subscriptionTier}
+              subscriptionCaseSize={order.subscriptionCaseSize}
+              subscriptionVariant={order.subscriptionVariant}
             />
 
             <ZohoSalesOrderButton
