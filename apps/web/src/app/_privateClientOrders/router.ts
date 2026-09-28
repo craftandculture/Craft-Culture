@@ -2,6 +2,8 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
 import adminAddNote from './controller/adminAddNote';
+import adminBulkAssignDistributor from './controller/adminBulkAssignDistributor';
+import adminBulkUpdateStockStatus from './controller/adminBulkUpdateStockStatus';
 import adminCloneOrder from './controller/adminCloneOrder';
 import adminClonePreview from './controller/adminClonePreview';
 import adminCreate from './controller/adminCreate';
@@ -127,6 +129,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminGetSubscriptionBoxes,
   adminAddItem,
   adminAddNote,
+  adminBulkAssignDistributor,
+  adminBulkUpdateStockStatus,
   adminMatchStockLwins,
   adminUpdateItem,
   adminRemoveItem,

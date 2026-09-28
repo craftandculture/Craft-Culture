@@ -1,4 +1,5 @@
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -17,6 +18,8 @@ const adminGetOrdersSchema = z.object({
   search: z.string().optional(),
   status: privateClientOrderStatusEnum.optional(),
   partnerId: z.string().uuid().optional(),
+  /** A distributor's orders, or 'unassigned' for orders with none */
+  distributor: z.union([z.literal('unassigned'), z.string().uuid()]).optional(),
   /** One subscription box; a null variant means the box with no variant */
   box: z
     .object({
@@ -32,10 +35,13 @@ const adminGetOrdersSchema = z.object({
  *
  * Admins can see all orders across all partners with filtering options.
  */
+/** The order's distributor, joined alongside its partner */
+const distributorPartner = alias(partners, 'distributor_partner');
+
 const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, search, status, partnerId, box } = input;
+    const { limit, cursor, search, status, partnerId, box, distributor } = input;
 
     // Build where conditions
     const conditions = [];
@@ -46,6 +52,14 @@ const adminGetMany = wmsOperatorProcedure
 
     if (partnerId) {
       conditions.push(eq(privateClientOrders.partnerId, partnerId));
+    }
+
+    if (distributor) {
+      conditions.push(
+        distributor === 'unassigned'
+          ? isNull(privateClientOrders.distributorId)
+          : eq(privateClientOrders.distributorId, distributor),
+      );
     }
 
     if (box) {
@@ -93,9 +107,17 @@ const adminGetMany = wmsOperatorProcedure
           id: privateClientContacts.id,
           cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
         },
+        distributor: {
+          id: distributorPartner.id,
+          businessName: distributorPartner.businessName,
+        },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+      .leftJoin(
+        distributorPartner,
+        eq(privateClientOrders.distributorId, distributorPartner.id),
+      )
       .leftJoin(
         privateClientContacts,
         eq(privateClientOrders.clientId, privateClientContacts.id),
@@ -110,6 +132,7 @@ const adminGetMany = wmsOperatorProcedure
       ...row.order,
       partner: row.partner,
       client: row.client,
+      distributor: row.distributor?.id ? row.distributor : null,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;

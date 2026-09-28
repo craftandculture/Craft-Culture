@@ -24,6 +24,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
@@ -73,6 +74,12 @@ const AdminPrivateOrdersPage = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   // One subscription box, stored as its index in `boxes` ('all' for none)
   const [boxFilter, setBoxFilter] = useState('all');
+  // 'all', 'unassigned', or a distributor's id
+  const [distributorFilter, setDistributorFilter] = useState('all');
+  // Orders ticked for a bulk action
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDistributorId, setBulkDistributorId] = useState('');
+  const [bulkStockStatus, setBulkStockStatus] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -81,12 +88,17 @@ const AdminPrivateOrdersPage = () => {
   );
   const selectedBox = boxFilter === 'all' ? undefined : boxes[Number(boxFilter)];
 
+  const { data: distributors = [] } = useQuery(
+    api.partners.getMany.queryOptions({ type: 'distributor', status: 'active' }),
+  );
+
   // Fetch orders
   const { data, isLoading, refetch, isFetching } = useQuery({
     ...api.privateClientOrders.adminGetMany.queryOptions({
       limit: 50,
       search: searchQuery || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
+      distributor: distributorFilter === 'all' ? undefined : distributorFilter,
       box: selectedBox
         ? {
             tier: selectedBox.tier,
@@ -102,6 +114,42 @@ const AdminPrivateOrdersPage = () => {
   const handleRefresh = () => {
     void refetch();
   };
+
+  // Bulk actions: each order is handled exactly as it would be on its own page
+  const onBulkDone = (label: string) => ({
+    onSuccess: (result: {
+      succeeded: number;
+      failed: { orderNumber: string; message?: string }[];
+    }) => {
+      if (result.succeeded > 0) {
+        toast.success(`${label}: ${result.succeeded} order${result.succeeded === 1 ? '' : 's'}`);
+      }
+      for (const failure of result.failed) {
+        toast.error(`${failure.orderNumber}: ${failure.message ?? 'failed'}`);
+      }
+      setSelected(new Set());
+      void refetch();
+    },
+    onError: (error: { message: string }) => toast.error(error.message),
+  });
+  const bulkAssign = useMutation(
+    api.privateClientOrders.adminBulkAssignDistributor.mutationOptions(
+      onBulkDone('Distributor assigned'),
+    ),
+  );
+  const bulkStock = useMutation(
+    api.privateClientOrders.adminBulkUpdateStockStatus.mutationOptions(
+      onBulkDone('Stock status updated'),
+    ),
+  );
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Update status mutation
   const { mutate: updateStatus, isPending: isUpdating } = useMutation(
@@ -228,6 +276,22 @@ const AdminPrivateOrdersPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="w-full sm:w-52">
+                <Select value={distributorFilter} onValueChange={setDistributorFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Distributor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All distributors</SelectItem>
+                    <SelectItem value="unassigned">No distributor yet</SelectItem>
+                    {distributors.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.businessName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {boxes.length > 0 && (
                 <div className="w-full sm:w-56">
                   <Select value={boxFilter} onValueChange={setBoxFilter}>
@@ -269,7 +333,7 @@ const AdminPrivateOrdersPage = () => {
                 No Orders Found
               </Typography>
               <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all'
+                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all'
                   ? 'No orders match your filters. Try adjusting your search.'
                   : 'No private client orders have been created yet.'}
               </Typography>
@@ -283,6 +347,19 @@ const AdminPrivateOrdersPage = () => {
                 <table className="w-full">
                   <thead className="border-b border-border-muted">
                     <tr>
+                      <th className="w-10 py-3 pl-4">
+                        <Checkbox
+                          aria-label="Select all shown"
+                          checked={
+                            orders.length > 0 && orders.every((o) => selected.has(o.id))
+                          }
+                          onCheckedChange={(checked) =>
+                            setSelected(
+                              checked === true ? new Set(orders.map((o) => o.id)) : new Set(),
+                            )
+                          }
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary">
                         Order
                       </th>
@@ -321,6 +398,13 @@ const AdminPrivateOrdersPage = () => {
                             className="cursor-pointer hover:bg-surface-muted"
                             onClick={() => toggleExpanded(order.id)}
                           >
+                            <td className="w-10 py-4 pl-4" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                aria-label={`Select ${order.orderNumber}`}
+                                checked={selected.has(order.id)}
+                                onCheckedChange={() => toggleSelected(order.id)}
+                              />
+                            </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <Icon
@@ -351,6 +435,15 @@ const AdminPrivateOrdersPage = () => {
                                 <Typography variant="bodyXs" className="text-center">
                                   {order.partner?.businessName ?? 'Unknown'}
                                 </Typography>
+                                {order.distributor ? (
+                                  <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                                    → {order.distributor.businessName}
+                                  </Typography>
+                                ) : (
+                                  <span className="rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+                                    No distributor
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -417,7 +510,7 @@ const AdminPrivateOrdersPage = () => {
                           </tr>
                           {isExpanded && (
                             <tr key={`${order.id}-details`} className="bg-surface-muted">
-                              <td colSpan={8} className="px-6 py-4">
+                              <td colSpan={9} className="px-6 py-4">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                                   {/* Update Status */}
                                   <div>
@@ -531,6 +624,13 @@ const AdminPrivateOrdersPage = () => {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                aria-label={`Select ${order.orderNumber}`}
+                                checked={selected.has(order.id)}
+                                onCheckedChange={() => toggleSelected(order.id)}
+                              />
+                            </span>
                             <Icon
                               icon={isExpanded ? IconChevronUp : IconChevronDown}
                               size="sm"
@@ -582,7 +682,12 @@ const AdminPrivateOrdersPage = () => {
                               )}
                             </div>
                             <Typography variant="bodyXs" colorRole="muted">
-                              {order.itemCount ?? 0} items · {order.caseCount ?? 0} cases
+                              {order.itemCount ?? 0} items · {order.caseCount ?? 0} cases ·{' '}
+                              {order.distributor ? (
+                                `→ ${order.distributor.businessName}`
+                              ) : (
+                                <span className="text-text-warning">No distributor</span>
+                              )}
                             </Typography>
                           </div>
                           <Typography variant="bodySm" className="font-semibold">
@@ -661,6 +766,92 @@ const AdminPrivateOrdersPage = () => {
           </Card>
         )}
       </div>
+    
+      {/* Bulk actions for the ticked orders */}
+      {selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+          <div className="flex w-full max-w-4xl flex-wrap items-center gap-3 rounded-xl border border-border-primary bg-fill-primary px-4 py-3 shadow-lg">
+            <Typography variant="bodySm" className="font-medium">
+              {selected.size} selected
+            </Typography>
+
+            <div className="flex items-center gap-2">
+              <Select value={bulkDistributorId} onValueChange={setBulkDistributorId}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Assign distributor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {distributors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.businessName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                colorRole="brand"
+                disabled={!bulkDistributorId || bulkAssign.isPending}
+                onClick={() =>
+                  bulkAssign.mutate({
+                    orderIds: [...selected],
+                    distributorId: bulkDistributorId,
+                  })
+                }
+              >
+                {bulkAssign.isPending ? 'Assigning…' : 'Assign'}
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select value={bulkStockStatus} onValueChange={setBulkStockStatus}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Set stock status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    ['confirmed', 'Confirmed'],
+                    ['in_transit_to_cc', 'In transit to C&C'],
+                    ['at_cc_bonded', 'At C&C bonded'],
+                    ['at_cc_ready_for_dispatch', 'Packed'],
+                    ['in_transit_to_distributor', 'In transit to distributor'],
+                    ['at_distributor', 'At distributor'],
+                    ['delivered', 'Delivered'],
+                  ].map(([value, label]) => (
+                    <SelectItem key={value} value={value!}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                colorRole="brand"
+                disabled={!bulkStockStatus || bulkStock.isPending}
+                onClick={() =>
+                  bulkStock.mutate({
+                    orderIds: [...selected],
+                    stockStatus: bulkStockStatus as
+                      | 'confirmed'
+                      | 'in_transit_to_cc'
+                      | 'at_cc_bonded'
+                      | 'at_cc_ready_for_dispatch'
+                      | 'in_transit_to_distributor'
+                      | 'at_distributor'
+                      | 'delivered',
+                  })
+                }
+              >
+                {bulkStock.isPending ? 'Updating…' : 'Apply'}
+              </Button>
+            </div>
+
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
