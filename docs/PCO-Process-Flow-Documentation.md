@@ -19,6 +19,7 @@
 8. [Verification Flows](#8-verification-flows)
 9. [Notifications](#9-notifications)
 10. [Status Reference](#10-status-reference)
+11. [Subscription Boxes & Cloning](#11-subscription-boxes--cloning)
 
 ---
 
@@ -1113,6 +1114,82 @@ Each status transition records a timestamp:
 
 ---
 
+## 11. Subscription Boxes & Cloning
+
+*Added September 2026.*
+
+Some wine partners run a monthly subscription club, e.g. Cru Wine's Cellar Club: **Discovery** or **The Collector**, in a **case of 3 or 6**, at an all-in AED price (Discovery 570 / 1,075, The Collector 1,450 / 2,710). Every member on the same box gets the same wines at the same price, so a month's boxes are built from one checked order per box, not keyed one by one.
+
+The intent is that the **partner enters its own boxes**, and C&C picks up at review, invoicing and fulfilment.
+
+### 11.1 Who can use it
+
+| Actor | Where | Scope |
+|-------|-------|-------|
+| C&C admin / warehouse operator | Admin order page | Any partner's orders and clients |
+| Wine partner with `subscriptionsEnabled` | Partner order page | Its own orders and clients only |
+
+`partners.subscriptions_enabled` is off for every partner by default. It was switched on for **Cru Wine** once, on the deploy that created the column (`migrate.mjs`). There is no admin toggle yet, so enable another partner in the database.
+
+### 11.2 Subscription box tag
+
+Each order can carry a box, set in the **Subscription box** card under the progress steps:
+
+| Field | Column | Values |
+|-------|--------|--------|
+| Tier | `subscription_tier` | `discovery`, `collector` |
+| Case | `subscription_case_size` | 3, 6 |
+| Variant | `subscription_variant` | Optional free text, e.g. Mix, B and B; variants already used are offered in the dropdown |
+
+The tag is a label only: it does not change pricing or workflow. Once set, the card shows the **club price beside the order's client total** (amber when they differ by more than 2%). The order list shows the box as a tag and has a **Box** filter with a count per box. Options live in `_privateClientOrders/constants.ts`.
+
+### 11.3 Monthly flow
+
+```
+┌──────────────────────────┐
+│ Build ONE order per box  │  e.g. Discovery 3 · Mix, Discovery 6, Collector 3
+│ (normal draft PCO)       │  check wines, LWINs, bottles, prices
+└────────────┬─────────────┘
+             ▼
+┌──────────────────────────┐
+│ Tag it with its box      │  Tier / Case / Variant; check club price
+└────────────┬─────────────┘
+             ▼
+┌──────────────────────────┐
+│ Clone for clients        │  preview: bottles per box, needed vs on hand
+│                          │  tick members / paste new ones
+└────────────┬─────────────┘
+             ▼
+┌──────────────────────────┐
+│ N draft orders created   │  same lines, prices and box tag
+│                          │  edit any member's swaps
+└────────────┬─────────────┘
+             ▼
+   Normal PCO flow per order (submit → C&C review → distributor → Zoho → pick → deliver)
+```
+
+### 11.4 Clone rules
+
+- **Exact copy:** lines (product, LWIN, bottle size, case config, source, quantity, price) and the box tag are copied. Each clone's `ccNotes` reads "Cloned from PCO-…". Totals are recalculated by the pricing engine.
+- **Not copied:** `sourceStockId` / `sourceLotNumber` (a parcel pin would promise the same bottles to every clone). Stock status restarts at `pending`.
+- **All or nothing:** one transaction; a failure creates no orders.
+- **No double shipment:** the same client twice in a batch is refused, and clients who already have an order for the same box (same partner, not cancelled) from the last **25 days** are greyed out in the dialog.
+- **Clients:** saved clients are read from their record. Pasted "Name, email, phone" lines are resolved with `findOrCreateClientForPartner`, so they join the partner's client list. Up to 60 clones per batch.
+- **Stock preview:** bottles = quantity × case config (the same rule as the Zoho sales order), counted across every pack of the wine. It shows on-hand stock only and does not subtract other open orders.
+- Clones are **drafts**. A partner still submits each one, and C&C review still applies.
+
+### 11.5 Code map
+
+| Piece | File |
+|-------|------|
+| Clone logic (shared) | `utils/cloneOrderForClients.ts` |
+| Preview + "already has this box" (shared) | `utils/buildClonePreview.ts` |
+| Box tag (shared) | `utils/setSubscriptionBox.ts`, `data/getSubscriptionBoxes.ts`, `schemas/subscriptionBoxSchema.ts` |
+| Partner gate | `utils/assertSubscriptionsEnabled.ts` |
+| Dialog / picker | `components/CloneOrderDialog.tsx`, `components/SubscriptionBoxPicker.tsx` (`audience: 'admin' \| 'partner'`) |
+
+---
+
 ## Appendix A: Database Schema Reference
 
 ### Orders Table Fields
@@ -1135,6 +1212,7 @@ privateClientOrders
 ├── distributorVerificationResponse, distributorVerificationAt
 ├── partnerInvoiceAcknowledgedAt
 ├── scheduledDeliveryDate, deliverySignature, deliveryPhoto
+├── subscriptionTier, subscriptionCaseSize, subscriptionVariant (§11)
 └── [all timestamp fields]
 ```
 
@@ -1174,6 +1252,11 @@ privateClientOrderItems
 | `ordersMarkDelivered` | Distributor | Complete delivery |
 | `documentsUpload` | Any | Upload documents |
 | `ordersPartnerAcknowledgeInvoice` | Partner | Acknowledge invoice |
+| `adminCloneOrder` / `clone` | Admin / Partner (club) | Clone an order for a list of clients (§11) |
+| `adminClonePreview` / `clonePreview` | Admin / Partner (club) | Bottles per box, needed vs on hand, clients with the box |
+| `adminSetSubscriptionBox` / `setSubscriptionBox` | Admin / Partner (club) | Tag or clear an order's subscription box |
+| `adminGetSubscriptionBoxes` / `getSubscriptionBoxes` | Admin / Partner | Boxes in use, with counts |
+| `subscriptionAccess` | Partner | Whether the partner's club tools are on |
 
 ---
 

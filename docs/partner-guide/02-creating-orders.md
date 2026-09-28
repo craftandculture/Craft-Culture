@@ -185,6 +185,42 @@ Not ready to submit? Your order is automatically saved as a **Draft**.
 
 ---
 
+## Subscription Boxes (Club Partners)
+
+If you run a monthly subscription club, your account can be switched on for **subscription boxes**. You then build one order per box each month and copy it for every member on that box, instead of entering each member's order separately. Ask C&C to enable it.
+
+### 1. Build one order per box
+
+Create a normal order for each box you're sending this month, e.g. *Discovery 3 · Mix*, *Discovery 6*, *Collector 3*. Use any member of that box as the client. Get the wines, quantities and prices right: this is the only order per box you need to check line by line.
+
+### 2. Tag it with its box
+
+On the order page, in the **Subscription box** card:
+
+- **Tier:** Discovery or The Collector
+- **Case:** 3 or 6
+- **Variant:** Mix, B and B, or **New variant…** to type your own
+
+Click **Save**. The card then shows your **club price next to this order's client total**. If the line is amber, the box costs noticeably more or less than you charge members, so adjust the wines before copying it.
+
+### 3. Clone it for your members
+
+Click **Clone for clients** at the top of the order.
+
+- **Left:** tick your members (search by name, email or phone, or **Select all**). For someone new, click **Add clients not on the list** and paste one per line as `Name, email, phone`; they are saved to your clients for next month.
+- **Right:** check the box is the right number of bottles, and that every wine shows a ✓ (enough stock) rather than **Short**.
+- Members who already have this box in the last few weeks are greyed out, so nobody gets two.
+
+Click **Create N draft orders**. Each member gets their own draft order with the same wines, prices and box tag.
+
+### 4. Submit
+
+Open any member who needs a swap (e.g. no white) and edit their order. Then **Submit for Review** on each order as usual. C&C reviews them and takes care of invoicing and fulfilment.
+
+**Tip:** On your order list, every order shows its box tag, so you can see at a glance that each member on a box has an order this month.
+
+---
+
 ## Tips for Faster Approval
 
 1. **Complete all fields** - Missing information causes delays

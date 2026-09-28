@@ -568,6 +568,38 @@ const PartnerTab = () => (
         full details.
       </Typography>
     </div>
+
+    {/* Club partners: one order per box, cloned for every member */}
+    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6">
+      <Typography variant="headingSm" className="mb-2">
+        Running a Subscription Club?
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+        If your account has subscription boxes switched on (ask C&amp;C), you build
+        one order per box each month and copy it for every member, instead of
+        entering each member separately.
+      </Typography>
+      <ol className="space-y-2">
+        {[
+          'Build one order per box (e.g. Discovery 3 · Mix) and check its wines and prices.',
+          'Tag it in the Subscription box card: Tier, Case (3 or 6) and Variant. Check the club price against the order total.',
+          'Click Clone for clients, tick your members (or paste new ones as Name, email, phone) and check every wine shows a ✓ for stock.',
+          'Create the draft orders, edit any member’s swaps, then Submit for Review on each.',
+        ].map((step, index) => (
+          <li key={step} className="flex items-start gap-3">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[11px] font-semibold text-white">
+              {index + 1}
+            </span>
+            <Typography variant="bodyXs">{step}</Typography>
+          </li>
+        ))}
+      </ol>
+      <Typography variant="bodyXs" colorRole="muted" className="mt-4">
+        Members who already have this box in the last few weeks are greyed out, so
+        nobody gets two. Full steps are in the C&amp;C Admin tab under Subscription
+        Boxes &amp; the Clone Tool.
+      </Typography>
+    </div>
   </div>
 );
 
