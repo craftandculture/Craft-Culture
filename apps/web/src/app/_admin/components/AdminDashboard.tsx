@@ -5,8 +5,6 @@ import {
   IconArrowRight,
   IconBarcode,
   IconBuilding,
-  IconCash,
-  IconCheck,
   IconChevronRight,
   IconClock,
   IconFileCheck,
@@ -21,7 +19,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -121,59 +118,21 @@ const AdminDashboard = () => {
   } = data;
 
   // Status pipeline steps for admin
-  const pipelineSteps = [
-    {
-      label: 'Pending Review',
-      count: statusBreakdown.pendingReview,
-      icon: IconFileCheck,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-      textColor: 'text-amber-700 dark:text-amber-300',
-      href: '/platform/admin/private-orders?stage=review',
-    },
-    {
-      label: 'Verification',
-      count: statusBreakdown.awaitingVerification,
-      icon: IconShieldCheck,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      textColor: 'text-orange-700 dark:text-orange-300',
-      href: '/platform/admin/private-orders?stage=verification',
-    },
-    {
-      label: 'Payment',
-      count: statusBreakdown.awaitingPayment,
-      icon: IconCash,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      textColor: 'text-blue-700 dark:text-blue-300',
-      href: '/platform/admin/private-orders?stage=payment',
-    },
-    {
-      label: 'Fulfillment',
-      count: statusBreakdown.inFulfillment,
-      icon: IconTruck,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      textColor: 'text-purple-700 dark:text-purple-300',
-      href: '/platform/admin/private-orders?stage=fulfilment',
-    },
-    {
-      label: 'Delivered',
-      count: statusBreakdown.completed,
-      icon: IconCheck,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      textColor: 'text-green-700 dark:text-green-300',
-      href: '/platform/admin/private-orders?stage=delivered',
-    },
-  ];
+  // The pipeline, in order: each stage is a group of statuses (PCO_STAGES)
+  const stages = [
+    { key: 'review', label: 'Review', color: 'bg-amber-400', dot: 'bg-amber-400' },
+    { key: 'verification', label: 'Verification', color: 'bg-orange-400', dot: 'bg-orange-400' },
+    { key: 'payment', label: 'Payment', color: 'bg-blue-500', dot: 'bg-blue-500' },
+    { key: 'fulfilment', label: 'Fulfilment', color: 'bg-violet-500', dot: 'bg-violet-500' },
+    { key: 'delivered', label: 'Delivered', color: 'bg-emerald-500', dot: 'bg-emerald-500' },
+  ] as const;
+  const pipelineTotal = stages.reduce((sum, st) => sum + data.stages[st.key].count, 0);
 
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-5">
       {/* Header with Currency Toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Typography variant="headingLg" className="font-bold">
             Private Client Orders
@@ -279,7 +238,7 @@ const AdminDashboard = () => {
       )}
 
       {/* What needs someone now — each count opens the list behind it */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {[
           {
             label: 'Pending review',
@@ -323,7 +282,7 @@ const AdminDashboard = () => {
             <Link
               key={item.label}
               href={item.href}
-              className={`group flex flex-col gap-1 rounded-xl border p-4 transition-colors ${
+              className={`group flex flex-col gap-0.5 rounded-xl border px-4 py-3 transition-colors ${
                 needsAction
                   ? 'border-fill-warning/50 bg-fill-warning/5 hover:bg-fill-warning/10'
                   : 'border-border-muted bg-fill-primary hover:bg-fill-muted/40'
@@ -386,81 +345,70 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Status Pipeline */}
+      {/* Pipeline: one bar, each stage's share of orders, then the stages */}
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex items-baseline justify-between gap-2">
             <Typography variant="headingSm" className="font-semibold">
-              Order Pipeline
+              Pipeline
             </Typography>
-            <Link href="/platform/admin/private-orders">
-              <Button variant="ghost" size="sm" className="gap-1">
-                View All <Icon icon={IconArrowRight} size="sm" />
-              </Button>
-            </Link>
+            <Typography variant="bodyXs" colorRole="muted">
+              {pipelineTotal} orders from review to delivery
+            </Typography>
           </div>
 
-          {/* Mobile: Stacked cards */}
-          <div className="flex flex-col gap-2 sm:hidden">
-            {pipelineSteps.map((step) => (
-              <Link key={step.label} href={step.href}>
-                <div
-                  className={`flex items-center justify-between rounded-lg p-3 ${step.bgColor} transition-opacity hover:opacity-80`}
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-fill-muted">
+            {stages.map((st) => {
+              const count = data.stages[st.key].count;
+              if (count === 0 || pipelineTotal === 0) return null;
+              return (
+                <Link
+                  key={st.key}
+                  href={`/platform/admin/private-orders?stage=${st.key}`}
+                  className={`${st.color} h-full transition-opacity hover:opacity-80`}
+                  style={{ width: `${(count / pipelineTotal) * 100}%` }}
+                  title={`${st.label}: ${count}`}
+                />
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {stages.map((st) => {
+              const stage = data.stages[st.key];
+              return (
+                <Link
+                  key={st.key}
+                  href={`/platform/admin/private-orders?stage=${st.key}`}
+                  className="group flex flex-col rounded-lg px-2 py-1.5 transition-colors hover:bg-fill-muted/50"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-lg p-1.5 ${step.color}`}>
-                      <Icon icon={step.icon} size="sm" className="text-white" />
-                    </div>
-                    <Typography variant="bodySm" className={step.textColor}>
-                      {step.label}
+                  <span className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${st.dot}`} />
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {st.label}
                     </Typography>
-                  </div>
-                  <Badge colorRole="muted" size="sm" className="font-semibold">
-                    {step.count}
-                  </Badge>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Desktop: Horizontal pipeline */}
-          <div className="hidden sm:block">
-            <div className="flex items-center justify-between">
-              {pipelineSteps.map((step, index) => (
-                <div key={step.label} className="flex flex-1 items-center">
-                  <Link href={step.href} className="flex flex-1 flex-col items-center group">
-                    <div
-                      className={`mb-2 flex h-12 w-12 items-center justify-center rounded-full ${step.color} transition-transform group-hover:scale-110`}
-                    >
-                      <Icon icon={step.icon} size="md" className="text-white" />
-                    </div>
-                    <Typography variant="headingMd" className="mb-0.5 text-xl font-bold">
-                      {step.count}
+                  </span>
+                  <span className="flex items-baseline gap-1.5">
+                    <Typography variant="headingSm" className="font-semibold">
+                      {stage.count}
                     </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                      {step.label}
+                    <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                      {stage.count > 0 ? formatCurrency(stage.valueUsd, stage.valueAed) : ''}
                     </Typography>
-                  </Link>
-                  {index < pipelineSteps.length - 1 && (
-                    <Icon
-                      icon={IconChevronRight}
-                      size="md"
-                      className="mx-2 flex-shrink-0 text-text-muted"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
       {/* Two Column Layout for Recent Orders and Partners */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         {/* Recent Orders */}
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between">
               <Typography variant="headingSm" className="font-semibold">
                 Recent Orders
               </Typography>
@@ -484,7 +432,7 @@ const AdminDashboard = () => {
                   <Link
                     key={order.id}
                     href={`/platform/admin/private-orders/${order.id}`}
-                    className="group flex items-center gap-3 py-3 transition-colors hover:bg-surface-secondary/50"
+                    className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-secondary/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -493,7 +441,7 @@ const AdminDashboard = () => {
                         </Typography>
                         <PrivateOrderStatusBadge status={order.status} size="sm" />
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-text-muted">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         <span className="hidden sm:inline">·</span>
                         <div className="hidden items-center gap-1 sm:flex">
@@ -534,8 +482,8 @@ const AdminDashboard = () => {
 
         {/* Orders by Partner */}
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2">
               <Typography variant="headingSm" className="font-semibold">
                 Orders by Partner
               </Typography>

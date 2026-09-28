@@ -51,6 +51,8 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
     .select({
       status: privateClientOrders.status,
       count: sql<number>`count(*)`,
+      valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
+      valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
     })
     .from(privateClientOrders)
     .groupBy(privateClientOrders.status);
@@ -213,6 +215,16 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       ),
     );
 
+  // Orders and value per pipeline stage, from the same status groups the list filters by
+  const stageTotals = (statuses: readonly string[]) => {
+    const rows = statusCounts.filter((c) => statuses.includes(c.status));
+    return {
+      count: rows.reduce((sum, c) => sum + Number(c.count), 0),
+      valueUsd: rows.reduce((sum, c) => sum + Number(c.valueUsd), 0),
+      valueAed: rows.reduce((sum, c) => sum + Number(c.valueAed), 0),
+    };
+  };
+
   const countByStatuses = (statuses: readonly string[]) =>
     statusCounts
       .filter((s) => statuses.includes(s.status))
@@ -237,6 +249,13 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       suspended: statusCounts
         .filter((c) => c.status === 'verification_suspended')
         .reduce((sum, c) => sum + Number(c.count), 0),
+    },
+    stages: {
+      review: stageTotals(PCO_STAGES.review),
+      verification: stageTotals(PCO_STAGES.verification),
+      payment: stageTotals(PCO_STAGES.payment),
+      fulfilment: stageTotals(PCO_STAGES.fulfilment),
+      delivered: stageTotals(PCO_STAGES.delivered),
     },
     statusBreakdown: {
       drafts: countByStatuses(['draft']),
