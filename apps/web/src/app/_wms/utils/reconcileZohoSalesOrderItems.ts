@@ -6,6 +6,7 @@ import {
   wmsStockReservations,
   zohoSalesOrderItems,
 } from '@/database/schema';
+import discountAmount from '@/lib/zoho/discountAmount';
 
 /**
  * Canonicalise a Zoho SKU to the dashed LWIN18 form when it encodes one — even
@@ -29,7 +30,9 @@ interface ZohoLineItem {
   rate: number;
   quantity: number;
   unit?: string | null;
-  discount?: number | null;
+  /** A number for a flat discount, a string like "5.00%" for a percentage */
+  discount?: number | string | null;
+  discount_amount?: number | null;
   item_total: number;
 }
 
@@ -195,7 +198,7 @@ const reconcileZohoSalesOrderItems = async ({
           rate: zoho.rate,
           quantity: zoho.quantity,
           unit: zoho.unit,
-          discount: zoho.discount,
+          discount: discountAmount(zoho.discount, zoho.discount_amount),
           itemTotal: zoho.item_total,
           stockId: null,
           updatedAt: new Date(),
@@ -216,7 +219,7 @@ const reconcileZohoSalesOrderItems = async ({
           rate: item.rate,
           quantity: item.quantity,
           unit: item.unit,
-          discount: item.discount,
+          discount: discountAmount(item.discount, item.discount_amount),
           itemTotal: item.item_total,
         })),
       );

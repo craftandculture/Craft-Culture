@@ -15,6 +15,7 @@ import db from '@/database/client';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
+import discountAmount from '@/lib/zoho/discountAmount';
 import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrders';
 
 const syncSalesOrdersSchema = z
@@ -114,7 +115,7 @@ const adminSyncSalesOrders = adminProcedure
             total: fullOrder.total,
             currencyCode: fullOrder.currency_code,
             shippingCharge: fullOrder.shipping_charge,
-            discount: fullOrder.discount,
+            discount: discountAmount(fullOrder.discount, fullOrder.discount_amount),
             notes: fullOrder.notes,
             billingAddress: fullOrder.billing_address,
             shippingAddress: fullOrder.shipping_address,
@@ -139,7 +140,7 @@ const adminSyncSalesOrders = adminProcedure
               rate: item.rate,
               quantity: item.quantity,
               unit: item.unit,
-              discount: item.discount,
+              discount: discountAmount(item.discount, item.discount_amount),
               itemTotal: item.item_total,
             })),
           );
