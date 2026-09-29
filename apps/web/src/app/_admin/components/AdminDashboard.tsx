@@ -118,15 +118,15 @@ const AdminDashboard = () => {
   } = data;
 
   // Status pipeline steps for admin
-  // The pipeline, in order: each stage is a group of statuses (PCO_STAGES)
+  // The live pipeline, in order: each stage is a group of statuses (PCO_STAGES).
+  // Delivered is shown apart: it is the finish line, not work in progress.
   const stages = [
-    { key: 'review', label: 'Review', color: 'bg-amber-400', dot: 'bg-amber-400' },
-    { key: 'verification', label: 'Verification', color: 'bg-orange-400', dot: 'bg-orange-400' },
-    { key: 'payment', label: 'Payment', color: 'bg-blue-500', dot: 'bg-blue-500' },
-    { key: 'fulfilment', label: 'Fulfilment', color: 'bg-violet-500', dot: 'bg-violet-500' },
-    { key: 'delivered', label: 'Delivered', color: 'bg-emerald-500', dot: 'bg-emerald-500' },
+    { key: 'review', label: 'Review', owner: 'C&C', dot: 'bg-amber-400' },
+    { key: 'verification', label: 'Verification', owner: 'Partner · distributor', dot: 'bg-orange-400' },
+    { key: 'payment', label: 'Payment', owner: 'Distributor · client', dot: 'bg-blue-500' },
+    { key: 'fulfilment', label: 'Fulfilment', owner: 'C&C · distributor', dot: 'bg-violet-500' },
   ] as const;
-  const pipelineTotal = stages.reduce((sum, st) => sum + data.stages[st.key].count, 0);
+  const inFlight = stages.reduce((sum, st) => sum + data.stages[st.key].count, 0);
 
 
   return (
@@ -345,58 +345,88 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Pipeline: one bar, each stage's share of orders, then the stages */}
+      {/* Pipeline: where live orders are, and whether they are moving */}
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:p-5">
-          <div className="flex items-baseline justify-between gap-2">
-            <Typography variant="headingSm" className="font-semibold">
-              Pipeline
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              {pipelineTotal} orders from review to delivery
-            </Typography>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex items-baseline gap-2">
+              <Typography variant="headingSm" className="font-semibold">
+                Pipeline
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {inFlight} in flight
+              </Typography>
+            </div>
+            <Link
+              href="/platform/admin/private-orders?stage=delivered"
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary"
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {data.stages.delivered.count} delivered
+              {data.stages.delivered.lastWeek > 0 && ` · ${data.stages.delivered.lastWeek} this week`}
+              <Icon icon={IconChevronRight} size="xs" />
+            </Link>
           </div>
 
-          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-fill-muted">
-            {stages.map((st) => {
-              const count = data.stages[st.key].count;
-              if (count === 0 || pipelineTotal === 0) return null;
-              return (
-                <Link
-                  key={st.key}
-                  href={`/platform/admin/private-orders?stage=${st.key}`}
-                  className={`${st.color} h-full transition-opacity hover:opacity-80`}
-                  style={{ width: `${(count / pipelineTotal) * 100}%` }}
-                  title={`${st.label}: ${count}`}
-                />
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {stages.map((st) => {
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {stages.map((st, index) => {
               const stage = data.stages[st.key];
+              const share = inFlight > 0 ? (stage.count / inFlight) * 100 : 0;
               return (
-                <Link
-                  key={st.key}
-                  href={`/platform/admin/private-orders?stage=${st.key}`}
-                  className="group flex flex-col rounded-lg px-2 py-1.5 transition-colors hover:bg-fill-muted/50"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${st.dot}`} />
+                <div key={st.key} className="relative">
+                  <Link
+                    href={`/platform/admin/private-orders?stage=${st.key}`}
+                    className="flex h-full flex-col gap-2 rounded-lg border border-border-muted p-3 transition-colors hover:border-border-primary hover:bg-fill-muted/30"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${st.dot}`} />
+                        <Typography variant="bodySm" className="font-medium">
+                          {st.label}
+                        </Typography>
+                      </span>
+                      <Typography variant="bodyXs" colorRole="muted" className="hidden truncate sm:block">
+                        {st.owner}
+                      </Typography>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <Typography variant="headingMd" className="font-semibold">
+                        {stage.count}
+                      </Typography>
+                      {stage.count > 0 && (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {formatCurrency(stage.valueUsd, stage.valueAed)}
+                        </Typography>
+                      )}
+                    </div>
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-fill-muted">
+                      <div className={`h-full ${st.dot}`} style={{ width: `${share}%` }} />
+                    </div>
                     <Typography variant="bodyXs" colorRole="muted">
-                      {st.label}
+                      {stage.count === 0
+                        ? 'Empty'
+                        : stage.oldestDays !== null
+                          ? `Oldest ${stage.oldestDays === 0 ? 'today' : `${stage.oldestDays}d`} without a change`
+                          : ' '}
                     </Typography>
-                  </span>
-                  <span className="flex items-baseline gap-1.5">
-                    <Typography variant="headingSm" className="font-semibold">
-                      {stage.count}
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="truncate">
-                      {stage.count > 0 ? formatCurrency(stage.valueUsd, stage.valueAed) : ''}
-                    </Typography>
-                  </span>
-                </Link>
+                  </Link>
+                  {stage.idle > 0 && (
+                    <Link
+                      href={`/platform/admin/private-orders?stage=${st.key}&idle=1`}
+                      className="absolute right-2 top-9 rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning hover:bg-fill-warning/25"
+                      title="No change in 7 days"
+                    >
+                      {stage.idle} idle 7d+
+                    </Link>
+                  )}
+                  {index < stages.length - 1 && (
+                    <Icon
+                      icon={IconChevronRight}
+                      size="xs"
+                      className="absolute -right-2 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-fill-primary text-text-muted lg:block"
+                    />
+                  )}
+                </div>
               );
             })}
           </div>

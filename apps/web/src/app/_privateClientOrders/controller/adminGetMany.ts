@@ -22,6 +22,8 @@ const adminGetOrdersSchema = z.object({
   partnerId: z.string().uuid().optional(),
   /** A pipeline stage: a group of statuses (see PCO_STAGES) */
   stage: z.enum(['review', 'verification', 'payment', 'fulfilment', 'delivered']).optional(),
+  /** Orders with no change in 7 days */
+  idle: z.boolean().optional(),
   /** Orders whose distributor needs a bundle SKU that isn't recorded yet */
   skuMissing: z.boolean().optional(),
   /** A distributor's orders, or 'unassigned' for orders with none */
@@ -47,7 +49,7 @@ const distributorPartner = alias(partners, 'distributor_partner');
 const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, search, status, partnerId, box, distributor, stage, skuMissing } = input;
+    const { limit, cursor, search, status, partnerId, box, distributor, stage, skuMissing, idle } = input;
 
     // Build where conditions
     const conditions = [];
@@ -62,6 +64,10 @@ const adminGetMany = wmsOperatorProcedure
 
     if (stage) {
       conditions.push(inArray(privateClientOrders.status, [...PCO_STAGES[stage]]));
+    }
+
+    if (idle) {
+      conditions.push(sql`${privateClientOrders.updatedAt} < now() - interval '7 days'`);
     }
 
     if (skuMissing) {

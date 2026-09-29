@@ -53,6 +53,10 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       count: sql<number>`count(*)`,
       valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
       valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      // Time since each order last changed: how long work has sat in a stage
+      oldestUpdatedAt: sql<string | null>`min(${privateClientOrders.updatedAt})`,
+      idle: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} < now() - interval '7 days')`,
+      lastWeek: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} >= now() - interval '7 days')`,
     })
     .from(privateClientOrders)
     .groupBy(privateClientOrders.status);
@@ -218,10 +222,20 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
   // Orders and value per pipeline stage, from the same status groups the list filters by
   const stageTotals = (statuses: readonly string[]) => {
     const rows = statusCounts.filter((c) => statuses.includes(c.status));
+    const oldest = rows
+      .map((c) => (c.oldestUpdatedAt ? new Date(c.oldestUpdatedAt).getTime() : null))
+      .filter((t): t is number => t !== null)
+      .sort((a, b) => a - b)[0];
     return {
       count: rows.reduce((sum, c) => sum + Number(c.count), 0),
       valueUsd: rows.reduce((sum, c) => sum + Number(c.valueUsd), 0),
       valueAed: rows.reduce((sum, c) => sum + Number(c.valueAed), 0),
+      /** Days the longest-waiting order has gone without a change */
+      oldestDays: oldest ? Math.floor((Date.now() - oldest) / 86_400_000) : null,
+      /** Orders with no change in 7 days */
+      idle: rows.reduce((sum, c) => sum + Number(c.idle), 0),
+      /** Orders that changed in the last 7 days (for Delivered: delivered this week) */
+      lastWeek: rows.reduce((sum, c) => sum + Number(c.lastWeek), 0),
     };
   };
 

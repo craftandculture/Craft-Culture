@@ -92,6 +92,7 @@ const AdminPrivateOrdersPage = () => {
   // Set from dashboard links: a pipeline stage, or orders missing a CD SKU
   const [stageFilter, setStageFilter] = useState<PcoStage | null>(null);
   const [skuMissingFilter, setSkuMissingFilter] = useState(false);
+  const [idleFilter, setIdleFilter] = useState(false);
 
   // Dashboard links arrive as ?stage=, ?status=, ?distributor=, ?skuMissing=1
   useEffect(() => {
@@ -105,6 +106,7 @@ const AdminPrivateOrdersPage = () => {
     const distributor = params.get('distributor');
     if (distributor) setDistributorFilter(distributor);
     if (params.get('skuMissing') === '1') setSkuMissingFilter(true);
+    if (params.get('idle') === '1') setIdleFilter(true);
   }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -127,6 +129,7 @@ const AdminPrivateOrdersPage = () => {
       distributor: distributorFilter === 'all' ? undefined : distributorFilter,
       stage: stageFilter ?? undefined,
       skuMissing: skuMissingFilter || undefined,
+      idle: idleFilter || undefined,
       box: selectedBox
         ? {
             tier: selectedBox.tier,
@@ -270,12 +273,14 @@ const AdminPrivateOrdersPage = () => {
                 statusFilter === 'all' &&
                 distributorFilter === 'all' &&
                 !stageFilter &&
-                !skuMissingFilter,
+                !skuMissingFilter &&
+                !idleFilter,
               apply: () => {
                 setStatusFilter('all');
                 setDistributorFilter('all');
                 setStageFilter(null);
                 setSkuMissingFilter(false);
+                setIdleFilter(false);
               },
             },
             {
@@ -330,6 +335,15 @@ const AdminPrivateOrdersPage = () => {
               className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
             >
               Stage: {STAGE_LABELS[stageFilter]} <span className="text-text-muted">×</span>
+            </button>
+          )}
+          {idleFilter && (
+            <button
+              type="button"
+              onClick={() => setIdleFilter(false)}
+              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+            >
+              No change in 7 days <span className="text-text-muted">×</span>
             </button>
           )}
           {skuMissingFilter && (
@@ -434,7 +448,7 @@ const AdminPrivateOrdersPage = () => {
                 No Orders Found
               </Typography>
               <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter
+                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter || idleFilter
                   ? 'No orders match your filters. Try adjusting your search.'
                   : 'No private client orders have been created yet.'}
               </Typography>
