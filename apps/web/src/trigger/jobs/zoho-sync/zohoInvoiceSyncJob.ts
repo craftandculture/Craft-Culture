@@ -8,6 +8,7 @@
 import { logger, schedules } from '@trigger.dev/sdk';
 import { eq } from 'drizzle-orm';
 
+import pruneZohoInvoices from '@/app/_zohoSalesOrders/utils/pruneZohoInvoices';
 import { zohoInvoices } from '@/database/schema';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { listInvoices } from '@/lib/zoho/invoices';
@@ -27,9 +28,11 @@ export const zohoInvoiceSyncJob = schedules.task({
       return { skipped: true, reason: 'not_configured' };
     }
 
-    const results = { created: 0, updated: 0, errors: 0 };
+    const results = { created: 0, updated: 0, errors: 0, removed: 0 };
     let page = 1;
     let hasMore = true;
+    const seenIds = new Set<string>();
+    const voidIds = new Set<string>();
 
     try {
       while (hasMore) {
@@ -45,6 +48,8 @@ export const zohoInvoiceSyncJob = schedules.task({
         }
 
         for (const inv of result.invoices) {
+          seenIds.add(inv.invoice_id);
+          if (inv.status === 'void') voidIds.add(inv.invoice_id);
           if (inv.status === 'draft' || inv.status === 'void') continue;
 
           try {
@@ -127,6 +132,18 @@ export const zohoInvoiceSyncJob = schedules.task({
       throw new Error(
         `Zoho invoice sync wrote nothing across ${results.errors} errors — failing run to surface the outage`,
       );
+    }
+
+    // Reached only when every page was read — see pruneZohoInvoices.
+    const pruned = await pruneZohoInvoices({ seenIds, voidIds, db: triggerDb });
+    results.removed = pruned.removed;
+    if (pruned.removed > 0) {
+      logger.info('Removed void/deleted invoices', { invoices: pruned.invoices });
+    }
+    if (pruned.skipped) {
+      logger.warn('Invoices missing from Zoho NOT removed — too many at once', {
+        invoices: pruned.invoices,
+      });
     }
 
     logger.info('Zoho invoice sync completed', results);

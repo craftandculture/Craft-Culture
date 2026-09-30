@@ -6,6 +6,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { listInvoices } from '@/lib/zoho/invoices';
 
+import pruneZohoInvoices from '../utils/pruneZohoInvoices';
+
 /**
  * Sync all invoices from Zoho Books into the zohoInvoices table. Paginates
  * through all invoices and upserts each one.
@@ -22,11 +24,15 @@ const adminSyncZohoInvoices = adminProcedure.mutation(async () => {
   let updated = 0;
   let page = 1;
   let hasMore = true;
+  const seenIds = new Set<string>();
+  const voidIds = new Set<string>();
 
   while (hasMore) {
     const result = await listInvoices({ page, perPage: 200 });
 
     for (const inv of result.invoices) {
+      seenIds.add(inv.invoice_id);
+      if (inv.status === 'void') voidIds.add(inv.invoice_id);
       // Skip draft and void invoices
       if (inv.status === 'draft' || inv.status === 'void') continue;
 
@@ -89,13 +95,24 @@ const adminSyncZohoInvoices = adminProcedure.mutation(async () => {
     page++;
   }
 
+  // Every page has been read, so anything unseen really is gone from Zoho.
+  const pruned = await pruneZohoInvoices({ seenIds, voidIds, db });
+
   const total = created + updated;
 
   return {
     created,
     updated,
     total,
-    message: `Synced ${total} invoices (${created} new, ${updated} updated)`,
+    removed: pruned.removed,
+    message:
+      `Synced ${total} invoices (${created} new, ${updated} updated)` +
+      (pruned.removed > 0
+        ? `; removed ${pruned.removed} void/deleted (${pruned.invoices.join(', ')})`
+        : '') +
+      (pruned.skipped
+        ? `; ${pruned.invoices.length} invoices missing from Zoho were NOT removed — too many at once to trust`
+        : ''),
   };
 });
 
