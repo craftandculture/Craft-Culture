@@ -20,9 +20,12 @@ import {
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { isZohoConfigured } from '@/lib/zoho/client';
+import { getSalesOrder } from '@/lib/zoho/salesOrders';
 
 import parseSkuPack from '../utils/parseSkuPack';
 import readOrderedPack from '../utils/readOrderedPack';
+import reconcileZohoSalesOrderItems from '../utils/reconcileZohoSalesOrderItems';
 import resolvePickQuantities from '../utils/resolvePickQuantities';
 import resolvePickStock from '../utils/resolvePickStock';
 
@@ -64,11 +67,36 @@ const adminResyncPickList = wmsOperatorProcedure
       });
     }
 
-    // NOTE: the caller is responsible for refreshing the order from Zoho first
-    // (a forced `zohoSalesOrders.sync`). An item-master edit — correcting a
-    // SKU's pack digits from `06` to `01` — does not bump the sales order's
-    // last-modified time, so without that forced pass this rebuilds faithfully
-    // from stale lines and the operator hits the same "no stock found" wall.
+    /*
+      Take the order's CURRENT lines from Zoho before rebuilding.
+
+      The background sync deliberately leaves a released order's lines alone —
+      it only refreshes the header and raises the "changed in Zoho" flag — so
+      the stored lines are the ones from release day. Rebuilding from them
+      meant a Re-sync after removing an out-of-stock line in Zoho rebuilt the
+      very same pick (SO-00150 / PL-2026-0077, 30 Sep): "nothing happened".
+      This is the explicit operator action that is allowed to move the lines,
+      and picked lines are preserved below regardless. If Zoho can't be
+      reached, fall back to the stored lines rather than block the pick.
+    */
+    if (isZohoConfigured() && order.zohoSalesOrderId) {
+      try {
+        const fullOrder = await getSalesOrder(order.zohoSalesOrderId);
+        if (fullOrder.line_items && fullOrder.line_items.length > 0) {
+          await reconcileZohoSalesOrderItems({
+            orderId: order.id,
+            zohoLineItems: fullOrder.line_items,
+            db,
+          });
+        }
+      } catch (error) {
+        console.error('Re-sync: could not refresh lines from Zoho', {
+          orderNumber: order.salesOrderNumber,
+          error,
+        });
+      }
+    }
+
     const orderItems = await db
       .select()
       .from(zohoSalesOrderItems)
