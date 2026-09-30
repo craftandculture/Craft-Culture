@@ -25,6 +25,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PickOrderLines from '@/app/_wms/components/PickOrderLines';
+import WhereIsOrder from '@/app/_wms/components/WhereIsOrder';
 import isPickableZohoStatus from '@/app/_zohoSalesOrders/utils/isPickableZohoStatus';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
@@ -97,7 +98,18 @@ const NewPickListPage = () => {
     ...api.zohoSalesOrders.sync.mutationOptions(),
     onSuccess: (data) => {
       void queryClient.invalidateQueries();
-      toast.success(data.message);
+      // A failed order is otherwise invisible — it simply never appears.
+      if (data.failed && data.failed.length > 0) {
+        toast.error(
+          `${data.failed.length} order(s) failed to sync from Zoho: ` +
+            data.failed
+              .map((f) => `${f.salesOrderNumber} (${f.reason})`)
+              .join('; '),
+          { duration: 20000 },
+        );
+      } else {
+        toast.success(data.message);
+      }
     },
   });
 
@@ -398,12 +410,20 @@ const NewPickListPage = () => {
             {filteredOrders?.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <Typography variant="headingSm" className="mb-2">
-                    No Sales Orders Available
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    There are no invoiced sales orders ready for picking
-                  </Typography>
+                  {/* A search that finds nothing says WHY the order is
+                      missing, rather than leaving it to be dug out of Zoho. */}
+                  {searchQuery.trim().length >= 4 ? (
+                    <WhereIsOrder query={searchQuery} />
+                  ) : (
+                    <>
+                      <Typography variant="headingSm" className="mb-2">
+                        No Sales Orders Available
+                      </Typography>
+                      <Typography variant="bodySm" colorRole="muted">
+                        There are no invoiced sales orders ready for picking
+                      </Typography>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ) : (

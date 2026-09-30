@@ -17,6 +17,7 @@ import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminReleaseToPick from './controller/adminReleaseToPick';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
 import adminSyncZohoInvoices from './controller/adminSyncZohoInvoices';
+import adminWhereIsOrder from './controller/adminWhereIsOrder';
 
 const zohoSalesOrdersRouter = createTRPCRouter({
   list: adminListSalesOrders,
@@ -32,6 +33,7 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   outstanding: adminGetOutstandingOrders,
   // What a customer has been invoiced, by their Zoho record and by currency
   customerInvoiceTotals: adminGetCustomerInvoiceTotals,
+  whereIs: adminWhereIsOrder,
 });
 
 export default zohoSalesOrdersRouter;

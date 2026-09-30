@@ -74,6 +74,7 @@ const listInvoices = async (options?: {
   customerId?: string;
   status?: ZohoInvoice['status'];
   referenceNumber?: string;
+  invoiceNumber?: string;
   page?: number;
   perPage?: number;
 }) => {
@@ -87,6 +88,9 @@ const listInvoices = async (options?: {
   }
   if (options?.referenceNumber) {
     params.set('reference_number', options.referenceNumber);
+  }
+  if (options?.invoiceNumber) {
+    params.set('invoice_number', options.invoiceNumber);
   }
   if (options?.page) {
     params.set('page', String(options.page));

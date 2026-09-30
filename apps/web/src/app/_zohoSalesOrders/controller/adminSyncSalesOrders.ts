@@ -49,6 +49,9 @@ const adminSyncSalesOrders = adminProcedure
     updated: 0,
     errors: 0,
   };
+  // Which orders failed and why — reported back to the screen, since an order
+  // that fails to sync otherwise just never appears.
+  const failed: { salesOrderNumber: string; reason: string }[] = [];
 
   // Fetch all sales orders from Zoho that need fulfillment (paginated)
   const [openOrders, invoicedOrders] = await Promise.all([
@@ -150,6 +153,10 @@ const adminSyncSalesOrders = adminProcedure
       results.created++;
     } catch (error) {
       results.errors++;
+      failed.push({
+        salesOrderNumber: zohoOrder.salesorder_number,
+        reason: (error instanceof Error ? error.message : String(error)).slice(0, 160),
+      });
       console.error('Failed to sync sales order', {
         salesOrderNumber: zohoOrder.salesorder_number,
         error,
@@ -160,6 +167,7 @@ const adminSyncSalesOrders = adminProcedure
   return {
     success: true,
     ...results,
+    failed,
     message: `Synced ${results.created} new, ${results.updated} updated from ${results.fetched} orders`,
   };
 });
