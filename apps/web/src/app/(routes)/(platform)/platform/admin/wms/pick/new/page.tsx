@@ -25,6 +25,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PickOrderLines from '@/app/_wms/components/PickOrderLines';
+import isPickableZohoStatus from '@/app/_zohoSalesOrders/utils/isPickableZohoStatus';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -67,7 +68,9 @@ const NewPickListPage = () => {
     ...api.zohoSalesOrders.list.queryOptions(),
     select: (orders) =>
       orders
-        .filter((o) => o.status === 'synced' && o.zohoStatus === 'invoiced')
+        .filter(
+          (o) => o.status === 'synced' && isPickableZohoStatus(o.zohoStatus),
+        )
         .sort((a, b) =>
           (b.salesOrderNumber ?? '').localeCompare(a.salesOrderNumber ?? ''),
         ),
@@ -471,6 +474,17 @@ const NewPickListPage = () => {
                               <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
                                 <IconReplace className="h-3 w-3 shrink-0" />
                                 {repackLines} repack
+                              </span>
+                            )}
+                            {/* The pick follows the ORDER lines; an edited
+                                invoice may bill something else. */}
+                            {order.zohoStatus === 'partially_invoiced' && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700"
+                                title="Zoho shows this order as partly invoiced. Check that the order lines match the invoice before picking."
+                              >
+                                <IconAlertTriangle className="h-3 w-3 shrink-0" />
+                                Part-invoiced
                               </span>
                             )}
                           </div>

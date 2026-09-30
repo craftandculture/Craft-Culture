@@ -3,7 +3,7 @@
  *
  * Directly creates a pick list for an invoiced Zoho sales order.
  * Skips the 'approved' state - goes directly from 'synced' to 'picking'.
- * Only works for orders with zohoStatus === 'invoiced' (finalized in Zoho).
+ * Only works for orders Zoho has billed — see isPickableZohoStatus.
  */
 
 import { TRPCError } from '@trpc/server';
@@ -28,6 +28,8 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import isPickableZohoStatus from '../utils/isPickableZohoStatus';
+
 const adminReleaseToPick = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
   .mutation(async ({ input }) => {
@@ -46,8 +48,8 @@ const adminReleaseToPick = wmsOperatorProcedure
       });
     }
 
-    // Must be invoiced in Zoho (finalized, no more changes)
-    if (order.zohoStatus !== 'invoiced') {
+    // Must be billed in Zoho — see isPickableZohoStatus for part-invoiced
+    if (!isPickableZohoStatus(order.zohoStatus)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Order must be invoiced in Zoho before release. Current Zoho status: ${order.zohoStatus}`,

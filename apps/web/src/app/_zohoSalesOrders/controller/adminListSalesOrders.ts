@@ -22,6 +22,7 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import isPickableZohoStatus from '../utils/isPickableZohoStatus';
 const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
   const orders = await db
     .select()
@@ -61,7 +62,8 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
   const readyOrderIds = new Set(
     orders
       .filter(
-        (order) => order.status === 'synced' && order.zohoStatus === 'invoiced',
+        (order) =>
+          order.status === 'synced' && isPickableZohoStatus(order.zohoStatus),
       )
       .map((order) => order.id),
   );
