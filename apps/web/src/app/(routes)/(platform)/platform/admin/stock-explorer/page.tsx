@@ -3072,6 +3072,70 @@ const StockExplorerPage = () => {
                     </div>
                   ))}
                 </div>
+                {overview.valuation.byCategory.length > 0 && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-border-muted text-text-muted border-b text-left">
+                          <th className="py-1 font-medium">Category</th>
+                          <th className="py-1 text-right font-medium">
+                            Products
+                          </th>
+                          <th className="py-1 text-right font-medium">Cases</th>
+                          <th className="py-1 text-right font-medium">Cost</th>
+                          <th className="py-1 text-right font-medium">
+                            In-Bond
+                          </th>
+                          <th className="py-1 text-right font-medium">PC</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-border-muted divide-y">
+                        {overview.valuation.byCategory.map((c) => (
+                          <tr key={c.category}>
+                            <td className="py-1">{c.category}</td>
+                            <td className="py-1 text-right tabular-nums">
+                              {c.products.toLocaleString()}
+                            </td>
+                            <td className="py-1 text-right tabular-nums">
+                              {c.cases.toLocaleString()}
+                            </td>
+                            <td className="py-1 text-right tabular-nums">
+                              {fmtMoney(c.costValue)}
+                            </td>
+                            <td className="py-1 text-right tabular-nums text-blue-600">
+                              {fmtMoney(c.inBondValue)}
+                            </td>
+                            <td className="py-1 text-right tabular-nums text-violet-600">
+                              {fmtMoney(c.pcValue)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="font-semibold">
+                          <td className="py-1">All categories</td>
+                          <td className="py-1 text-right tabular-nums">
+                            {overview.valuation.byCategory
+                              .reduce((n, c) => n + c.products, 0)
+                              .toLocaleString()}
+                          </td>
+                          <td className="py-1 text-right tabular-nums">
+                            {overview.valuation.byCategory
+                              .reduce((n, c) => n + c.cases, 0)
+                              .toLocaleString()}
+                          </td>
+                          <td className="py-1 text-right tabular-nums">
+                            {fmtMoney(overview.valuation.costValue)}
+                          </td>
+                          <td className="py-1 text-right tabular-nums text-blue-600">
+                            {fmtMoney(overview.valuation.inBondValue)}
+                          </td>
+                          <td className="py-1 text-right tabular-nums text-violet-600">
+                            {fmtMoney(overview.valuation.pcValue)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {overview.valuation.byOwner.length > 1 && (
                   <div className="mt-3 overflow-x-auto">
                     <table className="w-full text-xs">

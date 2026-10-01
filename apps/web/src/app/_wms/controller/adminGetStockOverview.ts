@@ -65,6 +65,7 @@ const adminGetStockOverview = wmsOperatorProcedure
       inboundStockResult,
       valuationResult,
       valueByOwnerResult,
+      valueByCategoryResult,
     ] = await Promise.all([
       // Get total stock stats
       db
@@ -207,6 +208,30 @@ const adminGetStockOverview = wmsOperatorProcedure
         .groupBy(wmsStock.ownerId, wmsStock.ownerName)
         .orderBy(sql`SUM(${btl} * ${landedExpr}) DESC`)
         .limit(15),
+
+      // Value broken down by category, so wine and spirits can be read
+      // apart. Uncategorised stock counts as wine, as it does on the price
+      // lists.
+      db
+        .select({
+          category: sql<string>`COALESCE(${wmsStock.category}, 'Wine')`,
+          costValue: sql<number>`COALESCE(SUM(${btl} * ${landedExpr}), 0)::float`,
+          inBondValue: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${btl} * ${inBondExpr} END), 0)::float`,
+          pcValue: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${btl} * ${pcExpr} END), 0)::float`,
+          cases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
+          products: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+        })
+        .from(wmsStock)
+        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
+        .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
+        .leftJoin(
+          wmsOwnerPricing,
+          and(eq(wmsOwnerPricing.lwin18, wmsStock.lwin18), eq(wmsOwnerPricing.ownerId, wmsStock.ownerId)),
+        )
+        .leftJoin(shipJoin, sql`ship.lwin18 = ${wmsStock.lwin18}`)
+        .where(and(gt(wmsStock.quantityCases, 0), ownerCond))
+        .groupBy(sql`COALESCE(${wmsStock.category}, 'Wine')`)
+        .orderBy(sql`SUM(${btl} * ${landedExpr}) DESC`),
     ]);
 
     const stockStats = stockStatsResult[0];
@@ -274,6 +299,14 @@ const adminGetStockOverview = wmsOperatorProcedure
           inBondValue: Math.round(o.inBondValue * 100) / 100,
           pcValue: Math.round(o.pcValue * 100) / 100,
           cases: o.cases,
+        })),
+        byCategory: valueByCategoryResult.map((c) => ({
+          category: c.category,
+          costValue: Math.round(c.costValue * 100) / 100,
+          inBondValue: Math.round(c.inBondValue * 100) / 100,
+          pcValue: Math.round(c.pcValue * 100) / 100,
+          cases: c.cases,
+          products: c.products,
         })),
       },
     };
