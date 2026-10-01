@@ -12,6 +12,7 @@ import {
 
 import type { CatalogueRow } from './getCatalogueRows';
 import inboundLineKey from '../utils/inboundLineKey';
+import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 
@@ -28,8 +29,6 @@ export interface CatalogueInboundFilters {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const isCraftCulture = (owner: string | null) =>
-  !!owner && /craft.*culture/i.test(owner);
 const isZeroTransferOwner = (owner: string | null) =>
   !!owner && /(cru wine|crurated)/i.test(owner);
 
@@ -295,18 +294,12 @@ const getCatalogueInboundRows = async (
     const manualImport =
       r.importPrice && r.importPrice > 0 ? r.importPrice : null;
     const importPaid = manualImport ?? r.costPerBottle ?? 0;
-    const systemLogistics =
+    const allocatedFreight =
       r.landedPerBottle != null && r.costPerBottle != null
         ? Math.max(0, round2(r.landedPerBottle - r.costPerBottle))
         : 0;
-    const logistics =
-      r.logistics ??
-      (systemLogistics > 0
-        ? systemLogistics
-        : isCraftCulture(r.owner) &&
-            (r.category === 'Wine' || r.category == null)
-          ? 22.5
-          : 0);
+    // The Pricing Manager's rule, not a copy of it — see the helper
+    const logistics = inboundLogisticsPerBottle(r.logistics, allocatedFreight);
     const transfer = r.transfer ?? (isZeroTransferOwner(r.owner) ? 0 : 2.5);
     const override = r.override ?? 0;
     const landed =

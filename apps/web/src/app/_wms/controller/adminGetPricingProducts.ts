@@ -30,6 +30,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import inboundLineKey from '../utils/inboundLineKey';
+import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
 
@@ -40,12 +41,6 @@ import lwinPakKey from '../utils/lwinPakKey';
  * KPI cards (total products, avg margin, unpriced count, total values). Falls
  * back to shipment landed cost when no explicit import price exists.
  */
-/**
- * Standing air-freight estimate per bottle, used for in-transit wine until the
- * freight invoice is allocated against the shipment. Most C&C stock flies.
- */
-const DEFAULT_AIR_FREIGHT_PER_BOTTLE = 20;
-
 const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
@@ -902,11 +897,10 @@ const adminGetPricingProducts = wmsOperatorProcedure
           is how a price barely above the buy price reached a price list.
           The estimate gives way to the actuals the moment they arrive.
         */
-        systemLogistics:
-          r.lineLogistics ??
-          (r.allocatedFreight && r.allocatedFreight > 0
-            ? r.allocatedFreight
-            : DEFAULT_AIR_FREIGHT_PER_BOTTLE),
+        systemLogistics: inboundLogisticsPerBottle(
+          r.lineLogistics,
+          r.allocatedFreight,
+        ),
         logisticsIsEstimate:
           r.lineLogistics == null &&
           !(r.allocatedFreight && r.allocatedFreight > 0),
