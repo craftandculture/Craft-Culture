@@ -8,14 +8,29 @@ import type { ExportBoeLookup, ExportInvoiceInput } from '../utils/buildExportLi
 /**
  * The part of an LWIN-18 that says which wine it is, ignoring the pack
  *
- * Wine and vintage (first 12 characters) plus bottle size (last 5). Orders and
+ * Code and vintage plus bottle size. Orders and
  * stock are matched on this because an order for a 6-pack is routinely filled
  * from a 12-pack or a bay that was repacked — the BOE is the same either way.
  *
  * @param lwin18 - A dashed LWIN-18
  * @returns The pack-agnostic key
  */
-const wineKey = (lwin18: string) => `${lwin18.slice(0, 12)}|${lwin18.slice(-5)}`;
+const wineKey = (lwin18: string) => {
+  const [code, vintage, , size] = lwin18.split('-');
+  return `${code}-${vintage}|${size}`;
+};
+
+/** Code and vintage, the part every pack of a wine shares */
+const winePrefix = (lwin18: string) => lwin18.split('-').slice(0, 2).join('-');
+
+/**
+ * Whether a code has the LWIN-18 shape
+ *
+ * Numeric LWINs, internal 9000001+ codes and the alphanumeric codes Crurated
+ * stock is held under (`WITEP3R20B-2020-06-00750`) all share it: code,
+ * vintage, pack, size. Only the shape matters for matching stock.
+ */
+const hasLwinShape = (code: string) => /^[A-Z0-9]+-\d{4}-\d{2}-\d{5}$/i.test(code);
 
 const digits = (boe: string | null) => boe?.replace(/\D/g, '') || null;
 
@@ -36,7 +51,7 @@ const resolveExportBoes = async (invoices: ExportInvoiceInput[]) => {
   const result = new Map<string, ExportBoeLookup>();
   const wanted = invoices.flatMap((inv) =>
     inv.lines
-      .filter((l) => l.lwin18 && /^\d{7}-\d{4}-\d{2}-\d{5}$/.test(l.lwin18))
+      .filter((l) => l.lwin18 && hasLwinShape(l.lwin18))
       .map((l) => ({ order: inv.soNumber ?? inv.invoiceNumber, lwin18: l.lwin18 as string })),
   );
   if (wanted.length === 0) return result;
@@ -58,7 +73,7 @@ const resolveExportBoes = async (invoices: ExportInvoiceInput[]) => {
       ),
     );
 
-  const prefixes = [...new Set(wanted.map((w) => w.lwin18.slice(0, 12)))];
+  const prefixes = [...new Set(wanted.map((w) => winePrefix(w.lwin18)))];
   const lots = await db
     .select({
       lwin18: wmsStock.lwin18,
@@ -67,7 +82,7 @@ const resolveExportBoes = async (invoices: ExportInvoiceInput[]) => {
       quantityCases: wmsStock.quantityCases,
     })
     .from(wmsStock)
-    .where(inArray(sql`substring(${wmsStock.lwin18}, 1, 12)`, prefixes));
+    .where(inArray(sql`split_part(${wmsStock.lwin18}, '-', 1) || '-' || split_part(${wmsStock.lwin18}, '-', 2)`, prefixes));
 
   for (const { order, lwin18 } of wanted) {
     const key = wineKey(lwin18);

@@ -1,7 +1,7 @@
 import { inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { lwinWines, products } from '@/database/schema';
+import { logisticsShipmentItems, lwinWines, products } from '@/database/schema';
 
 /**
  * Country of origin for each wine on an export
@@ -33,6 +33,19 @@ const lookupOrigins = async (lwin18s: string[]) => {
     .where(inArray(lwinWines.lwin, lwin7s));
   for (const row of register) {
     if (row.country) origins.set(row.lwin, row.country);
+  }
+
+  // Codes the catalogue does not know (Crurated's alphanumeric ones) take the
+  // origin declared on the shipment they arrived on
+  const missing = codes.filter((c) => !origins.has(c) && !origins.has(c.slice(0, 7)));
+  if (missing.length > 0) {
+    const shipped = await db
+      .select({ lwin: logisticsShipmentItems.lwin, country: logisticsShipmentItems.countryOfOrigin })
+      .from(logisticsShipmentItems)
+      .where(inArray(logisticsShipmentItems.lwin, missing));
+    for (const row of shipped) {
+      if (row.lwin && row.country && !origins.has(row.lwin)) origins.set(row.lwin, row.country);
+    }
   }
 
   return origins;
