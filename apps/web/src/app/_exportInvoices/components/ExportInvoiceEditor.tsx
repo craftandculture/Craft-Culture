@@ -1,31 +1,37 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import ExportChangeRequest from './ExportChangeRequest';
 import ExportChecksPanel from './ExportChecksPanel';
 import ExportDocumentPreview from './ExportDocumentPreview';
 import ExportHeaderPanel from './ExportHeaderPanel';
+import ExportPanel from './ExportPanel';
+import ExportSummaryStrip from './ExportSummaryStrip';
 import type { ExportOp } from '../schemas/exportOpSchema';
 
 export interface ExportInvoiceEditorProps {
   id: string;
 }
 
+type SideTab = 'checks' | 'ask' | 'header' | 'history';
+
 /**
  * The export invoice editor
  *
  * The document on the left, edited in place; checks, change requests, the
- * header and history on the right. Every change goes through one mutation as
- * ops, so it is versioned and the checks re-run against the saved result.
+ * header and history in separate cards on the right. Below extra-wide screens
+ * the cards become tabs above the document, so a phone or laptop shows one at
+ * a time. Every change goes through one mutation as ops, versioned, with the
+ * checks re-run against the saved result.
  */
 const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const api = useTRPC();
@@ -33,6 +39,8 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const queryClient = useQueryClient();
   const [highlighted, setHighlighted] = useState<string[]>([]);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [tab, setTab] = useState<SideTab>('checks');
 
   const query = useQuery(api.exportInvoices.admin.getOne.queryOptions({ id }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.getOne.queryKey({ id }) });
@@ -59,49 +67,185 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
     onError: (error) => toast.error(error.message),
   });
 
-  if (query.isLoading) return <p className="text-sm text-text-muted">Loading…</p>;
+  if (query.isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-9 w-72 animate-pulse rounded-lg bg-fill-muted/50" />
+        <div className="h-14 animate-pulse rounded-lg bg-fill-muted/50" />
+        <div className="h-96 animate-pulse rounded-lg bg-fill-muted/50" />
+      </div>
+    );
+  }
   if (!query.data) return <p className="text-sm text-text-danger">{query.error?.message ?? 'Not found'}</p>;
 
   const data = query.data;
   const editable = data.status === 'draft';
   const errors = data.checks.filter((c) => c.level === 'error');
   const warnings = data.checks.filter((c) => c.level === 'warning');
+  const pdfHref = data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`;
+  const canIssue = errors.length === 0 && (warnings.length === 0 || acknowledged) && !issueMutation.isPending;
 
   const apply = (ops: ExportOp[], changeSummary: string, request?: string) =>
     applyMutation.mutateAsync({ id, expectedVersion: data.version, ops, changeSummary, request });
+  const issue = () =>
+    issueMutation.mutate({ id, expectedVersion: data.version, acknowledgedWarnings: warnings.map((w) => w.code) });
+
+  const checksPanel = (
+    <ExportPanel
+      title="Checks"
+      aside={
+        <span className={`text-xs font-medium ${errors.length ? 'text-text-danger' : warnings.length ? 'text-text-warning' : 'text-text-success'}`}>
+          {errors.length ? `${errors.length} to fix` : warnings.length ? `${warnings.length} to review` : 'Ready'}
+        </span>
+      }
+    >
+      <ExportChecksPanel checks={data.checks} onSelectLines={setHighlighted} />
+      {editable && (
+        <div className="mt-4 space-y-3 border-t border-border-muted pt-4">
+          {warnings.length > 0 && errors.length === 0 && (
+            <label className="flex items-start gap-2 text-xs">
+              <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5 size-4" />
+              I have read the warnings and the document is right to send.
+            </label>
+          )}
+          <Button colorRole="brand" className="w-full justify-center" disabled={!canIssue} onClick={issue}>
+            {issueMutation.isPending ? 'Issuing…' : errors.length ? 'Fix the errors to issue' : 'Issue and number'}
+          </Button>
+        </div>
+      )}
+    </ExportPanel>
+  );
+  const askPanel = editable ? (
+    <ExportPanel title="Ask for a change">
+      <ExportChangeRequest
+        id={id}
+        zohoCustomerId={data.zohoCustomerId}
+        consigneeName={data.document.header.consignee.name}
+        document={data.document}
+        onApply={(ops, summary, request) => apply(ops, summary, request)}
+      />
+    </ExportPanel>
+  ) : null;
+  const headerPanel = (
+    <ExportPanel title="Header & text">
+      <ExportHeaderPanel document={data.document} editable={editable} onApply={(ops, summary) => void apply(ops, summary)} />
+    </ExportPanel>
+  );
+  const historyPanel = (
+    <ExportPanel title="History" aside={<span className="text-xs text-text-muted">v{data.version}</span>}>
+      <ol className="space-y-3">
+        {data.versions.map((v) => (
+          <li key={v.version} className="border-l-2 border-border-muted pl-3 text-xs">
+            <p>
+              <span className="font-semibold">v{v.version}</span> · {v.changeSummary ?? 'Edited'}
+            </p>
+            {v.request && <p className="mt-1 rounded-md bg-fill-muted/40 px-2 py-1 italic text-text-muted">“{v.request}”</p>}
+            <p className="mt-1 text-text-muted">
+              {v.createdByName ?? 'Someone'} · {new Date(v.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+              {v.pdfUrl && (
+                <>
+                  {' · '}
+                  <a className="underline" href={v.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
+                </>
+              )}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </ExportPanel>
+  );
+
+  const tabs: { key: SideTab; label: string; badge?: number }[] = [
+    { key: 'checks', label: 'Checks', badge: errors.length + warnings.length || undefined },
+    ...(editable ? [{ key: 'ask' as const, label: 'Ask' }] : []),
+    { key: 'header', label: 'Header' },
+    { key: 'history', label: 'History' },
+  ];
+  const tabPanel = { checks: checksPanel, ask: askPanel, header: headerPanel, history: historyPanel }[tab];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Typography variant="headingMd" asChild>
-            <h1>{data.number ?? 'Draft export invoice'}</h1>
-          </Typography>
-          <Badge colorRole={editable ? 'warning' : 'success'}>{editable ? 'Draft' : 'Issued'}</Badge>
-          <span className="text-sm text-text-muted">{data.document.header.consignee.name}</span>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <a href={data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`} target="_blank" rel="noreferrer">
-              {editable ? 'Preview PDF' : 'Download PDF'}
-            </a>
-          </Button>
-          {editable && (
-            <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate({ id })}>
-              Discard draft
+      {/* Title and actions; stays in view while scrolling the lines */}
+      <div className="sticky top-0 z-20 -mx-4 border-b border-border-muted bg-fill-primary/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <Link href="/platform/admin/logistics/export-invoices" className="text-xs text-text-muted hover:underline">
+              ← Export invoices
+            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-semibold sm:text-xl">{data.number ?? 'Draft export invoice'}</h1>
+              <Badge colorRole={editable ? 'warning' : 'success'} size="sm">{editable ? 'Draft' : 'Issued'}</Badge>
+              <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {editable &&
+              (confirmDiscard ? (
+                <span className="flex items-center gap-1.5 text-xs">
+                  Discard this draft?
+                  <Button size="xs" colorRole="danger" onClick={() => deleteMutation.mutate({ id })}>Discard</Button>
+                  <Button size="xs" variant="ghost" onClick={() => setConfirmDiscard(false)}>Keep</Button>
+                </span>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDiscard(true)}>Discard</Button>
+              ))}
+            <Button variant="outline" size="sm" asChild>
+              <a href={pdfHref} target="_blank" rel="noreferrer">{editable ? 'Preview PDF' : 'Download PDF'}</a>
             </Button>
-          )}
+            {editable && (
+              <Button
+                size="sm"
+                colorRole="brand"
+                disabled={!canIssue}
+                onClick={issue}
+                title={errors.length ? 'Fix the errors in Checks first' : warnings.length && !acknowledged ? 'Tick the warnings as read in Checks' : undefined}
+              >
+                Issue
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
+      {!editable && (
+        <div className="rounded-xl border border-border-success/30 bg-fill-success/10 px-4 py-3 text-sm text-text-success">
+          Issued{data.number ? ` as ${data.number}` : ''}. The document is frozen; build a new draft if the invoices change.
+        </div>
+      )}
       {data.stale.length > 0 && (
-        <div className="rounded-lg border border-border-danger/30 bg-fill-danger/10 p-3 text-sm text-text-danger">
-          Revised in Zoho: {data.stale.map((s) => `${s.invoiceNumber} (${s.reason})`).join('; ')}. Build a new
-          draft from the current invoices before issuing.
+        <div className="rounded-xl border border-border-danger/30 bg-fill-danger/10 px-4 py-3 text-sm text-text-danger">
+          <p className="font-semibold">Revised in Zoho since this draft was built</p>
+          <p>{data.stale.map((s) => `${s.invoiceNumber} (${s.reason})`).join('; ')}. Build a new draft from the current invoices before issuing.</p>
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <ExportSummaryStrip document={data.document} />
+
+      {/* Below extra-wide screens: the side cards as tabs */}
+      <div className="xl:hidden">
+        <div className="mb-3 flex gap-1 overflow-x-auto rounded-xl border border-border-muted bg-fill-muted/30 p-1">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${
+                tab === t.key ? 'bg-fill-primary font-medium shadow-xs' : 'text-text-muted'
+              }`}
+            >
+              {t.label}
+              {t.badge ? (
+                <span className={`rounded-full px-1.5 text-[10px] font-semibold ${errors.length ? 'bg-fill-danger/15 text-text-danger' : 'bg-fill-warning/15 text-text-warning'}`}>
+                  {t.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+        {tabPanel}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <ExportDocumentPreview
           document={data.document}
           editable={editable && !applyMutation.isPending}
@@ -109,70 +253,13 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
           onApply={(ops, summary) => void apply(ops, summary)}
         />
 
-        <aside className="space-y-6">
-          <section className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-text-muted">Checks</p>
-            <ExportChecksPanel checks={data.checks} onSelectLines={setHighlighted} />
-            {editable && (
-              <div className="space-y-2 pt-2">
-                {warnings.length > 0 && errors.length === 0 && (
-                  <label className="flex items-start gap-2 text-xs">
-                    <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5" />
-                    I have read the warnings and the document is right to send.
-                  </label>
-                )}
-                <Button
-                  colorRole="brand"
-                  className="w-full justify-center"
-                  disabled={errors.length > 0 || (warnings.length > 0 && !acknowledged) || issueMutation.isPending}
-                  onClick={() =>
-                    issueMutation.mutate({ id, expectedVersion: data.version, acknowledgedWarnings: warnings.map((w) => w.code) })
-                  }
-                >
-                  {issueMutation.isPending ? 'Issuing…' : 'Issue and number'}
-                </Button>
-              </div>
-            )}
-          </section>
-
-          {editable && (
-            <section className="space-y-2">
-              <p className="text-xs font-semibold uppercase text-text-muted">Ask for a change</p>
-              <ExportChangeRequest
-                id={id}
-                zohoCustomerId={data.zohoCustomerId}
-                consigneeName={data.document.header.consignee.name}
-                document={data.document}
-                onApply={(ops, summary, request) => apply(ops, summary, request)}
-              />
-            </section>
-          )}
-
-          <section className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-text-muted">Header & text</p>
-            <ExportHeaderPanel document={data.document} editable={editable} onApply={(ops, summary) => void apply(ops, summary)} />
-          </section>
-
-          <section className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-text-muted">History</p>
-            <ul className="space-y-1.5 text-xs">
-              {data.versions.map((v) => (
-                <li key={v.version} className="border-b border-border-muted/60 pb-1.5">
-                  <span className="font-semibold">v{v.version}</span> · {v.changeSummary ?? 'Edited'}
-                  {v.request && <span className="block text-text-muted">“{v.request}”</span>}
-                  <span className="block text-text-muted">
-                    {v.createdByName ?? 'Someone'} · {new Date(v.createdAt).toLocaleString('en-GB')}
-                    {v.pdfUrl && (
-                      <>
-                        {' · '}
-                        <a className="underline" href={v.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
-                      </>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        <aside className="hidden xl:block">
+          <div className="sticky top-28 max-h-[calc(100vh-8rem)] space-y-4 overflow-y-auto pb-4">
+            {checksPanel}
+            {askPanel}
+            {headerPanel}
+            {historyPanel}
+          </div>
         </aside>
       </div>
     </div>

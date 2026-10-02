@@ -8,36 +8,42 @@ export interface ExportChecksPanelProps {
 }
 
 /**
- * The checks an export invoice must pass, beside the document
+ * The checks an export invoice must pass
  *
- * Errors stop it being issued; warnings must be read. Clicking a check that
- * names lines highlights them in the table.
+ * Errors stop it being issued; warnings must be read. A check that names
+ * lines can be clicked to highlight and scroll to them.
  */
 const ExportChecksPanel = ({ checks, onSelectLines }: ExportChecksPanelProps) => {
   if (checks.length === 0) {
     return (
-      <div className="rounded-lg border border-border-success/30 bg-fill-success/10 p-3 text-sm text-text-success">
+      <p className="rounded-lg border border-border-success/30 bg-fill-success/10 px-3 py-2.5 text-sm text-text-success">
         All checks pass.
-      </div>
+      </p>
     );
   }
   return (
     <ul className="space-y-2">
-      {checks.map((c) => (
-        <li key={`${c.code}-${c.message}`}>
-          <button
-            type="button"
-            onClick={() => c.lineIds && onSelectLines?.(c.lineIds)}
-            className={`w-full rounded-lg border p-2.5 text-left text-xs ${
-              c.level === 'error'
-                ? 'border-border-danger/30 bg-fill-danger/10 text-text-danger'
-                : 'border-border-warning/30 bg-fill-warning/10 text-text-warning'
-            }`}
-          >
-            <span className="font-semibold uppercase">{c.level}</span> · {c.message}
-          </button>
-        </li>
-      ))}
+      {checks.map((c) => {
+        const clickable = Boolean(c.lineIds?.length && onSelectLines);
+        return (
+          <li key={`${c.code}-${c.message}`}>
+            <button
+              type="button"
+              disabled={!clickable}
+              onClick={() => c.lineIds && onSelectLines?.(c.lineIds)}
+              className={`w-full rounded-lg border-l-4 px-3 py-2 text-left text-xs leading-snug ${
+                c.level === 'error'
+                  ? 'border-l-border-danger bg-fill-danger/10 text-text-danger'
+                  : 'border-l-border-warning bg-fill-warning/10 text-text-warning'
+              } ${clickable ? 'hover:brightness-95' : 'cursor-default'}`}
+            >
+              <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide">{c.level}</span>
+              {c.message}
+              {clickable && <span className="mt-1 block text-[10px] underline">Show the line{c.lineIds && c.lineIds.length > 1 ? 's' : ''}</span>}
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 };

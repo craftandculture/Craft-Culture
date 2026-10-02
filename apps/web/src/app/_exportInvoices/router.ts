@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminApplyOps from './controller/adminApplyOps';
 import adminCreateDraft from './controller/adminCreateDraft';
 import adminDeleteDraft from './controller/adminDeleteDraft';
+import adminGetInvoiceLines from './controller/adminGetInvoiceLines';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminIssue from './controller/adminIssue';
@@ -17,6 +18,7 @@ const exportInvoicesRouter = createTRPCRouter({
     getOne: adminGetOne,
     consignees: adminListConsignees,
     invoicesForConsignee: adminListInvoicesForConsignee,
+    invoiceLines: adminGetInvoiceLines,
     createDraft: adminCreateDraft,
     // Every edit, typed or requested, is an op applied here and versioned
     applyOps: adminApplyOps,
