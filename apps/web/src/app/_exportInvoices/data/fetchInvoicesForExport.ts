@@ -1,10 +1,10 @@
-import { inArray, or } from 'drizzle-orm';
+import { eq, inArray, or } from 'drizzle-orm';
 
 import readInvoiceSubject from '@/app/_triangulation/utils/readInvoiceSubject';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
-import { zohoSalesOrders } from '@/database/schema';
-import { getInvoice } from '@/lib/zoho/invoices';
+import { zohoInvoices, zohoSalesOrders } from '@/database/schema';
+import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 import type { ZohoLineItem } from '@/lib/zoho/types';
 
 import type { ExportInvoiceInput } from '../utils/buildExportLines';
@@ -12,6 +12,41 @@ import roundMoney from '../utils/roundMoney';
 
 /** Fields Zoho returns on a line that the shared type does not declare */
 type ExportZohoLine = ZohoLineItem & { line_item_id?: string; hsn_or_sac?: string };
+
+/**
+ * Fetch an invoice, following it if Zoho deleted and re-raised it
+ *
+ * An invoice deleted in Zoho can linger in the synced list until the prune
+ * catches it, and a re-raised invoice keeps its number under a new id. So a
+ * 404 is retried by number; if the number is gone too, the stale row is
+ * removed and the operator is told which invoice to untick.
+ *
+ * @param zohoInvoiceId - The id from the synced list
+ * @returns The invoice as it stands in Zoho now
+ */
+const getCurrentInvoice = async (zohoInvoiceId: string) => {
+  try {
+    return await getInvoice(zohoInvoiceId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/404|1002|does not exist/i.test(message)) throw error;
+
+    const [row] = await db
+      .select({ invoiceNumber: zohoInvoices.invoiceNumber })
+      .from(zohoInvoices)
+      .where(eq(zohoInvoices.zohoInvoiceId, zohoInvoiceId))
+      .limit(1);
+    const number = row?.invoiceNumber ?? zohoInvoiceId;
+    const { invoices: matches } = await listInvoices({ invoiceNumber: number });
+    const replacement = matches.find((m) => m.invoice_number === number && m.status !== 'void');
+    if (replacement) return await getInvoice(replacement.invoice_id);
+
+    await db.delete(zohoInvoices).where(eq(zohoInvoices.zohoInvoiceId, zohoInvoiceId));
+    throw new Error(`${number} no longer exists in Zoho (deleted or replaced). Untick it and choose its replacement.`, {
+      cause: error,
+    });
+  }
+};
 
 /**
  * Read the invoices an export invoice is built from, live from Zoho
@@ -28,7 +63,7 @@ type ExportZohoLine = ZohoLineItem & { line_item_id?: string; hsn_or_sac?: strin
 const fetchInvoicesForExport = async (zohoInvoiceIds: string[]) => {
   const invoices = [];
   for (const id of zohoInvoiceIds) {
-    invoices.push(await getInvoice(id));
+    invoices.push(await getCurrentInvoice(id));
   }
 
   // The invoice's reference holds its sales order; a reissued invoice is not
