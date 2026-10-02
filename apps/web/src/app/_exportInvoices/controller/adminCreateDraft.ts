@@ -36,7 +36,7 @@ const adminCreateDraft = adminProcedure
       logger.error('Export draft build failed', { error, input });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Could not read the invoices from Zoho. Try again in a moment.',
+        message: `Could not build the draft. ${error instanceof Error ? error.message : String(error)}`,
       });
     }
 

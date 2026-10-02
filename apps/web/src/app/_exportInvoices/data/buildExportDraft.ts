@@ -60,15 +60,29 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
   const currency = profile?.currency === 'USD' ? 'USD' : 'AED';
   const rate = currency === 'USD' ? 1 : (profile?.rate ?? AED_PER_USD);
 
-  const invoices = await fetchInvoicesForExport(input.zohoInvoiceIds);
+  // Each step is named so a failure says where it happened, not just that it did
+  const step = async <T,>(name: string, run: () => Promise<T> | T) => {
+    try {
+      return await run();
+    } catch (error) {
+      throw new Error(`${name}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+  };
+
+  const invoices = await step('Reading invoices from Zoho', () => fetchInvoicesForExport(input.zohoInvoiceIds));
   const lwins = invoices.flatMap((i) => i.lines.map((l) => l.lwin18).filter((l): l is string => Boolean(l)));
-  const [originByLwin, boeByKey] = await Promise.all([lookupOrigins(lwins), resolveExportBoes(invoices)]);
-  const { sections, lines } = buildExportLines(invoices, { rate, originByLwin, boeByKey });
+  const originByLwin = await step('Looking up origins', () => lookupOrigins(lwins));
+  const boeByKey = await step('Finding BOEs in stock', () => resolveExportBoes(invoices));
+  const { sections, lines } = await step('Building lines', () =>
+    buildExportLines(invoices, { rate, originByLwin, boeByKey }),
+  );
 
   // A profile made only to hold a standing rule has no address of its own
   const consignee = profile?.addressLines?.length
     ? { name: profile.displayName, addressLines: profile.addressLines, trn: profile.trn }
-    : consigneeFromContact(await getContact(input.zohoCustomerId));
+    : await step('Reading the consignee from Zoho', async () =>
+        consigneeFromContact(await getContact(input.zohoCustomerId)),
+      );
 
   const today = new Date().toISOString().slice(0, 10);
   const origins = [...new Set(lines.flatMap((l) => l.origin.split(' / ')).filter(Boolean))];
