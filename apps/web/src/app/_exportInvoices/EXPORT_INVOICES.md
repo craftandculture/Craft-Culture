@@ -2,7 +2,7 @@
 
 The combined **Commercial Invoice & Packing List** (EXP-YYYY-NNNN) that goes with a shipment leaving the bond. Before this tool existed they were hand-built HTML files in `cc-marketing-site/templates/` (EXP-2026-0029 to 0041). This screen replaces them.
 
-**Screen:** Admin → Finance → Export Invoices (`/platform/admin/export-invoices`).
+**Screen:** Admin → Logistics → Export Invoices (`/platform/admin/logistics/export-invoices`).
 
 ## Flow
 1. **New export invoice:** pick the consignee, tick the invoices going out, then **Build draft**. The invoices are read live from Zoho.

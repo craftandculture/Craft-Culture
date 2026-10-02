@@ -55,7 +55,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   });
   const deleteMutation = useMutation({
     ...api.exportInvoices.admin.deleteDraft.mutationOptions(),
-    onSuccess: () => router.push('/platform/admin/export-invoices'),
+    onSuccess: () => router.push('/platform/admin/logistics/export-invoices'),
     onError: (error) => toast.error(error.message),
   });
 

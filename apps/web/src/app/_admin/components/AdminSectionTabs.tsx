@@ -26,6 +26,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Quotes', href: '/platform/admin/logistics/quotes' },
     { label: 'Requests', href: '/platform/admin/logistics/requests' },
     { label: 'Invoices', href: '/platform/admin/logistics/invoices' },
+    { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices' },
     { label: 'Reports', href: '/platform/admin/logistics/reports' },
   ],
   warehouse: [
@@ -57,7 +58,6 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
     { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
     { label: 'Client LPOs', href: '/platform/admin/lpo' },
-    { label: 'Export Invoices', href: '/platform/admin/export-invoices' },
     { label: 'Distribution', href: '/platform/admin/distribution' },
     // Triangulation stays until Crurated's figures agree in both
     { label: 'Triangulation', href: '/platform/admin/triangulation' },

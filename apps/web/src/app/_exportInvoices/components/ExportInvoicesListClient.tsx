@@ -19,7 +19,7 @@ const ExportInvoicesListClient = () => {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button colorRole="brand" size="sm" asChild>
-          <Link href="/platform/admin/export-invoices/new">New export invoice</Link>
+          <Link href="/platform/admin/logistics/export-invoices/new">New export invoice</Link>
         </Button>
       </div>
       {isLoading ? (
@@ -43,7 +43,7 @@ const ExportInvoicesListClient = () => {
               {data.map((row) => (
                 <tr key={row.id} className="border-t border-border-muted/60 hover:bg-fill-muted/30">
                   <td className="px-3 py-2 font-medium">
-                    <Link href={`/platform/admin/export-invoices/${row.id}`} className="hover:underline">
+                    <Link href={`/platform/admin/logistics/export-invoices/${row.id}`} className="hover:underline">
                       {row.number ?? 'Draft'}
                     </Link>
                   </td>

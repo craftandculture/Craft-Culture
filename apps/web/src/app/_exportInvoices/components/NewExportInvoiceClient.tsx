@@ -33,7 +33,7 @@ const NewExportInvoiceClient = () => {
     onSuccess: (result) => {
       const skipped = result.ruleResults.filter((r) => !r.applied);
       if (skipped.length) toast.warning(`${skipped.length} standing rule${skipped.length > 1 ? 's' : ''} did not apply`);
-      router.push(`/platform/admin/export-invoices/${result.id}`);
+      router.push(`/platform/admin/logistics/export-invoices/${result.id}`);
     },
     onError: (error) => toast.error(error.message),
   });
