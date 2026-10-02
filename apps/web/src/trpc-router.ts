@@ -5,6 +5,7 @@ import cellarRouter from '@/app/_cellar/router';
 import commissionsRouter from '@/app/_commissions/router';
 import consignmentRouter from '@/app/_consignment/router';
 import distributionRouter from '@/app/_distribution/router';
+import exportInvoicesRouter from '@/app/_exportInvoices/router';
 import logisticsRouter from '@/app/_logistics/router';
 import lpoRouter from '@/app/_lpo/router';
 import lwinRouter from '@/app/_lwin/router';
@@ -35,6 +36,7 @@ export const appRouter = createTRPCRouter({
   commissions: commissionsRouter,
   logistics: logisticsRouter,
   lpo: lpoRouter,
+  exportInvoices: exportInvoicesRouter,
   lwin: lwinRouter,
   morningView: morningViewRouter,
   users: usersRouter,

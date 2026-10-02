@@ -5782,6 +5782,107 @@ export const zohoInvoices = pgTable(
 export type ZohoInvoice = typeof zohoInvoices.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Export invoices (combined commercial invoice & packing list)
+// ---------------------------------------------------------------------------
+
+/**
+ * A combined Commercial Invoice & Packing List for one consignee
+ *
+ * The document itself is JSON (`ExportDocument` in `_exportInvoices`), so the
+ * preview and the PDF are drawn from one source and every change is an op
+ * that can be shown, logged and replayed. `number` stays null until issue so a
+ * discarded draft does not burn an EXP number.
+ */
+export const exportInvoices = pgTable(
+  'export_invoices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    number: text('number').unique(),
+    zohoCustomerId: text('zoho_customer_id').notNull(),
+    consigneeName: text('consignee_name').notNull(),
+    status: text('status').notNull().default('draft'), // 'draft' | 'issued'
+    document: jsonb('document').$type<Record<string, unknown>>().notNull(),
+    version: integer('version').notNull().default(1),
+    pdfUrl: text('pdf_url'),
+    issuedAt: timestamp('issued_at', { mode: 'date' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('export_invoices_customer_idx').on(table.zohoCustomerId)],
+);
+
+/** Every saved state of an export invoice, with the ops and request behind it */
+export const exportInvoiceVersions = pgTable(
+  'export_invoice_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    exportInvoiceId: uuid('export_invoice_id')
+      .references(() => exportInvoices.id, { onDelete: 'cascade' })
+      .notNull(),
+    version: integer('version').notNull(),
+    document: jsonb('document').$type<Record<string, unknown>>().notNull(),
+    ops: jsonb('ops').$type<unknown[]>().notNull().default([]),
+    /** The words that asked for the change, when it came from a request */
+    request: text('request'),
+    changeSummary: text('change_summary'),
+    pdfUrl: text('pdf_url'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('export_invoice_versions_unique').on(table.exportInvoiceId, table.version),
+  ],
+);
+
+/**
+ * The Zoho invoices an export invoice was built from, as they stood
+ *
+ * Invoices get reissued after the export invoice is drafted (lines dropped,
+ * prices corrected). Comparing these snapshots with the synced invoice is how
+ * a stale document is caught before it reaches customs.
+ */
+export const exportInvoiceSources = pgTable(
+  'export_invoice_sources',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    exportInvoiceId: uuid('export_invoice_id')
+      .references(() => exportInvoices.id, { onDelete: 'cascade' })
+      .notNull(),
+    zohoInvoiceId: text('zoho_invoice_id').notNull(),
+    invoiceNumber: text('invoice_number').notNull(),
+    snapshotTotal: doublePrecision('snapshot_total').notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index('export_invoice_sources_export_idx').on(table.exportInvoiceId),
+    index('export_invoice_sources_zoho_idx').on(table.zohoInvoiceId),
+  ],
+);
+
+/**
+ * How export invoices to one consignee are made
+ *
+ * Currency and rate, the consignee block as customs want it, and standing
+ * rules — requests that were made once and should apply to every document for
+ * this consignee from then on.
+ */
+export const exportConsigneeProfiles = pgTable('export_consignee_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  zohoCustomerId: text('zoho_customer_id').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  addressLines: jsonb('address_lines').$type<string[]>(),
+  trn: text('trn'),
+  currency: text('currency').notNull().default('AED'),
+  rate: doublePrecision('rate').notNull().default(3.6725),
+  /** `{ text, ops }[]`, replayed on every new draft */
+  standingRules: jsonb('standing_rules').$type<{ text: string; ops: unknown[] }[]>().notNull().default([]),
+  ...timestamps,
+});
+
+export type ExportInvoiceRow = typeof exportInvoices.$inferSelect;
+export type ExportConsigneeProfile = typeof exportConsigneeProfiles.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // AI Agents
 // ---------------------------------------------------------------------------
 

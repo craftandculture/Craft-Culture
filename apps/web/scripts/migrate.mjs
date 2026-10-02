@@ -2159,6 +2159,100 @@ const runMigrations = async () => {
     );
     console.log('✅ cons_wine_closed ready');
 
+    /*
+      Export invoices — the combined commercial invoice & packing list.
+
+      The document is JSON; versions keep every state with the ops and request
+      behind it; sources snapshot the Zoho invoices so a reissued invoice is
+      caught; consignee profiles hold currency and standing rules. The two
+      consignees exported to so far are seeded from the synced invoices, with
+      the address and TRN customs have accepted on earlier documents.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "export_invoices" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "number" text UNIQUE,
+        "zoho_customer_id" text NOT NULL,
+        "consignee_name" text NOT NULL,
+        "status" text NOT NULL DEFAULT 'draft',
+        "document" jsonb NOT NULL,
+        "version" integer NOT NULL DEFAULT 1,
+        "pdf_url" text,
+        "issued_at" timestamp,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "export_invoices_customer_idx" ON "export_invoices"("zoho_customer_id")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "export_invoice_versions" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "export_invoice_id" uuid NOT NULL REFERENCES "export_invoices"("id") ON DELETE CASCADE,
+        "version" integer NOT NULL,
+        "document" jsonb NOT NULL,
+        "ops" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "request" text,
+        "change_summary" text,
+        "pdf_url" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "export_invoice_versions_unique" ON "export_invoice_versions"("export_invoice_id","version")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "export_invoice_sources" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "export_invoice_id" uuid NOT NULL REFERENCES "export_invoices"("id") ON DELETE CASCADE,
+        "zoho_invoice_id" text NOT NULL,
+        "invoice_number" text NOT NULL,
+        "snapshot_total" double precision NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "export_invoice_sources_export_idx" ON "export_invoice_sources"("export_invoice_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "export_invoice_sources_zoho_idx" ON "export_invoice_sources"("zoho_invoice_id")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "export_consignee_profiles" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_customer_id" text NOT NULL UNIQUE,
+        "display_name" text NOT NULL,
+        "address_lines" jsonb,
+        "trn" text,
+        "currency" text NOT NULL DEFAULT 'AED',
+        "rate" double precision NOT NULL DEFAULT 3.6725,
+        "standing_rules" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      INSERT INTO "export_consignee_profiles" ("zoho_customer_id","display_name","address_lines","trn")
+      SELECT DISTINCT ON (zoho_customer_id) zoho_customer_id, 'C D General Trading L.L.C',
+        '["09 Al Mamoura Building","Khalifa Industrial Area","Abu Dhabi Ports Company PJSC","United Arab Emirates"]'::jsonb,
+        '104077092500003'
+      FROM "zoho_invoices" WHERE customer_name ILIKE 'C D General Trading%'
+      ON CONFLICT ("zoho_customer_id") DO NOTHING
+    `);
+    await client.unsafe(`
+      INSERT INTO "export_consignee_profiles" ("zoho_customer_id","display_name","address_lines","trn")
+      SELECT DISTINCT ON (zoho_customer_id) zoho_customer_id, 'The Bottle Store General Trading LLC – SPC',
+        '["Al Saman Towers","Sheikh Hamdan Bin Mohammed Street 31945","Abu Dhabi","United Arab Emirates"]'::jsonb,
+        '100451466500003'
+      FROM "zoho_invoices" WHERE customer_name ILIKE 'The Bottle Store%'
+      ON CONFLICT ("zoho_customer_id") DO NOTHING
+    `);
+    console.log('✅ export invoices ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

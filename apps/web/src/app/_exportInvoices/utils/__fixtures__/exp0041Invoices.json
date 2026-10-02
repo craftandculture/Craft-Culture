@@ -1,0 +1,1152 @@
+[
+ {
+  "zohoInvoiceId": "INV-000341",
+  "invoiceNumber": "INV-000341",
+  "soNumber": "SO-00144",
+  "pcoNumber": "PCO-2026-00060",
+  "invoiceDate": "2026-09-21",
+  "totalUsd": 513.9,
+  "lines": [
+   {
+    "lineItemId": "INV-000341-1",
+    "name": "Lynch Bages 2000 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 2,
+    "rate": 256.95,
+    "netUsd": 513.9,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000343",
+  "invoiceNumber": "INV-000343",
+  "soNumber": "SO-00145",
+  "pcoNumber": null,
+  "invoiceDate": "2026-09-21",
+  "totalUsd": 1226.1,
+  "lines": [
+   {
+    "lineItemId": "INV-000343-1",
+    "name": "Bruno Clair Vosne-Romanee Aux Champs Perdrix (3x) 2023 (2x75cl)",
+    "description": "2x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 158.88,
+    "netUsd": 158.88,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000343-2",
+    "name": "Anne Gros Chambolle Musigny 'Combe D’Orveaux' 2023 (2x75cl)",
+    "description": "2x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 222.24,
+    "netUsd": 222.24,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000343-3",
+    "name": "Domaine Fourrier Premier Cru Gevrey-Chambertin Vieille Vigne 2021 0.75L 13.5%abv (2x75cl)",
+    "description": "2x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 273.12,
+    "netUsd": 273.12,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000343-4",
+    "name": "Chambolle-Musigny Premier Cru, Les Veroilles, Domaine Ghislaine Barthod 2015 (2x75cl)",
+    "description": "2x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 571.86,
+    "netUsd": 571.86,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000348",
+  "invoiceNumber": "INV-000348",
+  "soNumber": "SO-00172",
+  "pcoNumber": "PCO-2026-00061",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 195.51,
+  "lines": [
+   {
+    "lineItemId": "INV-000348-1",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.42,
+    "netUsd": 30.42,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000348-2",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 33.62,
+    "netUsd": 33.62,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000348-3",
+    "name": "Chateau Marsau, Francs-Cotes de Bordeaux 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.69,
+    "netUsd": 31.69,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000348-4",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 42.32,
+    "netUsd": 42.32,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000348-5",
+    "name": "Escoces Volante, Calatayud, Manda Huevos Tinto 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.18,
+    "netUsd": 30.18,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000348-6",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 27.28,
+    "netUsd": 27.28,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000350",
+  "invoiceNumber": "INV-000350",
+  "soNumber": "SO-00171",
+  "pcoNumber": "PCO-2026-00062",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 195.51,
+  "lines": [
+   {
+    "lineItemId": "INV-000350-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 27.28,
+    "netUsd": 27.28,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000350-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.42,
+    "netUsd": 30.42,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000350-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 33.62,
+    "netUsd": 33.62,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000350-4",
+    "name": "Chateau Marsau, Francs-Cotes de Bordeaux 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.69,
+    "netUsd": 31.69,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000350-5",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 42.32,
+    "netUsd": 42.32,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000350-6",
+    "name": "Escoces Volante, Calatayud, Manda Huevos Tinto 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.18,
+    "netUsd": 30.18,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000351",
+  "invoiceNumber": "INV-000351",
+  "soNumber": "SO-00170",
+  "pcoNumber": "PCO-2026-00063",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 103.68,
+  "lines": [
+   {
+    "lineItemId": "INV-000351-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.15,
+    "netUsd": 31.15,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000351-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 34.31,
+    "netUsd": 34.31,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000351-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 38.22,
+    "netUsd": 38.22,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000352",
+  "invoiceNumber": "INV-000352",
+  "soNumber": "SO-00169",
+  "pcoNumber": "PCO-2026-00064",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 103.68,
+  "lines": [
+   {
+    "lineItemId": "INV-000352-1",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 32.9,
+    "netUsd": 32.9,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000352-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 29.49,
+    "netUsd": 29.49,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000352-3",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 41.29,
+    "netUsd": 41.29,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000353",
+  "invoiceNumber": "INV-000353",
+  "soNumber": "SO-00168",
+  "pcoNumber": "PCO-2026-00065",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 263.72,
+  "lines": [
+   {
+    "lineItemId": "INV-000353-1",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.85,
+    "netUsd": 91.85,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000353-2",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.52,
+    "netUsd": 91.52,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000353-3",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 80.35,
+    "netUsd": 80.35,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000354",
+  "invoiceNumber": "INV-000354",
+  "soNumber": "SO-00167",
+  "pcoNumber": "PCO-2026-00066",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 195.51,
+  "lines": [
+   {
+    "lineItemId": "INV-000354-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 27.28,
+    "netUsd": 27.28,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000354-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.42,
+    "netUsd": 30.42,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000354-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 33.62,
+    "netUsd": 33.62,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000354-4",
+    "name": "Chateau Marsau, Francs-Cotes de Bordeaux 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.69,
+    "netUsd": 31.69,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000354-5",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 42.32,
+    "netUsd": 42.32,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000354-6",
+    "name": "Escoces Volante, Calatayud, Manda Huevos Tinto 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.18,
+    "netUsd": 30.18,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000355",
+  "invoiceNumber": "INV-000355",
+  "soNumber": "SO-00166",
+  "pcoNumber": "PCO-2026-00067",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 195.51,
+  "lines": [
+   {
+    "lineItemId": "INV-000355-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 27.28,
+    "netUsd": 27.28,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000355-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.42,
+    "netUsd": 30.42,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000355-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 33.62,
+    "netUsd": 33.62,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000355-4",
+    "name": "Chateau Marsau, Francs-Cotes de Bordeaux 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.69,
+    "netUsd": 31.69,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000355-5",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 42.32,
+    "netUsd": 42.32,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000355-6",
+    "name": "Escoces Volante, Calatayud, Manda Huevos Tinto 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.18,
+    "netUsd": 30.18,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000356",
+  "invoiceNumber": "INV-000356",
+  "soNumber": "SO-00165",
+  "pcoNumber": "PCO-2026-00068",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 195.51,
+  "lines": [
+   {
+    "lineItemId": "INV-000356-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 27.28,
+    "netUsd": 27.28,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000356-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.42,
+    "netUsd": 30.42,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000356-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 33.62,
+    "netUsd": 33.62,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000356-4",
+    "name": "Chateau Marsau, Francs-Cotes de Bordeaux 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.69,
+    "netUsd": 31.69,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000356-5",
+    "name": "Domaine Heresztyn-Mazzini, Bourgogne, Pinot Noir 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 42.32,
+    "netUsd": 42.32,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000356-6",
+    "name": "Escoces Volante, Calatayud, Manda Huevos Tinto 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 30.18,
+    "netUsd": 30.18,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000357",
+  "invoiceNumber": "INV-000357",
+  "soNumber": "SO-00164",
+  "pcoNumber": "PCO-2026-00069",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 103.68,
+  "lines": [
+   {
+    "lineItemId": "INV-000357-1",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 34.31,
+    "netUsd": 34.31,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000357-2",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 38.22,
+    "netUsd": 38.22,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000357-3",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.15,
+    "netUsd": 31.15,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000358",
+  "invoiceNumber": "INV-000358",
+  "soNumber": "SO-00163",
+  "pcoNumber": "PCO-2026-00070",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 103.68,
+  "lines": [
+   {
+    "lineItemId": "INV-000358-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.15,
+    "netUsd": 31.15,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000358-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 34.31,
+    "netUsd": 34.31,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000358-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 38.22,
+    "netUsd": 38.22,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000359",
+  "invoiceNumber": "INV-000359",
+  "soNumber": "SO-00161",
+  "pcoNumber": "PCO-2026-00071",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 103.68,
+  "lines": [
+   {
+    "lineItemId": "INV-000359-1",
+    "name": "Livio Sassetti (Pertimali), Rosso di Montalcino 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 31.15,
+    "netUsd": 31.15,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000359-2",
+    "name": "Chateau Potensac, Medoc 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 34.31,
+    "netUsd": 34.31,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000359-3",
+    "name": "Larue, Bourgogne, Cote d'Or Les Buees 2022 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 38.22,
+    "netUsd": 38.22,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000360",
+  "invoiceNumber": "INV-000360",
+  "soNumber": "SO-00160",
+  "pcoNumber": "PCO-2026-00075",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 263.72,
+  "lines": [
+   {
+    "lineItemId": "INV-000360-1",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.52,
+    "netUsd": 91.52,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000360-2",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 80.35,
+    "netUsd": 80.35,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000360-3",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.85,
+    "netUsd": 91.85,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000361",
+  "invoiceNumber": "INV-000361",
+  "soNumber": "SO-00159",
+  "pcoNumber": "PCO-2026-00074",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 263.72,
+  "lines": [
+   {
+    "lineItemId": "INV-000361-1",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 80.35,
+    "netUsd": 80.35,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000361-2",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.52,
+    "netUsd": 91.52,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000361-3",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.85,
+    "netUsd": 91.85,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000362",
+  "invoiceNumber": "INV-000362",
+  "soNumber": "SO-00158",
+  "pcoNumber": "PCO-2026-00076",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 263.72,
+  "lines": [
+   {
+    "lineItemId": "INV-000362-1",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.52,
+    "netUsd": 91.52,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000362-2",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 80.35,
+    "netUsd": 80.35,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000362-3",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.85,
+    "netUsd": 91.85,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000363",
+  "invoiceNumber": "INV-000363",
+  "soNumber": "SO-00157",
+  "pcoNumber": "PCO-2026-00073",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 263.72,
+  "lines": [
+   {
+    "lineItemId": "INV-000363-1",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.52,
+    "netUsd": 91.52,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000363-2",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 80.35,
+    "netUsd": 80.35,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000363-3",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 91.85,
+    "netUsd": 91.85,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000364",
+  "invoiceNumber": "INV-000364",
+  "soNumber": "SO-00156",
+  "pcoNumber": "PCO-2026-00077",
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 492.88,
+  "lines": [
+   {
+    "lineItemId": "INV-000364-1",
+    "name": "Elio Grasso, Barolo, Gavarini Chiniera 2020 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 95.5,
+    "netUsd": 95.5,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000364-2",
+    "name": "Chateau Rauzan-Gassies 2eme Cru Classe, Margaux 2015 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 83.86,
+    "netUsd": 83.86,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000364-3",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 95.63,
+    "netUsd": 95.63,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000364-4",
+    "name": "Macan Clasico 2019 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 60.33,
+    "netUsd": 60.33,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000364-5",
+    "name": "Penfolds, Bin 18A Reserve Chardonnay, Adelaide Hills 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 75.16,
+    "netUsd": 75.16,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000364-6",
+    "name": "Chateau Lascombes 2eme Cru Classe, Margaux 2018 (1x75cl)",
+    "description": "1x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 82.4,
+    "netUsd": 82.4,
+    "zohoHsCode": null
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000365",
+  "invoiceNumber": "INV-000365",
+  "soNumber": "SO-00155",
+  "pcoNumber": null,
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 13937.11,
+  "lines": [
+   {
+    "lineItemId": "INV-000365-1",
+    "name": "BROTHERS BOND - STRAIGHT BOURBON Whiskey ABV / 80",
+    "description": "75cl - 40%",
+    "lwin18": null,
+    "quantity": 2,
+    "rate": 141.0,
+    "netUsd": 282.0,
+    "zohoHsCode": "22083000000"
+   },
+   {
+    "lineItemId": "INV-000365-2",
+    "name": "Chateau Pedesclaux 5eme Cru Classe, Pauillac 2020",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 256.65,
+    "netUsd": 256.65,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-3",
+    "name": "Chateau Leoville Poyferre 2eme Cru Classe, Saint-Julien 2021",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 553.83,
+    "netUsd": 553.83,
+    "zohoHsCode": "2204214210"
+   },
+   {
+    "lineItemId": "INV-000365-4",
+    "name": "Chateau Leoville Poyferre 2eme Cru Classe, Saint-Julien 2019",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 570.53,
+    "netUsd": 570.53,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-5",
+    "name": "Chateau Leoville Poyferre 2eme Cru Classe, Saint Julien 2017",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 1122.69,
+    "netUsd": 1122.69,
+    "zohoHsCode": "2204216690"
+   },
+   {
+    "lineItemId": "INV-000365-6",
+    "name": "Chateau Lascombes 2eme Cru Classe, Margaux 2018",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 832.47,
+    "netUsd": 832.47,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-7",
+    "name": "Chateau Brane-Cantenac 2eme Cru Classe, Margaux 2016 (6pk)",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 592.92,
+    "netUsd": 592.92,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000365-8",
+    "name": "Chateau Troplong Mondot Premier Grand Cru Classe B, Saint- Emilion Grand Cru 2021",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 481.65,
+    "netUsd": 481.65,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-9",
+    "name": "Chateau Troplong Mondot 1er Grand Cru Classe, St Emilion 2014",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 1383.2,
+    "netUsd": 1383.2,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000365-10",
+    "name": "Chateau Talbot 4eme Cru Classe, Saint-Julien 2019",
+    "description": "06x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 467.8,
+    "netUsd": 467.8,
+    "zohoHsCode": null
+   },
+   {
+    "lineItemId": "INV-000365-11",
+    "name": "Chateau Pape Clement Cru Classe, Pessac-Leognan 2017",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 988.98,
+    "netUsd": 988.98,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-12",
+    "name": "Chateau Giscours 3eme Cru Classe, Margaux 2018",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 795.33,
+    "netUsd": 795.33,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-13",
+    "name": "Chateau Giscours 3eme Cru Classe, Margaux 2017",
+    "description": "12x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 890.03,
+    "netUsd": 890.03,
+    "zohoHsCode": "2204214290"
+   },
+   {
+    "lineItemId": "INV-000365-14",
+    "name": "Pauillac Pontet Canet 2016",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 2,
+    "rate": 2020.38,
+    "netUsd": 4040.76,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000365-15",
+    "name": "Lynch Bages 2010",
+    "description": "3x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 678.27,
+    "netUsd": 678.27,
+    "zohoHsCode": "22042100"
+   }
+  ]
+ },
+ {
+  "zohoInvoiceId": "INV-000366",
+  "invoiceNumber": "INV-000366",
+  "soNumber": "SO-00154",
+  "pcoNumber": null,
+  "invoiceDate": "2026-09-29",
+  "totalUsd": 11935.9,
+  "lines": [
+   {
+    "lineItemId": "INV-000366-1",
+    "name": "Racines Wenzlau Chardonnay 2022",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 4,
+    "rate": 505.63,
+    "netUsd": 2022.52,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-2",
+    "name": "Armand Heitz Bourgogne Blanc 2023",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 6,
+    "rate": 185.4,
+    "netUsd": 1112.4,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-3",
+    "name": "Domaine de Montille Bourgogne Blanc Le Clos du Château 2022",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 2,
+    "rate": 219.12,
+    "netUsd": 438.24,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-4",
+    "name": "Domaine de Montille Bourgogne Rouge 2021",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 218.88,
+    "netUsd": 218.88,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-5",
+    "name": "Arnaud Mortet Gevrey-Chambertin Ma Cuvée 2020",
+    "description": "3 x 75cl",
+    "lwin18": null,
+    "quantity": 8,
+    "rate": 324.85,
+    "netUsd": 2598.8,
+    "zohoHsCode": "22042143"
+   },
+   {
+    "lineItemId": "INV-000366-6",
+    "name": "Domaine Fournier Gevrey-Chambertin 2023",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 4,
+    "rate": 648.89,
+    "netUsd": 2595.56,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-7",
+    "name": "Cantina del Barone Fiano d'Avellino 2022",
+    "description": "3x75cl",
+    "lwin18": null,
+    "quantity": 8,
+    "rate": 151.69,
+    "netUsd": 1213.52,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-8",
+    "name": "Tormaresca Puglia IGT Fiano di Bocca di Lupo 2021",
+    "description": "6x75cl",
+    "lwin18": null,
+    "quantity": 5,
+    "rate": 286.52,
+    "netUsd": 1432.6,
+    "zohoHsCode": "22042100"
+   },
+   {
+    "lineItemId": "INV-000366-9",
+    "name": "Cantina dell'Angelo Torrefavale 2022",
+    "description": "6 x 75cl",
+    "lwin18": null,
+    "quantity": 1,
+    "rate": 303.38,
+    "netUsd": 303.38,
+    "zohoHsCode": "22042138"
+   }
+  ]
+ }
+]

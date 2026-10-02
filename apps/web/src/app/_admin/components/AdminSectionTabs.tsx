@@ -57,6 +57,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
     { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
     { label: 'Client LPOs', href: '/platform/admin/lpo' },
+    { label: 'Export Invoices', href: '/platform/admin/export-invoices' },
     { label: 'Distribution', href: '/platform/admin/distribution' },
     // Triangulation stays until Crurated's figures agree in both
     { label: 'Triangulation', href: '/platform/admin/triangulation' },
