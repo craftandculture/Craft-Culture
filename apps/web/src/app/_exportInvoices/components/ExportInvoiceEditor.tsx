@@ -42,6 +42,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [tab, setTab] = useState<SideTab>('checks');
   const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [reopenReason, setReopenReason] = useState<string | null>(null);
 
   const query = useQuery(api.exportInvoices.admin.getOne.queryOptions({ id }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.getOne.queryKey({ id }) });
@@ -78,6 +79,16 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
     onError: (error) => toast.error(error.message),
   });
 
+  const reopenMutation = useMutation({
+    ...api.exportInvoices.admin.reopen.mutationOptions(),
+    onSuccess: () => {
+      toast.success('Reopened for editing — re-issue when done');
+      setReopenReason(null);
+      void refresh();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   if (query.isLoading) {
     return (
       <div className="space-y-4">
@@ -91,6 +102,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
 
   const data = query.data;
   const editable = data.status === 'draft';
+  const revising = editable && Boolean(data.number);
   const errors = data.checks.filter((c) => c.level === 'error');
   const warnings = data.checks.filter((c) => c.level === 'warning');
   const pdfHref = data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`;
@@ -120,7 +132,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
             </label>
           )}
           <Button colorRole="brand" className="w-full justify-center" disabled={!canIssue} onClick={issue}>
-            {issueMutation.isPending ? 'Issuing…' : errors.length ? 'Fix the errors to issue' : 'Issue and number'}
+            {issueMutation.isPending ? 'Issuing…' : errors.length ? 'Fix the errors to issue' : revising ? `Re-issue ${data.number}` : 'Issue and number'}
           </Button>
         </div>
       )}
@@ -186,13 +198,13 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-semibold sm:text-xl">{data.number ?? 'Draft export invoice'}</h1>
               <Badge colorRole={editable ? 'warning' : data.status === 'cancelled' ? 'danger' : 'success'} size="sm">
-                {editable ? 'Draft' : data.status === 'cancelled' ? 'Cancelled' : 'Issued'}
+                {revising ? 'Revising' : editable ? 'Draft' : data.status === 'cancelled' ? 'Cancelled' : 'Issued'}
               </Badge>
               <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {editable &&
+            {editable && !revising &&
               (confirmDiscard ? (
                 <span className="flex items-center gap-1.5 text-xs">
                   Discard this draft?
@@ -203,6 +215,24 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                 <Button variant="ghost" size="sm" onClick={() => setConfirmDiscard(true)}>Discard</Button>
               ))}
             {data.status === 'issued' &&
+              (reopenReason === null ? (
+                <Button variant="outline" size="sm" onClick={() => setReopenReason('')}>Edit</Button>
+              ) : (
+                <span className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <input
+                    autoFocus
+                    value={reopenReason}
+                    onChange={(e) => setReopenReason(e.target.value)}
+                    placeholder="What needs changing, e.g. customs want ABV"
+                    className="w-60 rounded-md border border-border-primary bg-fill-primary px-2 py-1"
+                  />
+                  <Button size="xs" colorRole="brand" disabled={reopenReason.trim().length < 3 || reopenMutation.isPending} onClick={() => reopenMutation.mutate({ id, reason: reopenReason.trim() })}>
+                    Reopen {data.number}
+                  </Button>
+                  <Button size="xs" variant="ghost" onClick={() => setReopenReason(null)}>Back</Button>
+                </span>
+              ))}
+            {(data.status === 'issued' || revising) &&
               (cancelReason === null ? (
                 <Button variant="ghost" size="sm" onClick={() => setCancelReason('')}>Cancel invoice</Button>
               ) : (
@@ -231,7 +261,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                 onClick={issue}
                 title={errors.length ? 'Fix the errors in Checks first' : warnings.length && !acknowledged ? 'Tick the warnings as read in Checks' : undefined}
               >
-                Issue
+                {revising ? 'Re-issue' : 'Issue'}
               </Button>
             )}
           </div>
@@ -240,7 +270,12 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
 
       {data.status === 'issued' && (
         <div className="rounded-xl border border-border-success/30 bg-fill-success/10 px-4 py-3 text-sm text-text-success">
-          Issued{data.number ? ` as ${data.number}` : ''}. The document is frozen; if the invoices change, cancel it and build a new draft.
+          Issued{data.number ? ` as ${data.number}` : ''}. To correct it, use Edit: it reopens under the same number and keeps every earlier PDF.
+        </div>
+      )}
+      {revising && (
+        <div className="rounded-xl border border-border-warning/30 bg-fill-warning/10 px-4 py-3 text-sm text-text-warning">
+          Revising {data.number}. Make your changes, then Re-issue — it keeps the same number and saves a new PDF version.
         </div>
       )}
       {data.status === 'cancelled' && (

@@ -44,12 +44,20 @@ const ExportInvoicesListClient = () => {
   /** Delete for a draft, cancel (with a reason) for an issued document */
   const actions = (row: { id: string; status: string; number: string | null }) => {
     if (row.status === 'cancelled') return null;
-    const isDraft = row.status === 'draft';
+    // Only a never-issued draft is deleted; anything numbered is cancelled
+    const isDraft = row.status === 'draft' && !row.number;
     if (confirming?.id !== row.id) {
       return (
-        <Button size="xs" variant="ghost" onClick={(e) => { e.preventDefault(); setConfirming({ id: row.id, reason: '' }); }}>
-          {isDraft ? 'Delete' : 'Cancel'}
-        </Button>
+        <span className="flex justify-end gap-1">
+          {row.status !== 'draft' && (
+            <Button size="xs" variant="ghost" asChild>
+              <Link href={`/platform/admin/logistics/export-invoices/${row.id}`}>Edit</Link>
+            </Button>
+          )}
+          <Button size="xs" variant="ghost" onClick={(e) => { e.preventDefault(); setConfirming({ id: row.id, reason: '' }); }}>
+            {isDraft ? 'Delete' : 'Cancel'}
+          </Button>
+        </span>
       );
     }
     return (
@@ -77,9 +85,9 @@ const ExportInvoicesListClient = () => {
       </span>
     );
   };
-  const badge = (status: string) => (
+  const badge = (status: string, number: string | null) => (
     <Badge colorRole={status === 'issued' ? 'success' : status === 'cancelled' ? 'danger' : 'warning'} size="sm">
-      {status === 'issued' ? 'Issued' : status === 'cancelled' ? 'Cancelled' : 'Draft'}
+      {status === 'issued' ? 'Issued' : status === 'cancelled' ? 'Cancelled' : number ? 'Revising' : 'Draft'}
     </Badge>
   );
   const [filter, setFilter] = useState<Filter>('all');
@@ -173,7 +181,7 @@ const ExportInvoicesListClient = () => {
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
                       {row.total === null ? '—' : `${row.currency} ${money(row.total)}`}
                     </td>
-                    <td className="px-4 py-3">{badge(row.status)}</td>
+                    <td className="px-4 py-3">{badge(row.status, row.number)}</td>
                     <td className="px-4 py-3 text-right">{actions(row)}</td>
                   </tr>
                 ))}
@@ -193,7 +201,7 @@ const ExportInvoicesListClient = () => {
                       <p className="font-semibold">{row.number ?? 'Draft'}</p>
                       <p className="text-xs text-text-muted">{row.consigneeName}</p>
                     </div>
-                    {badge(row.status)}
+                    {badge(row.status, row.number)}
                   </div>
                   <div className="mt-2 flex items-end justify-between gap-2">
                     <p className="text-xs text-text-muted">{invoiceList(row.invoices)}</p>

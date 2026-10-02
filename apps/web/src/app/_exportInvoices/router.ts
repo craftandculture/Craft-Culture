@@ -10,6 +10,7 @@ import adminGetOne from './controller/adminGetOne';
 import adminIssue from './controller/adminIssue';
 import adminListConsignees from './controller/adminListConsignees';
 import adminListInvoicesForConsignee from './controller/adminListInvoicesForConsignee';
+import adminReopen from './controller/adminReopen';
 import adminRequestChange from './controller/adminRequestChange';
 import adminSaveRule from './controller/adminSaveRule';
 
@@ -30,6 +31,8 @@ const exportInvoicesRouter = createTRPCRouter({
     deleteDraft: adminDeleteDraft,
     // Issued documents keep their number; they are cancelled, never deleted
     cancelIssued: adminCancelIssued,
+    // Revise after release under the same number
+    reopen: adminReopen,
   }),
 });
 

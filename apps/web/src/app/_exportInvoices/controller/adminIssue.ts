@@ -42,7 +42,8 @@ const adminIssue = adminProcedure
 
     let number = '';
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      number = await generateExportInvoiceNumber();
+      // A reopened document is re-issued under the number it already has
+      number = row.number ?? (await generateExportInvoiceNumber());
       const issued = { ...document, header: { ...document.header, number } };
       const pdf = await renderExportInvoicePDF(issued);
       const version = row.version + 1;
@@ -62,7 +63,7 @@ const adminIssue = adminProcedure
             version,
             document: issued,
             ops: [],
-            changeSummary: `Issued as ${number}`,
+            changeSummary: row.number ? `Re-issued ${number} (revised)` : `Issued as ${number}`,
             pdfUrl: blob.url,
             createdBy: ctx.user.id,
           });

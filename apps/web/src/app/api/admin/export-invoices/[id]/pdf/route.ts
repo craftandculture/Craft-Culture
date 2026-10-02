@@ -29,7 +29,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const parsed = exportDocumentSchema.safeParse(row.document);
   if (!parsed.success) return NextResponse.json({ error: 'Unreadable document' }, { status: 500 });
 
-  const pdf = await renderExportInvoicePDF(parsed.data);
+  // A reopened document carries its number; make a preview of the revision unmistakable
+  const doc =
+    row.status === 'draft' && row.number
+      ? { ...parsed.data, header: { ...parsed.data.header, number: `${row.number} — REVISION DRAFT` } }
+      : parsed.data;
+  const pdf = await renderExportInvoicePDF(doc);
   const filename = `${row.number ?? 'export-invoice-draft'}.pdf`;
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
