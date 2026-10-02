@@ -1,8 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -11,7 +12,7 @@ import useTRPC from '@/lib/trpc/browser';
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
-type Filter = 'all' | 'draft' | 'issued';
+type Filter = 'all' | 'draft' | 'issued' | 'cancelled';
 
 /**
  * Export invoices, drafts and issued, newest first
@@ -21,7 +22,66 @@ type Filter = 'all' | 'draft' | 'issued';
  */
 const ExportInvoicesListClient = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery(api.exportInvoices.admin.getMany.queryOptions());
+  const [confirming, setConfirming] = useState<{ id: string; reason: string } | null>(null);
+  const done = (message: string) => () => {
+    toast.success(message);
+    setConfirming(null);
+    void queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.getMany.queryKey() });
+  };
+  const deleteMutation = useMutation({
+    ...api.exportInvoices.admin.deleteDraft.mutationOptions(),
+    onSuccess: done('Draft deleted'),
+    onError: (error) => toast.error(error.message),
+  });
+  const cancelMutation = useMutation({
+    ...api.exportInvoices.admin.cancelIssued.mutationOptions(),
+    onSuccess: done('Export invoice cancelled'),
+    onError: (error) => toast.error(error.message),
+  });
+
+  /** Delete for a draft, cancel (with a reason) for an issued document */
+  const actions = (row: { id: string; status: string; number: string | null }) => {
+    if (row.status === 'cancelled') return null;
+    const isDraft = row.status === 'draft';
+    if (confirming?.id !== row.id) {
+      return (
+        <Button size="xs" variant="ghost" onClick={(e) => { e.preventDefault(); setConfirming({ id: row.id, reason: '' }); }}>
+          {isDraft ? 'Delete' : 'Cancel'}
+        </Button>
+      );
+    }
+    return (
+      <span className="flex flex-wrap items-center justify-end gap-1.5 text-xs" onClick={(e) => e.preventDefault()}>
+        {isDraft ? (
+          <span>Delete this draft?</span>
+        ) : (
+          <input
+            autoFocus
+            value={confirming.reason}
+            onChange={(e) => setConfirming({ id: row.id, reason: e.target.value })}
+            placeholder="Reason for cancelling"
+            className="w-44 rounded-md border border-border-primary bg-fill-primary px-2 py-1"
+          />
+        )}
+        <Button
+          size="xs"
+          colorRole="danger"
+          disabled={(!isDraft && confirming.reason.trim().length < 3) || deleteMutation.isPending || cancelMutation.isPending}
+          onClick={() => (isDraft ? deleteMutation.mutate({ id: row.id }) : cancelMutation.mutate({ id: row.id, reason: confirming.reason.trim() }))}
+        >
+          {isDraft ? 'Delete' : `Cancel ${row.number ?? ''}`}
+        </Button>
+        <Button size="xs" variant="ghost" onClick={() => setConfirming(null)}>Keep</Button>
+      </span>
+    );
+  };
+  const badge = (status: string) => (
+    <Badge colorRole={status === 'issued' ? 'success' : status === 'cancelled' ? 'danger' : 'warning'} size="sm">
+      {status === 'issued' ? 'Issued' : status === 'cancelled' ? 'Cancelled' : 'Draft'}
+    </Badge>
+  );
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
 
@@ -41,15 +101,15 @@ const ExportInvoicesListClient = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-xl border border-border-muted bg-fill-muted/30 p-1">
-          {(['all', 'draft', 'issued'] as const).map((f) => (
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-border-muted bg-fill-muted/30 p-1">
+          {(['all', 'draft', 'issued', 'cancelled'] as const).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
               className={`rounded-lg px-3 py-1.5 text-sm capitalize ${filter === f ? 'bg-fill-primary font-medium shadow-xs' : 'text-text-muted'}`}
             >
-              {f === 'all' ? 'All' : f === 'draft' ? 'Drafts' : 'Issued'} <span className="text-xs text-text-muted">{count(f)}</span>
+              {f === 'all' ? 'All' : f === 'draft' ? 'Drafts' : f === 'issued' ? 'Issued' : 'Cancelled'} <span className="text-xs text-text-muted">{count(f)}</span>
             </button>
           ))}
         </div>
@@ -93,11 +153,12 @@ const ExportInvoicesListClient = () => {
                   <th className="px-4 py-2.5 text-right">Cases</th>
                   <th className="px-4 py-2.5 text-right">Total</th>
                   <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-muted">
                 {rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-fill-muted/30">
+                  <tr key={row.id} className={`hover:bg-fill-muted/30 ${row.status === 'cancelled' ? 'text-text-muted line-through decoration-text-muted/40' : ''}`}>
                     <td className="px-4 py-3 font-semibold">
                       <Link href={`/platform/admin/logistics/export-invoices/${row.id}`} className="hover:underline">
                         {row.number ?? 'Draft'}
@@ -112,11 +173,8 @@ const ExportInvoicesListClient = () => {
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
                       {row.total === null ? '—' : `${row.currency} ${money(row.total)}`}
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge colorRole={row.status === 'issued' ? 'success' : 'warning'} size="sm">
-                        {row.status === 'issued' ? 'Issued' : 'Draft'}
-                      </Badge>
-                    </td>
+                    <td className="px-4 py-3">{badge(row.status)}</td>
+                    <td className="px-4 py-3 text-right">{actions(row)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -135,9 +193,7 @@ const ExportInvoicesListClient = () => {
                       <p className="font-semibold">{row.number ?? 'Draft'}</p>
                       <p className="text-xs text-text-muted">{row.consigneeName}</p>
                     </div>
-                    <Badge colorRole={row.status === 'issued' ? 'success' : 'warning'} size="sm">
-                      {row.status === 'issued' ? 'Issued' : 'Draft'}
-                    </Badge>
+                    {badge(row.status)}
                   </div>
                   <div className="mt-2 flex items-end justify-between gap-2">
                     <p className="text-xs text-text-muted">{invoiceList(row.invoices)}</p>
@@ -147,6 +203,7 @@ const ExportInvoicesListClient = () => {
                     </p>
                   </div>
                 </Link>
+                {row.status !== 'cancelled' && <div className="mt-1 flex justify-end">{actions(row)}</div>}
               </li>
             ))}
           </ul>

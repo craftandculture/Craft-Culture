@@ -41,6 +41,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [tab, setTab] = useState<SideTab>('checks');
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
 
   const query = useQuery(api.exportInvoices.admin.getOne.queryOptions({ id }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.getOne.queryKey({ id }) });
@@ -64,6 +65,16 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const deleteMutation = useMutation({
     ...api.exportInvoices.admin.deleteDraft.mutationOptions(),
     onSuccess: () => router.push('/platform/admin/logistics/export-invoices'),
+    onError: (error) => toast.error(error.message),
+  });
+
+  const cancelMutation = useMutation({
+    ...api.exportInvoices.admin.cancelIssued.mutationOptions(),
+    onSuccess: () => {
+      toast.success('Export invoice cancelled');
+      setCancelReason(null);
+      void refresh();
+    },
     onError: (error) => toast.error(error.message),
   });
 
@@ -174,7 +185,9 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
             </Link>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-semibold sm:text-xl">{data.number ?? 'Draft export invoice'}</h1>
-              <Badge colorRole={editable ? 'warning' : 'success'} size="sm">{editable ? 'Draft' : 'Issued'}</Badge>
+              <Badge colorRole={editable ? 'warning' : data.status === 'cancelled' ? 'danger' : 'success'} size="sm">
+                {editable ? 'Draft' : data.status === 'cancelled' ? 'Cancelled' : 'Issued'}
+              </Badge>
               <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
             </div>
           </div>
@@ -188,6 +201,24 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                 </span>
               ) : (
                 <Button variant="ghost" size="sm" onClick={() => setConfirmDiscard(true)}>Discard</Button>
+              ))}
+            {data.status === 'issued' &&
+              (cancelReason === null ? (
+                <Button variant="ghost" size="sm" onClick={() => setCancelReason('')}>Cancel invoice</Button>
+              ) : (
+                <span className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <input
+                    autoFocus
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Reason, e.g. issued in error"
+                    className="w-52 rounded-md border border-border-primary bg-fill-primary px-2 py-1"
+                  />
+                  <Button size="xs" colorRole="danger" disabled={cancelReason.trim().length < 3 || cancelMutation.isPending} onClick={() => cancelMutation.mutate({ id, reason: cancelReason.trim() })}>
+                    Cancel {data.number}
+                  </Button>
+                  <Button size="xs" variant="ghost" onClick={() => setCancelReason(null)}>Keep</Button>
+                </span>
               ))}
             <Button variant="outline" size="sm" asChild>
               <a href={pdfHref} target="_blank" rel="noreferrer">{editable ? 'Preview PDF' : 'Download PDF'}</a>
@@ -207,9 +238,14 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         </div>
       </div>
 
-      {!editable && (
+      {data.status === 'issued' && (
         <div className="rounded-xl border border-border-success/30 bg-fill-success/10 px-4 py-3 text-sm text-text-success">
-          Issued{data.number ? ` as ${data.number}` : ''}. The document is frozen; build a new draft if the invoices change.
+          Issued{data.number ? ` as ${data.number}` : ''}. The document is frozen; if the invoices change, cancel it and build a new draft.
+        </div>
+      )}
+      {data.status === 'cancelled' && (
+        <div className="rounded-xl border border-border-danger/30 bg-fill-danger/10 px-4 py-3 text-sm text-text-danger">
+          {data.number} was cancelled{data.versions[0]?.request ? `: ${data.versions[0].request}` : ''}. The number stays used; its invoices are free to go on a new export invoice.
         </div>
       )}
       {data.stale.length > 0 && (

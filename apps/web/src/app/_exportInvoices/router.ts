@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminApplyOps from './controller/adminApplyOps';
+import adminCancelIssued from './controller/adminCancelIssued';
 import adminCreateDraft from './controller/adminCreateDraft';
 import adminDeleteDraft from './controller/adminDeleteDraft';
 import adminGetInvoiceLines from './controller/adminGetInvoiceLines';
@@ -27,6 +28,8 @@ const exportInvoicesRouter = createTRPCRouter({
     saveRule: adminSaveRule,
     issue: adminIssue,
     deleteDraft: adminDeleteDraft,
+    // Issued documents keep their number; they are cancelled, never deleted
+    cancelIssued: adminCancelIssued,
   }),
 });
 
