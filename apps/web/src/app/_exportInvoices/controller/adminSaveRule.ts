@@ -9,7 +9,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { exportOpSchema } from '../schemas/exportOpSchema';
 
 /** Ops that name a line only make sense on the document they were made on */
-const LINE_OPS = new Set(['setLine', 'setLineBoe', 'overrideLine', 'splitLine', 'moveWineBetweenCases', 'setColumnValues', 'setSectionNote']);
+const LINE_OPS = new Set(['setLine', 'setComponent', 'setLineBoe', 'overrideLine', 'splitLine', 'moveWineBetweenCases', 'setColumnValues', 'setSectionNote']);
 
 /**
  * Keep a change as a standing rule for the consignee

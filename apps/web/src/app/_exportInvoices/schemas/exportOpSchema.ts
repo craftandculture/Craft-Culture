@@ -45,6 +45,14 @@ export const exportOpSchema = z.discriminatedUnion('op', [
     value: z.union([z.string(), z.number()]),
   }),
   z.object({
+    op: z.literal('setComponent'),
+    lineId: z.string(),
+    /** Which wine in the mixed case, by position */
+    index: z.number().int().nonnegative(),
+    field: z.enum(['description', 'origin', 'hsCode']),
+    value: z.string(),
+  }),
+  z.object({
     op: z.literal('setLineBoe'),
     lineId: z.string(),
     boe: z.string().nullable(),

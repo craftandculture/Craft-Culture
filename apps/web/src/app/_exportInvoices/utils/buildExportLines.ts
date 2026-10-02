@@ -155,6 +155,7 @@ const buildExportLines = (invoices: ExportInvoiceInput[], options: BuildExportLi
       const components = chunk.map((u) => ({
         description: cleanDescription(u.line.name),
         origin: originFor(u.line.lwin18),
+        hsCode: classifyHsCode(u.text, u.line.zohoHsCode),
         unitPrice: roundMoney(u.perBottleUsd * rate),
         lwin18: u.line.lwin18,
       }));

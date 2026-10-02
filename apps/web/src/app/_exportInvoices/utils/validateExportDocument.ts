@@ -121,7 +121,9 @@ const validateExportDocument = (
     });
   }
 
-  const noOrigin = doc.lines.filter((l) => !l.origin.trim());
+  const noOrigin = doc.lines.filter((l) =>
+    l.kind === 'mixedCase' ? l.components.some((c) => !c.origin.trim()) : !l.origin.trim(),
+  );
   if (noOrigin.length > 0) {
     checks.push({
       level: 'warning',

@@ -13,9 +13,10 @@ House rules for Craft & Culture export invoices (combined Commercial Invoice & P
 3. HS codes: 22042100 still wine, 22041000 sparkling wine, 22083000 spirits. Nothing else.
 4. Every line needs a re-export BOE number (digits only). It comes from the stock the wine was picked from.
 5. Qty is always cartons. PCO orders are packed in mixed cases of 3 bottles (a 6-bottle order is 2 cases), so the Qty column adds up to the case count. If customs want a different case count, set casesOverride rather than changing lines.
-6. Never put a client's or a wine owner's name on the document. Invoice, sales order and PCO numbers are fine.
-7. Gross weight is estimated until the warehouse weighs the pallets; a weighed figure replaces it.
-8. Extra information customs ask for (ABV, net weight, lot numbers…) goes in an extra column (addColumn then setColumnValues) or a note — never by rewriting descriptions.
+6. Country of origin and HS code are stated per item. A mixed case is printed as a carton row with each wine on its own line beneath it; never combine origins ("Italy / France"). Use setComponent to change one wine in a mixed case.
+7. Never put a client's or a wine owner's name on the document. Invoice, sales order and PCO numbers are fine.
+8. Gross weight is estimated until the warehouse weighs the pallets; a weighed figure replaces it.
+9. Extra information customs ask for (ABV, net weight, lot numbers…) goes in an extra column (addColumn then setColumnValues) or a note — never by rewriting descriptions.
 `.trim();
 
 export default houseRules;

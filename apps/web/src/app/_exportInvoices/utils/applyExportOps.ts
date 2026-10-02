@@ -12,7 +12,7 @@ import type { ExportOp } from '../schemas/exportOpSchema';
 const recomputeMixedCase = (line: ExportLine) => {
   const names = [...new Set(line.components.map((c) => c.description))];
   line.description = names.length === 1 ? (names[0] ?? '') : `Mixed case: ${names.join('; ')}`;
-  line.origin = [...new Set(line.components.map((c) => c.origin))].join(' / ');
+  line.origin = [...new Set(line.components.map((c) => c.origin).filter(Boolean))].join(' / ');
   line.packBottles = line.components.length;
   line.unitPrice = roundMoney(line.components.reduce((sum, c) => sum + c.unitPrice, 0));
   line.amount = roundMoney(line.unitPrice * line.qty);
@@ -80,6 +80,14 @@ const applyExportOps = (doc: ExportDocument, ops: ExportOp[]) => {
         } else {
           line[op.field] = String(op.value);
         }
+        break;
+      }
+      case 'setComponent': {
+        const line = lineById(op.lineId);
+        const component = line.components[op.index];
+        if (!component) throw new Error(`Line ${op.lineId} has no wine ${op.index + 1}.`);
+        component[op.field] = op.value.trim();
+        recomputeMixedCase(line);
         break;
       }
       case 'setLineBoe': {

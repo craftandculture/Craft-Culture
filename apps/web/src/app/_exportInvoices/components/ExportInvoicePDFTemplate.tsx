@@ -161,6 +161,45 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
               .filter((l) => l.sectionId === section.id)
               .map((l) => {
                 const lineNo = lineNumber.get(l.id) ?? 0;
+                if (l.kind === 'mixedCase') {
+                  // Customs want origin and HS per item: a carton row, then each wine
+                  return (
+                    <View key={l.id} wrap={false}>
+                      <View style={[styles.row, { backgroundColor: '#f7f7f7' }]}>
+                        <Text style={[styles.cell, { width: col.n }]}>{lineNo}</Text>
+                        <Text style={[styles.cell, { width: col.desc, fontFamily: 'Helvetica-Bold' }]}>
+                          {`Mixed case of ${l.packBottles} × ${l.bottleSizeCl}cl — contents below`}
+                        </Text>
+                        <Text style={[styles.cell, { width: col.hs }]} />
+                        <Text style={[styles.cell, { width: col.origin }]} />
+                        <Text style={[styles.cell, { width: col.pack }]}>{`${l.packBottles}x${l.bottleSizeCl}cl`}</Text>
+                        <Text style={[styles.cell, styles.center, { width: col.qty }]}>{l.qty}</Text>
+                        <Text style={[styles.cell, styles.center, { width: col.btl }]}>{l.qty * l.packBottles}</Text>
+                        {extra.map((c) => (
+                          <Text key={c.key} style={[styles.cell, { width: col.extra }]}>{l.extra[c.key] ?? ''}</Text>
+                        ))}
+                        <Text style={[styles.cell, { width: col.unit }]} />
+                        <Text style={[styles.cell, { width: col.amount }]} />
+                      </View>
+                      {l.components.map((c, i) => (
+                        <View key={`${l.id}-${i}`} style={styles.row}>
+                          <Text style={[styles.cell, { width: col.n, color: MUTED }]}>{`${lineNo}.${i + 1}`}</Text>
+                          <Text style={[styles.cell, { width: col.desc, paddingLeft: 12 }]}>{c.description}</Text>
+                          <Text style={[styles.cell, { width: col.hs }]}>{c.hsCode ?? l.hsCode}</Text>
+                          <Text style={[styles.cell, { width: col.origin }]}>{c.origin}</Text>
+                          <Text style={[styles.cell, { width: col.pack }]}>{`1x${l.bottleSizeCl}cl`}</Text>
+                          <Text style={[styles.cell, styles.center, { width: col.qty, color: MUTED }]}>–</Text>
+                          <Text style={[styles.cell, styles.center, { width: col.btl }]}>{l.qty}</Text>
+                          {extra.map((x) => (
+                            <Text key={x.key} style={[styles.cell, { width: col.extra }]} />
+                          ))}
+                          <Text style={[styles.cell, styles.right, { width: col.unit }]}>{money(c.unitPrice)}</Text>
+                          <Text style={[styles.cell, styles.right, { width: col.amount }]}>{money(c.unitPrice * l.qty)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                }
                 return (
                   <View key={l.id} style={styles.row} wrap={false}>
                     <Text style={[styles.cell, { width: col.n }]}>{lineNo}</Text>
@@ -222,7 +261,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
           <Text style={styles.small}>
             {`Qty is the number of cases of the stated Pack Size; Bottles is the resulting bottle count.${
               doc.lines.some((l) => l.kind === 'mixedCase')
-                ? ' PCO orders are packed in mixed cases of 3 bottles.'
+                ? ' PCO orders are packed in mixed cases of 3 bottles; each case is listed with its contents, item by item, beneath it.'
                 : ''
             }${cur === 'AED' ? ` All values in AED, converted from USD at the fixed rate of AED ${doc.header.rate} = USD 1.` : ''}${
               doc.header.grossWeightEstimated && doc.header.grossWeightKg !== null ? ' Gross weight is estimated.' : ''

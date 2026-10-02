@@ -23,6 +23,8 @@ const describeExportOp = (op: ExportOp, doc: ExportDocument) => {
       return 'Change the consignee block';
     case 'setLine':
       return `Set ${lineNo(op.lineId)} ${op.field} to ${op.value}`;
+    case 'setComponent':
+      return `Set wine ${op.index + 1} in ${lineNo(op.lineId)} ${op.field} to ${op.value}`;
     case 'setLineBoe':
       return `Set ${lineNo(op.lineId)} BOE to ${op.boe ?? 'blank'}`;
     case 'overrideLine':

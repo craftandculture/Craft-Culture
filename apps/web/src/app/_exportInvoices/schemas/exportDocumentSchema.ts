@@ -61,7 +61,9 @@ export const exportLineSchema = z.object({
   components: z.array(
     z.object({
       description: z.string(),
+      /** Customs want origin per item, never "Italy / France" for a case */
       origin: z.string(),
+      hsCode: z.string().optional(),
       unitPrice: z.number(),
       lwin18: z.string().nullable(),
     }),

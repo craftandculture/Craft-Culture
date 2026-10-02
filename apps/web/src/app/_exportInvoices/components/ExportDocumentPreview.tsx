@@ -28,7 +28,7 @@ const money = (n: number) =>
  */
 const describe = (line: ExportLine) =>
   line.kind === 'mixedCase'
-    ? { title: `Mixed case of ${line.packBottles}`, wines: line.components.map((c) => c.description) }
+    ? { title: `Mixed case of ${line.packBottles} × ${line.bottleSizeCl}cl — contents below`, wines: line.components.map((c) => c.description) }
     : { title: line.description, wines: [] as string[] };
 
 /**
@@ -69,6 +69,11 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
       `Line ${lineNumber.get(l.id)} pack: ${v}`,
     );
   };
+  const setComponent = (l: ExportLine, index: number, field: 'description' | 'origin' | 'hsCode') => (v: string) =>
+    onApply(
+      [{ op: 'setComponent', lineId: l.id, index, field, value: v }],
+      `Line ${lineNumber.get(l.id)}.${index + 1} ${field === 'hsCode' ? 'HS code' : field}: ${v}`,
+    );
   const setBoe = (l: ExportLine) => (v: string) =>
     onApply([{ op: 'setLineBoe', lineId: l.id, boe: v || null }], `Line ${lineNumber.get(l.id)} BOE: ${v}`);
   const rowTone = (l: ExportLine) =>
@@ -127,18 +132,19 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                           <td className="px-2 py-1 text-text-muted">{lineNumber.get(l.id)}</td>
                           <td className="px-1 py-1">
                             {l.kind === 'mixedCase' ? (
-                              <div className="px-1">
-                                <p className="font-medium">{d.title}</p>
-                                <p className="text-[11px] leading-snug text-text-muted">{d.wines.join(' · ')}</p>
-                              </div>
+                              <p className="px-1 font-medium">{d.title}</p>
                             ) : (
                               <EditableText value={l.description} disabled={!editable} onSave={setField(l, 'description', 'description')} />
                             )}
                             {l.override && <p className="px-1 text-[10px] text-text-warning">Differs from Zoho: {l.override.reason}</p>}
                           </td>
                           <td className="px-1 py-1">
-                            <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} />
-                            <EditableText value={l.origin} disabled={!editable} onSave={setField(l, 'origin', 'origin')} placeholder="Add origin" className={l.origin ? 'text-text-muted' : 'text-text-warning'} />
+                            {l.kind !== 'mixedCase' && (
+                              <>
+                                <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} />
+                                <EditableText value={l.origin} disabled={!editable} onSave={setField(l, 'origin', 'origin')} placeholder="Add origin" className={l.origin ? 'text-text-muted' : 'text-text-warning'} />
+                              </>
+                            )}
                           </td>
                           <td className="px-1 py-1">
                             <EditableText value={`${l.packBottles}x${l.bottleSizeCl}cl`} disabled={!editable || l.kind === 'mixedCase'} onSave={setPack(l)} />
@@ -164,10 +170,34 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                               onSave={setBoe(l)}
                             />
                           </td>
-                          <td className="px-2 py-1 text-right tabular-nums">{money(l.unitPrice)}</td>
-                          <td className="px-2 py-1 text-right font-medium tabular-nums">{money(l.amount)}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">{l.kind === 'mixedCase' ? '' : money(l.unitPrice)}</td>
+                          <td className="px-2 py-1 text-right font-medium tabular-nums">
+                            {l.kind === 'mixedCase' ? <span className="text-text-muted">{money(l.amount)}</span> : money(l.amount)}
+                          </td>
                           <td className="px-1 py-1 text-right">{lineButton(l)}</td>
                         </tr>
+                        {l.kind === 'mixedCase' &&
+                          l.components.map((c, i) => (
+                            <tr key={`${l.id}-${i}`} className="border-b border-border-muted/50 bg-fill-muted/15 align-top">
+                              <td className="px-2 py-1 text-[11px] text-text-muted">{lineNumber.get(l.id)}.{i + 1}</td>
+                              <td className="py-1 pl-5 pr-1">
+                                <EditableText value={c.description} disabled={!editable} onSave={setComponent(l, i, 'description')} />
+                              </td>
+                              <td className="px-1 py-1">
+                                <EditableText value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} />
+                                <EditableText value={c.origin} disabled={!editable} onSave={setComponent(l, i, 'origin')} placeholder="Add origin" className={c.origin ? 'text-text-muted' : 'text-text-warning'} />
+                              </td>
+                              <td className="px-2 py-1 text-text-muted">1x{l.bottleSizeCl}cl</td>
+                              <td className="px-2 py-1 text-center tabular-nums text-text-muted">– · {l.qty}</td>
+                              {doc.extraColumns.map((x) => (
+                                <td key={x.key} />
+                              ))}
+                              <td />
+                              <td className="px-2 py-1 text-right tabular-nums">{money(c.unitPrice)}</td>
+                              <td className="px-2 py-1 text-right tabular-nums">{money(c.unitPrice * l.qty)}</td>
+                              <td />
+                            </tr>
+                          ))}
                         {openLine === l.id && (
                           <tr>
                             <td colSpan={colCount} className="p-2">
@@ -200,10 +230,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                         <div className="min-w-0 flex-1">
                           <span className="mr-1 text-text-muted">{lineNumber.get(l.id)}.</span>
                           {l.kind === 'mixedCase' ? (
-                            <>
-                              <span className="font-medium">{d.title}</span>
-                              <p className="text-[11px] text-text-muted">{d.wines.join(' · ')}</p>
-                            </>
+                            <span className="font-medium">{d.title}</span>
                           ) : (
                             <EditableText value={l.description} disabled={!editable} onSave={setField(l, 'description', 'description')} className="font-medium" />
                           )}
@@ -220,12 +247,16 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                           <EditableText value={`${l.packBottles}x${l.bottleSizeCl}cl`} disabled={!editable || l.kind === 'mixedCase'} onSave={setPack(l)} className="text-text-primary" />
                         </label>
                         <span className="flex items-center text-text-muted">Bottles <span className="ml-1 text-text-primary">{l.qty * l.packBottles}</span></span>
-                        <label className="flex items-center gap-1 text-text-muted">HS
-                          <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} className="text-text-primary" />
-                        </label>
-                        <label className="flex items-center gap-1 text-text-muted">Origin
-                          <EditableText value={l.origin} disabled={!editable} onSave={setField(l, 'origin', 'origin')} placeholder="Add" className={l.origin ? 'text-text-primary' : 'text-text-warning'} />
-                        </label>
+                        {l.kind !== 'mixedCase' && (
+                          <>
+                            <label className="flex items-center gap-1 text-text-muted">HS
+                              <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} className="text-text-primary" />
+                            </label>
+                            <label className="flex items-center gap-1 text-text-muted">Origin
+                              <EditableText value={l.origin} disabled={!editable} onSave={setField(l, 'origin', 'origin')} placeholder="Add" className={l.origin ? 'text-text-primary' : 'text-text-warning'} />
+                            </label>
+                          </>
+                        )}
                         <label className="col-span-2 flex items-center gap-1 text-text-muted">BOE
                           <EditableText value={l.boe ?? ''} disabled={!editable} placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'} onSave={setBoe(l)} className={`font-mono ${l.boe ? 'text-text-primary' : 'text-text-danger'}`} />
                         </label>
@@ -235,6 +266,27 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                           </label>
                         ))}
                       </div>
+                      {l.kind === 'mixedCase' && (
+                        <ul className="space-y-1 rounded-lg border border-border-muted/70 bg-fill-muted/20 p-2">
+                          {l.components.map((c, i) => (
+                            <li key={`${l.id}-${i}`} className="text-[11px]">
+                              <div className="flex justify-between gap-2">
+                                <EditableText value={c.description} disabled={!editable} onSave={setComponent(l, i, 'description')} />
+                                <span className="shrink-0 tabular-nums">{money(c.unitPrice * l.qty)}</span>
+                              </div>
+                              <div className="flex gap-3 text-text-muted">
+                                <label className="flex items-center gap-1">Origin
+                                  <EditableText value={c.origin} disabled={!editable} onSave={setComponent(l, i, 'origin')} placeholder="Add" className={c.origin ? 'text-text-primary' : 'text-text-warning'} />
+                                </label>
+                                <label className="flex items-center gap-1">HS
+                                  <EditableText value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} className="text-text-primary" />
+                                </label>
+                                <span className="flex items-center">{l.qty} btl</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {l.override && <p className="text-[10px] text-text-warning">Differs from Zoho: {l.override.reason}</p>}
                       {editable && <div className="flex justify-end">{lineButton(l)}</div>}
                       {openLine === l.id && (

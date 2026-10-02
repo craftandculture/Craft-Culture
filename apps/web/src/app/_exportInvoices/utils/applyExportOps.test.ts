@@ -109,3 +109,44 @@ describe('validateExportDocument', () => {
     expect(codes).toContain('invoice_revised');
   });
 });
+
+describe('mixed cases, item by item', () => {
+  it('gives every wine in a mixed case its own origin and HS code', async () => {
+    const { default: exp0041 } = await import('./__fixtures__/exp0041Invoices.json');
+    const { lines } = buildExportLines(exp0041 as ExportInvoiceInput[], {
+      rate: AED_PER_USD,
+      originByLwin: new Map(),
+      boeByKey: new Map(),
+    });
+    const mixed = lines.filter((l) => l.kind === 'mixedCase');
+    expect(mixed.length).toBeGreaterThan(0);
+    expect(mixed.every((l) => l.components.every((c) => c.hsCode === '22042100'))).toBe(true);
+  });
+
+  it('changes one wine without touching the others or the money', () => {
+    const doc = base();
+    const withCase: ExportDocument = {
+      ...doc,
+      lines: [
+        {
+          ...doc.lines[0]!,
+          id: 'm1',
+          kind: 'mixedCase',
+          qty: 2,
+          packBottles: 2,
+          unitPrice: 30,
+          amount: 60,
+          components: [
+            { description: 'Wine A', origin: 'France', hsCode: '22042100', unitPrice: 10, lwin18: null },
+            { description: 'Wine B', origin: '', hsCode: '22042100', unitPrice: 20, lwin18: null },
+          ],
+        },
+      ],
+    };
+    const next = applyExportOps(withCase, [{ op: 'setComponent', lineId: 'm1', index: 1, field: 'origin', value: 'Italy' }]);
+    const line = next.lines[0]!;
+    expect(line.components.map((c) => c.origin)).toEqual(['France', 'Italy']);
+    expect(line.amount).toBe(60);
+    expect(validateExportDocument(next).map((c) => c.code)).not.toContain('missing_origin');
+  });
+});
