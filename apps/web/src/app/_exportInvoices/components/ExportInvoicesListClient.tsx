@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -23,6 +24,7 @@ type Filter = 'all' | 'draft' | 'issued' | 'cancelled';
 const ExportInvoicesListClient = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { data, isLoading } = useQuery(api.exportInvoices.admin.getMany.queryOptions());
   const [confirming, setConfirming] = useState<{ id: string; reason: string } | null>(null);
   const done = (message: string) => () => {
@@ -50,11 +52,11 @@ const ExportInvoicesListClient = () => {
       return (
         <span className="flex justify-end gap-1">
           {row.status !== 'draft' && (
-            <Button size="xs" variant="ghost" asChild>
+            <Button size="xs" variant="outline" asChild>
               <Link href={`/platform/admin/logistics/export-invoices/${row.id}`}>Edit</Link>
             </Button>
           )}
-          <Button size="xs" variant="ghost" onClick={(e) => { e.preventDefault(); setConfirming({ id: row.id, reason: '' }); }}>
+          <Button size="xs" variant="outline" className="text-text-danger" onClick={(e) => { e.preventDefault(); setConfirming({ id: row.id, reason: '' }); }}>
             {isDraft ? 'Delete' : 'Cancel'}
           </Button>
         </span>
@@ -121,17 +123,12 @@ const ExportInvoicesListClient = () => {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search number, consignee, invoice"
-            className="min-w-0 flex-1 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm sm:w-72"
-          />
-          <Button colorRole="brand" size="sm" asChild>
-            <Link href="/platform/admin/logistics/export-invoices/new">New</Link>
-          </Button>
-        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search number, consignee, invoice"
+          className="h-10 w-full rounded-lg border border-border-primary bg-fill-primary px-3 text-sm sm:w-80"
+        />
       </div>
 
       {isLoading ? (
@@ -166,7 +163,11 @@ const ExportInvoicesListClient = () => {
               </thead>
               <tbody className="divide-y divide-border-muted">
                 {rows.map((row) => (
-                  <tr key={row.id} className={`hover:bg-fill-muted/30 ${row.status === 'cancelled' ? 'text-text-muted line-through decoration-text-muted/40' : ''}`}>
+                  <tr
+                    key={row.id}
+                    onClick={() => router.push(`/platform/admin/logistics/export-invoices/${row.id}`)}
+                    className={`cursor-pointer hover:bg-fill-muted/30 ${row.status === 'cancelled' ? 'text-text-muted line-through decoration-text-muted/40' : ''}`}
+                  >
                     <td className="px-4 py-3 font-semibold">
                       <Link href={`/platform/admin/logistics/export-invoices/${row.id}`} className="hover:underline">
                         {row.number ?? 'Draft'}
@@ -182,7 +183,7 @@ const ExportInvoicesListClient = () => {
                       {row.total === null ? '—' : `${row.currency} ${money(row.total)}`}
                     </td>
                     <td className="px-4 py-3">{badge(row.status, row.number)}</td>
-                    <td className="px-4 py-3 text-right">{actions(row)}</td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>{actions(row)}</td>
                   </tr>
                 ))}
               </tbody>

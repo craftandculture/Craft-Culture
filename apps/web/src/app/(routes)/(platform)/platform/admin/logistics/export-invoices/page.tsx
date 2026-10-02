@@ -1,4 +1,7 @@
+import Link from 'next/link';
+
 import ExportInvoicesListClient from '@/app/_exportInvoices/components/ExportInvoicesListClient';
+import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
@@ -10,17 +13,20 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 const ExportInvoicesPage = () => {
   return (
     <main className="container space-y-6 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Export invoices</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Choose a consignee and the invoices going out, and the commercial invoice and packing list is
-            built from Zoho: net prices in AED, HS codes, origins, re-export BOEs from stock, and PCO orders
-            packed in cases of three. Check it, ask for whatever customs want changed, and issue.
-          </p>
-        </Typography>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Typography variant="headingLg" asChild>
+            <h1>Export invoices</h1>
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted" asChild>
+            <p className="mt-1 max-w-2xl">
+              Commercial invoice &amp; packing list, built from the Zoho invoices going out — checked, then issued.
+            </p>
+          </Typography>
+        </div>
+        <Button colorRole="brand" asChild>
+          <Link href="/platform/admin/logistics/export-invoices/new">+ New export invoice</Link>
+        </Button>
       </div>
       <ExportInvoicesListClient />
     </main>

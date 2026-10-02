@@ -44,7 +44,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
   const totals = deriveDocumentTotals(doc);
   const boes = deriveBoeTable(doc);
   const cur = doc.header.currency;
-  const colCount = 9 + doc.extraColumns.length;
+  const colCount = (editable ? 9 : 8) + doc.extraColumns.length;
   // Lines are stored in print order, so the index is the printed line number
   const lineNumber = new Map(doc.lines.map((l, i) => [l.id, i + 1]));
 
@@ -101,7 +101,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
           <thead className="sticky top-0 z-10 bg-fill-bold text-left text-[10px] uppercase tracking-wide text-text-bold-on-fill">
             <tr>
               <th className="w-8 px-2 py-2">#</th>
-              <th className="px-2 py-2">Description of goods</th>
+              <th className="min-w-[240px] px-2 py-2">Description of goods</th>
               <th className="w-24 px-2 py-2">HS / Origin</th>
               <th className="w-20 px-2 py-2">Pack</th>
               <th className="w-20 px-2 py-2 text-center">Qty · Btl</th>
@@ -111,7 +111,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
               <th className="w-32 px-2 py-2">BOE</th>
               <th className="w-24 px-2 py-2 text-right">Unit {cur}</th>
               <th className="w-28 px-2 py-2 text-right">Amount {cur}</th>
-              <th className="w-16 px-2 py-2" />
+              {editable && <th className="w-16 px-2 py-2" />}
             </tr>
           </thead>
           <tbody>
@@ -166,7 +166,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                               value={l.boe ?? ''}
                               disabled={!editable}
                               placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'}
-                              className={`font-mono ${l.boe ? '' : 'text-text-danger'}`}
+                              className={`font-mono text-[11px] ${l.boe ? '' : 'text-text-danger'}`}
                               onSave={setBoe(l)}
                             />
                           </td>
@@ -174,7 +174,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                           <td className="px-2 py-1 text-right font-medium tabular-nums">
                             {l.kind === 'mixedCase' ? <span className="text-text-muted">{money(l.amount)}</span> : money(l.amount)}
                           </td>
-                          <td className="px-1 py-1 text-right">{lineButton(l)}</td>
+                          {editable && <td className="px-1 py-1 text-right">{lineButton(l)}</td>}
                         </tr>
                         {l.kind === 'mixedCase' &&
                           l.components.map((c, i) => (
@@ -188,14 +188,14 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                                 <EditableText value={c.origin} disabled={!editable} onSave={setComponent(l, i, 'origin')} placeholder="Add origin" className={c.origin ? 'text-text-muted' : 'text-text-warning'} />
                               </td>
                               <td className="px-2 py-1 text-text-muted">1x{l.bottleSizeCl}cl</td>
-                              <td className="px-2 py-1 text-center tabular-nums text-text-muted">– · {l.qty}</td>
+                              <td className="px-2 py-1 text-center tabular-nums text-text-muted">{l.qty} btl</td>
                               {doc.extraColumns.map((x) => (
                                 <td key={x.key} />
                               ))}
                               <td />
                               <td className="px-2 py-1 text-right tabular-nums">{money(c.unitPrice)}</td>
                               <td className="px-2 py-1 text-right tabular-nums">{money(c.unitPrice * l.qty)}</td>
-                              <td />
+                              {editable && <td />}
                             </tr>
                           ))}
                         {openLine === l.id && (

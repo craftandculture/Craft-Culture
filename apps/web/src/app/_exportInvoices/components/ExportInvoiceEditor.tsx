@@ -188,8 +188,8 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Title and actions; stays in view while scrolling the lines */}
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border-muted bg-fill-primary/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+      {/* Title, status and actions */}
+      <div className="rounded-xl border border-border-muted bg-fill-primary px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <Link href="/platform/admin/logistics/export-invoices" className="text-xs text-text-muted hover:underline">
@@ -202,6 +202,9 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               </Badge>
               <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
             </div>
+            {data.status === 'issued' && (
+              <p className="mt-0.5 text-xs text-text-muted">Frozen. Edit reopens it under the same number; earlier PDFs stay in History.</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {editable && !revising &&
@@ -234,7 +237,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               ))}
             {(data.status === 'issued' || revising) &&
               (cancelReason === null ? (
-                <Button variant="ghost" size="sm" onClick={() => setCancelReason('')}>Cancel invoice</Button>
+                <Button variant="ghost" size="sm" className="text-text-danger" onClick={() => setCancelReason('')}>Cancel invoice</Button>
               ) : (
                 <span className="flex flex-wrap items-center gap-1.5 text-xs">
                   <input
@@ -268,11 +271,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         </div>
       </div>
 
-      {data.status === 'issued' && (
-        <div className="rounded-xl border border-border-success/30 bg-fill-success/10 px-4 py-3 text-sm text-text-success">
-          Issued{data.number ? ` as ${data.number}` : ''}. To correct it, use Edit: it reopens under the same number and keeps every earlier PDF.
-        </div>
-      )}
+
       {revising && (
         <div className="rounded-xl border border-border-warning/30 bg-fill-warning/10 px-4 py-3 text-sm text-text-warning">
           Revising {data.number}. Make your changes, then Re-issue — it keeps the same number and saves a new PDF version.
@@ -316,7 +315,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         {tabPanel}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <ExportDocumentPreview
           document={data.document}
           editable={editable && !applyMutation.isPending}

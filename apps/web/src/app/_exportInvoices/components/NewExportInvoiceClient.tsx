@@ -75,7 +75,7 @@ const NewExportInvoiceClient = () => {
             placeholder="Search consignees"
             className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm"
           />
-          <ul className="max-h-[60vh] space-y-1.5 overflow-y-auto pr-1">
+          <ul className="max-h-[55vh] space-y-1.5 overflow-y-auto rounded-xl border border-border-muted bg-fill-muted/20 p-1.5">
             {consignees.isLoading &&
               [0, 1, 2, 3].map((i) => <li key={i} className="h-11 animate-pulse rounded-lg bg-fill-muted/50" />)}
             {filtered.map((c) => (
