@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -62,6 +62,26 @@ const DailySalesClient = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+
+  /*
+    The daily pull runs on Trigger.dev, which has gone days without deploying
+    before. Pulling here is the way out when the latest count is stale.
+  */
+  const pull = useMutation({
+    ...api.distribution.admin.pullOutletStock.mutationOptions(),
+    onSuccess: async (result) => {
+      for (const outcome of result.results) {
+        if (outcome.ok) toast.success(`${outcome.outlet}: latest count pulled`);
+        else toast.error(`${outcome.outlet}: ${outcome.reason}`);
+      }
+      await queryClient.invalidateQueries({
+        queryKey: api.distribution.staff.getDailySales.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const send = useMutation({
     ...api.distribution.staff.sendDailySales.mutationOptions(),
     onSuccess: (result) => {
@@ -104,6 +124,8 @@ const DailySalesClient = () => {
   }
 
   const latest = data.days[0]!;
+  const ageHours = (Date.now() - new Date(latest.closedAt).getTime()) / 36e5;
+  const stale = ageHours > 30;
   const totalOf = (d: (typeof data.days)[number]) => d.consigned.bottles + d.bought.bottles;
   const valueOf = (d: (typeof data.days)[number]) => d.consigned.value + d.bought.value;
   const week = data.days.slice(0, 7);
@@ -111,13 +133,10 @@ const DailySalesClient = () => {
   const month = data.days.reduce((sum, d) => sum + totalOf(d), 0);
   const monthValue = data.days.reduce((sum, d) => sum + valueOf(d), 0);
 
-  // Chart geometry: one slot per day, bars rounded at the top only
+  // One scale for every bar, so heights compare across days
   const max = Math.max(1, ...days.map(totalOf));
-  const slot = 28;
-  const barW = 18;
-  const plotH = 160;
-  const width = days.length * slot;
-  const y = (bottles: number) => (bottles / max) * plotH;
+  const pct = (bottles: number) => `${(bottles / max) * 100}%`;
+  const showValues = days.length <= 14;
 
   const owners = new Map<string, number>();
   for (const line of day?.lines ?? []) {
@@ -140,10 +159,24 @@ const DailySalesClient = () => {
             Dubai · posts to #cd-sales at 07:00 daily
           </p>
         </Typography>
-        <Button colorRole="muted" size="sm" isDisabled={send.isPending} onClick={() => send.mutate()}>
-          {send.isPending ? 'Posting…' : 'Post to #cd-sales now'}
-        </Button>
+        <div className="flex gap-2">
+          <Button colorRole="muted" size="sm" isDisabled={pull.isPending} onClick={() => pull.mutate({})}>
+            {pull.isPending ? 'Pulling…' : 'Pull latest count'}
+          </Button>
+          <Button colorRole="muted" size="sm" isDisabled={send.isPending} onClick={() => send.mutate()}>
+            {send.isPending ? 'Posting…' : 'Post to #cd-sales now'}
+          </Button>
+        </div>
       </div>
+
+      {stale ? (
+        <div className="border-border-warning bg-fill-warning/10 text-text-warning flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm">
+          <span>
+            The latest count is {Math.round(ageHours / 24)} days old, so the days since are missing. The daily
+            pull has not run — pull now to catch up. Sales since then will land on one combined day.
+          </span>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
@@ -183,91 +216,71 @@ const DailySalesClient = () => {
           </p>
         </Typography>
 
-        <div className="overflow-x-auto">
-          <svg
-            viewBox={`0 0 ${width} ${plotH + 22}`}
-            className="block h-auto w-full"
-            style={{ minWidth: `${Math.max(width, 320)}px` }}
-            role="img"
-            aria-label={`Bottles sold per day over the last ${days.length} days`}
-          >
-            <line
-              x1={0}
-              x2={width}
-              y1={plotH}
-              y2={plotH}
-              className="stroke-border-primary"
-              strokeWidth={1}
-            />
-            {days.map((d, i) => {
-              const x = i * slot + (slot - barW) / 2;
-              const cH = y(d.consigned.bottles);
-              const bH = y(d.bought.bottles);
-              const isOn = (day?.closedAt ?? null) === d.closedAt;
+        {/*
+          Plain HTML bars rather than a scaled SVG: the plot keeps a fixed
+          height and each bar a capped width whether there are five days or
+          thirty, where a viewBox stretched to the container made five days
+          into five slabs.
+        */}
+        <div className="flex gap-3">
+          <div className="text-text-muted flex h-48 w-8 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums">
+            <span>{max}</span>
+            <span>{Math.round(max / 2)}</span>
+            <span>0</span>
+          </div>
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <div
+              className="border-border-primary relative flex h-48 items-end gap-1 border-b sm:gap-1.5"
+              style={{ minWidth: `${days.length * 14}px` }}
+            >
+              <div className="border-border-primary pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed opacity-60" />
+              {days.map((d) => {
+                const isOn = (day?.closedAt ?? null) === d.closedAt;
+                const dim = selected && !isOn ? 'opacity-50' : '';
 
-              return (
-                <g
+                return (
+                  <button
+                    key={d.closedAt}
+                    type="button"
+                    aria-label={`${longDay(d.salesDate)}: ${totalOf(d)} bottles`}
+                    aria-pressed={isOn}
+                    onClick={() => setSelected(d.closedAt)}
+                    onMouseEnter={() => setHovered(d.closedAt)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setHovered(d.closedAt)}
+                    onBlur={() => setHovered(null)}
+                    className={`group relative flex h-full max-w-10 flex-1 flex-col items-center justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-border-brand ${
+                      isOn ? 'bg-fill-muted/60' : 'hover:bg-fill-muted/40'
+                    }`}
+                  >
+                    {showValues && totalOf(d) > 0 ? (
+                      <span className="text-text-muted mb-1 text-[10px] font-medium tabular-nums">
+                        {totalOf(d)}
+                      </span>
+                    ) : null}
+                    <span
+                      className={`bg-text-muted w-3/5 max-w-6 rounded-t-[4px] opacity-60 ${dim}`}
+                      style={{ height: pct(d.bought.bottles) }}
+                    />
+                    <span
+                      className={`bg-fill-brand w-3/5 max-w-6 ${d.bought.bottles > 0 ? 'mt-0.5' : 'rounded-t-[4px]'} ${dim}`}
+                      style={{ height: pct(d.consigned.bottles) }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-1.5 flex gap-1 sm:gap-1.5" style={{ minWidth: `${days.length * 14}px` }}>
+              {days.map((d, i) => (
+                <span
                   key={d.closedAt}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${longDay(d.salesDate)}: ${totalOf(d)} bottles`}
-                  className="cursor-pointer outline-none"
-                  onClick={() => setSelected(d.closedAt)}
-                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setSelected(d.closedAt)}
-                  onMouseEnter={() => setHovered(d.closedAt)}
-                  onMouseLeave={() => setHovered(null)}
-                  onFocus={() => setHovered(d.closedAt)}
-                  onBlur={() => setHovered(null)}
+                  className="text-text-muted max-w-10 flex-1 text-center text-[10px] tabular-nums"
                 >
-                  {/* Hit target taller and wider than the bar */}
-                  <rect x={i * slot} y={0} width={slot} height={plotH + 22} fill="transparent" />
-                  {cH > 0 ? (
-                    <rect
-                      x={x}
-                      y={plotH - cH}
-                      width={barW}
-                      height={cH}
-                      rx={bH > 0 ? 0 : 4}
-                      className="fill-fill-brand"
-                      opacity={isOn || !selected ? 1 : 0.55}
-                    />
-                  ) : null}
-                  {bH > 0 ? (
-                    <rect
-                      x={x}
-                      y={plotH - cH - bH - (cH > 0 ? 2 : 0)}
-                      width={barW}
-                      height={bH}
-                      rx={4}
-                      className="fill-text-muted"
-                      opacity={isOn || !selected ? 0.6 : 0.35}
-                    />
-                  ) : null}
-                  {isOn ? (
-                    <rect
-                      x={x - 3}
-                      y={plotH + 4}
-                      width={barW + 6}
-                      height={2}
-                      rx={1}
-                      className="fill-fill-brand"
-                    />
-                  ) : null}
-                  {i % 5 === days.length % 5 || i === days.length - 1 ? (
-                    <text
-                      x={i * slot + slot / 2}
-                      y={plotH + 18}
-                      textAnchor="middle"
-                      className="fill-text-muted"
-                      fontSize={9}
-                    >
-                      {shortDay(d.salesDate)}
-                    </text>
-                  ) : null}
-                </g>
-              );
-            })}
-          </svg>
+                  {days.length <= 14 || i % 5 === (days.length - 1) % 5 ? shortDay(d.salesDate) : ''}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

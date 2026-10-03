@@ -29,7 +29,7 @@ const DailySalesPage = async () => {
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p className="mt-1">
             What City Drinks sold each day, worked out from their daily stock count: yesterday&apos;s
-            count, plus what we delivered, less today&apos;s. A day runs 06:00 to 06:00 Dubai.
+            count, plus what we delivered, less today&apos;s. A day runs from one daily count to the next, early morning Dubai time.
             Valued at our invoice price. C&amp;C staff only.
           </p>
         </Typography>
