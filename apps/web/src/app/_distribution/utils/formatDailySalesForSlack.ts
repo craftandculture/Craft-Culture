@@ -47,14 +47,36 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
           `Bought: ${day.bought.bottles} bottles · ${worth(day.bought.bottles, day.bought.value)}`,
         ].join('\n');
 
-  const top = day.lines.slice(0, 10).map((line) => {
+  const lineText = (line: (typeof day.lines)[number]) => {
     const owner = line.ownerName ? ` · ${line.ownerName}` : '';
     const worth = line.value !== null ? ` · ${money(line.value, line.currency)}` : '';
 
     return `• ${line.sold} × ${line.productName}${owner}${worth}`;
-  });
+  };
 
-  if (day.lines.length > 10) top.push(`…and ${day.lines.length - 10} more wines`);
+  /*
+    Every wine, not the top ten. Slack refuses a text block over 3,000
+    characters, so each list is cut into blocks under that, at line breaks.
+  */
+  const listBlocks = (title: string, lines: string[]) => {
+    const out: unknown[] = [];
+    let chunk = `*${title}*`;
+
+    for (const line of lines) {
+      if (chunk.length + line.length + 1 > 2900) {
+        out.push({ type: 'section', text: { type: 'mrkdwn', text: chunk } });
+        chunk = '';
+      }
+      chunk = chunk ? `${chunk}\n${line}` : line;
+    }
+
+    if (chunk) out.push({ type: 'section', text: { type: 'mrkdwn', text: chunk } });
+
+    return out;
+  };
+
+  const consignedLines = day.lines.filter((line) => line.regime === 'consigned').map(lineText);
+  const boughtLines = day.lines.filter((line) => line.regime === 'bought').map(lineText);
 
   const owners = new Map<string, number>();
 
@@ -94,8 +116,13 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     { type: 'section', text: { type: 'mrkdwn', text: summary } },
   ];
 
-  if (top.length > 0) {
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*What sold*\n${top.join('\n')}` } });
+  if (day.lines.length > 0) {
+    if (consignedLines.length > 0) {
+      blocks.push(...listBlocks(`Consigned · ${consignedLines.length} wines`, consignedLines));
+    }
+    if (boughtLines.length > 0) {
+      blocks.push(...listBlocks(`Bought · ${boughtLines.length} wines`, boughtLines));
+    }
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `By owner — ${byOwner}` }] });
   }
 

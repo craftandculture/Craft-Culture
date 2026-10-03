@@ -215,6 +215,21 @@ const DailySalesClient = () => {
         />
       </div>
 
+      {data.check ? (
+        <div className="border-border-primary bg-fill-muted/30 flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-xl border px-4 py-3 text-sm">
+          <span className="text-text-primary">
+            <span className="font-semibold tabular-nums">{data.check.feed30}</span> bottles sold in the last 30 days
+            by City Drinks&apos; own figure
+            <span className="text-text-muted"> · {data.check.feed30Consigned} consigned</span>
+          </span>
+          <span className="text-text-muted">
+            Our daily counts cover {data.check.daysCovered} of those 30 days and find{' '}
+            <span className="tabular-nums">{data.check.derived30}</span>. Gaps between counts, and restocks inside
+            them, make ours lower until a full month of daily counts exists.
+          </span>
+        </div>
+      ) : null}
+
       <div className="border-border-primary rounded-xl border px-4 py-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Typography variant="labelSm" asChild>
@@ -421,9 +436,6 @@ const DailySalesClient = () => {
 
       <Typography variant="bodyXs" colorRole="muted" asChild>
         <p>
-          {data.check
-            ? `Check: ${data.check.derived30} bottles derived over 30 days, against ${data.check.feed30} in the outlet's own 30-day figure. `
-            : 'The 30-day check against the outlet’s own figure appears once 30 daily counts exist. '}
           {data.unlinked > 0
             ? `${data.unlinked} wines on their feed are not linked to ours, so show no owner or value — link them on Consignment & Distribution.`
             : ''}

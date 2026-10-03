@@ -58,7 +58,16 @@ export interface DailyOutletSales {
   /** Lines on their feed that reach no wine of ours, so carry no owner or value */
   unlinked: number;
   /** Our derived 30 days beside the feed's own figure, once 30 days exist */
-  check: { derived30: number; feed30: number } | null;
+  /**
+   * The outlet's own rolling 30-day sales from its latest count, beside what
+   * our daily counts found over the part of those 30 days they cover
+   */
+  check: {
+    feed30: number;
+    feed30Consigned: number;
+    derived30: number;
+    daysCovered: number;
+  } | null;
 }
 
 
@@ -163,11 +172,24 @@ const buildDailySales = (rows: PairRow[]) => {
   const last30 = ordered.filter(
     (day) => latest && new Date(latest).getTime() - new Date(day.closedAt).getTime() < 30 * 864e5,
   );
+
+  /*
+    Shown from the first count rather than after thirty: the outlet's own
+    figure covers the whole thirty days whatever our history holds, so it is
+    the check that matters most while our counts still have gaps.
+  */
   const check =
-    ordered.length >= 30
+    latestRows.length > 0
       ? {
-          derived30: last30.reduce((sum, day) => sum + day.consigned.bottles + day.bought.bottles, 0),
           feed30: latestRows.reduce((sum, row) => sum + (row.soldLast30d ?? 0), 0),
+          feed30Consigned: latestRows
+            .filter((row) => row.regime === 'consigned')
+            .reduce((sum, row) => sum + (row.soldLast30d ?? 0), 0),
+          derived30: last30.reduce((sum, day) => sum + day.consigned.bottles + day.bought.bottles, 0),
+          daysCovered: Math.min(
+            30,
+            last30.reduce((sum, day) => sum + Math.max(1, Math.round(day.spanHours / 24)), 0),
+          ),
         }
       : null;
 
