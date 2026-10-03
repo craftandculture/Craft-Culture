@@ -8,6 +8,8 @@ import { getSectionFromPathname } from '@/app/_admin/components/AdminTopNav';
 interface TabItem {
   label: string;
   href: string;
+  /** Shown to C&C staff only, not every admin: see _distribution/utils/isStaff */
+  staffOnly?: boolean;
 }
 
 const sectionTabs: Record<string, TabItem[]> = {
@@ -59,6 +61,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
     { label: 'Client LPOs', href: '/platform/admin/lpo' },
     { label: 'Distribution', href: '/platform/admin/distribution' },
+    { label: 'Daily Sales', href: '/platform/admin/daily-sales', staffOnly: true },
     // Triangulation stays until Crurated's figures agree in both
     { label: 'Triangulation', href: '/platform/admin/triangulation' },
   ],
@@ -74,6 +77,8 @@ const sectionTabs: Record<string, TabItem[]> = {
 
 interface AdminSectionTabsProps {
   userRole?: string;
+  /** C&C staff, for the tabs only they may see */
+  isStaff?: boolean;
 }
 
 /** Tabs visible to WMS operators per section */
@@ -85,7 +90,7 @@ const operatorTabOverrides: Record<string, Set<string>> = {
  * Section-aware tab bar for admin navigation
  * Renders horizontal tabs for the current section, sticky below header
  */
-const AdminSectionTabs = ({ userRole }: AdminSectionTabsProps) => {
+const AdminSectionTabs = ({ userRole, isStaff = false }: AdminSectionTabsProps) => {
   const pathname = usePathname();
   const section = getSectionFromPathname(pathname);
   let tabs = sectionTabs[section];
@@ -97,6 +102,9 @@ const AdminSectionTabs = ({ userRole }: AdminSectionTabsProps) => {
       tabs = tabs.filter((tab) => allowedHrefs.has(tab.href));
     }
   }
+
+  // Partners are shown the distribution screens; daily sales is ours alone
+  tabs = tabs?.filter((tab) => !tab.staffOnly || isStaff);
 
   if (!tabs) return null;
 

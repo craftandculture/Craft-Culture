@@ -7,6 +7,7 @@ import AdminTopNav from '@/app/_admin/components/AdminTopNav';
 import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
+import isStaff from '@/app/_distribution/utils/isStaff';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
@@ -246,7 +247,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             <UserDropdown user={user} />
           </div>
         </div>
-        {(user.role === 'admin' || user.role === 'wms_operator') && <AdminSectionTabs userRole={user.role} />}
+        {(user.role === 'admin' || user.role === 'wms_operator') && <AdminSectionTabs userRole={user.role} isStaff={isStaff(user)} />}
       </header>
       <div className="flex-1">{children}</div>
       <BrandedFooter customerType={user.customerType} partnerType={
