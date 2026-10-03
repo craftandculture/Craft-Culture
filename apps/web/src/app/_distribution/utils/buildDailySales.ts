@@ -49,6 +49,34 @@ export interface DailySalesDay {
   lines: DailySaleLine[];
   /** Counts that rose by more than we delivered — a restock, not a sale */
   restocks: { productName: string; bottles: number }[];
+  /** What the outlet held at the close of the window, grouped for the filters */
+  stock: StockGroup[];
+}
+
+/**
+ * Bottles the outlet held at one count, for one owner, regime and type
+ *
+ * Grouped rather than per wine so thirty days of positions stay small, and at
+ * the grain the page filters on. `unvalued` are bottles of wines with no
+ * invoice price of ours, which is to say not linked: counted, never priced.
+ */
+export interface StockGroup {
+  ownerName: string | null;
+  regime: 'consigned' | 'bought';
+  category: DrinkCategory;
+  bottles: number;
+  value: number;
+  unvalued: number;
+}
+
+/** One wine held at the latest count, valued at our invoice price */
+export interface StockWine {
+  productName: string;
+  ownerName: string | null;
+  regime: 'consigned' | 'bought';
+  category: DrinkCategory;
+  held: number;
+  value: number | null;
 }
 
 export interface DailyOutletSales {
@@ -61,6 +89,8 @@ export interface DailyOutletSales {
   notMoving: { productName: string; ownerName: string | null; held: number; category: DrinkCategory }[];
   /** Lines on their feed that reach no wine of ours, so carry no owner or value */
   unlinked: number;
+  /** Every wine held at the latest count, most valuable first */
+  stockWines: StockWine[];
   /** Our derived 30 days beside the feed's own figure, once 30 days exist */
   /**
    * The outlet's own rolling 30-day sales from its latest count, beside what
@@ -113,6 +143,7 @@ const buildDailySales = (rows: PairRow[]) => {
         bought: { bottles: 0, value: 0 },
         lines: [],
         restocks: [],
+        stock: [],
       };
       byDay.set(key, day);
     }
@@ -230,7 +261,51 @@ const buildDailySales = (rows: PairRow[]) => {
     }
   }
 
-  return { currency, latestSnapshotAt: latest, days: ordered, notMoving, unlinked, check };
+  /*
+    Stock held at each count, valued at our latest invoice price per bottle.
+    Read from the closing side of each window, so a day's stock is what was on
+    their shelf when that day's sales were worked out. Only the dominant
+    currency is valued, as with sales.
+  */
+  const priced = (row: PairRow) =>
+    row.bottlePrice !== null && (!currency || row.currency === currency);
+
+  for (const row of rows) {
+    if (row.heldTo <= 0) continue;
+
+    const day = byDay.get(String(row.closedAt));
+    if (!day) continue;
+
+    const regime = row.regime === 'consigned' ? 'consigned' : 'bought';
+    const category = classifyDrink(row.productName);
+    let group = day.stock.find(
+      (g) => g.ownerName === row.ownerName && g.regime === regime && g.category === category,
+    );
+
+    if (!group) {
+      group = { ownerName: row.ownerName, regime, category, bottles: 0, value: 0, unvalued: 0 };
+      day.stock.push(group);
+    }
+
+    group.bottles += row.heldTo;
+
+    if (priced(row)) group.value += row.heldTo * (row.bottlePrice ?? 0);
+    else group.unvalued += row.heldTo;
+  }
+
+  const stockWines: StockWine[] = latestRows
+    .filter((row) => row.heldTo > 0)
+    .map((row) => ({
+      productName: row.productName,
+      ownerName: row.ownerName,
+      regime: row.regime === 'consigned' ? ('consigned' as const) : ('bought' as const),
+      category: classifyDrink(row.productName),
+      held: row.heldTo,
+      value: priced(row) ? row.heldTo * (row.bottlePrice ?? 0) : null,
+    }))
+    .sort((a, b) => (b.value ?? -1) - (a.value ?? -1) || b.held - a.held);
+
+  return { currency, latestSnapshotAt: latest, days: ordered, notMoving, unlinked, stockWines, check };
 };
 
 export default buildDailySales;

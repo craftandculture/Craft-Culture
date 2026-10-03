@@ -119,9 +119,25 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     );
   }
 
+  /* What they hold of ours at this morning's count, valued as sales are */
+  const held = day.stock.reduce(
+    (acc, g) => ({
+      bottles: acc.bottles + g.bottles,
+      value: acc.value + g.value,
+      consigned: acc.consigned + (g.regime === 'consigned' ? g.value : 0),
+      consignedBottles: acc.consignedBottles + (g.regime === 'consigned' ? g.bottles : 0),
+    }),
+    { bottles: 0, value: 0, consigned: 0, consignedBottles: 0 },
+  );
+  const stockLine =
+    held.bottles > 0
+      ? `*Stock at ${sales.outletName}:* ${held.bottles} bottles · ${money(held.value, sales.currency)} (consigned: ${held.consignedBottles} bottles · ${money(held.consigned, sales.currency)})`
+      : null;
+
   const blocks: unknown[] = [
     { type: 'header', text: { type: 'plain_text', text: heading } },
     { type: 'section', text: { type: 'mrkdwn', text: summary } },
+    ...(stockLine ? [{ type: 'section', text: { type: 'mrkdwn', text: stockLine } }] : []),
   ];
 
   if (day.lines.length > 0) {

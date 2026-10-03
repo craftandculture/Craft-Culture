@@ -71,7 +71,18 @@ const DailySalesClient = () => {
     ownerColour(setup.data?.owners.findIndex((owner) => owner.name === name) ?? -1).chip;
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [category, setCategory] = useState<'all' | DrinkCategory>('all');
+  /*
+    Several types at once: wine and sparkling are both wine, and are often
+    wanted together. None selected means everything.
+  */
+  const [types, setTypes] = useState<DrinkCategory[]>([]);
+  const [allWines, setAllWines] = useState(false);
+  const match = (category: DrinkCategory) => types.length === 0 || types.includes(category);
+  const toggleType = (key: 'all' | DrinkCategory) => {
+    if (key === 'all') return setTypes([]);
+    const next = types.includes(key) ? types.filter((t) => t !== key) : [...types, key];
+    setTypes(next.length === CATEGORIES.length - 1 ? [] : next);
+  };
 
   const queryClient = useQueryClient();
 
@@ -112,10 +123,10 @@ const DailySalesClient = () => {
   */
   const shown = useMemo(() => {
     const all = data?.days ?? [];
-    if (category === 'all') return all;
+    if (types.length === 0) return all;
 
     return all.map((d) => {
-      const lines = d.lines.filter((line) => line.category === category);
+      const lines = d.lines.filter((line) => types.includes(line.category));
       const sum = (regime: 'consigned' | 'bought') => {
         const of = lines.filter((line) => line.regime === regime);
         return {
@@ -127,7 +138,7 @@ const DailySalesClient = () => {
       };
       return { ...d, lines, consigned: sum('consigned'), bought: sum('bought') };
     });
-  }, [data, category]);
+  }, [data, types]);
 
   const days = useMemo(() => [...shown].reverse(), [shown]);
   const currency = data?.currency ?? null;
@@ -180,12 +191,55 @@ const DailySalesClient = () => {
   const monthValue = shown.reduce((sum, d) => sum + valueOf(d), 0);
   const coveredDays = shown.reduce((sum, d) => sum + daysIn(d), 0);
   const firstDay = shown[shown.length - 1]!.salesDate;
-  const notMoving = data.notMoving.filter((row) => category === 'all' || row.category === category);
+  const notMoving = data.notMoving.filter((row) => match(row.category));
   const feed30 = data.check
-    ? category === 'all'
+    ? types.length === 0
       ? data.check.feed30
-      : data.check.feed30ByCategory[category]
+      : types.reduce((sum, t) => sum + (data.check?.feed30ByCategory[t] ?? 0), 0)
     : 0;
+  const typeLabel =
+    types.length === 0
+      ? 'bottles'
+      : CATEGORIES.filter((c) => c.key !== 'all' && types.includes(c.key as DrinkCategory))
+          .map((c) => c.label.toLowerCase())
+          .join(' + ');
+
+  /* What the outlet holds at a count, narrowed by the type filter */
+  const stockOf = (d: (typeof shown)[number] | undefined) => {
+    const out = { consigned: { bottles: 0, value: 0 }, bought: { bottles: 0, value: 0 }, unvalued: 0 };
+    for (const g of d?.stock ?? []) {
+      if (!match(g.category)) continue;
+      out[g.regime].bottles += g.bottles;
+      out[g.regime].value += g.value;
+      out.unvalued += g.unvalued;
+    }
+    return out;
+  };
+  const stockNow = stockOf(latest);
+  const stockBefore = shown[1] ? stockOf(shown[1]) : null;
+  const stockValue = (st: ReturnType<typeof stockOf>) => st.consigned.value + st.bought.value;
+  const stockBottles = (st: ReturnType<typeof stockOf>) => st.consigned.bottles + st.bought.bottles;
+  const stockTrend = days.map((d) => ({ date: d.salesDate, value: stockValue(stockOf(d)) }));
+  const trendMax = Math.max(1, ...stockTrend.map((p) => p.value));
+
+  const stockOwners = new Map<string, { consigned: number; consignedValue: number; bought: number; boughtValue: number }>();
+  for (const g of latest.stock) {
+    if (!match(g.category)) continue;
+    const name = g.ownerName ?? 'Not linked';
+    const row = stockOwners.get(name) ?? { consigned: 0, consignedValue: 0, bought: 0, boughtValue: 0 };
+    if (g.regime === 'consigned') {
+      row.consigned += g.bottles;
+      row.consignedValue += g.value;
+    } else {
+      row.bought += g.bottles;
+      row.boughtValue += g.value;
+    }
+    stockOwners.set(name, row);
+  }
+  const ownerRows = [...stockOwners.entries()].sort((a, b) =>
+    a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1].consignedValue + b[1].boughtValue - (a[1].consignedValue + a[1].boughtValue),
+  );
+  const heldWines = data.stockWines.filter((w) => match(w.category));
 
   // One scale for every bar, so heights compare across days
   const max = Math.max(1, ...days.map(totalOf));
@@ -237,10 +291,10 @@ const DailySalesClient = () => {
           <button
             key={c.key}
             type="button"
-            aria-pressed={category === c.key}
-            onClick={() => setCategory(c.key)}
+            aria-pressed={c.key === 'all' ? types.length === 0 : types.includes(c.key)}
+            onClick={() => toggleType(c.key)}
             className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-              category === c.key
+              (c.key === 'all' ? types.length === 0 : types.includes(c.key))
                 ? 'border-border-brand bg-fill-brand/10 text-text-brand font-medium'
                 : 'border-border-primary text-text-muted hover:text-text-primary'
             }`}
@@ -273,13 +327,140 @@ const DailySalesClient = () => {
         />
       </div>
 
+      {/*
+        What they hold of ours, in money. The level is a line because it is
+        one quantity over time; consigned is the part still owed to owners
+        until it sells, so it is named on its own.
+      */}
+      <div className="border-border-primary space-y-4 rounded-xl border px-4 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0">
+            <Typography variant="labelSm" asChild>
+              <h2>Stock at {data.outletName}</h2>
+            </Typography>
+            <p className="text-text-primary mt-1 text-3xl font-semibold tabular-nums">
+              {money(stockValue(stockNow), currency)}
+            </p>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mt-1 tabular-nums">
+                {stockBottles(stockNow)} bottles at the latest count · consigned{' '}
+                {money(stockNow.consigned.value, currency)} ({stockNow.consigned.bottles}) · bought{' '}
+                {money(stockNow.bought.value, currency)} ({stockNow.bought.bottles})
+              </p>
+            </Typography>
+            {stockBefore ? (
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p className="mt-0.5 tabular-nums">
+                  {stockValue(stockNow) >= stockValue(stockBefore) ? 'Up' : 'Down'}{' '}
+                  {money(Math.abs(stockValue(stockNow) - stockValue(stockBefore)), currency)} since the previous
+                  count
+                </p>
+              </Typography>
+            ) : null}
+            {stockNow.unvalued > 0 ? (
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p className="mt-0.5">{stockNow.unvalued} bottles not valued: wines not linked to ours.</p>
+              </Typography>
+            ) : null}
+          </div>
+
+          {stockTrend.length > 1 ? (
+            <div className="w-full max-w-md flex-1">
+              <div className="text-text-muted mb-1 flex justify-between text-[10px] tabular-nums">
+                <span>Value at each count</span>
+                <span>{money(trendMax, currency)}</span>
+              </div>
+              <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="block h-24 w-full" aria-hidden="true">
+                <line x1="0" x2="100" y1="40" y2="40" className="stroke-border-primary" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                <polyline
+                  fill="none"
+                  className="stroke-fill-brand"
+                  strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinejoin="round"
+                  points={stockTrend
+                    .map((pt, i) => `${(i / (stockTrend.length - 1)) * 100},${40 - (pt.value / trendMax) * 36}`)
+                    .join(' ')}
+                />
+              </svg>
+              <div className="text-text-muted mt-1 flex justify-between text-[10px] tabular-nums">
+                <span>{shortDay(stockTrend[0]!.date)}</span>
+                <span>{shortDay(stockTrend[stockTrend.length - 1]!.date)}</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {ownerRows.length > 0 ? (
+          <div className="border-border-primary overflow-x-auto rounded-lg border">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead className="text-text-muted border-border-primary border-b">
+                <tr>
+                  <th className="py-2 pl-4 pr-3 font-medium">Owner</th>
+                  <th className="py-2 pr-3 text-right font-medium">Consigned</th>
+                  <th className="py-2 pr-3 text-right font-medium">Value</th>
+                  <th className="py-2 pr-3 text-right font-medium">Bought</th>
+                  <th className="py-2 pr-4 text-right font-medium">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ownerRows.map(([name, row]) => (
+                  <tr key={name} className="border-border-primary border-b last:border-0">
+                    <td className="py-2 pl-4 pr-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${chipFor(name)}`}>{name}</span>
+                    </td>
+                    <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{row.consigned || '—'}</td>
+                    <td className="text-text-primary py-2 pr-3 text-right font-medium tabular-nums">
+                      {row.consigned ? money(row.consignedValue, currency) : '—'}
+                    </td>
+                    <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{row.bought || '—'}</td>
+                    <td className="text-text-muted py-2 pr-4 text-right tabular-nums">
+                      {row.bought ? money(row.boughtValue, currency) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {heldWines.length > 0 ? (
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p className="mb-2">Most valuable wines held</p>
+            </Typography>
+            <div className="border-border-primary divide-border-primary divide-y rounded-lg border">
+              {(allWines ? heldWines : heldWines.slice(0, 10)).map((w) => (
+                <div key={`${w.productName}-${w.ownerName}-${w.regime}`} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                  <span className="text-text-primary min-w-0 truncate">{w.productName}</span>
+                  <span className="text-text-muted flex shrink-0 items-center gap-3 tabular-nums">
+                    <span className="hidden sm:inline">{w.ownerName ?? 'Not linked'}</span>
+                    <span>{w.held} held</span>
+                    <span className="text-text-primary w-24 text-right">{w.value !== null ? money(w.value, currency) : '—'}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            {heldWines.length > 10 ? (
+              <button
+                type="button"
+                onClick={() => setAllWines(!allWines)}
+                className="text-text-brand mt-2 text-xs font-medium hover:underline"
+              >
+                {allWines ? 'Show the top 10' : `Show all ${heldWines.length} wines`}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
       {data.check ? (
         <div className="border-border-primary bg-fill-muted/30 flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-xl border px-4 py-3 text-sm">
           <span className="text-text-primary">
             <span className="font-semibold tabular-nums">{feed30}</span>{' '}
-            {category === 'all' ? 'bottles' : CATEGORIES.find((c) => c.key === category)?.label.toLowerCase()} sold in the last 30 days
+            {typeLabel} sold in the last 30 days
             by City Drinks&apos; own figure
-            {category === 'all' ? <span className="text-text-muted"> · {data.check.feed30Consigned} consigned</span> : null}
+            {types.length === 0 ? <span className="text-text-muted"> · {data.check.feed30Consigned} consigned</span> : null}
           </span>
           <span className="text-text-muted">
             Our daily counts cover {data.check.daysCovered} of those 30 days and find{' '}
