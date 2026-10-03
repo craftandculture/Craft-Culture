@@ -2417,6 +2417,61 @@ const runMigrations = async () => {
       if (missing.size) console.log(`⚠️  Team Tasks seed: no staff login found for ${[...missing].join(', ')}; their parts were left unassigned`);
     });
 
+    await dataFix('Team Tasks: wording as on the 3 October list', async () => {
+      // Titles and parts read exactly as the PDF did. Only text still as seeded
+      // is changed, so anything the team has since edited is left alone.
+      const titles = [
+        ['Consignment Tool: get working', 'Consignment Tool — get working'],
+        ['Rate card: update', 'Rate card — update'],
+        ['TBS: preorder sheet update', 'TBS — preorder sheet update'],
+        ['Consignment invoices: reconciliation', 'Consignment invoices — reconciliation'],
+        ['Cru & Crurated: update pricing to new 15% tax', 'Cru & Crurated — update pricing to new 15% tax'],
+        ['Wynn: pricing matrix & transfer', 'Wynn — pricing matrix & transfer'],
+        ['Philipp: code qty errors in pricing manager', 'Philipp — code qty errors in pricing manager'],
+        ['Isabel Mayfair: shipping quote, set up & invoice', 'Isabel Mayfair — shipping quote + set up in system & invoice'],
+        ['Said: contract, rate card & pricing check', 'Said — contract, rate card & pricing check'],
+        ['Julian: price list & interactive pricing portal', 'Julian — price list & interactive pricing portal'],
+        ['Cult: arrange air freight', 'Cult — arrange air freight'],
+        ['Box: procure new boxes', 'Box — procure new boxes'],
+      ];
+      for (const [from, to] of titles) {
+        await client`UPDATE "team_tasks" SET "title" = ${to}, "updated_at" = now() WHERE "title" = ${from}`;
+      }
+      const parts = [
+        ['Get it working', 'Consignment Tool — get working'],
+        ['Update rate card', 'Rate card — update'],
+        ['Update the sheet', 'Sheet updated'],
+        ['Load onto live price list', 'TBS — load preorder sheet onto live price list'],
+        ['Reconcile consignment invoices', 'Consignment invoices — reconciliation'],
+        ['Cru PCO and new wines only', 'Cru & Crurated — update pricing to 15% tax (Cru PCO & new wines)'],
+        ['Pricing matrix, with Abhishek', 'Wynn — pricing matrix & Abhishek conversation re. transfer'],
+        ['Alignment and coding', 'Wynn — code pricing matrix (once Sophie sends)'],
+        ['Manage transfer', 'Wynn — manage transfer'],
+        ['Fix quantity errors in Pricing Manager', 'Philipp — code qty errors in pricing manager'],
+        ['Shipping quote', 'Isabel Mayfair — shipping quote'],
+        ['Set up in system and invoice (Kevin to instruct)', 'Isabel Mayfair — set up in system & invoice (Kevin to instruct)'],
+        ['Send contract', 'Said — send contract'],
+        ['Check pricing', 'Said — check pricing'],
+        ['Logistics quote', 'Said — logistics quote'],
+        ['Price list', 'Julian — pricing for price list & portal'],
+        ['Build portal', 'Julian — build interactive pricing portal'],
+        ['Replenishment and RFQ', 'CD replen & RFQ'],
+        ['Strategy and scaling plan', 'Company strategy & scaling'],
+        ['Prepare 2026 P&L', '2026 P&L'],
+        ["Check samples and order new boxes (under Kevin's instruction)", "Box — check samples & order new boxes (under Kevin's instruction)"],
+      ];
+      for (const [from, to] of parts) {
+        await client`UPDATE "team_task_parts" SET "what" = ${to}, "updated_at" = now() WHERE "what" = ${from}`;
+      }
+      const done = [
+        ['Altamura: storage Apr to Sep', 'Altamura — storage Apr–Sep'], ['Tax return: Kevin sign-off', 'Tax return — Kevin sign off'],
+      ];
+      for (const [from, to] of done) {
+        await client`UPDATE "team_tasks" SET "title" = ${to} WHERE "title" = ${from}`;
+      }
+      await client`UPDATE "team_tasks" SET "title" = regexp_replace("title", '^([^:]+): ', '\\1 — ') WHERE "status" = 'closed' AND "title" ~ '^[^:]+: '`;
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {
