@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AED_PER_USD } from '@/app/_exportInvoices/constants';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -64,7 +65,7 @@ const Stat = ({ label, value, detail }: { label: string; value: string; detail?:
  */
 const DailySalesClient = () => {
   const api = useTRPC();
-  const sales = useQuery(api.distribution.staff.getDailySales.queryOptions({ days: 30 }));
+  const sales = useQuery(api.distribution.staff.getDailySales.queryOptions({ days: 62 }));
   // Owner colours follow the order on Consignment & Distribution, so an owner looks the same on both
   const setup = useQuery(api.distribution.admin.getSetup.queryOptions());
   const chipFor = (name: string) =>
@@ -77,6 +78,23 @@ const DailySalesClient = () => {
   */
   const [types, setTypes] = useState<DrinkCategory[]>([]);
   const [allWines, setAllWines] = useState(false);
+  const [winesOpen, setWinesOpen] = useState(false);
+  const [settleOpen, setSettleOpen] = useState(true);
+  const [period, setPeriod] = useState<'this' | 'last'>('this');
+  const [display, setDisplay] = useState<'USD' | 'AED'>('USD');
+
+  /*
+    Every amount on the page in the chosen currency, at the fixed dirham peg —
+    the same constant the export invoices use, so the two never disagree.
+  */
+  const toDisplay = (value: number, from: string | null) => {
+    const source = from ?? display;
+
+    if (source === display) return value;
+
+    return source === 'USD' ? value * AED_PER_USD : value / AED_PER_USD;
+  };
+  const show = (value: number, from: string | null) => money(toDisplay(value, from), display);
   const match = (category: DrinkCategory) => types.length === 0 || types.includes(category);
   const toggleType = (key: 'all' | DrinkCategory) => {
     if (key === 'all') return setTypes([]);
@@ -240,6 +258,65 @@ const DailySalesClient = () => {
     a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1].consignedValue + b[1].boughtValue - (a[1].consignedValue + a[1].boughtValue),
   );
   const heldWines = data.stockWines.filter((w) => match(w.category));
+  const heldTotal = heldWines.reduce((sum, w) => sum + (w.value ?? 0), 0);
+
+  /*
+    Settlement, consigned stock only: what sold in the month is due (the
+    outlet pays C&C, and C&C settles the owner), and what is still on their
+    shelf is pending. Bought stock is the outlet's own and owes nobody.
+    A window is counted in the month its first day falls in.
+  */
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' });
+  const [ty, tm] = today.split('-').map(Number) as [number, number];
+  const monthKey =
+    period === 'this'
+      ? `${ty}-${String(tm).padStart(2, '0')}`
+      : tm === 1
+        ? `${ty - 1}-12`
+        : `${ty}-${String(tm - 1).padStart(2, '0')}`;
+  const monthName = new Date(`${monthKey}-15T12:00:00Z`).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  const inMonth = shown.filter((d) => d.salesDate.startsWith(monthKey));
+  const monthDaysCovered = inMonth.reduce((sum, d) => sum + daysIn(d), 0);
+
+  const settle = new Map<string, { soldBottles: number; soldValue: number; heldBottles: number; heldValue: number }>();
+  const settleRow = (name: string) =>
+    settle.get(name) ?? { soldBottles: 0, soldValue: 0, heldBottles: 0, heldValue: 0 };
+
+  for (const d of inMonth) {
+    for (const line of d.lines) {
+      if (line.regime !== 'consigned') continue;
+      const name = line.ownerName ?? 'Not linked';
+      const row = settleRow(name);
+      row.soldBottles += line.sold;
+      row.soldValue += line.value !== null ? toDisplay(line.value, line.currency) : 0;
+      settle.set(name, row);
+    }
+  }
+
+  for (const [name, row] of stockOwners) {
+    if (!row.consigned) continue;
+    const entry = settleRow(name);
+    entry.heldBottles += row.consigned;
+    entry.heldValue += toDisplay(row.consignedValue, currency);
+    settle.set(name, entry);
+  }
+
+  const settleRows = [...settle.entries()].sort((a, b) =>
+    a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1].soldValue - a[1].soldValue || b[1].heldValue - a[1].heldValue,
+  );
+  const settleTotal = settleRows.reduce(
+    (acc, [, r]) => ({
+      soldBottles: acc.soldBottles + r.soldBottles,
+      soldValue: acc.soldValue + r.soldValue,
+      heldBottles: acc.heldBottles + r.heldBottles,
+      heldValue: acc.heldValue + r.heldValue,
+    }),
+    { soldBottles: 0, soldValue: 0, heldBottles: 0, heldValue: 0 },
+  );
 
   // One scale for every bar, so heights compare across days
   const max = Math.max(1, ...days.map(totalOf));
@@ -267,7 +344,20 @@ const DailySalesClient = () => {
             Dubai · posts to #cd-sales at 07:00 daily
           </p>
         </Typography>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="border-border-primary flex overflow-hidden rounded-full border text-xs" role="group" aria-label="Currency">
+            {(['USD', 'AED'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={display === c}
+                onClick={() => setDisplay(c)}
+                className={`px-3 py-1 font-medium ${display === c ? 'bg-fill-brand text-text-brand-on-fill' : 'text-text-muted hover:text-text-primary'}`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
           <Button colorRole="muted" size="sm" isDisabled={pull.isPending} onClick={() => pull.mutate({})}>
             {pull.isPending ? 'Pulling…' : 'Pull latest count'}
           </Button>
@@ -312,7 +402,7 @@ const DailySalesClient = () => {
         />
         <Stat
           label="Value"
-          value={money(valueOf(latest), currency)}
+          value={show(valueOf(latest), currency)}
           detail={
             latest.lines.some((line) => line.value === null)
               ? 'at our invoice price · unlinked wines not valued'
@@ -323,8 +413,107 @@ const DailySalesClient = () => {
         <Stat
           label={`Since ${shortDay(firstDay)} · ${coveredDays} days`}
           value={`${month} bottles`}
-          detail={money(monthValue, currency)}
+          detail={show(monthValue, currency)}
         />
+      </div>
+
+      <div className="border-border-primary rounded-xl border">
+        <button
+          type="button"
+          onClick={() => setSettleOpen(!settleOpen)}
+          aria-expanded={settleOpen}
+          className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left"
+        >
+          <span>
+            <span className="text-text-primary text-sm font-semibold">Settlement · consigned stock</span>
+            <span className="text-text-muted ml-2 text-xs tabular-nums">
+              {monthName}: {show(settleTotal.soldValue, display)} to be paid · {show(settleTotal.heldValue, display)} pending
+            </span>
+          </span>
+          <span className="text-text-muted text-xs">{settleOpen ? 'Hide' : 'Show'}</span>
+        </button>
+
+        {settleOpen ? (
+          <div className="border-border-primary space-y-3 border-t px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex gap-1.5" role="group" aria-label="Month">
+                {(['this', 'last'] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={period === p}
+                    onClick={() => setPeriod(p)}
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      period === p
+                        ? 'border-border-brand bg-fill-brand/10 text-text-brand font-medium'
+                        : 'border-border-primary text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    {p === 'this' ? 'This month' : 'Last month'}
+                  </button>
+                ))}
+              </div>
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p className="tabular-nums">Daily counts cover {monthDaysCovered} days of {monthName}</p>
+              </Typography>
+            </div>
+
+            <div className="border-border-primary overflow-x-auto rounded-lg border">
+              <table className="w-full min-w-[38rem] text-left text-sm">
+                <thead className="text-text-muted border-border-primary border-b">
+                  <tr>
+                    <th className="py-2 pl-4 pr-3 font-medium">Owner</th>
+                    <th className="border-border-primary border-l py-2 pl-3 pr-3 text-right font-medium" colSpan={2}>
+                      To be paid · sold in {monthName.split(' ')[0]}
+                    </th>
+                    <th className="border-border-primary border-l py-2 pl-3 pr-4 text-right font-medium" colSpan={2}>
+                      Pending · still held
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {settleRows.map(([name, r]) => (
+                    <tr key={name} className="border-border-primary border-b last:border-0">
+                      <td className="py-2 pl-4 pr-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${chipFor(name)}`}>{name}</span>
+                      </td>
+                      <td className="border-border-primary text-text-muted border-l py-2 pl-3 pr-3 text-right tabular-nums">
+                        {r.soldBottles || '—'}
+                      </td>
+                      <td className="text-text-primary py-2 pr-3 text-right font-semibold tabular-nums">
+                        {r.soldBottles ? show(r.soldValue, display) : '—'}
+                      </td>
+                      <td className="border-border-primary text-text-muted border-l py-2 pl-3 pr-3 text-right tabular-nums">
+                        {r.heldBottles || '—'}
+                      </td>
+                      <td className="text-text-muted py-2 pr-4 text-right tabular-nums">
+                        {r.heldBottles ? show(r.heldValue, display) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-fill-muted/30 font-medium">
+                    <td className="py-2 pl-4 pr-3">Total</td>
+                    <td className="border-border-primary border-l py-2 pl-3 pr-3 text-right tabular-nums">{settleTotal.soldBottles}</td>
+                    <td className="text-text-primary py-2 pr-3 text-right font-semibold tabular-nums">
+                      {show(settleTotal.soldValue, display)}
+                    </td>
+                    <td className="border-border-primary border-l py-2 pl-3 pr-3 text-right tabular-nums">{settleTotal.heldBottles}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">{show(settleTotal.heldValue, display)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p>
+                <strong>To be paid:</strong> consigned bottles City Drinks sold in the month. City Drinks pay C&amp;C, and
+                C&amp;C settles each owner; Craft &amp; Culture&apos;s own stock stays with us.{' '}
+                <strong>Pending:</strong> consigned bottles still at City Drinks, not yet due. Valued at our invoice price
+                to City Drinks; owners are settled at their agreed price.
+              </p>
+            </Typography>
+          </div>
+        ) : null}
       </div>
 
       {/*
@@ -339,20 +528,20 @@ const DailySalesClient = () => {
               <h2>Stock at {data.outletName}</h2>
             </Typography>
             <p className="text-text-primary mt-1 text-3xl font-semibold tabular-nums">
-              {money(stockValue(stockNow), currency)}
+              {show(stockValue(stockNow), currency)}
             </p>
             <Typography variant="bodyXs" colorRole="muted" asChild>
               <p className="mt-1 tabular-nums">
                 {stockBottles(stockNow)} bottles at the latest count · consigned{' '}
-                {money(stockNow.consigned.value, currency)} ({stockNow.consigned.bottles}) · bought{' '}
-                {money(stockNow.bought.value, currency)} ({stockNow.bought.bottles})
+                {show(stockNow.consigned.value, currency)} ({stockNow.consigned.bottles}) · bought{' '}
+                {show(stockNow.bought.value, currency)} ({stockNow.bought.bottles})
               </p>
             </Typography>
             {stockBefore ? (
               <Typography variant="bodyXs" colorRole="muted" asChild>
                 <p className="mt-0.5 tabular-nums">
                   {stockValue(stockNow) >= stockValue(stockBefore) ? 'Up' : 'Down'}{' '}
-                  {money(Math.abs(stockValue(stockNow) - stockValue(stockBefore)), currency)} since the previous
+                  {show(Math.abs(stockValue(stockNow) - stockValue(stockBefore)), currency)} since the previous
                   count
                 </p>
               </Typography>
@@ -368,7 +557,7 @@ const DailySalesClient = () => {
             <div className="w-full max-w-md flex-1">
               <div className="text-text-muted mb-1 flex justify-between text-[10px] tabular-nums">
                 <span>Value at each count</span>
-                <span>{money(trendMax, currency)}</span>
+                <span>{show(trendMax, currency)}</span>
               </div>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="block h-24 w-full" aria-hidden="true">
                 <line x1="0" x2="100" y1="40" y2="40" className="stroke-border-primary" strokeWidth="1" vectorEffect="non-scaling-stroke" />
@@ -411,11 +600,11 @@ const DailySalesClient = () => {
                     </td>
                     <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{row.consigned || '—'}</td>
                     <td className="text-text-primary py-2 pr-3 text-right font-medium tabular-nums">
-                      {row.consigned ? money(row.consignedValue, currency) : '—'}
+                      {row.consigned ? show(row.consignedValue, currency) : '—'}
                     </td>
                     <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{row.bought || '—'}</td>
                     <td className="text-text-muted py-2 pr-4 text-right tabular-nums">
-                      {row.bought ? money(row.boughtValue, currency) : '—'}
+                      {row.bought ? show(row.boughtValue, currency) : '—'}
                     </td>
                   </tr>
                 ))}
@@ -425,27 +614,39 @@ const DailySalesClient = () => {
         ) : null}
 
         {heldWines.length > 0 ? (
-          <div>
-            <Typography variant="bodyXs" colorRole="muted" asChild>
-              <p className="mb-2">Most valuable wines held</p>
-            </Typography>
-            <div className="border-border-primary divide-border-primary divide-y rounded-lg border">
+          <div className="border-border-primary rounded-lg border">
+            <button
+              type="button"
+              onClick={() => setWinesOpen(!winesOpen)}
+              aria-expanded={winesOpen}
+              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm"
+            >
+              <span className="text-text-primary font-medium">
+                Wines held <span className="text-text-muted font-normal tabular-nums">· {heldWines.length} · {show(heldTotal, currency)}</span>
+              </span>
+              <span className="text-text-muted text-xs">{winesOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {winesOpen ? (
+            <div className="border-border-primary divide-border-primary divide-y border-t">
               {(allWines ? heldWines : heldWines.slice(0, 10)).map((w) => (
                 <div key={`${w.productName}-${w.ownerName}-${w.regime}`} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                   <span className="text-text-primary min-w-0 truncate">{w.productName}</span>
                   <span className="text-text-muted flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className="hidden sm:inline">{w.ownerName ?? 'Not linked'}</span>
+                    <span className={`hidden rounded-full px-2 py-0.5 text-xs font-medium sm:inline ${chipFor(w.ownerName ?? 'Not linked')}`}>
+                      {w.ownerName ?? 'Not linked'}
+                    </span>
                     <span>{w.held} held</span>
-                    <span className="text-text-primary w-24 text-right">{w.value !== null ? money(w.value, currency) : '—'}</span>
+                    <span className="text-text-primary w-24 text-right">{w.value !== null ? show(w.value, currency) : '—'}</span>
                   </span>
                 </div>
               ))}
             </div>
-            {heldWines.length > 10 ? (
+            ) : null}
+            {winesOpen && heldWines.length > 10 ? (
               <button
                 type="button"
                 onClick={() => setAllWines(!allWines)}
-                className="text-text-brand mt-2 text-xs font-medium hover:underline"
+                className="text-text-brand border-border-primary w-full border-t px-4 py-2 text-left text-xs font-medium hover:underline"
               >
                 {allWines ? 'Show the top 10' : `Show all ${heldWines.length} wines`}
               </button>
@@ -488,7 +689,7 @@ const DailySalesClient = () => {
         <Typography variant="bodyXs" colorRole="muted" asChild>
           <p className="mb-2 min-h-4 tabular-nums">
             {hover
-              ? `${formatSalesPeriod(hover.salesDate, hover.spanHours)}: ${hover.consigned.bottles} consigned, ${hover.bought.bottles} bought · ${money(valueOf(hover), currency)}`
+              ? `${formatSalesPeriod(hover.salesDate, hover.spanHours)}: ${hover.consigned.bottles} consigned, ${hover.bought.bottles} bought · ${show(valueOf(hover), currency)}`
               : 'Select a day to see what sold.'}
           </p>
         </Typography>
@@ -571,7 +772,7 @@ const DailySalesClient = () => {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <Typography variant="labelSm" asChild>
               <h2>
-                What sold {formatSalesPeriod(day.salesDate, day.spanHours)} · {totalOf(day)} bottles · {money(valueOf(day), currency)}
+                What sold {formatSalesPeriod(day.salesDate, day.spanHours)} · {totalOf(day)} bottles · {show(valueOf(day), currency)}
               </h2>
             </Typography>
             {day.spanHours > 30 ? (
@@ -631,7 +832,7 @@ const DailySalesClient = () => {
                       </td>
                       <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{line.heldAfter}</td>
                       <td className="text-text-muted py-2 pr-4 text-right tabular-nums">
-                        {line.value !== null ? money(line.value, line.currency) : '—'}
+                        {line.value !== null ? show(line.value, line.currency) : '—'}
                       </td>
                     </tr>
                   ))}
