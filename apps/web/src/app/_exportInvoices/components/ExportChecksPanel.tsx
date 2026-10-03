@@ -16,8 +16,8 @@ export interface ExportChecksPanelProps {
 const ExportChecksPanel = ({ checks, onSelectLines }: ExportChecksPanelProps) => {
   if (checks.length === 0) {
     return (
-      <p className="rounded-lg border border-border-success/30 bg-fill-success/10 px-3 py-2.5 text-sm text-text-success">
-        All checks pass.
+      <p className="flex items-center gap-2 rounded-lg bg-fill-success/10 px-3 py-2 text-xs font-medium text-text-success">
+        <span aria-hidden>✓</span> All checks pass — ready to issue.
       </p>
     );
   }
