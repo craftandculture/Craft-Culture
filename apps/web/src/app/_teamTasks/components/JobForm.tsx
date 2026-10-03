@@ -87,7 +87,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormPro
 
     if (!title.trim()) return setError('Give the job a title.');
     if (areaId === NEW_AREA && !newAreaName.trim()) return setError('Name the new area.');
-    if (cleanParts.some((p) => !p.what.trim())) return setError('Say what each person does.');
+    if (cleanParts.some((p) => !p.what.trim())) return setError('Fill in what each person does, in the box next to their name.');
     if (urgent && cleanParts.some((p) => !p.due)) return setError('Urgent jobs need a due date on every part.');
 
     const input: JobInput = {
@@ -209,10 +209,10 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormPro
             <p className={label}>Who does what</p>
             {parts.map((p, i) => (
               <div key={p.id ?? `new-${i}`} className="space-y-2 rounded-lg border border-border-muted p-2.5">
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <select
                     aria-label="Owner"
-                    className={`${field} w-40 shrink-0`}
+                    className="h-9 w-full shrink-0 rounded-lg border border-border-primary bg-surface-primary px-2.5 text-sm text-text-primary sm:w-44"
                     value={p.ownerId}
                     onChange={(e) => setPart(i, { ownerId: e.target.value })}
                   >
@@ -224,10 +224,10 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormPro
                   </select>
                   <input
                     aria-label="What"
-                    className={field}
+                    className={`${field} min-w-0 sm:flex-1`}
                     value={p.what}
                     onChange={(e) => setPart(i, { what: e.target.value })}
-                    placeholder="What they do"
+                    placeholder="What they do, e.g. Send the shipping quote"
                   />
                   {parts.length > 1 && (
                     <button
