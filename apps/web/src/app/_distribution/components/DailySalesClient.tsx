@@ -93,13 +93,19 @@ const DailySalesClient = () => {
   };
 
   /* Bought lines matched to our sales orders by name: preview, then apply */
+  const [preview, setPreview] = useState<{
+    proposals: { outletCode: string; theirProductName: string; ourProductName: string; score: number }[];
+    heldBack: number;
+  } | null>(null);
+
   const autoLink = useMutation({
     ...api.distribution.admin.autoLinkCodes.mutationOptions(),
     onSuccess: async (result) => {
       if (result.mode === 'preview') {
-        toast.info(`${result.proposals.length} bought wines can be linked by name; ${result.heldBack ?? 0} need a person.`);
+        setPreview({ proposals: result.proposals, heldBack: result.heldBack ?? 0 });
         return;
       }
+      setPreview(null);
       toast.success(result.mode === 'undo' ? `Removed ${result.linked} automatic links` : `Linked ${result.linked} bought wines`);
       await refresh();
     },
@@ -1021,6 +1027,67 @@ const DailySalesClient = () => {
               Undo auto-links
             </Button>
           </span>
+        </div>
+      ) : null}
+
+      {preview ? (
+        <div className="border-border-brand space-y-3 rounded-xl border px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Typography variant="labelSm" asChild>
+              <h2>
+                Auto-link preview · {preview.proposals.length} matches
+                {preview.heldBack > 0 ? `, ${preview.heldBack} left for a person` : ''}
+              </h2>
+            </Typography>
+            <span className="flex gap-2">
+              <Button
+                colorRole="brand"
+                size="sm"
+                isDisabled={autoLink.isPending || preview.proposals.length === 0}
+                onClick={() => autoLink.mutate({ outletId: data.outletId, mode: 'apply', scope: 'bought' })}
+              >
+                {autoLink.isPending ? 'Linking…' : `Apply these ${preview.proposals.length} links`}
+              </Button>
+              <Button colorRole="muted" size="sm" onClick={() => setPreview(null)}>
+                Close
+              </Button>
+            </span>
+          </div>
+          {preview.proposals.length === 0 ? (
+            <Typography variant="bodySm" colorRole="muted" asChild>
+              <p>
+                Nothing can be linked by name with confidence. Those left need the Link button beside each wine — usually
+                because a name has no vintage, or two of our wines match it equally well.
+              </p>
+            </Typography>
+          ) : (
+            <div className="border-border-primary max-h-96 overflow-auto rounded-lg border">
+              <table className="w-full min-w-[40rem] text-left text-sm">
+                <thead className="text-text-muted border-border-primary bg-fill-primary sticky top-0 border-b">
+                  <tr>
+                    <th className="py-2 pl-4 pr-3 font-medium">Their wine</th>
+                    <th className="py-2 pr-3 font-medium">Will link to our wine</th>
+                    <th className="py-2 pr-4 text-right font-medium">Match</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.proposals.map((p) => (
+                    <tr key={p.outletCode} className="border-border-primary border-b last:border-0">
+                      <td className="py-2 pl-4 pr-3">
+                        <div className="text-text-primary">{p.theirProductName}</div>
+                        <div className="text-text-muted text-xs">{p.outletCode}</div>
+                      </td>
+                      <td className="text-text-primary py-2 pr-3">{p.ourProductName}</td>
+                      <td className="text-text-muted py-2 pr-4 text-right tabular-nums">{Math.round(p.score * 100)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Typography variant="bodyXs" colorRole="muted" asChild>
+            <p>Check a few before applying. Every automatic link can be removed with Undo auto-links.</p>
+          </Typography>
         </div>
       ) : null}
     </div>
