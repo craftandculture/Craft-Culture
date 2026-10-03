@@ -17,6 +17,8 @@ import adminSetWineClosed from './controller/adminSetWineClosed';
 import adminSetWineOwner from './controller/adminSetWineOwner';
 import adminSyncBills from './controller/adminSyncBills';
 import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
+import staffGetDailySales from './controller/staffGetDailySales';
+import staffSendDailySales from './controller/staffSendDailySales';
 
 /**
  * Distribution — our wine placed with a retail outlet, and whose it is
@@ -54,6 +56,11 @@ const distributionRouter = createTRPCRouter({
     setWineOwner: adminSetWineOwner,
     syncBills: adminSyncBills,
     syncOutFromZoho: adminSyncOutFromZoho,
+  }),
+  /* C&C staff only, not every admin: see utils/isStaff */
+  staff: createTRPCRouter({
+    getDailySales: staffGetDailySales,
+    sendDailySales: staffSendDailySales,
   }),
 });
 

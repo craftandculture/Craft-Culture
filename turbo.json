@@ -14,7 +14,9 @@
     "ZOHO_ORGANIZATION_ID",
     "ZOHO_REGION",
     "WMS_DEVICE_TOKEN",
-    "WMS_DEVICE_USER_EMAIL"
+    "WMS_DEVICE_USER_EMAIL",
+    "CRON_SECRET",
+    "SLACK_CD_SALES_WEBHOOK_URL"
   ],
   "tasks": {
     "build": {
