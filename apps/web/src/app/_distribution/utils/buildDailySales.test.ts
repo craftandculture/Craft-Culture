@@ -12,6 +12,7 @@ const row = (over: Partial<PairRow>): PairRow => ({
   productName: 'Tignanello 2019',
   regime: 'consigned',
   code: '11000012019',
+  lwin: '110000120190600750',
   heldFrom: 12,
   heldTo: 12,
   soldLast30d: 4,

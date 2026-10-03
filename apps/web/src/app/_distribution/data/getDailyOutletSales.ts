@@ -9,6 +9,7 @@ import {
   packAgnostic,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import wineOwnersReady from '../utils/wineOwnersReady';
 
 const squashed = () =>
   client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`;
@@ -41,6 +42,7 @@ const getDailyOutletSales = async (
   days: number,
 ): Promise<DailyOutletSales> => {
   const hasLinks = await confirmedLinksReady();
+  const hasOwners = await wineOwnersReady();
 
   const [outlet] = await client<{ name: string; zohoCustomerMatch: string | null }[]>`
     SELECT name, zoho_customer_match AS "zohoCustomerMatch"
@@ -65,6 +67,7 @@ const getDailyOutletSales = async (
       SELECT s.taken_at,
              UPPER(REGEXP_REPLACE(s.outlet_code, '[^A-Za-z0-9]', '', 'g')) AS outlet_code,
              ${packAgnostic(() => resolvedSnapshotCode())} AS code,
+             MIN(${resolvedSnapshotCode()}) AS lwin,
              MIN(s.product_name) AS product_name,
              MIN(s.regime) AS regime,
              SUM(s.bottles_on_hand)::float8 AS held,
@@ -90,11 +93,40 @@ const getDailyOutletSales = async (
       WHERE a.outlet_id = ${outletId} AND m.kind = 'out'
     ),
     /* Whose wine it is: the owner on the latest invoice line */
-    owner_of AS (
+    invoiced_owner AS (
       SELECT DISTINCT ON (o.code) o.code, ow.name AS owner_name
       FROM outs o
       JOIN cons_owners ow ON ow.id = o.owner_id
       ORDER BY o.code, o.doc_date DESC NULLS LAST
+    ),
+    /*
+      Said by hand, and the last word. Read here as well as at invoice time,
+      because a wine that reached them on an unattributed invoice — or on none
+      we can read — has no invoice line for the override to correct, and would
+      otherwise never get an owner at all.
+    */
+    stated_owner AS (
+      ${
+        hasOwners
+          ? client`
+              SELECT DISTINCT ON (code) code, owner_name
+              FROM (
+                SELECT ${packAgnostic(
+                  () => client`UPPER(REGEXP_REPLACE(w.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+                )} AS code, ow.name AS owner_name
+                FROM cons_wine_owners w
+                JOIN cons_owners ow ON ow.id = w.owner_id
+                WHERE w.outlet_id = ${outletId}
+              ) stated
+              ORDER BY code
+            `
+          : client`SELECT NULL::text AS code, NULL::text AS owner_name WHERE false`
+      }
+    ),
+    owner_of AS (
+      SELECT COALESCE(s.code, i.code) AS code, COALESCE(s.owner_name, i.owner_name) AS owner_name
+      FROM stated_owner s
+      FULL JOIN invoiced_owner i ON i.code = s.code
     ),
     /*
       What we sold them outright, from our Zoho sales orders to this customer.
@@ -147,6 +179,7 @@ const getDailyOutletSales = async (
            COALESCE(c.product_name, o.product_name) AS "productName",
            COALESCE(c.regime, o.regime) AS regime,
            COALESCE(c.code, o.code) AS code,
+           COALESCE(c.lwin, o.lwin) AS lwin,
            COALESCE(o.held, 0) AS "heldFrom",
            COALESCE(c.held, 0) AS "heldTo",
            c.sold_last_30d AS "soldLast30d",

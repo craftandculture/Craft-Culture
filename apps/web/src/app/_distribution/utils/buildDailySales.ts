@@ -17,6 +17,8 @@ export interface PairRow {
   productName: string;
   regime: string | null;
   code: string | null;
+  /** Our wine's full LWIN, for writing a per-wine owner the invoices read too */
+  lwin: string | null;
   heldFrom: number;
   heldTo: number;
   soldLast30d: number | null;
@@ -30,6 +32,7 @@ export interface DailySaleLine {
   outletCode: string;
   /** Their code reaches a wine of ours */
   linked: boolean;
+  lwin: string | null;
   productName: string;
   category: DrinkCategory;
   ownerName: string | null;
@@ -75,6 +78,7 @@ export interface StockGroup {
 export interface StockWine {
   outletCode: string;
   linked: boolean;
+  lwin: string | null;
   productName: string;
   ownerName: string | null;
   regime: 'consigned' | 'bought';
@@ -184,6 +188,7 @@ const buildDailySales = (rows: PairRow[]) => {
     day.lines.push({
       outletCode: row.outletCode,
       linked: row.code !== null,
+      lwin: row.lwin,
       productName: row.productName,
       category: classifyDrink(row.productName),
       ownerName: ownerOf(row),
@@ -312,6 +317,7 @@ const buildDailySales = (rows: PairRow[]) => {
     .map((row) => ({
       outletCode: row.outletCode,
       linked: row.code !== null,
+      lwin: row.lwin,
       productName: row.productName,
       ownerName: ownerOf(row),
       regime: row.regime === 'consigned' ? ('consigned' as const) : ('bought' as const),

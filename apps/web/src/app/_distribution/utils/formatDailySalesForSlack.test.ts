@@ -27,6 +27,7 @@ const sales = (lines: number): DailyOutletSales => ({
       lines: Array.from({ length: lines }, (_, i) => ({
         outletCode: `CDR${i}`,
         linked: true,
+        lwin: null,
         productName: `Domaine de Montille Chassagne-Montrachet 1er Cru Les Caillerets ${2000 + i}`,
         ownerName: 'Crurated',
         category: 'wine' as const,

@@ -10,6 +10,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import LineFixPanel from './LineFixPanel';
 import LinkWinePicker from './LinkWinePicker';
 import type { DrinkCategory } from '../utils/classifyDrink';
 import formatSalesPeriod from '../utils/formatSalesPeriod';
@@ -655,15 +656,15 @@ const DailySalesClient = () => {
                   <span className="text-text-primary min-w-0 truncate">{w.productName}</span>
                   <span className="text-text-muted flex shrink-0 items-center gap-3 tabular-nums">
                     <span className={`hidden rounded-full px-2 py-0.5 text-xs font-medium sm:inline ${chipFor(w.ownerName ?? 'Not linked')}`}>
-                      {w.ownerName ?? 'Not linked'}
+                      {w.ownerName ?? (w.linked ? 'No invoice' : 'Not linked')}
                     </span>
-                    {!w.linked ? (
+                    {!w.linked || !w.ownerName ? (
                       <button
                         type="button"
                         onClick={() => setLinking(linking === `held-${w.outletCode}` ? null : `held-${w.outletCode}`)}
                         className="text-text-brand text-xs font-medium hover:underline"
                       >
-                        Link
+                        {w.linked ? 'Fix' : 'Link'}
                       </button>
                     ) : null}
                     <span>{w.held} held</span>
@@ -672,13 +673,26 @@ const DailySalesClient = () => {
                 </div>
                 {linking === `held-${w.outletCode}` ? (
                   <div className="px-4 pb-3">
-                    <LinkWinePicker
-                      outletId={data.outletId}
-                      outletCode={w.outletCode}
-                      productName={w.productName}
-                      onLinked={refresh}
-                      onCancel={() => setLinking(null)}
-                    />
+                    {w.linked ? (
+                      <LineFixPanel
+                        outletId={data.outletId}
+                        outletCode={w.outletCode}
+                        lwin={w.lwin}
+                        productName={w.productName}
+                        owners={setup.data?.owners ?? []}
+                        ownerChip={chipFor}
+                        onDone={refresh}
+                        onCancel={() => setLinking(null)}
+                      />
+                    ) : (
+                      <LinkWinePicker
+                        outletId={data.outletId}
+                        outletCode={w.outletCode}
+                        productName={w.productName}
+                        onLinked={refresh}
+                        onCancel={() => setLinking(null)}
+                      />
+                    )}
                   </div>
                 ) : null}
                 </div>
@@ -866,8 +880,19 @@ const DailySalesClient = () => {
                         <div className="text-text-muted text-xs">{line.outletCode}</div>
                       </td>
                       <td className="text-text-muted py-2 pr-3">
-                        {line.linked ? (
+                        {line.linked && line.ownerName ? (
                           line.ownerName
+                        ) : line.linked ? (
+                          <span className="flex items-center gap-2">
+                            No invoice
+                            <button
+                              type="button"
+                              onClick={() => setLinking(linking === `fix-${line.outletCode}` ? null : `fix-${line.outletCode}`)}
+                              className="text-text-brand text-xs font-medium hover:underline"
+                            >
+                              Fix
+                            </button>
+                          </span>
                         ) : (
                           <span className="flex items-center gap-2">
                             Not linked
@@ -894,6 +919,22 @@ const DailySalesClient = () => {
                         {line.value !== null ? show(line.value, line.currency) : '—'}
                       </td>
                     </tr>
+                    {linking === `fix-${line.outletCode}` ? (
+                      <tr className="border-border-primary border-b">
+                        <td colSpan={6} className="px-4 py-3">
+                          <LineFixPanel
+                            outletId={data.outletId}
+                            outletCode={line.outletCode}
+                            lwin={line.lwin}
+                            productName={line.productName}
+                            owners={setup.data?.owners ?? []}
+                            ownerChip={chipFor}
+                            onDone={refresh}
+                            onCancel={() => setLinking(null)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
                     {linking === line.outletCode ? (
                       <tr className="border-border-primary border-b">
                         <td colSpan={6} className="px-4 py-3">
