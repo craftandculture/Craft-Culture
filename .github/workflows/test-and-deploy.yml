@@ -138,5 +138,17 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        # On failure the CLI's last lines are raised as an annotation: logs
+        # are hidden from anyone not signed in to GitHub, annotations are not,
+        # and a deploy that fails where nobody can read why stays broken.
         run: |
-          pnpm trigger:deploy
+          set -o pipefail
+          if ! pnpm trigger:deploy 2>&1 | tee deploy.log; then
+            msg=$(tail -40 deploy.log \
+              | sed -E 's/\x1b\[[0-9;?]*[A-Za-z]//g' \
+              | grep -vE '^[[:space:]│◒◐◓◑]*$' \
+              | tail -12 \
+              | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Trigger.dev deploy failed::${msg}"
+            exit 1
+          fi
