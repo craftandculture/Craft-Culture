@@ -282,7 +282,7 @@ const LwinLookup = ({
                     onClick={() => setManualLwin7(internal.next)}
                     className="rounded-md border border-brand-500 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:text-brand-400"
                   >
-                    New: <span className="font-mono">{internal.next}</span>
+                    New C&amp;C code: <span className="font-mono">{internal.next}</span>
                   </button>
                 </div>
               </div>
