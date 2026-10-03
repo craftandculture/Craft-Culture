@@ -42,9 +42,13 @@ const getDailyOutletSales = async (
 ): Promise<DailyOutletSales> => {
   const hasLinks = await confirmedLinksReady();
 
-  const [outlet] = await client<{ name: string }[]>`
-    SELECT name FROM cons_outlets WHERE id = ${outletId}
+  const [outlet] = await client<{ name: string; zohoCustomerMatch: string | null }[]>`
+    SELECT name, zoho_customer_match AS "zohoCustomerMatch"
+    FROM cons_outlets WHERE id = ${outletId}
   `;
+
+  /* Squashed as the invoice sync squashes it, so both find the same customer */
+  const customer = (outlet?.zohoCustomerMatch ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
   const rows = await client<PairRow[]>`
     WITH times AS (
@@ -92,14 +96,48 @@ const getDailyOutletSales = async (
       JOIN cons_owners ow ON ow.id = o.owner_id
       ORDER BY o.code, o.doc_date DESC NULLS LAST
     ),
-    /* What it is worth: our latest invoice price, per bottle */
+    /*
+      What we sold them outright, from our Zoho sales orders to this customer.
+      Consignment movements only cover consigned wine, so without this a wine
+      they bought has no price of ours at all. The SKU is the pack sold, so a
+      case rate is divided by the pack in its LWIN unless the unit is a bottle;
+      a pack outside 1-24 is corrupt data and gives no price rather than a
+      wrong one.
+    */
+    outright AS (
+      SELECT ${packAgnostic(
+               () => client`UPPER(REGEXP_REPLACE(i.sku, '[^A-Za-z0-9]', '', 'g'))`,
+             )} AS code,
+             so.order_date AS doc_date,
+             (CASE
+               WHEN LOWER(COALESCE(i.unit, '')) LIKE 'bottle%' THEN i.rate
+               WHEN REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g') ~ '^[0-9]{18}$'
+                    AND SUBSTR(REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g'), 12, 2)::int BETWEEN 1 AND 24
+                 THEN i.rate / SUBSTR(REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g'), 12, 2)::int
+             END)::float8 AS bottle_price,
+             so.currency_code AS currency
+      FROM zoho_sales_order_items i
+      JOIN zoho_sales_orders so ON so.id = i.sales_order_id
+      WHERE ${customer} <> ''
+        AND UPPER(REGEXP_REPLACE(so.customer_name, '[^A-Za-z0-9]', '', 'g')) LIKE '%' || ${customer} || '%'
+        AND so.zoho_status <> 'void'
+        AND NULLIF(TRIM(i.sku), '') IS NOT NULL
+        AND i.rate > 0
+    ),
+    /* What it is worth: our latest invoice price per bottle, either route */
     price_of AS (
-      SELECT DISTINCT ON (o.code) o.code,
-             (o.unit_price * o.source_qty / NULLIF(o.bottles, 0))::float8 AS bottle_price,
-             o.currency
-      FROM outs o
-      WHERE o.unit_price IS NOT NULL AND o.bottles > 0
-      ORDER BY o.code, o.doc_date DESC NULLS LAST
+      SELECT DISTINCT ON (code) code, bottle_price, currency
+      FROM (
+        SELECT o.code, o.doc_date,
+               (o.unit_price * o.source_qty / NULLIF(o.bottles, 0))::float8 AS bottle_price,
+               o.currency
+        FROM outs o
+        WHERE o.unit_price IS NOT NULL AND o.bottles > 0
+        UNION ALL
+        SELECT code, doc_date, bottle_price, currency FROM outright
+        WHERE bottle_price IS NOT NULL
+      ) prices
+      ORDER BY code, doc_date DESC NULLS LAST
     )
     SELECT p.closed_at AS "closedAt", p.opened_at AS "openedAt",
            TO_CHAR((p.opened_at AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD')

@@ -65,8 +65,16 @@ const VINTAGE = /\b(19|20)\d{2}\b/;
  * Written as `auto-name` rather than `confirmed`, so a sweep can be undone
  * whole without touching a link anybody made by hand.
  *
+ * Bought lines are a second sweep. Wine they bought outright never reaches our
+ * consignment movements, so those lines are matched against our Zoho sales
+ * orders to them instead, and written as `auto-name-bought` so either sweep
+ * can be undone without the other. There is no owner to disagree over on a
+ * bought line, so a tie there is settled by the larger quantity sold.
+ *
  * @param outletId - The distributor to map
  * @param mode - Preview the sweep, apply it, or undo the last one
+ * @param scope - Consigned lines (against consignment movements) or bought
+ *   lines (against our sales orders to the outlet)
  * @returns What was linked, what was left, and why it was left
  */
 const adminAutoLinkCodes = adminProcedure
@@ -74,6 +82,7 @@ const adminAutoLinkCodes = adminProcedure
     z.object({
       outletId: z.string().uuid(),
       mode: z.enum(['preview', 'apply', 'undo']).default('preview'),
+      scope: z.enum(['consigned', 'bought']).default('consigned'),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -86,10 +95,13 @@ const adminAutoLinkCodes = adminProcedure
       });
     }
 
+    const source = input.scope === 'bought' ? 'auto-name-bought' : 'auto-name';
+    const consigned = input.scope === 'consigned';
+
     if (input.mode === 'undo') {
       const removed = await client<{ outletCode: string }[]>`
         DELETE FROM cons_code_links
-        WHERE outlet_id = ${input.outletId} AND source = 'auto-name'
+        WHERE outlet_id = ${input.outletId} AND source = ${source}
         RETURNING outlet_code AS "outletCode"
       `;
 
@@ -110,24 +122,50 @@ const adminAutoLinkCodes = adminProcedure
       ${codeBridgeJoins()}
       WHERE s.outlet_id = ${input.outletId}
         AND s.taken_at = latest.taken_at
-        AND s.regime = 'consigned'
         AND ${resolvedSnapshotCode()} IS NOT NULL
     `;
 
     const mappedCodes = new Set(reached.map((row) => wineKey(row.outletCode)));
 
-    const ours = await client<OursRow[]>`
-      SELECT m.lwin18, MIN(m.product_name) AS "productName",
-             MIN(ow.name) AS "ownerName",
-             SUM(m.bottles)::float8 AS "outBottles"
-      FROM cons_movements m
-      JOIN cons_arrangements a ON a.id = m.arrangement_id
-      JOIN cons_owners ow ON ow.id = a.owner_id
-      WHERE a.outlet_id = ${input.outletId}
-        AND m.kind = 'out'
-        AND m.lwin18 IS NOT NULL
-      GROUP BY m.lwin18
+    const [outlet] = await client<{ zohoCustomerMatch: string | null }[]>`
+      SELECT zoho_customer_match AS "zohoCustomerMatch"
+      FROM cons_outlets WHERE id = ${input.outletId}
     `;
+    const customer = (outlet?.zohoCustomerMatch ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (!consigned && !customer) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'This outlet has no Zoho customer name set, so its sales orders cannot be found.',
+      });
+    }
+
+    const ours = consigned
+      ? await client<OursRow[]>`
+          SELECT m.lwin18, MIN(m.product_name) AS "productName",
+                 MIN(ow.name) AS "ownerName",
+                 SUM(m.bottles)::float8 AS "outBottles"
+          FROM cons_movements m
+          JOIN cons_arrangements a ON a.id = m.arrangement_id
+          JOIN cons_owners ow ON ow.id = a.owner_id
+          WHERE a.outlet_id = ${input.outletId}
+            AND m.kind = 'out'
+            AND m.lwin18 IS NOT NULL
+          GROUP BY m.lwin18
+        `
+      : await client<OursRow[]>`
+          SELECT REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g') AS lwin18,
+                 MIN(i.name) AS "productName",
+                 'Sold outright' AS "ownerName",
+                 SUM(i.quantity)::float8 AS "outBottles"
+          FROM zoho_sales_order_items i
+          JOIN zoho_sales_orders so ON so.id = i.sales_order_id
+          WHERE UPPER(REGEXP_REPLACE(so.customer_name, '[^A-Za-z0-9]', '', 'g'))
+                  LIKE '%' || ${customer} || '%'
+            AND so.zoho_status <> 'void'
+            AND REGEXP_REPLACE(COALESCE(i.sku, ''), '[^0-9]', '', 'g') ~ '^[0-9]{18}$'
+          GROUP BY 1
+        `;
 
     const theirs = await client<TheirsRow[]>`
       WITH latest AS (
@@ -138,7 +176,7 @@ const adminAutoLinkCodes = adminProcedure
       FROM cons_snapshots s, latest
       WHERE s.outlet_id = ${input.outletId}
         AND s.taken_at = latest.taken_at
-        AND s.regime = 'consigned'
+        AND ${consigned ? client`s.regime = 'consigned'` : client`s.regime <> 'consigned'`}
     `;
 
     const proposals: {
@@ -228,7 +266,7 @@ const adminAutoLinkCodes = adminProcedure
         VALUES (
           ${input.outletId}, ${row.outletCode}, ${row.lwin18},
           ${row.theirProductName}, ${row.ourProductName},
-          'auto-name', ${ctx.user.id}
+          ${source}, ${ctx.user.id}
         )
         ON CONFLICT (outlet_id, outlet_code) DO NOTHING
       `;

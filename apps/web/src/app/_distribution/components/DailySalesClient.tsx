@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AED_PER_USD } from '@/app/_exportInvoices/constants';
@@ -10,6 +10,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import LinkWinePicker from './LinkWinePicker';
 import type { DrinkCategory } from '../utils/classifyDrink';
 import formatSalesPeriod from '../utils/formatSalesPeriod';
 import ownerColour from '../utils/ownerColour';
@@ -65,6 +66,7 @@ const Stat = ({ label, value, detail }: { label: string; value: string; detail?:
  */
 const DailySalesClient = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const sales = useQuery(api.distribution.staff.getDailySales.queryOptions({ days: 62 }));
   // Owner colours follow the order on Consignment & Distribution, so an owner looks the same on both
   const setup = useQuery(api.distribution.admin.getSetup.queryOptions());
@@ -82,6 +84,26 @@ const DailySalesClient = () => {
   const [settleOpen, setSettleOpen] = useState(true);
   const [period, setPeriod] = useState<'this' | 'last'>('this');
   const [display, setDisplay] = useState<'USD' | 'AED'>('USD');
+  const [linking, setLinking] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLinking(null);
+    await queryClient.invalidateQueries({ queryKey: api.distribution.staff.getDailySales.queryKey() });
+  };
+
+  /* Bought lines matched to our sales orders by name: preview, then apply */
+  const autoLink = useMutation({
+    ...api.distribution.admin.autoLinkCodes.mutationOptions(),
+    onSuccess: async (result) => {
+      if (result.mode === 'preview') {
+        toast.info(`${result.proposals.length} bought wines can be linked by name; ${result.heldBack ?? 0} need a person.`);
+        return;
+      }
+      toast.success(result.mode === 'undo' ? `Removed ${result.linked} automatic links` : `Linked ${result.linked} bought wines`);
+      await refresh();
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   /*
     Every amount on the page in the chosen currency, at the fixed dirham peg —
@@ -102,7 +124,6 @@ const DailySalesClient = () => {
     setTypes(next.length === CATEGORIES.length - 1 ? [] : next);
   };
 
-  const queryClient = useQueryClient();
 
   /*
     The daily pull runs on Trigger.dev, which has gone days without deploying
@@ -629,15 +650,37 @@ const DailySalesClient = () => {
             {winesOpen ? (
             <div className="border-border-primary divide-border-primary divide-y border-t">
               {(allWines ? heldWines : heldWines.slice(0, 10)).map((w) => (
-                <div key={`${w.productName}-${w.ownerName}-${w.regime}`} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                <div key={`${w.outletCode}-${w.regime}`}>
+                <div className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                   <span className="text-text-primary min-w-0 truncate">{w.productName}</span>
                   <span className="text-text-muted flex shrink-0 items-center gap-3 tabular-nums">
                     <span className={`hidden rounded-full px-2 py-0.5 text-xs font-medium sm:inline ${chipFor(w.ownerName ?? 'Not linked')}`}>
                       {w.ownerName ?? 'Not linked'}
                     </span>
+                    {!w.linked ? (
+                      <button
+                        type="button"
+                        onClick={() => setLinking(linking === `held-${w.outletCode}` ? null : `held-${w.outletCode}`)}
+                        className="text-text-brand text-xs font-medium hover:underline"
+                      >
+                        Link
+                      </button>
+                    ) : null}
                     <span>{w.held} held</span>
                     <span className="text-text-primary w-24 text-right">{w.value !== null ? show(w.value, currency) : '—'}</span>
                   </span>
+                </div>
+                {linking === `held-${w.outletCode}` ? (
+                  <div className="px-4 pb-3">
+                    <LinkWinePicker
+                      outletId={data.outletId}
+                      outletCode={w.outletCode}
+                      productName={w.productName}
+                      onLinked={refresh}
+                      onCancel={() => setLinking(null)}
+                    />
+                  </div>
+                ) : null}
                 </div>
               ))}
             </div>
@@ -816,12 +859,28 @@ const DailySalesClient = () => {
                 </thead>
                 <tbody>
                   {day.lines.map((line) => (
-                    <tr key={line.outletCode} className="border-border-primary border-b last:border-0">
+                    <Fragment key={line.outletCode}>
+                    <tr className="border-border-primary border-b last:border-0">
                       <td className="py-2 pl-4 pr-3">
                         <div className="text-text-primary">{line.productName}</div>
                         <div className="text-text-muted text-xs">{line.outletCode}</div>
                       </td>
-                      <td className="text-text-muted py-2 pr-3">{line.ownerName ?? 'Not linked'}</td>
+                      <td className="text-text-muted py-2 pr-3">
+                        {line.linked ? (
+                          line.ownerName
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            Not linked
+                            <button
+                              type="button"
+                              onClick={() => setLinking(linking === line.outletCode ? null : line.outletCode)}
+                              className="text-text-brand text-xs font-medium hover:underline"
+                            >
+                              Link
+                            </button>
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 pr-3">
                         <Badge size="xs" colorRole={line.regime === 'consigned' ? 'brand' : 'muted'}>
                           {line.regime}
@@ -835,6 +894,20 @@ const DailySalesClient = () => {
                         {line.value !== null ? show(line.value, line.currency) : '—'}
                       </td>
                     </tr>
+                    {linking === line.outletCode ? (
+                      <tr className="border-border-primary border-b">
+                        <td colSpan={6} className="px-4 py-3">
+                          <LinkWinePicker
+                            outletId={data.outletId}
+                            outletCode={line.outletCode}
+                            productName={line.productName}
+                            onLinked={refresh}
+                            onCancel={() => setLinking(null)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -875,13 +948,40 @@ const DailySalesClient = () => {
         )}
       </div>
 
-      <Typography variant="bodyXs" colorRole="muted" asChild>
-        <p>
-          {data.unlinked > 0
-            ? `${data.unlinked} wines on their feed are not linked to ours, so show no owner or value — link them on Consignment & Distribution.`
-            : ''}
-        </p>
-      </Typography>
+      {data.unlinked > 0 ? (
+        <div className="border-border-primary flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm">
+          <span className="text-text-muted">
+            {data.unlinked} wines at {data.outletName} are not linked to ours, so they show no owner or value. Use{' '}
+            <strong>Link</strong> beside any of them, or link the bought ones from our sales orders by name.
+          </span>
+          <span className="flex flex-wrap gap-2">
+            <Button
+              colorRole="muted"
+              size="sm"
+              isDisabled={autoLink.isPending}
+              onClick={() => autoLink.mutate({ outletId: data.outletId, mode: 'preview', scope: 'bought' })}
+            >
+              Preview auto-link
+            </Button>
+            <Button
+              colorRole="brand"
+              size="sm"
+              isDisabled={autoLink.isPending}
+              onClick={() => autoLink.mutate({ outletId: data.outletId, mode: 'apply', scope: 'bought' })}
+            >
+              {autoLink.isPending ? 'Linking…' : 'Auto-link bought wines'}
+            </Button>
+            <Button
+              colorRole="muted"
+              size="sm"
+              isDisabled={autoLink.isPending}
+              onClick={() => autoLink.mutate({ outletId: data.outletId, mode: 'undo', scope: 'bought' })}
+            >
+              Undo auto-links
+            </Button>
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 };

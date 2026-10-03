@@ -28,6 +28,8 @@ export interface PairRow {
 
 export interface DailySaleLine {
   outletCode: string;
+  /** Their code reaches a wine of ours */
+  linked: boolean;
   productName: string;
   category: DrinkCategory;
   ownerName: string | null;
@@ -71,6 +73,8 @@ export interface StockGroup {
 
 /** One wine held at the latest count, valued at our invoice price */
 export interface StockWine {
+  outletCode: string;
+  linked: boolean;
   productName: string;
   ownerName: string | null;
   regime: 'consigned' | 'bought';
@@ -125,6 +129,14 @@ export interface DailyOutletSales {
  * @param rows - One row per wine per window, any order
  * @returns Days newest first, plus what is not moving and the 30-day check
  */
+/*
+  A wine they bought has no owner to settle with — it was sold to them
+  outright — but once its code is linked it is no longer unknown either, so it
+  is named for what it is rather than lumped in with lines nobody has matched.
+*/
+const ownerOf = (row: PairRow) =>
+  row.ownerName ?? (row.code !== null && row.regime !== 'consigned' ? 'Sold outright' : null);
+
 const buildDailySales = (rows: PairRow[]) => {
   const byDay = new Map<string, DailySalesDay>();
   const currencies = new Map<string, number>();
@@ -171,9 +183,10 @@ const buildDailySales = (rows: PairRow[]) => {
 
     day.lines.push({
       outletCode: row.outletCode,
+      linked: row.code !== null,
       productName: row.productName,
       category: classifyDrink(row.productName),
-      ownerName: row.ownerName,
+      ownerName: ownerOf(row),
       regime,
       sold: movement,
       heldAfter: row.heldTo,
@@ -278,12 +291,13 @@ const buildDailySales = (rows: PairRow[]) => {
 
     const regime = row.regime === 'consigned' ? 'consigned' : 'bought';
     const category = classifyDrink(row.productName);
+    const owner = ownerOf(row);
     let group = day.stock.find(
-      (g) => g.ownerName === row.ownerName && g.regime === regime && g.category === category,
+      (g) => g.ownerName === owner && g.regime === regime && g.category === category,
     );
 
     if (!group) {
-      group = { ownerName: row.ownerName, regime, category, bottles: 0, value: 0, unvalued: 0 };
+      group = { ownerName: owner, regime, category, bottles: 0, value: 0, unvalued: 0 };
       day.stock.push(group);
     }
 
@@ -296,8 +310,10 @@ const buildDailySales = (rows: PairRow[]) => {
   const stockWines: StockWine[] = latestRows
     .filter((row) => row.heldTo > 0)
     .map((row) => ({
+      outletCode: row.outletCode,
+      linked: row.code !== null,
       productName: row.productName,
-      ownerName: row.ownerName,
+      ownerName: ownerOf(row),
       regime: row.regime === 'consigned' ? ('consigned' as const) : ('bought' as const),
       category: classifyDrink(row.productName),
       held: row.heldTo,
