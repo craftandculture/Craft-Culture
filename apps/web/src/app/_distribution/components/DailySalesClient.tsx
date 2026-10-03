@@ -9,6 +9,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import formatSalesPeriod from '../utils/formatSalesPeriod';
 import ownerColour from '../utils/ownerColour';
 
 const money = (value: number, currency: string | null) =>
@@ -128,10 +129,23 @@ const DailySalesClient = () => {
   const stale = ageHours > 30;
   const totalOf = (d: (typeof data.days)[number]) => d.consigned.bottles + d.bought.bottles;
   const valueOf = (d: (typeof data.days)[number]) => d.consigned.value + d.bought.value;
-  const week = data.days.slice(0, 7);
-  const weekAvg = week.reduce((sum, d) => sum + totalOf(d), 0) / week.length;
+  /*
+    Rates per calendar day, not per window. A window that spans a missed pull
+    covers several days, and dividing by the number of windows overstates the
+    daily rate by exactly that much.
+  */
+  const daysIn = (d: (typeof data.days)[number]) => Math.max(1, Math.round(d.spanHours / 24));
+  const week: typeof data.days = [];
+  for (const d of data.days) {
+    if (week.reduce((sum, w) => sum + daysIn(w), 0) >= 7) break;
+    week.push(d);
+  }
+  const weekDays = week.reduce((sum, d) => sum + daysIn(d), 0);
+  const weekAvg = week.reduce((sum, d) => sum + totalOf(d), 0) / weekDays;
   const month = data.days.reduce((sum, d) => sum + totalOf(d), 0);
   const monthValue = data.days.reduce((sum, d) => sum + valueOf(d), 0);
+  const coveredDays = data.days.reduce((sum, d) => sum + daysIn(d), 0);
+  const firstDay = data.days[data.days.length - 1]!.salesDate;
 
   // One scale for every bar, so heights compare across days
   const max = Math.max(1, ...days.map(totalOf));
@@ -180,14 +194,22 @@ const DailySalesClient = () => {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
-          label={`Sold ${longDay(latest.salesDate)}`}
+          label={`Sold ${formatSalesPeriod(latest.salesDate, latest.spanHours)}`}
           value={`${totalOf(latest)} bottles`}
           detail={`${latest.consigned.bottles} consigned · ${latest.bought.bottles} bought`}
         />
-        <Stat label="Value that day" value={money(valueOf(latest), currency)} detail="at our invoice price" />
-        <Stat label="7-day average" value={`${weekAvg.toFixed(1)} a day`} detail={`over ${week.length} days`} />
         <Stat
-          label={`Last ${data.days.length} days`}
+          label="Value"
+          value={money(valueOf(latest), currency)}
+          detail={
+            latest.lines.some((line) => line.value === null)
+              ? 'at our invoice price · unlinked wines not valued'
+              : 'at our invoice price'
+          }
+        />
+        <Stat label="Daily average" value={`${weekAvg.toFixed(1)} a day`} detail={`over the last ${weekDays} days`} />
+        <Stat
+          label={`Since ${shortDay(firstDay)} · ${coveredDays} days`}
           value={`${month} bottles`}
           detail={money(monthValue, currency)}
         />
@@ -211,7 +233,7 @@ const DailySalesClient = () => {
         <Typography variant="bodyXs" colorRole="muted" asChild>
           <p className="mb-2 min-h-4 tabular-nums">
             {hover
-              ? `${longDay(hover.salesDate)}: ${hover.consigned.bottles} consigned, ${hover.bought.bottles} bought · ${money(valueOf(hover), currency)}`
+              ? `${formatSalesPeriod(hover.salesDate, hover.spanHours)}: ${hover.consigned.bottles} consigned, ${hover.bought.bottles} bought · ${money(valueOf(hover), currency)}`
               : 'Select a day to see what sold.'}
           </p>
         </Typography>
@@ -249,7 +271,7 @@ const DailySalesClient = () => {
                     onMouseLeave={() => setHovered(null)}
                     onFocus={() => setHovered(d.closedAt)}
                     onBlur={() => setHovered(null)}
-                    className={`group relative flex h-full max-w-10 flex-1 flex-col items-center justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-border-brand ${
+                    className={`group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-border-brand ${
                       isOn ? 'bg-fill-muted/60' : 'hover:bg-fill-muted/40'
                     }`}
                   >
@@ -259,11 +281,11 @@ const DailySalesClient = () => {
                       </span>
                     ) : null}
                     <span
-                      className={`bg-text-muted w-3/5 max-w-6 rounded-t-[4px] opacity-60 ${dim}`}
+                      className={`bg-text-muted w-3/5 max-w-8 rounded-t-[4px] opacity-60 ${dim}`}
                       style={{ height: pct(d.bought.bottles) }}
                     />
                     <span
-                      className={`bg-fill-brand w-3/5 max-w-6 ${d.bought.bottles > 0 ? 'mt-0.5' : 'rounded-t-[4px]'} ${dim}`}
+                      className={`bg-fill-brand w-3/5 max-w-8 ${d.bought.bottles > 0 ? 'mt-0.5' : 'rounded-t-[4px]'} ${dim}`}
                       style={{ height: pct(d.consigned.bottles) }}
                     />
                   </button>
@@ -274,9 +296,14 @@ const DailySalesClient = () => {
               {days.map((d, i) => (
                 <span
                   key={d.closedAt}
-                  className="text-text-muted max-w-10 flex-1 text-center text-[10px] tabular-nums"
+                  className="text-text-muted min-w-0 flex-1 text-center text-[10px] leading-tight tabular-nums"
                 >
                   {days.length <= 14 || i % 5 === (days.length - 1) % 5 ? shortDay(d.salesDate) : ''}
+                  {daysIn(d) > 1 ? (
+                    <span className="text-text-warning block font-medium" title="Covers several days: a daily pull was missed">
+                      {daysIn(d)}d
+                    </span>
+                  ) : null}
                 </span>
               ))}
             </div>
@@ -289,7 +316,7 @@ const DailySalesClient = () => {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <Typography variant="labelSm" asChild>
               <h2>
-                What sold on {longDay(day.salesDate)} · {totalOf(day)} bottles · {money(valueOf(day), currency)}
+                What sold {formatSalesPeriod(day.salesDate, day.spanHours)} · {totalOf(day)} bottles · {money(valueOf(day), currency)}
               </h2>
             </Typography>
             {day.spanHours > 30 ? (
@@ -302,7 +329,7 @@ const DailySalesClient = () => {
           {owners.size > 0 ? (
             <div className="flex flex-wrap gap-2">
               {[...owners.entries()]
-                .sort((a, b) => b[1] - a[1])
+                .sort((a, b) => (a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1] - a[1]))
                 .map(([name, bottles]) => (
                   <span
                     key={name}

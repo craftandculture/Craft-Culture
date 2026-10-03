@@ -1,17 +1,10 @@
 import type { DailyOutletSales } from './buildDailySales';
+import formatSalesPeriod from './formatSalesPeriod';
 
 const PAGE_URL = 'https://wine.craftculture.xyz/platform/admin/daily-sales';
 
 const money = (value: number, currency: string | null) =>
   `${currency ? `${currency} ` : ''}${new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(value)}`;
-
-const dayName = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-  });
 
 /**
  * The morning sales message for #cd-sales
@@ -34,17 +27,24 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     return { text, blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }] };
   }
 
+  /*
+    Bottles with no value are wines whose code is not linked to ours, so the
+    value is unknown rather than nil. Saying USD 0 would read as a giveaway.
+  */
+  const worth = (bottles: number, value: number) =>
+    bottles > 0 && value === 0 ? 'value not known (not linked)' : money(value, sales.currency);
+
   const total = day.consigned.bottles + day.bought.bottles;
   const totalValue = day.consigned.value + day.bought.value;
-  const heading = `${sales.outletName} sales — ${dayName(day.salesDate)}`;
+  const heading = `${sales.outletName} sales — ${formatSalesPeriod(day.salesDate, day.spanHours)}`;
 
   const summary =
     total === 0
       ? 'No sales recorded.'
       : [
           `*${total} bottles* · *${money(totalValue, sales.currency)}*`,
-          `Consigned: ${day.consigned.bottles} bottles · ${money(day.consigned.value, sales.currency)}`,
-          `Bought: ${day.bought.bottles} bottles · ${money(day.bought.value, sales.currency)}`,
+          `Consigned: ${day.consigned.bottles} bottles · ${worth(day.consigned.bottles, day.consigned.value)}`,
+          `Bought: ${day.bought.bottles} bottles · ${worth(day.bought.bottles, day.bought.value)}`,
         ].join('\n');
 
   const top = day.lines.slice(0, 10).map((line) => {
@@ -63,8 +63,9 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     owners.set(name, (owners.get(name) ?? 0) + line.sold);
   }
 
+  // Not linked last: it is a to-do, not an owner
   const byOwner = [...owners.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => (a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1] - a[1]))
     .map(([name, bottles]) => `${name}: ${bottles}`)
     .join(' · ');
 
@@ -72,6 +73,14 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
 
   if (day.spanHours > 30) {
     notes.push(`This covers ${Math.round(day.spanHours / 24)} days: a daily stock pull was missed.`);
+  }
+
+  const unlinkedBottles = owners.get('Not linked') ?? 0;
+
+  if (unlinkedBottles > 0) {
+    notes.push(
+      `${unlinkedBottles} bottles are wines not linked to our codes, so they show no owner or value — link them on Consignment & Distribution.`,
+    );
   }
 
   if (day.restocks.length > 0) {
