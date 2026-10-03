@@ -1,3 +1,6 @@
+import classifyDrink from './classifyDrink';
+import type { DrinkCategory } from './classifyDrink';
+
 /**
  * One wine's position across one daily window, as read from the database
  *
@@ -26,6 +29,7 @@ export interface PairRow {
 export interface DailySaleLine {
   outletCode: string;
   productName: string;
+  category: DrinkCategory;
   ownerName: string | null;
   regime: 'consigned' | 'bought';
   sold: number;
@@ -54,7 +58,7 @@ export interface DailyOutletSales {
   latestSnapshotAt: string | null;
   days: DailySalesDay[];
   /** Consigned wine still held that the outlet reports no sale of in 30 days */
-  notMoving: { productName: string; ownerName: string | null; held: number }[];
+  notMoving: { productName: string; ownerName: string | null; held: number; category: DrinkCategory }[];
   /** Lines on their feed that reach no wine of ours, so carry no owner or value */
   unlinked: number;
   /** Our derived 30 days beside the feed's own figure, once 30 days exist */
@@ -65,6 +69,8 @@ export interface DailyOutletSales {
   check: {
     feed30: number;
     feed30Consigned: number;
+    /** The outlet's own 30-day figure split by drink type, for the filters */
+    feed30ByCategory: Record<DrinkCategory, number>;
     derived30: number;
     daysCovered: number;
   } | null;
@@ -135,6 +141,7 @@ const buildDailySales = (rows: PairRow[]) => {
     day.lines.push({
       outletCode: row.outletCode,
       productName: row.productName,
+      category: classifyDrink(row.productName),
       ownerName: row.ownerName,
       regime,
       sold: movement,
@@ -164,7 +171,12 @@ const buildDailySales = (rows: PairRow[]) => {
 
   const notMoving = latestRows
     .filter((row) => row.regime === 'consigned' && row.heldTo > 0 && row.soldLast30d === 0)
-    .map((row) => ({ productName: row.productName, ownerName: row.ownerName, held: row.heldTo }))
+    .map((row) => ({
+      productName: row.productName,
+      ownerName: row.ownerName,
+      held: row.heldTo,
+      category: classifyDrink(row.productName),
+    }))
     .sort((a, b) => b.held - a.held);
 
   const unlinked = latestRows.filter((row) => row.code === null && row.heldTo > 0).length;
@@ -185,6 +197,13 @@ const buildDailySales = (rows: PairRow[]) => {
           feed30Consigned: latestRows
             .filter((row) => row.regime === 'consigned')
             .reduce((sum, row) => sum + (row.soldLast30d ?? 0), 0),
+          feed30ByCategory: latestRows.reduce<Record<DrinkCategory, number>>(
+            (acc, row) => {
+              acc[classifyDrink(row.productName)] += row.soldLast30d ?? 0;
+              return acc;
+            },
+            { wine: 0, sparkling: 0, spirits: 0, rtd: 0 },
+          ),
           derived30: last30.reduce((sum, day) => sum + day.consigned.bottles + day.bought.bottles, 0),
           daysCovered: Math.min(
             30,

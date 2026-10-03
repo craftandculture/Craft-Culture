@@ -24,6 +24,7 @@ const sales = (lines: number): DailyOutletSales => ({
         outletCode: `CDR${i}`,
         productName: `Domaine de Montille Chassagne-Montrachet 1er Cru Les Caillerets ${2000 + i}`,
         ownerName: 'Crurated',
+        category: 'wine' as const,
         regime: 'consigned' as const,
         sold: 1,
         heldAfter: 3,

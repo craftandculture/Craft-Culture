@@ -84,6 +84,6 @@ describe('buildDailySales', () => {
     ]);
 
     expect(days.map((day) => day.salesDate)).toEqual(['2026-10-02', '2026-10-01']);
-    expect(notMoving).toEqual([{ productName: 'Sleeper', ownerName: 'Crurated', held: 6 }]);
+    expect(notMoving).toEqual([{ productName: 'Sleeper', ownerName: 'Crurated', held: 6, category: 'wine' }]);
   });
 });

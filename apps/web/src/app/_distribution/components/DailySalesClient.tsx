@@ -9,6 +9,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import type { DrinkCategory } from '../utils/classifyDrink';
 import formatSalesPeriod from '../utils/formatSalesPeriod';
 import ownerColour from '../utils/ownerColour';
 
@@ -29,6 +30,14 @@ const longDay = (iso: string) =>
     month: 'long',
     timeZone: 'UTC',
   });
+
+const CATEGORIES: { key: 'all' | DrinkCategory; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'wine', label: 'Wine' },
+  { key: 'sparkling', label: 'Sparkling' },
+  { key: 'spirits', label: 'Spirits' },
+  { key: 'rtd', label: 'RTD' },
+];
 
 const Stat = ({ label, value, detail }: { label: string; value: string; detail?: string }) => (
   <div className="border-border-primary rounded-xl border px-4 py-3">
@@ -62,6 +71,7 @@ const DailySalesClient = () => {
     ownerColour(setup.data?.owners.findIndex((owner) => owner.name === name) ?? -1).chip;
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [category, setCategory] = useState<'all' | DrinkCategory>('all');
 
   const queryClient = useQueryClient();
 
@@ -95,10 +105,34 @@ const DailySalesClient = () => {
   });
 
   const data = sales.data;
-  const days = useMemo(() => [...(data?.days ?? [])].reverse(), [data]);
+  /*
+    The type filter narrows every figure on the page, so each day is rebuilt
+    from its own lines rather than filtering the table alone — a total that
+    disagreed with the rows beneath it would be worse than no filter.
+  */
+  const shown = useMemo(() => {
+    const all = data?.days ?? [];
+    if (category === 'all') return all;
+
+    return all.map((d) => {
+      const lines = d.lines.filter((line) => line.category === category);
+      const sum = (regime: 'consigned' | 'bought') => {
+        const of = lines.filter((line) => line.regime === regime);
+        return {
+          bottles: of.reduce((acc, line) => acc + line.sold, 0),
+          value: of
+            .filter((line) => !data?.currency || line.currency === data.currency)
+            .reduce((acc, line) => acc + (line.value ?? 0), 0),
+        };
+      };
+      return { ...d, lines, consigned: sum('consigned'), bought: sum('bought') };
+    });
+  }, [data, category]);
+
+  const days = useMemo(() => [...shown].reverse(), [shown]);
   const currency = data?.currency ?? null;
-  const day = data?.days.find((d) => d.closedAt === selected) ?? data?.days[0] ?? null;
-  const hover = data?.days.find((d) => d.closedAt === hovered) ?? null;
+  const day = shown.find((d) => d.closedAt === selected) ?? shown[0] ?? null;
+  const hover = shown.find((d) => d.closedAt === hovered) ?? null;
 
   if (sales.isLoading) {
     return (
@@ -124,28 +158,34 @@ const DailySalesClient = () => {
     );
   }
 
-  const latest = data.days[0]!;
+  const latest = shown[0]!;
   const ageHours = (Date.now() - new Date(latest.closedAt).getTime()) / 36e5;
   const stale = ageHours > 30;
-  const totalOf = (d: (typeof data.days)[number]) => d.consigned.bottles + d.bought.bottles;
-  const valueOf = (d: (typeof data.days)[number]) => d.consigned.value + d.bought.value;
+  const totalOf = (d: (typeof shown)[number]) => d.consigned.bottles + d.bought.bottles;
+  const valueOf = (d: (typeof shown)[number]) => d.consigned.value + d.bought.value;
   /*
     Rates per calendar day, not per window. A window that spans a missed pull
     covers several days, and dividing by the number of windows overstates the
     daily rate by exactly that much.
   */
-  const daysIn = (d: (typeof data.days)[number]) => Math.max(1, Math.round(d.spanHours / 24));
-  const week: typeof data.days = [];
-  for (const d of data.days) {
+  const daysIn = (d: (typeof shown)[number]) => Math.max(1, Math.round(d.spanHours / 24));
+  const week: typeof shown = [];
+  for (const d of shown) {
     if (week.reduce((sum, w) => sum + daysIn(w), 0) >= 7) break;
     week.push(d);
   }
   const weekDays = week.reduce((sum, d) => sum + daysIn(d), 0);
   const weekAvg = week.reduce((sum, d) => sum + totalOf(d), 0) / weekDays;
-  const month = data.days.reduce((sum, d) => sum + totalOf(d), 0);
-  const monthValue = data.days.reduce((sum, d) => sum + valueOf(d), 0);
-  const coveredDays = data.days.reduce((sum, d) => sum + daysIn(d), 0);
-  const firstDay = data.days[data.days.length - 1]!.salesDate;
+  const month = shown.reduce((sum, d) => sum + totalOf(d), 0);
+  const monthValue = shown.reduce((sum, d) => sum + valueOf(d), 0);
+  const coveredDays = shown.reduce((sum, d) => sum + daysIn(d), 0);
+  const firstDay = shown[shown.length - 1]!.salesDate;
+  const notMoving = data.notMoving.filter((row) => category === 'all' || row.category === category);
+  const feed30 = data.check
+    ? category === 'all'
+      ? data.check.feed30
+      : data.check.feed30ByCategory[category]
+    : 0;
 
   // One scale for every bar, so heights compare across days
   const max = Math.max(1, ...days.map(totalOf));
@@ -192,6 +232,24 @@ const DailySalesClient = () => {
         </div>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by type">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={category === c.key}
+            onClick={() => setCategory(c.key)}
+            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+              category === c.key
+                ? 'border-border-brand bg-fill-brand/10 text-text-brand font-medium'
+                : 'border-border-primary text-text-muted hover:text-text-primary'
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label={`Sold ${formatSalesPeriod(latest.salesDate, latest.spanHours)}`}
@@ -218,13 +276,14 @@ const DailySalesClient = () => {
       {data.check ? (
         <div className="border-border-primary bg-fill-muted/30 flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-xl border px-4 py-3 text-sm">
           <span className="text-text-primary">
-            <span className="font-semibold tabular-nums">{data.check.feed30}</span> bottles sold in the last 30 days
+            <span className="font-semibold tabular-nums">{feed30}</span>{' '}
+            {category === 'all' ? 'bottles' : CATEGORIES.find((c) => c.key === category)?.label.toLowerCase()} sold in the last 30 days
             by City Drinks&apos; own figure
-            <span className="text-text-muted"> · {data.check.feed30Consigned} consigned</span>
+            {category === 'all' ? <span className="text-text-muted"> · {data.check.feed30Consigned} consigned</span> : null}
           </span>
           <span className="text-text-muted">
             Our daily counts cover {data.check.daysCovered} of those 30 days and find{' '}
-            <span className="tabular-nums">{data.check.derived30}</span>. Gaps between counts, and restocks inside
+            <span className="tabular-nums">{month}</span>. Gaps between counts, and restocks inside
             them, make ours lower until a full month of daily counts exists.
           </span>
         </div>
@@ -415,13 +474,13 @@ const DailySalesClient = () => {
         <Typography variant="labelSm" asChild>
           <h2>Consigned stock not moving · no sale in 30 days</h2>
         </Typography>
-        {data.notMoving.length === 0 ? (
+        {notMoving.length === 0 ? (
           <Typography variant="bodySm" colorRole="muted" asChild>
             <p>Every consigned wine at the outlet has sold in the last 30 days.</p>
           </Typography>
         ) : (
           <div className="border-border-primary divide-border-primary divide-y rounded-xl border">
-            {data.notMoving.map((row) => (
+            {notMoving.map((row) => (
               <div key={`${row.productName}-${row.ownerName}`} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                 <span className="text-text-primary">{row.productName}</span>
                 <span className="text-text-muted flex shrink-0 items-center gap-3">

@@ -85,6 +85,14 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     owners.set(name, (owners.get(name) ?? 0) + line.sold);
   }
 
+  const TYPE_NAMES = { wine: 'Wine', sparkling: 'Sparkling', spirits: 'Spirits', rtd: 'RTD' } as const;
+  const types = new Map<keyof typeof TYPE_NAMES, number>();
+  for (const line of day.lines) types.set(line.category, (types.get(line.category) ?? 0) + line.sold);
+  const byType = [...types.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([type, bottles]) => `${TYPE_NAMES[type]}: ${bottles}`)
+    .join(' · ');
+
   // Not linked last: it is a to-do, not an owner
   const byOwner = [...owners.entries()]
     .sort((a, b) => (a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1] - a[1]))
@@ -124,6 +132,7 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
       blocks.push(...listBlocks(`Bought · ${boughtLines.length} wines`, boughtLines));
     }
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `By owner — ${byOwner}` }] });
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `By type — ${byType}` }] });
   }
 
   if (notes.length > 0) {
