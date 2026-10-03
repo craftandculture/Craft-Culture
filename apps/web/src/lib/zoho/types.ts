@@ -268,7 +268,10 @@ export interface ZohoSalesOrderLineItem {
   quantity_packed?: number;
   quantity_shipped?: number;
   unit?: string;
-  discount?: number;
+  /** A number for a flat discount, a string like "5.00%" for a percentage */
+  discount?: number | string;
+  /** The discount in money, whichever form `discount` takes */
+  discount_amount?: number;
   tax_id?: string;
   item_total: number;
 }
@@ -291,7 +294,10 @@ export interface ZohoSalesOrder {
   currency_code: string;
   shipping_charge?: number;
   adjustment?: number;
-  discount?: number;
+  /** A number for a flat discount, a string like "5.00%" for a percentage */
+  discount?: number | string;
+  /** The discount in money, whichever form `discount` takes */
+  discount_amount?: number;
   notes?: string;
   terms?: string;
   billing_address?: ZohoAddress;
