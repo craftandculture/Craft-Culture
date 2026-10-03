@@ -16,6 +16,14 @@ import wineKey from '../utils/wineKey';
 /** Alike enough that the two names are describing one wine */
 const ACCEPT_AT = 0.55;
 
+/*
+  Stricter for bought lines. Their candidates are everything we ever sold the
+  outlet, and a wine of theirs we never sold still finds a "closest" one — Alión
+  Ribera del Duero 2016 reached Flor de Pingus 2016 at 0.59 on the appellation
+  and the year alone.
+*/
+const ACCEPT_BOUGHT_AT = 0.65;
+
 /** How far clear of the runner-up the winner has to be to stand unaided */
 const MARGIN = 0.15;
 
@@ -83,6 +91,8 @@ const adminAutoLinkCodes = adminProcedure
       outletId: z.string().uuid(),
       mode: z.enum(['preview', 'apply', 'undo']).default('preview'),
       scope: z.enum(['consigned', 'bought']).default('consigned'),
+      /** On apply, link only these of their codes — the rows a person left ticked */
+      only: z.array(z.string().min(1).max(120)).max(1000).optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -203,7 +213,7 @@ const adminAutoLinkCodes = adminProcedure
 
       const best = ranked[0];
 
-      if (!best || best.score < ACCEPT_AT) {
+      if (!best || best.score < (consigned ? ACCEPT_AT : ACCEPT_BOUGHT_AT)) {
         heldBack += 1;
         continue;
       }
@@ -257,7 +267,10 @@ const adminAutoLinkCodes = adminProcedure
       return { mode: 'preview' as const, linked: 0, heldBack, proposals };
     }
 
-    for (const row of proposals) {
+    const chosen = input.only ? new Set(input.only) : null;
+    const applying = chosen ? proposals.filter((row) => chosen.has(row.outletCode)) : proposals;
+
+    for (const row of applying) {
       await client`
         INSERT INTO cons_code_links (
           outlet_id, outlet_code, lwin18, outlet_product_name,
@@ -274,9 +287,9 @@ const adminAutoLinkCodes = adminProcedure
 
     return {
       mode: 'apply' as const,
-      linked: proposals.length,
+      linked: applying.length,
       heldBack,
-      proposals,
+      proposals: applying,
     };
   });
 

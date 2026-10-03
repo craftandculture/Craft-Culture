@@ -111,6 +111,11 @@ const adminLinkCode = adminProcedure
         lwin18 = EXCLUDED.lwin18,
         outlet_product_name = EXCLUDED.outlet_product_name,
         our_product_name = EXCLUDED.our_product_name,
+        /*
+          A person correcting an automatic link makes it theirs. Left as
+          auto-name, the next "undo auto-links" would delete the correction.
+        */
+        source = 'confirmed',
         confirmed_by = EXCLUDED.confirmed_by,
         updated_at = NOW()
     `;

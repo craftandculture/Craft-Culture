@@ -97,12 +97,16 @@ const DailySalesClient = () => {
     proposals: { outletCode: string; theirProductName: string; ourProductName: string; score: number }[];
     heldBack: number;
   } | null>(null);
+  /* Rows a person has unticked in the preview, never written */
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   const autoLink = useMutation({
     ...api.distribution.admin.autoLinkCodes.mutationOptions(),
     onSuccess: async (result) => {
       if (result.mode === 'preview') {
         setPreview({ proposals: result.proposals, heldBack: result.heldBack ?? 0 });
+        // Weak matches start unticked, so applying never writes one unread
+        setSkipped(result.proposals.filter((p) => p.score < 0.75).map((p) => p.outletCode));
         return;
       }
       setPreview(null);
@@ -664,22 +668,20 @@ const DailySalesClient = () => {
                     <span className={`hidden rounded-full px-2 py-0.5 text-xs font-medium sm:inline ${chipFor(w.ownerName ?? 'Not linked')}`}>
                       {w.ownerName ?? (w.linked ? 'No invoice' : 'Not linked')}
                     </span>
-                    {!w.linked || !w.ownerName ? (
-                      <button
-                        type="button"
-                        onClick={() => setLinking(linking === `held-${w.outletCode}` ? null : `held-${w.outletCode}`)}
-                        className="text-text-brand text-xs font-medium hover:underline"
-                      >
-                        {w.linked ? 'Fix' : 'Link'}
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setLinking(linking === `held-${w.outletCode}` ? null : `held-${w.outletCode}`)}
+                      className={`text-xs hover:underline ${!w.linked || !w.ownerName ? 'text-text-brand font-medium' : 'text-text-muted hover:text-text-brand'}`}
+                    >
+                      {!w.linked ? 'Link' : !w.ownerName ? 'Fix' : 'Change'}
+                    </button>
                     <span>{w.held} held</span>
                     <span className="text-text-primary w-24 text-right">{w.value !== null ? show(w.value, currency) : '—'}</span>
                   </span>
                 </div>
                 {linking === `held-${w.outletCode}` ? (
                   <div className="px-4 pb-3">
-                    {w.linked ? (
+                    {w.linked && !w.ownerName ? (
                       <LineFixPanel
                         outletId={data.outletId}
                         outletCode={w.outletCode}
@@ -887,7 +889,16 @@ const DailySalesClient = () => {
                       </td>
                       <td className="text-text-muted py-2 pr-3">
                         {line.linked && line.ownerName ? (
-                          line.ownerName
+                          <span className="flex items-center gap-2">
+                            {line.ownerName}
+                            <button
+                              type="button"
+                              onClick={() => setLinking(linking === line.outletCode ? null : line.outletCode)}
+                              className="text-text-muted text-xs hover:text-text-brand hover:underline"
+                            >
+                              Change
+                            </button>
+                          </span>
                         ) : line.linked ? (
                           <span className="flex items-center gap-2">
                             No invoice
@@ -1043,10 +1054,17 @@ const DailySalesClient = () => {
               <Button
                 colorRole="brand"
                 size="sm"
-                isDisabled={autoLink.isPending || preview.proposals.length === 0}
-                onClick={() => autoLink.mutate({ outletId: data.outletId, mode: 'apply', scope: 'bought' })}
+                isDisabled={autoLink.isPending || preview.proposals.length === skipped.length}
+                onClick={() =>
+                  autoLink.mutate({
+                    outletId: data.outletId,
+                    mode: 'apply',
+                    scope: 'bought',
+                    only: preview.proposals.filter((p) => !skipped.includes(p.outletCode)).map((p) => p.outletCode),
+                  })
+                }
               >
-                {autoLink.isPending ? 'Linking…' : `Apply these ${preview.proposals.length} links`}
+                {autoLink.isPending ? 'Linking…' : `Apply ${preview.proposals.length - skipped.length} ticked links`}
               </Button>
               <Button colorRole="muted" size="sm" onClick={() => setPreview(null)}>
                 Close
@@ -1065,20 +1083,48 @@ const DailySalesClient = () => {
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <thead className="text-text-muted border-border-primary bg-fill-primary sticky top-0 border-b">
                   <tr>
-                    <th className="py-2 pl-4 pr-3 font-medium">Their wine</th>
+                    <th className="w-8 py-2 pl-4 font-medium">
+                      <span className="sr-only">Link</span>
+                    </th>
+                    <th className="py-2 pl-2 pr-3 font-medium">Their wine</th>
                     <th className="py-2 pr-3 font-medium">Will link to our wine</th>
                     <th className="py-2 pr-4 text-right font-medium">Match</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.proposals.map((p) => (
-                    <tr key={p.outletCode} className="border-border-primary border-b last:border-0">
-                      <td className="py-2 pl-4 pr-3">
+                    <tr
+                      key={p.outletCode}
+                      className={`border-border-primary border-b last:border-0 ${skipped.includes(p.outletCode) ? 'opacity-50' : ''}`}
+                    >
+                      <td className="py-2 pl-4 align-top">
+                        <input
+                          id={`auto-${p.outletCode}`}
+                          type="checkbox"
+                          aria-label={`Link ${p.theirProductName}`}
+                          checked={!skipped.includes(p.outletCode)}
+                          onChange={() =>
+                            setSkipped(
+                              skipped.includes(p.outletCode)
+                                ? skipped.filter((code) => code !== p.outletCode)
+                                : [...skipped, p.outletCode],
+                            )
+                          }
+                          className="mt-1 size-4"
+                        />
+                      </td>
+                      <td className="py-2 pl-2 pr-3">
                         <div className="text-text-primary">{p.theirProductName}</div>
                         <div className="text-text-muted text-xs">{p.outletCode}</div>
                       </td>
                       <td className="text-text-primary py-2 pr-3">{p.ourProductName}</td>
-                      <td className="text-text-muted py-2 pr-4 text-right tabular-nums">{Math.round(p.score * 100)}%</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {p.score < 0.75 ? (
+                          <span className="text-text-warning font-medium">{Math.round(p.score * 100)}% · check</span>
+                        ) : (
+                          <span className="text-text-muted">{Math.round(p.score * 100)}%</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1086,7 +1132,11 @@ const DailySalesClient = () => {
             </div>
           )}
           <Typography variant="bodyXs" colorRole="muted" asChild>
-            <p>Check a few before applying. Every automatic link can be removed with Undo auto-links.</p>
+            <p>
+              Untick any that are wrong; weaker matches start unticked. Only ticked rows are linked, and every automatic
+              link can be removed with Undo auto-links. Anything linked wrongly later can be corrected with Change beside
+              the wine.
+            </p>
           </Typography>
         </div>
       ) : null}
