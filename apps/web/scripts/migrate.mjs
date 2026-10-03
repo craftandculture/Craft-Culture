@@ -2253,6 +2253,170 @@ const runMigrations = async () => {
     `);
     console.log('✅ export invoices ready');
 
+    /*
+      Team Tasks — the team's shared to-do list (jobs, each split into parts
+      owned by one person). Tables first; then, once only, the areas and the
+      3 October 2026 list the team was working from, so the page opens on real
+      work. The seed is a data backfill: it never blocks a deploy.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_areas" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL UNIQUE,
+        "position" integer NOT NULL DEFAULT 0,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_tasks" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "title" text NOT NULL,
+        "area_id" uuid NOT NULL REFERENCES "team_task_areas"("id") ON DELETE RESTRICT,
+        "for_tag" text,
+        "urgent" boolean NOT NULL DEFAULT false,
+        "waiting_on" text,
+        "repeat" text,
+        "status" text NOT NULL DEFAULT 'open',
+        "closed_at" timestamp,
+        "closed_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_status_idx" ON "team_tasks"("status")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_area_idx" ON "team_tasks"("area_id")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_parts" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "task_id" uuid NOT NULL REFERENCES "team_tasks"("id") ON DELETE CASCADE,
+        "owner_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "what" text NOT NULL,
+        "due" date,
+        "done" boolean NOT NULL DEFAULT false,
+        "done_at" timestamp,
+        "done_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "waits_for_part_id" uuid,
+        "overdue_notified_at" timestamp,
+        "position" integer NOT NULL DEFAULT 0,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_parts_task_idx" ON "team_task_parts"("task_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_parts_owner_idx" ON "team_task_parts"("owner_id")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_notes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "task_id" uuid NOT NULL REFERENCES "team_tasks"("id") ON DELETE CASCADE,
+        "user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "body" text NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_notes_task_idx" ON "team_task_notes"("task_id")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_events" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "task_id" uuid NOT NULL REFERENCES "team_tasks"("id") ON DELETE CASCADE,
+        "user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "text" text NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_events_task_idx" ON "team_task_events"("task_id")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_people" (
+        "user_id" uuid PRIMARY KEY REFERENCES "users"("id") ON DELETE CASCADE,
+        "slack_member_id" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ team tasks tables ready');
+
+    await dataFix('Team Tasks: areas and the 3 October list', async () => {
+      const areaNames = ['System & Tech', 'Finance', 'Customers', 'Clients', 'Distributors', 'Internal', 'Other'];
+      for (const [i, name] of areaNames.entries()) {
+        await client`INSERT INTO "team_task_areas" ("name","position") VALUES (${name}, ${i}) ON CONFLICT ("name") DO NOTHING`;
+      }
+
+      const [{ count }] = await client`SELECT count(*)::int AS count FROM "team_tasks"`;
+      if (count > 0) return;
+
+      // Team members by first name; "Jo" signs in as Jyothi.
+      const staff = await client`
+        SELECT id, name FROM "users"
+        WHERE role IN ('admin','wms_operator') AND lower(email) LIKE '%@craftculture.xyz'
+      `;
+      const who = (first) => {
+        const hit = staff.find((u) => u.name.trim().toLowerCase().startsWith(first));
+        return hit ? hit.id : null;
+      };
+      const people = { kevin: who('kevin'), sophie: who('sophie'), jo: who('jyothi') ?? who('jo'), laraine: who('laraine') };
+      const areas = Object.fromEntries((await client`SELECT id, name FROM "team_task_areas"`).map((a) => [a.name, a.id]));
+
+      const jobs = [
+        { t: 'Consignment Tool: get working', a: 'System & Tech', u: true, p: [['kevin', 'Get it working']] },
+        { t: 'Rate card: update', a: 'System & Tech', p: [['kevin', 'Update rate card']] },
+        { t: 'TBS: preorder sheet update', a: 'System & Tech', u: true, p: [['sophie', 'Update the sheet', true], ['kevin', 'Load onto live price list']] },
+        { t: 'Consignment invoices: reconciliation', a: 'Finance', u: true, p: [['laraine', 'Reconcile consignment invoices']] },
+        { t: 'Cru & Crurated: update pricing to new 15% tax', a: 'Finance', p: [['sophie', 'Cru PCO and new wines only']] },
+        { t: 'Wynn: pricing matrix & transfer', a: 'Customers', u: true, p: [['sophie', 'Pricing matrix, with Abhishek'], ['kevin', 'Alignment and coding', false, 0], ['jo', 'Manage transfer']] },
+        { t: 'Philipp: code qty errors in pricing manager', a: 'Clients', u: true, f: 'client', p: [['kevin', 'Fix quantity errors in Pricing Manager']] },
+        { t: 'Isabel Mayfair: shipping quote, set up & invoice', a: 'Clients', f: 'client', w: 'Client go-ahead', p: [['jo', 'Shipping quote'], ['laraine', 'Set up in system and invoice (Kevin to instruct)']] },
+        { t: 'Said: contract, rate card & pricing check', a: 'Clients', f: 'client', w: 'Client go-ahead', p: [['kevin', 'Send contract'], ['sophie', 'Check pricing'], ['jo', 'Logistics quote', true]] },
+        { t: 'Julian: price list & interactive pricing portal', a: 'Clients', f: 'client', w: 'Client go-ahead', p: [['sophie', 'Price list'], ['kevin', 'Build portal']] },
+        { t: 'CD replen & RFQ', a: 'Distributors', f: 'distributor', p: [['kevin', 'Replenishment and RFQ']] },
+        { t: 'Company strategy & scaling', a: 'Internal', p: [['kevin', 'Strategy and scaling plan']] },
+        { t: '2026 P&L', a: 'Internal', p: [['sophie', 'Prepare 2026 P&L']] },
+        { t: 'Cult: arrange air freight', a: 'Other', p: [] },
+        { t: 'Box: procure new boxes', a: 'Other', u: true, p: [['laraine', "Check samples and order new boxes (under Kevin's instruction)"]] },
+      ];
+      const done = [
+        ['City Drinks: send feedback', '2026-10-03'], ['City Drinks: collection admin', '2026-10-03'], ['Cult Wine: settle mutual payments', '2026-10-03'],
+        ['Altamura: storage Apr to Sep', '2026-10-03'], ['Cru: consulting support & repack', '2026-10-03'], ['PCO: code copy & paste function', '2026-10-02'],
+        ['Tax return: Kevin sign-off', '2026-10-02'], ['Albert: 3x unpaid invoices (inc. cheque)', '2026-10-01'], ['Compass Box: pay outstanding', '2026-10-01'],
+        ['Share invoices with clients', '2026-09-30'], ['Chase outstanding payments', '2026-09-30'], ["Ihab's case at Yuvraj house", '2026-09-30'],
+        ['TBS (Jeandre): wine consignment list', '2026-09-29'], ['TBS: invoice Daniel re. missing bottle of Figeac', '2026-09-29'], ['JMK: send wine model', '2026-09-29'],
+        ['Cru: send product list for shipment', '2026-09-28'], ['Cru: City Drinks collection', '2026-09-28'], ['Cru: add-on subscriptions packing', '2026-09-27'],
+        ['Cru: PCOs to be input', '2026-09-27'], ['Crurated: air freight (push with Walid)', '2026-09-27'], ['Laraine: induction', '2026-09-26'], ['Said: logistics cost quote (Jo)', '2026-09-26'],
+      ];
+
+      const missing = new Set();
+      for (const job of jobs) {
+        const [task] = await client`
+          INSERT INTO "team_tasks" ("title","area_id","for_tag","urgent","waiting_on")
+          VALUES (${job.t}, ${areas[job.a]}, ${job.f ?? null}, ${job.u ?? false}, ${job.w ?? null})
+          RETURNING id
+        `;
+        const ids = [];
+        for (const [i, [key, what, isDone, waitsIdx]] of job.p.entries()) {
+          if (!people[key]) { missing.add(key); ids.push(null); continue; }
+          const waits = waitsIdx === undefined ? null : ids.at(waitsIdx) ?? null;
+          const [part] = await client`
+            INSERT INTO "team_task_parts" ("task_id","owner_id","what","done","done_at","waits_for_part_id","position")
+            VALUES (${task.id}, ${people[key]}, ${what}, ${isDone ?? false}, ${isDone ? new Date() : null}, ${waits}, ${i})
+            RETURNING id
+          `;
+          ids.push(part.id);
+        }
+        await client`INSERT INTO "team_task_events" ("task_id","text") VALUES (${task.id}, 'Carried over from the 3 October list')`;
+      }
+      for (const [title, day] of done) {
+        const [task] = await client`
+          INSERT INTO "team_tasks" ("title","area_id","status","closed_at")
+          VALUES (${title}, ${areas.Other}, 'closed', ${day + 'T12:00:00Z'})
+          RETURNING id
+        `;
+        await client`INSERT INTO "team_task_events" ("task_id","text") VALUES (${task.id}, 'Done before Team Tasks started')`;
+      }
+      if (missing.size) console.log(`⚠️  Team Tasks seed: no staff login found for ${[...missing].join(', ')}; their parts were left unassigned`);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {

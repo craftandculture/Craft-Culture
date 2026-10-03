@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 
 import { STOCK_OWNER_PARTNER_TYPES } from '@/app/_auth/constants/accessProfiles';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import serverConfig from '@/server.config';
 
@@ -89,6 +90,18 @@ export const wmsOperatorProcedure = protectedProcedure.use(
     return await next({ ctx });
   },
 );
+
+/**
+ * Team procedure
+ *
+ * C&C staff only: admin or warehouse role AND a C&C email address. Used by
+ * Team Tasks, which partners holding admin logins must never see.
+ */
+export const teamProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  ctx.accessControl(() => isTeamMember(ctx.user));
+
+  return await next({ ctx });
+});
 
 /**
  * Wine Partner procedure

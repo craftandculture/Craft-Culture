@@ -6,15 +6,18 @@ import {
   IconCoin,
   IconDatabaseSearch,
   IconHome2,
+  IconListCheck,
   IconPackage,
   IconShip,
   IconUsers,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import type { IconProp } from '@/app/_ui/components/Icon/Icon';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import useTRPC from '@/lib/trpc/browser';
 
 interface AdminTopNavProps {
   userRole?: string;
@@ -29,6 +32,7 @@ interface AdminNavItem {
 
 const adminNavItems: AdminNavItem[] = [
   { label: 'Home', href: '/platform/admin/home', icon: IconHome2, section: 'home' },
+  { label: 'Tasks', href: '/platform/admin/tasks', icon: IconListCheck, section: 'tasks' },
   { label: 'Orders', href: '/platform/admin', icon: IconPackage, section: 'orders' },
   { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip, section: 'logistics' },
   { label: 'Stock', href: '/platform/admin/stock-explorer', icon: IconDatabaseSearch, section: 'stock' },
@@ -41,6 +45,7 @@ const adminNavItems: AdminNavItem[] = [
 /** Detect which top-level section the current pathname belongs to */
 const getSectionFromPathname = (pathname: string) => {
   if (pathname === '/platform/admin/home') return 'home';
+  if (pathname.startsWith('/platform/admin/tasks')) return 'tasks';
 
   // Orders (incl. the PCO dashboard overview at /platform/admin)
   if (
@@ -100,7 +105,7 @@ const getSectionFromPathname = (pathname: string) => {
 };
 
 /** Sections visible to WMS operators */
-const operatorSections = new Set(['warehouse', 'stock', 'orders']);
+const operatorSections = new Set(['tasks', 'warehouse', 'stock', 'orders']);
 
 /**
  * Admin top navigation bar with 6 section items
@@ -109,6 +114,15 @@ const operatorSections = new Set(['warehouse', 'stock', 'orders']);
 const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
   const pathname = usePathname();
   const currentSection = getSectionFromPathname(pathname);
+  const api = useTRPC();
+
+  // Your own open parts on Team Tasks; red when any is overdue. Partner
+  // logins with an admin role are refused by the server and show no badge.
+  const { data: taskCount } = useQuery({
+    ...api.teamTasks.myCount.queryOptions(),
+    retry: false,
+    refetchInterval: 60_000,
+  });
 
   const visibleItems = userRole === 'wms_operator'
     ? adminNavItems.filter((item) => operatorSections.has(item.section))
@@ -131,6 +145,16 @@ const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
           >
             <Icon icon={item.icon} size="sm" className={isActive ? 'text-text-brand' : ''} />
             <span>{item.label}</span>
+            {item.section === 'tasks' && taskCount && taskCount.open > 0 && (
+              <span
+                className={`ml-0.5 min-w-[18px] rounded-full px-1.5 text-center text-[11px] font-semibold leading-[18px] ${
+                  taskCount.overdue > 0 ? 'bg-fill-danger text-text-danger-on-fill' : 'bg-fill-brand/15 text-text-brand'
+                }`}
+                title={taskCount.overdue > 0 ? `${taskCount.overdue} overdue` : `${taskCount.open} open`}
+              >
+                {taskCount.open}
+              </span>
+            )}
           </Link>
         );
       })}

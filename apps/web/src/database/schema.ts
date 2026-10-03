@@ -7015,3 +7015,118 @@ export const consCodeLinks = pgTable(
 );
 
 export type ConsCodeLink = typeof consCodeLinks.$inferSelect;
+
+/**
+ * Team Tasks — the team's shared to-do list
+ *
+ * A job (`team_tasks`) is one line on the list; it is split into parts, one
+ * per person, each ticked off by its owner. A job closes only on a second,
+ * confirming click once every part is done, and can be reopened. Slack
+ * (#tasks) is told when a job opens or closes; the list itself lives here.
+ */
+export const teamTaskAreas = pgTable('team_task_areas', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  position: integer('position').notNull().default(0),
+  ...timestamps,
+});
+
+export const teamTasks = pgTable(
+  'team_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    areaId: uuid('area_id')
+      .references(() => teamTaskAreas.id, { onDelete: 'restrict' })
+      .notNull(),
+    /** 'client' | 'distributor', or null for internal work */
+    forTag: text('for_tag'),
+    urgent: boolean('urgent').notNull().default(false),
+    /** Who the job is waiting on before it can start; null when active */
+    waitingOn: text('waiting_on'),
+    /** 'weekly' | 'monthly': closing the job creates the next one */
+    repeat: text('repeat'),
+    /** 'open' | 'closed' | 'cancelled' */
+    status: text('status').notNull().default('open'),
+    closedAt: timestamp('closed_at', { mode: 'date' }),
+    closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('team_tasks_status_idx').on(table.status),
+    index('team_tasks_area_idx').on(table.areaId),
+  ],
+);
+
+export const teamTaskParts = pgTable(
+  'team_task_parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .references(() => teamTasks.id, { onDelete: 'cascade' })
+      .notNull(),
+    ownerId: uuid('owner_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    what: text('what').notNull(),
+    due: date('due', { mode: 'string' }),
+    done: boolean('done').notNull().default(false),
+    doneAt: timestamp('done_at', { mode: 'date' }),
+    doneBy: uuid('done_by').references(() => users.id, { onDelete: 'set null' }),
+    /** Another part of the same job that must finish first */
+    waitsForPartId: uuid('waits_for_part_id'),
+    /** Set once the overdue alert has been posted, so it posts only once */
+    overdueNotifiedAt: timestamp('overdue_notified_at', { mode: 'date' }),
+    position: integer('position').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [
+    index('team_task_parts_task_idx').on(table.taskId),
+    index('team_task_parts_owner_idx').on(table.ownerId),
+  ],
+);
+
+export const teamTaskNotes = pgTable(
+  'team_task_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .references(() => teamTasks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    ...timestamps,
+  },
+  (table) => [index('team_task_notes_task_idx').on(table.taskId)],
+);
+
+/** What happened to a job and who did it, shown as its history */
+export const teamTaskEvents = pgTable(
+  'team_task_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .references(() => teamTasks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    text: text('text').notNull(),
+    ...timestamps,
+  },
+  (table) => [index('team_task_events_task_idx').on(table.taskId)],
+);
+
+/**
+ * A team member's Slack member ID, so #tasks posts can @mention them.
+ * Kept apart from `users` so a missed migration cannot break every user read.
+ */
+export const teamTaskPeople = pgTable('team_task_people', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  slackMemberId: text('slack_member_id'),
+  ...timestamps,
+});
+
+export type TeamTask = typeof teamTasks.$inferSelect;
+export type TeamTaskPart = typeof teamTaskParts.$inferSelect;

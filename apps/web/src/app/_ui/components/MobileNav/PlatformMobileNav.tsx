@@ -72,6 +72,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   // WMS Operator sections — limited admin nav
   if (user.role === 'wms_operator') {
     sections.push({
+      title: 'Tasks',
+      links: [{ href: '/platform/admin/tasks', label: 'Team tasks' }],
+    });
+    sections.push({
       title: 'Orders',
       links: [{ href: '/platform/admin/private-orders', label: 'Private Orders' }],
     });
@@ -100,6 +104,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     sections.push({
       title: 'Home',
       links: [{ href: '/platform/admin/home', label: 'Home' }],
+    });
+    sections.push({
+      title: 'Tasks',
+      links: [{ href: '/platform/admin/tasks', label: 'Team tasks' }],
     });
     sections.push({
       title: 'Orders',

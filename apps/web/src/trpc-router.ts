@@ -21,6 +21,7 @@ import quotesRouter from '@/app/_quotes/router';
 import salesQuotesRouter from '@/app/_salesQuotes/router';
 import settingsRouter from '@/app/_settings/router';
 import sourceRouter from '@/app/_source/router';
+import teamTasksRouter from '@/app/_teamTasks/router';
 import triangulationRouter from '@/app/_triangulation/router';
 import warehouseRouter from '@/app/_warehouse/router';
 import wmsRouter from '@/app/_wms/router';
@@ -50,6 +51,7 @@ export const appRouter = createTRPCRouter({
   products: productsRouter,
   quotes: quotesRouter,
   salesQuotes: salesQuotesRouter,
+  teamTasks: teamTasksRouter,
   source: sourceRouter,
   triangulation: triangulationRouter,
   warehouse: warehouseRouter,
