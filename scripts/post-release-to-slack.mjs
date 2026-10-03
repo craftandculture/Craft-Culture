@@ -64,6 +64,8 @@ for (const block of latest.split(/^### /m).slice(1)) {
         .slice(2)
         /* Drop the "([925a892](https://github.com/…))" commit links */
         .replace(/\s*\(\[[0-9a-f]{7,}\]\([^)]*\)\)/g, '')
+        /* "#tasks" in a subject comes back as an issue link: keep the text */
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
         /* "**scope:** text" → "text"; the scope is a code module name */
         .replace(/^\*\*[^*]+:\*\*\s*/, '')
         .trim(),
