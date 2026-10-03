@@ -34,12 +34,17 @@ const ExportSummaryStrip = ({ document: doc }: ExportSummaryStripProps) => {
 
   return (
     <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border-muted bg-border-muted sm:grid-cols-6">
-      {items.map((item) => (
-        <div key={item.label} className="bg-fill-primary px-3 py-2">
-          <p className="text-[10px] uppercase tracking-wide text-text-muted">{item.label}</p>
-          <p className={`text-sm font-semibold tabular-nums ${item.missing ? 'text-text-warning' : ''}`}>{item.value}</p>
-        </div>
-      ))}
+      {items.map((item, i) => {
+        const isTotal = i === items.length - 1;
+        return (
+          <div key={item.label} className={`px-3 py-2.5 ${isTotal ? 'bg-fill-brand/10' : 'bg-fill-primary'}`}>
+            <p className="text-[10px] uppercase tracking-wide text-text-muted">{item.label}</p>
+            <p className={`tabular-nums ${isTotal ? 'text-base font-bold' : 'text-sm font-semibold'} ${item.missing ? 'text-text-warning' : ''}`}>
+              {item.value}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 };

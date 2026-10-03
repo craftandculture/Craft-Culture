@@ -43,6 +43,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const [tab, setTab] = useState<SideTab>('checks');
   const [cancelReason, setCancelReason] = useState<string | null>(null);
   const [reopenReason, setReopenReason] = useState<string | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const query = useQuery(api.exportInvoices.admin.getOne.queryOptions({ id }));
   const refresh = () => queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.getOne.queryKey({ id }) });
@@ -157,7 +158,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const historyPanel = (
     <ExportPanel title="History" aside={<span className="text-xs text-text-muted">v{data.version}</span>}>
       <ol className="space-y-3">
-        {data.versions.map((v) => (
+        {(showAllHistory ? data.versions : data.versions.slice(0, 3)).map((v) => (
           <li key={v.version} className="border-l-2 border-border-muted pl-3 text-xs">
             <p>
               <span className="font-semibold">v{v.version}</span> · {v.changeSummary ?? 'Edited'}
@@ -175,16 +176,41 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
           </li>
         ))}
       </ol>
+      {data.versions.length > 3 && (
+        <button type="button" onClick={() => setShowAllHistory((v) => !v)} className="mt-3 text-xs font-medium text-text-brand hover:underline">
+          {showAllHistory ? 'Show fewer' : `Show all ${data.versions.length} versions`}
+        </button>
+      )}
+    </ExportPanel>
+  );
+  const pdfVersions = data.versions.filter((v) => v.pdfUrl);
+  const documentPanel = (
+    <ExportPanel title="Document">
+      <a
+        href={pdfHref}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center justify-between rounded-lg border border-border-muted px-3 py-2.5 text-sm hover:bg-fill-muted/30"
+      >
+        <span>
+          <span className="font-semibold">{data.number}</span>
+          <span className="block text-xs text-text-muted">Latest PDF</span>
+        </span>
+        <span className="text-xs font-medium text-text-brand">Open ↗</span>
+      </a>
+      {pdfVersions.length > 1 && (
+        <p className="mt-2 text-xs text-text-muted">{pdfVersions.length} PDF versions — earlier ones are in History.</p>
+      )}
     </ExportPanel>
   );
 
   const tabs: { key: SideTab; label: string; badge?: number }[] = [
-    { key: 'checks', label: 'Checks', badge: errors.length + warnings.length || undefined },
+    { key: 'checks', label: editable ? 'Checks' : 'Document', badge: editable ? errors.length + warnings.length || undefined : undefined },
     ...(editable ? [{ key: 'ask' as const, label: 'Ask' }] : []),
     { key: 'header', label: 'Header' },
     { key: 'history', label: 'History' },
   ];
-  const tabPanel = { checks: checksPanel, ask: askPanel, header: headerPanel, history: historyPanel }[tab];
+  const tabPanel = { checks: editable ? checksPanel : documentPanel, ask: askPanel, header: headerPanel, history: historyPanel }[tab];
 
   return (
     <div className="space-y-4">
@@ -325,7 +351,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
 
         <aside className="hidden xl:block">
           <div className="sticky top-28 max-h-[calc(100vh-8rem)] space-y-4 overflow-y-auto pb-4">
-            {checksPanel}
+            {editable ? checksPanel : documentPanel}
             {askPanel}
             {headerPanel}
             {historyPanel}

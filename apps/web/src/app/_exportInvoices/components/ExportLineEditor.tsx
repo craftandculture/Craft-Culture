@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 
@@ -25,6 +25,14 @@ const ExportLineEditor = ({ line, currency, onApply, onClose }: ExportLineEditor
   const [unitPrice, setUnitPrice] = useState(String(line.unitPrice));
   const [qty, setQty] = useState(String(line.qty));
   const [reason, setReason] = useState(line.override?.reason ?? '');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const priceChanged = Number(unitPrice) !== line.unitPrice || Number(qty) !== line.qty;
 
@@ -62,7 +70,7 @@ const ExportLineEditor = ({ line, currency, onApply, onClose }: ExportLineEditor
             Qty
             <input value={qty} onChange={(e) => setQty(e.target.value)} className="w-16 rounded border border-border-primary bg-fill-primary px-2 py-1" inputMode="numeric" />
           </label>
-          <label className="flex min-w-60 flex-1 flex-col gap-1">
+          <label className="flex w-full min-w-0 flex-1 flex-col gap-1 sm:w-auto sm:min-w-60">
             Reason (shown in the checks)
             <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Priced as a 12-pack; ships as a 6-pack" className="rounded border border-border-primary bg-fill-primary px-2 py-1" />
           </label>

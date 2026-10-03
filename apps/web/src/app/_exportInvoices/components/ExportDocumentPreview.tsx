@@ -56,6 +56,10 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [highlighted]);
 
+  const sectionTotals = (sectionId: string) => {
+    const lines = doc.lines.filter((l) => l.sectionId === sectionId);
+    return { lines: lines.length, amount: lines.reduce((sum, l) => sum + l.amount, 0) };
+  };
   const setField = (l: ExportLine, field: 'description' | 'hsCode' | 'origin', label: string) => (v: string) =>
     onApply([{ op: 'setLine', lineId: l.id, field, value: v }], `Line ${lineNumber.get(l.id)} ${label}: ${v}`);
   const setPack = (l: ExportLine) => (v: string) => {
@@ -125,19 +129,27 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
               <Fragment key={section.id}>
                 <tr>
                   <td colSpan={colCount} className="bg-[#2a5a4a] px-3 py-1.5 text-[11px] font-semibold text-white">
-                    {formatSectionTitle(section)}
+                    <div className="flex items-center justify-between gap-4">
+                      <span>{formatSectionTitle(section)}</span>
+                      <span className="shrink-0 font-normal text-white/80 tabular-nums">
+                        {sectionTotals(section.id).lines} line{sectionTotals(section.id).lines === 1 ? '' : 's'} · {cur} {money(sectionTotals(section.id).amount)}
+                      </span>
+                    </div>
                   </td>
                 </tr>
                 {doc.lines
                   .filter((l) => l.sectionId === section.id)
-                  .map((l) => {
+                  .map((l, rowIndex, sectionLines) => {
                     const mixed = l.kind === 'mixedCase';
+                    // Show the BOE only where it changes; the table below lists it in full
+                    const sameBoe = rowIndex > 0 && sectionLines[rowIndex - 1]?.boe === l.boe && Boolean(l.boe);
+                    const zebra = rowIndex % 2 === 1 ? 'bg-fill-muted/15' : '';
                     return (
                       <Fragment key={l.id}>
                         <tr
                           data-line={l.id}
                           className={`border-b border-border-muted align-middle transition-colors ${
-                            rowTone(l) || (mixed ? 'bg-fill-muted/30' : 'hover:bg-fill-muted/25')
+                            rowTone(l) || (mixed ? 'bg-fill-muted/35' : `${zebra} hover:bg-fill-muted/30`)
                           }`}
                         >
                           <td className="px-3 py-1.5 font-medium text-text-muted">{lineNumber.get(l.id)}</td>
@@ -166,7 +178,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                             <EditableText value={`${l.packBottles}x${l.bottleSizeCl}cl`} disabled={!editable || mixed} onSave={setPack(l)} />
                           </td>
                           <td className="px-2 py-1.5 text-right font-medium tabular-nums">{l.qty}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums text-text-muted">{l.qty * l.packBottles}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums">{l.qty * l.packBottles}</td>
                           {doc.extraColumns.map((c) => (
                             <td key={c.key} className="px-1 py-1.5">
                               <EditableText
@@ -177,13 +189,17 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                             </td>
                           ))}
                           <td className="px-1 py-1.5">
-                            <EditableText
-                              value={l.boe ?? ''}
-                              disabled={!editable}
-                              placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'}
-                              className={`font-mono text-[11px] ${l.boe ? '' : 'text-text-danger'}`}
-                              onSave={setBoe(l)}
-                            />
+                            {sameBoe && !editable ? (
+                              <span className="px-1 text-text-muted" title={l.boe ?? ''}>〃</span>
+                            ) : (
+                              <EditableText
+                                value={l.boe ?? ''}
+                                disabled={!editable}
+                                placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'}
+                                className={`font-mono text-[11px] ${l.boe ? (sameBoe ? 'text-text-muted' : '') : 'text-text-danger'}`}
+                                onSave={setBoe(l)}
+                              />
+                            )}
                           </td>
                           <td className="px-2 py-1.5 text-right tabular-nums">{mixed ? '' : money(l.unitPrice)}</td>
                           <td className="px-3 py-1.5 text-right font-medium tabular-nums">{mixed ? '' : money(l.amount)}</td>

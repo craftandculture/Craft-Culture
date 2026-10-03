@@ -153,9 +153,13 @@ const ExportHeaderPanel = ({ document: doc, editable, onApply }: ExportHeaderPan
       )}
 
       <Group title="Declaration">
-        <div className="rounded-lg border border-border-muted p-2.5 text-xs leading-relaxed">
-          <EditableText disabled={!editable} value={doc.declaration} onSave={(v) => onApply([{ op: 'setDeclaration', text: v }], 'Declaration changed')} />
-        </div>
+        {editable ? (
+          <div className="rounded-lg border border-border-muted p-2.5 text-xs leading-relaxed">
+            <EditableText value={doc.declaration} onSave={(v) => onApply([{ op: 'setDeclaration', text: v }], 'Declaration changed')} />
+          </div>
+        ) : (
+          <p className="text-xs leading-relaxed text-text-muted">{doc.declaration}</p>
+        )}
       </Group>
     </div>
   );
