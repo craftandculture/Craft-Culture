@@ -1,3 +1,4 @@
+import hsCodeOptions from '../hsCodeOptions';
 import deriveDocumentTotals from './deriveDocumentTotals';
 import roundMoney from './roundMoney';
 import type { ExportDocument } from '../schemas/exportDocumentSchema';
@@ -118,6 +119,21 @@ const validateExportDocument = (
       level: 'warning',
       code: 'invoice_after_document',
       message: `${later.map((s) => s.invoiceNumber).join(', ')} ${later.length > 1 ? 'are' : 'is'} dated after this export invoice.`,
+    });
+  }
+
+  const standard = new Set<string>(hsCodeOptions.map((o) => o.code));
+  const customHs = doc.lines.filter((l) =>
+    l.kind === 'mixedCase'
+      ? l.components.some((c) => !standard.has(c.hsCode ?? l.hsCode))
+      : !standard.has(l.hsCode),
+  );
+  if (customHs.length > 0) {
+    checks.push({
+      level: 'warning',
+      code: 'custom_hs_code',
+      message: `${customHs.length} line${customHs.length > 1 ? 's use' : ' uses'} an HS code outside the standard list. Make sure customs expect it.`,
+      lineIds: customHs.map((l) => l.id),
     });
   }
 

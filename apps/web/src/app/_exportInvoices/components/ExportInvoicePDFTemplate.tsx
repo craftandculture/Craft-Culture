@@ -156,7 +156,12 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
 
         {doc.sections.map((section) => (
           <View key={section.id}>
-            <Text style={styles.sectionRow} wrap={false}>{formatSectionTitle(section)}</Text>
+            <View style={[styles.sectionRow, { flexDirection: 'row', justifyContent: 'space-between' }]} wrap={false}>
+              <Text>{formatSectionTitle(section)}</Text>
+              <Text style={{ fontFamily: 'Helvetica' }}>
+                {`${cur} ${money(doc.lines.filter((l) => l.sectionId === section.id).reduce((sum, l) => sum + l.amount, 0))}`}
+              </Text>
+            </View>
             {doc.lines
               .filter((l) => l.sectionId === section.id)
               .map((l) => {

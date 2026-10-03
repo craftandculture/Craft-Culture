@@ -16,6 +16,7 @@ import ExportDocumentPreview from './ExportDocumentPreview';
 import ExportHeaderPanel from './ExportHeaderPanel';
 import ExportPanel from './ExportPanel';
 import ExportSummaryStrip from './ExportSummaryStrip';
+import IssueButton from './IssueButton';
 import type { ExportOp } from '../schemas/exportOpSchema';
 
 export interface ExportInvoiceEditorProps {
@@ -107,7 +108,11 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const errors = data.checks.filter((c) => c.level === 'error');
   const warnings = data.checks.filter((c) => c.level === 'warning');
   const pdfHref = data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`;
-  const canIssue = errors.length === 0 && (warnings.length === 0 || acknowledged) && !issueMutation.isPending;
+  const blockedBy = errors.length
+    ? `${errors.length} error${errors.length > 1 ? 's' : ''} to fix in Checks: ${errors[0]?.message ?? ''}`
+    : warnings.length && !acknowledged
+      ? 'Read the warnings in Checks and tick that the document is right to send.'
+      : null;
 
   const apply = (ops: ExportOp[], changeSummary: string, request?: string) =>
     applyMutation.mutateAsync({ id, expectedVersion: data.version, ops, changeSummary, request });
@@ -132,9 +137,15 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               I have read the warnings and the document is right to send.
             </label>
           )}
-          <Button colorRole="brand" className="w-full justify-center" disabled={!canIssue} onClick={issue}>
-            {issueMutation.isPending ? 'Issuing…' : errors.length ? 'Fix the errors to issue' : revising ? `Re-issue ${data.number}` : 'Issue and number'}
-          </Button>
+          <IssueButton
+            className="w-full"
+            label={errors.length ? 'Fix the errors to issue' : revising ? `Re-issue ${data.number}` : 'Issue and number'}
+            blockedBy={blockedBy}
+            revising={revising}
+            number={data.number}
+            pending={issueMutation.isPending}
+            onIssue={issue}
+          />
         </div>
       )}
     </ExportPanel>
@@ -283,15 +294,15 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               <a href={pdfHref} target="_blank" rel="noreferrer">{editable ? 'Preview PDF' : 'Download PDF'}</a>
             </Button>
             {editable && (
-              <Button
+              <IssueButton
                 size="sm"
-                colorRole="brand"
-                disabled={!canIssue}
-                onClick={issue}
-                title={errors.length ? 'Fix the errors in Checks first' : warnings.length && !acknowledged ? 'Tick the warnings as read in Checks' : undefined}
-              >
-                {revising ? 'Re-issue' : 'Issue'}
-              </Button>
+                label={revising ? 'Re-issue' : 'Issue'}
+                blockedBy={blockedBy}
+                revising={revising}
+                number={data.number}
+                pending={issueMutation.isPending}
+                onIssue={issue}
+              />
             )}
           </div>
         </div>

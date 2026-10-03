@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from 'react';
 
 import EditableText from './EditableText';
 import ExportLineEditor from './ExportLineEditor';
+import HsCodeSelect from './HsCodeSelect';
 import type { ExportDocument, ExportLine } from '../schemas/exportDocumentSchema';
 import type { ExportOp } from '../schemas/exportOpSchema';
 import deriveBoeTable from '../utils/deriveBoeTable';
@@ -103,6 +104,26 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
 
   return (
     <div className="space-y-4">
+      {doc.sections.length > 2 && (
+        <nav aria-label="Sections" className="flex gap-1.5 overflow-x-auto pb-1">
+          {doc.sections.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() =>
+                globalThis.document
+                  ?.querySelector(`[data-section="${section.id}"]:not([hidden])`)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+              className="shrink-0 rounded-full border border-border-muted bg-fill-primary px-3 py-1 text-[11px] font-medium text-text-muted hover:border-border-brand hover:text-text-primary"
+            >
+              {section.refs.length > 1 ? `${section.refs[0]?.invoiceNumber} +${section.refs.length - 1}` : section.refs[0]?.invoiceNumber}
+              <span className="ml-1.5 tabular-nums text-text-muted">{sectionTotals(section.id).lines}</span>
+            </button>
+          ))}
+        </nav>
+      )}
+
       {/* Wide screens: the table, laid out like the PDF */}
       <div className="hidden overflow-x-auto rounded-xl border border-border-muted bg-fill-primary lg:block">
         <table className="w-full text-xs">
@@ -110,7 +131,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
             <tr>
               <th className="w-10 px-3 py-2.5">#</th>
               <th className="min-w-[260px] px-2 py-2.5">Description of goods</th>
-              <th className="w-24 px-2 py-2.5">HS code</th>
+              <th className="w-32 px-2 py-2.5">HS code</th>
               <th className="w-28 px-2 py-2.5">Origin</th>
               <th className="w-20 px-2 py-2.5">Pack</th>
               <th className="w-12 px-2 py-2.5 text-right">Qty</th>
@@ -127,7 +148,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
           <tbody>
             {doc.sections.map((section) => (
               <Fragment key={section.id}>
-                <tr>
+                <tr data-section={section.id} className="scroll-mt-24">
                   <td colSpan={colCount} className="bg-[#2a5a4a] px-3 py-1.5 text-[11px] font-semibold text-white">
                     <div className="flex items-center justify-between gap-4">
                       <span>{formatSectionTitle(section)}</span>
@@ -167,7 +188,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                             {l.override && <p className="px-1 text-[10px] text-text-warning">Differs from Zoho: {l.override.reason}</p>}
                           </td>
                           <td className="px-1 py-1.5">
-                            {!mixed && <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} />}
+                            {!mixed && <HsCodeSelect value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} />}
                           </td>
                           <td className="px-1 py-1.5">
                             {!mixed && (
@@ -215,7 +236,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                                 </div>
                               </td>
                               <td className="px-1 py-1">
-                                <EditableText value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} />
+                                <HsCodeSelect value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} />
                               </td>
                               <td className="px-1 py-1">
                                 <EditableText value={c.origin} disabled={!editable} onSave={setComponent(l, i, 'origin')} placeholder="Add origin" className={c.origin ? '' : 'text-text-warning'} />
@@ -251,7 +272,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
       {/* Phones and tablets: one card per line */}
       <div className="space-y-3 lg:hidden">
         {doc.sections.map((section) => (
-          <div key={section.id} className="overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
+          <div key={section.id} data-section={section.id} className="scroll-mt-24 overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
             <p className="bg-[#2a5a4a] px-3 py-1.5 text-[11px] font-semibold text-white">{formatSectionTitle(section)}</p>
             <ul className="divide-y divide-border-muted/60">
               {doc.lines
@@ -284,7 +305,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                         {l.kind !== 'mixedCase' && (
                           <>
                             <label className="flex items-center gap-1 text-text-muted">HS
-                              <EditableText value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} className="text-text-primary" />
+                              <HsCodeSelect value={l.hsCode} disabled={!editable} onSave={setField(l, 'hsCode', 'HS code')} />
                             </label>
                             <label className="flex items-center gap-1 text-text-muted">Origin
                               <EditableText value={l.origin} disabled={!editable} onSave={setField(l, 'origin', 'origin')} placeholder="Add" className={l.origin ? 'text-text-primary' : 'text-text-warning'} />
@@ -313,7 +334,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                                   <EditableText value={c.origin} disabled={!editable} onSave={setComponent(l, i, 'origin')} placeholder="Add" className={c.origin ? 'text-text-primary' : 'text-text-warning'} />
                                 </label>
                                 <label className="flex items-center gap-1">HS
-                                  <EditableText value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} className="text-text-primary" />
+                                  <HsCodeSelect value={c.hsCode ?? l.hsCode} disabled={!editable} onSave={setComponent(l, i, 'hsCode')} />
                                 </label>
                                 <span className="flex items-center">{l.qty} btl</span>
                               </div>
