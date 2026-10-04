@@ -7051,6 +7051,12 @@ export const teamTasks = pgTable(
     closedAt: timestamp('closed_at', { mode: 'date' }),
     closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'set null' }),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    /** An Index page the job is about, e.g. /platform/admin/private-orders/<id> */
+    linkUrl: text('link_url'),
+    /** How that link reads, e.g. PCO-2026-00060 */
+    linkLabel: text('link_label'),
+    /** A partner who can see this job and tick their own parts in their portal */
+    partnerId: uuid('partner_id').references(() => partners.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (table) => [

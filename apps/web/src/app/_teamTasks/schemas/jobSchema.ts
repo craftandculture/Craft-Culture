@@ -28,6 +28,17 @@ const jobSchema = z
     waitingOn: z.string().trim().max(120).nullable(),
     repeat: z.enum(['weekly', 'monthly']).nullable(),
     parts: z.array(partInputSchema).max(12),
+    /** An Index page the job is about; only links inside Index are kept */
+    linkUrl: z
+      .string()
+      .trim()
+      .max(300)
+      .regex(/^\/platform\//, 'Links must point to a page in Index')
+      .nullable()
+      .optional(),
+    linkLabel: z.string().trim().max(80).nullable().optional(),
+    /** A partner who can see the job and tick their own parts */
+    partnerId: z.string().uuid().nullable().optional(),
   })
   .refine((job) => job.areaId || job.newAreaName, {
     message: 'Choose an area or name a new one',

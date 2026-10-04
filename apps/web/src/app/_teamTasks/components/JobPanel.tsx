@@ -111,6 +111,18 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
               )}
             </div>
 
+            {task.linkUrl && (
+              <a
+                href={task.linkUrl}
+                className="flex items-center justify-between rounded-lg border border-border-muted px-3 py-2 text-sm hover:border-border-brand"
+              >
+                <span className="text-text-primary">
+                  About <span className="font-medium">{task.linkLabel ?? 'a linked page'}</span>
+                </span>
+                <span className="text-xs text-text-brand">Open &rarr;</span>
+              </a>
+            )}
+
             {task.waitingOn && task.status === 'open' && (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-fill-warning/15 px-3 py-2">
                 <span className="text-sm text-text-warning">Waiting on: {task.waitingOn}</span>

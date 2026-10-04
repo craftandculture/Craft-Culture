@@ -8,6 +8,7 @@ import createJob from './controller/createJob';
 import getBoard from './controller/getBoard';
 import getTask from './controller/getTask';
 import goAhead from './controller/goAhead';
+import jobsForLink from './controller/jobsForLink';
 import myCount from './controller/myCount';
 import reassignPart from './controller/reassignPart';
 import reopenJob from './controller/reopenJob';
@@ -20,6 +21,7 @@ const teamTasksRouter = createTRPCRouter({
   getBoard,
   getTask,
   myCount,
+  jobsForLink,
   createJob,
   updateJob,
   // Ticking never closes a job; closeJob is the confirmed second step

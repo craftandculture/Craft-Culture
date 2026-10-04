@@ -12,14 +12,23 @@ import Typography from '@/app/_ui/components/Typography/Typography';
  * can add, edit, reassign, close and reopen any job; #tasks in Slack is told
  * when a job opens or closes. C&C staff only.
  */
-const TeamTasksPage = async ({ searchParams }: { searchParams: Promise<{ job?: string }> }) => {
+const TeamTasksPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ job?: string; new?: string; title?: string; link?: string; linkLabel?: string }>;
+}) => {
   const user = await getUserOrRedirect();
 
   if (!isTeamMember(user)) {
     redirect('/platform');
   }
 
-  const { job } = await searchParams;
+  const { job, new: isNew, title, link, linkLabel } = await searchParams;
+  // "Make a job" on another page opens the form with the job already linked
+  const prefill =
+    isNew === '1'
+      ? { title, linkUrl: link?.startsWith('/platform/') ? link : undefined, linkLabel: linkLabel?.slice(0, 80) }
+      : undefined;
 
   return (
     <main className="container space-y-5 py-6">
@@ -33,7 +42,7 @@ const TeamTasksPage = async ({ searchParams }: { searchParams: Promise<{ job?: s
           </p>
         </Typography>
       </div>
-      <TeamTasksClient initialJobId={job} />
+      <TeamTasksClient initialJobId={job} prefill={prefill} />
     </main>
   );
 };

@@ -43,7 +43,17 @@ const closeJob = teamProcedure.input(z.object({ taskId: z.string().uuid() })).mu
     nextTaskId = await db.transaction(async (tx) => {
       const [next] = await tx
         .insert(teamTasks)
-        .values({ title: task.title, areaId: task.areaId, forTag: task.forTag, urgent: task.urgent, repeat, createdBy: ctx.user.id })
+        .values({
+          title: task.title,
+          areaId: task.areaId,
+          forTag: task.forTag,
+          urgent: task.urgent,
+          repeat,
+          linkUrl: task.linkUrl,
+          linkLabel: task.linkLabel,
+          partnerId: task.partnerId,
+          createdBy: ctx.user.id,
+        })
         .returning({ id: teamTasks.id });
       const ids: string[] = [];
       for (const p of parts) {

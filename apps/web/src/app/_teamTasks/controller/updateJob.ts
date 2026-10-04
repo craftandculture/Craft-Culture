@@ -39,6 +39,9 @@ const updateJob = teamProcedure
           urgent: input.urgent,
           waitingOn: input.waitingOn || null,
           repeat: input.repeat,
+          linkUrl: input.linkUrl ?? null,
+          linkLabel: input.linkUrl ? (input.linkLabel ?? null) : null,
+          partnerId: input.partnerId ?? null,
         })
         .where(eq(teamTasks.id, input.taskId));
       await writeParts(tx, input.taskId, input.parts);

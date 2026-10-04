@@ -22,6 +22,8 @@ interface JobFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: (taskId: string) => void;
+  /** Starting values for a new job made from another page, e.g. an order */
+  prefill?: { title?: string; linkUrl?: string; linkLabel?: string };
 }
 
 type FormPart = JobInput['parts'][number];
@@ -43,10 +45,13 @@ const label = 'mb-1 block text-xs font-medium text-text-muted';
  * Anyone on the team can edit any job. A part can wait for another part of the
  * same job; its owner is told in #tasks when it is their turn.
  */
-const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormProps) => {
+const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: JobFormProps) => {
   const { createJob, updateJob } = useTaskMutations();
 
-  const [title, setTitle] = useState(task?.title ?? '');
+  const [title, setTitle] = useState(task?.title ?? prefill?.title ?? '');
+  const [linkUrl, setLinkUrl] = useState<string | null>(task?.linkUrl ?? prefill?.linkUrl ?? null);
+  const [linkLabel] = useState<string | null>(task?.linkLabel ?? prefill?.linkLabel ?? null);
+  const [partnerId] = useState<string | null>(task?.partnerId ?? null);
   const [areaId, setAreaId] = useState<string>(task?.areaId ?? board.areas[0]?.id ?? NEW_AREA);
   const [newAreaName, setNewAreaName] = useState('');
   const [forTag, setForTag] = useState<JobInput['forTag']>(task?.forTag ?? null);
@@ -99,6 +104,9 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormPro
       waitingOn: waiting && waitingOn.trim() ? waitingOn.trim() : null,
       repeat,
       parts: cleanParts,
+      linkUrl,
+      linkLabel: linkUrl ? linkLabel : null,
+      partnerId,
     };
 
     if (task) {
@@ -131,6 +139,17 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved }: JobFormPro
               autoFocus
             />
           </div>
+
+          {linkUrl && (
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-fill-secondary px-3 py-2 text-sm">
+              <span className="text-text-primary">
+                Linked to <span className="font-medium">{linkLabel ?? linkUrl}</span>
+              </span>
+              <button type="button" onClick={() => setLinkUrl(null)} className="text-xs text-text-muted underline">
+                Remove link
+              </button>
+            </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>

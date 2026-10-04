@@ -38,6 +38,7 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
     showMeta && area,
     showMeta && others.length > 0 && `with ${others.join(', ')}`,
     showMeta && task.parts.length > 1 && `${done} of ${task.parts.length} parts done`,
+    task.linkLabel,
     task.forTag === 'client' ? 'Client' : task.forTag === 'distributor' ? 'Distributor' : null,
     task.repeat && `Repeats ${task.repeat}`,
   ].filter(Boolean);

@@ -2287,6 +2287,12 @@ const runMigrations = async () => {
     `);
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_status_idx" ON "team_tasks"("status")`);
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_area_idx" ON "team_tasks"("area_id")`);
+    // Team Tasks: a job can point at the order it is about, and be shared with one partner
+    await client.unsafe(`ALTER TABLE "team_tasks" ADD COLUMN IF NOT EXISTS "link_url" text`);
+    await client.unsafe(`ALTER TABLE "team_tasks" ADD COLUMN IF NOT EXISTS "link_label" text`);
+    await client.unsafe(`ALTER TABLE "team_tasks" ADD COLUMN IF NOT EXISTS "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_link_idx" ON "team_tasks"("link_url")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_tasks_partner_idx" ON "team_tasks"("partner_id")`);
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS "team_task_parts" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

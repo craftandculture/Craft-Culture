@@ -11,6 +11,7 @@ import DoneView from './DoneView';
 import JobForm from './JobForm';
 import JobPanel from './JobPanel';
 import MyTasksView from './MyTasksView';
+import ReviewView from './ReviewView';
 import SlackLinksDialog from './SlackLinksDialog';
 import TeamBoardView from './TeamBoardView';
 import useTaskMutations from '../hooks/useTaskMutations';
@@ -18,18 +19,20 @@ import type { BoardTask } from '../types/Board';
 import type { CardActions } from '../types/CardActions';
 import dubaiToday from '../utils/dubaiToday';
 
-type Tab = 'mine' | 'board' | 'people' | 'done';
+type Tab = 'mine' | 'board' | 'people' | 'done' | 'review';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'mine', label: 'My tasks' },
   { key: 'board', label: 'Team board' },
   { key: 'people', label: 'By person' },
   { key: 'done', label: 'Done' },
+  { key: 'review', label: 'Weekly review' },
 ];
 
 /** Keep ?job= in the address bar in step with the open panel, without a reload */
 const syncJobParam = (taskId: string | null) => {
   const url = new URL(window.location.href);
+  ['new', 'title', 'link', 'linkLabel'].forEach((k) => url.searchParams.delete(k));
   if (taskId) url.searchParams.set('job', taskId);
   else url.searchParams.delete('job');
   window.history.replaceState(null, '', url);
@@ -42,8 +45,16 @@ const syncJobParam = (taskId: string | null) => {
  * reopening and cancelling a job are posted to #tasks.
  *
  * @param initialJobId - A job to open straight away, from a #tasks link
+ * @param prefill - Values for a new job started from another page
  */
-const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
+const TeamTasksClient = ({
+  initialJobId,
+  prefill,
+}: {
+  initialJobId?: string;
+  /** Opens the new-job form straight away, e.g. from "Make a job" on an order */
+  prefill?: { title?: string; linkUrl?: string; linkLabel?: string };
+}) => {
   const api = useTRPC();
   const { data: board, isLoading } = useQuery(api.teamTasks.getBoard.queryOptions());
   const m = useTaskMutations();
@@ -54,7 +65,9 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
   const [areaFilter, setAreaFilter] = useState('');
   const [focus, setFocus] = useState<'' | 'urgent' | 'overdue'>('');
   const [openId, setOpenId] = useState<string | null>(initialJobId ?? null);
-  const [form, setForm] = useState<{ task?: BoardTask; key: number } | null>(null);
+  const [form, setForm] = useState<{ task?: BoardTask; key: number; prefill?: typeof prefill } | null>(
+    prefill ? { key: 0, prefill } : null,
+  );
   const [slackOpen, setSlackOpen] = useState(false);
 
   if (isLoading || !board) return <p className="text-sm text-text-muted">Loading jobs…</p>;
@@ -106,7 +119,7 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="tt-controls flex flex-wrap items-center gap-2">
         <div className="flex max-w-full overflow-x-auto rounded-lg border border-border-muted bg-fill-secondary p-0.5">
           {TABS.map((t) => (
             <button
@@ -176,6 +189,7 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
       {tab === 'board' && <TeamBoardView board={board} tasks={tasks} actions={actions} />}
       {tab === 'people' && <ByPersonView board={board} tasks={tasks} actions={actions} />}
       {tab === 'done' && <DoneView board={board} tasks={tasks} actions={actions} />}
+      {tab === 'review' && <ReviewView board={board} tasks={tasks} today={today} />}
 
       <JobPanel
         task={board.tasks.find((t) => t.id === openId)}
@@ -191,6 +205,7 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
           board={board}
           today={today}
           task={form.task}
+          prefill={form.prefill}
           open
           onOpenChange={(o) => !o && setForm(null)}
           onSaved={(taskId) => !form.task && open(taskId)}

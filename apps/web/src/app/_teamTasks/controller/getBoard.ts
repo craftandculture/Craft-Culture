@@ -64,6 +64,10 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
       repeat: t.repeat as 'weekly' | 'monthly' | null,
       status: t.status as 'open' | 'closed' | 'cancelled',
       closedAt: t.closedAt,
+      closedBy: t.closedBy,
+      linkUrl: t.linkUrl,
+      linkLabel: t.linkLabel,
+      partnerId: t.partnerId,
       noteCount: notesByTask.get(t.id) ?? 0,
       parts: parts
         .filter((p) => p.taskId === t.id)

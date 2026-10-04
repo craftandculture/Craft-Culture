@@ -26,6 +26,9 @@ const createJob = teamProcedure.input(jobSchema).mutation(async ({ input, ctx })
         urgent: input.urgent,
         waitingOn: input.waitingOn || null,
         repeat: input.repeat,
+        linkUrl: input.linkUrl ?? null,
+        linkLabel: input.linkUrl ? (input.linkLabel ?? null) : null,
+        partnerId: input.partnerId ?? null,
         createdBy: ctx.user.id,
       })
       .returning({ id: teamTasks.id });

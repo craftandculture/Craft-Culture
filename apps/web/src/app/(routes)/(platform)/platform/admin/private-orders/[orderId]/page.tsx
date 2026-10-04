@@ -41,6 +41,7 @@ import StockManagementSection from '@/app/_privateClientOrders/components/StockM
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
+import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -606,6 +607,12 @@ const AdminPrivateOrderDetailPage = () => {
               orderId={order.id}
               zohoSalesOrderNumber={order.zohoSalesOrderNumber}
               hasSalesOrder={Boolean(order.zohoSalesOrderId)}
+            />
+
+            <MakeJobButton
+              linkUrl={`/platform/admin/private-orders/${order.id}`}
+              linkLabel={order.orderNumber}
+              title={`${order.orderNumber} — ${order.clientName}`}
             />
 
             {/* Delete button - only for draft/cancelled orders */}
