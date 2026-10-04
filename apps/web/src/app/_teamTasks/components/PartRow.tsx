@@ -1,6 +1,7 @@
 'use client';
 
 import DueChip from './DueChip';
+import DueMenu from './DueMenu';
 import PersonBadge from './PersonBadge';
 import type { Board, BoardPart, BoardTask } from '../types/Board';
 import partLabel from '../utils/partLabel';
@@ -14,7 +15,7 @@ interface PartRowProps {
   today: string;
   onTick: (partId: string, done: boolean) => void;
   busy?: boolean;
-  /** Show "No date" on undated parts (the job panel) */
+  /** The job panel: name the owner in full and allow changing the date */
   showUndated?: boolean;
 }
 
@@ -32,7 +33,7 @@ const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRo
   const locked = task.status !== 'open' || state === 'blocked';
 
   return (
-    <div className="flex items-start gap-2 py-1.5">
+    <div className="group flex items-start gap-2 py-1.5">
       <input
         type="checkbox"
         aria-label={`Mark ${owner?.name ?? 'this'} part done`}
@@ -44,8 +45,9 @@ const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRo
       />
       <PersonBadge name={owner?.name ?? '?'} isViewer={part.ownerId === board.viewerId} />
       <div className="min-w-0 flex-1">
+        {showUndated && <p className="text-[11px] font-medium text-text-muted">{owner ? personName(owner.name) : 'Unassigned'}</p>}
         <p className={`text-sm ${part.done ? 'text-text-muted line-through' : 'text-text-primary'}`}>
-          {partLabel(task.title, part.what) ?? (owner ? personName(owner.name) : 'Unassigned')}
+          {showUndated ? part.what : (partLabel(task.title, part.what) ?? (owner ? personName(owner.name) : 'Unassigned'))}
         </p>
         {state === 'blocked' && first && (
           <p className="text-xs text-text-muted">
@@ -53,7 +55,11 @@ const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRo
           </p>
         )}
       </div>
-      <DueChip due={part.due} state={state} showUndated={showUndated} />
+      {showUndated && task.status === 'open' && !part.done && state !== 'blocked' ? (
+        <DueMenu partId={part.id} due={part.due} state={state} today={today} urgent={task.urgent} />
+      ) : (
+        <DueChip due={part.due} state={state} showUndated={showUndated} />
+      )}
     </div>
   );
 };

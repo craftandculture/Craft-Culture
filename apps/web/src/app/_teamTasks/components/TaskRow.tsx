@@ -1,6 +1,7 @@
 'use client';
 
-import DueChip from './DueChip';
+import DueMenu from './DueMenu';
+import GiveToMenu from './GiveToMenu';
 import type { Board, BoardPart, BoardTask } from '../types/Board';
 import type { CardActions } from '../types/CardActions';
 import partLabel from '../utils/partLabel';
@@ -42,7 +43,7 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
   ].filter(Boolean);
 
   return (
-    <div className={`flex items-start gap-3 px-3 py-2.5 transition hover:bg-fill-secondary/60 ${onHold ? 'opacity-60' : ''}`}>
+    <div className={`group flex items-start gap-3 px-3 py-2.5 transition hover:bg-fill-secondary/60 ${onHold ? 'opacity-60' : ''}`}>
       <input
         type="checkbox"
         aria-label={`Mark "${task.title}" done`}
@@ -67,7 +68,10 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
         {onHold && <p className="mt-0.5 text-xs text-text-muted">Waiting on: {task.waitingOn}</p>}
         {meta.length > 0 && <p className="mt-0.5 text-[11px] text-text-muted">{meta.join(' · ')}</p>}
       </button>
-      {state !== 'blocked' && !onHold && <DueChip due={part.due} state={state} />}
+      {!onHold && <GiveToMenu partId={part.id} ownerId={part.ownerId} board={board} />}
+      {state !== 'blocked' && !onHold && (
+        <DueMenu partId={part.id} due={part.due} state={state} today={actions.today} urgent={task.urgent} />
+      )}
     </div>
   );
 };

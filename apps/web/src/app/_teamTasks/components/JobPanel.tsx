@@ -49,7 +49,15 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
       <SheetContent side="right" className="flex w-full flex-col overflow-y-auto p-5 sm:max-w-lg">
         {task && (
           <>
-            <div>
+            <div className="relative pr-8">
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close panel"
+                className="absolute right-0 top-0 flex size-8 items-center justify-center rounded-lg text-lg text-text-muted hover:bg-fill-secondary hover:text-text-primary"
+              >
+                ✕
+              </button>
               <p className="text-[11px] font-medium uppercase tracking-wide text-text-muted">
                 {area?.name}
                 {task.status !== 'open' && ` · ${task.status === 'closed' ? 'Closed' : 'Cancelled'}`}
@@ -66,39 +74,7 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
               </div>
             </div>
 
-            {task.waitingOn && task.status === 'open' && (
-              <div className="flex items-center justify-between gap-2 rounded-lg bg-fill-warning/15 px-3 py-2">
-                <span className="text-sm text-text-warning">Waiting on: {task.waitingOn}</span>
-                <button
-                  type="button"
-                  onClick={() => m.goAhead.mutate({ taskId: task.id })}
-                  disabled={m.goAhead.isPending}
-                  className="h-7 shrink-0 rounded-lg border border-border-brand bg-fill-brand px-2.5 text-xs font-medium text-text-brand-on-fill"
-                >
-                  Go ahead, start now
-                </button>
-              </div>
-            )}
-
-            <div>
-              <p className="mb-1 text-xs font-medium text-text-muted">Parts</p>
-              <div className="divide-y divide-border-muted rounded-lg border border-border-muted px-2.5">
-                {task.parts.map((p) => (
-                  <PartRow
-                    key={p.id}
-                    part={p}
-                    task={task}
-                    board={board}
-                    today={today}
-                    busy={busy}
-                    showUndated
-                    onTick={(partId, done) => m.tickPart.mutate({ partId, done })}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border-muted pb-4">
               {task.status === 'open' ? (
                 <>
                   <button
@@ -133,6 +109,38 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                   Reopen job
                 </button>
               )}
+            </div>
+
+            {task.waitingOn && task.status === 'open' && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-fill-warning/15 px-3 py-2">
+                <span className="text-sm text-text-warning">Waiting on: {task.waitingOn}</span>
+                <button
+                  type="button"
+                  onClick={() => m.goAhead.mutate({ taskId: task.id })}
+                  disabled={m.goAhead.isPending}
+                  className="h-7 shrink-0 rounded-lg border border-border-brand bg-fill-brand px-2.5 text-xs font-medium text-text-brand-on-fill"
+                >
+                  Go ahead, start now
+                </button>
+              </div>
+            )}
+
+            <div>
+              <p className="mb-1 text-xs font-medium text-text-muted">Parts</p>
+              <div className="divide-y divide-border-muted rounded-lg border border-border-muted px-2.5">
+                {task.parts.map((p) => (
+                  <PartRow
+                    key={p.id}
+                    part={p}
+                    task={task}
+                    board={board}
+                    today={today}
+                    busy={busy}
+                    showUndated
+                    onTick={(partId, done) => m.tickPart.mutate({ partId, done })}
+                  />
+                ))}
+              </div>
             </div>
 
             <div>

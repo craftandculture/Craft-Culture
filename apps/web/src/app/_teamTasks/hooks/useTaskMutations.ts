@@ -30,6 +30,8 @@ const useTaskMutations = () => {
     createJob: useMutation({ ...api.teamTasks.createJob.mutationOptions(), ...opts }),
     updateJob: useMutation({ ...api.teamTasks.updateJob.mutationOptions(), ...opts }),
     tickPart: useMutation({ ...api.teamTasks.tickPart.mutationOptions(), ...opts }),
+    setPartDue: useMutation({ ...api.teamTasks.setPartDue.mutationOptions(), ...opts }),
+    reassignPart: useMutation({ ...api.teamTasks.reassignPart.mutationOptions(), ...opts }),
     closeJob: useMutation({ ...api.teamTasks.closeJob.mutationOptions(), ...opts }),
     reopenJob: useMutation({ ...api.teamTasks.reopenJob.mutationOptions(), ...opts }),
     cancelJob: useMutation({ ...api.teamTasks.cancelJob.mutationOptions(), ...opts }),

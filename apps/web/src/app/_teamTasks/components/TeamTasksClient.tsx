@@ -52,6 +52,7 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
   const [tab, setTab] = useState<Tab>('mine');
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
+  const [focus, setFocus] = useState<'' | 'urgent' | 'overdue'>('');
   const [openId, setOpenId] = useState<string | null>(initialJobId ?? null);
   const [form, setForm] = useState<{ task?: BoardTask; key: number } | null>(null);
   const [slackOpen, setSlackOpen] = useState(false);
@@ -62,6 +63,8 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
   const tasks = board.tasks.filter(
     (t) =>
       (!areaFilter || t.areaId === areaFilter) &&
+      (focus !== 'urgent' || t.urgent) &&
+      (focus !== 'overdue' || t.parts.some((p) => !p.done && p.due && p.due < today && !t.waitingOn)) &&
       (!q ||
         t.title.toLowerCase().includes(q) ||
         t.parts.some((p) => p.what.toLowerCase().includes(q)) ||
@@ -136,6 +139,18 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
               {a.name}
             </option>
           ))}
+        </select>
+        <select
+          value={focus}
+          onChange={(e) => setFocus(e.target.value as typeof focus)}
+          aria-label="Show only"
+          className={`h-9 rounded-lg border px-2 text-sm ${
+            focus ? 'border-border-brand bg-fill-brand/10 text-text-brand' : 'border-border-primary bg-surface-primary text-text-primary'
+          }`}
+        >
+          <option value="">All jobs</option>
+          <option value="urgent">Urgent only</option>
+          <option value="overdue">Overdue only</option>
         </select>
         <div className="ml-auto flex items-center gap-2">
           {board.viewerIsAdmin && (

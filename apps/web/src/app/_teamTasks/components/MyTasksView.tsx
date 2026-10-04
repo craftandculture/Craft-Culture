@@ -1,5 +1,6 @@
 'use client';
 
+import QuickAdd from './QuickAdd';
 import TaskRow from './TaskRow';
 import TwoStepButton from './TwoStepButton';
 import type { Board, BoardTask } from '../types/Board';
@@ -43,12 +44,12 @@ const MyTasksView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask
     )
     .sort((a, b) => rankPart(a.task, a.state) - rankPart(b.task, b.state) || (a.part.due ?? '9999').localeCompare(b.part.due ?? '9999'));
 
-  if (!rows.length && !ready.length) {
-    return <p className="py-16 text-center text-sm text-text-muted">Nothing on your list. Add a job, or check the team board.</p>;
-  }
-
   return (
     <div className="space-y-5">
+      <QuickAdd board={board} />
+      {!rows.length && !ready.length && (
+        <p className="py-12 text-center text-sm text-text-muted">Nothing on your list. Add a job above, or check the team board.</p>
+      )}
       {ready.length > 0 && (
         <section>
           <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-success">
