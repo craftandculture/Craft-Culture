@@ -1,6 +1,8 @@
 'use client';
 
+import DueMenu from './DueMenu';
 import type { Board, BoardTask } from '../types/Board';
+import partLabel from '../utils/partLabel';
 import partState from '../utils/partState';
 import shortDate from '../utils/shortDate';
 
@@ -24,7 +26,9 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
     .filter((t) => !t.waitingOn)
     .flatMap((t) => t.parts.filter((p) => partState(p, t, today) === 'overdue').map((p) => ({ t, p })))
     .sort((a, b) => (a.p.due ?? '').localeCompare(b.p.due ?? ''));
-  const undatedUrgent = open.filter((t) => t.urgent && !t.waitingOn && t.parts.some((p) => !p.done && !p.due));
+  const undatedParts = open
+    .filter((t) => t.urgent && !t.waitingOn)
+    .flatMap((t) => t.parts.filter((p) => !p.done && !p.due && partState(p, t, today) !== 'blocked').map((p) => ({ t, p })));
 
   const load = board.team
     .map((m) => {
@@ -45,10 +49,20 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
   return (
     <div className="space-y-6">
       <style>{'@media print { header, nav, .tt-controls { display: none !important; } }'}</style>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-text-muted">
-          Week to {shortDate(today)} · {closed.length} closed · {overdue.length} overdue · {open.length} open
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: 'Closed this week', value: closed.length, tone: 'text-text-success' },
+            { label: 'Overdue now', value: overdue.length, tone: overdue.length ? 'text-text-danger' : '' },
+            { label: 'Urgent, no date', value: undatedParts.length, tone: undatedParts.length ? 'text-text-warning' : '' },
+            { label: 'Open jobs', value: open.length, tone: '' },
+          ].map((k) => (
+            <div key={k.label} className="rounded-xl border border-border-muted bg-surface-primary px-4 py-3">
+              <p className={`text-2xl font-bold tabular-nums ${k.tone}`}>{k.value}</p>
+              <p className="text-xs text-text-muted">{k.label}</p>
+            </div>
+          ))}
+        </div>
         <button
           type="button"
           onClick={() => window.print()}
@@ -98,7 +112,8 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
               <div key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="w-28 shrink-0 text-text-danger">{shortDate(p.due!)}</span>
                 <span className="min-w-0 flex-1 text-text-primary">
-                  {t.title} <span className="text-text-muted">· {p.what}</span>
+                  {t.title}
+                  {partLabel(t.title, p.what) && <span className="text-text-muted"> · {partLabel(t.title, p.what)}</span>}
                 </span>
                 <span className="shrink-0 text-text-muted">{name(p.ownerId)}</span>
               </div>
@@ -109,18 +124,22 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
         )}
       </section>
 
-      {undatedUrgent.length > 0 && (
+      {undatedParts.length > 0 && (
         <section>
           <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-warning">
-            Urgent with no date · {undatedUrgent.length}
+            Urgent with no date · {undatedParts.length}
           </h2>
-          <p className="mb-1.5 text-xs text-text-muted">These cannot go overdue or be chased until they have a date.</p>
+          <p className="mb-1.5 text-xs text-text-muted">These cannot go overdue or be chased until they have a date. Set one here.</p>
           <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
-            {undatedUrgent.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 text-text-primary">{t.title}</span>
-                <span className="shrink-0 text-text-muted">
-                  {[...new Set(t.parts.filter((p) => !p.done && !p.due).map((p) => name(p.ownerId)))].join(', ')}
+            {undatedParts.map(({ t, p }) => (
+              <div key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 text-text-primary">
+                  {t.title}
+                  {partLabel(t.title, p.what) && <span className="text-text-muted"> · {partLabel(t.title, p.what)}</span>}
+                </span>
+                <span className="w-32 shrink-0 text-right text-text-muted">{name(p.ownerId)}</span>
+                <span className="tt-controls">
+                  <DueMenu partId={p.id} due={p.due} state="undated" today={today} urgent />
                 </span>
               </div>
             ))}

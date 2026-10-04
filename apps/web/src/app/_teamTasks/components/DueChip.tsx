@@ -14,7 +14,7 @@ const styles: Record<PartState, string> = {
 
 /** A part's due date, coloured by how close it is; undated parts show nothing unless asked */
 const DueChip = ({ due, state, showUndated = false }: { due: string | null; state: PartState; showUndated?: boolean }) => {
-  if (state === 'undated' && !showUndated) return null;
+  if ((state === 'undated' || state === 'done') && !showUndated) return null;
 
   const tomorrow = new Date(`${dubaiToday()}T12:00:00Z`);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);

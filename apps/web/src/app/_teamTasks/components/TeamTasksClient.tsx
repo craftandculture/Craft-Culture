@@ -141,6 +141,7 @@ const TeamTasksClient = ({
           placeholder="Search jobs"
           className="h-9 min-w-0 flex-1 rounded-lg border sm:w-48 sm:flex-none border-border-primary bg-surface-primary px-2.5 text-sm text-text-primary"
         />
+        {tab !== 'review' && (
         <select
           value={areaFilter}
           onChange={(e) => setAreaFilter(e.target.value)}
@@ -153,6 +154,8 @@ const TeamTasksClient = ({
             </option>
           ))}
         </select>
+        )}
+        {tab !== 'review' && tab !== 'done' && (
         <select
           value={focus}
           onChange={(e) => setFocus(e.target.value as typeof focus)}
@@ -165,6 +168,7 @@ const TeamTasksClient = ({
           <option value="urgent">Urgent only</option>
           <option value="overdue">Overdue only</option>
         </select>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {board.viewerIsAdmin && (
             <button

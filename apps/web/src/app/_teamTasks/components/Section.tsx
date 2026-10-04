@@ -13,7 +13,7 @@ const Section = ({ title, count, tone, children }: { title: string; count: numbe
       >
         {title} <span className="font-normal">· {count}</span>
       </h2>
-      <div className="grid items-start gap-2 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+      <div className="gap-2 md:columns-2 xl:columns-3 [&>*]:mb-2 [&>*]:break-inside-avoid">{children}</div>
     </section>
   );
 };

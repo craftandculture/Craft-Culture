@@ -46,7 +46,7 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
   ].filter(Boolean);
 
   return (
-    <div className={`group flex items-start gap-3 px-3 py-2.5 transition hover:bg-fill-secondary/60 ${onHold ? 'opacity-60' : ''}`}>
+    <div className={`group relative flex items-start gap-3 px-3 py-2.5 transition hover:bg-fill-secondary/60 ${onHold ? 'opacity-60' : ''}`}>
       <input
         type="checkbox"
         aria-label={`Mark "${task.title}" done`}
@@ -72,9 +72,16 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
           {onHold && <p className="mt-0.5 text-xs text-text-muted">Waiting on: {task.waitingOn}</p>}
           {meta.length > 0 && <p className="mt-0.5 text-[11px] text-text-muted">{meta.join(' · ')}</p>}
         </button>
-        {/* Narrow columns: date and hand-over sit under the text so the title keeps its width */}
+        {/* Narrow columns: date and hand-over sit under the text so the title keeps its width.
+            With no date to show, they appear only on hover, over the top-right corner. */}
         {!showMeta && !onHold && (
-          <div className="mt-1.5 flex items-center gap-1.5">
+          <div
+            className={
+              part.due || (task.urgent && state !== 'blocked')
+                ? 'mt-1.5 flex items-center gap-1.5'
+                : 'absolute right-2 top-2 hidden items-center gap-1 rounded-lg bg-surface-primary p-0.5 shadow-sm ring-1 ring-border-muted group-hover:flex focus-within:flex'
+            }
+          >
             {state !== 'blocked' && (
               <DueMenu partId={part.id} due={part.due} state={state} today={actions.today} urgent={task.urgent} align="left" />
             )}
