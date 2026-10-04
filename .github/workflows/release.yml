@@ -1,0 +1,70 @@
+name: release
+
+# Cuts the release (CHANGELOG.md, tag, GitHub release) and posts its notes to
+# the staff #development channel in Slack.
+#
+# Separate from test-and-deploy on purpose. semantic-release only publishes
+# from the newest commit on main, and the seven-minute check job was always
+# overtaken by the next push when work was landing steadily — so no release
+# was cut and nothing reached Slack. This job takes about a minute, runs one
+# at a time, and checks out main as it is NOW rather than the commit that
+# triggered it, so whichever run goes last releases everything waiting.
+#
+# It does not wait for lint, tests or typecheck: Vercel deploys every push
+# regardless, so the release notes describe what is actually live. Gating
+# them on CI is how they went silent for four days in September 2026.
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # Remembered so the post below can tell whether a release was cut
+      - name: Note current version
+        id: before
+        run: echo "version=$(grep -m1 -oE '^#{1,2} \[[^]]+' CHANGELOG.md | sed -E 's/^#+ \[//')" >> "$GITHUB_OUTPUT"
+
+      - name: Semantic Release
+        run: pnpm run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_AUTH_TOKEN }}
+
+      # Staff changelog: the new release's features, improvements and fixes.
+      # Skips itself when no release was cut or the webhook is not set.
+      - name: Post release notes to Slack
+        run: node scripts/post-release-to-slack.mjs "${{ steps.before.outputs.version }}"
+        env:
+          SLACK_CHANGELOG_WEBHOOK_URL: ${{ secrets.SLACK_CHANGELOG_WEBHOOK_URL }}

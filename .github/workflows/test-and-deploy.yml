@@ -90,23 +90,9 @@ jobs:
       - name: Typecheck (no new errors)
         run: pnpm turbo run typecheck
 
-      # Remembered so the post below can tell whether a release was cut
-      - name: Note current version
-        id: before
-        run: echo "version=$(grep -m1 -oE '^#{1,2} \[[^]]+' CHANGELOG.md | sed -E 's/^#+ \[//')" >> "$GITHUB_OUTPUT"
-
-      - name: Semantic Release
-        run: pnpm run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_AUTH_TOKEN }}
-
-      # Staff changelog: the new release's features and fixes, to Slack.
-      # Skips itself when no release was cut or the webhook is not set.
-      - name: Post release notes to Slack
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: node scripts/post-release-to-slack.mjs "${{ steps.before.outputs.version }}"
-        env:
-          SLACK_CHANGELOG_WEBHOOK_URL: ${{ secrets.SLACK_CHANGELOG_WEBHOOK_URL }}
+      # Releasing and the Slack changelog live in release.yml: run here,
+      # seven minutes behind main, every release was overtaken by the next
+      # push and skipped.
 
   trigger-deploy:
     needs: [check]
