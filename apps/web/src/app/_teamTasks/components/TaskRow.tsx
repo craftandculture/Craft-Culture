@@ -13,7 +13,8 @@ interface TaskRowProps {
   state: PartState;
   board: Board;
   actions: CardActions;
-  /** Show the area and who else is on the job (wide lists) */
+  /** Wide lists (My tasks): show the area and who else is on the job, with the date on the right.
+   * Narrow columns (By person) put the date and hand-over under the text instead. */
   showMeta?: boolean;
 }
 
@@ -54,25 +55,40 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
         onChange={() => actions.onTick(part.id, true)}
         className="mt-0.5 size-4 shrink-0 cursor-pointer accent-teal-600 disabled:cursor-not-allowed disabled:opacity-40"
       />
-      <button type="button" onClick={() => actions.onOpen(task.id)} className="min-w-0 flex-1 text-left">
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-text-primary">
-          {task.urgent && !onHold && (
-            <span className="mr-1.5 inline-block size-2 -translate-y-px rounded-full bg-fill-danger align-middle" title="Urgent" />
-          )}
-          {task.title}
-        </p>
-        {label && <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{label}</p>}
-        {state === 'blocked' && first && (
-          <p className="mt-0.5 text-xs text-text-muted">
-            After {firstOwner ?? 'someone'}: {partLabel(task.title, first.what) ?? 'their part'}
+      <div className="min-w-0 flex-1">
+        <button type="button" onClick={() => actions.onOpen(task.id)} className="w-full text-left">
+          <p className="line-clamp-2 text-sm font-medium leading-snug text-text-primary">
+            {task.urgent && !onHold && (
+              <span className="mr-1.5 inline-block size-2 -translate-y-px rounded-full bg-fill-danger align-middle" title="Urgent" />
+            )}
+            {task.title}
           </p>
+          {label && <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{label}</p>}
+          {state === 'blocked' && first && (
+            <p className="mt-0.5 text-xs text-text-muted">
+              After {firstOwner ?? 'someone'}: {partLabel(task.title, first.what) ?? 'their part'}
+            </p>
+          )}
+          {onHold && <p className="mt-0.5 text-xs text-text-muted">Waiting on: {task.waitingOn}</p>}
+          {meta.length > 0 && <p className="mt-0.5 text-[11px] text-text-muted">{meta.join(' · ')}</p>}
+        </button>
+        {/* Narrow columns: date and hand-over sit under the text so the title keeps its width */}
+        {!showMeta && !onHold && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            {state !== 'blocked' && (
+              <DueMenu partId={part.id} due={part.due} state={state} today={actions.today} urgent={task.urgent} align="left" />
+            )}
+            <GiveToMenu partId={part.id} ownerId={part.ownerId} board={board} />
+          </div>
         )}
-        {onHold && <p className="mt-0.5 text-xs text-text-muted">Waiting on: {task.waitingOn}</p>}
-        {meta.length > 0 && <p className="mt-0.5 text-[11px] text-text-muted">{meta.join(' · ')}</p>}
-      </button>
-      {!onHold && <GiveToMenu partId={part.id} ownerId={part.ownerId} board={board} />}
-      {state !== 'blocked' && !onHold && (
-        <DueMenu partId={part.id} due={part.due} state={state} today={actions.today} urgent={task.urgent} />
+      </div>
+      {showMeta && !onHold && (
+        <>
+          <GiveToMenu partId={part.id} ownerId={part.ownerId} board={board} />
+          {state !== 'blocked' && (
+            <DueMenu partId={part.id} due={part.due} state={state} today={actions.today} urgent={task.urgent} />
+          )}
+        </>
       )}
     </div>
   );

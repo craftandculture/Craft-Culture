@@ -14,6 +14,8 @@ interface DueMenuProps {
   today: string;
   /** Urgent jobs cannot drop a date, and an undated one asks for one */
   urgent: boolean;
+  /** Which edge the picker opens from; 'left' when the date sits at the start of a line */
+  align?: 'left' | 'right';
 }
 
 const PICKS: { key: QuickDue; label: string }[] = [
@@ -29,7 +31,7 @@ const PICKS: { key: QuickDue; label: string }[] = [
  * Saves at once and writes the change to the job's history. An urgent part
  * with no date shows "Needs a date" so it is set before it can slip.
  */
-const DueMenu = ({ partId, due, state, today, urgent }: DueMenuProps) => {
+const DueMenu = ({ partId, due, state, today, urgent, align = 'right' }: DueMenuProps) => {
   const { setPartDue } = useTaskMutations();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ const DueMenu = ({ partId, due, state, today, urgent }: DueMenuProps) => {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-7 z-20 w-44 rounded-lg border border-border-muted bg-surface-primary p-1 shadow-lg">
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} top-7 z-20 w-44 rounded-lg border border-border-muted bg-surface-primary p-1 shadow-lg`}>
           {PICKS.map((p) => (
             <button
               key={p.key}

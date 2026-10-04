@@ -39,7 +39,7 @@ const ByPersonView = ({ board, tasks, actions }: { board: Board; tasks: BoardTas
         const active = rows.filter((r) => !r.task.waitingOn).length;
 
         return (
-          <div key={person.id} className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+          <div key={person.id} className="rounded-xl border border-border-muted bg-surface-primary">
             <div className="flex items-center gap-2 border-b border-border-muted px-3 py-2.5">
               <PersonBadge name={person.name} isViewer={person.id === board.viewerId} />
               <span className="text-sm font-semibold text-text-primary">{person.name}</span>
