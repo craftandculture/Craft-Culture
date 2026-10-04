@@ -102,13 +102,13 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-border-muted bg-fill-secondary p-0.5">
+        <div className="flex max-w-full overflow-x-auto rounded-lg border border-border-muted bg-fill-secondary p-0.5">
           {TABS.map((t) => (
             <button
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`h-8 rounded-md px-3 text-sm font-medium ${
+              className={`h-8 shrink-0 whitespace-nowrap rounded-md px-3 text-sm font-medium ${
                 tab === t.key ? 'bg-surface-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
               }`}
             >
@@ -121,7 +121,7 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search jobs"
-          className="h-9 w-48 rounded-lg border border-border-primary bg-surface-primary px-2.5 text-sm text-text-primary"
+          className="h-9 min-w-0 flex-1 rounded-lg border sm:w-48 sm:flex-none border-border-primary bg-surface-primary px-2.5 text-sm text-text-primary"
         />
         <select
           value={areaFilter}

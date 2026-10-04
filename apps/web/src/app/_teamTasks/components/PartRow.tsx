@@ -3,7 +3,9 @@
 import DueChip from './DueChip';
 import PersonBadge from './PersonBadge';
 import type { Board, BoardPart, BoardTask } from '../types/Board';
+import partLabel from '../utils/partLabel';
 import partState from '../utils/partState';
+import personName from '../utils/personName';
 
 interface PartRowProps {
   part: BoardPart;
@@ -12,6 +14,8 @@ interface PartRowProps {
   today: string;
   onTick: (partId: string, done: boolean) => void;
   busy?: boolean;
+  /** Show "No date" on undated parts (the job panel) */
+  showUndated?: boolean;
 }
 
 /**
@@ -20,7 +24,7 @@ interface PartRowProps {
  * Ticking marks only this part done; the job stays open until someone closes
  * it with the two-step close. A part waiting for another cannot be ticked.
  */
-const PartRow = ({ part, task, board, today, onTick, busy }: PartRowProps) => {
+const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRowProps) => {
   const state = partState(part, task, today);
   const owner = board.team.find((m) => m.id === part.ownerId);
   const first = part.waitsForPartId ? task.parts.find((p) => p.id === part.waitsForPartId) : undefined;
@@ -40,14 +44,16 @@ const PartRow = ({ part, task, board, today, onTick, busy }: PartRowProps) => {
       />
       <PersonBadge name={owner?.name ?? '?'} isViewer={part.ownerId === board.viewerId} />
       <div className="min-w-0 flex-1">
-        <p className={`text-sm ${part.done ? 'text-text-muted line-through' : 'text-text-primary'}`}>{part.what}</p>
+        <p className={`text-sm ${part.done ? 'text-text-muted line-through' : 'text-text-primary'}`}>
+          {partLabel(task.title, part.what) ?? 'Whole job'}
+        </p>
         {state === 'blocked' && first && (
           <p className="text-xs text-text-muted">
-            After {firstOwner?.name ?? 'someone'}: {first.what}
+            After {firstOwner ? personName(firstOwner.name) : 'someone'}: {partLabel(task.title, first.what) ?? 'their part'}
           </p>
         )}
       </div>
-      <DueChip due={part.due} state={state} />
+      <DueChip due={part.due} state={state} showUndated={showUndated} />
     </div>
   );
 };

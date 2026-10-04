@@ -5,6 +5,7 @@ import { teamTaskAreas, teamTaskNotes, teamTaskParts, teamTasks } from '@/databa
 import { teamProcedure } from '@/lib/trpc/procedures';
 
 import getTeam from '../data/getTeam';
+import personName from '../utils/personName';
 import { TASKS_WEBHOOK_ENV } from '../utils/postTasksSlack';
 
 /** How far back the Done tab reaches */
@@ -52,7 +53,7 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
     viewerIsAdmin: ctx.user.role === 'admin',
     slackConnected: Boolean(process.env[TASKS_WEBHOOK_ENV]),
     areas: areas.map((a) => ({ id: a.id, name: a.name })),
-    team: team.map((m) => ({ id: m.id, name: m.name, linkedToSlack: Boolean(m.slackMemberId), slackMemberId: m.slackMemberId })),
+    team: team.map((m) => ({ id: m.id, name: personName(m.name), linkedToSlack: Boolean(m.slackMemberId), slackMemberId: m.slackMemberId })),
     tasks: tasks.map((t) => ({
       id: t.id,
       title: t.title,

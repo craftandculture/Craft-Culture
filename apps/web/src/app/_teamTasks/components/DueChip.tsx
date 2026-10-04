@@ -11,8 +11,10 @@ const styles: Record<PartState, string> = {
   done: 'bg-fill-success/15 text-text-success',
 };
 
-/** A part's due date, coloured by how close it is */
-const DueChip = ({ due, state }: { due: string | null; state: PartState }) => {
+/** A part's due date, coloured by how close it is; undated parts show nothing unless asked */
+const DueChip = ({ due, state, showUndated = false }: { due: string | null; state: PartState; showUndated?: boolean }) => {
+  if (state === 'undated' && !showUndated) return null;
+
   const text =
     state === 'blocked'
       ? 'Waiting'

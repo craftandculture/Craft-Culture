@@ -11,11 +11,19 @@ const DoneView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask[];
 
   if (!done.length) return <p className="py-12 text-center text-sm text-text-muted">Nothing closed in the last 60 days.</p>;
 
+  const weekAgo = Date.now() - 7 * 864e5;
+  const heading = (t: BoardTask) => (new Date(t.closedAt ?? 0).getTime() >= weekAgo ? 'Last 7 days' : 'Earlier');
+
   return (
-    <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
-      {done.map((t) => (
+    <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+      {done.map((t, i) => (
+        <div key={t.id}>
+          {(i === 0 || heading(done[i - 1]!) !== heading(t)) && (
+            <p className="bg-fill-secondary px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-text-muted">
+              {heading(t)}
+            </p>
+          )}
         <button
-          key={t.id}
           type="button"
           onClick={() => actions.onOpen(t.id)}
           className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-fill-secondary"
@@ -30,6 +38,7 @@ const DoneView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask[];
               new Date(t.closedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' })}
           </span>
         </button>
+        </div>
       ))}
     </div>
   );

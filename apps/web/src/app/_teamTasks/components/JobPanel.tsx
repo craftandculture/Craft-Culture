@@ -91,6 +91,7 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                     board={board}
                     today={today}
                     busy={busy}
+                    showUndated
                     onTick={(partId, done) => m.tickPart.mutate({ partId, done })}
                   />
                 ))}
