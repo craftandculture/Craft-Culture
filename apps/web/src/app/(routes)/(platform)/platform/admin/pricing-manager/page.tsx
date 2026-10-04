@@ -24,7 +24,16 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 
 import Card from '@/app/_ui/components/Card/Card';
@@ -98,6 +107,42 @@ const shortOwner = (name: string): string => {
   return name.replace(/\b(Ltd|LLC|ApS|Trading|Limited|SPC)\b/gi, '').replace(/\s{2,}/g, ' ').trim();
 };
 
+// ─── Display currency ─────────────────────────────────────────────────────────
+
+/** AED per USD — the dirham peg, the same rate the price lists convert at */
+const AED_PER_USD = 3.6725;
+
+type DisplayCurrency = 'USD' | 'AED';
+
+/**
+ * The currency prices are shown in. Every price is stored and edited in USD;
+ * this only changes how a figure is written on screen.
+ */
+const CurrencyContext = createContext<DisplayCurrency>('USD');
+
+/**
+ * Write a USD amount in the display currency
+ *
+ * @example
+ *   money(14.28, 'USD'); // "$14.28"
+ *   money(14.28, 'AED'); // "AED 52.44"
+ *   money(5881, 'AED', 0); // "AED 21,598"
+ *
+ * @param usd - Amount in USD
+ * @param ccy - Currency to show it in
+ * @param decimals - Decimal places (default 2)
+ * @returns The formatted amount
+ */
+const money = (usd: number, ccy: DisplayCurrency, decimals = 2) => {
+  const v = ccy === 'AED' ? usd * AED_PER_USD : usd;
+  const n = v.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+
+  return ccy === 'AED' ? `AED ${n}` : `$${n}`;
+};
+
 // ─── PriceCell (click-to-edit) ────────────────────────────────────────────────
 
 /**
@@ -111,10 +156,14 @@ const shortOwner = (name: string): string => {
  *
  * @param perBottle - The per-bottle price
  * @param caseConfig - Bottles in the case
+ * @param ccy - Currency to show it in
  * @returns e.g. "$5,881/case"
  */
-const casePrice = (perBottle: number, caseConfig: number) =>
-  `$${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
+const casePrice = (
+  perBottle: number,
+  caseConfig: number,
+  ccy: DisplayCurrency = 'USD',
+) => `${money(perBottle * caseConfig, ccy, 0)}/case`;
 
 /**
  * Profit per bottle and per case, in the units wine is actually sold in
@@ -126,10 +175,15 @@ const casePrice = (perBottle: number, caseConfig: number) =>
  *
  * @param perBottle - Profit on one bottle
  * @param caseConfig - Bottles in the case
+ * @param ccy - Currency to show it in
  * @returns e.g. "$14.28/btl · $86/case"
  */
-const profitPerUnit = (perBottle: number, caseConfig: number) =>
-  `$${perBottle.toFixed(2)}/btl · $${Math.round(perBottle * caseConfig).toLocaleString('en-US')}/case`;
+const profitPerUnit = (
+  perBottle: number,
+  caseConfig: number,
+  ccy: DisplayCurrency = 'USD',
+) =>
+  `${money(perBottle, ccy)}/btl · ${money(perBottle * caseConfig, ccy, 0)}/case`;
 
 /** The shipment statuses the in-transit price list will publish from */
 const INBOUND_LISTABLE = [
@@ -168,6 +222,7 @@ const PriceCell = ({
    */
   hintFor?: (price: number) => string | null;
 }) => {
+  const ccy = useContext(CurrencyContext);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
   /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
@@ -193,7 +248,7 @@ const PriceCell = ({
           }}
         >
           {value != null && value > 0 ? (
-            `${suggested ? '~' : ''}$${value.toFixed(2)}`
+            `${suggested ? '~' : ''}${money(value, ccy)}`
           ) : (
             <span className="text-text-muted/40">—</span>
           )}
@@ -240,7 +295,9 @@ const PriceCell = ({
           commit();
         }}
       >
-        <span className="text-xs text-text-muted">$</span>
+        <span className="text-xs text-text-muted">
+          {ccy === 'AED' ? 'USD' : '$'}
+        </span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -298,6 +355,7 @@ const OverrideCell = ({
   onSave: (v: number | null) => void;
   tdClassName?: string;
 }) => {
+  const ccy = useContext(CurrencyContext);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
   /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
@@ -318,7 +376,7 @@ const OverrideCell = ({
           }}
         >
           {has ? (
-            `${value! >= 0 ? '+' : '−'}$${Math.abs(value!).toFixed(2)}`
+            `${value! >= 0 ? '+' : '−'}${money(Math.abs(value!), ccy)}`
           ) : (
             <span className="text-text-muted/40">—</span>
           )}
@@ -358,7 +416,9 @@ const OverrideCell = ({
           commit();
         }}
       >
-        <span className="text-xs text-text-muted">$</span>
+        <span className="text-xs text-text-muted">
+          {ccy === 'AED' ? 'USD' : '$'}
+        </span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -495,6 +555,7 @@ const LogisticsCell = ({
   onSave: (v: number | null) => void;
   tdClassName?: string;
 }) => {
+  const ccy = useContext(CurrencyContext);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
   /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
@@ -520,7 +581,7 @@ const LogisticsCell = ({
           }
         >
           {effective != null ? (
-            `$${effective.toFixed(2)}`
+            money(effective, ccy)
           ) : (
             <span className="text-text-muted/40">—</span>
           )}
@@ -560,7 +621,9 @@ const LogisticsCell = ({
           commit();
         }}
       >
-        <span className="text-xs text-text-muted">$</span>
+        <span className="text-xs text-text-muted">
+          {ccy === 'AED' ? 'USD' : '$'}
+        </span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -605,6 +668,7 @@ const TransfersCell = ({
   onSave: (v: number | null) => void;
   tdClassName?: string;
 }) => {
+  const ccy = useContext(CurrencyContext);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
   /** Set by Escape so a blur racing the unmount cannot commit the abandoned edit */
@@ -630,7 +694,7 @@ const TransfersCell = ({
           }
         >
           {effective != null ? (
-            `$${effective.toFixed(2)}`
+            money(effective, ccy)
           ) : (
             <span className="text-text-muted/40">—</span>
           )}
@@ -670,7 +734,9 @@ const TransfersCell = ({
           commit();
         }}
       >
-        <span className="text-xs text-text-muted">$</span>
+        <span className="text-xs text-text-muted">
+          {ccy === 'AED' ? 'USD' : '$'}
+        </span>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -870,6 +936,23 @@ const PricingManagerPage = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
+  // Display currency, remembered per browser. Prices stay stored in USD.
+  const [currency, setCurrency] = useState<DisplayCurrency>('USD');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('pm_currency') === 'AED') setCurrency('AED');
+    } catch {
+      // storage blocked — stay on USD
+    }
+  }, []);
+  const changeCurrency = (next: DisplayCurrency) => {
+    setCurrency(next);
+    try {
+      localStorage.setItem('pm_currency', next);
+    } catch {
+      // storage blocked — the choice just won't persist
+    }
+  };
 
   // State
   const [search, setSearch] = useState('');
@@ -1458,10 +1541,12 @@ const PricingManagerPage = () => {
     return (1 - importPrice / sellPrice) * 100;
   };
 
-  const formatValue = (v: number) => {
-    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-    if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
-    return `$${v.toFixed(0)}`;
+  const formatValue = (usd: number) => {
+    const v = currency === 'AED' ? usd * AED_PER_USD : usd;
+    const sym = currency === 'AED' ? 'AED ' : '$';
+    if (v >= 1_000_000) return `${sym}${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${sym}${(v / 1_000).toFixed(1)}K`;
+    return `${sym}${v.toFixed(0)}`;
   };
 
   // Excel export — pages through ALL filtered rows (not just the current page)
@@ -1606,6 +1691,7 @@ const PricingManagerPage = () => {
   const thBase = 'cursor-pointer select-none text-xs font-medium text-text-muted';
 
   return (
+    <CurrencyContext.Provider value={currency}>
     <div className="mx-auto max-w-[1400px] space-y-6 p-6">
       {/* Breadcrumb + Header */}
       <div>
@@ -1988,6 +2074,27 @@ const PricingManagerPage = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Display currency — every figure on screen; edits stay in USD */}
+        <div
+          className="flex overflow-hidden rounded-lg border border-border-primary text-sm font-medium"
+          title="Show prices in USD or AED (at 3.6725). Prices are still entered in USD."
+        >
+          {(['USD', 'AED'] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => changeCurrency(c)}
+              className={`px-3 py-2 transition-colors ${
+                currency === c
+                  ? 'bg-text-primary text-background-primary'
+                  : 'bg-background-primary text-text-secondary hover:bg-surface-muted'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
 
         {/* Export all filtered rows → Excel */}
@@ -2997,7 +3104,7 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-slate-300"
                           sub={
                             importPrice != null && importPrice > 0
-                              ? casePrice(importPrice, caseConfig)
+                              ? casePrice(importPrice, caseConfig, currency)
                               : undefined
                           }
                           onSave={(v) =>
@@ -3047,11 +3154,11 @@ const PricingManagerPage = () => {
                         {/* Landed (emphasised) */}
                         <td className="px-3 py-2.5 text-right tabular-nums">
                           <div className="font-semibold text-text-primary">
-                            {landed != null ? `$${landed.toFixed(2)}` : '—'}
+                            {landed != null ? money(landed, currency) : '—'}
                           </div>
                           {landed != null && (
                             <div className="text-[11px] font-medium text-text-muted">
-                              {casePrice(landed, caseConfig)}
+                              {casePrice(landed, caseConfig, currency)}
                             </div>
                           )}
                         </td>
@@ -3067,13 +3174,13 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-blue-300"
                           sub={
                             inBondPrice != null
-                              ? casePrice(inBondPrice, caseConfig)
+                              ? casePrice(inBondPrice, caseConfig, currency)
                               : undefined
                           }
                           hintFor={(price) =>
                             landed != null && landed > 0 && price > 0
                               ? price <= landed
-                                ? `below cost — landed is $${landed.toFixed(2)}`
+                                ? `below cost — landed is ${money(landed, currency)}`
                                 : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
                               : null
                           }
@@ -3096,7 +3203,7 @@ const PricingManagerPage = () => {
                           tdClassName="border-l-2 border-violet-300"
                           sub={
                             sellPrice != null && sellPrice > 0
-                              ? casePrice(sellPrice, caseConfig)
+                              ? casePrice(sellPrice, caseConfig, currency)
                               : undefined
                           }
                           onSave={(v) => {
@@ -3227,7 +3334,7 @@ const PricingManagerPage = () => {
                                     </span>
                                   </span>
                                   <span className="tabular-nums text-text-secondary">
-                                    {profitPerUnit(displayMarginPerBottle, caseConfig)}
+                                    {profitPerUnit(displayMarginPerBottle, caseConfig, currency)}
                                   </span>
                                   <span className="text-[10px] uppercase tracking-wide text-text-muted">
                                     {marginBasis === 'ibLanded'
@@ -3247,7 +3354,7 @@ const PricingManagerPage = () => {
                                   </span>
                                   <span className="text-text-muted">/btl</span>
                                   <span className="ml-1.5 text-[10px] text-text-muted/70">
-                                    {casePrice(lastSold.pricePerBottle, caseConfig)}
+                                    {casePrice(lastSold.pricePerBottle, caseConfig, currency)}
                                   </span>
                                 </span>
                                 <span
@@ -3340,6 +3447,7 @@ const PricingManagerPage = () => {
         </div>
       )}
     </div>
+    </CurrencyContext.Provider>
   );
 };
 
