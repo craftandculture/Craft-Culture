@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import HomeTasksCard from '@/app/_teamTasks/components/HomeTasksCard';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -412,6 +413,8 @@ const MorningViewContent = () => {
 
         {/* Right column — Recent Orders + Quick Actions */}
         <div className="space-y-5 lg:col-span-2">
+          <HomeTasksCard />
+
           {/* Recent Orders */}
           <Card>
             <CardContent className="p-0">

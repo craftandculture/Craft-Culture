@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import sendMorningDigests from '@/app/_teamTasks/data/sendMorningDigests';
 import sendOverdueAlerts from '@/app/_teamTasks/data/sendOverdueAlerts';
 import sendWeeklyRoundUp from '@/app/_teamTasks/data/sendWeeklyRoundUp';
 import logger from '@/utils/logger';
@@ -11,7 +12,7 @@ export const maxDuration = 60;
  * Team Tasks morning run, on Vercel's schedule
  *
  * Called at 03:00 UTC (07:00 Dubai). Every day: tag owners of parts that have
- * just gone overdue, once. On Fridays (Dubai), also post the week's round-up.
+ * just gone overdue, once, and send each person their own list. On Fridays (Dubai), also post the week's round-up.
  * Refuses any call without `Authorization: Bearer <CRON_SECRET>`, and every
  * call when the secret is unset.
  */
@@ -24,10 +25,11 @@ export const GET = async (request: Request) => {
 
   try {
     const overdue = await sendOverdueAlerts();
+    const digests = await sendMorningDigests();
     const weekday = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', weekday: 'long' }).format(new Date());
     const roundUp = weekday === 'Friday' ? await sendWeeklyRoundUp() : null;
 
-    return NextResponse.json({ overdue, roundUp });
+    return NextResponse.json({ overdue, digests, roundUp });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
