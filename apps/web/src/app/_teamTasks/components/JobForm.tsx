@@ -51,7 +51,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
   const [title, setTitle] = useState(task?.title ?? prefill?.title ?? '');
   const [linkUrl, setLinkUrl] = useState<string | null>(task?.linkUrl ?? prefill?.linkUrl ?? null);
   const [linkLabel] = useState<string | null>(task?.linkLabel ?? prefill?.linkLabel ?? null);
-  const [partnerId] = useState<string | null>(task?.partnerId ?? null);
+  const [partnerId, setPartnerId] = useState<string | null>(task?.partnerId ?? null);
   const [areaId, setAreaId] = useState<string>(task?.areaId ?? board.areas[0]?.id ?? NEW_AREA);
   const [newAreaName, setNewAreaName] = useState('');
   const [forTag, setForTag] = useState<JobInput['forTag']>(task?.forTag ?? null);
@@ -69,6 +69,13 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
     })) ?? [{ ownerId: board.viewerId, what: '', due: null, waitsForIndex: null }],
   );
   const [error, setError] = useState<string | null>(null);
+
+  // C&C staff, plus the people at the partner this job is shared with
+  const owners = [
+    ...board.team.filter((m) => !m.partnerId),
+    ...board.partnerPeople.filter((p) => partnerId && p.partnerId === partnerId).filter((p) => !board.team.some((m) => m.id === p.id && !m.partnerId)),
+  ];
+  const partnerName = board.partners.find((p) => p.id === partnerId)?.name;
 
   const setPart = (i: number, patch: Partial<FormPart>) =>
     setParts((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
@@ -94,6 +101,9 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
     if (areaId === NEW_AREA && !newAreaName.trim()) return setError('Name the new area.');
     if (cleanParts.some((p) => !p.what.trim())) return setError('Fill in what each person does, in the box next to their name.');
     if (urgent && cleanParts.some((p) => !p.due)) return setError('Urgent jobs need a due date on every part.');
+    if (cleanParts.some((p) => !owners.some((o) => o.id === p.ownerId))) {
+      return setError('A part belongs to a partner this job is no longer shared with. Give it to someone else.');
+    }
 
     const input: JobInput = {
       title: title.trim(),
@@ -224,6 +234,30 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
             />
           )}
 
+          <div>
+            <label className={label} htmlFor="tt-partner">
+              Share with a partner
+            </label>
+            <select
+              id="tt-partner"
+              className={field}
+              value={partnerId ?? ''}
+              onChange={(e) => setPartnerId(e.target.value || null)}
+            >
+              <option value="">Not shared (C&amp;C only)</option>
+              {board.partners.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {partnerId && (
+              <p className="mt-1 text-xs text-text-warning">
+                {partnerName} will see this job, every part and all notes, and can tick their own parts.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <p className={label}>Who does what</p>
             {parts.map((p, i) => (
@@ -235,9 +269,9 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
                     value={p.ownerId}
                     onChange={(e) => setPart(i, { ownerId: e.target.value })}
                   >
-                    {board.team.map((m) => (
+                    {owners.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name}
+                        {'partnerId' in m && m.partnerId && partnerName ? `${m.name} (${partnerName})` : m.name}
                       </option>
                     ))}
                   </select>
@@ -300,7 +334,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
                       {parts.map((q, j) =>
                         j === i ? null : (
                           <option key={j} value={j}>
-                            After {board.team.find((m) => m.id === q.ownerId)?.name ?? '?'}: {q.what || `part ${j + 1}`}
+                            After {owners.find((m) => m.id === q.ownerId)?.name ?? '?'}: {q.what || `part ${j + 1}`}
                           </option>
                         ),
                       )}

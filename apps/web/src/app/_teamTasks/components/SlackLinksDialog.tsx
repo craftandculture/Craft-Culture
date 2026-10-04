@@ -21,7 +21,7 @@ import type { Board } from '../types/Board';
 const SlackLinksDialog = ({ board, open, onOpenChange }: { board: Board; open: boolean; onOpenChange: (o: boolean) => void }) => {
   const { setSlackIds } = useTaskMutations();
   const [ids, setIds] = useState<Record<string, string>>(
-    Object.fromEntries(board.team.map((m) => [m.id, m.slackMemberId ?? ''])),
+    Object.fromEntries(board.team.filter((m) => !m.partnerId).map((m) => [m.id, m.slackMemberId ?? ''])),
   );
 
   return (
@@ -35,7 +35,7 @@ const SlackLinksDialog = ({ board, open, onOpenChange }: { board: Board; open: b
             Paste each person&apos;s Slack member ID so #tasks can tag them. In Slack, open their profile, press the
             three dots, then Copy member ID.
           </p>
-          {board.team.map((m) => (
+          {board.team.filter((m) => !m.partnerId).map((m) => (
             <label key={m.id} className="flex items-center gap-3 text-sm text-text-primary">
               <span className="w-32 shrink-0 truncate">{m.name}</span>
               <input

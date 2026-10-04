@@ -39,6 +39,7 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
     showMeta && others.length > 0 && `with ${others.join(', ')}`,
     showMeta && task.parts.length > 1 && `${done} of ${task.parts.length} parts done`,
     task.linkLabel,
+    task.partnerId && `Shared with ${board.partners.find((p) => p.id === task.partnerId)?.name ?? 'a partner'}`,
     task.forTag === 'client' ? 'Client' : task.forTag === 'distributor' ? 'Distributor' : null,
     task.repeat && `Repeats ${task.repeat}`,
   ].filter(Boolean);

@@ -43,6 +43,11 @@ const ByPersonView = ({ board, tasks, actions }: { board: Board; tasks: BoardTas
             <div className="flex items-center gap-2 border-b border-border-muted px-3 py-2.5">
               <PersonBadge name={person.name} isViewer={person.id === board.viewerId} />
               <span className="text-sm font-semibold text-text-primary">{person.name}</span>
+              {person.partnerId && (
+                <span className="rounded-full bg-fill-muted px-1.5 py-0.5 text-[10px] text-text-muted">
+                  {board.partners.find((p) => p.id === person.partnerId)?.name ?? 'Partner'}
+                </span>
+              )}
               <span className="ml-auto flex items-center gap-1.5 text-xs">
                 {overdue > 0 && (
                   <span className="rounded-full bg-fill-danger/15 px-1.5 py-0.5 font-semibold text-text-danger">{overdue} overdue</span>

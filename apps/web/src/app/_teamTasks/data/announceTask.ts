@@ -4,7 +4,7 @@ import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
 import serverConfig from '@/server.config';
 
-import getTeam from './getTeam';
+import getPeople from './getPeople';
 import postTasksSlack from '../utils/postTasksSlack';
 import shortDate from '../utils/shortDate';
 
@@ -41,7 +41,7 @@ const announceTask = async (taskId: string, kind: Kind) => {
     .from(teamTaskParts)
     .where(eq(teamTaskParts.taskId, taskId))
     .orderBy(asc(teamTaskParts.position));
-  const team = await getTeam();
+  const team = await getPeople();
   const tag = (userId: string) => {
     const member = team.find((m) => m.id === userId);
     if (!member) return 'someone';

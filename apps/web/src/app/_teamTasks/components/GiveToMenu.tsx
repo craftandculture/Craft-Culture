@@ -22,7 +22,7 @@ const GiveToMenu = ({ partId, ownerId, board }: { partId: string; ownerId: strin
     >
       <option value="">Give to…</option>
       {board.team
-        .filter((m) => m.id !== ownerId)
+        .filter((m) => m.id !== ownerId && !m.partnerId)
         .map((m) => (
           <option key={m.id} value={m.id}>
             {m.name}

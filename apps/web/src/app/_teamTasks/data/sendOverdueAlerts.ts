@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, lt } from 'drizzle-orm';
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
 
-import getTeam from './getTeam';
+import getPeople from './getPeople';
 import dubaiToday from '../utils/dubaiToday';
 import postTasksSlack from '../utils/postTasksSlack';
 import shortDate from '../utils/shortDate';
@@ -37,7 +37,7 @@ const sendOverdueAlerts = async () => {
 
   if (!rows.length) return { alerted: 0, posted: false };
 
-  const team = await getTeam();
+  const team = await getPeople();
   const tag = (id: string) => {
     const m = team.find((t) => t.id === id);
     return m?.slackMemberId ? `<@${m.slackMemberId}>` : `*${m?.name ?? 'someone'}*`;

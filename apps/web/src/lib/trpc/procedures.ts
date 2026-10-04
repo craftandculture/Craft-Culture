@@ -104,6 +104,38 @@ export const teamProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
+ * Partner task procedure
+ *
+ * For partner logins (wine partner, distributor or private collector) on the
+ * jobs C&C has shared with their partner in Team Tasks. Injects the partnerId
+ * so every read and write is limited to that partner's shared jobs.
+ */
+export const partnerTaskProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    const { default: resolvePartnerForUser } = await import(
+      '@/app/_partners/data/resolvePartnerForUser'
+    );
+
+    const partner = await resolvePartnerForUser(
+      ctx.user.id,
+      ['wine_partner', 'distributor', 'private_collector'],
+      ctx.user.partnerId,
+    );
+
+    if (!partner || partner.status !== 'active') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You are not linked to an active partner account.',
+      });
+    }
+
+    return await next({
+      ctx: { ...ctx, partner, partnerId: partner.id },
+    });
+  },
+);
+
+/**
  * Wine Partner procedure
  *
  * Accessible to users linked to a wine partner (wine company) via:

@@ -8,6 +8,7 @@ import { teamProcedure } from '@/lib/trpc/procedures';
 
 import announceTask from '../data/announceTask';
 import logTaskEvent from '../data/logTaskEvent';
+import notifyPartnerPeople from '../data/notifyPartnerPeople';
 import resolveArea from '../data/resolveArea';
 import writeParts from '../data/writeParts';
 import jobSchema from '../schemas/jobSchema';
@@ -48,6 +49,7 @@ const updateJob = teamProcedure
     });
 
     await logTaskEvent(input.taskId, ctx.user.id, `${ctx.user.name} edited the job`);
+    if (input.partnerId && input.partnerId !== before.partnerId) await notifyPartnerPeople(input.taskId);
 
     const started = Boolean(before.waitingOn) && !input.waitingOn && before.status === 'open';
     if (started) await logTaskEvent(input.taskId, ctx.user.id, `${ctx.user.name} recorded the go-ahead`);

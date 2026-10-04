@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, gte, inArray, ne, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { teamTaskAreas, teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
+import { partners, teamTaskAreas, teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
 import { teamProcedure } from '@/lib/trpc/procedures';
 
+import getPartnerPeople, { SHARE_PARTNER_TYPES } from '../data/getPartnerPeople';
 import getTeam from '../data/getTeam';
 import personName from '../utils/personName';
 import { TASKS_WEBHOOK_ENV } from '../utils/postTasksSlack';
@@ -24,7 +25,7 @@ const DONE_DAYS = 60;
 const getBoard = teamProcedure.query(async ({ ctx }) => {
   const since = new Date(Date.now() - DONE_DAYS * 864e5);
 
-  const [areas, tasks, team] = await Promise.all([
+  const [areas, tasks, team, partnerPeople, partnerList] = await Promise.all([
     db.select().from(teamTaskAreas).orderBy(asc(teamTaskAreas.position), asc(teamTaskAreas.name)),
     db
       .select()
@@ -32,6 +33,12 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
       .where(or(eq(teamTasks.status, 'open'), and(ne(teamTasks.status, 'open'), gte(teamTasks.closedAt, since))))
       .orderBy(desc(teamTasks.closedAt), asc(teamTasks.createdAt)),
     getTeam(),
+    getPartnerPeople(),
+    db
+      .select({ id: partners.id, name: partners.businessName })
+      .from(partners)
+      .where(and(inArray(partners.type, [...SHARE_PARTNER_TYPES]), eq(partners.status, 'active')))
+      .orderBy(asc(partners.businessName)),
   ]);
 
   const ids = tasks.map((t) => t.id);
@@ -53,7 +60,22 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
     viewerIsAdmin: ctx.user.role === 'admin',
     slackConnected: Boolean(process.env[TASKS_WEBHOOK_ENV]),
     areas: areas.map((a) => ({ id: a.id, name: a.name })),
-    team: team.map((m) => ({ id: m.id, name: personName(m.name), linkedToSlack: Boolean(m.slackMemberId), slackMemberId: m.slackMemberId })),
+    team: [
+      ...team.map((m) => ({
+        id: m.id,
+        name: personName(m.name),
+        linkedToSlack: Boolean(m.slackMemberId),
+        slackMemberId: m.slackMemberId,
+        partnerId: null as string | null,
+      })),
+      // Partner people who hold a part on a job shown here, so they are named
+      ...partnerPeople
+        .filter((p) => !team.some((m) => m.id === p.id) && parts.some((q) => q.ownerId === p.id))
+        .filter((p, i, all) => all.findIndex((q) => q.id === p.id) === i)
+        .map((p) => ({ id: p.id, name: personName(p.name), linkedToSlack: false, slackMemberId: null, partnerId: p.partnerId as string | null })),
+    ],
+    partners: partnerList,
+    partnerPeople: partnerPeople.map((p) => ({ ...p, name: personName(p.name) })),
     tasks: tasks.map((t) => ({
       id: t.id,
       title: t.title,

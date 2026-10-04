@@ -71,6 +71,11 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                   </span>
                 )}
                 {task.repeat && <span className="rounded-full bg-fill-muted px-2 py-0.5 text-text-muted">Repeats {task.repeat}</span>}
+                {task.partnerId && (
+                  <span className="rounded-full bg-fill-brand/10 px-2 py-0.5 text-text-brand">
+                    Shared with {board.partners.find((p) => p.id === task.partnerId)?.name ?? 'a partner'}
+                  </span>
+                )}
               </div>
             </div>
 

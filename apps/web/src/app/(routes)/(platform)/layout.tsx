@@ -9,6 +9,7 @@ import UserDropdown from '@/app/_auth/components/UserDropdown';
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import isStaff from '@/app/_distribution/utils/isStaff';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
+import PartnerTasksNavLink from '@/app/_teamTasks/components/PartnerTasksNavLink';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
@@ -228,6 +229,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </Link>
                 </div>
               )}
+              {/* Shared jobs from Team Tasks; appears only once one is shared */}
+              {user.role !== 'admin' && user.role !== 'wms_operator' && <PartnerTasksNavLink />}
               {/* Admin top nav - 6 section items */}
               {(user.role === 'admin' || user.role === 'wms_operator') && <AdminTopNav userRole={user.role} />}
             </nav>

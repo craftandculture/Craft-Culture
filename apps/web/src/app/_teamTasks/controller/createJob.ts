@@ -4,6 +4,7 @@ import { teamProcedure } from '@/lib/trpc/procedures';
 
 import announceTask from '../data/announceTask';
 import logTaskEvent from '../data/logTaskEvent';
+import notifyPartnerPeople from '../data/notifyPartnerPeople';
 import resolveArea from '../data/resolveArea';
 import writeParts from '../data/writeParts';
 import jobSchema from '../schemas/jobSchema';
@@ -37,6 +38,7 @@ const createJob = teamProcedure.input(jobSchema).mutation(async ({ input, ctx })
   });
 
   await logTaskEvent(taskId, ctx.user.id, `${ctx.user.name} added the job`);
+  if (input.partnerId) await notifyPartnerPeople(taskId);
   const slack = input.waitingOn ? { posted: false, reason: 'waiting' as const } : await announceTask(taskId, 'opened');
 
   return { taskId, slack };
