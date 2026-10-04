@@ -2,9 +2,9 @@
  * Post the newest release's notes to the staff changelog channel in Slack
  *
  * Run by CI straight after semantic-release. Reads the top section of
- * CHANGELOG.md — the release just cut — and posts its Features and Bug Fixes
- * as plain sentences. Refactors, docs and tests are left out: the channel is
- * for staff, who want to know what changed for them, not how the code moved.
+ * CHANGELOG.md — the release just cut — and posts its Features, Improvements
+ * (refine/style: visible polish) and Bug Fixes as plain sentences. Refactors,
+ * docs and tests are left out: the channel is for staff, who want to know what changed for them, not how the code moved.
  *
  * Does nothing when no release was cut (the top version is the one passed in
  * as the version before), or when SLACK_CHANGELOG_WEBHOOK_URL is not set, so a
@@ -22,6 +22,7 @@ const appUrl = 'https://wine.craftculture.xyz';
 /** Sections staff see, and what they are called in the channel */
 const SECTIONS = {
   Features: ':sparkles: *New*',
+  Improvements: ':art: *Improved*',
   'Bug Fixes': ':wrench: *Fixed*',
   'Performance Improvements': ':zap: *Faster*',
 };
