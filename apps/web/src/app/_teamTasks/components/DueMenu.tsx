@@ -56,7 +56,7 @@ const DueMenu = ({ partId, due, state, today, urgent, align = 'right' }: DueMenu
         type="button"
         onClick={() => setOpen((o) => !o)}
         title="Change the due date"
-        className="rounded-full outline-offset-2 hover:ring-1 hover:ring-border-brand"
+        className="rounded-full outline-offset-2 hover:ring-1 hover:ring-border-primary"
       >
         {needsDate ? (
           <span className="inline-flex items-center rounded-full border border-dashed border-border-danger px-2 py-0.5 text-[11px] font-medium text-text-danger">

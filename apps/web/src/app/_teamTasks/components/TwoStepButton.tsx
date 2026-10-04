@@ -14,7 +14,7 @@ interface TwoStepButtonProps {
 }
 
 const tones = {
-  brand: 'border-border-brand bg-fill-brand text-text-brand-on-fill',
+  brand: 'border-text-primary bg-text-primary text-surface-primary',
   danger: 'border-border-danger bg-fill-danger text-text-danger-on-fill',
   neutral: 'border-border-primary bg-fill-primary text-text-primary',
 };

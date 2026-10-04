@@ -35,7 +35,7 @@ const QuickAdd = ({ board }: { board: Board }) => {
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-dashed border-border-muted bg-surface-primary px-3 py-1.5 focus-within:border-border-brand">
+    <div className="flex items-center gap-2 rounded-xl border border-dashed border-border-muted bg-surface-primary px-3 py-1.5 focus-within:border-text-muted">
       <span className="text-lg leading-none text-text-muted">+</span>
       <input
         value={title}

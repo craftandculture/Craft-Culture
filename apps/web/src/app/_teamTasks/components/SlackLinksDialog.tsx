@@ -58,7 +58,7 @@ const SlackLinksDialog = ({ board, open, onOpenChange }: { board: Board; open: b
                   { onSuccess: () => onOpenChange(false) },
                 )
               }
-              className="h-9 rounded-lg border border-border-brand bg-fill-brand px-4 text-sm font-medium text-text-brand-on-fill disabled:opacity-50"
+              className="h-9 rounded-lg border border-text-primary bg-text-primary px-4 text-sm font-medium text-surface-primary disabled:opacity-50"
             >
               Save
             </button>

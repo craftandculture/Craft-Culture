@@ -41,7 +41,7 @@ const MakeJobButton = ({ linkUrl, linkLabel, title }: MakeJobButtonProps) => {
         <Link
           href={`/platform/admin/tasks?job=${openJobs[0]!.id}`}
           title={openJobs.map((j) => `${j.title} (${j.done}/${j.total})`).join('\n')}
-          className="inline-flex h-8 items-center rounded-lg bg-fill-brand/10 px-2.5 text-xs font-medium text-text-brand"
+          className="inline-flex h-8 items-center rounded-lg bg-surface-muted px-2.5 text-xs font-medium text-text-primary"
         >
           {openJobs.length} open job{openJobs.length === 1 ? '' : 's'}
         </Link>

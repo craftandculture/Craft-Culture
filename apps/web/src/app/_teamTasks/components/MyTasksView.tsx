@@ -52,8 +52,8 @@ const MyTasksView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask
       )}
       {ready.length > 0 && (
         <section>
-          <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-success">
-            Ready to close <span className="font-normal">· {ready.length}</span>
+          <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-success">
+            Ready to close <span className="ml-1 rounded-full bg-surface-muted px-1.5 py-0.5 font-medium normal-case tracking-normal text-text-muted">{ready.length}</span>
           </h2>
           <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-success/50 bg-surface-primary">
             {ready.map((task) => (
@@ -74,10 +74,10 @@ const MyTasksView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask
         if (!items.length) return null;
         return (
           <section key={g.key}>
-            <h2 className={`mb-1.5 text-xs font-semibold uppercase tracking-wide ${g.tone ?? 'text-text-muted'}`}>
-              {g.title} <span className="font-normal">· {items.length}</span>
+            <h2 className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wider ${g.tone ?? 'text-text-muted'}`}>
+              {g.title} <span className="ml-1 rounded-full bg-surface-muted px-1.5 py-0.5 font-medium normal-case tracking-normal text-text-muted">{items.length}</span>
             </h2>
-            <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+            <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary shadow-sm">
               {items.map(({ task, part, state }) => (
                 <TaskRow key={part.id} task={task} part={part} state={state} board={board} actions={actions} showMeta />
               ))}

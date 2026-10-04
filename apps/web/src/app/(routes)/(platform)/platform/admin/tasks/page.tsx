@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import TeamTasksClient from '@/app/_teamTasks/components/TeamTasksClient';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
  * Team Tasks
@@ -31,17 +30,7 @@ const TeamTasksPage = async ({
       : undefined;
 
   return (
-    <main className="container space-y-5 py-6">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Team tasks</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1">
-            Who is doing what, and by when. New and closed jobs are posted to #tasks.
-          </p>
-        </Typography>
-      </div>
+    <main className="container py-6">
       <TeamTasksClient initialJobId={job} prefill={prefill} />
     </main>
   );

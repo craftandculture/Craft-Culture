@@ -217,11 +217,11 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
 
           <div className="flex flex-wrap gap-4 text-sm text-text-primary">
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} className="accent-teal-600" />
+              <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} className="accent-neutral-900 dark:accent-neutral-100" />
               Urgent <span className="text-xs text-text-muted">(needs a date on every part)</span>
             </label>
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={waiting} onChange={(e) => setWaiting(e.target.checked)} className="accent-teal-600" />
+              <input type="checkbox" checked={waiting} onChange={(e) => setWaiting(e.target.checked)} className="accent-neutral-900 dark:accent-neutral-100" />
               Waiting on someone before we start
             </label>
           </div>
@@ -310,7 +310,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
                         onClick={() => setPart(i, { due: value })}
                         className={`h-7 rounded-full border px-2.5 text-xs ${
                           p.due === value
-                            ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                            ? 'border-text-primary bg-text-primary/10 text-text-primary'
                             : 'border-border-muted text-text-muted hover:text-text-primary'
                         }`}
                       >
@@ -346,7 +346,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
             <button
               type="button"
               onClick={() => setParts((ps) => [...ps, { ownerId: board.viewerId, what: '', due: null, waitsForIndex: null }])}
-              className="text-sm font-medium text-text-brand"
+              className="text-sm font-medium text-text-primary"
             >
               + Add a part for someone else
             </button>
@@ -367,7 +367,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
               type="button"
               disabled={saving}
               onClick={() => void submit().catch(() => undefined)}
-              className="h-9 rounded-lg border border-border-brand bg-fill-brand px-4 text-sm font-medium text-text-brand-on-fill disabled:opacity-50"
+              className="h-9 rounded-lg border border-text-primary bg-text-primary px-4 text-sm font-medium text-surface-primary disabled:opacity-50"
             >
               {saving ? 'Saving…' : task ? 'Save changes' : 'Add job'}
             </button>

@@ -37,14 +37,14 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy, h
       tabIndex={0}
       onClick={() => onOpen(task.id)}
       onKeyDown={(e) => e.key === 'Enter' && onOpen(task.id)}
-      className={`cursor-pointer rounded-xl border bg-surface-primary p-3 text-left transition hover:border-border-brand hover:shadow-sm ${
+      className={`cursor-pointer rounded-xl border bg-surface-primary p-3.5 text-left shadow-sm transition hover:-translate-y-px hover:shadow-md ${
         ready ? 'border-border-success' : 'border-border-muted'
-      } ${task.urgent && task.status === 'open' && !ready ? 'border-l-4 border-l-fill-danger' : ''}`}
+      } ${task.urgent && task.status === 'open' && !ready ? 'border-l-[3px] border-l-red-500' : ''}`}
     >
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
         {area && !hideArea && <span className="font-medium uppercase tracking-wide text-text-muted">{area.name}</span>}
         {task.urgent && task.status === 'open' && (
-          <span className="rounded-full bg-fill-danger/15 px-2 py-0.5 font-semibold text-text-danger">Urgent</span>
+          <span className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30">Urgent</span>
         )}
         {task.forTag && (
           <span className="rounded-full bg-fill-muted px-2 py-0.5 text-text-muted">
@@ -63,7 +63,7 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy, h
         )}
       </div>
 
-      <p className="mt-1 text-[15px] font-semibold leading-snug text-text-primary">{task.title}</p>
+      <p className="mt-1 text-[15px] font-semibold leading-snug tracking-tight text-text-primary">{task.title}</p>
 
       {task.waitingOn && task.status === 'open' && (
         <p className="mt-1 rounded-md bg-fill-warning/15 px-2 py-1 text-xs text-text-warning">
@@ -74,7 +74,7 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy, h
       {total > 1 && (
         <div className="mt-2 flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill-muted">
-            <div className="h-full rounded-full bg-fill-brand" style={{ width: `${(done / total) * 100}%` }} />
+            <div className="h-full rounded-full bg-text-primary" style={{ width: `${(done / total) * 100}%` }} />
           </div>
           <span className="text-[11px] text-text-muted">
             {done}/{total}

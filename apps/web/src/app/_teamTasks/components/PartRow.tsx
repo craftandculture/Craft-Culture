@@ -3,6 +3,7 @@
 import DueChip from './DueChip';
 import DueMenu from './DueMenu';
 import PersonBadge from './PersonBadge';
+import TickBox from './TickBox';
 import type { Board, BoardPart, BoardTask } from '../types/Board';
 import partLabel from '../utils/partLabel';
 import partState from '../utils/partState';
@@ -34,14 +35,11 @@ const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRo
 
   return (
     <div className="group flex items-start gap-2 py-1.5">
-      <input
-        type="checkbox"
-        aria-label={`Mark ${owner?.name ?? 'this'} part done`}
+      <TickBox
+        label={`Mark ${owner?.name ?? 'this'} part done`}
         checked={part.done}
         disabled={locked || busy}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => onTick(part.id, e.target.checked)}
-        className="mt-1 size-4 shrink-0 cursor-pointer accent-teal-600 disabled:cursor-not-allowed"
+        onChange={(checked) => onTick(part.id, checked)}
       />
       <PersonBadge name={owner?.name ?? '?'} isViewer={part.ownerId === board.viewerId} />
       <div className="min-w-0 flex-1">

@@ -41,9 +41,9 @@ const PartnerTasksClient = () => {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Open · {open.length}</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Open · {open.length}</h2>
         {open.map((job) => (
-          <div key={job.id} className="rounded-xl border border-border-muted bg-surface-primary">
+          <div key={job.id} className="rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             <div className="border-b border-border-muted px-4 py-3">
               <p className="text-[15px] font-semibold text-text-primary">
                 {job.urgent && <span className="mr-1.5 inline-block size-2 -translate-y-px rounded-full bg-fill-danger align-middle" title="Urgent" />}
@@ -63,7 +63,7 @@ const PartnerTasksClient = () => {
                       disabled={!mine || tick.isPending || Boolean(job.waitingOn)}
                       onChange={(e) => tick.mutate({ partId: p.id, done: e.target.checked })}
                       aria-label={`Mark "${p.what}" done`}
-                      className="mt-0.5 size-4 shrink-0 accent-teal-600 disabled:opacity-40"
+                      className="mt-0.5 size-4 shrink-0 accent-neutral-900 dark:accent-neutral-100 disabled:opacity-40"
                     />
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm ${p.done ? 'text-text-muted line-through' : 'text-text-primary'}`}>{p.what}</p>
@@ -109,8 +109,8 @@ const PartnerTasksClient = () => {
 
       {closed.length > 0 && (
         <section>
-          <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-muted">Closed in the last 30 days</h2>
-          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
+          <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Closed in the last 30 days</h2>
+          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             {closed.map((j) => (
               <p key={j.id} className="px-4 py-2 text-sm text-text-muted">
                 {j.title}

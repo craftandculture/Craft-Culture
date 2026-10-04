@@ -15,7 +15,7 @@ const DoneView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask[];
   const heading = (t: BoardTask) => (new Date(t.closedAt ?? 0).getTime() >= weekAgo ? 'Last 7 days' : 'Earlier');
 
   return (
-    <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+    <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary shadow-sm">
       {done.map((t, i) => (
         <div key={t.id}>
           {(i === 0 || heading(done[i - 1]!) !== heading(t)) && (

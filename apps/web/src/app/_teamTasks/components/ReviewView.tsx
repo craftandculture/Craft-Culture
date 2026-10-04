@@ -57,7 +57,7 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
             { label: 'Urgent, no date', value: undatedParts.length, tone: undatedParts.length ? 'text-text-warning' : '' },
             { label: 'Open jobs', value: open.length, tone: '' },
           ].map((k) => (
-            <div key={k.label} className="rounded-xl border border-border-muted bg-surface-primary px-4 py-3">
+            <div key={k.label} className="rounded-xl border border-border-muted bg-surface-primary shadow-sm px-4 py-3">
               <p className={`text-2xl font-bold tabular-nums ${k.tone}`}>{k.value}</p>
               <p className="text-xs text-text-muted">{k.label}</p>
             </div>
@@ -73,8 +73,8 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
       </div>
 
       <section>
-        <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-muted">Each person</h2>
-        <div className="overflow-x-auto rounded-xl border border-border-muted bg-surface-primary">
+        <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Each person</h2>
+        <div className="overflow-x-auto rounded-xl border border-border-muted bg-surface-primary shadow-sm">
           <table className="w-full">
             <thead className="border-b border-border-muted">
               <tr>
@@ -105,9 +105,9 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
       </section>
 
       <section>
-        <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-danger">Overdue now · {overdue.length}</h2>
+        <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-danger">Overdue now · {overdue.length}</h2>
         {overdue.length ? (
-          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
+          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             {overdue.map(({ t, p }) => (
               <div key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="w-28 shrink-0 text-text-danger">{shortDate(p.due!)}</span>
@@ -126,11 +126,11 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
 
       {undatedParts.length > 0 && (
         <section>
-          <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-warning">
+          <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-warning">
             Urgent with no date · {undatedParts.length}
           </h2>
           <p className="mb-1.5 text-xs text-text-muted">These cannot go overdue or be chased until they have a date. Set one here.</p>
-          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
+          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             {undatedParts.map(({ t, p }) => (
               <div key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="min-w-0 flex-1 text-text-primary">
@@ -148,9 +148,9 @@ const ReviewView = ({ board, tasks, today }: { board: Board; tasks: BoardTask[];
       )}
 
       <section>
-        <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-success">Closed this week · {closed.length}</h2>
+        <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-success">Closed this week · {closed.length}</h2>
         {closed.length ? (
-          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary">
+          <div className="divide-y divide-border-muted rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             {closed.map((t) => (
               <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="w-28 shrink-0 text-text-muted">

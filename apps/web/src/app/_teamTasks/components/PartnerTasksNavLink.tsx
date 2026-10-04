@@ -23,7 +23,7 @@ const PartnerTasksNavLink = () => {
     >
       Tasks
       {data.mine > 0 && (
-        <span className="min-w-[18px] rounded-full bg-fill-brand/15 px-1.5 text-center text-[11px] font-semibold leading-[18px] text-text-brand">
+        <span className="min-w-[18px] rounded-full bg-text-primary/15 px-1.5 text-center text-[11px] font-semibold leading-[18px] text-text-primary">
           {data.mine}
         </span>
       )}

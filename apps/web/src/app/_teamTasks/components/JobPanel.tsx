@@ -72,7 +72,7 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                 )}
                 {task.repeat && <span className="rounded-full bg-fill-muted px-2 py-0.5 text-text-muted">Repeats {task.repeat}</span>}
                 {task.partnerId && (
-                  <span className="rounded-full bg-fill-brand/10 px-2 py-0.5 text-text-brand">
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-text-primary">
                     Shared with {board.partners.find((p) => p.id === task.partnerId)?.name ?? 'a partner'}
                   </span>
                 )}
@@ -119,12 +119,12 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
             {task.linkUrl && (
               <a
                 href={task.linkUrl}
-                className="flex items-center justify-between rounded-lg border border-border-muted px-3 py-2 text-sm hover:border-border-brand"
+                className="flex items-center justify-between rounded-lg border border-border-muted px-3 py-2 text-sm hover:border-border-primary-hover"
               >
                 <span className="text-text-primary">
                   About <span className="font-medium">{task.linkLabel ?? 'a linked page'}</span>
                 </span>
-                <span className="text-xs text-text-brand">Open &rarr;</span>
+                <span className="text-xs text-text-primary">Open &rarr;</span>
               </a>
             )}
 
@@ -135,7 +135,7 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                   type="button"
                   onClick={() => m.goAhead.mutate({ taskId: task.id })}
                   disabled={m.goAhead.isPending}
-                  className="h-7 shrink-0 rounded-lg border border-border-brand bg-fill-brand px-2.5 text-xs font-medium text-text-brand-on-fill"
+                  className="h-7 shrink-0 rounded-lg border border-text-primary bg-text-primary px-2.5 text-xs font-medium text-surface-primary"
                 >
                   Go ahead, start now
                 </button>

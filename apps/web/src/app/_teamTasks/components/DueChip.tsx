@@ -3,13 +3,13 @@ import type { PartState } from '../utils/partState';
 import shortDate from '../utils/shortDate';
 
 const styles: Record<PartState, string> = {
-  overdue: 'bg-fill-danger/15 text-text-danger',
-  today: 'bg-fill-warning/20 text-text-warning',
-  week: 'bg-fill-brand/10 text-text-brand',
-  later: 'bg-fill-muted text-text-muted',
-  undated: 'bg-fill-muted text-text-muted',
-  blocked: 'bg-fill-muted text-text-muted',
-  done: 'bg-fill-success/15 text-text-success',
+  overdue: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30',
+  today: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30',
+  week: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30',
+  later: 'bg-surface-muted text-text-secondary ring-border-muted',
+  undated: 'bg-surface-muted text-text-muted ring-border-muted',
+  blocked: 'bg-surface-muted text-text-muted ring-border-muted',
+  done: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30',
 };
 
 /** A part's due date, coloured by how close it is; undated parts show nothing unless asked */
@@ -36,7 +36,7 @@ const DueChip = ({ due, state, showUndated = false }: { due: string | null; stat
                 : shortDate(due);
 
   return (
-    <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[state]}`}>
+    <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${styles[state]}`}>
       {text}
     </span>
   );

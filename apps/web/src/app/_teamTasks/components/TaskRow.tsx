@@ -2,6 +2,7 @@
 
 import DueMenu from './DueMenu';
 import GiveToMenu from './GiveToMenu';
+import TickBox from './TickBox';
 import type { Board, BoardPart, BoardTask } from '../types/Board';
 import type { CardActions } from '../types/CardActions';
 import partLabel from '../utils/partLabel';
@@ -46,20 +47,18 @@ const TaskRow = ({ task, part, state, board, actions, showMeta }: TaskRowProps) 
   ].filter(Boolean);
 
   return (
-    <div className={`group relative flex items-start gap-3 px-3 py-2.5 transition hover:bg-fill-secondary/60 ${onHold ? 'opacity-60' : ''}`}>
-      <input
-        type="checkbox"
-        aria-label={`Mark "${task.title}" done`}
+    <div className={`group relative flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary/50 ${onHold ? 'opacity-60' : ''}`}>
+      <TickBox
+        label={`Mark "${task.title}" done`}
         checked={false}
         disabled={state === 'blocked' || onHold || actions.busy}
         onChange={() => actions.onTick(part.id, true)}
-        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-teal-600 disabled:cursor-not-allowed disabled:opacity-40"
       />
       <div className="min-w-0 flex-1">
         <button type="button" onClick={() => actions.onOpen(task.id)} className="w-full text-left">
-          <p className="line-clamp-2 text-sm font-medium leading-snug text-text-primary">
+          <p className="line-clamp-2 text-[14px] font-semibold leading-snug tracking-tight text-text-primary">
             {task.urgent && !onHold && (
-              <span className="mr-1.5 inline-block size-2 -translate-y-px rounded-full bg-fill-danger align-middle" title="Urgent" />
+              <span className="mr-1.5 inline-block size-2 -translate-y-px rounded-full bg-red-500 align-middle" title="Urgent" />
             )}
             {task.title}
           </p>

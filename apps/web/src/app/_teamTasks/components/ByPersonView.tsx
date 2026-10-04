@@ -37,23 +37,35 @@ const ByPersonView = ({ board, tasks, actions }: { board: Board; tasks: BoardTas
 
         const overdue = rows.filter((r) => r.state === 'overdue' && !r.task.waitingOn).length;
         const active = rows.filter((r) => !r.task.waitingOn).length;
+        const week = rows.filter((r) => !r.task.waitingOn && (r.state === 'today' || r.state === 'week')).length;
 
         return (
-          <div key={person.id} className="rounded-xl border border-border-muted bg-surface-primary">
-            <div className="flex items-center gap-2 border-b border-border-muted px-3 py-2.5">
-              <PersonBadge name={person.name} isViewer={person.id === board.viewerId} />
-              <span className="text-sm font-semibold text-text-primary">{person.name}</span>
-              {person.partnerId && (
-                <span className="rounded-full bg-fill-muted px-1.5 py-0.5 text-[10px] text-text-muted">
-                  {board.partners.find((p) => p.id === person.partnerId)?.name ?? 'Partner'}
-                </span>
+          <div key={person.id} className="rounded-xl border border-border-muted bg-surface-primary shadow-sm">
+            <div className="border-b border-border-muted px-3 pb-2.5 pt-3">
+              <div className="flex items-center gap-2.5">
+                <PersonBadge name={person.name} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-text-primary">
+                    {person.name}
+                    {person.partnerId && (
+                      <span className="ml-1.5 rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                        {board.partners.find((p) => p.id === person.partnerId)?.name ?? 'Partner'}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {active} open{week > 0 && ` · ${week} this week`}
+                    {overdue > 0 && <span className="font-semibold text-red-600"> · {overdue} overdue</span>}
+                  </p>
+                </div>
+              </div>
+              {active > 0 && (
+                <div className="mt-2.5 flex h-1 overflow-hidden rounded-full bg-surface-muted" title="Overdue · this week · later">
+                  <span className="bg-red-500" style={{ width: `${(overdue / active) * 100}%` }} />
+                  <span className="bg-amber-400" style={{ width: `${(week / active) * 100}%` }} />
+                  <span className="bg-text-muted/40" style={{ width: `${((active - overdue - week) / active) * 100}%` }} />
+                </div>
               )}
-              <span className="ml-auto flex items-center gap-1.5 text-xs">
-                {overdue > 0 && (
-                  <span className="rounded-full bg-fill-danger/15 px-1.5 py-0.5 font-semibold text-text-danger">{overdue} overdue</span>
-                )}
-                <span className="text-text-muted">{active} open</span>
-              </span>
             </div>
 
             <div className="divide-y divide-border-muted">

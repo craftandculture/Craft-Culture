@@ -1,6 +1,8 @@
 'use client';
 
+import { IconBrandSlack, IconChevronRight, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -13,11 +15,14 @@ import JobPanel from './JobPanel';
 import MyTasksView from './MyTasksView';
 import ReviewView from './ReviewView';
 import SlackLinksDialog from './SlackLinksDialog';
+import StatTiles from './StatTiles';
 import TeamBoardView from './TeamBoardView';
 import useTaskMutations from '../hooks/useTaskMutations';
 import type { BoardTask } from '../types/Board';
 import type { CardActions } from '../types/CardActions';
+import type { Focus } from '../types/Focus';
 import dubaiToday from '../utils/dubaiToday';
+import matchesFocus from '../utils/matchesFocus';
 
 type Tab = 'mine' | 'board' | 'people' | 'done' | 'review';
 
@@ -63,21 +68,20 @@ const TeamTasksClient = ({
   const [tab, setTab] = useState<Tab>('mine');
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
-  const [focus, setFocus] = useState<'' | 'urgent' | 'overdue'>('');
+  const [focus, setFocus] = useState<Focus>('');
   const [openId, setOpenId] = useState<string | null>(initialJobId ?? null);
   const [form, setForm] = useState<{ task?: BoardTask; key: number; prefill?: typeof prefill } | null>(
     prefill ? { key: 0, prefill } : null,
   );
   const [slackOpen, setSlackOpen] = useState(false);
 
-  if (isLoading || !board) return <p className="text-sm text-text-muted">Loading jobs…</p>;
+  if (isLoading || !board) return <p className="py-16 text-center text-sm text-text-muted">Loading jobs…</p>;
 
   const q = search.trim().toLowerCase();
   const tasks = board.tasks.filter(
     (t) =>
       (!areaFilter || t.areaId === areaFilter) &&
-      (focus !== 'urgent' || t.urgent) &&
-      (focus !== 'overdue' || t.parts.some((p) => !p.done && p.due && p.due < today && !t.waitingOn)) &&
+      matchesFocus(t, focus, today) &&
       (!q ||
         t.title.toLowerCase().includes(q) ||
         t.parts.some((p) => p.what.toLowerCase().includes(q)) ||
@@ -111,81 +115,121 @@ const TeamTasksClient = ({
     .flatMap((t) => t.parts)
     .filter((p) => p.ownerId === board.viewerId && !p.done).length;
 
-  return (
-    <div className="space-y-4">
-      {!board.slackConnected && (
-        <div className="rounded-lg border border-border-warning bg-fill-warning/10 px-3 py-2 text-sm text-text-warning">
-          #tasks is not connected yet, so nothing is posted to Slack. Everything is still saved here.
-        </div>
-      )}
+  const dateLine = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' }).format(new Date());
+  const pill = (active: boolean) =>
+    `shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+      active ? 'bg-text-primary text-surface-primary' : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+    }`;
 
-      <div className="tt-controls flex flex-wrap items-center gap-2">
-        <div className="flex max-w-full overflow-x-auto rounded-lg border border-border-muted bg-fill-secondary p-0.5">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`h-8 shrink-0 whitespace-nowrap rounded-md px-3 text-sm font-medium ${
-                tab === t.key ? 'bg-surface-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              {t.label}
-              {t.key === 'mine' && mineCount > 0 && <span className="ml-1.5 text-xs text-text-brand">{mineCount}</span>}
-            </button>
-          ))}
+  return (
+    <div className="space-y-5">
+      {/* Header, as on Stock Explorer */}
+      <div className="tt-controls flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-1.5 text-sm text-text-muted">
+            <Link href="/platform/admin/home" className="transition-colors hover:text-text-primary">
+              Admin
+            </Link>
+            <IconChevronRight className="size-4" />
+            <span className="text-text-primary">Team Tasks</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Team Tasks</h1>
+          <p className="mt-0.5 text-sm text-text-muted">{dateLine} — who is doing what, and by when</p>
         </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search jobs"
-          className="h-9 min-w-0 flex-1 rounded-lg border sm:w-48 sm:flex-none border-border-primary bg-surface-primary px-2.5 text-sm text-text-primary"
-        />
-        {tab !== 'review' && (
-        <select
-          value={areaFilter}
-          onChange={(e) => setAreaFilter(e.target.value)}
-          className="h-9 rounded-lg border border-border-primary bg-surface-primary px-2 text-sm text-text-primary"
-        >
-          <option value="">All areas</option>
-          {board.areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-        )}
-        {tab !== 'review' && tab !== 'done' && (
-        <select
-          value={focus}
-          onChange={(e) => setFocus(e.target.value as typeof focus)}
-          aria-label="Show only"
-          className={`h-9 rounded-lg border px-2 text-sm ${
-            focus ? 'border-border-brand bg-fill-brand/10 text-text-brand' : 'border-border-primary bg-surface-primary text-text-primary'
-          }`}
-        >
-          <option value="">All jobs</option>
-          <option value="urgent">Urgent only</option>
-          <option value="overdue">Overdue only</option>
-        </select>
-        )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {board.viewerIsAdmin && (
             <button
               type="button"
               onClick={() => setSlackOpen(true)}
-              className="h-9 rounded-lg px-3 text-sm text-text-muted hover:text-text-primary"
+              title={board.slackConnected ? 'Link Slack accounts' : '#tasks is not connected'}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-border-muted bg-surface-primary px-3 text-sm font-medium text-text-secondary shadow-sm transition-colors hover:text-text-primary"
             >
-              Slack accounts
+              <IconBrandSlack className="size-4" />
+              <span className="hidden sm:inline">Slack</span>
+              <span className={`size-1.5 rounded-full ${board.slackConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             </button>
           )}
           <button
             type="button"
             onClick={() => setForm({ key: Date.now() })}
-            className="h-9 rounded-lg border border-border-brand bg-fill-brand px-4 text-sm font-medium text-text-brand-on-fill"
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-text-primary px-4 text-sm font-semibold text-surface-primary shadow-sm transition hover:opacity-90"
           >
-            + New job
+            <IconPlus className="size-4" />
+            New job
           </button>
+        </div>
+      </div>
+
+      {!board.slackConnected && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          #tasks is not connected yet, so nothing is posted to Slack. Everything is still saved here.
+        </div>
+      )}
+
+      <div className="tt-controls">
+        <StatTiles tasks={board.tasks} today={today} focus={focus} onFocus={setFocus} />
+      </div>
+
+      <div className="tt-controls space-y-3">
+        <div className="relative">
+          <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search jobs, parts or who it is waiting on…"
+            className="h-11 w-full rounded-xl border border-border-muted bg-surface-primary shadow-sm pl-9 pr-3 text-sm text-text-primary shadow-sm placeholder:text-text-muted focus:border-text-muted focus:outline-none"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex max-w-full gap-2 overflow-x-auto">
+            {TABS.map((t) => (
+              <button key={t.key} type="button" onClick={() => setTab(t.key)} className={pill(tab === t.key)}>
+                {t.label}
+                {t.key === 'mine' && mineCount > 0 && (
+                  <span className={`ml-1.5 tabular-nums ${tab === t.key ? 'opacity-70' : 'text-text-muted'}`}>{mineCount}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {tab !== 'review' && (
+            <>
+              <div className="mx-1 hidden h-4 w-px bg-border-muted sm:block" />
+              <select
+                value={areaFilter}
+                onChange={(e) => setAreaFilter(e.target.value)}
+                aria-label="Area"
+                className={`h-9 rounded-full border px-3 text-sm ${
+                  areaFilter ? 'border-text-primary bg-text-primary text-surface-primary' : 'border-border-muted bg-surface-primary text-text-secondary'
+                }`}
+              >
+                <option value="">All areas</option>
+                {board.areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              {tab !== 'done' && (
+                <button type="button" onClick={() => setFocus(focus === 'urgent' ? '' : 'urgent')} className={pill(focus === 'urgent')}>
+                  Urgent
+                </button>
+              )}
+            </>
+          )}
+          {(focus || areaFilter || search) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFocus('');
+                setAreaFilter('');
+                setSearch('');
+              }}
+              className="ml-auto flex items-center gap-1 text-xs font-medium text-text-muted hover:text-text-primary"
+            >
+              <IconX className="size-3.5" />
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
 
