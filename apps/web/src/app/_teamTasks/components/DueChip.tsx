@@ -1,3 +1,4 @@
+import dubaiToday from '../utils/dubaiToday';
 import type { PartState } from '../utils/partState';
 import shortDate from '../utils/shortDate';
 
@@ -15,6 +16,10 @@ const styles: Record<PartState, string> = {
 const DueChip = ({ due, state, showUndated = false }: { due: string | null; state: PartState; showUndated?: boolean }) => {
   if (state === 'undated' && !showUndated) return null;
 
+  const tomorrow = new Date(`${dubaiToday()}T12:00:00Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const isTomorrow = due === tomorrow.toISOString().slice(0, 10);
+
   const text =
     state === 'blocked'
       ? 'Waiting'
@@ -26,7 +31,9 @@ const DueChip = ({ due, state, showUndated = false }: { due: string | null; stat
             ? `Overdue · ${shortDate(due)}`
             : state === 'today'
               ? 'Today'
-              : shortDate(due);
+              : isTomorrow
+                ? 'Tomorrow'
+                : shortDate(due);
 
   return (
     <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[state]}`}>

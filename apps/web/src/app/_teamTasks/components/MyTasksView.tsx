@@ -1,70 +1,87 @@
 'use client';
 
-import JobCard from './JobCard';
-import Section from './Section';
+import TaskRow from './TaskRow';
+import TwoStepButton from './TwoStepButton';
 import type { Board, BoardTask } from '../types/Board';
 import type { CardActions } from '../types/CardActions';
 import partState, { type PartState } from '../utils/partState';
+import rankPart from '../utils/rankPart';
 
-const GROUPS: { key: PartState | 'ready' | 'waiting'; title: string; tone?: 'danger' | 'success' }[] = [
-  { key: 'ready', title: 'Ready to close', tone: 'success' },
-  { key: 'overdue', title: 'Overdue', tone: 'danger' },
-  { key: 'today', title: 'Due today' },
+type Group = 'overdue' | 'today' | 'week' | 'next' | 'blocked' | 'hold';
+
+const GROUPS: { key: Group; title: string; tone?: string }[] = [
+  { key: 'overdue', title: 'Overdue', tone: 'text-text-danger' },
+  { key: 'today', title: 'Today' },
   { key: 'week', title: 'This week' },
-  { key: 'later', title: 'Later' },
-  { key: 'undated', title: 'No date' },
+  { key: 'next', title: 'Later and undated' },
   { key: 'blocked', title: 'Waiting for someone else first' },
-  { key: 'waiting', title: 'On hold: waiting on someone' },
+  { key: 'hold', title: 'On hold until the go-ahead' },
 ];
 
-const rank: Record<PartState, number> = { overdue: 0, today: 1, week: 2, later: 3, undated: 4, blocked: 5, done: 6 };
+const groupOf = (task: BoardTask, state: PartState): Group => {
+  if (task.waitingOn) return 'hold';
+  if (state === 'overdue' || state === 'today' || state === 'week' || state === 'blocked') return state;
+  return 'next';
+};
 
 /**
- * My tasks: the viewer's own open parts, most pressing first
+ * My tasks: the viewer's own to-do list, one row per part, most pressing first
  *
- * Each job sits in the group of the viewer's most pressing part. Jobs the
- * viewer has a part in and that are fully ticked appear under Ready to close.
+ * Jobs the viewer is on whose parts are all ticked sit at the top, ready for
+ * the two-step close. Jobs on hold are listed last, dimmed.
  */
 const MyTasksView = ({ board, tasks, actions }: { board: Board; tasks: BoardTask[]; actions: CardActions }) => {
-  const grouped = new Map<string, { task: BoardTask; partIds: string[] }[]>();
-  const sortKey = new Map<string, string>();
+  const open = tasks.filter((t) => t.status === 'open');
+  const ready = open.filter(
+    (t) => t.parts.length > 0 && t.parts.every((p) => p.done) && t.parts.some((p) => p.ownerId === board.viewerId),
+  );
+  const rows = open
+    .flatMap((task) =>
+      task.parts
+        .filter((p) => p.ownerId === board.viewerId && !p.done)
+        .map((part) => ({ task, part, state: partState(part, task, actions.today) })),
+    )
+    .sort((a, b) => rankPart(a.task, a.state) - rankPart(b.task, b.state) || (a.part.due ?? '9999').localeCompare(b.part.due ?? '9999'));
 
-  for (const task of tasks) {
-    if (task.status !== 'open') continue;
-    const mine = task.parts.filter((p) => p.ownerId === board.viewerId);
-    if (!mine.length) continue;
-
-    let key: string;
-    if (task.parts.every((p) => p.done)) key = 'ready';
-    else if (task.waitingOn) key = 'waiting';
-    else {
-      const open = mine.filter((p) => !p.done);
-      if (!open.length) continue;
-      key = open.map((p) => partState(p, task, actions.today)).sort((a, b) => rank[a] - rank[b])[0]!;
-      sortKey.set(task.id, open.map((p) => p.due ?? '9999').sort()[0]!);
-    }
-
-    grouped.set(key, [...(grouped.get(key) ?? []), { task, partIds: mine.map((p) => p.id) }]);
-  }
-
-  const total = [...grouped.values()].reduce((n, g) => n + g.length, 0);
-
-  if (!total) {
-    return <p className="py-12 text-center text-sm text-text-muted">Nothing on your list. Add a job, or check the team board.</p>;
+  if (!rows.length && !ready.length) {
+    return <p className="py-16 text-center text-sm text-text-muted">Nothing on your list. Add a job, or check the team board.</p>;
   }
 
   return (
-    <div className="space-y-6">
-      {GROUPS.map((g) => {
-        const items = (grouped.get(g.key) ?? []).sort((a, b) =>
-          (sortKey.get(a.task.id) ?? '').localeCompare(sortKey.get(b.task.id) ?? ''),
-        );
-        return (
-          <Section key={g.key} title={g.title} count={items.length} tone={g.tone}>
-            {items.map(({ task, partIds }) => (
-              <JobCard key={task.id} task={task} board={board} partIds={g.key === 'ready' ? undefined : partIds} {...actions} />
+    <div className="space-y-5">
+      {ready.length > 0 && (
+        <section>
+          <h2 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-success">
+            Ready to close <span className="font-normal">· {ready.length}</span>
+          </h2>
+          <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-success/50 bg-surface-primary">
+            {ready.map((task) => (
+              <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
+                <button type="button" onClick={() => actions.onOpen(task.id)} className="min-w-0 flex-1 text-left">
+                  <p className="text-sm font-medium text-text-primary">{task.title}</p>
+                  <p className="text-xs text-text-success">Every part is done</p>
+                </button>
+                <TwoStepButton label="Close job" confirmLabel="Yes, close it" size="xs" onConfirm={() => actions.onClose(task.id)} />
+              </div>
             ))}
-          </Section>
+          </div>
+        </section>
+      )}
+
+      {GROUPS.map((g) => {
+        const items = rows.filter((r) => groupOf(r.task, r.state) === g.key);
+        if (!items.length) return null;
+        return (
+          <section key={g.key}>
+            <h2 className={`mb-1.5 text-xs font-semibold uppercase tracking-wide ${g.tone ?? 'text-text-muted'}`}>
+              {g.title} <span className="font-normal">· {items.length}</span>
+            </h2>
+            <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+              {items.map(({ task, part, state }) => (
+                <TaskRow key={part.id} task={task} part={part} state={state} board={board} actions={actions} showMeta />
+              ))}
+            </div>
+          </section>
         );
       })}
     </div>

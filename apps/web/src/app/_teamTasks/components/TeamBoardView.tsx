@@ -20,7 +20,7 @@ const TeamBoardView = ({ board, tasks, actions }: { board: Board; tasks: BoardTa
         return (
           <Section key={area.id} title={area.name} count={items.length}>
             {items.map((t) => (
-              <JobCard key={t.id} task={t} board={board} {...actions} />
+              <JobCard key={t.id} task={t} board={board} hideArea {...actions} />
             ))}
           </Section>
         );

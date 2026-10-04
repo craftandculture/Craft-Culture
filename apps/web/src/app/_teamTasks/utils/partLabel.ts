@@ -16,6 +16,17 @@ const partLabel = (title: string, what: string) => {
 
   if (rest.toLowerCase() === t) return null;
 
+  // The title was reworded after the part was written ("Rate card — update"
+  // became "C&C Rate card — update"): drop the shared ending of the title.
+  const low = rest.toLowerCase();
+  for (let end = low.length; end >= 6; end--) {
+    const shared = low.slice(0, end);
+    if ((end === low.length || low[end] === ' ') && shared.includes(' — ') && t.endsWith(shared)) {
+      const tail = rest.slice(end).trim();
+      return tail ? tail.charAt(0).toUpperCase() + tail.slice(1) : null;
+    }
+  }
+
   // Only titles written "Subject — task" carry a prefix worth stripping; a
   // plain title such as "Work Permits" may begin the part text naturally.
   if (!t.includes(' — ')) return rest;

@@ -45,7 +45,7 @@ const PartRow = ({ part, task, board, today, onTick, busy, showUndated }: PartRo
       <PersonBadge name={owner?.name ?? '?'} isViewer={part.ownerId === board.viewerId} />
       <div className="min-w-0 flex-1">
         <p className={`text-sm ${part.done ? 'text-text-muted line-through' : 'text-text-primary'}`}>
-          {partLabel(task.title, part.what) ?? 'Whole job'}
+          {partLabel(task.title, part.what) ?? (owner ? personName(owner.name) : 'Unassigned')}
         </p>
         {state === 'blocked' && first && (
           <p className="text-xs text-text-muted">

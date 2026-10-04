@@ -14,6 +14,8 @@ interface JobCardProps {
   /** Show only these parts (My tasks, By person); defaults to all */
   partIds?: string[];
   busy?: boolean;
+  /** Leave out the area label (the board already groups by area) */
+  hideArea?: boolean;
 }
 
 /**
@@ -22,7 +24,7 @@ interface JobCardProps {
  * Clicking the card opens the job panel. When every part is ticked, the card
  * offers the two-step close; ticking alone never closes it.
  */
-const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy }: JobCardProps) => {
+const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy, hideArea }: JobCardProps) => {
   const area = board.areas.find((a) => a.id === task.areaId);
   const done = task.parts.filter((p) => p.done).length;
   const total = task.parts.length;
@@ -35,12 +37,12 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy }:
       tabIndex={0}
       onClick={() => onOpen(task.id)}
       onKeyDown={(e) => e.key === 'Enter' && onOpen(task.id)}
-      className={`cursor-pointer rounded-xl border bg-surface-primary p-3 text-left transition hover:border-border-brand ${
-        ready ? 'border-border-success' : task.urgent && task.status === 'open' ? 'border-border-danger' : 'border-border-muted'
-      }`}
+      className={`cursor-pointer rounded-xl border bg-surface-primary p-3 text-left transition hover:border-border-brand hover:shadow-sm ${
+        ready ? 'border-border-success' : 'border-border-muted'
+      } ${task.urgent && task.status === 'open' && !ready ? 'border-l-4 border-l-fill-danger' : ''}`}
     >
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-        {area && <span className="font-medium uppercase tracking-wide text-text-muted">{area.name}</span>}
+        {area && !hideArea && <span className="font-medium uppercase tracking-wide text-text-muted">{area.name}</span>}
         {task.urgent && task.status === 'open' && (
           <span className="rounded-full bg-fill-danger/15 px-2 py-0.5 font-semibold text-text-danger">Urgent</span>
         )}
@@ -69,7 +71,7 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy }:
         </p>
       )}
 
-      {total > 0 && (
+      {total > 1 && (
         <div className="mt-2 flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill-muted">
             <div className="h-full rounded-full bg-fill-brand" style={{ width: `${(done / total) * 100}%` }} />

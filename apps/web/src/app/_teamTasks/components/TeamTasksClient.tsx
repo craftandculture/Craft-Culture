@@ -89,9 +89,11 @@ const TeamTasksClient = ({ initialJobId }: { initialJobId?: string }) => {
       ),
   };
 
-  const mineCount = board.tasks.filter(
-    (t) => t.status === 'open' && t.parts.some((p) => p.ownerId === board.viewerId && !p.done),
-  ).length;
+  // Same rule as the count in the top bar: your open parts, not on hold
+  const mineCount = board.tasks
+    .filter((t) => t.status === 'open' && !t.waitingOn)
+    .flatMap((t) => t.parts)
+    .filter((p) => p.ownerId === board.viewerId && !p.done).length;
 
   return (
     <div className="space-y-4">

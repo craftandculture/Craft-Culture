@@ -22,15 +22,14 @@ const TeamTasksPage = async ({ searchParams }: { searchParams: Promise<{ job?: s
   const { job } = await searchParams;
 
   return (
-    <main className="container space-y-6 py-8">
+    <main className="container space-y-5 py-6">
       <div>
         <Typography variant="headingLg" asChild>
           <h1>Team tasks</h1>
         </Typography>
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p className="mt-1">
-            Who is doing what, and by when. Tick your part when it is done; a job closes only when someone presses
-            Close twice. New and closed jobs are posted to #tasks.
+            Who is doing what, and by when. New and closed jobs are posted to #tasks.
           </p>
         </Typography>
       </div>
