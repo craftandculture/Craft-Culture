@@ -2478,6 +2478,52 @@ const runMigrations = async () => {
       await client`UPDATE "team_tasks" SET "title" = regexp_replace("title", '^([^:]+): ', '\\1 — ') WHERE "status" = 'closed' AND "title" ~ '^[^:]+: '`;
     });
 
+    /*
+      Logistics jobs and movement bonds — export jobs numbered EXP-CNC/YY/NNNN,
+      and the bond C&C puts down on a bonded transfer. New tables beside
+      logistics_shipments, so no existing shipment query depends on them.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_jobs" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "shipment_id" uuid NOT NULL UNIQUE REFERENCES "logistics_shipments"("id") ON DELETE CASCADE,
+        "kind" text NOT NULL,
+        "job_number" text NOT NULL UNIQUE,
+        "stage" text NOT NULL,
+        "bonded_transfer" boolean NOT NULL DEFAULT false,
+        "client_name" text NOT NULL,
+        "zoho_customer_id" text,
+        "export_invoice_id" uuid REFERENCES "export_invoices"("id") ON DELETE SET NULL,
+        "invoice_number" text,
+        "invoice_value" double precision,
+        "invoice_currency" text NOT NULL DEFAULT 'AED',
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "logistics_jobs_kind_idx" ON "logistics_jobs"("kind")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_movement_bonds" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "shipment_id" uuid NOT NULL UNIQUE REFERENCES "logistics_shipments"("id") ON DELETE CASCADE,
+        "goods_value" double precision,
+        "bond_amount" double precision,
+        "currency" text NOT NULL DEFAULT 'AED',
+        "declaration_number" text,
+        "paid_on" date,
+        "arrived_on" date,
+        "stamped_on" date,
+        "claim_submitted_on" date,
+        "refunded_on" date,
+        "refund_amount" double precision,
+        "reminders_sent" text[] NOT NULL DEFAULT '{}'::text[],
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ logistics jobs + movement bonds ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -25,6 +25,7 @@ const sectionTabs: Record<string, TabItem[]> = {
   logistics: [
     { label: 'Dashboard', href: '/platform/admin/logistics' },
     { label: 'Shipments', href: '/platform/admin/logistics/shipments' },
+    { label: 'Exports', href: '/platform/admin/logistics/exports' },
     { label: 'Quotes', href: '/platform/admin/logistics/quotes' },
     { label: 'Requests', href: '/platform/admin/logistics/requests' },
     { label: 'Invoices', href: '/platform/admin/logistics/invoices' },

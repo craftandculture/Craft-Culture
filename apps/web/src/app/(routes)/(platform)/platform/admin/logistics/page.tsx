@@ -19,11 +19,13 @@ import {
   IconRefresh,
   IconShip,
   IconTruck,
+  IconTruckDelivery,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
+import BondsOutstandingCard from '@/app/_logistics/components/exports/BondsOutstandingCard';
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -244,6 +246,11 @@ const LogisticsDashboardPage = () => {
                 className={isFetching ? 'animate-spin' : ''}
               />
             </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/platform/admin/logistics/exports">
+                <ButtonContent iconLeft={IconTruckDelivery}>Export jobs</ButtonContent>
+              </Link>
+            </Button>
             <Button asChild>
               <Link href="/platform/admin/logistics/shipments/new">
                 <ButtonContent iconLeft={IconPlus}>New Shipment</ButtonContent>
@@ -251,6 +258,9 @@ const LogisticsDashboardPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* C&C money held on bonded transfers; hidden when none is */}
+        <BondsOutstandingCard />
 
         {/* Status Cards */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

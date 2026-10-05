@@ -3165,6 +3165,75 @@ export const logisticsGroupDocuments = pgTable(
 export type LogisticsGroupDocument = typeof logisticsGroupDocuments.$inferSelect;
 
 /**
+ * A logistics job: the operator's view of a shipment
+ *
+ * Kept beside `logistics_shipments` rather than in it, so nothing that already
+ * reads shipments depends on these columns. The shipment keeps its SHP number
+ * and status for every existing screen; the job adds the number the logistics
+ * team works by (EXP-CNC/26/0001), its own stage, and the client and invoice
+ * details an export needs.
+ */
+export const logisticsJobs = pgTable(
+  'logistics_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull()
+      .unique(),
+    /** 'export' now; 'import' when import jobs get numbers */
+    kind: text('kind').notNull(),
+    jobNumber: text('job_number').notNull().unique(),
+    stage: text('stage').notNull(),
+    /** Goods moving under bond between emirates, which puts down a movement bond */
+    bondedTransfer: boolean('bonded_transfer').notNull().default(false),
+    clientName: text('client_name').notNull(),
+    /** Set when the client was picked from Zoho rather than typed */
+    zohoCustomerId: text('zoho_customer_id'),
+    exportInvoiceId: uuid('export_invoice_id').references(() => exportInvoices.id, {
+      onDelete: 'set null',
+    }),
+    invoiceNumber: text('invoice_number'),
+    invoiceValue: doublePrecision('invoice_value'),
+    invoiceCurrency: text('invoice_currency').notNull().default('AED'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_jobs_kind_idx').on(table.kind)],
+);
+
+export type LogisticsJob = typeof logisticsJobs.$inferSelect;
+
+/**
+ * The movement bond on a bonded transfer (e.g. RAK to a Dubai bond)
+ *
+ * C&C puts down half the goods value and gets it back only by submitting the
+ * customs-stamped paperwork within three months. Each step is a date, so the
+ * job can say where the money is; `remindersSent` stops a reminder repeating.
+ */
+export const logisticsMovementBonds = pgTable('logistics_movement_bonds', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shipmentId: uuid('shipment_id')
+    .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+    .notNull()
+    .unique(),
+  goodsValue: doublePrecision('goods_value'),
+  bondAmount: doublePrecision('bond_amount'),
+  currency: text('currency').notNull().default('AED'),
+  declarationNumber: text('declaration_number'),
+  paidOn: date('paid_on', { mode: 'string' }),
+  arrivedOn: date('arrived_on', { mode: 'string' }),
+  stampedOn: date('stamped_on', { mode: 'string' }),
+  claimSubmittedOn: date('claim_submitted_on', { mode: 'string' }),
+  refundedOn: date('refunded_on', { mode: 'string' }),
+  refundAmount: doublePrecision('refund_amount'),
+  remindersSent: text('reminders_sent').array().notNull().default(sql`'{}'::text[]`),
+  ...timestamps,
+});
+
+export type LogisticsMovementBond = typeof logisticsMovementBonds.$inferSelect;
+
+/**
  * Native per-shipment logistics cost ledger — one row per invoice charge on a
  * single (non-grouped) shipment. The 8 shipment cost fields are kept in sync as
  * the sum of these lines by category, so landed cost still computes normally.

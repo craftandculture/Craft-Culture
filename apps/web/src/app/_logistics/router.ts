@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminAcceptQuote from './controller/adminAcceptQuote';
 import adminAddGroupCostLine from './controller/adminAddGroupCostLine';
 import adminAddItem from './controller/adminAddItem';
+import adminAddExportDocument from './controller/adminAddExportDocument';
 import adminAddShipmentCostLine from './controller/adminAddShipmentCostLine';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
@@ -14,6 +15,7 @@ import adminClearShipmentItems from './controller/adminClearShipmentItems';
 import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminConfirmDeclaredTotals from './controller/adminConfirmDeclaredTotals';
 import adminCreate from './controller/adminCreate';
+import adminCreateExportJob from './controller/adminCreateExportJob';
 import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminCreateShipmentGroup from './controller/adminCreateShipmentGroup';
@@ -33,6 +35,8 @@ import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGenerateInboundDeliveryNote from './controller/adminGenerateInboundDeliveryNote';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
+import adminGetExportJob from './controller/adminGetExportJob';
+import adminGetExportJobs from './controller/adminGetExportJobs';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
 import adminGetInvoices from './controller/adminGetInvoices';
 import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
@@ -50,6 +54,7 @@ import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
+import adminSaveBond from './controller/adminSaveBond';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
@@ -57,6 +62,7 @@ import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocume
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
 import adminSyncItemsToZoho from './controller/adminSyncItemsToZoho';
 import adminUpdate from './controller/adminUpdate';
+import adminUpdateExportJob from './controller/adminUpdateExportJob';
 import adminUpdateGroupCostLine from './controller/adminUpdateGroupCostLine';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateQuote from './controller/adminUpdateQuote';
@@ -122,6 +128,16 @@ const adminRouter = createTRPCRouter({
     parseInvoice: adminParseGroupInvoice,
     uploadDocument: adminUploadGroupDocument,
     deleteDocument: adminDeleteGroupDocument,
+  }),
+
+  // Export jobs (EXP-CNC numbers), with the movement bond on bonded transfers
+  exports: createTRPCRouter({
+    getMany: adminGetExportJobs,
+    getOne: adminGetExportJob,
+    create: adminCreateExportJob,
+    update: adminUpdateExportJob,
+    saveBond: adminSaveBond,
+    addDocument: adminAddExportDocument,
   }),
 
   // Invoices
