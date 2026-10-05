@@ -7,6 +7,7 @@ import { logisticsGroupDocuments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { uploadGroupDocumentSchema } from '../schemas/shipmentGroupSchemas';
+import readUploadedFile from '../utils/readUploadedFile';
 
 const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -18,7 +19,7 @@ const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'ima
 const adminUploadGroupDocument = adminProcedure
   .input(uploadGroupDocumentSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { groupId, file, filename, documentType, documentNumber } = input;
+    const { groupId, filename, documentType, documentNumber } = input;
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       throw new TRPCError({
@@ -27,11 +28,7 @@ const adminUploadGroupDocument = adminProcedure
       });
     }
 
-    const base64Data = file.includes(',') ? file.split(',')[1] : file;
-    if (!base64Data) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid file format' });
-    }
-    const buffer = Buffer.from(base64Data, 'base64');
+    const buffer = await readUploadedFile(input);
 
     const detectedType = await fileTypeFromBuffer(buffer);
     if (!detectedType || !ALLOWED.includes(detectedType.mime)) {
@@ -44,13 +41,16 @@ const adminUploadGroupDocument = adminProcedure
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'File must be under 10MB' });
     }
 
-    const stamp = `${buffer.length}-${filename.length}`;
-    const sanitized = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const blob = await put(`logistics/groups/${groupId}/${stamp}-${sanitized}`, buffer, {
-      access: 'public',
-      contentType: detectedType.mime,
-      addRandomSuffix: true,
-    });
+    // Already in Blob when the browser uploaded it there; stored here otherwise
+    const fileUrl =
+      input.blobUrl ??
+      (
+        await put(
+          `logistics/groups/${groupId}/${buffer.length}-${filename.length}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`,
+          buffer,
+          { access: 'public', contentType: detectedType.mime, addRandomSuffix: true },
+        )
+      ).url;
 
     const [doc] = await db
       .insert(logisticsGroupDocuments)
@@ -58,7 +58,7 @@ const adminUploadGroupDocument = adminProcedure
         groupId,
         documentType,
         documentNumber: documentNumber ?? null,
-        fileUrl: blob.url,
+        fileUrl,
         fileName: filename,
         fileSize: buffer.length,
         mimeType: detectedType.mime,

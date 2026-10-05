@@ -29,6 +29,7 @@ const CATEGORIES = [
   'customs',
   'gov_fees',
   'delivery',
+  'transportation',
   'other',
 ] as const;
 

@@ -34,7 +34,9 @@ const syncShipmentCostsFromLedger = async (shipmentId: string) => {
   };
   type BKey = keyof typeof b;
   for (const l of lines) {
-    const k: BKey = l.category in b ? (l.category as BKey) : 'other';
+    // Transportation is road haulage to or from the warehouse: the delivery bucket
+    const category = l.category === 'transportation' ? 'delivery' : l.category;
+    const k: BKey = category in b ? (category as BKey) : 'other';
     b[k] += l.amountUsd;
   }
 

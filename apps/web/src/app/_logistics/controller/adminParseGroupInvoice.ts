@@ -10,6 +10,7 @@ import { logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { costLineCategories, parseGroupInvoiceSchema } from '../schemas/shipmentGroupSchemas';
+import readUploadedFile from '../utils/readUploadedFile';
 
 const parsedInvoiceSchema = z.object({
   vendor: z.string().optional().describe('Freight forwarder / vendor name'),
@@ -26,7 +27,7 @@ const parsedInvoiceSchema = z.object({
         category: z
           .enum(costLineCategories)
           .describe(
-            'Best-fit category. Pickup/collection charges = collection; airfreight/sea freight = freight; export clearance/AMS/customs = customs; pallets/handling = handling.',
+            'Best-fit category. Pickup/collection charges = collection; airfreight/sea freight = freight; trucking/road transport to or from the warehouse = transportation; export clearance/AMS/customs = customs; pallets/handling = handling.',
           ),
         description: z.string().describe('The charge description as printed'),
         amount: z.number().describe('The line amount (numbers only)'),
@@ -54,8 +55,8 @@ const parsedInvoiceSchema = z.object({
 const adminParseGroupInvoice = adminProcedure
   .input(parseGroupInvoiceSchema)
   .mutation(async ({ input }) => {
-    const { groupId, file: rawFile, fileType } = input;
-    const file = rawFile.includes(',') ? (rawFile.split(',')[1] ?? rawFile) : rawFile;
+    const { groupId, fileType } = input;
+    const file = (await readUploadedFile(input)).toString('base64');
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {

@@ -17,6 +17,7 @@ const addShipmentCostLineSchema = z.object({
       'customs',
       'gov_fees',
       'delivery',
+      'transportation',
       'other',
     ])
     .default('freight'),

@@ -152,6 +152,7 @@ const SHIP_COST_CATEGORIES = [
   'customs',
   'gov_fees',
   'delivery',
+  'transportation',
   'other',
 ] as const;
 type ShipCostCategory = (typeof SHIP_COST_CATEGORIES)[number];

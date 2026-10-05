@@ -59,6 +59,7 @@ export const costLineCategories = [
   'insurance',
   'duty',
   'delivery',
+  'transportation',
   'other',
 ] as const;
 
@@ -123,14 +124,18 @@ export const groupDocumentTypes = [
 ] as const;
 
 /** Upload a document once to a group (applies to all its shipments). */
-export const uploadGroupDocumentSchema = z.object({
-  groupId: z.string().uuid(),
-  /** Base64 data URL of the file. */
-  file: z.string(),
-  filename: z.string().min(1).max(300),
-  documentType: z.enum(groupDocumentTypes).default('other'),
-  documentNumber: z.string().max(120).nullable().optional(),
-});
+export const uploadGroupDocumentSchema = z
+  .object({
+    groupId: z.string().uuid(),
+    /** Base64 data URL of the file — small files only, the request caps at 4.5MB. */
+    file: z.string().optional(),
+    /** Where the browser already uploaded it, for anything larger. */
+    blobUrl: z.string().url().optional(),
+    filename: z.string().min(1).max(300),
+    documentType: z.enum(groupDocumentTypes).default('other'),
+    documentNumber: z.string().max(120).nullable().optional(),
+  })
+  .refine((v) => v.file || v.blobUrl, { message: 'No file sent' });
 
 /** Delete a group document. */
 export const deleteGroupDocumentSchema = z.object({
@@ -138,9 +143,13 @@ export const deleteGroupDocumentSchema = z.object({
 });
 
 /** Parse an uploaded freight invoice (PDF/image) into candidate cost lines. */
-export const parseGroupInvoiceSchema = z.object({
-  groupId: z.string().uuid(),
-  /** Base64 data URL (or raw base64) of the invoice file. */
-  file: z.string(),
-  fileType: z.enum(['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']),
-});
+export const parseGroupInvoiceSchema = z
+  .object({
+    groupId: z.string().uuid(),
+    /** Base64 data URL (or raw base64) of the invoice file. */
+    file: z.string().optional(),
+    /** Where the browser already uploaded it, for anything larger. */
+    blobUrl: z.string().url().optional(),
+    fileType: z.enum(['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']),
+  })
+  .refine((v) => v.file || v.blobUrl, { message: 'No file sent' });

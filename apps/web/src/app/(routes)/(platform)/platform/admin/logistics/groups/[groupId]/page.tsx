@@ -11,6 +11,7 @@ import {
   IconUpload,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { upload } from '@vercel/blob/client';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -34,6 +35,7 @@ const CATEGORIES = [
   'insurance',
   'duty',
   'delivery',
+  'transportation',
   'other',
 ] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -323,6 +325,7 @@ const ShipmentGroupDetailPage = () => {
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
   const [batchFx, setBatchFx] = useState('1');
   const [savingBatch, setSavingBatch] = useState(false);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
 
   const parseMut = useMutation({
     ...api.logistics.admin.groups.parseInvoice.mutationOptions(),
@@ -348,18 +351,26 @@ const ShipmentGroupDetailPage = () => {
       toast.error('Upload a PDF, PNG or JPG');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () =>
-      parseMut.mutate({
-        groupId,
-        file: reader.result as string,
-        fileType: fileType as
-          | 'application/pdf'
-          | 'image/png'
-          | 'image/jpeg'
-          | 'image/jpg',
-      });
-    reader.readAsDataURL(f);
+    // Straight to Blob, then parsed from there: a base64 body over 4.5MB is
+    // refused before our code runs
+    setInvoiceUploading(true);
+    void upload(`logistics/groups/${groupId}/${f.name}`, f, {
+      access: 'public',
+      handleUploadUrl: '/api/upload/blob',
+    })
+      .then((blob) =>
+        parseMut.mutate({
+          groupId,
+          blobUrl: blob.url,
+          fileType: fileType as
+            | 'application/pdf'
+            | 'image/png'
+            | 'image/jpeg'
+            | 'image/jpg',
+        }),
+      )
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Upload failed'))
+      .finally(() => setInvoiceUploading(false));
   };
 
   // ── Group documents (upload once, applies to all shipments) ──────────────
@@ -377,18 +388,26 @@ const ShipmentGroupDetailPage = () => {
     ...api.logistics.admin.groups.deleteDocument.mutationOptions(),
     onSuccess: () => void invalidate(),
   });
+  const [docUploading, setDocUploading] = useState(false);
   const handleDocFile = (fileList: FileList | null) => {
     const f = fileList?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () =>
-      uploadDocMut.mutate({
-        groupId,
-        file: reader.result as string,
-        filename: f.name,
-        documentType: docType,
-      });
-    reader.readAsDataURL(f);
+    // Straight to Blob, so a scanned GAC invoice over ~3MB is not refused
+    setDocUploading(true);
+    void upload(`logistics/groups/${groupId}/${f.name}`, f, {
+      access: 'public',
+      handleUploadUrl: '/api/upload/blob',
+    })
+      .then((blob) =>
+        uploadDocMut.mutate({
+          groupId,
+          blobUrl: blob.url,
+          filename: f.name,
+          documentType: docType,
+        }),
+      )
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Upload failed'))
+      .finally(() => setDocUploading(false));
   };
 
   const addAllParsed = async () => {
@@ -657,12 +676,12 @@ const ShipmentGroupDetailPage = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => docFileRef.current?.click()}
-                  disabled={uploadDocMut.isPending}
+                  disabled={docUploading || uploadDocMut.isPending}
                 >
                   <ButtonContent
-                    iconLeft={uploadDocMut.isPending ? IconLoader2 : IconUpload}
+                    iconLeft={docUploading || uploadDocMut.isPending ? IconLoader2 : IconUpload}
                   >
-                    {uploadDocMut.isPending ? 'Uploading…' : 'Upload'}
+                    {docUploading || uploadDocMut.isPending ? 'Uploading…' : 'Upload'}
                   </ButtonContent>
                 </Button>
               </div>
@@ -724,12 +743,12 @@ const ShipmentGroupDetailPage = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => fileRef.current?.click()}
-                  disabled={parseMut.isPending}
+                  disabled={invoiceUploading || parseMut.isPending}
                 >
                   <ButtonContent
-                    iconLeft={parseMut.isPending ? IconLoader2 : IconUpload}
+                    iconLeft={invoiceUploading || parseMut.isPending ? IconLoader2 : IconUpload}
                   >
-                    {parseMut.isPending ? 'Parsing…' : 'Upload invoice'}
+                    {invoiceUploading ? 'Uploading…' : parseMut.isPending ? 'Parsing…' : 'Upload invoice'}
                   </ButtonContent>
                 </Button>
                 <Typography variant="bodyXs" colorRole="muted">
