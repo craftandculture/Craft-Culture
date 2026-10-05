@@ -1555,21 +1555,31 @@ const PricingManagerPage = () => {
     setIsExporting(true);
     try {
       const pageSize = 200;
-      const all: typeof products = [];
+      const landedRows: typeof products = [];
+      // In-transit lines come back whole on every page, so they are taken once
+      let inboundRows: NonNullable<typeof data>['inbound'] = [];
       for (let offset = 0; offset < 20000; offset += pageSize) {
         const res = await trpcClient.wms.admin.stock.pricing.getProducts.query({
           search: debouncedSearch || undefined,
           category,
           ownerId,
           priceFilters,
+          includeInbound,
+          includeSoldOut,
           sortBy,
           sortOrder,
           limit: pageSize,
           offset,
         });
-        all.push(...res.products);
+        if (offset === 0) inboundRows = includeInbound ? (res.inbound ?? []) : [];
+        landedRows.push(...res.products);
         if (!res.pagination.hasMore) break;
       }
+      // Same order as the table: in transit first, then landed stock
+      const all = [
+        ...inboundRows.map((p) => ({ ...p, exportStatus: `In transit${p.shipmentNumber ? ` (${p.shipmentNumber})` : ''}` })),
+        ...landedRows.map((p) => ({ ...p, exportStatus: 'In stock' })),
+      ];
       if (!all.length) {
         toast.info('No products to export');
         return;
@@ -1590,7 +1600,7 @@ const PricingManagerPage = () => {
 
       const XLSX = await import('xlsx');
       const aoa: (string | number)[][] = [[
-        'Product', 'Producer', 'Vintage', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
+        'Product', 'Producer', 'Vintage', 'Status', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
         'Transfer $/btl', 'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
         'PC Price $/btl', 'PC Price $/case', 'Margin %',
       ]];
@@ -1639,6 +1649,7 @@ const PricingManagerPage = () => {
           p.productName,
           p.producer ?? '',
           p.vintage ?? '',
+          p.exportStatus,
           `${caseConfig}x${p.bottleSize ?? '75cl'}`,
           p.totalCases,
           p.totalCases * caseConfig,
@@ -1657,10 +1668,10 @@ const PricingManagerPage = () => {
       }
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
-        { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
+        { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 24 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
         { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
       ];
-      ws['!autofilter'] = { ref: `A1:P${all.length + 1}` };
+      ws['!autofilter'] = { ref: `A1:R${all.length + 1}` };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
       XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -1678,6 +1689,8 @@ const PricingManagerPage = () => {
     category,
     ownerId,
     priceFilters,
+    includeInbound,
+    includeSoldOut,
     sortBy,
     sortOrder,
     effLogistics,
