@@ -95,6 +95,8 @@ const adminUpdate = adminProcedure
         .set({
           ...updates,
           ...(totalLandedCostUsd !== undefined && { totalLandedCostUsd }),
+          // Never an empty SET: a line reset changes no shipment column
+          updatedAt: new Date(),
         })
         .where(eq(logisticsShipments.id, id))
         .returning();
