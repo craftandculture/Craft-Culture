@@ -9,6 +9,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import packFromLwin from '../utils/packFromLwin';
 import recalcShipmentTotals from '../utils/recalcShipmentTotals';
+import syncReceivedAvailability from '../utils/syncReceivedAvailability';
 
 const updateItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -217,6 +218,11 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
   // Recompute shipment totals from line items when cases/pack changed
   if (updateFields.cases !== undefined || updateFields.bottlesPerCase !== undefined) {
     await recalcShipmentTotals(existingItem.shipmentId);
+  }
+
+  // A line's answer reaches stock already received under it, not only the next
+  if (updateFields.notForSale !== undefined) {
+    await syncReceivedAvailability([existingItem.shipmentId]);
   }
 
   return updatedItem;

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import syncReceivedAvailability from '@/app/_logistics/utils/syncReceivedAvailability';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -83,9 +84,17 @@ const adminSetInboundAvailability = wmsOperatorProcedure
             sql`COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) IN ${keys}`,
           ),
         )
-        .returning({ id: logisticsShipmentItems.id });
+        .returning({
+          id: logisticsShipmentItems.id,
+          shipmentId: logisticsShipmentItems.shipmentId,
+        });
 
       updated += rows.length;
+
+      // Lines marked here may already be on the shelf
+      await syncReceivedAvailability([
+        ...new Set(rows.map((row) => row.shipmentId)),
+      ]);
     }
 
     return { updated, notForSale };

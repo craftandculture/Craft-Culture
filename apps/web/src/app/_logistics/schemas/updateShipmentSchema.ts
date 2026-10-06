@@ -70,6 +70,9 @@ const updateShipmentSchema = z.object({
 
   /** Goods held for their owner rather than offered for sale */
   notForSale: z.boolean().optional(),
+
+  /** Hand every line's sale setting back to the shipment's */
+  resetLineAvailability: z.boolean().optional(),
 });
 
 export default updateShipmentSchema;

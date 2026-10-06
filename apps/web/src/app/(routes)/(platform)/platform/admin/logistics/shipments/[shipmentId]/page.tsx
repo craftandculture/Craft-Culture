@@ -1779,6 +1779,44 @@ const ShipmentDetailPage = () => {
                     </div>
 
                     {/*
+                      Lines can answer for themselves, and the switch above
+                      leaves those alone — so a shipment marked for sale could
+                      still have every line held, with nothing on screen to say
+                      why its wine never reached a price list.
+                    */}
+                    {(() => {
+                      const ownAnswer = (shipment.items ?? []).filter(
+                        (item) => item.notForSale != null,
+                      );
+
+                      if (ownAnswer.length === 0) return null;
+
+                      const held = ownAnswer.filter((item) => item.notForSale).length;
+
+                      return (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {ownAnswer.length} line{ownAnswer.length === 1 ? '' : 's'} set
+                            individually
+                            {held > 0 ? ` — ${held} held for owner whatever the shipment says` : ''}
+                          </Typography>
+                          <button
+                            onClick={() =>
+                              updateShipment({
+                                id: shipmentId,
+                                resetLineAvailability: true,
+                              })
+                            }
+                            disabled={isUpdatingShipment}
+                            className="text-xs text-text-brand hover:underline disabled:opacity-50"
+                          >
+                            Use the shipment setting for all lines
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {/*
                       Shown for every shipment, not only the foreign ones.
 
                       It used to appear only when the currency read as non-USD,

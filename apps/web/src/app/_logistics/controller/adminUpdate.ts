@@ -1,17 +1,17 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
   logisticsShipmentActivityLogs,
   logisticsShipmentItems,
   logisticsShipments,
-  wmsStock,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import updateShipmentSchema from '../schemas/updateShipmentSchema';
+import syncReceivedAvailability from '../utils/syncReceivedAvailability';
 
 /**
  * Update a logistics shipment
@@ -27,7 +27,7 @@ const adminUpdate = adminProcedure
   .input(updateShipmentSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     try {
-      const { id, ...updates } = input;
+      const { id, resetLineAvailability, ...updates } = input;
 
       // Get current shipment
       const [existing] = await db
@@ -102,24 +102,25 @@ const adminUpdate = adminProcedure
       /*
         Stock already received has to follow, or the setting only works if you
         remember it before the goods land. Lines that state their own answer
-        are left alone; everything else inherits the shipment it came in on.
+        keep it; everything else inherits the shipment it came in on.
+
+        Handing every line back to the shipment is the way out when lines were
+        held one by one: the switch skips a line with its own answer, so
+        flipping it could never release them.
       */
-      if (
-        updates.notForSale !== undefined &&
-        updates.notForSale !== existing.notForSale
-      ) {
+      if (resetLineAvailability) {
         await db
-          .update(wmsStock)
-          .set({ notForSale: updates.notForSale, updatedAt: new Date() })
-          .where(
-            sql`${wmsStock.shipmentId} = ${id}
-                AND NOT EXISTS (
-                  SELECT 1 FROM ${logisticsShipmentItems}
-                  WHERE ${logisticsShipmentItems.shipmentId} = ${id}
-                    AND ${logisticsShipmentItems.lwin} = ${wmsStock.lwin18}
-                    AND ${logisticsShipmentItems.notForSale} IS NOT NULL
-                )`,
-          );
+          .update(logisticsShipmentItems)
+          .set({ notForSale: null, updatedAt: new Date() })
+          .where(eq(logisticsShipmentItems.shipmentId, id));
+      }
+
+      if (
+        resetLineAvailability ||
+        (updates.notForSale !== undefined &&
+          updates.notForSale !== existing.notForSale)
+      ) {
+        await syncReceivedAvailability([id]);
       }
 
       if (!shipment) {
@@ -134,7 +135,12 @@ const adminUpdate = adminProcedure
         shipmentId: id,
         userId: user.id,
         action: 'updated',
-        metadata: { updatedFields: Object.keys(updates) },
+        metadata: {
+          updatedFields: [
+            ...Object.keys(updates),
+            ...(resetLineAvailability ? ['lineAvailability'] : []),
+          ],
+        },
         notes: `Shipment updated`,
       });
 
