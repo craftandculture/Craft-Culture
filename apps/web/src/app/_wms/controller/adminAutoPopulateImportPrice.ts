@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { client } from '@/database/client';
 import {
   logisticsShipmentItems,
   wmsStock,
@@ -10,13 +9,13 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { autoPopulateImportPriceSchema } from '../schemas/pricingSchema';
+import writeProductPricing from '../utils/writeProductPricing';
 
 /**
  * Auto-populate import price from the latest logistics shipment for a product
  *
  * Finds the most recent shipment item matching this LWIN18 via wmsStock.shipmentId,
  * and uses its landedCostPerBottle as the import price.
- * Uses raw postgres-js client for the upsert to bypass Drizzle's RLS query builder.
  *
  * @param lwin18 - The product LWIN18 identifier
  */
@@ -60,16 +59,16 @@ const adminAutoPopulateImportPrice = wmsOperatorProcedure
       });
     }
 
-    await client`
-      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, import_price_source, shipment_item_id, updated_by)
-      VALUES (${lwin18}, ${costPerBottle}, ${'shipment'}, ${shipmentItem.id}, ${ctx.user.id})
-      ON CONFLICT (lwin18) DO UPDATE SET
-        import_price_per_bottle = ${costPerBottle},
-        import_price_source = ${'shipment'},
-        shipment_item_id = ${shipmentItem.id},
-        updated_by = ${ctx.user.id},
-        updated_at = NOW()
-    `;
+    // Every pack of the wine, as every other pricing write does
+    await writeProductPricing({
+      lwin18,
+      set: {
+        importPricePerBottle: costPerBottle,
+        importPriceSource: 'shipment',
+        shipmentItemId: shipmentItem.id,
+      },
+      userId: ctx.user.id,
+    });
 
     return {
       importPricePerBottle: costPerBottle,
