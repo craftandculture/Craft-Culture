@@ -13,6 +13,13 @@ import LpoPreviewReport from './LpoPreviewReport';
 
 type LpoPreview = inferRouterOutputs<AppRouter>['lpo']['admin']['preview'];
 
+/** A correction to one line, as the preview accepts it */
+export interface LpoEdit {
+  lwin18?: string;
+  bottles?: number;
+  unitPriceAed?: number;
+}
+
 /**
  * Upload a client purchase order and read it back against live stock.
  *
@@ -41,6 +48,12 @@ const LpoPreviewClient = () => {
   const [vintages, setVintages] = useState<Record<string, string>>({});
   /** The customer, once picked, so prices can be checked against their quote */
   const [chosenClient, setChosenClient] = useState('');
+  /*
+    Corrections made in the table — the wine a line means, its quantity, its
+    price — keyed by the line's position. Sent back with every re-read, like a
+    chosen vintage, so nothing is patched on screen.
+  */
+  const [edits, setEdits] = useState<Record<string, LpoEdit>>({});
 
   const previewMutation = useMutation({
     ...api.lpo.admin.preview.mutationOptions(),
@@ -57,6 +70,7 @@ const LpoPreviewClient = () => {
     setFileName(chosen.name);
     setPreview(null);
     setVintages({});
+    setEdits({});
     setChosenClient('');
 
     const base64 = await new Promise<string>((resolve, reject) => {
@@ -91,6 +105,42 @@ const LpoPreviewClient = () => {
       source: source.trim() || undefined,
       client: chosenClient || undefined,
       vintages: next,
+      edits,
+    });
+  };
+
+  /** Correct one line — its wine, quantity or price — and read the order again. */
+  const onEdit = (at: number, patch: LpoEdit) => {
+    if (!file) return;
+
+    const next = { ...edits, [String(at)]: { ...edits[String(at)], ...patch } };
+    setEdits(next);
+
+    previewMutation.mutate({
+      file,
+      fileName: fileName ?? undefined,
+      source: source.trim() || undefined,
+      client: chosenClient || undefined,
+      vintages,
+      edits: next,
+    });
+  };
+
+  /** Undo every correction on one line. */
+  const onResetEdit = (at: number) => {
+    if (!file) return;
+
+    const next = { ...edits };
+    delete next[String(at)];
+    setEdits(next);
+
+    previewMutation.mutate({
+      file,
+      fileName: fileName ?? undefined,
+      source: source.trim() || undefined,
+      client: chosenClient || undefined,
+      vintages,
+      edits: next,
     });
   };
 
@@ -112,6 +162,7 @@ const LpoPreviewClient = () => {
       source: source.trim() || undefined,
       client: name || undefined,
       vintages,
+      edits,
     });
   };
 
@@ -161,6 +212,9 @@ const LpoPreviewClient = () => {
           preview={preview}
           chosenVintages={vintages}
           onChooseVintage={onChooseVintage}
+          edits={edits}
+          onEdit={onEdit}
+          onResetEdit={onResetEdit}
           onChooseClient={onChooseClient}
           isRereading={previewMutation.isPending}
         />

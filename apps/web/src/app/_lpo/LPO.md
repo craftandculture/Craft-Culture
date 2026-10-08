@@ -75,6 +75,24 @@ The confidence margin is measured against the nearest **different** wine. Two
 packs of the same wine scoring alike is agreement, not ambiguity, and treating
 it as ambiguity refuses matches that are certain.
 
+### A stated LWIN is an identifier, not a name
+
+A sheet exported from our own Stock Explorer carries `LWIN18`, `Size`, `Pack`
+and `Vintage` columns. `parseReplenishmentSheet` reads them, and `matchLpoLine`
+takes a stated LWIN first — any pack of that wine + vintage + size — before
+scoring a name at all. Ignoring them failed lines whose code sat in the next
+column (a 3L Opus One scored against 75cl rows because size was fixed at 750),
+and multiplied every "1 case" by six, so a single 3L read as "short 6 of 6".
+Where the LWIN is not held, the name still gets its chance.
+
+### Lines are corrected on screen
+
+Wine (from the shortlist, or a pasted LWIN), quantity and price per bottle are
+editable in the table. Each correction is sent back as `edits` keyed by line
+position — like a chosen vintage — and the whole order is read again, so stock,
+repacks and price are worked out in one place. A wine chosen on screen that we
+do not hold is reported as such rather than falling back to the name match.
+
 ### In transit is not on the shelf
 
 `availableBottles` counts stock; `inboundBottles` is reported separately.

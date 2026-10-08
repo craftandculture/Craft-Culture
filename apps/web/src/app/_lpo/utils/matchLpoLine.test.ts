@@ -272,4 +272,39 @@ describe('an order that does not state a vintage', () => {
     expect(result.lwin18).toBeNull();
     expect(result.verdict).toMatch(/Nothing on file at 1500ml/);
   });
+
+  it('takes a stated LWIN over the name, across any pack', () => {
+    const MARGAUX = [
+      row('1012781-2013-06-01500', 'Chateau Margaux Premier Cru Classe, Margaux', '2013', 1500, 6, 6),
+      row('3000423-2013-03-00750', 'Oddero Barolo Riserva 2013', '2013', 750, 3, 6),
+    ];
+
+    const result = matchLpoLine({
+      wine: 'Chateau Margaux Premier Cru Classe, Margaux 2013',
+      vintage: '2013',
+      // The sheet's size was never read, which is why the name failed
+      sizeMl: 750,
+      bottles: 6,
+      candidates: MARGAUX,
+      lwin18: '1012781-2013-06-01500',
+    });
+
+    expect(result.lwin18).toBe('1012781-2013-06-01500');
+    expect(result.verdict).toBe('Matched by LWIN');
+    expect(result.availableBottles).toBe(6);
+  });
+
+  it('falls back to the name when the stated LWIN is not held', () => {
+    const result = matchLpoLine({
+      wine: 'Chateau Hosanna, Pomerol',
+      vintage: '1999',
+      sizeMl: 750,
+      bottles: 3,
+      candidates: HOSANNA,
+      lwin18: '9999999-1999-06-00750',
+    });
+
+    expect(result.lwin18).not.toBeNull();
+    expect(result.verdict).toBe('Matched');
+  });
 });

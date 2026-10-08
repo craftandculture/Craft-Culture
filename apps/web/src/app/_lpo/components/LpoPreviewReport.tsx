@@ -17,6 +17,9 @@ import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
 import LpoChip from './LpoChip';
+import LpoMatchPicker from './LpoMatchPicker';
+import LpoNumberCell from './LpoNumberCell';
+import type { LpoEdit } from './LpoPreviewClient';
 
 export interface LpoPreviewReportProps {
   preview: inferRouterOutputs<AppRouter>['lpo']['admin']['preview'];
@@ -28,6 +31,12 @@ export interface LpoPreviewReportProps {
   onChooseClient?: (name: string) => void;
   /** True while the order is being read again with a new answer. */
   isRereading?: boolean;
+  /** Corrections already made, keyed by the line's position in the order. */
+  edits?: Record<string, LpoEdit>;
+  /** Correct a line's wine, quantity or price, which re-reads the order. */
+  onEdit?: (at: number, patch: LpoEdit) => void;
+  /** Undo every correction on a line. */
+  onResetEdit?: (at: number) => void;
 }
 
 const money = (value: number) =>
@@ -59,6 +68,9 @@ const LpoPreviewReport = ({
   onChooseVintage,
   onChooseClient,
   isRereading = false,
+  edits = {},
+  onEdit,
+  onResetEdit,
 }: LpoPreviewReportProps) => {
   const { order, reconciliation, summary, lines } = preview;
   /*
@@ -164,6 +176,8 @@ const LpoPreviewReport = ({
     one nobody notices is gone.
   */
   const [removed, setRemoved] = useState<Set<number>>(new Set());
+  /** The line whose wine is being changed, if any */
+  const [picking, setPicking] = useState<number | null>(null);
 
   const toggleRemoved = (index: number) =>
     setRemoved((current) => {
@@ -497,7 +511,8 @@ const LpoPreviewReport = ({
                   ) : (
                     <span className="text-text-muted">
                       {' '}
-                      — closest: {line.match.shortlist[0]?.wine}
+                      — closest: {line.match.shortlist[0]?.wine}. Choose the
+                      wine in the table below, or paste its LWIN.
                     </span>
                   ))}
                 {chosenVintages?.[String(at)] && (
@@ -635,14 +650,73 @@ const LpoPreviewReport = ({
                       <div>{line.match.matchedWine}</div>
                       <div className="font-mono text-[11px] text-text-muted">
                         {line.match.lwin18}
+                        {edits[String(index)]?.lwin18 ? (
+                          <span className="ml-1 rounded bg-amber-100 px-1 font-sans text-[11px] text-amber-900">
+                            chosen here
+                          </span>
+                        ) : line.match.verdict === 'Matched by LWIN' ? (
+                          <span className="ml-1 font-sans text-[11px]">
+                            · by LWIN
+                          </span>
+                        ) : null}
                       </div>
                     </>
                   ) : (
                     <span className="text-red-600">{line.match.verdict}</span>
                   )}
+                  {/*
+                    A line read wrongly is corrected here rather than in the
+                    client's file. An unidentified line opens straight away; a
+                    matched one only on request.
+                  */}
+                  {onEdit &&
+                    (picking === index || !line.match.lwin18 ? (
+                      <LpoMatchPicker
+                        shortlist={line.match.shortlist}
+                        current={edits[String(index)]?.lwin18 ?? null}
+                        disabled={isRereading}
+                        onChoose={(lwin18) => {
+                          setPicking(null);
+                          onEdit(index, { lwin18 });
+                        }}
+                        onCancel={
+                          line.match.lwin18 ? () => setPicking(null) : undefined
+                        }
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPicking(index)}
+                        className="mt-0.5 text-[11px] text-text-brand hover:underline"
+                      >
+                        change wine
+                      </button>
+                    ))}
+                  {onResetEdit && edits[String(index)] && (
+                    <button
+                      type="button"
+                      disabled={isRereading}
+                      onClick={() => onResetEdit(index)}
+                      className="ml-2 mt-0.5 text-[11px] text-text-muted hover:underline"
+                    >
+                      undo changes
+                    </button>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  {line.bottles}
+                  {onEdit ? (
+                    <LpoNumberCell
+                      value={line.bottles}
+                      disabled={isRereading}
+                      edited={edits[String(index)]?.bottles !== undefined}
+                      title="Bottles — type a new quantity and press Enter"
+                      onCommit={(bottles) =>
+                        bottles > 0 && onEdit(index, { bottles })
+                      }
+                    />
+                  ) : (
+                    line.bottles
+                  )}
                 </td>
                 <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
                   {line.match.lwin18 ? line.match.availableBottles : '—'}
@@ -653,7 +727,25 @@ const LpoPreviewReport = ({
                   )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  {money(convert(line.unitPriceAed))}
+                  {onEdit ? (
+                    <LpoNumberCell
+                      value={convert(line.unitPriceAed)}
+                      decimals={2}
+                      disabled={isRereading}
+                      edited={edits[String(index)]?.unitPriceAed !== undefined}
+                      title={`Price per bottle in ${currency} — type a new one and press Enter`}
+                      onCommit={(price) =>
+                        onEdit(index, {
+                          // Held in AED like the rest of the order
+                          unitPriceAed:
+                            Math.round((inUsd ? price / AED_TO_USD : price) * 100) /
+                            100,
+                        })
+                      }
+                    />
+                  ) : (
+                    money(convert(line.unitPriceAed))
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   {money(convert(line.lineTotalAed))}

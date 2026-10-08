@@ -28,6 +28,14 @@ export interface LpoLine {
   unitPriceCaseAed?: number;
   /** The client's own code for the item, where their form carries one. */
   supplierCode?: string | null;
+  /**
+   * The LWIN-18 the document itself states, where it carries one.
+   *
+   * A sheet exported from our own Stock Explorer names the exact wine, vintage,
+   * pack and size. That is an identifier, and reading the name instead threw it
+   * away — lines failed to match while their LWIN sat in the next column.
+   */
+  lwin18?: string | null;
 }
 
 export interface ParsedLpo {

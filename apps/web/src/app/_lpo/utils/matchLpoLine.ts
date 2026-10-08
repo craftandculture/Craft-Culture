@@ -21,6 +21,14 @@ export interface LpoMatchInput {
   /** Bottles ordered. */
   bottles: number;
   candidates: CatalogueCandidate[];
+  /**
+   * An LWIN-18 the document stated, or a person chose on screen.
+   *
+   * It names wine, vintage and size outright, so where it is held it decides
+   * the match and the name is not scored at all. Any pack of it counts: the
+   * code says which wine, not which box it has to come out of.
+   */
+  lwin18?: string | null;
 }
 
 export interface LpoMatch {
@@ -143,7 +151,50 @@ const matchLpoLine = ({
   sizeMl,
   bottles,
   candidates,
+  lwin18: statedLwin,
 }: LpoMatchInput): LpoMatch => {
+  /*
+    An LWIN is an identifier, not a name to be scored. Where one was stated and
+    we hold that wine, vintage and size in any pack, it is the answer. Where we
+    do not, the name still gets its chance below — the code may simply be one
+    we file differently.
+  */
+  if (statedLwin) {
+    const identity = identityOf(statedLwin.trim());
+    const rows = candidates
+      .filter((candidate) => identityOf(candidate.lwin18) === identity)
+      .sort((left, right) => {
+        // The exact pack stated first, then the fullest row
+        const exact =
+          Number(right.lwin18 === statedLwin) - Number(left.lwin18 === statedLwin);
+        return exact || right.bottles - left.bottles;
+      });
+
+    if (rows.length > 0) {
+      const held = (source: CatalogueCandidate['source']) =>
+        rows
+          .filter((row) => row.source === source)
+          .reduce((total, row) => total + row.bottles, 0);
+      const availableBottles = held('stock');
+      const best = rows.find((row) => row.source === 'stock') ?? rows[0]!;
+
+      return {
+        lwin18: best.lwin18,
+        matchedWine: best.wine,
+        score: 1,
+        verdict: 'Matched by LWIN',
+        availableBottles,
+        inboundBottles: held('inbound'),
+        takesLastBottles: availableBottles > 0 && availableBottles === bottles,
+        rows: [
+          ...rows.filter((row) => row.source === 'stock'),
+          ...rows.filter((row) => row.source !== 'stock'),
+        ],
+        shortlist: [],
+      };
+    }
+  }
+
   const empty = {
     lwin18: null,
     matchedWine: null,

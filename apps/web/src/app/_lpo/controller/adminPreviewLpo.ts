@@ -22,17 +22,7 @@ import matchLpoLine from '../utils/matchLpoLine';
 import type { CatalogueCandidate } from '../utils/matchLpoLine';
 import parseAnyLpoText from '../utils/parseAnyLpoText';
 import parseReplenishmentSheet from '../utils/parseReplenishmentSheet';
-
-/** "75cl", "750ml", "1.5L" — however a row happens to spell its size. */
-const toMl = (size: string | null) => {
-  const match = String(size ?? '').match(/([\d.]+)\s*(cl|ml|l)/i);
-  if (!match?.[1] || !match[2]) return null;
-
-  const value = Number(match[1]);
-  const unit = match[2].toLowerCase();
-
-  return unit === 'ml' ? value : unit === 'cl' ? value * 10 : value * 1000;
-};
+import toMl from '../utils/toMl';
 
 /**
  * Read a client's purchase order and say what it would take to fulfil it.
@@ -108,6 +98,16 @@ const adminPreviewLpo = adminProcedure
       if (line && !line.vintage.trim() && /^(\d{4}|NV)$/.test(vintage)) {
         line.vintage = vintage;
       }
+    });
+
+    /*
+      Quantities corrected on screen. Applied before matching, like a chosen
+      vintage, so what we hold, the shortfall and the pack the sale needs are
+      all worked out for the quantity actually wanted.
+    */
+    Object.entries(input.edits ?? {}).forEach(([at, edit]) => {
+      const line = parsed.lines[Number(at)];
+      if (line && edit.bottles) line.bottles = edit.bottles;
     });
 
     if (parsed.lines.length === 0) {
@@ -241,20 +241,47 @@ const adminPreviewLpo = adminProcedure
       replenishment is quoted at exactly what a customer would be shown rather
       than at a figure computed a second way.
     */
-    const catalogue = new Map(
-      parsed.lines.some((line) => line.unitPriceAed === 0)
-        ? (await getCatalogueRows({})).map((row) => [row.lwin18, row])
-        : [],
+    const catalogueRows =
+      parsed.lines.some((line) => line.unitPriceAed === 0) || input.edits
+        ? await getCatalogueRows({})
+        : [];
+    const catalogue = new Map(catalogueRows.map((row) => [row.lwin18, row]));
+    /*
+      The same prices keyed without the pack, for a match that lands on a pack
+      the price list does not carry — the bottle price is the wine's, whatever
+      box it is in.
+    */
+    const cataloguePak = new Map(
+      catalogueRows.map((row) => [pakKeyOf(row.lwin18), row]),
     );
 
-    const lines = parsed.lines.map((line) => {
+    const lines = parsed.lines.map((line, at) => {
+      const edit = input.edits?.[String(at)];
+      // A wine chosen on screen wins over the one the document stated
+      const chosenLwin = edit?.lwin18 ?? null;
+
       const match = matchLpoLine({
         wine: line.wine,
         vintage: line.vintage,
         sizeMl: line.sizeMl,
         bottles: line.bottles,
         candidates,
+        lwin18: chosenLwin ?? line.lwin18 ?? null,
       });
+
+      /*
+        A wine chosen on screen that we do not hold is said so plainly, rather
+        than quietly falling back to whatever the name happened to match.
+      */
+      if (chosenLwin && match.verdict !== 'Matched by LWIN') {
+        match.lwin18 = null;
+        match.matchedWine = null;
+        match.verdict = `${chosenLwin} is not held, in any pack`;
+        match.availableBottles = 0;
+        match.inboundBottles = 0;
+        match.takesLastBottles = false;
+        match.rows = [];
+      }
 
       /** Bottles the order asks for that are not on a shelf today. */
       const shortfall = match.lwin18
@@ -303,10 +330,17 @@ const adminPreviewLpo = adminProcedure
         same number the price list publishes. Held in AED because the rest of
         this flow is, and converted back at the peg when the order is billed.
       */
-      const listed = match.lwin18 ? catalogue.get(match.lwin18) : undefined;
+      const listed = match.lwin18
+        ? (catalogue.get(match.lwin18) ?? cataloguePak.get(pakKeyOf(match.lwin18)))
+        : undefined;
 
       if (line.unitPriceAed === 0 && listed && listed.ibPerBottle > 0) {
         line.unitPriceAed = Math.round((listed.ibPerBottle / AED_TO_USD) * 100) / 100;
+      }
+
+      // A price settled on screen is the price; a quantity changed re-totals
+      if (edit?.unitPriceAed !== undefined) line.unitPriceAed = edit.unitPriceAed;
+      if (line.unitPriceAed > 0 && (edit || line.lineTotalAed === 0)) {
         line.lineTotalAed = Math.round(line.unitPriceAed * line.bottles * 100) / 100;
       }
 

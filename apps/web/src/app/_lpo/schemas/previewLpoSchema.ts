@@ -30,6 +30,27 @@ const previewLpoSchema = z.object({
    * on.
    */
   client: z.string().optional(),
+  /**
+   * Corrections made on screen, keyed by the line's position in the order.
+   *
+   * A read order is not always right — a name too loose to match, a quantity
+   * misread, a price to settle — and editing the client's file to fix that is
+   * absurd. Sent back like a chosen vintage, so stock, repacks and price are
+   * worked out again in one place rather than patched on screen.
+   */
+  edits: z
+    .record(
+      z.string(),
+      z.object({
+        /** The wine this line means, chosen from the shortlist or typed */
+        lwin18: z.string().trim().min(1).optional(),
+        /** Bottles wanted */
+        bottles: z.number().int().positive().optional(),
+        /** Price per bottle, in AED like the rest of the order */
+        unitPriceAed: z.number().nonnegative().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export default previewLpoSchema;

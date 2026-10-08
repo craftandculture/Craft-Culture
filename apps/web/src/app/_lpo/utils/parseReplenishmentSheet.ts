@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 
 import type { ParsedLpo } from './parseLpoText';
+import toMl from './toMl';
 
 /*
   A sheet typed by hand puts the words in whatever order it likes: "Send 4
@@ -103,26 +104,45 @@ const parseReplenishmentSheet = (
       continue;
     }
 
-    // A vintage on the end of the name is the only one the sheet states
-    const vintage = /\b(19|20)\d{2}\b/.exec(wine)?.[0] ?? 'NV';
+    /*
+      A sheet exported from our Stock Explorer carries its own LWIN18, Size,
+      Pack and Vintage columns. Each is read where present: the LWIN identifies
+      the wine outright, and size and pack stop a 3L or a three-pack being read
+      as six 75cl bottles.
+    */
+    const lwinText = text(row['LWIN18'] ?? row['LWIN'] ?? row['Lwin18']);
+    const lwin18 = /^[\dA-Z]+-[\dA-Z]{4}-\d{2}-\d{5}$/i.test(lwinText)
+      ? lwinText
+      : null;
+    const statedVintage = text(row['Vintage']);
+    const statedPack = Number(text(row['Pack']));
+
+    // The name's own year first, then the column, else non-vintage
+    const vintage =
+      /\b(19|20)\d{2}\b/.exec(wine)?.[0] ??
+      (/^\d{4}$/.test(statedVintage) ? statedVintage : 'NV');
+
+    const sizeMl = toMl(text(row['Size'])) ?? 750;
+
+    /*
+      Cases become bottles at the sheet's own pack where it states one. Without
+      one the common pack of six is the guess, and the match shows what we
+      actually hold beside it for someone to check.
+    */
+    const pack = Number.isInteger(statedPack) && statedPack > 0 ? statedPack : 6;
 
     lines.push({
       region: source || 'Replenishment',
       wine,
       vintage,
       volumeText: isBottles ? `${count} btl` : `${count} case`,
-      // The sheet never states a format; the catalogue match settles it
-      sizeMl: 750,
-      /*
-        Cases are turned into bottles at six, and corrected by the match.
-        Guessing is unavoidable — the sheet says "4 case" and not of what — so
-        it is the common pack, and the preview shows what we actually hold
-        beside it for someone to check before anything is created.
-      */
-      bottles: isBottles ? count : count * 6,
+      sizeMl,
+      bottles: isBottles ? count : count * pack,
+      ...(isBottles ? {} : { cases: count, pack }),
       unitPriceAed: 0,
       lineTotalAed: 0,
       problem: null,
+      lwin18,
     });
   }
 
