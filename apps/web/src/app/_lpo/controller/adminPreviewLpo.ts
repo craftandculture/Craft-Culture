@@ -283,6 +283,14 @@ const adminPreviewLpo = adminProcedure
         match.rows = [];
       }
 
+      /*
+        An order that states no bottle size takes the size of the wine it
+        matched, so the Zoho item is created with a real one.
+      */
+      if (!(line.sizeMl > 0)) {
+        line.sizeMl = match.rows[0]?.sizeMl ?? 750;
+      }
+
       /** Bottles the order asks for that are not on a shelf today. */
       const shortfall = match.lwin18
         ? Math.max(0, line.bottles - match.availableBottles)

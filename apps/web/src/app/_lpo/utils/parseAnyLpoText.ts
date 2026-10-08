@@ -1,3 +1,4 @@
+import parseItemListText, { isItemList } from './parseItemListText';
 import parseLpoText from './parseLpoText';
 import type { ParsedLpo } from './parseLpoText';
 import parseOrderFormText, { isOrderForm } from './parseOrderFormText';
@@ -15,6 +16,9 @@ import parseProformaText, { isProforma } from './parseProformaText';
  */
 const parseAnyLpoText = (text: string): ParsedLpo => {
   if (isOrderForm(text)) return parseOrderFormText(text);
+
+  // S.NO / ITEM NAME / VINTAGE / UOM — one line per wine, no bottle size
+  if (isItemList(text)) return parseItemListText(text);
 
   // A proforma we issued is an order too, and reads nothing like a client's.
   if (isProforma(text)) return parseProformaText(text);

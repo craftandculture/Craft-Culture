@@ -75,6 +75,17 @@ The confidence margin is measured against the nearest **different** wine. Two
 packs of the same wine scoring alike is agreement, not ambiguity, and treating
 it as ambiguity refuses matches that are certain.
 
+### Layouts read
+
+`parseAnyLpoText` chooses by what the document says about itself:
+`parseOrderFormText` (ORDER FORM, cases), `parseItemListText` (S.NO / ITEM
+NAME / VINTAGE / UOM — Super Cellar), `parseProformaText` (our own proforma),
+else `parseLpoText`. In the item-list layout quantity and price arrive run
+together ("54161.00"); the cut is the one whose product is the line total, and
+two valid cuts refuse the line. It states no bottle size, so lines carry size 0
+and `matchLpoLine` tries 75cl first, then each other size held for that
+vintage — which is how 70cl spirits on a wine order match.
+
 ### A stated LWIN is an identifier, not a name
 
 A sheet exported from our own Stock Explorer carries `LWIN18`, `Size`, `Pack`

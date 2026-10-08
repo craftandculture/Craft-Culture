@@ -195,6 +195,34 @@ const matchLpoLine = ({
     }
   }
 
+  /*
+    Some orders never state a bottle size. Size is still identity, so it is
+    not dropped: the line is tried at 75cl, which is what an unstated wine
+    almost always is, and only if nothing matches there at each other size we
+    hold that vintage in — best score wins. That is what lets a 70cl whisky on
+    a wine order match without letting a magnum stand in for a bottle.
+  */
+  if (!(sizeMl > 0)) {
+    const at750 = matchLpoLine({ wine, vintage, bottles, candidates, sizeMl: 750 });
+    if (at750.lwin18) return at750;
+
+    const otherSizes = [
+      ...new Set(
+        candidates
+          .filter((candidate) => !vintage.trim() || candidate.vintage === vintage)
+          .map((candidate) => candidate.sizeMl)
+          .filter((size) => size !== 750),
+      ),
+    ];
+
+    const found = otherSizes
+      .map((size) => matchLpoLine({ wine, vintage, bottles, candidates, sizeMl: size }))
+      .filter((result) => result.lwin18)
+      .sort((left, right) => right.score - left.score);
+
+    return found[0] ?? at750;
+  }
+
   const empty = {
     lwin18: null,
     matchedWine: null,
