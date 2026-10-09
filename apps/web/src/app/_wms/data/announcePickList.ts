@@ -27,12 +27,12 @@ const HEAD: Record<PickListEvent, string> = {
  * @param pickListId - The pick list
  * @param event - What just happened
  * @param actorName - Who did it, when known
- * @returns Whether Slack accepted the post
+ * @returns null when posted, otherwise why it did not go
  */
 const announcePickList = async (pickListId: string, event: PickListEvent, actorName?: string | null) => {
   try {
     const [pl] = await db.select().from(wmsPickLists).where(eq(wmsPickLists.id, pickListId));
-    if (!pl) return false;
+    if (!pl) return 'Pick list not found';
 
     const items = await db
       .select({
@@ -83,10 +83,9 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
     );
   } catch (error) {
     // Best effort only: never fail the warehouse action, but leave a trace
-    logger.error('Warehouse activity: could not build the post', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Warehouse activity: could not build the post', { error: message });
+    return `Could not build the post: ${message}`;
   }
 };
 

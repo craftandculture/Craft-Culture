@@ -12,22 +12,21 @@ export const WAREHOUSE_WEBHOOK_ENV = 'SLACK_WAREHOUSE_WEBHOOK_URL';
  * dispatch stands whether or not Slack hears about it.
  *
  * @param text - Slack mrkdwn text
- * @returns Whether Slack accepted the post
+ * @returns null when Slack accepted the post, otherwise why it did not go
  */
 const postWarehouseSlack = async (text: string) => {
   if (!process.env[WAREHOUSE_WEBHOOK_ENV]) {
     logger.warn('Warehouse activity: SLACK_WAREHOUSE_WEBHOOK_URL is not set, nothing posted');
-    return false;
+    return 'SLACK_WAREHOUSE_WEBHOOK_URL is not set';
   }
 
   try {
     await postSlackWebhook(WAREHOUSE_WEBHOOK_ENV, { text });
-    return true;
+    return null;
   } catch (error) {
-    logger.error('Warehouse activity: Slack post failed', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Warehouse activity: Slack post failed', { error: message });
+    return message;
   }
 };
 
