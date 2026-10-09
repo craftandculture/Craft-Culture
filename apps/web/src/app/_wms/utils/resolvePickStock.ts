@@ -34,6 +34,8 @@ interface StockRow {
   openBottles?: number | null;
   caseConfig: number | null;
   lwin18: string;
+  /** The bay's storage method — shelf, pallet or mixed */
+  storageMethod?: string | null;
 }
 
 /**
@@ -43,7 +45,8 @@ interface StockRow {
  * that distinguishes lookalike names (e.g. "Talenti, Brunello di Montalcino"
  * from "Talenti, Piero, Brunello di Montalcino") — and requires physical stock
  * (quantity_cases > 0) so an empty pack is never suggested. Prefers the exact
- * ordered pack, then a pack with enough available, then the most stock. Falls
+ * ordered pack, then a shelf bay over a pallet, then a bay with enough
+ * available, then the most stock. Falls
  * back to a strict name + vintage match ONLY when the LWIN yields nothing, and
  * refuses to guess when the name matches more than one distinct wine.
  *
@@ -109,6 +112,10 @@ const resolvePickStock = async ({
     openBottles: wmsStock.openBottles,
     caseConfig: wmsStock.caseConfig,
     lwin18: wmsStock.lwin18,
+    storageMethod: sql<string | null>`(
+      SELECT storage_method::text FROM wms_locations
+       WHERE wms_locations.id = ${wmsStock.locationId}
+    )`,
   };
 
   // Rank in-stock rows: exact ordered pack first, then enough available, then
@@ -122,12 +129,20 @@ const resolvePickStock = async ({
     if (inStock.length === 0) return null;
     const exact =
       orderedPack > 0 ? inStock.filter((s) => s.caseConfig === orderedPack) : [];
-    const pool = exact.length > 0 ? exact : inStock;
+    /*
+      A shelf bay before a pallet. Cases on a shelf are picked by hand; a
+      pallet means a high bay, a forklift and re-wrapping, for the same wine.
+      The rows came back in whatever order the database chose, so a line with
+      24 cases on the shelf could send the picker up to a pallet at A-04-03.
+    */
+    const onPallet = (s: StockRow) => (s.storageMethod === 'pallet' ? 1 : 0);
+    const pool = [...(exact.length > 0 ? exact : inStock)].sort(
+      (a, b) =>
+        onPallet(a) - onPallet(b) ||
+        (b.availableCases ?? 0) - (a.availableCases ?? 0),
+    );
     return (
-      pool.find((s) => (s.availableCases ?? 0) >= neededCases) ??
-      [...pool].sort(
-        (a, b) => (b.availableCases ?? 0) - (a.availableCases ?? 0),
-      )[0]
+      pool.find((s) => (s.availableCases ?? 0) >= neededCases) ?? pool[0]
     );
   };
 

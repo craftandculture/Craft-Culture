@@ -112,7 +112,11 @@ const reserveStockForOrderItems = async ({
           inOurWarehouse(),
         ),
       )
-      .orderBy(desc(wmsStock.availableCases));
+      .orderBy(
+        // Shelf before pallet, as the pick does — see resolvePickStock
+        sql`(SELECT storage_method = 'pallet' FROM wms_locations WHERE wms_locations.id = ${wmsStock.locationId}) NULLS FIRST`,
+        desc(wmsStock.availableCases),
+      );
 
     // Strategy 2: Prefix match (for short LWINs like LWIN7/LWIN11)
     if (stockRecords.length === 0 && normalizedLwin.length < 18) {
@@ -127,7 +131,11 @@ const reserveStockForOrderItems = async ({
             inOurWarehouse(),
           ),
         )
-        .orderBy(desc(wmsStock.availableCases));
+        .orderBy(
+        // Shelf before pallet, as the pick does — see resolvePickStock
+        sql`(SELECT storage_method = 'pallet' FROM wms_locations WHERE wms_locations.id = ${wmsStock.locationId}) NULLS FIRST`,
+        desc(wmsStock.availableCases),
+      );
 
       stockRecords.push(...prefixMatches);
     }

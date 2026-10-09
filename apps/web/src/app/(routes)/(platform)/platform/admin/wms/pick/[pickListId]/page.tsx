@@ -268,12 +268,13 @@ const WMSPickListDetailPage = () => {
     try {
       const result = await lookupLocation({ barcode });
 
-      // Verify scanned location matches the suggested location
-      if (pickingItem?.suggestedLocationId && result.location.id !== pickingItem.suggestedLocationId) {
-        const suggestedCode = data?.items.find((i) => i.id === pickingItem.itemId)?.suggestedLocationCode;
-        setLocationError(`Wrong bay — go to ${suggestedCode ?? 'suggested location'}`);
-        return;
-      }
+      /*
+        Any bay is accepted, not only the suggested one. The suggestion is a
+        best guess; the picker can see a shelf holding the same wine, and
+        blocking them sent people up to a pallet for a case within reach. The
+        pick itself checks the scanned bay holds enough and says where else it
+        is if not.
+      */
 
       setPickedLocationId(result.location.id);
       setPickedLocationCode(result.location.locationCode);
@@ -285,7 +286,7 @@ const WMSPickListDetailPage = () => {
     } finally {
       setIsLookingUpLocation(false);
     }
-  }, [scannedBarcodes, lookupLocation, pickingItem, data]);
+  }, [scannedBarcodes, lookupLocation]);
 
   // Handle case barcode scan
   const handleCaseScan = useCallback((barcode: string) => {
