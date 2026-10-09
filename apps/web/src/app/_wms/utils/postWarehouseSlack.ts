@@ -1,7 +1,11 @@
 import postSlackWebhook from '@/lib/slack/postSlackWebhook';
 import logger from '@/utils/logger';
 
-/** The environment variable holding the #warehouse-activity incoming webhook */
+/**
+ * The environment variable holding the #warehouse-activity incoming webhook.
+ * Set it on the craft-culture project in the CraftCulture Pro team (the one
+ * serving wine.craftculture.xyz); a changed value needs a fresh deployment.
+ */
 export const WAREHOUSE_WEBHOOK_ENV = 'SLACK_WAREHOUSE_WEBHOOK_URL';
 
 /**
