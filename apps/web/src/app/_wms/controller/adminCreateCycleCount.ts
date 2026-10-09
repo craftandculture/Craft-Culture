@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, or } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -51,7 +51,18 @@ const adminCreateCycleCount = wmsOperatorProcedure
         quantityCases: wmsStock.quantityCases,
       })
       .from(wmsStock)
-      .where(eq(wmsStock.locationId, locationId))
+      /*
+        Nothing to count on a line holding no cases and no loose bottles. These
+        are stock rows emptied by picking, kept for history; snapshotting them
+        made every count a list of zeros to tap through. A row with no sealed
+        cases but loose bottles from a split case is still counted.
+      */
+      .where(
+        and(
+          eq(wmsStock.locationId, locationId),
+          or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+        ),
+      )
       .orderBy(wmsStock.productName);
 
     const totalExpected = stock.reduce((sum, s) => sum + s.quantityCases, 0);

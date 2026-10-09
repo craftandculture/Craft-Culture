@@ -2,10 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsCycleCountItems, wmsCycleCounts } from '@/database/schema';
+import { wmsCycleCountItems, wmsCycleCounts, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { completeCycleCountSchema } from '../schemas/cycleCountSchema';
+import isEmptyUncounted from '../utils/isEmptyUncounted';
 
 /**
  * Complete a cycle count — calculates discrepancies and sets status to completed
@@ -42,10 +43,31 @@ const adminCompleteCycleCount = wmsOperatorProcedure
     }
 
     // Get all items
-    const items = await db
-      .select()
+    const rows = await db
+      .select({ item: wmsCycleCountItems, openBottles: wmsStock.openBottles })
       .from(wmsCycleCountItems)
+      .leftJoin(wmsStock, eq(wmsCycleCountItems.stockId, wmsStock.id))
       .where(eq(wmsCycleCountItems.cycleCountId, countId));
+
+    /*
+      Lines expecting nothing, never counted and holding no loose bottles are
+      hidden from the operator, so they are recorded as counted at zero rather
+      than blocking completion.
+    */
+    const spared = rows
+      .filter(({ item, openBottles }) => isEmptyUncounted({ ...item, openBottles }))
+      .map(({ item }) => item.id);
+
+    for (const id of spared) {
+      await db
+        .update(wmsCycleCountItems)
+        .set({ countedQuantity: 0, countedAt: new Date(), updatedAt: new Date() })
+        .where(eq(wmsCycleCountItems.id, id));
+    }
+
+    const items = rows.map(({ item }) =>
+      spared.includes(item.id) ? { ...item, countedQuantity: 0 } : item,
+    );
 
     // Check all items have been counted
     const uncounted = items.filter((i) => i.countedQuantity === null);

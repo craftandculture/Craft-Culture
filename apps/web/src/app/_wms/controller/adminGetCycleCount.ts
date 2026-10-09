@@ -11,6 +11,8 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getCycleCountSchema } from '../schemas/cycleCountSchema';
+import isEmptyUncounted from '../utils/isEmptyUncounted';
+
 
 /**
  * Get a single cycle count with all items and location info
@@ -64,6 +66,7 @@ const adminGetCycleCount = wmsOperatorProcedure
         countedAt: wmsCycleCountItems.countedAt,
         bottleSize: wmsStock.bottleSize,
         caseConfig: wmsStock.caseConfig,
+        openBottles: wmsStock.openBottles,
       })
       .from(wmsCycleCountItems)
       .leftJoin(wmsStock, eq(wmsCycleCountItems.stockId, wmsStock.id))
@@ -72,7 +75,12 @@ const adminGetCycleCount = wmsOperatorProcedure
 
     return {
       ...cycleCount,
-      items,
+      /*
+        Counts created before empty stock rows were left out still hold them.
+        An uncounted line expecting nothing, with no loose bottles, is hidden;
+        completing the count records it as zero.
+      */
+      items: items.filter((i) => !isEmptyUncounted(i)),
     };
   });
 
