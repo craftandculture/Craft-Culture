@@ -150,6 +150,14 @@ const buildExportLines = (invoices: ExportInvoiceInput[], options: BuildExportLi
       }));
     });
 
+    /*
+      Cartons with the same contents are one line, qty counting them. Packing
+      bottle by bottle made every carton its own line, so an order of twelve
+      Fournier came out as four "mixed cases" each listing the same wine three
+      times — EXP-2026-0046 ran to four pages of it.
+    */
+    const merged = new Map<string, ExportLine>();
+
     for (let i = 0; i < units.length; i += PCO_CASE_BOTTLES) {
       const chunk = units.slice(i, i + PCO_CASE_BOTTLES);
       const components = chunk.map((u) => ({
@@ -164,10 +172,27 @@ const buildExportLines = (invoices: ExportInvoiceInput[], options: BuildExportLi
       const lookups = orders.flatMap((o) => chunk.map((u) => boeFor(o, u.line.lwin18)));
       const boes = [...new Set(lookups.map((b) => b.boe).filter(Boolean))];
       const hsCodes = [...new Set(chunk.map((u) => classifyHsCode(u.text, u.line.zohoHsCode)))];
-      lines.push({
+      const wines = new Set(components.map((c) => `${c.description}|${c.lwin18 ?? ''}`));
+
+      const signature = JSON.stringify([
+        components.map((c) => [c.description, c.lwin18, c.hsCode, c.origin, c.unitPrice]),
+        boes,
+      ]);
+      const twin = merged.get(signature);
+      if (twin) {
+        twin.qty += n;
+        twin.amount = roundMoney(twin.unitPrice * twin.qty);
+        twin.source.netUsd = roundMoney(
+          twin.source.netUsd + chunk.reduce((s, u) => s + u.perBottleUsd, 0) * n,
+        );
+        continue;
+      }
+
+      const line: ExportLine = {
         id: `l${lines.length + 1}`,
         sectionId,
-        kind: names.length === 1 && chunk.length < PCO_CASE_BOTTLES ? 'cased' : 'mixedCase',
+        /* One wine in the carton is a case of that wine, not a "mixed" one */
+        kind: wines.size === 1 ? 'cased' : 'mixedCase',
         description: names.length === 1 ? (names[0] ?? '') : `Mixed case: ${names.join('; ')}`,
         hsCode: hsCodes.length === 1 ? (hsCodes[0] ?? '') : hsCodes.join(' / '),
         origin: [...new Set(components.map((c) => c.origin).filter(Boolean))].join(' / '),
@@ -189,7 +214,9 @@ const buildExportLines = (invoices: ExportInvoiceInput[], options: BuildExportLi
         },
         extra: {},
         override: null,
-      });
+      };
+      lines.push(line);
+      merged.set(signature, line);
     }
   }
 

@@ -30,7 +30,7 @@ const base = (): ExportDocument => {
     lines: lines.map((l) => ({ ...l, boe: '20260503000037', origin: 'France' })),
     extraColumns: [],
     notes: [],
-    declaration: '',
+    declaration: 'We declare that this invoice shows the actual price of the goods described. The goods are of France origin.',
   };
 };
 

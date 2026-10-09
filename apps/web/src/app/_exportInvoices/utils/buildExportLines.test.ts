@@ -8,6 +8,7 @@ import applyExportOps from './applyExportOps';
 import buildExportLines from './buildExportLines';
 import type { ExportInvoiceInput } from './buildExportLines';
 import deriveDocumentTotals from './deriveDocumentTotals';
+import validateExportDocument from './validateExportDocument';
 
 const toDoc = (invoices: ExportInvoiceInput[]): ExportDocument => {
   const { sections, lines } = buildExportLines(invoices, {
@@ -100,5 +101,75 @@ describe('buildExportLines, replaying the hand-built export invoices', () => {
     expect(totals.cases).toBe(83);
     expect(totals.bottles).toBe(391);
     expect(totals.total).toBe(111921.09);
+  });
+  it('lists a carton of one wine as a case of it, and identical cartons once (EXP-2026-0046)', () => {
+    const line = (n: number, name: string, quantity: number, rate: number) => ({
+      lineItemId: `L${n}`,
+      name: `${name} (1x75cl)`,
+      description: '1x75cl',
+      lwin18: null,
+      quantity,
+      rate,
+      netUsd: quantity * rate,
+      zohoHsCode: null,
+    });
+    const doc = toDoc([
+      {
+        zohoInvoiceId: 'INV-000404',
+        invoiceNumber: 'INV-000404',
+        soNumber: 'SO-00200',
+        pcoNumber: 'PCO-2026-00081',
+        invoiceDate: '2026-10-08',
+        totalUsd: 0,
+        lines: [
+          line(1, 'Domaine Fournier Gevrey-Chambertin 2023', 12, 104.83),
+          line(2, 'Vincent Dancer Bourgogne Blanc 2023', 6, 65.33),
+          line(3, 'Cantina del Barone Fiano d Avellino 2022', 2, 49),
+        ],
+      },
+    ]);
+    const totals = deriveDocumentTotals(doc);
+
+    // Twelve Fournier: one line of four cases of three, not four "mixed cases"
+    expect(doc.lines.filter((l) => l.description.startsWith('Domaine Fournier'))).toEqual([
+      expect.objectContaining({ kind: 'cased', packBottles: 3, qty: 4 }),
+    ]);
+    expect(doc.lines.find((l) => l.description.startsWith('Vincent Dancer'))).toMatchObject({
+      kind: 'cased',
+      packBottles: 3,
+      qty: 2,
+    });
+    // Two Barone and nothing else left: a carton of two
+    expect(doc.lines.find((l) => l.description.startsWith('Cantina del Barone'))).toMatchObject({
+      kind: 'cased',
+      packBottles: 2,
+      qty: 1,
+    });
+    expect(doc.lines).toHaveLength(3);
+    expect(totals.cases).toBe(7);
+    expect(totals.bottles).toBe(20);
+    // Priced per case as three rounded bottles, the same as a mixed carton
+    const perBottle = Math.round(104.83 * AED_PER_USD * 100) / 100;
+    expect(doc.lines[0]).toMatchObject({
+      unitPrice: Math.round(perBottle * 3 * 100) / 100,
+      amount: Math.round(perBottle * 3 * 4 * 100) / 100,
+    });
+  });
+  it('refuses a declaration that leaves out an origin on the lines (EXP-2026-0046)', () => {
+    const doc = toDoc(exp0041 as ExportInvoiceInput[]);
+    const [first] = doc.lines;
+    if (!first) throw new Error('fixture lines missing');
+    const edited = applyExportOps(doc, [
+      { op: 'setLine', lineId: first.id, field: 'origin', value: 'United Kingdom' },
+      { op: 'setDeclaration', text: 'The goods are of France, Italy origin.' },
+    ]);
+    const check = validateExportDocument(edited).find((c) => c.code === 'undeclared_origin');
+    expect(check).toMatchObject({ level: 'error', lineIds: [first.id] });
+    expect(check?.message).toContain('United Kingdom');
+
+    const fixed = applyExportOps(edited, [
+      { op: 'setDeclaration', text: 'The goods are of France, Italy, United Kingdom origin.' },
+    ]);
+    expect(validateExportDocument(fixed).some((c) => c.code === 'undeclared_origin')).toBe(false);
   });
 });

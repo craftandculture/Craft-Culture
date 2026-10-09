@@ -149,6 +149,31 @@ const validateExportDocument = (
     });
   }
 
+  /*
+    The declaration names the countries of origin, written when the draft is
+    built. An origin filled in afterwards never reached it: EXP-2026-0046
+    declared five countries while Roebuck (United Kingdom) and NICE (Spain)
+    sat on its lines. A declaration that leaves one out is a false one.
+  */
+  const declared = doc.declaration.toLowerCase();
+  const undeclared = new Map<string, string[]>();
+  for (const l of doc.lines) {
+    const origins = l.kind === 'mixedCase' ? l.components.map((c) => c.origin) : [l.origin];
+    for (const origin of origins.flatMap((o) => o.split(' / ')).map((o) => o.trim())) {
+      if (origin && !declared.includes(origin.toLowerCase())) {
+        undeclared.set(origin, [...(undeclared.get(origin) ?? []), l.id]);
+      }
+    }
+  }
+  if (undeclared.size > 0) {
+    checks.push({
+      level: 'error',
+      code: 'undeclared_origin',
+      message: `The declaration does not name ${[...undeclared.keys()].join(', ')}, which ${undeclared.size > 1 ? 'are' : 'is'} the origin of goods on this invoice. Edit the declaration to include ${undeclared.size > 1 ? 'them' : 'it'}.`,
+      lineIds: [...new Set([...undeclared.values()].flat())],
+    });
+  }
+
   if (doc.header.pallets === null) {
     checks.push({ level: 'warning', code: 'missing_pallets', message: 'Enter the number of pallets.' });
   }
