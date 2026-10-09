@@ -14,8 +14,8 @@ import announcePickList from '../data/announcePickList';
  */
 const adminResendPickListPost = adminProcedure
   .input(z.object({ pickListId: z.string().uuid(), event: z.enum(['released', 'started', 'completed', 'cancelled']) }))
-  .mutation(async ({ input, ctx }) => {
-    const problem = await announcePickList(input.pickListId, input.event, ctx.user.name);
+  .mutation(async ({ input }) => {
+    const problem = await announcePickList(input.pickListId, input.event);
     if (problem) throw new TRPCError({ code: 'BAD_REQUEST', message: `The post did not go: ${problem}` });
     return { posted: true };
   });

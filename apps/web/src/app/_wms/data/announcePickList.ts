@@ -47,6 +47,12 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
       .where(eq(wmsPickListItems.pickListId, pickListId))
       .orderBy(asc(wmsLocations.locationCode));
 
+    // Name the person who actually closed the list, so a re-sent post is right too
+    const [closer] = pl.completedBy
+      ? await db.select({ name: users.name }).from(users).where(eq(users.id, pl.completedBy))
+      : [];
+    const completedBy = closer?.name ?? actorName;
+
     const [assignee] = pl.assignedTo
       ? await db.select({ name: users.name }).from(users).where(eq(users.id, pl.assignedTo))
       : [];
@@ -73,7 +79,7 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
     if (event === 'started' && actorName) meta += ` · ${actorName}`;
     if (event === 'completed') {
       const mins = pl.startedAt && pl.completedAt ? Math.round((pl.completedAt.getTime() - pl.startedAt.getTime()) / 60000) : null;
-      meta += `${actorName ? ` · by ${actorName}` : ''}${mins !== null ? ` · ${mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`}` : ''}`;
+      meta += `${completedBy ? ` · by ${completedBy}` : ''}${mins !== null ? ` · ${mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`}` : ''}`;
     }
     if (event === 'cancelled' && actorName) meta += ` · by ${actorName}`;
 
