@@ -6,6 +6,7 @@ import {
   IconClipboardCheck,
   IconLoader2,
   IconMapPin,
+  IconPencil,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -39,6 +40,8 @@ const CycleCountDetailPage = () => {
   const [countedValues, setCountedValues] = useState<Record<string, string>>({});
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
+  /* The line being corrected at review, and the count being typed for it */
+  const [correcting, setCorrecting] = useState<{ itemId: string; value: string } | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.admin.cycleCounts.getOne.queryOptions({ countId }),
@@ -109,6 +112,37 @@ const CycleCountDetailPage = () => {
     [countedValues, countId, trpcClient, refetch],
   );
 
+  /*
+    A miscount found at review is corrected on the line, not reconciled into
+    the stock as a loss. The approval is dropped: the corrected line may now
+    match, and if not it should be looked at again before it adjusts stock.
+  */
+  const handleCorrect = useCallback(async () => {
+    if (!correcting) return;
+    const quantity = parseInt(correcting.value, 10);
+    if (isNaN(quantity) || quantity < 0) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    setSavingItemId(correcting.itemId);
+    try {
+      await trpcClient.wms.admin.cycleCounts.recordItem.mutate({
+        cycleCountId: countId,
+        itemId: correcting.itemId,
+        countedQuantity: quantity,
+      });
+      setApprovals((prev) => ({ ...prev, [correcting.itemId]: false }));
+      setCorrecting(null);
+      toast.success('Count corrected');
+      void refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to correct count');
+    } finally {
+      setSavingItemId(null);
+    }
+  }, [correcting, countId, trpcClient, refetch]);
+
   const { mutate: completeCount } = completeMutation;
   const handleCompleteCount = useCallback(() => {
     completeCount({ countId });
@@ -174,6 +208,42 @@ const CycleCountDetailPage = () => {
     if (item.bottleSize) parts.push(item.bottleSize);
     return parts.length > 0 ? parts.join('') : null;
   };
+
+  const renderCorrection = (item: { id: string; countedQuantity: number | null }) =>
+    correcting?.itemId === item.id ? (
+      <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          autoFocus
+          value={correcting.value}
+          onChange={(e) => setCorrecting({ itemId: item.id, value: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleCorrect();
+          }}
+          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+        />
+        <Button size="sm" onClick={() => void handleCorrect()} disabled={savingItemId === item.id}>
+          <ButtonContent iconLeft={savingItemId === item.id ? IconLoader2 : IconCheck}>Save</ButtonContent>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setCorrecting(null)}>
+          Cancel
+        </Button>
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setCorrecting({ itemId: item.id, value: String(item.countedQuantity ?? '') });
+        }}
+        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-teal hover:underline"
+      >
+        <Icon icon={IconPencil} size="xs" />
+        Edit count
+      </button>
+    );
 
   const status = data.status ?? 'pending';
   const countedCount = data.items.filter((i) => i.countedQuantity !== null).length;
@@ -476,6 +546,7 @@ const CycleCountDetailPage = () => {
                                   {isShortage ? '' : '+'}{disc}
                                 </span>
                               </div>
+                              {renderCorrection(item)}
                             </div>
                           </div>
                         </CardContent>
@@ -497,9 +568,12 @@ const CycleCountDetailPage = () => {
                     {data.items
                       .filter((i) => i.discrepancy === 0)
                       .map((item) => (
-                        <div key={item.id} className="flex items-center justify-between text-xs text-text-muted">
-                          <span>{item.productName}</span>
-                          <span>{item.expectedQuantity} cases</span>
+                        <div key={item.id} className="border-b border-border-muted/50 py-1 last:border-0">
+                          <div className="flex items-center justify-between text-xs text-text-muted">
+                            <span>{item.productName}</span>
+                            <span>{item.expectedQuantity} cases</span>
+                          </div>
+                          {renderCorrection(item)}
                         </div>
                       ))}
                   </div>

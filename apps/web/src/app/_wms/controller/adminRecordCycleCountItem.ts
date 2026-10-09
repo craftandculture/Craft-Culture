@@ -35,10 +35,19 @@ const adminRecordCycleCountItem = wmsOperatorProcedure
       });
     }
 
-    if (cycleCount.status !== 'in_progress') {
+    /*
+      A completed count can still be corrected: a miscount found at review
+      is fixed on the line rather than reconciled into the stock as a loss.
+      Once reconciled the adjustments are posted, so the count is closed.
+    */
+    const isReview = cycleCount.status === 'completed';
+    if (cycleCount.status !== 'in_progress' && !isReview) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Count must be in progress to record items',
+        message:
+          cycleCount.status === 'reconciled'
+            ? 'This count has been reconciled and can no longer be changed'
+            : 'Count must be in progress to record items',
       });
     }
 
@@ -70,8 +79,29 @@ const adminRecordCycleCountItem = wmsOperatorProcedure
         notes: notes ?? item.notes,
         countedAt: new Date(),
         updatedAt: new Date(),
+        // At review the discrepancy is already set, so it moves with the count
+        ...(isReview ? { discrepancy: countedQuantity - item.expectedQuantity } : {}),
       })
       .where(eq(wmsCycleCountItems.id, itemId));
+
+    if (isReview) {
+      const items = await db
+        .select({
+          countedQuantity: wmsCycleCountItems.countedQuantity,
+          discrepancy: wmsCycleCountItems.discrepancy,
+        })
+        .from(wmsCycleCountItems)
+        .where(eq(wmsCycleCountItems.cycleCountId, cycleCountId));
+
+      await db
+        .update(wmsCycleCounts)
+        .set({
+          countedItems: items.reduce((sum, i) => sum + (i.countedQuantity ?? 0), 0),
+          discrepancyCount: items.filter((i) => (i.discrepancy ?? 0) !== 0).length,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsCycleCounts.id, cycleCountId));
+    }
 
     return {
       success: true,
