@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -63,10 +63,14 @@ const adminResolvePcoOrder = wmsOperatorProcedure
 
     if (!pco) return null;
 
-    const labelCount = await db.$count(
-      privateClientOrderItems,
-      eq(privateClientOrderItems.orderId, pco.id),
-    );
+    // One label per case, not per line — a line of two cases is two boxes
+    const [{ cases } = { cases: 0 }] = await db
+      .select({
+        cases: sql<number>`coalesce(sum(greatest(coalesce(${privateClientOrderItems.quantity}, 1), 1)), 0)::int`,
+      })
+      .from(privateClientOrderItems)
+      .where(eq(privateClientOrderItems.orderId, pco.id));
+    const labelCount = cases;
 
     return {
       orderId: pco.id,

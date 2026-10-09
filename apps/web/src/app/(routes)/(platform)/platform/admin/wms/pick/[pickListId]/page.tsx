@@ -97,7 +97,13 @@ const WMSPickListDetailPage = () => {
     }),
     enabled: !!pcoRef?.orderId,
   });
-  const { printLabels, isPrinting: isPrintingLabels } = usePrintPcoLabels();
+  const {
+    printLabels,
+    buildLabels,
+    isPrinting: isPrintingLabels,
+  } = usePrintPcoLabels();
+  /** The per-case list, opened to reprint a single missed label */
+  const [showCaseLabels, setShowCaseLabels] = useState(false);
   /*
     Set when a pick cracked a case. The bottles left over are physically still
     in the box they came out of, wearing its label, so the picker is asked to
@@ -614,35 +620,76 @@ const WMSPickListDetailPage = () => {
       {/* PCO client labels — secondary action; only shown for picks that
           resolve to a private-client order */}
       {pcoRef?.orderId && (
-        <button
-          type="button"
-          onClick={() => pcoOrder && void printLabels(pcoOrder)}
-          disabled={!pcoOrder || isPrintingLabels}
-          title="Print client labels for this order"
-          className="mb-3 flex w-full items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-4 py-2.5 text-left transition-colors hover:bg-fill-muted disabled:opacity-60"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-brand">
-            <Icon
-              icon={isPrintingLabels ? IconLoader2 : IconTag}
-              size="sm"
-              className={isPrintingLabels ? 'animate-spin' : ''}
-            />
-          </span>
-          <span className="min-w-0 flex-1">
-            <Typography variant="bodySm" className="font-semibold text-text-primary">
-              {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted" className="truncate">
-              {pcoRef.orderNumber}
-            </Typography>
-          </span>
-          {pcoRef.labelCount ? (
-            <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-brand">
-              {pcoRef.labelCount} label{pcoRef.labelCount === 1 ? '' : 's'}
-            </span>
-          ) : null}
-          <Icon icon={IconChevronRight} size="sm" className="shrink-0 text-text-muted" />
-        </button>
+        <div className="mb-3">
+          <div className="flex items-stretch gap-2">
+            <button
+              type="button"
+              onClick={() => pcoOrder && void printLabels(pcoOrder)}
+              disabled={!pcoOrder || isPrintingLabels}
+              title="Print every case label for this order"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-4 py-2.5 text-left transition-colors hover:bg-fill-muted disabled:opacity-60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-brand">
+                <Icon
+                  icon={isPrintingLabels ? IconLoader2 : IconTag}
+                  size="sm"
+                  className={isPrintingLabels ? 'animate-spin' : ''}
+                />
+              </span>
+              <span className="min-w-0 flex-1">
+                <Typography variant="bodySm" className="font-semibold text-text-primary">
+                  {isPrintingLabels ? 'Printing…' : 'Print PCO Labels'}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                  {pcoRef.orderNumber}
+                </Typography>
+              </span>
+              {pcoRef.labelCount ? (
+                <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-brand">
+                  {pcoRef.labelCount} label{pcoRef.labelCount === 1 ? '' : 's'}
+                </span>
+              ) : null}
+            </button>
+            {/* One label at a time, for the case that came out bare */}
+            <button
+              type="button"
+              onClick={() => setShowCaseLabels((open) => !open)}
+              disabled={!pcoOrder}
+              className="shrink-0 rounded-lg border border-border-primary bg-fill-secondary px-3 text-xs font-semibold text-text-primary hover:bg-fill-muted disabled:opacity-60"
+            >
+              {showCaseLabels ? 'Close' : 'Choose'}
+            </button>
+          </div>
+
+          {showCaseLabels && pcoOrder && (
+            <ul className="mt-2 divide-y divide-border-muted rounded-lg border border-border-primary">
+              {buildLabels(pcoOrder).map((label) => (
+                <li key={label.key} className="flex items-center gap-3 px-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <Typography variant="bodySm" className="truncate font-medium text-text-primary">
+                      {label.data.productName}
+                      {label.data.vintage ? ` ${label.data.vintage}` : ''}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {label.casesOnLine === 1
+                        ? 'single case'
+                        : `case ${label.caseNumber} of ${label.casesOnLine}`}
+                    </Typography>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void printLabels(pcoOrder, [label.key])}
+                    disabled={isPrintingLabels}
+                    className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-border-primary px-3 text-xs font-semibold text-text-primary hover:bg-fill-muted disabled:opacity-60"
+                  >
+                    <Icon icon={IconTag} size="sm" />
+                    Print
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {/*
