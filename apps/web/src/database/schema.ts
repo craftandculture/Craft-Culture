@@ -7176,6 +7176,29 @@ export const teamTaskNotes = pgTable(
   (table) => [index('team_task_notes_task_idx').on(table.taskId)],
 );
 
+/**
+ * A file attached to a job — a quote, a photo, an invoice, a supplier's sheet
+ *
+ * The file itself lives in Vercel Blob, uploaded straight from the browser;
+ * this row says which job it belongs to and who added it.
+ */
+export const teamTaskAttachments = pgTable(
+  'team_task_attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .references(() => teamTasks.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type'),
+    fileSize: integer('file_size'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('team_task_attachments_task_idx').on(table.taskId)],
+);
+
 /** What happened to a job and who did it, shown as its history */
 export const teamTaskEvents = pgTable(
   'team_task_events',

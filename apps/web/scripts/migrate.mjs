@@ -2323,6 +2323,21 @@ const runMigrations = async () => {
       )
     `);
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_notes_task_idx" ON "team_task_notes"("task_id")`);
+    // Team Tasks: files attached to a job (stored in Blob; this row links them)
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "team_task_attachments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "task_id" uuid NOT NULL REFERENCES "team_tasks"("id") ON DELETE CASCADE,
+        "file_url" text NOT NULL,
+        "file_name" text NOT NULL,
+        "mime_type" text,
+        "file_size" integer,
+        "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "team_task_attachments_task_idx" ON "team_task_attachments"("task_id")`);
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS "team_task_events" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

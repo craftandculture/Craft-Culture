@@ -34,6 +34,11 @@ export const POST = async (request: Request) => {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-excel',
             'text/csv',
+            // Team Tasks: quotes, letters and decks attached to a job
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain',
           ],
           maximumSizeInBytes: 10 * 1024 * 1024, // 10MB
           /*

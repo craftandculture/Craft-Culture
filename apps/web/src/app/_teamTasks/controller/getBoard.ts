@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, ne, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, teamTaskAreas, teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
+import { partners, teamTaskAreas, teamTaskAttachments, teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
 import { teamProcedure } from '@/lib/trpc/procedures';
 
 import getPartnerPeople, { SHARE_PARTNER_TYPES } from '../data/getPartnerPeople';
@@ -55,6 +55,17 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
 
   const notesByTask = new Map(noteCounts.map((n) => [n.taskId, n.count]));
 
+  // Read on its own so the board still loads if the attachments table is missing
+  const fileCounts = ids.length
+    ? await db
+        .select({ taskId: teamTaskAttachments.taskId, count: sql<number>`count(*)::int` })
+        .from(teamTaskAttachments)
+        .where(inArray(teamTaskAttachments.taskId, ids))
+        .groupBy(teamTaskAttachments.taskId)
+        .catch(() => [])
+    : [];
+  const filesByTask = new Map(fileCounts.map((f) => [f.taskId, f.count]));
+
   return {
     viewerId: ctx.user.id,
     viewerIsAdmin: ctx.user.role === 'admin',
@@ -91,6 +102,7 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
       linkLabel: t.linkLabel,
       partnerId: t.partnerId,
       noteCount: notesByTask.get(t.id) ?? 0,
+      fileCount: filesByTask.get(t.id) ?? 0,
       parts: parts
         .filter((p) => p.taskId === t.id)
         .map((p) => ({

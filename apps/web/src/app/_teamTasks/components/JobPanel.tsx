@@ -9,6 +9,7 @@ import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import useTRPC from '@/lib/trpc/browser';
 
 import PartRow from './PartRow';
+import TaskFiles from './TaskFiles';
 import TwoStepButton from './TwoStepButton';
 import useTaskMutations from '../hooks/useTaskMutations';
 import type { Board, BoardTask } from '../types/Board';
@@ -25,7 +26,7 @@ const when = (at: Date | string) =>
   new Date(at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
 
 /**
- * The job panel: every part, the notes, the history and the job's actions
+ * The job panel: every part, the files, the notes, the history and the job's actions
  *
  * Close and cancel both need two presses. A closed or cancelled job can be
  * reopened from here. Opened from a card or from a #tasks link (?job=).
@@ -159,6 +160,8 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                 ))}
               </div>
             </div>
+
+            <TaskFiles taskId={task.id} files={detail?.attachments ?? []} />
 
             <div>
               <p className="mb-1 text-xs font-medium text-text-muted">Notes</p>

@@ -1,5 +1,7 @@
 'use client';
 
+import { IconPaperclip } from '@tabler/icons-react';
+
 import PartRow from './PartRow';
 import TwoStepButton from './TwoStepButton';
 import type { Board, BoardTask } from '../types/Board';
@@ -59,6 +61,11 @@ const JobCard = ({ task, board, today, onOpen, onTick, onClose, partIds, busy, h
         {task.noteCount > 0 && (
           <span className="text-text-muted">
             · {task.noteCount} note{task.noteCount === 1 ? '' : 's'}
+          </span>
+        )}
+        {task.fileCount > 0 && (
+          <span className="inline-flex items-center gap-0.5 text-text-muted">
+            · <IconPaperclip size={11} /> {task.fileCount} file{task.fileCount === 1 ? '' : 's'}
           </span>
         )}
       </div>
