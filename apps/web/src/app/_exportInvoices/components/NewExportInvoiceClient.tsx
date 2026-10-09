@@ -78,8 +78,14 @@ const NewExportInvoiceClient = () => {
           <ul className="max-h-[55vh] space-y-1.5 overflow-y-auto rounded-xl border border-border-muted bg-fill-muted/20 p-1.5">
             {consignees.isLoading &&
               [0, 1, 2, 3].map((i) => <li key={i} className="h-11 animate-pulse rounded-lg bg-fill-muted/50" />)}
-            {filtered.map((c) => (
+            {filtered.map((c, i) => (
               <li key={c.zohoCustomerId}>
+                {/* Customers not invoiced lately follow the ones that are */}
+                {!c.recentlyInvoiced && (i === 0 || filtered[i - 1]?.recentlyInvoiced) && (
+                  <p className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    All other customers
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => chooseConsignee(c.zohoCustomerId)}
@@ -125,7 +131,7 @@ const NewExportInvoiceClient = () => {
           </div>
         ) : rows.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border-muted p-8 text-center text-sm text-text-muted">
-            No invoices for this consignee in the last 120 days.
+            No invoices for this consignee in the last 120 days. Raise the invoice in Zoho first; it appears here once synced.
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-border-muted bg-fill-primary">

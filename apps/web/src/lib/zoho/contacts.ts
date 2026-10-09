@@ -90,14 +90,24 @@ const searchContacts = async (searchTerm: string) => {
  * @param limit - How many to take, newest first as Zoho orders them
  * @returns The customer contacts
  */
-const listCustomerContacts = async (limit = 200) => {
-  const response = await zohoFetch<{
-    code: number;
-    message: string;
-    contacts: ZohoContact[];
-  }>(`/contacts?contact_type=customer&per_page=${Math.min(limit, 200)}`);
+const listCustomerContacts = async (limit = 2000) => {
+  const contacts: ZohoContact[] = [];
 
-  return response.contacts;
+  // Zoho pages at 200; a customer on page two is otherwise never offered
+  for (let page = 1; contacts.length < limit && page <= 10; page += 1) {
+    const response = await zohoFetch<{
+      code: number;
+      message: string;
+      contacts: ZohoContact[];
+      page_context?: { has_more_page?: boolean };
+    }>(`/contacts?contact_type=customer&per_page=200&page=${page}`);
+
+    contacts.push(...(response.contacts ?? []));
+
+    if (!response.page_context?.has_more_page) break;
+  }
+
+  return contacts.slice(0, limit);
 };
 
 /**
