@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Fragment, useState } from 'react';
 import { toast } from 'sonner';
@@ -32,6 +32,24 @@ const NewExportInvoiceClient = () => {
   const invoices = useQuery({
     ...api.exportInvoices.admin.invoicesForConsignee.queryOptions({ zohoCustomerId: customerId }),
     enabled: Boolean(customerId),
+  });
+  const queryClient = useQueryClient();
+  /*
+    Invoices are read from our copy of Zoho, which a scheduled job keeps up to
+    date. When that job stalls, a just-raised invoice is simply missing and the
+    screen says there is none — so the copy can be refreshed from here rather
+    than waiting on, or knowing about, the job.
+  */
+  const refresh = useMutation({
+    ...api.zohoSalesOrders.syncInvoices.mutationOptions(),
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.invoicesForConsignee.queryKey() }),
+        queryClient.invalidateQueries({ queryKey: api.exportInvoices.admin.consignees.queryKey() }),
+      ]);
+      toast.success(result.message ?? 'Invoices refreshed from Zoho');
+    },
+    onError: (error) => toast.error(error.message),
   });
   const create = useMutation({
     ...api.exportInvoices.admin.createDraft.mutationOptions(),
@@ -109,7 +127,18 @@ const NewExportInvoiceClient = () => {
       {/* Step 2 */}
       <section className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">2 · Invoices going out</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">2 · Invoices going out</p>
+            <button
+              type="button"
+              onClick={() => refresh.mutate()}
+              disabled={refresh.isPending}
+              className="text-xs text-text-brand hover:underline disabled:opacity-60"
+              title="Pull the latest invoices from Zoho"
+            >
+              {refresh.isPending ? 'Refreshing…' : 'Refresh from Zoho'}
+            </button>
+          </div>
           {eligible.length > 0 && (
             <Button
               size="xs"
@@ -130,8 +159,12 @@ const NewExportInvoiceClient = () => {
             {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-fill-muted/50" />)}
           </div>
         ) : rows.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border-muted p-8 text-center text-sm text-text-muted">
-            No invoices for this consignee in the last 120 days. Raise the invoice in Zoho first; it appears here once synced.
+          <div className="space-y-3 rounded-xl border border-dashed border-border-muted p-8 text-center text-sm text-text-muted">
+            <p>No invoices for this consignee in the last 120 days.</p>
+            <p>Invoiced in Zoho already? Pull the latest invoices across, then they appear here.</p>
+            <Button size="xs" variant="outline" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
+              {refresh.isPending ? 'Refreshing from Zoho… (up to a minute)' : 'Refresh invoices from Zoho'}
+            </Button>
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
