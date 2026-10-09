@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
+import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import {
   wmsLocations,
@@ -549,6 +550,11 @@ const adminPickItem = wmsOperatorProcedure
         updatedAt: new Date(),
       })
       .where(eq(wmsPickLists.id, pickList.id));
+
+    // First line picked: tell #warehouse-activity the list is under way
+    if (pickList.status === 'pending') {
+      await announcePickList(pickList.id, 'started', ctx.user.name);
+    }
 
     /*
       What the picker now has to relabel.

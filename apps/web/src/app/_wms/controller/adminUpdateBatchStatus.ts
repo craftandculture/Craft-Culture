@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq, inArray } from 'drizzle-orm';
 
+import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
 import {
   privateClientOrderItems,
@@ -172,6 +173,10 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
           }
         }
       }
+    }
+
+    if (status === 'dispatched' || status === 'delivered') {
+      await announceDispatch(batchId, status);
     }
 
     return {

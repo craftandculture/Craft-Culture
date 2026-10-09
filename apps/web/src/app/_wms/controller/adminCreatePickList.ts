@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import {
   privateClientOrderItems,
@@ -125,6 +126,9 @@ const adminCreatePickList = wmsOperatorProcedure
 
       pickListItems.push(pickListItem);
     }
+
+    // Tell #warehouse-activity a new list is out to the floor
+    if (pickList) await announcePickList(pickList.id, 'released');
 
     return {
       success: true,

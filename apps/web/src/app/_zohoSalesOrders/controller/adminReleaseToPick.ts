@@ -10,6 +10,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import announcePickList from '@/app/_wms/data/announcePickList';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
@@ -475,6 +476,9 @@ const adminReleaseToPick = wmsOperatorProcedure
         updatedAt: new Date(),
       })
       .where(eq(zohoSalesOrders.id, salesOrderId));
+
+    // Tell #warehouse-activity a new list is out to the floor
+    if (pickList) await announcePickList(pickList.id, 'released');
 
     return {
       success: true,

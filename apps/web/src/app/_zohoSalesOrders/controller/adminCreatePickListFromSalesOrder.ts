@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import announcePickList from '@/app/_wms/data/announcePickList';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import resolvePickStock from '@/app/_wms/utils/resolvePickStock';
 import db from '@/database/client';
@@ -164,6 +165,9 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
         updatedAt: new Date(),
       })
       .where(eq(zohoSalesOrders.id, salesOrderId));
+
+    // Tell #warehouse-activity a new list is out to the floor
+    if (pickList) await announcePickList(pickList.id, 'released');
 
     return {
       success: true,

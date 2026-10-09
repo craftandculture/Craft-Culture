@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -75,6 +76,9 @@ const adminDeletePickList = wmsOperatorProcedure
         })
         .where(eq(zohoSalesOrders.id, pickList.orderId));
     }
+
+    // Tell #warehouse-activity before the lines are gone
+    await announcePickList(pickListId, 'cancelled');
 
     // Delete pick list items
     await db

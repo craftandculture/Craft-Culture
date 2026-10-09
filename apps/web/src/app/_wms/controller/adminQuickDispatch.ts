@@ -3,6 +3,7 @@ import { put } from '@vercel/blob';
 import { and, eq, gt, inArray, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
 import {
   partners,
@@ -503,6 +504,8 @@ const adminQuickDispatch = wmsOperatorProcedure
         };
       }
     }
+
+    await announceDispatch(batch.id, 'dispatched');
 
     return {
       success: true,
