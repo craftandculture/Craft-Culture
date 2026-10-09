@@ -90,6 +90,7 @@ import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminRepack from './controller/adminRepack';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
+import adminResendPickListPost from './controller/adminResendPickListPost';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminResolvePcoOrder from './controller/adminResolvePcoOrder';
@@ -247,6 +248,7 @@ const pickingRouter = createTRPCRouter({
   resync: adminResyncPickList,
   resolvePcoOrder: adminResolvePcoOrder,
   feedStatus: adminWarehouseFeedStatus,
+  resendPost: adminResendPickListPost,
 });
 
 const dispatchRouter = createTRPCRouter({

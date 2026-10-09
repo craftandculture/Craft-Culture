@@ -27,11 +27,12 @@ const HEAD: Record<PickListEvent, string> = {
  * @param pickListId - The pick list
  * @param event - What just happened
  * @param actorName - Who did it, when known
+ * @returns Whether Slack accepted the post
  */
 const announcePickList = async (pickListId: string, event: PickListEvent, actorName?: string | null) => {
   try {
     const [pl] = await db.select().from(wmsPickLists).where(eq(wmsPickLists.id, pickListId));
-    if (!pl) return;
+    if (!pl) return false;
 
     const items = await db
       .select({
@@ -77,7 +78,7 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
     if (event === 'cancelled' && actorName) meta += ` · by ${actorName}`;
 
     const showLines = event === 'released' || event === 'completed';
-    await postWarehouseSlack(
+    return await postWarehouseSlack(
       [`${HEAD[event]} ${link} · ${order}`, meta, showLines ? lines.join('\n') : ''].filter(Boolean).join('\n'),
     );
   } catch (error) {
@@ -85,6 +86,7 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
     logger.error('Warehouse activity: could not build the post', {
       error: error instanceof Error ? error.message : String(error),
     });
+    return false;
   }
 };
 
