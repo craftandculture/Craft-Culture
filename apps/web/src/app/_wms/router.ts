@@ -122,6 +122,7 @@ import adminUpdateProductName from './controller/adminUpdateProductName';
 import adminUpdateStockBoe from './controller/adminUpdateStockBoe';
 import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
 import adminValidateImportItems from './controller/adminValidateImportItems';
+import adminWarehouseFeedStatus from './controller/adminWarehouseFeedStatus';
 import deviceGetBayTotems from './controller/deviceGetBayTotems';
 import deviceGetLocationLabels from './controller/deviceGetLocationLabels';
 import partnerGetMovements from './controller/partnerGetMovements';
@@ -245,6 +246,7 @@ const pickingRouter = createTRPCRouter({
   complete: adminCompletePickList,
   resync: adminResyncPickList,
   resolvePcoOrder: adminResolvePcoOrder,
+  feedStatus: adminWarehouseFeedStatus,
 });
 
 const dispatchRouter = createTRPCRouter({

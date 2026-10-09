@@ -3,6 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { users, wmsLocations, wmsPickListItems, wmsPickLists } from '@/database/schema';
 import serverConfig from '@/server.config';
+import logger from '@/utils/logger';
 
 import describeOrder from './describeOrder';
 import postWarehouseSlack from '../utils/postWarehouseSlack';
@@ -79,8 +80,11 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
     await postWarehouseSlack(
       [`${HEAD[event]} ${link} · ${order}`, meta, showLines ? lines.join('\n') : ''].filter(Boolean).join('\n'),
     );
-  } catch {
-    // Best effort only
+  } catch (error) {
+    // Best effort only: never fail the warehouse action, but leave a trace
+    logger.error('Warehouse activity: could not build the post', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 

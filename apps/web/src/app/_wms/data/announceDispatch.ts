@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsDispatchBatchOrders, wmsDispatchBatches } from '@/database/schema';
+import logger from '@/utils/logger';
 
 import describeOrder from './describeOrder';
 import postWarehouseSlack from '../utils/postWarehouseSlack';
@@ -45,8 +46,11 @@ const announceDispatch = async (batchId: string, event: 'dispatched' | 'delivere
       .join(' · ');
 
     await postWarehouseSlack([head, meta, described.map((d) => `• ${d}`).join('\n')].filter(Boolean).join('\n'));
-  } catch {
-    // Best effort only
+  } catch (error) {
+    // Best effort only: never fail the warehouse action, but leave a trace
+    logger.error('Warehouse activity: could not build the post', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 
