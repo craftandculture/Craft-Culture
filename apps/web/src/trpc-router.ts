@@ -11,6 +11,7 @@ import lpoRouter from '@/app/_lpo/router';
 import lwinRouter from '@/app/_lwin/router';
 import morningViewRouter from '@/app/_morningView/router';
 import notificationsRouter from '@/app/_notifications/router';
+import orderChecksRouter from '@/app/_orderChecks/router';
 import partnersRouter from '@/app/_partners/router';
 import passkeysRouter from '@/app/_passkeys/router';
 import pricingRouter from '@/app/_pricing/router';
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
   exportInvoices: exportInvoicesRouter,
   lwin: lwinRouter,
   morningView: morningViewRouter,
+  orderChecks: orderChecksRouter,
   users: usersRouter,
   notifications: notificationsRouter,
   partners: partnersRouter,
