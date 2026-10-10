@@ -15,6 +15,7 @@ import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+import StockCommitmentsNote from './StockCommitmentsNote';
 import WmsStockCombobox from './WmsStockCombobox';
 import type { WmsStockItem } from './WmsStockCombobox';
 
@@ -50,6 +51,8 @@ export interface ProductPickerProps {
   wmsOwnerId?: string;
   /** Admin: browse ALL warehouse stock across every owner (C&C orders) */
   wmsAllOwners?: boolean;
+  /** Admin: the order being edited, so its own lines are not counted against it */
+  orderId?: string;
 }
 
 /**
@@ -77,6 +80,7 @@ const ProductPicker = ({
   defaultMode = 'search',
   wmsOwnerId,
   wmsAllOwners = false,
+  orderId,
 }: ProductPickerProps) => {
   const hasManualDataOnly = !value.productId && value.productName.trim().length > 0 && !value.lwin;
   const hasWmsData = !value.productId && value.lwin && value.productName.trim().length > 0;
@@ -469,6 +473,15 @@ const ProductPicker = ({
           </Typography>
         </div>
       </div>
+
+      {/* Admin only: what is free, and who holds the rest (partners cannot read other owners' orders) */}
+      {(wmsAllOwners || wmsOwnerId) && value.lwin ? (
+        <StockCommitmentsNote
+          lwin={value.lwin}
+          bottlesWanted={(value.quantity || 0) * (value.caseConfig || 1)}
+          excludePcoId={orderId}
+        />
+      ) : null}
     </div>
   );
 };

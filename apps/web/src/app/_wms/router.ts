@@ -68,6 +68,7 @@ import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiv
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
+import adminGetStockCommitments from './controller/adminGetStockCommitments';
 import adminGetStockLookalikes from './controller/adminGetStockLookalikes';
 import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminGetStockReservations from './controller/adminGetStockReservations';
@@ -233,6 +234,8 @@ const ownershipRouter = createTRPCRouter({
   release: adminReleaseReservation,
   getReservations: adminGetOrderReservations,
   getStockReservations: adminGetStockReservations,
+  // On hand, held by order, promised on PCOs, and free — shown at order entry
+  getCommitments: adminGetStockCommitments,
   getRequests: adminGetPartnerRequests,
   resolve: adminResolvePartnerRequest,
 });

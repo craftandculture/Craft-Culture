@@ -10,6 +10,7 @@ import {
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import INBOUND_SHIPMENT_STATUSES from '../../_wms/utils/inboundShipmentStatuses';
+import normalizeLwin18 from '../../_wms/utils/normalizeLwin18';
 
 const inputSchema = z.object({
   ownerId: z.string().uuid().optional(),
@@ -38,11 +39,31 @@ const adminGetWmsStockForOrder = wmsOperatorProcedure
   .query(async ({ input }) => {
     const { ownerId, search, limit, offset } = input;
 
-    const searchConditions = search
-      ? or(
-          ilike(wmsStock.productName, `%${search}%`),
-          ilike(wmsStock.producer, `%${search}%`),
-          ilike(wmsStock.lwin18, `%${search}%`),
+    /*
+      Every word must match somewhere — name, producer, code or vintage — rather
+      than the whole phrase in one column. "Fourrier Gevrey" never matched when
+      the producer and the wine name sat in different columns, which is how
+      Domaine Fourrier could not be found for PCO 79. A code typed without its
+      dashes is put back into the stored shape.
+    */
+    const words = (search ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => (/^\d{18}$/.test(w) ? normalizeLwin18(w) : w))
+      .slice(0, 8);
+    const like = (w: string) => `%${w.replace(/[^\x20-\x7E]/g, '%')}%`;
+
+    const searchConditions = words.length
+      ? and(
+          ...words.map((w) =>
+            or(
+              ilike(wmsStock.productName, like(w)),
+              ilike(wmsStock.producer, like(w)),
+              ilike(wmsStock.lwin18, like(w)),
+              ilike(sql`${wmsStock.vintage}::text`, like(w)),
+            ),
+          ),
         )
       : undefined;
 
@@ -65,7 +86,13 @@ const adminGetWmsStockForOrder = wmsOperatorProcedure
         ),
       )
       .groupBy(wmsStock.lwin18, wmsStock.caseConfig)
-      .having(gt(sql`SUM(${wmsStock.availableCases})`, 0))
+      /*
+        Anything physically here, even if every case is held for an order. It
+        used to list only wine with free cases, so held wine simply vanished
+        and looked like it had never arrived; it now shows with 0 available,
+        and the order line says who holds it.
+      */
+      .having(gt(sql`SUM(${wmsStock.quantityCases}) + SUM(${wmsStock.openBottles})`, 0))
       .orderBy(sql`MIN(${wmsStock.productName})`)
       .limit(limit)
       .offset(offset);
@@ -112,13 +139,14 @@ const adminGetWmsStockForOrder = wmsOperatorProcedure
           inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
           ownerId ? eq(logisticsShipments.partnerId, ownerId) : undefined,
           sql`COALESCE(${logisticsShipmentItems.lwin}, '') <> ''`,
-          search
-            ? or(
-                ilike(logisticsShipmentItems.productName, `%${search}%`),
-                ilike(logisticsShipmentItems.producer, `%${search}%`),
-                ilike(logisticsShipmentItems.lwin, `%${search}%`),
-              )
-            : undefined,
+          ...words.map((w) =>
+            or(
+              ilike(logisticsShipmentItems.productName, like(w)),
+              ilike(logisticsShipmentItems.producer, like(w)),
+              ilike(logisticsShipmentItems.lwin, like(w)),
+              ilike(sql`${logisticsShipmentItems.vintage}::text`, like(w)),
+            ),
+          ),
         ),
       )
       .groupBy(logisticsShipmentItems.lwin)
