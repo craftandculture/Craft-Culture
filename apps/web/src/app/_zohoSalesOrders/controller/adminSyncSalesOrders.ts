@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import db from '@/database/client';
@@ -52,6 +53,8 @@ const adminSyncSalesOrders = adminProcedure
   // Which orders failed and why — reported back to the screen, since an order
   // that fails to sync otherwise just never appears.
   const failed: { salesOrderNumber: string; reason: string }[] = [];
+  /** New orders that asked for more than the warehouse has free */
+  const shortOnSync: string[] = [];
 
   // Fetch all sales orders from Zoho that need fulfillment (paginated)
   const [openOrders, invoicedOrders] = await Promise.all([
@@ -99,7 +102,7 @@ const adminSyncSalesOrders = adminProcedure
       const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
 
       // Create order + line items in a transaction to prevent orphaned records
-      await db.transaction(async (tx) => {
+      const newOrderId = await db.transaction(async (tx) => {
         const [newOrder] = await tx
           .insert(zohoSalesOrders)
           .values({
@@ -148,7 +151,26 @@ const adminSyncSalesOrders = adminProcedure
             })),
           );
         }
+
+        return newOrder!.id;
       });
+
+      /*
+        Hold the stock now, as the scheduled sync does. This button used to
+        insert without holding, and once it had seen an order the scheduled
+        sync treated it as existing and never held it either — so the wine
+        stayed "available" for the next order until release.
+      */
+      const hold = await holdStockForSalesOrder({
+        db,
+        orderId: newOrderId,
+        orderNumber: fullOrder.salesorder_number,
+      });
+      if (hold.short.length) {
+        shortOnSync.push(
+          `${fullOrder.salesorder_number}: ${hold.short.map((s) => `${s.name} (${s.bottlesShort} btl short)`).join(', ')}`,
+        );
+      }
 
       results.created++;
     } catch (error) {
@@ -168,7 +190,10 @@ const adminSyncSalesOrders = adminProcedure
     success: true,
     ...results,
     failed,
-    message: `Synced ${results.created} new, ${results.updated} updated from ${results.fetched} orders`,
+    shortOnSync,
+    message: `Synced ${results.created} new, ${results.updated} updated from ${results.fetched} orders${
+      shortOnSync.length ? `. Not enough free stock for: ${shortOnSync.join('; ')}` : ''
+    }`,
   };
 });
 

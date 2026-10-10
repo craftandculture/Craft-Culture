@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
@@ -234,6 +235,17 @@ const syncExistingSalesOrder = async ({
             db,
           })
         : { added: 0, updated: 0, removed: 0 };
+
+    /*
+      Reconciling releases the hold on any line that changed and takes in new
+      lines unheld. Hold them again here, or an order whose quantity was
+      edited in Zoho stops holding its wine — the SO-00099 Talbot case.
+    */
+    await holdStockForSalesOrder({
+      db,
+      orderId: existing.id,
+      orderNumber: fullOrder.salesorder_number,
+    });
 
     return { outcome: 'reconciled' as const, reconciled };
   }

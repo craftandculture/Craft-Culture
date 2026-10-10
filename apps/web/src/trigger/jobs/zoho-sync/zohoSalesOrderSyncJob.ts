@@ -8,8 +8,8 @@
 import { logger, schedules } from '@trigger.dev/sdk';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
-import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import {
   wmsStockReservations,
@@ -212,50 +212,21 @@ export const zohoSalesOrderSyncJob = schedules.task({
             );
           }
 
-          // Reserve WMS stock for the new order
+          // Hold WMS stock for the new order — the same step the Sync button,
+          // line edits and release use, so all four hold stock the same way
           try {
-            const insertedItems = await triggerDb
-              .select({
-                id: zohoSalesOrderItems.id,
-                sku: zohoSalesOrderItems.sku,
-                lwin18: zohoSalesOrderItems.lwin18,
-                name: zohoSalesOrderItems.name,
-                quantity: zohoSalesOrderItems.quantity,
-              })
-              .from(zohoSalesOrderItems)
-              .where(eq(zohoSalesOrderItems.salesOrderId, newOrder.id));
+            const hold = await holdStockForSalesOrder({
+              db: triggerDb,
+              orderId: newOrder.id,
+              orderNumber: fullOrder.salesorder_number,
+            });
 
-            const reservationItems = insertedItems
-              .filter((item) => item.sku || item.lwin18)
-              .map((item) => ({
-                orderItemId: item.id,
-                lwin18: item.lwin18 ?? item.sku ?? '',
-                productName: item.name,
-                quantityCases: item.quantity,
-              }));
-
-            if (reservationItems.length > 0) {
-              const reservationResult = await reserveStockForOrderItems({
-                orderType: 'zoho',
-                orderId: newOrder.id,
-                orderNumber: fullOrder.salesorder_number,
-                items: reservationItems,
-                db: triggerDb,
-              });
-
-              if (reservationResult.short.length > 0) {
-                logger.warn(
-                  `Stock shortage for ${fullOrder.salesorder_number}`,
-                  { short: reservationResult.short },
-                );
-              }
+            if (hold.short.length > 0) {
+              logger.warn(`Stock shortage for ${fullOrder.salesorder_number}`, { short: hold.short });
             }
           } catch (reserveError) {
-            // Don't fail the sync if reservation fails
-            logger.error(
-              `Failed to reserve stock for ${fullOrder.salesorder_number}`,
-              { error: reserveError },
-            );
+            // Don't fail the sync if holding fails
+            logger.error(`Failed to hold stock for ${fullOrder.salesorder_number}`, { error: reserveError });
           }
 
           results.created++;

@@ -383,7 +383,7 @@ and until then the line drops out of the consumer catalogue feeds as unpriced.
 **Printable sheet**: `GET /api/admin/wms/picking-list/[pickListId]` renders `PickingListPDFTemplate`. The registered Roboto subset has **no arrow or box glyphs** — `→ ↻ □` render as stray punctuation, so keep the sheet to plain ASCII.
 
 **Known gaps**:
-- [ ] `reserveStockForOrderItems` matches the exact LWIN only (prefix fallback fires just for codes shorter than 18), so a pack mismatch reserves nothing and the line reports short
+- [x] `reserveStockForOrderItems` matched the exact LWIN only — replaced (2026-10) by `holdStockForSalesOrder`, pack-agnostic and in bottles, used by the sync job, the Sync button, line reconcile and release-to-pick
 - [ ] `adminQuickDispatch` has the same exact-LWIN lookup, and silently dispatches without decrementing when it misses
 - [ ] The NUC local server carries its own copy of the pick endpoints; fixes here do not reach it
 

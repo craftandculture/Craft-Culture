@@ -354,7 +354,28 @@ const adminReleaseToPick = wmsOperatorProcedure
       // fully-reserved wine looked like no stock at all — including stock
       // reserved for THIS order at approval — and the line was released with no
       // bay and no LWIN, which is what strands an operator at the shelf.
+      /*
+        Stock already held for this line — by the sync when the order came in,
+        or after an edit — is where the pick should go, and must not be held a
+        second time below. Holding it again took the same cases twice off
+        "available".
+      */
+      const existingHolds: { stockId: string; quantityCases: number }[] = await db
+        .select({
+          stockId: wmsStockReservations.stockId,
+          quantityCases: wmsStockReservations.quantityCases,
+        })
+        .from(wmsStockReservations)
+        .where(
+          and(
+            eq(wmsStockReservations.orderItemId, item.id),
+            eq(wmsStockReservations.status, 'active'),
+          ),
+        );
+      const alreadyHeldCases = existingHolds.reduce((sum, h) => sum + h.quantityCases, 0);
+
       const suggestedStock =
+        availableStock.find((s) => existingHolds.some((h) => h.stockId === s.stockId)) ??
         availableStock.find(
           (s) => s.availableCases >= casesNeededFor(packOf(s.caseConfig)),
         ) ??
@@ -404,7 +425,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
             ? 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
-            : suggestedStock.availableCases < casesNeeded
+            : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
               : null,
         })
@@ -432,7 +453,10 @@ const adminReleaseToPick = wmsOperatorProcedure
           Reserving here reuses the pack-agnostic resolution above, which is
           the same matching the picker will use at the bay.
         */
-        const held = Math.min(casesNeeded, suggestedStock.availableCases);
+        const held =
+          alreadyHeldCases > 0
+            ? 0
+            : Math.min(casesNeeded, suggestedStock.availableCases);
 
         if (held > 0) {
           await db.insert(wmsStockReservations).values({
@@ -459,9 +483,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           reservedCases += held;
         }
 
-        if (held < casesNeeded) {
+        if (held + alreadyHeldCases < casesNeeded) {
           shortOnRelease.push(
-            `${item.name} (${casesNeeded - held} of ${casesNeeded} cases)`,
+            `${item.name} (${casesNeeded - held - alreadyHeldCases} of ${casesNeeded} cases)`,
           );
         }
       }
