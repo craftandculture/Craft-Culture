@@ -1,3 +1,9 @@
+## [2.0.303](https://github.com/craftandculture/Craft-Culture/compare/v2.0.302...v2.0.303) (2026-10-11)
+
+### Bug Fixes
+
+* Zoho Codes retires a recently sold wine that Stock Explorer holds at zero — sold out, not unknown ([ab31607](https://github.com/craftandculture/Craft-Culture/commit/ab316077cf05e69e9edff5c211b0cbeaf022f242))
+
 ## [2.0.302](https://github.com/craftandculture/Craft-Culture/compare/v2.0.301...v2.0.302) (2026-10-11)
 
 ### Features
