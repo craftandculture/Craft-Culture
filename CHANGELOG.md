@@ -1,3 +1,9 @@
+## [2.0.298](https://github.com/craftandculture/Craft-Culture/compare/v2.0.297...v2.0.298) (2026-10-11)
+
+### Bug Fixes
+
+* Zoho Codes collapses stray spaces in new item names ([7873140](https://github.com/craftandculture/Craft-Culture/commit/7873140cccdc6829cf3c229bbd25c3171dcc7e8a))
+
 ## [2.0.297](https://github.com/craftandculture/Craft-Culture/compare/v2.0.296...v2.0.297) (2026-10-11)
 
 ### Features
