@@ -1,3 +1,9 @@
+## [2.0.301](https://github.com/craftandculture/Craft-Culture/compare/v2.0.300...v2.0.301) (2026-10-11)
+
+### Bug Fixes
+
+* Zoho Codes keeps the vintage and pack when cutting a long name to 100 characters ([5cfe0e3](https://github.com/craftandculture/Craft-Culture/commit/5cfe0e39175348b3d6c7b5311c27d406e2871ac4))
+
 ## [2.0.300](https://github.com/craftandculture/Craft-Culture/compare/v2.0.299...v2.0.300) (2026-10-11)
 
 ### Bug Fixes
