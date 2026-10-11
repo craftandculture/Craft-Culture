@@ -32,6 +32,8 @@ export interface CleanupContext {
   openItemIds: Set<string>;
   /** The open documents each of those items sits on, e.g. "SO-00140 (picking)" */
   openDocuments?: Map<string, string[]>;
+  /** Wine-vintage-size keys Stock Explorer has any line for, even at zero */
+  everHeldKeys?: Set<string>;
   /** Zoho item ids sold in the last 90 days */
   recentlySoldItemIds: Set<string>;
   /** Items created this recently are left alone (ISO date) */
@@ -202,7 +204,10 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
       const why =
         form === 'blank' ? 'No SKU' : canonical ? `Old code format (${canonical} in Stock Explorer form)` : `"${i.sku}" is not an LWIN`;
       const replacement = replacementFor(i, canonical);
-      if (!replacement && ctx.recentlySoldItemIds.has(i.itemId)) {
+      // Sold out (Stock Explorer has the wine at zero) is fine to retire; only
+      // a wine Stock Explorer has never held keeps its sole record in Zoho
+      const soldOut = canonical ? ctx.everHeldKeys?.has(lwinPakKeyOf(canonical)) : false;
+      if (!replacement && !soldOut && ctx.recentlySoldItemIds.has(i.itemId)) {
         actions.push({
           id: i.itemId,
           itemId: i.itemId,
@@ -213,7 +218,7 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
           toSku: null,
           canonical,
           reason: why,
-          blocked: 'Sold in the last 90 days and not in Stock Explorer, so nothing would replace it — kept until it is received under a Stock Explorer code',
+          blocked: 'Sold in the last 90 days and never in Stock Explorer, so this item is its only record — kept until it is received under a Stock Explorer code',
           stockExplorerName: null,
           create: null,
           dependsOn: null,
@@ -224,7 +229,11 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
         i,
         'retire',
         canonical,
-        replacement ? `${why}; replaced by ${replacement.lwin18}` : `${why}; not held, not sold in 90 days`,
+        replacement
+          ? `${why}; replaced by ${replacement.lwin18}`
+          : soldOut
+            ? `${why}; sold out in Stock Explorer`
+            : `${why}; not held, not sold in 90 days`,
         replacement?.lwin18 ?? null,
       );
       continue;

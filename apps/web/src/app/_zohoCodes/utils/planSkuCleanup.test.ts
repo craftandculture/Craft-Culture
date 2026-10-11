@@ -109,6 +109,14 @@ describe('planSkuCleanup: what replaces an old item', () => {
     expect(a).toMatchObject({ kind: 'retire', blocked: expect.stringContaining('Sold in the last 90 days') });
   });
 
+  it('retires a recently sold wine that Stock Explorer has at zero', () => {
+    const [a] = planSkuCleanup(
+      [item({ itemId: 'g', name: 'Guidalberto 2020', sku: '109539220200600750' })],
+      ctx({ recentlySoldItemIds: new Set(['g']), everHeldKeys: new Set(['1095392-2020-00750']) }),
+    );
+    expect(a).toMatchObject({ kind: 'retire', blocked: null, reason: expect.stringContaining('sold out') });
+  });
+
   it('retires a sold spirit whose Stock Explorer line matches by name', () => {
     const actions = planSkuCleanup(
       [item({ itemId: 'mez', name: 'Bandida Mezcal - Black', sku: 'MEZ-BAN-700-BTL-UAE-BLK' })],

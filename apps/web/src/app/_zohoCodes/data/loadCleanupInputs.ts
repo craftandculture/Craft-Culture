@@ -149,6 +149,9 @@ const loadCleanupInputs = async () => {
     isbn: i.isbn ?? writtenDetails.get(i.item_id)?.isbn ?? null,
   }));
 
+  const everHeld = await db.selectDistinct({ lwin18: wmsStock.lwin18 }).from(wmsStock);
+  const everHeldKeys = new Set(everHeld.map((r) => lwinPakKeyOf(normalizeLwin18(r.lwin18.trim().toUpperCase()))));
+
   const customs = await loadCustomsDetails([
     ...stockExplorer.keys(),
     ...items.filter((i) => i.status === 'active' && parseZohoSku(i.sku).form === 'dashed').map((i) => i.sku.trim().toUpperCase()),
@@ -156,6 +159,7 @@ const loadCleanupInputs = async () => {
 
   const ctx: CleanupContext = {
     customs,
+    everHeldKeys,
     stockExplorer,
     heldKeys,
     openItemIds: new Set([...openLines.map((l) => l.zohoItemId!).filter(Boolean), ...draftItemIds.keys()]),
