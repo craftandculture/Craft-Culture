@@ -1,171 +1,190 @@
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, privateClientOrders } from '@/database/schema';
+import type { PrivateClientOrder } from '@/database/schema';
+import {
+  partners,
+  privateClientOrderItems,
+  privateClientOrders,
+} from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import {
+  DISTRIBUTOR_QUEUES,
+  DISTRIBUTOR_SKU_LOCKED_STATUSES,
+  DISTRIBUTOR_STAGES,
+  DISTRIBUTOR_VISIBLE_STATUSES,
+} from '../constants';
+
 /**
- * Get dashboard statistics for the current distributor
+ * The distributor's dashboard: what is waiting on them, where their orders
+ * are, and how much they add up to
  *
- * Returns KPIs including order counts by status, recent orders,
- * and aggregated metrics for displaying on the distributor dashboard.
+ * Every count is built from the same status groups the order list filters
+ * by (DISTRIBUTOR_STAGES, DISTRIBUTOR_QUEUES), so a number on the dashboard
+ * opens a list of exactly that many orders.
+ *
+ * Quantities are in bottles. The stored case count adds single bottles to
+ * cases as if they were one unit, which read "1 cases" for a bottle.
  */
 const distributorDashboard = distributorProcedure.query(
-  async ({ ctx: { partnerId } }) => {
-    // Get date 30 days ago for "this month" metrics
+  async ({ ctx: { partnerId, partner } }) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Status categories for distributors
-    const visibleStatuses = [
-      'cc_approved',
-      'awaiting_partner_verification',
-      'awaiting_distributor_verification',
-      'verification_suspended',
-      'awaiting_client_payment',
-      'client_paid',
-      'awaiting_distributor_payment',
-      'distributor_paid',
-      'awaiting_partner_payment',
-      'partner_paid',
-      'stock_in_transit',
-      'with_distributor',
-      'out_for_delivery',
-      'delivered',
-    ] as const;
+    const mine = and(
+      eq(privateClientOrders.distributorId, partnerId),
+      inArray(privateClientOrders.status, [...DISTRIBUTOR_VISIBLE_STATUSES]),
+    );
 
-    // Get counts by status
-    const statusCounts = await db
-      .select({
-        status: privateClientOrders.status,
-        count: sql<number>`count(*)`,
-      })
-      .from(privateClientOrders)
-      .where(
-        and(
-          eq(privateClientOrders.distributorId, partnerId),
-          inArray(privateClientOrders.status, visibleStatuses),
-        ),
-      )
-      .groupBy(privateClientOrders.status);
+    const bottlesSql = sql<number>`coalesce(sum(${privateClientOrderItems.quantity} * coalesce(${privateClientOrderItems.caseConfig}, 1)), 0)`;
 
-    // Get totals (both USD and AED)
-    const [totals] = await db
-      .select({
-        totalOrders: sql<number>`count(*)`,
-        totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
-        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-        totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
-      })
-      .from(privateClientOrders)
-      .where(
-        and(
-          eq(privateClientOrders.distributorId, partnerId),
-          inArray(privateClientOrders.status, visibleStatuses),
-        ),
-      );
+    const [statusCounts, [totals], [monthlyTotals], [monthlyBottles], recentOrders, ordersByPartner, [skuMissing]] =
+      await Promise.all([
+        db
+          .select({
+            status: privateClientOrders.status,
+            count: sql<number>`count(*)`,
+            valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
+            valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            oldestUpdatedAt: sql<string | null>`min(${privateClientOrders.updatedAt})`,
+            idle: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} < now() - interval '7 days')`,
+            lastWeek: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} >= now() - interval '7 days')`,
+          })
+          .from(privateClientOrders)
+          .where(mine)
+          .groupBy(privateClientOrders.status),
 
-    // Get this month's totals (both USD and AED)
-    const [monthlyTotals] = await db
-      .select({
-        totalOrders: sql<number>`count(*)`,
-        totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
-        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-        totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
-      })
-      .from(privateClientOrders)
-      .where(
-        and(
-          eq(privateClientOrders.distributorId, partnerId),
-          inArray(privateClientOrders.status, visibleStatuses),
-          gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo),
-        ),
-      );
+        db
+          .select({
+            totalOrders: sql<number>`count(*)`,
+            totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+          })
+          .from(privateClientOrders)
+          .where(mine),
 
-    // Get recent 5 orders with partner info
-    const recentOrders = await db
-      .select({
-        order: privateClientOrders,
-        partner: {
-          id: partners.id,
-          businessName: partners.businessName,
-          logoUrl: partners.logoUrl,
-        },
-      })
-      .from(privateClientOrders)
-      .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
-      .where(
-        and(
-          eq(privateClientOrders.distributorId, partnerId),
-          inArray(privateClientOrders.status, visibleStatuses),
-        ),
-      )
-      .orderBy(desc(privateClientOrders.distributorAssignedAt))
-      .limit(5);
+        db
+          .select({
+            totalOrders: sql<number>`count(*)`,
+            totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+          })
+          .from(privateClientOrders)
+          .where(and(mine, gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo))),
 
-    // Get orders by partner for breakdown (both USD and AED)
-    const ordersByPartner = await db
-      .select({
-        partnerId: partners.id,
-        partnerName: partners.businessName,
-        partnerLogoUrl: partners.logoUrl,
-        orderCount: sql<number>`count(*)`,
-        totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
-        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-        totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
-      })
-      .from(privateClientOrders)
-      .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
-      .where(
-        and(
-          eq(privateClientOrders.distributorId, partnerId),
-          inArray(privateClientOrders.status, visibleStatuses),
-        ),
-      )
-      .groupBy(partners.id, partners.businessName, partners.logoUrl);
+        db
+          .select({ bottles: bottlesSql })
+          .from(privateClientOrders)
+          .innerJoin(
+            privateClientOrderItems,
+            eq(privateClientOrderItems.orderId, privateClientOrders.id),
+          )
+          .where(and(mine, gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo))),
 
-    // Build status breakdown with proper categorization
-    const pendingPaymentStatuses = [
-      'cc_approved',
-      'awaiting_partner_verification',
-      'awaiting_distributor_verification',
-      'verification_suspended',
-      'awaiting_client_payment',
-      'client_paid',
-      'awaiting_distributor_payment',
-    ];
-    const inTransitStatuses = ['distributor_paid', 'stock_in_transit'];
-    const atWarehouseStatuses = ['with_distributor'];
-    const inDeliveryStatuses = ['out_for_delivery'];
-    const completedStatuses = ['delivered'];
+        db
+          .select({
+            order: privateClientOrders,
+            partner: {
+              id: partners.id,
+              businessName: partners.businessName,
+              logoUrl: partners.logoUrl,
+            },
+          })
+          .from(privateClientOrders)
+          .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+          .where(mine)
+          .orderBy(desc(privateClientOrders.distributorAssignedAt))
+          .limit(6),
 
-    const countByStatuses = (statuses: string[]) =>
+        db
+          .select({
+            partnerId: partners.id,
+            partnerName: partners.businessName,
+            partnerLogoUrl: partners.logoUrl,
+            orderCount: sql<number>`count(*)`,
+            activeCount: sql<number>`count(*) filter (where ${privateClientOrders.status} <> 'delivered')`,
+            totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+          })
+          .from(privateClientOrders)
+          .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+          .where(mine)
+          .groupBy(partners.id, partners.businessName, partners.logoUrl)
+          .orderBy(sql`coalesce(sum(${privateClientOrders.totalUsd}), 0) desc`),
+
+        // Only asked of distributors who record a bundle SKU on each order
+        partner.requiresOrderSku
+          ? db
+              .select({ count: sql<number>`count(*)` })
+              .from(privateClientOrders)
+              .where(
+                and(
+                  mine,
+                  isNull(privateClientOrders.distributorSku),
+                  notInArray(
+                    privateClientOrders.status,
+                    DISTRIBUTOR_SKU_LOCKED_STATUSES as PrivateClientOrder['status'][],
+                  ),
+                ),
+              )
+          : Promise.resolve([{ count: 0 }]),
+      ]);
+
+    // Orders and value per stage, from the same groups the list filters by
+    const stageTotals = (statuses: readonly string[]) => {
+      const rows = statusCounts.filter((c) => statuses.includes(c.status));
+      const oldest = rows
+        .map((c) => (c.oldestUpdatedAt ? new Date(c.oldestUpdatedAt).getTime() : null))
+        .filter((t): t is number => t !== null)
+        .sort((a, b) => a - b)[0];
+      return {
+        count: rows.reduce((sum, c) => sum + Number(c.count), 0),
+        valueUsd: rows.reduce((sum, c) => sum + Number(c.valueUsd), 0),
+        valueAed: rows.reduce((sum, c) => sum + Number(c.valueAed), 0),
+        /** Days the longest-waiting order has gone without a change */
+        oldestDays: oldest ? Math.floor((Date.now() - oldest) / 86_400_000) : null,
+        /** Orders with no change in 7 days */
+        idle: rows.reduce((sum, c) => sum + Number(c.idle), 0),
+        /** Orders that changed in the last 7 days (for Delivered: delivered this week) */
+        lastWeek: rows.reduce((sum, c) => sum + Number(c.lastWeek), 0),
+      };
+    };
+
+    const countOf = (statuses: readonly string[]) =>
       statusCounts
-        .filter((s) => statuses.includes(s.status))
-        .reduce((sum, s) => sum + Number(s.count), 0);
+        .filter((c) => statuses.includes(c.status))
+        .reduce((sum, c) => sum + Number(c.count), 0);
+
+    const delivered = countOf(DISTRIBUTOR_STAGES.delivered);
 
     return {
       kpis: {
+        activeOrders: Number(totals?.totalOrders ?? 0) - delivered,
         totalOrders: Number(totals?.totalOrders ?? 0),
-        totalCases: Number(totals?.totalCases ?? 0),
         totalValueUsd: Number(totals?.totalValueUsd ?? 0),
         totalValueAed: Number(totals?.totalValueAed ?? 0),
         monthlyOrders: Number(monthlyTotals?.totalOrders ?? 0),
-        monthlyCases: Number(monthlyTotals?.totalCases ?? 0),
+        monthlyBottles: Number(monthlyBottles?.bottles ?? 0),
         monthlyValueUsd: Number(monthlyTotals?.totalValueUsd ?? 0),
         monthlyValueAed: Number(monthlyTotals?.totalValueAed ?? 0),
       },
-      statusBreakdown: {
-        pendingPayment: countByStatuses(pendingPaymentStatuses),
-        inTransit: countByStatuses(inTransitStatuses),
-        atWarehouse: countByStatuses(atWarehouseStatuses),
-        inDelivery: countByStatuses(inDeliveryStatuses),
-        completed: countByStatuses(completedStatuses),
+      requiresOrderSku: partner.requiresOrderSku,
+      queues: {
+        verify: countOf(DISTRIBUTOR_QUEUES.verify.statuses),
+        clientPayment: countOf(DISTRIBUTOR_QUEUES.clientPayment.statuses),
+        payCc: countOf(DISTRIBUTOR_QUEUES.payCc.statuses),
+        receive: countOf(DISTRIBUTOR_QUEUES.receive.statuses),
+        deliver: countOf(DISTRIBUTOR_QUEUES.deliver.statuses),
+        skuMissing: Number(skuMissing?.count ?? 0),
       },
-      statusCounts: statusCounts.map((s) => ({
-        status: s.status,
-        count: Number(s.count),
-      })),
+      stages: {
+        verification: stageTotals(DISTRIBUTOR_STAGES.verification),
+        payment: stageTotals(DISTRIBUTOR_STAGES.payment),
+        inbound: stageTotals(DISTRIBUTOR_STAGES.inbound),
+        delivery: stageTotals(DISTRIBUTOR_STAGES.delivery),
+        delivered: stageTotals(DISTRIBUTOR_STAGES.delivered),
+      },
       recentOrders: recentOrders.map((row) => ({
         ...row.order,
         partner: row.partner,
@@ -175,7 +194,7 @@ const distributorDashboard = distributorProcedure.query(
         partnerName: p.partnerName ?? 'Unknown Partner',
         partnerLogoUrl: p.partnerLogoUrl,
         orderCount: Number(p.orderCount),
-        totalCases: Number(p.totalCases),
+        activeCount: Number(p.activeCount),
         totalValueUsd: Number(p.totalValueUsd),
         totalValueAed: Number(p.totalValueAed),
       })),

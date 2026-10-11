@@ -2,17 +2,16 @@
 
 import {
   IconArrowRight,
+  IconBarcode,
   IconBook,
-  IconBox,
   IconBuilding,
-  IconBuildingStore,
-  IconCalendar,
   IconCash,
-  IconCheck,
   IconChevronRight,
-  IconClock,
   IconPackage,
+  IconReceipt,
+  IconShieldCheck,
   IconTruck,
+  IconTruckDelivery,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -20,7 +19,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -29,15 +27,23 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
+import { DISTRIBUTOR_QUEUES } from '../constants';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
 const DEFAULT_EXCHANGE_RATE = 3.67;
 
+const ORDERS = '/platform/distributor/orders';
+
 /**
- * DistributorDashboard displays an overview of assigned orders
- * with KPIs, status pipeline, and recent activity
+ * The distributor's dashboard, action first
+ *
+ * What is waiting on the distributor comes first, one tile per task, amber
+ * when there is work and "All clear" when there is none; each opens the list
+ * of exactly those orders. Then the book in one line, and a pipeline showing
+ * where orders are and whether they are moving. Same layout as the C&C admin
+ * dashboard, so both sides read an order the same way.
  */
 const DistributorDashboard = () => {
   const trpcClient = useTRPCClient();
@@ -46,40 +52,17 @@ const DistributorDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.distributorDashboard'],
     queryFn: () => trpcClient.privateClientOrders.distributorDashboard.query(),
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
 
-  /**
-   * Format currency value, calculating AED from USD if AED is not available
-   */
   const formatCurrency = (amountUsd: number, amountAed: number) => {
-    let amount: number;
-    if (currency === 'USD') {
-      amount = amountUsd;
-    } else {
-      // Use AED if available, otherwise calculate from USD
-      amount = amountAed > 0 ? amountAed : amountUsd * DEFAULT_EXCHANGE_RATE;
-    }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  /**
-   * Format order currency value, calculating AED from USD if needed
-   */
-  const formatOrderCurrency = (order: { totalUsd?: number | null; totalAed?: number | null }) => {
-    const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
-    let amount: number;
-    if (currency === 'USD') {
-      amount = usdAmount;
-    } else {
-      // Use AED if available, otherwise calculate from USD
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
-    }
+    const amount =
+      currency === 'USD'
+        ? amountUsd
+        : amountAed > 0
+          ? amountAed
+          : amountUsd * DEFAULT_EXCHANGE_RATE;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
@@ -107,304 +90,264 @@ const DistributorDashboard = () => {
     );
   }
 
-  const { kpis, statusBreakdown, recentOrders, ordersByPartner } = data;
+  const { kpis, queues, stages: stageData, recentOrders, ordersByPartner } = data;
 
-  // Status pipeline steps
-  const pipelineSteps = [
-    {
-      label: 'Pending Payment',
-      count: statusBreakdown.pendingPayment,
-      icon: IconClock,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-      textColor: 'text-amber-700 dark:text-amber-300',
-    },
-    {
-      label: 'In Transit',
-      count: statusBreakdown.inTransit,
-      icon: IconTruck,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      textColor: 'text-blue-700 dark:text-blue-300',
-    },
-    {
-      label: 'At Warehouse',
-      count: statusBreakdown.atWarehouse,
-      icon: IconBox,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      textColor: 'text-purple-700 dark:text-purple-300',
-    },
-    {
-      label: 'Out for Delivery',
-      count: statusBreakdown.inDelivery,
-      icon: IconTruck,
-      color: 'bg-indigo-500',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
-      textColor: 'text-indigo-700 dark:text-indigo-300',
-    },
-    {
-      label: 'Delivered',
-      count: statusBreakdown.completed,
-      icon: IconCheck,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      textColor: 'text-green-700 dark:text-green-300',
-    },
+  const tasks = [
+    { key: 'verify', icon: IconShieldCheck },
+    { key: 'clientPayment', icon: IconReceipt },
+    { key: 'payCc', icon: IconCash },
+    { key: 'receive', icon: IconTruck },
+    { key: 'deliver', icon: IconTruckDelivery },
+  ] as const;
+
+  const tiles = [
+    ...tasks.map((t) => ({
+      label: DISTRIBUTOR_QUEUES[t.key].label,
+      hint: DISTRIBUTOR_QUEUES[t.key].hint,
+      count: queues[t.key],
+      href: `${ORDERS}?queue=${t.key}`,
+      icon: t.icon,
+    })),
+    ...(data.requiresOrderSku
+      ? [
+          {
+            label: 'SKU missing',
+            hint: 'Needed before payment',
+            count: queues.skuMissing,
+            href: `${ORDERS}?skuMissing=1`,
+            icon: IconBarcode,
+          },
+        ]
+      : []),
   ];
 
-  const totalActive = pipelineSteps
-    .slice(0, 4)
-    .reduce((sum, step) => sum + step.count, 0);
+  // The live pipeline. Delivered is shown apart: it is the finish line.
+  const stages = [
+    { key: 'verification', label: 'Verification', owner: 'Partner · you', dot: 'bg-orange-400' },
+    { key: 'payment', label: 'Payment', owner: 'Client · you', dot: 'bg-blue-500' },
+    { key: 'inbound', label: 'Inbound', owner: 'C&C', dot: 'bg-violet-500' },
+    { key: 'delivery', label: 'Delivery', owner: 'You', dot: 'bg-amber-400' },
+  ] as const;
+  const inFlight = stages.reduce((sum, st) => sum + stageData[st.key].count, 0);
+
+  const totalPartnerValue = ordersByPartner.reduce((sum, p) => sum + p.totalValueUsd, 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Currency Toggle */}
-      <div className="flex items-center justify-end">
-        <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-              currency === 'USD'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            USD
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-              currency === 'AED'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            AED
-          </button>
+    <div className="flex flex-col gap-4 sm:gap-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Typography variant="headingLg" className="font-bold">
+            Private Client Orders
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted">
+            Orders assigned to you
+          </Typography>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={ORDERS}>
+            <Button size="sm" variant="outline" className="gap-1.5">
+              All orders ({kpis.totalOrders})
+            </Button>
+          </Link>
+          <Link href="/docs/pco-flows">
+            <Button size="sm" variant="ghost" className="gap-1.5">
+              <Icon icon={IconBook} size="sm" />
+              Process guide
+            </Button>
+          </Link>
+          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+            {(['USD', 'AED'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCurrency(c)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                  currency === c
+                    ? 'bg-background-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* Active Orders */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Active Orders
+      {/* What is waiting on you — each count opens the list behind it */}
+      <div
+        className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${
+          tiles.length > 5 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'
+        }`}
+      >
+        {tiles.map((item) => {
+          const needsAction = item.count > 0;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`group flex flex-col gap-0.5 rounded-xl border px-4 py-3 transition-colors ${
+                needsAction
+                  ? 'border-fill-warning/50 bg-fill-warning/5 hover:bg-fill-warning/10'
+                  : 'border-border-muted bg-fill-primary hover:bg-fill-muted/40'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wider">
+                  {item.label}
                 </Typography>
-                <Typography
-                  variant="headingLg"
-                  className="mt-1"
-                >
-                  {totalActive}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  Awaiting delivery
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-fill-brand/10 p-2">
-                <Icon icon={IconPackage} size="md" className="text-text-brand" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* This Month Orders */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  This Month
-                </Typography>
-                <Typography
-                  variant="headingLg"
-                  className="mt-1 text-2xl font-bold sm:text-3xl"
-                >
-                  {kpis.monthlyOrders}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  {kpis.monthlyCases} cases
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
                 <Icon
-                  icon={IconCalendar}
-                  size="md"
-                  className="text-emerald-600 dark:text-emerald-400"
+                  icon={item.icon}
+                  size="sm"
+                  className={needsAction ? 'text-fill-warning' : 'text-text-muted'}
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Cases */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Total Cases
-                </Typography>
-                <Typography
-                  variant="headingLg"
-                  className="mt-1 text-2xl font-bold sm:text-3xl"
-                >
-                  {kpis.totalCases}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  All time
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-900/30">
-                <Icon
-                  icon={IconBox}
-                  size="md"
-                  className="text-violet-600 dark:text-violet-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Value */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Total Value
-                </Typography>
-                <Typography
-                  variant="headingLg"
-                  className="mt-1 text-xl font-bold sm:text-2xl"
-                >
-                  {formatCurrency(kpis.totalValueUsd, kpis.totalValueAed)}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  Monthly: {formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed)}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
-                <Icon
-                  icon={IconCash}
-                  size="md"
-                  className="text-amber-600 dark:text-amber-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              <Typography
+                variant="headingMd"
+                className={needsAction ? 'text-text-primary' : 'text-text-muted'}
+              >
+                {item.count}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="flex items-center gap-1">
+                {needsAction ? item.hint : 'All clear'}
+                {needsAction && (
+                  <Icon
+                    icon={IconChevronRight}
+                    size="xs"
+                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                  />
+                )}
+              </Typography>
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Status Pipeline */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Typography variant="headingSm" className="font-semibold">
-              Order Pipeline
+      {/* The book at a glance */}
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-border-muted bg-fill-primary px-5 py-3">
+        {[
+          { label: 'Active orders', value: String(kpis.activeOrders) },
+          {
+            label: 'Last 30 days',
+            value: `${kpis.monthlyOrders} orders · ${kpis.monthlyBottles} bottles`,
+          },
+          {
+            label: 'Value, last 30 days',
+            value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed),
+          },
+          { label: 'Total value', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
+        ].map((stat) => (
+          <div key={stat.label} className="flex items-baseline gap-2">
+            <Typography variant="bodyXs" colorRole="muted">
+              {stat.label}
             </Typography>
-            <Link href="/platform/distributor/orders">
-              <Button variant="ghost" size="sm" className="gap-1">
-                View All <Icon icon={IconArrowRight} size="sm" />
-              </Button>
+            <Typography variant="bodySm" className="font-semibold">
+              {stat.value}
+            </Typography>
+          </div>
+        ))}
+      </div>
+
+      {/* Pipeline: where live orders are, and whether they are moving */}
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex items-baseline gap-2">
+              <Typography variant="headingSm" className="font-semibold">
+                Pipeline
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {inFlight} in flight
+              </Typography>
+            </div>
+            <Link
+              href={`${ORDERS}?stage=delivered`}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary"
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {stageData.delivered.count} delivered
+              {stageData.delivered.lastWeek > 0 && ` · ${stageData.delivered.lastWeek} this week`}
+              <Icon icon={IconChevronRight} size="xs" />
             </Link>
           </div>
 
-          {/* Mobile: Stacked cards */}
-          <div className="flex flex-col gap-2 sm:hidden">
-            {pipelineSteps.map((step) => (
-              <div
-                key={step.label}
-                className={`flex items-center justify-between rounded-lg p-3 ${step.bgColor}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`rounded-lg p-1.5 ${step.color}`}>
-                    <Icon icon={step.icon} size="sm" className="text-white" />
-                  </div>
-                  <Typography variant="bodySm" className={step.textColor}>
-                    {step.label}
-                  </Typography>
-                </div>
-                <Badge colorRole="muted" size="sm" className="font-semibold">
-                  {step.count}
-                </Badge>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop: Horizontal pipeline */}
-          <div className="hidden sm:block">
-            <div className="flex items-center justify-between">
-              {pipelineSteps.map((step, index) => (
-                <div key={step.label} className="flex flex-1 items-center">
-                  <div className="flex flex-1 flex-col items-center">
-                    <div
-                      className={`mb-2 flex h-12 w-12 items-center justify-center rounded-full ${step.color}`}
-                    >
-                      <Icon icon={step.icon} size="md" className="text-white" />
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {stages.map((st, index) => {
+              const stage = stageData[st.key];
+              const share = inFlight > 0 ? (stage.count / inFlight) * 100 : 0;
+              return (
+                <div key={st.key} className="relative">
+                  <Link
+                    href={`${ORDERS}?stage=${st.key}`}
+                    className="flex h-full flex-col gap-2 rounded-lg border border-border-muted p-3 transition-colors hover:border-border-primary hover:bg-fill-muted/30"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${st.dot}`} />
+                        <Typography variant="bodySm" className="font-medium">
+                          {st.label}
+                        </Typography>
+                      </span>
+                      <Typography variant="bodyXs" colorRole="muted" className="hidden truncate sm:block">
+                        {st.owner}
+                      </Typography>
                     </div>
-                    <Typography
-                      variant="headingMd"
-                      className="mb-0.5 text-xl font-bold"
-                    >
-                      {step.count}
+                    <div className="flex items-baseline gap-2">
+                      <Typography variant="headingMd" className="font-semibold">
+                        {stage.count}
+                      </Typography>
+                      {stage.count > 0 && (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {formatCurrency(stage.valueUsd, stage.valueAed)}
+                        </Typography>
+                      )}
+                    </div>
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-fill-muted">
+                      <div className={`h-full ${st.dot}`} style={{ width: `${share}%` }} />
+                    </div>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {stage.count === 0
+                        ? 'Empty'
+                        : stage.oldestDays !== null
+                          ? `Oldest ${stage.oldestDays === 0 ? 'today' : `${stage.oldestDays}d`} without a change`
+                          : ' '}
                     </Typography>
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="text-center"
+                  </Link>
+                  {stage.idle > 0 && (
+                    <Link
+                      href={`${ORDERS}?stage=${st.key}&idle=1`}
+                      className="absolute right-2 top-9 rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning hover:bg-fill-warning/25"
+                      title="No change in 7 days"
                     >
-                      {step.label}
-                    </Typography>
-                  </div>
-                  {index < pipelineSteps.length - 1 && (
+                      {stage.idle} idle 7d+
+                    </Link>
+                  )}
+                  {index < stages.length - 1 && (
                     <Icon
                       icon={IconChevronRight}
-                      size="md"
-                      className="mx-2 flex-shrink-0 text-text-muted"
+                      size="xs"
+                      className="absolute -right-2 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-fill-primary text-text-muted lg:block"
                     />
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Two Column Layout for Recent Orders and Partners */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Orders */}
+      {/* Recent orders and partners */}
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between">
               <Typography variant="headingSm" className="font-semibold">
-                Recent Orders
+                Recently assigned
               </Typography>
-              <Link href="/platform/distributor/orders">
+              <Link href={ORDERS}>
                 <Button variant="ghost" size="sm" className="gap-1">
-                  View All <Icon icon={IconArrowRight} size="sm" />
+                  View all <Icon icon={IconArrowRight} size="sm" />
                 </Button>
               </Link>
             </div>
@@ -413,7 +356,7 @@ const DistributorDashboard = () => {
               <div className="flex flex-col items-center justify-center gap-3 py-8">
                 <Icon icon={IconPackage} size="lg" className="text-text-muted" />
                 <Typography variant="bodySm" colorRole="muted">
-                  No orders assigned yet
+                  No orders yet
                 </Typography>
               </div>
             ) : (
@@ -421,23 +364,17 @@ const DistributorDashboard = () => {
                 {recentOrders.map((order) => (
                   <Link
                     key={order.id}
-                    href={`/platform/distributor/orders/${order.id}`}
-                    className="group flex items-center gap-3 py-3 transition-colors hover:bg-surface-secondary/50 sm:gap-4"
+                    href={`${ORDERS}/${order.id}`}
+                    className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-secondary/50"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Typography
-                          variant="bodySm"
-                          className="font-mono font-medium"
-                        >
+                        <Typography variant="bodySm" className="font-mono font-medium">
                           {order.orderNumber}
                         </Typography>
-                        <PrivateOrderStatusBadge
-                          status={order.status}
-                          size="sm"
-                        />
+                        <PrivateOrderStatusBadge status={order.status} size="sm" />
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-text-muted">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         <span className="hidden sm:inline">·</span>
                         <div className="hidden items-center gap-1 sm:flex">
@@ -454,27 +391,15 @@ const DistributorDashboard = () => {
                             {order.partner?.businessName ?? 'Unknown'}
                           </Typography>
                         </div>
-                        <span className="hidden sm:inline">·</span>
-                        <Typography variant="bodyXs">
-                          {order.caseCount} cases
-                        </Typography>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Typography
-                        variant="bodySm"
-                        className="font-medium whitespace-nowrap"
-                      >
-                        {formatOrderCurrency(order)}
+                      <Typography variant="bodySm" className="whitespace-nowrap font-medium">
+                        {formatCurrency(order.totalUsd ?? 0, order.totalAed ?? 0)}
                       </Typography>
-                      {order.distributorAssignedAt && (
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {format(
-                            new Date(order.distributorAssignedAt),
-                            'MMM d',
-                          )}
-                        </Typography>
-                      )}
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {format(new Date(order.distributorAssignedAt ?? order.createdAt), 'MMM d')}
+                      </Typography>
                     </div>
                     <Icon
                       icon={IconChevronRight}
@@ -488,73 +413,60 @@ const DistributorDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Orders by Partner */}
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2">
               <Typography variant="headingSm" className="font-semibold">
                 Orders by Partner
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                Distribution across wine partners
+                Share of value, all time
               </Typography>
             </div>
 
             {ordersByPartner.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-8">
-                <Icon
-                  icon={IconBuildingStore}
-                  size="lg"
-                  className="text-text-muted"
-                />
+                <Icon icon={IconBuilding} size="lg" className="text-text-muted" />
                 <Typography variant="bodySm" colorRole="muted">
                   No partner orders yet
                 </Typography>
               </div>
             ) : (
               <div className="flex flex-col divide-y divide-border-muted">
-                {ordersByPartner.map((partner) => {
+                {ordersByPartner.map((p) => {
+                  // Share of the book by value, so the bar and the figure agree
                   const percentage =
-                    kpis.totalOrders > 0
-                      ? Math.round((partner.orderCount / kpis.totalOrders) * 100)
+                    totalPartnerValue > 0
+                      ? Math.round((p.totalValueUsd / totalPartnerValue) * 100)
                       : 0;
-
                   return (
-                    <div key={partner.partnerId} className="py-3">
+                    <div key={p.partnerId ?? p.partnerName} className="py-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {partner.partnerLogoUrl ? (
+                          {p.partnerLogoUrl ? (
                             <Image
-                              src={partner.partnerLogoUrl}
-                              alt={partner.partnerName}
+                              src={p.partnerLogoUrl}
+                              alt={p.partnerName}
                               width={32}
                               height={32}
                               className="h-8 w-8 rounded-lg object-contain"
                             />
                           ) : (
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                              <Icon
-                                icon={IconBuilding}
-                                size="sm"
-                                className="text-text-muted"
-                              />
+                              <Icon icon={IconBuilding} size="sm" className="text-text-muted" />
                             </div>
                           )}
                           <div>
                             <Typography variant="bodySm" className="font-medium">
-                              {partner.partnerName}
+                              {p.partnerName}
                             </Typography>
                             <Typography variant="bodyXs" colorRole="muted">
-                              {partner.orderCount} orders · {partner.totalCases}{' '}
-                              cases
+                              {p.orderCount} orders · {p.activeCount} active
                             </Typography>
                           </div>
                         </div>
-                        <Typography
-                          variant="bodySm"
-                          className="font-medium whitespace-nowrap"
-                        >
-                          {formatCurrency(partner.totalValueUsd, partner.totalValueAed)}
+                        <Typography variant="bodySm" className="whitespace-nowrap font-medium">
+                          {formatCurrency(p.totalValueUsd, p.totalValueAed)}
                         </Typography>
                       </div>
                       <div className="relative h-2 overflow-hidden rounded-full bg-surface-secondary">
@@ -571,41 +483,6 @@ const DistributorDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Typography variant="headingSm" className="mb-4 font-semibold">
-            Quick Actions
-          </Typography>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/platform/distributor/orders?status=with_distributor">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconBox} size="sm" />
-                Ready for Delivery ({statusBreakdown.atWarehouse})
-              </Button>
-            </Link>
-            <Link href="/platform/distributor/orders?status=out_for_delivery">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconTruck} size="sm" />
-                Out for Delivery ({statusBreakdown.inDelivery})
-              </Button>
-            </Link>
-            <Link href="/platform/distributor/orders">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconPackage} size="sm" />
-                All Orders ({kpis.totalOrders})
-              </Button>
-            </Link>
-            <Link href="/docs/pco-flows">
-              <Button variant="outline" className="gap-2 border-border-brand text-text-brand hover:bg-fill-brand/5">
-                <Icon icon={IconBook} size="sm" />
-                Process Guide
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

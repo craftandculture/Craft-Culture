@@ -9,13 +9,14 @@ import {
   IconPackage,
   IconSearch,
   IconShieldCheck,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -32,7 +33,12 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
-import { DISTRIBUTOR_SKU_LOCKED_STATUSES } from '../constants';
+import type { DistributorQueue, DistributorStage } from '../constants';
+import {
+  DISTRIBUTOR_QUEUES,
+  DISTRIBUTOR_SKU_LOCKED_STATUSES,
+  DISTRIBUTOR_STAGES,
+} from '../constants';
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
@@ -41,17 +47,18 @@ type Currency = 'USD' | 'AED';
 const DEFAULT_EXCHANGE_RATE = 3.67;
 
 type OrderWithPartner = PrivateClientOrder & {
+  bottleCount: number;
   partner: { id: string; businessName: string; logoUrl: string | null } | null;
   client: { id: string; cityDrinksVerifiedAt: Date | null } | null;
 };
 
-type StatusFilter = 'all' | 'pending_payment' | 'in_transit' | 'ready_delivery' | 'delivered';
-
-const statusFilters: { value: StatusFilter; label: string; count?: number }[] = [
-  { value: 'all', label: 'All Orders' },
-  { value: 'pending_payment', label: 'Pending Payment' },
-  { value: 'in_transit', label: 'In Transit' },
-  { value: 'ready_delivery', label: 'Ready for Delivery' },
+/** The tabs are the dashboard's pipeline stages, so a tab and a count agree */
+const stageTabs: { value: DistributorStage | 'all'; label: string }[] = [
+  { value: 'all', label: 'All orders' },
+  { value: 'verification', label: 'Verification' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'inbound', label: 'Inbound' },
+  { value: 'delivery', label: 'Delivery' },
   { value: 'delivered', label: 'Delivered' },
 ];
 
@@ -65,20 +72,62 @@ const DistributorOrdersList = () => {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
   const [currency, setCurrency] = useState<Currency>('AED');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [stageFilter, setStageFilter] = useState<DistributorStage | 'all'>('all');
+  // Set from dashboard links: a task queue, a missing SKU, or idle orders
+  const [queueFilter, setQueueFilter] = useState<DistributorQueue | null>(null);
+  const [skuMissingFilter, setSkuMissingFilter] = useState(false);
+  const [idleFilter, setIdleFilter] = useState(false);
+
+  // Dashboard links arrive as ?stage=, ?queue=, ?skuMissing=1, ?idle=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stage = params.get('stage');
+    if (stage && stage in DISTRIBUTOR_STAGES) setStageFilter(stage as DistributorStage);
+    const queue = params.get('queue');
+    if (queue && queue in DISTRIBUTOR_QUEUES) setQueueFilter(queue as DistributorQueue);
+    if (params.get('skuMissing') === '1') setSkuMissingFilter(true);
+    if (params.get('idle') === '1') setIdleFilter(true);
+  }, []);
+
+  /** Clear a dashboard filter, and drop it from the address so a refresh agrees */
+  const clearParam = (key: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete(key);
+    const query = params.toString();
+    window.history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
+    setCursor(0);
+  };
+
+  // Tab counts come from the dashboard, which counts the same status groups
+  const { data: counts } = useQuery({
+    queryKey: ['privateClientOrders.distributorDashboard'],
+    queryFn: () => trpcClient.privateClientOrders.distributorDashboard.query(),
+  });
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       'privateClientOrders.distributorGetMany',
-      { limit: 20, cursor, search: search || undefined },
+      {
+        limit: 20,
+        cursor,
+        search: search || undefined,
+        stageFilter,
+        queueFilter,
+        skuMissingFilter,
+        idleFilter,
+      },
     ],
     queryFn: () =>
       trpcClient.privateClientOrders.distributorGetMany.query({
         limit: 20,
         cursor,
         search: search || undefined,
+        stage: stageFilter === 'all' ? undefined : stageFilter,
+        queue: queueFilter ?? undefined,
+        skuMissing: skuMissingFilter || undefined,
+        idle: idleFilter || undefined,
       }),
   });
 
@@ -118,22 +167,7 @@ const DistributorOrdersList = () => {
   const totalCount = data?.meta?.totalCount ?? 0;
   const hasMore = data?.meta?.hasMore ?? false;
 
-  // Filter orders by status category
-  const filterByStatus = (orders: OrderWithPartner[], filter: StatusFilter) => {
-    if (filter === 'all') return orders;
-
-    const statusCategories: Record<StatusFilter, string[]> = {
-      all: [],
-      pending_payment: ['cc_approved', 'awaiting_client_verification', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
-      in_transit: ['distributor_paid', 'stock_in_transit'],
-      ready_delivery: ['with_distributor', 'out_for_delivery'],
-      delivered: ['delivered'],
-    };
-
-    return orders.filter((order) => statusCategories[filter].includes(order.status));
-  };
-
-  const orders = filterByStatus(allOrders, statusFilter);
+  const orders = allOrders;
 
   const toggleOrderSelection = (orderId: string) => {
     setSelectedOrderIds((prev) => {
@@ -341,9 +375,9 @@ const DistributorOrdersList = () => {
       ),
     },
     {
-      accessorKey: 'caseCount',
-      header: 'Cases',
-      cell: ({ row }) => <Typography variant="bodySm">{row.original.caseCount}</Typography>,
+      accessorKey: 'bottleCount',
+      header: 'Bottles',
+      cell: ({ row }) => <Typography variant="bodySm">{row.original.bottleCount}</Typography>,
     },
     {
       accessorKey: 'total',
@@ -431,35 +465,82 @@ const DistributorOrdersList = () => {
         </div>
       )}
 
-      {/* Status Filter Tabs */}
+      {/* Pipeline stage tabs — filtered on the server, counted like the dashboard */}
       <div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
-        {statusFilters.map((filter) => {
-          const count = filterByStatus(allOrders, filter.value).length;
-          const isActive = statusFilter === filter.value;
+        {stageTabs.map((tab) => {
+          const count =
+            tab.value === 'all'
+              ? counts?.kpis.totalOrders
+              : counts?.stages[tab.value].count;
+          const isActive = stageFilter === tab.value;
 
           return (
             <button
-              key={filter.value}
+              key={tab.value}
               type="button"
-              onClick={() => setStatusFilter(filter.value)}
+              onClick={() => {
+                setStageFilter(tab.value);
+                clearParam('stage');
+                setCursor(0);
+              }}
               className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-fill-brand text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
-              {filter.label}
-              <Badge
-                size="sm"
-                colorRole={isActive ? 'brand' : 'muted'}
-                className={isActive ? 'bg-white/20 text-white' : ''}
-              >
-                {count}
-              </Badge>
+              {tab.label}
+              {count !== undefined && (
+                <Badge
+                  size="sm"
+                  colorRole={isActive ? 'brand' : 'muted'}
+                  className={isActive ? 'bg-white/20 text-white' : ''}
+                >
+                  {count}
+                </Badge>
+              )}
             </button>
           );
         })}
       </div>
+
+      {/* Filters opened from the dashboard, each removable */}
+      {(queueFilter || skuMissingFilter || idleFilter) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            queueFilter && {
+              key: 'queue',
+              label: DISTRIBUTOR_QUEUES[queueFilter].label,
+              clear: () => setQueueFilter(null),
+            },
+            skuMissingFilter && {
+              key: 'skuMissing',
+              label: 'SKU missing',
+              clear: () => setSkuMissingFilter(false),
+            },
+            idleFilter && {
+              key: 'idle',
+              label: 'No change in 7 days',
+              clear: () => setIdleFilter(false),
+            },
+          ]
+            .filter((chip): chip is { key: string; label: string; clear: () => void } => !!chip)
+            .map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => {
+                  chip.clear();
+                  clearParam(chip.key);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-fill-muted/40 px-3 py-1 text-xs font-medium hover:bg-fill-muted"
+              >
+                {chip.label}
+                <Icon icon={IconX} size="xs" />
+              </button>
+            ))}
+        </div>
+      )}
 
       {/* Header with search and currency toggle */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -614,7 +695,7 @@ const DistributorOrdersList = () => {
                 )}
                 <div className="flex items-center justify-between">
                   <Typography variant="bodyXs" colorRole="muted">
-                    {order.caseCount} cases
+                    {order.bottleCount} {order.bottleCount === 1 ? 'bottle' : 'bottles'}
                   </Typography>
                   <Typography variant="bodySm" className="font-semibold">
                     {formatCurrencyValue(order)}
