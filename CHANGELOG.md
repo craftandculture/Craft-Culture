@@ -1,3 +1,9 @@
+## [2.0.300](https://github.com/craftandculture/Craft-Culture/compare/v2.0.299...v2.0.300) (2026-10-11)
+
+### Bug Fixes
+
+* Zoho Codes reads the HS code and origin it already wrote from its log, since Zoho's item list omits them ([e6a7440](https://github.com/craftandculture/Craft-Culture/commit/e6a7440d17aa21c098b5426dd538eef908e69375))
+
 ## [2.0.299](https://github.com/craftandculture/Craft-Culture/compare/v2.0.298...v2.0.299) (2026-10-11)
 
 ### Bug Fixes
