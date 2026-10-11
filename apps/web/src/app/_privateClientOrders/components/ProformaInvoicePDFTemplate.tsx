@@ -1,5 +1,8 @@
 import { Document, Font, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
+import describePcoLine from '../utils/describePcoLine';
+import summarisePcoQuantities from '../utils/summarisePcoQuantities';
+
 // Register fonts
 Font.register({
   family: 'Roboto',
@@ -131,8 +134,26 @@ const styles = StyleSheet.create({
     flex: 2.2,
   },
   colQuantity: {
-    flex: 0.5,
+    flex: 0.9,
     textAlign: 'center',
+  },
+  qtyMain: {
+    fontWeight: 'bold',
+    color: '#0a0a0a',
+  },
+  qtyPack: {
+    fontSize: 7,
+    color: '#737373',
+  },
+  priceUnit: {
+    fontSize: 7,
+    color: '#737373',
+  },
+  itemsSummary: {
+    marginTop: 6,
+    fontSize: 9,
+    textAlign: 'right',
+    color: '#404040',
   },
   colDistCost: {
     flex: 1,
@@ -306,6 +327,8 @@ export interface ProformaInvoicePDFTemplateProps {
     vintage?: string | null;
     region?: string | null;
     bottleSize?: string | null;
+    /** Bottles per case; 1 is a single bottle */
+    caseConfig?: number | null;
     quantity: number;
     distributorCostPerCaseUsd?: number | null;
     pricePerCaseUsd?: number | null;
@@ -433,15 +456,16 @@ const ProformaInvoicePDFTemplate = ({
             <View style={styles.tableHeader}>
               <Text style={styles.colProduct}>Product</Text>
               <Text style={styles.colQuantity}>Qty</Text>
-              <Text style={styles.colDistCost}>Dist. Cost/Case</Text>
+              <Text style={styles.colDistCost}>Dist. Cost</Text>
               <Text style={styles.colDistTotal}>Dist. Total</Text>
-              <Text style={styles.colClientPrice}>Client/Case</Text>
+              <Text style={styles.colClientPrice}>Client Price</Text>
               <Text style={styles.colClientTotal}>Client Total</Text>
             </View>
 
             {/* Table Rows */}
             {lineItems.map((item, index) => {
               const distTotal = (item.distributorCostPerCaseUsd ?? 0) * item.quantity;
+              const line = describePcoLine(item);
               return (
                 <View
                   key={index}
@@ -451,14 +475,18 @@ const ProformaInvoicePDFTemplate = ({
                   <View style={styles.colProduct}>
                     <Text style={styles.productName}>{item.productName}</Text>
                     <Text style={styles.productMeta}>
-                      {[item.producer, item.region, item.vintage, item.bottleSize]
+                      {[item.producer, item.region, item.vintage]
                         .filter(Boolean)
                         .join(' • ')}
                     </Text>
                   </View>
-                  <Text style={styles.colQuantity}>{item.quantity}</Text>
+                  <View style={styles.colQuantity}>
+                    <Text style={styles.qtyMain}>{line.qty}</Text>
+                    <Text style={styles.qtyPack}>{line.pack}</Text>
+                  </View>
                   <Text style={styles.colDistCost}>
                     {formatAed(item.distributorCostPerCaseUsd)}
+                    <Text style={styles.priceUnit}> /{line.unit}</Text>
                     {'\n'}
                     <Text style={styles.priceUsd}>{formatUsd(item.distributorCostPerCaseUsd)}</Text>
                   </Text>
@@ -469,6 +497,7 @@ const ProformaInvoicePDFTemplate = ({
                   </Text>
                   <Text style={styles.colClientPrice}>
                     {formatAed(item.pricePerCaseUsd)}
+                    <Text style={styles.priceUnit}> /{line.unit}</Text>
                     {'\n'}
                     <Text style={styles.priceUsd}>{formatUsd(item.pricePerCaseUsd)}</Text>
                   </Text>
@@ -481,6 +510,10 @@ const ProformaInvoicePDFTemplate = ({
               );
             })}
           </View>
+          <Text style={styles.itemsSummary}>
+            {lineItems.length} {lineItems.length === 1 ? 'line' : 'lines'} ·{' '}
+            {summarisePcoQuantities(lineItems)}
+          </Text>
         </View>
 
         {/* Pricing Summary */}

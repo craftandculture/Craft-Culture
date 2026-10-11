@@ -23,6 +23,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
+import summarisePcoQuantities from '../utils/summarisePcoQuantities';
 
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
 
@@ -174,9 +175,8 @@ const AdminPrivateOrderForm = () => {
     return lineItems.reduce((sum, item) => sum + item.quantity * item.pricePerCaseUsd, 0);
   };
 
-  const calculateTotalCases = () => {
-    return lineItems.reduce((sum, item) => sum + item.quantity, 0);
-  };
+  // Cases and single bottles counted apart — "2 bottles", not "2 cases"
+  const calculateTotalCases = () => summarisePcoQuantities(lineItems);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -469,7 +469,7 @@ const AdminPrivateOrderForm = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Typography variant="bodySm" colorRole="muted">
-                Total Cases
+                Quantity
               </Typography>
               <Typography variant="bodySm" className="font-medium">
                 {calculateTotalCases()}

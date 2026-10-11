@@ -18,6 +18,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import StockCommitmentsNote from './StockCommitmentsNote';
 import WmsStockCombobox from './WmsStockCombobox';
 import type { WmsStockItem } from './WmsStockCombobox';
+import describeAvailableStock from '../utils/describeAvailableStock';
 
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
 
@@ -288,7 +289,11 @@ const ProductPicker = ({
                   {value.vintage && <span>{value.vintage}</span>}
                   {value.availableCases !== undefined && (
                     <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
-                      {value.availableCases} cs available
+                      {describeAvailableStock(
+                        value.availableCases,
+                        // The stock row's pack, held in the code, not the pack being sold
+                        Number(value.lwin?.split('-')[2]) || value.caseConfig,
+                      )}
                     </span>
                   )}
                 </div>
@@ -307,7 +312,10 @@ const ProductPicker = ({
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   {selectedWmsItem.producer && <span>{selectedWmsItem.producer}</span>}
                   <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
-                    {selectedWmsItem.availableCases} cs available
+                    {describeAvailableStock(
+                      selectedWmsItem.availableCases,
+                      selectedWmsItem.caseConfig,
+                    )}
                   </span>
                   <span className="text-text-muted/60">{selectedWmsItem.lwin18}</span>
                 </div>
@@ -402,13 +410,13 @@ const ProductPicker = ({
             value={value.caseConfig?.toString() || '12'}
             onValueChange={handleCaseConfigChange}
           >
-            <SelectTrigger className="h-8 w-full text-xs sm:w-[65px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[90px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {CASE_CONFIGS.map((config) => (
                 <SelectItem key={config} value={config.toString()}>
-                  ×{config}
+                  {config === 1 ? 'Single btl' : `Case of ${config}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -417,7 +425,9 @@ const ProductPicker = ({
 
         {/* Quantity */}
         <div className="flex items-center gap-1.5">
-          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">Cases:</Typography>
+          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
+            {pack === 1 ? 'Bottles:' : 'Cases:'}
+          </Typography>
           <Input
             type="number"
             min={1}
@@ -425,6 +435,11 @@ const ProductPicker = ({
             onChange={(e) => onChange({ ...value, quantity: parseInt(e.target.value) || 1 })}
             className="h-8 w-full text-center text-xs sm:w-16"
           />
+          {pack > 1 && (
+            <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
+              = {(value.quantity || 0) * pack} btl
+            </Typography>
+          )}
         </div>
 
         {/* Cost per bottle — type either, the other follows */}
@@ -446,8 +461,10 @@ const ProductPicker = ({
           />
         </div>
 
-        {/* Cost per case — the C&C buy price, NOT the final client price */}
+        {/* Cost per case — the C&C buy price, NOT the final client price. A
+            single bottle has no case, so the per-bottle cost is the only box. */}
         <div
+          hidden={pack === 1}
           className="flex items-center gap-1.5"
           title="The C&C cost per case — what C&C pays for this wine. NOT the final client price; margins are added automatically."
         >

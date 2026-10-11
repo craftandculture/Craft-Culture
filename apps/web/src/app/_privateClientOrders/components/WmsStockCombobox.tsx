@@ -132,7 +132,9 @@ const WmsStockCombobox = ({
                 {value.vintage ? ` ${value.vintage}` : ''}
               </span>
               <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                {value.availableCases} cs
+                {(value.caseConfig ?? 1) === 1
+                  ? `${value.availableCases} btl`
+                  : `${value.availableCases} cs`}
               </span>
               {value.isInTransit ? (
                 <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
@@ -193,7 +195,9 @@ const WmsStockCombobox = ({
                     </Typography>
                   </div>
                   <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
-                    {item.availableCases} cs
+                    {(item.caseConfig ?? 1) === 1
+                      ? `${item.availableCases} btl`
+                      : `${item.availableCases} cs`}
                   </span>
                   {item.isInTransit ? (
                     <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">

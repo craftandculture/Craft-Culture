@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
         vintage: item.vintage,
         region: item.region,
         bottleSize: item.bottleSize,
+        caseConfig: item.caseConfig,
         quantity: item.quantity ?? 0,
         pricePerCaseUsd: item.pricePerCaseUsd,
         totalUsd: item.totalUsd,

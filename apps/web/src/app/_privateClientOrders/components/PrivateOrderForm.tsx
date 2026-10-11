@@ -33,6 +33,7 @@ import type { PrivateClientContact } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
+import summarisePcoQuantities from '../utils/summarisePcoQuantities';
 
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
 
@@ -423,9 +424,8 @@ const PrivateOrderForm = () => {
     return lineItems.reduce((sum, item) => sum + item.quantity * item.pricePerCaseUsd, 0);
   };
 
-  const calculateTotalCases = () => {
-    return lineItems.reduce((sum, item) => sum + item.quantity, 0);
-  };
+  // Cases and single bottles counted apart — "2 bottles", not "2 cases"
+  const calculateTotalCases = () => summarisePcoQuantities(lineItems);
 
   const handleSubmit = async (e: React.FormEvent, shouldSubmit: boolean = false) => {
     e.preventDefault();
@@ -778,7 +778,7 @@ const PrivateOrderForm = () => {
               <Typography variant="headingSm">Products</Typography>
               {lineItems.length > 0 && (
                 <Typography variant="bodyXs" colorRole="muted">
-                  {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'} · {calculateTotalCases()} cases
+                  {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'} · {calculateTotalCases()}
                 </Typography>
               )}
             </div>
@@ -850,9 +850,9 @@ const PrivateOrderForm = () => {
             </div>
             <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
-                Cases
+                Quantity
               </Typography>
-              <Typography variant="headingSm" className="font-bold">
+              <Typography variant="bodySm" className="font-bold">
                 {calculateTotalCases()}
               </Typography>
             </div>

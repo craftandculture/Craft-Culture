@@ -36,6 +36,8 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import StockReceiptConfirmation from '@/app/_privateClientOrders/components/StockReceiptConfirmation';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
+import describePcoLine from '@/app/_privateClientOrders/utils/describePcoLine';
+import summarisePcoQuantities from '@/app/_privateClientOrders/utils/summarisePcoQuantities';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -899,7 +901,7 @@ const DistributorOrderDetailPage = () => {
                 Line Items ({order.items?.length ?? 0})
               </Typography>
               <div className="flex items-center gap-4 text-sm text-text-muted">
-                <span>{order.caseCount ?? 0} cases</span>
+                <span>{summarisePcoQuantities(order.items ?? [])}</span>
                 <span className="font-semibold text-text-primary">
                   {formatPrice(getAmount(order.totalUsd), currency)}
                 </span>
@@ -920,6 +922,7 @@ const DistributorOrderDetailPage = () => {
                         const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
                         const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
                         const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                        const line = describePcoLine(item);
                         return (
                           <div key={item.id} className="py-3">
                             <div className="flex items-start justify-between gap-2">
@@ -936,10 +939,10 @@ const DistributorOrderDetailPage = () => {
                               </Typography>
                             </div>
                             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
-                              <span>{item.caseConfig}×{item.bottleSize}</span>
-                              <span>{item.quantity} {item.quantity === 1 ? 'case' : 'cases'}</span>
-                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/cs</span>
-                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/cs</span>
+                              <span className="font-medium text-text-primary">{line.qty}</span>
+                              <span>{line.pack}</span>
+                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
+                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
                             </div>
                           </div>
                         );
@@ -956,8 +959,8 @@ const DistributorOrderDetailPage = () => {
                             <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
                             <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
                             <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Dist. Cost/Case</th>
-                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Price/Case</th>
+                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Dist. Cost</th>
+                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Price</th>
                             <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Total ({currency})</th>
                           </tr>
                         </thead>
@@ -966,6 +969,7 @@ const DistributorOrderDetailPage = () => {
                             const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
                             const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
                             const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                            const line = describePcoLine(item);
                             return (
                               <tr key={item.id} className="hover:bg-surface-muted/20">
                                 <td className="px-2 py-2">
@@ -973,13 +977,15 @@ const DistributorOrderDetailPage = () => {
                                 </td>
                                 <td className="px-2 py-2 text-sm">{item.producer || '-'}</td>
                                 <td className="px-2 py-2 text-center text-sm">{item.vintage || '-'}</td>
-                                <td className="px-2 py-2 text-center text-sm text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
-                                <td className="px-2 py-2 text-center text-sm font-medium">{item.quantity}</td>
+                                <td className="whitespace-nowrap px-2 py-2 text-center text-sm text-text-muted">{line.pack}</td>
+                                <td className="whitespace-nowrap px-2 py-2 text-center text-sm font-medium">{line.qty}</td>
                                 <td className="px-2 py-2 text-right text-sm text-text-muted">
                                   {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                  <span className="text-xs text-text-muted"> /{line.unit}</span>
                                 </td>
                                 <td className="px-2 py-2 text-right text-sm">
                                   {formatPrice(getAmount(clientPricePerCase), currency)}
+                                  <span className="text-xs text-text-muted"> /{line.unit}</span>
                                 </td>
                                 <td className="px-2 py-2 text-right text-sm font-semibold">
                                   {formatPrice(getAmount(clientTotal), currency)}

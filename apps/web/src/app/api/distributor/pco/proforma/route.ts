@@ -130,6 +130,7 @@ export async function GET(request: NextRequest) {
           vintage: item.vintage,
           region: item.region,
           bottleSize: item.bottleSize,
+          caseConfig: item.caseConfig,
           quantity: item.quantity ?? 0,
           distributorCostPerCaseUsd: distributorCostPerCase,
           pricePerCaseUsd: clientPricePerCase,
