@@ -33,7 +33,9 @@ export const POST = async (request: NextRequest) => {
   try {
     // Verify API key from Authorization header
     const authHeader = request.headers.get('authorization');
-    const apiKey = process.env.WAREHOUSE_API_KEY;
+    // Trimmed: a key pasted from the clipboard often carries a trailing
+    // newline, which made an otherwise identical key fail to match
+    const apiKey = process.env.WAREHOUSE_API_KEY?.trim();
 
     if (!apiKey) {
       return NextResponse.json(
@@ -46,7 +48,7 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
 
     // Use constant-time comparison to prevent timing attacks
     const tokenBuffer = Buffer.from(token);
