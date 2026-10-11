@@ -1,3 +1,9 @@
+## [2.0.305](https://github.com/craftandculture/Craft-Culture/compare/v2.0.304...v2.0.305) (2026-10-11)
+
+### Bug Fixes
+
+* a PCO for loose bottles picks bottles, not whole cases ([e9594b1](https://github.com/craftandculture/Craft-Culture/commit/e9594b1860de260079bc1a465dd99a06ee52e8e5))
+
 ## [2.0.304](https://github.com/craftandculture/Craft-Culture/compare/v2.0.303...v2.0.304) (2026-10-11)
 
 ### Bug Fixes
