@@ -103,11 +103,11 @@ const ZohoCodesClient = () => {
     .filter((a) => !a.dependsOn || chosenIds.has(a.dependsOn) || results.get(a.dependsOn)?.ok)
     .sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
 
-  // A pilot that shows both halves: old items retired AND their replacements created
-  const pairs = queue.filter((a) => a.kind === 'create' && a.dependsOn).slice(0, 5);
-  const pairedRetires = new Set(pairs.map((a) => a.dependsOn));
+  // A pilot that shows both halves: five old items retired AND their replacements created
+  const retiringCodes = new Map(queue.filter((a) => a.kind === 'retire' && a.canonical).map((a) => [a.canonical, a]));
+  const pairs = queue.filter((a) => a.kind === 'create' && retiringCodes.has(a.canonical)).slice(0, 5);
   const pilot = pairs.length
-    ? [...queue.filter((a) => pairedRetires.has(a.id)), ...pairs]
+    ? [...pairs.map((c) => retiringCodes.get(c.canonical)!), ...pairs]
     : queue.slice(0, 10);
 
   const run = async (list: Action[]) => {
