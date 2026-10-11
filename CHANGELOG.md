@@ -1,3 +1,9 @@
+## [2.0.306](https://github.com/craftandculture/Craft-Culture/compare/v2.0.305...v2.0.306) (2026-10-11)
+
+### Features
+
+* action-first distributor dashboard, in line with the admin one ([05caa03](https://github.com/craftandculture/Craft-Culture/commit/05caa03bd626f66daef9597a4344568ed595b581))
+
 ## [2.0.305](https://github.com/craftandculture/Craft-Culture/compare/v2.0.304...v2.0.305) (2026-10-11)
 
 ### Bug Fixes
