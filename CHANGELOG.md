@@ -1,3 +1,9 @@
+## [2.0.309](https://github.com/craftandculture/Craft-Culture/compare/v2.0.308...v2.0.309) (2026-10-11)
+
+### Features
+
+* distributors can show 20 or 50 orders a page ([0101e1c](https://github.com/craftandculture/Craft-Culture/commit/0101e1ca616e450ec0fbce80e9e4a4125b1311d8))
+
 ## [2.0.308](https://github.com/craftandculture/Craft-Culture/compare/v2.0.307...v2.0.308) (2026-10-11)
 
 ### Improvements
