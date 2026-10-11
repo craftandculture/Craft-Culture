@@ -90,7 +90,8 @@ export const itemNameFor = (
   const producer = line.producer?.trim();
   const named = producer && !line.productName.toLowerCase().includes(producer.toLowerCase()) ? `${producer}, ${line.productName}` : line.productName;
   const base = line.vintage && !named.includes(String(line.vintage)) ? `${named} ${line.vintage}` : named;
-  return `${base} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
+  // Stock Explorer names can carry stray spaces ("Pauillac  2022")
+  return `${base} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`.replace(/\s+/g, ' ').trim();
 };
 
 /**
