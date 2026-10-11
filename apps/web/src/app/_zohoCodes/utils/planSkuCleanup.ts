@@ -30,6 +30,8 @@ export interface CleanupContext {
   heldKeys: Set<string>;
   /** Zoho item ids on an undispatched sales order or a draft SO/invoice */
   openItemIds: Set<string>;
+  /** The open documents each of those items sits on, e.g. "SO-00140 (picking)" */
+  openDocuments?: Map<string, string[]>;
   /** Zoho item ids sold in the last 90 days */
   recentlySoldItemIds: Set<string>;
   /** Items created this recently are left alone (ISO date) */
@@ -144,7 +146,11 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
     names.delete(i.name.trim().toLowerCase());
     return name;
   };
-  const blockOf = (i: CleanupItem) => (ctx.openItemIds.has(i.itemId) ? 'On an open sales order or draft — retire once it has gone through' : null);
+  const blockOf = (i: CleanupItem) => {
+    if (!ctx.openItemIds.has(i.itemId)) return null;
+    const docs = [...new Set(ctx.openDocuments?.get(i.itemId) ?? [])];
+    return `On ${docs.length ? docs.join(', ') : 'an open sales order or draft'} — retire once it has gone through`;
+  };
   const seName = (canonical: string | null) => (canonical ? (ctx.stockExplorer.get(canonical)?.productName ?? null) : null);
   const customsFor = (code: string, name: string) => {
     const known = ctx.customs?.get(code);

@@ -49,7 +49,7 @@ const fetchAllZohoItems = async () => {
  * sent or converted, so they are read from Zoho one by one.
  */
 const fetchDraftItemIds = async () => {
-  const ids = new Set<string>();
+  const ids = new Map<string, string[]>();
   const [sos, invs] = await Promise.all([
     listSalesOrders({ status: 'draft', perPage: 200 }),
     listInvoices({ status: 'draft', perPage: 200 }),
@@ -61,7 +61,10 @@ const fetchDraftItemIds = async () => {
   // One at a time: Zoho rate-limits bursts
   for (const load of loaders) {
     const doc = await load();
-    for (const line of doc.line_items ?? []) if (line.item_id) ids.add(line.item_id);
+    const number = `${'salesorder_number' in doc ? doc.salesorder_number : doc.invoice_number} (draft)`;
+    for (const line of doc.line_items ?? []) {
+      if (line.item_id) ids.set(line.item_id, [...(ids.get(line.item_id) ?? []), number]);
+    }
   }
   return ids;
 };
@@ -97,7 +100,7 @@ const loadCleanupInputs = async () => {
       .innerJoin(logisticsShipments, eq(logisticsShipments.id, logisticsShipmentItems.shipmentId))
       .where(and(inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]), isNotNull(logisticsShipmentItems.lwin))),
     db
-      .selectDistinct({ zohoItemId: zohoSalesOrderItems.zohoItemId })
+      .selectDistinct({ zohoItemId: zohoSalesOrderItems.zohoItemId, number: zohoSalesOrders.salesOrderNumber, status: zohoSalesOrders.status })
       .from(zohoSalesOrderItems)
       .innerJoin(zohoSalesOrders, eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId))
       .where(and(notInArray(zohoSalesOrders.status, [...CLOSED]), isNotNull(zohoSalesOrderItems.zohoItemId), gt(zohoSalesOrderItems.quantity, 0))),
@@ -155,7 +158,14 @@ const loadCleanupInputs = async () => {
     customs,
     stockExplorer,
     heldKeys,
-    openItemIds: new Set([...openLines.map((l) => l.zohoItemId!).filter(Boolean), ...draftItemIds]),
+    openItemIds: new Set([...openLines.map((l) => l.zohoItemId!).filter(Boolean), ...draftItemIds.keys()]),
+    openDocuments: (() => {
+      const docs = new Map(draftItemIds);
+      for (const l of openLines) {
+        if (l.zohoItemId) docs.set(l.zohoItemId, [...(docs.get(l.zohoItemId) ?? []), `${l.number} (${l.status})`]);
+      }
+      return docs;
+    })(),
     recentlySoldItemIds: new Set(recentLines.map((l) => l.zohoItemId!).filter(Boolean)),
     newSince: new Date(Date.now() - 30 * 86_400_000).toISOString(),
   };
