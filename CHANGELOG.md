@@ -1,3 +1,9 @@
+## [2.0.304](https://github.com/craftandculture/Craft-Culture/compare/v2.0.303...v2.0.304) (2026-10-11)
+
+### Bug Fixes
+
+* single bottles read as bottles, not cases, on private orders ([3e8fa68](https://github.com/craftandculture/Craft-Culture/commit/3e8fa68a220ab731edd8fc5160ae250009d2a595))
+
 ## [2.0.303](https://github.com/craftandculture/Craft-Culture/compare/v2.0.302...v2.0.303) (2026-10-11)
 
 ### Bug Fixes
