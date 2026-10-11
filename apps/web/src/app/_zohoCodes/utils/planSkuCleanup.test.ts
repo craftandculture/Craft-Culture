@@ -160,3 +160,17 @@ describe('planSkuCleanup: HS code and origin', () => {
     expect(actions).toEqual([expect.objectContaining({ id: 'customs:a', kind: 'set_customs', customs: { hsCode: '22042100', country: 'France' } })]);
   });
 });
+
+describe('itemNameFor: Zoho limits', () => {
+  it('drops size and strength the pack already says, and fits 100 characters', async () => {
+    const { itemNameFor } = await import('./planSkuCleanup');
+    const name = itemNameFor(
+      { productName: "Ciacci Piccolomini d'Aragona Brunello di Montalcino Vigna di Pianrosso Riserva Santa Caterina d'Oro 2016 1.5L 15%abv", vintage: 2016 },
+      1,
+      1500,
+    );
+    expect(name.length).toBeLessThanOrEqual(100);
+    expect(name).not.toMatch(/1\.5L|abv/);
+    expect(name.endsWith('(1x150cl)')).toBe(true);
+  });
+});

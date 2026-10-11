@@ -86,12 +86,22 @@ export const itemNameFor = (
   bottlesPerCase: number,
   bottleSizeMl: number,
 ) => {
+  // Stock Explorer names can carry the size and strength ("2016 1.5L 15%abv"),
+  // which the pack suffix already says, and stray spaces
+  const productName = line.productName
+    .replace(/\b\d+(?:[.,]\d+)?\s?(?:cl|ml|l)\b/gi, '')
+    .replace(/\b\d+(?:[.,]\d+)?\s?%\s?(?:abv|vol)?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   // "Mezcal - Blanco" means nothing to a picker; "Bandida, Mezcal - Blanco" does
   const producer = line.producer?.trim();
-  const named = producer && !line.productName.toLowerCase().includes(producer.toLowerCase()) ? `${producer}, ${line.productName}` : line.productName;
+  const named = producer && !productName.toLowerCase().includes(producer.toLowerCase()) ? `${producer}, ${productName}` : productName;
   const base = line.vintage && !named.includes(String(line.vintage)) ? `${named} ${line.vintage}` : named;
-  // Stock Explorer names can carry stray spaces ("Pauillac  2022")
-  return `${base} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`.replace(/\s+/g, ' ').trim();
+  const suffix = ` (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
+  // Zoho refuses names over 100 characters; the pack suffix is kept whole
+  const room = NAME_MAX - suffix.length;
+  const fitted = base.length > room ? base.slice(0, room).replace(/[\s,]+\S*$/, '').trim() : base;
+  return `${fitted}${suffix}`.replace(/\s+/g, ' ').trim();
 };
 
 /**
@@ -261,7 +271,7 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
     const bottlesPerCase = Number(pack) || 1;
     const bottleSizeMl = Number(size) || 750;
     let name = itemNameFor(line, bottlesPerCase, bottleSizeMl);
-    if (names.has(name.toLowerCase())) name = `${name} ${lwin18}`;
+    if (names.has(name.toLowerCase())) name = `${name.slice(0, NAME_MAX - lwin18.length - 1).trim()} ${lwin18}`;
     names.add(name.toLowerCase());
     actions.push({
       id: `new:${lwin18}`,

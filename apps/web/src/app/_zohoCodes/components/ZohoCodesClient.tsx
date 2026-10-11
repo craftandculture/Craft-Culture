@@ -109,48 +109,55 @@ const ZohoCodesClient = () => {
     const batchId = crypto.randomUUID();
     setRunning({ done: 0, total: list.length });
     const next = new Map(results);
+    const toPayload = (a: Action) =>
+      a.kind === 'create'
+        ? {
+            id: a.id,
+            kind: 'create' as const,
+            name: a.name,
+            sku: a.sku,
+            producer: a.create?.producer ?? null,
+            bottlesPerCase: a.create?.bottlesPerCase ?? 1,
+            bottleSizeMl: a.create?.bottleSizeMl ?? 750,
+            customs: a.customs ?? { hsCode: '22042100', country: null },
+            reason: a.reason,
+          }
+        : a.kind === 'set_customs'
+          ? {
+              id: a.id,
+              kind: 'set_customs' as const,
+              itemId: a.itemId ?? '',
+              expectSku: a.sku,
+              customs: a.customs ?? { hsCode: '22042100', country: null },
+              reason: a.reason,
+            }
+          : {
+              id: a.id,
+              kind: a.kind as 'retire' | 'retire_duplicate' | 'retire_not_held',
+              itemId: a.itemId ?? '',
+              expectSku: a.sku,
+              expectName: a.name,
+              toName: a.toName ?? '',
+              toSku: a.toSku,
+              reason: a.reason,
+            };
+    const send = (slice: Action[]) => client.zohoCodes.applyChanges.mutate({ batchId, actions: slice.map(toPayload) });
+
     for (let i = 0; i < list.length; i += 10) {
       const slice = list.slice(i, i + 10);
       try {
-        const res = await client.zohoCodes.applyChanges.mutate({
-          batchId,
-          actions: slice.map((a) =>
-            a.kind === 'create'
-              ? {
-                  id: a.id,
-                  kind: 'create' as const,
-                  name: a.name,
-                  sku: a.sku,
-                  producer: a.create?.producer ?? null,
-                  bottlesPerCase: a.create?.bottlesPerCase ?? 1,
-                  bottleSizeMl: a.create?.bottleSizeMl ?? 750,
-                  customs: a.customs ?? { hsCode: '22042100', country: null },
-                  reason: a.reason,
-                }
-              : a.kind === 'set_customs'
-                ? {
-                    id: a.id,
-                    kind: 'set_customs' as const,
-                    itemId: a.itemId ?? '',
-                    expectSku: a.sku,
-                    customs: a.customs ?? { hsCode: '22042100', country: null },
-                    reason: a.reason,
-                  }
-                : {
-                  id: a.id,
-                  kind: a.kind as 'retire' | 'retire_duplicate' | 'retire_not_held',
-                  itemId: a.itemId ?? '',
-                  expectSku: a.sku,
-                  expectName: a.name,
-                  toName: a.toName ?? '',
-                  toSku: a.toSku,
-                  reason: a.reason,
-                },
-          ),
-        });
+        const res = await send(slice);
         for (const r of res.results) next.set(r.id, r);
-      } catch (error) {
-        for (const a of slice) next.set(a.id, { ok: false, message: error instanceof Error ? error.message : 'Request failed' });
+      } catch {
+        // One line the server refuses must not take nine good ones with it
+        for (const a of slice) {
+          try {
+            const res = await send([a]);
+            for (const r of res.results) next.set(r.id, r);
+          } catch (error) {
+            next.set(a.id, { ok: false, message: error instanceof Error ? error.message.slice(0, 200) : 'Request failed' });
+          }
+        }
       }
       setResults(new Map(next));
       setRunning({ done: Math.min(i + 10, list.length), total: list.length });

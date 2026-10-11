@@ -117,8 +117,9 @@ const loadCleanupInputs = async () => {
   const stockExplorer = new Map<string, StockExplorerLine>();
   for (const s of stock) {
     const lwin18 = normalizeLwin18(s.lwin18);
-    // Only codes in the dashed Stock Explorer shape can become Zoho SKUs
-    if (parseZohoSku(lwin18).form !== 'dashed') continue;
+    // Only codes in the exact dashed Stock Explorer shape can become Zoho SKUs;
+    // a malformed one ("rentW4301023-…") is fixed in Stock Explorer, not copied
+    if (!/^[A-Z0-9]+-\d{4}-\d{2}-\d{5}$/.test(lwin18)) continue;
     stockExplorer.set(lwin18, { lwin18, productName: s.productName, producer: s.producer, vintage: s.vintage });
   }
   const heldKeys = new Set(stock.map((s) => lwinPakKeyOf(normalizeLwin18(s.lwin18))));
