@@ -108,7 +108,7 @@ const ZohoCodesClient = () => {
     for (let i = 0; i < list.length; i += 10) {
       const slice = list.slice(i, i + 10);
       try {
-        const res = await client.zohoCodes.apply.mutate({
+        const res = await client.zohoCodes.applyChanges.mutate({
           batchId,
           actions: slice.map((a) =>
             a.kind === 'create'

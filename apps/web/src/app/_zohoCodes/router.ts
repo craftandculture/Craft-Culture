@@ -9,7 +9,7 @@ const zohoCodesRouter = createTRPCRouter({
   // Every Zoho item matched to Stock Explorer, with the change each needs
   plan: adminGetPlan,
   // Write a slice of the plan to Zoho, logged for undo
-  apply: adminApplyActions,
+  applyChanges: adminApplyActions,
   batches: adminGetBatches,
   undo: adminUndoBatch,
 });
