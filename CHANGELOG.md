@@ -1,3 +1,9 @@
+## [2.0.307](https://github.com/craftandculture/Craft-Culture/compare/v2.0.306...v2.0.307) (2026-10-11)
+
+### Improvements
+
+* distributor order lines get room to read ([0372d0f](https://github.com/craftandculture/Craft-Culture/commit/0372d0fb91042865a255c074a9437645fe026c27))
+
 ## [2.0.306](https://github.com/craftandculture/Craft-Culture/compare/v2.0.305...v2.0.306) (2026-10-11)
 
 ### Features
