@@ -1,3 +1,9 @@
+## [2.0.299](https://github.com/craftandculture/Craft-Culture/compare/v2.0.298...v2.0.299) (2026-10-11)
+
+### Bug Fixes
+
+* Zoho Codes new item names fit Zoho's 100 characters, malformed Stock Explorer codes are not copied, and a refused line no longer skips its group ([bc46417](https://github.com/craftandculture/Craft-Culture/commit/bc4641792fdf1b674db2e5384e6ca8be2fb23037))
+
 ## [2.0.298](https://github.com/craftandculture/Craft-Culture/compare/v2.0.297...v2.0.298) (2026-10-11)
 
 ### Bug Fixes
