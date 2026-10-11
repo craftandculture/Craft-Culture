@@ -1,3 +1,9 @@
+## [2.0.308](https://github.com/craftandculture/Craft-Culture/compare/v2.0.307...v2.0.308) (2026-10-11)
+
+### Improvements
+
+* proforma lines read cleanly — no wrapped prices, clear quantities ([8149e45](https://github.com/craftandculture/Craft-Culture/commit/8149e4515375ea8cf2116f30ac99316dd5008c89))
+
 ## [2.0.307](https://github.com/craftandculture/Craft-Culture/compare/v2.0.306...v2.0.307) (2026-10-11)
 
 ### Improvements
