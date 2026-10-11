@@ -50,7 +50,7 @@ const alertSilentSensors = async () => {
   const names = silent.map((row) => SENSOR_LIMITS[row.sensorId]!.name);
   const text =
     silent.length === ids.length
-      ? `🔌 No warehouse sensor has reported for ${SENSOR_STALE_MINUTES} minutes. Check Home Assistant and its internet connection.`
+      ? `🔌 No cold room sensor has reported for ${SENSOR_STALE_MINUTES} minutes. Check Home Assistant and its internet connection.`
       : `🔌 No reading for ${SENSOR_STALE_MINUTES} minutes from: ${names.join(', ')}. Check the sensor's battery and Wi-Fi.`;
 
   await postSlackWebhook(WAREHOUSE_DATA_WEBHOOK_ENV, { text });
