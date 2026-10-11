@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, inArray, isNotNull, ne, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, ne, notInArray, sql } from 'drizzle-orm';
 
 import INBOUND_SHIPMENT_STATUSES from '@/app/_wms/utils/inboundShipmentStatuses';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
@@ -8,6 +8,7 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   wmsStock,
+  zohoItemChanges,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -125,6 +126,15 @@ const loadCleanupInputs = async () => {
   const heldKeys = new Set(stock.map((s) => lwinPakKeyOf(normalizeLwin18(s.lwin18))));
   for (const row of inbound) if (row.lwin) heldKeys.add(lwinPakKeyOf(normalizeLwin18(row.lwin)));
 
+  // Zoho's item list leaves out UPC and ISBN, so what this tool already wrote
+  // is read back from its own log rather than offered again
+  const written = await db
+    .selectDistinctOn([zohoItemChanges.zohoItemId], { zohoItemId: zohoItemChanges.zohoItemId, details: zohoItemChanges.afterDetails })
+    .from(zohoItemChanges)
+    .where(and(inArray(zohoItemChanges.action, ['create', 'set_customs']), isNull(zohoItemChanges.undoneAt), isNotNull(zohoItemChanges.afterDetails)))
+    .orderBy(zohoItemChanges.zohoItemId, desc(zohoItemChanges.createdAt));
+  const writtenDetails = new Map(written.map((w) => [w.zohoItemId, w.details]));
+
   const items: CleanupItem[] = zohoItems.map((i) => ({
     itemId: i.item_id,
     name: i.name,
@@ -132,8 +142,8 @@ const loadCleanupInputs = async () => {
     status: i.status,
     productType: i.product_type ?? null,
     createdTime: i.created_time ?? '',
-    upc: i.upc ?? null,
-    isbn: i.isbn ?? null,
+    upc: i.upc ?? writtenDetails.get(i.item_id)?.upc ?? null,
+    isbn: i.isbn ?? writtenDetails.get(i.item_id)?.isbn ?? null,
   }));
 
   const customs = await loadCustomsDetails([
