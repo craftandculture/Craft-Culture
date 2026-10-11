@@ -3,9 +3,11 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import alertSensorChanges from '@/app/_warehouse/data/alertSensorChanges';
 import db from '@/database/client';
 import { warehouseSensorReadings } from '@/database/schema';
 import logger from '@/utils/logger';
+
 
 import { sensorDataSchema } from './schema';
 
@@ -73,6 +75,14 @@ export const POST = async (request: NextRequest) => {
     }
 
     const { sensors } = validationResult.data;
+
+    // Every sensor unavailable: Home Assistant sends an empty list
+    if (sensors.length === 0) {
+      return NextResponse.json({ success: true, inserted: 0, readings: [] });
+    }
+
+    // Compared with the previous readings, so this runs before they are stored
+    await alertSensorChanges(sensors);
 
     // Insert sensor readings into database
     const insertedReadings = await db
