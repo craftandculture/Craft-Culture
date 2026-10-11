@@ -1,3 +1,9 @@
+## [2.0.313](https://github.com/craftandculture/Craft-Culture/compare/v2.0.312...v2.0.313) (2026-10-11)
+
+### Bug Fixes
+
+* warehouse sensor key ignores stray whitespace ([0c7c1c0](https://github.com/craftandculture/Craft-Culture/commit/0c7c1c001a88f83122dae04d8d357ce0c0253f9f))
+
 ## [2.0.312](https://github.com/craftandculture/Craft-Culture/compare/v2.0.311...v2.0.312) (2026-10-11)
 
 ### Bug Fixes
