@@ -39,24 +39,20 @@ const formatValue = (value: number, unit: string) => {
   // Common unit formatting
   if (unit === 'celsius') return `${formatted}°C`;
   if (unit === 'fahrenheit') return `${formatted}°F`;
-  if (unit === 'percent') return `${formatted}%`;
+  if (unit === 'percent' || unit === '%') return `${formatted}%`;
+  if (unit === '°C') return `${formatted}°C`;
 
   return `${formatted} ${unit}`;
 };
 
 /**
  * Get display name for sensor
+ *
+ * The name Home Assistant sends as `location` ("Cold Room – Front"); the
+ * sensor type only when it sent none.
  */
-const getSensorDisplayName = (sensorId: string, sensorType: string) => {
-  // Try to extract location from sensor ID
-  const parts = sensorId.split('_');
-  if (parts.length > 2) {
-    const location = parts.slice(2).join(' ');
-    return `${sensorType} (${location})`;
-  }
-
-  return sensorType;
-};
+const getSensorDisplayName = (location: string | null, sensorType: string) =>
+  location?.trim() || sensorType;
 
 /**
  * Live warehouse sensor data feed component
@@ -104,7 +100,7 @@ const WarehouseDataFeed = () => {
                   colorRole="muted"
                 />
                 <Typography variant="bodyXs" colorRole="muted">
-                  {getSensorDisplayName(reading.sensorId, reading.sensorType)}:
+                  {getSensorDisplayName(reading.location, reading.sensorType)}:
                 </Typography>
                 <Typography
                   variant="bodyXs"

@@ -1,44 +1,33 @@
-import { desc } from 'drizzle-orm';
+import { desc, gte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { warehouseSensorReadings } from '@/database/schema';
 
 /**
- * Get the latest sensor reading for each unique sensor
+ * Get the latest reading for each sensor that has reported recently
  *
- * Returns the most recent reading for each sensor_id, useful for
- * displaying current warehouse conditions in real-time
+ * One row per sensor via DISTINCT ON. This used to take the first 100 rows in
+ * sensor-id order and pick the newest per sensor from those, so once a sensor
+ * had 100 readings stored, every sensor after it alphabetically fell off the
+ * feed. Only readings from the last two hours count: a sensor that has gone
+ * quiet, or been dropped from Home Assistant, stops showing a stale value.
  *
  * @example
  *   const latest = await getLatestSensorReadings();
- *   // Returns: [
- *   //   { sensor_id: 'warehouse_temp_1', value: 16.5, ... },
- *   //   { sensor_id: 'warehouse_humidity_1', value: 65.2, ... }
- *   // ]
+ *   // [{ sensorId: 'cold_room_front_temperature', location: 'Cold Room – Front', value: 12.9, ... }]
  */
 const getLatestSensorReadings = async () => {
-  // Use DISTINCT ON to get latest reading per sensor
-  const latestReadings = await db
-    .select()
+  const since = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+  return db
+    .selectDistinctOn([warehouseSensorReadings.sensorId])
     .from(warehouseSensorReadings)
+    .where(gte(warehouseSensorReadings.timestamp, since))
     .orderBy(
       warehouseSensorReadings.sensorId,
       desc(warehouseSensorReadings.timestamp),
-    )
-    .limit(100);
-
-  // Group by sensor_id and keep only the latest
-  const uniqueReadings = latestReadings.reduce(
-    (acc, reading) => {
-      if (!acc[reading.sensorId]) {
-        acc[reading.sensorId] = reading;
-      }
-      return acc;
-    },
-    {} as Record<string, typeof latestReadings[0]>,
-  );
-
-  return Object.values(uniqueReadings);
+      sql`${warehouseSensorReadings.id}`,
+    );
 };
 
 export default getLatestSensorReadings;
