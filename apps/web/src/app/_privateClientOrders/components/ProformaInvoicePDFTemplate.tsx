@@ -30,8 +30,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 40,
-    paddingBottom: 20,
+    marginBottom: 24,
+    paddingBottom: 16,
     borderBottom: '2px solid #6BBFBF',
   },
   headerLeft: {
@@ -115,27 +115,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#6BBFBF',
     color: '#ffffff',
-    padding: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     fontWeight: 'bold',
-    fontSize: 9,
+    fontSize: 7.5,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottom: '1px solid #e5e5e5',
-    padding: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     fontSize: 9,
   },
   tableRowAlt: {
     backgroundColor: '#fafafa',
   },
   colProduct: {
-    flex: 2.2,
+    flex: 2.4,
+    paddingRight: 8,
   },
   colQuantity: {
-    flex: 0.9,
-    textAlign: 'center',
+    flex: 1,
+    paddingRight: 6,
   },
   qtyMain: {
     fontWeight: 'bold',
@@ -144,10 +147,19 @@ const styles = StyleSheet.create({
   qtyPack: {
     fontSize: 7,
     color: '#737373',
+    marginTop: 2,
   },
-  priceUnit: {
+  priceMain: {
+    fontSize: 9,
+  },
+  priceMainBold: {
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  priceSub: {
     fontSize: 7,
     color: '#737373',
+    marginTop: 2,
   },
   itemsSummary: {
     marginTop: 6,
@@ -156,20 +168,24 @@ const styles = StyleSheet.create({
     color: '#404040',
   },
   colDistCost: {
-    flex: 1,
+    flex: 1.05,
     textAlign: 'right',
+    paddingLeft: 4,
   },
   colDistTotal: {
-    flex: 1,
+    flex: 1.05,
     textAlign: 'right',
+    paddingLeft: 4,
   },
   colClientPrice: {
-    flex: 1,
+    flex: 1.05,
     textAlign: 'right',
+    paddingLeft: 4,
   },
   colClientTotal: {
-    flex: 1,
+    flex: 1.05,
     textAlign: 'right',
+    paddingLeft: 4,
   },
   productName: {
     fontWeight: 'bold',
@@ -431,6 +447,7 @@ const ProformaInvoicePDFTemplate = ({
                 </Text>
               )}
             </View>
+            {(order.clientAddress || order.deliveryNotes) && (
             <View style={[styles.column, styles.infoBox]}>
               {order.clientAddress && (
                 <Text style={styles.infoText}>
@@ -445,6 +462,7 @@ const ProformaInvoicePDFTemplate = ({
                 </Text>
               )}
             </View>
+            )}
           </View>
         </View>
 
@@ -481,31 +499,29 @@ const ProformaInvoicePDFTemplate = ({
                     </Text>
                   </View>
                   <View style={styles.colQuantity}>
-                    <Text style={styles.qtyMain}>{line.qty}</Text>
-                    <Text style={styles.qtyPack}>{line.pack}</Text>
+                    <Text style={styles.qtyMain}>{line.count}</Text>
+                    <Text style={styles.qtyPack}>
+                      {line.isSingle
+                        ? line.pack
+                        : `${line.pack.replace('Case of ', '')} · ${line.bottles} btl`}
+                    </Text>
                   </View>
-                  <Text style={styles.colDistCost}>
-                    {formatAed(item.distributorCostPerCaseUsd)}
-                    <Text style={styles.priceUnit}> /{line.unit}</Text>
-                    {'\n'}
-                    <Text style={styles.priceUsd}>{formatUsd(item.distributorCostPerCaseUsd)}</Text>
-                  </Text>
-                  <Text style={styles.colDistTotal}>
-                    {formatAed(distTotal)}
-                    {'\n'}
-                    <Text style={styles.priceUsd}>{formatUsd(distTotal)}</Text>
-                  </Text>
-                  <Text style={styles.colClientPrice}>
-                    {formatAed(item.pricePerCaseUsd)}
-                    <Text style={styles.priceUnit}> /{line.unit}</Text>
-                    {'\n'}
-                    <Text style={styles.priceUsd}>{formatUsd(item.pricePerCaseUsd)}</Text>
-                  </Text>
-                  <Text style={styles.colClientTotal}>
-                    {formatAed(item.totalUsd)}
-                    {'\n'}
-                    <Text style={styles.priceUsd}>{formatUsd(item.totalUsd)}</Text>
-                  </Text>
+                  {[
+                    { style: styles.colDistCost, usd: item.distributorCostPerCaseUsd, per: true },
+                    { style: styles.colDistTotal, usd: distTotal, per: false },
+                    { style: styles.colClientPrice, usd: item.pricePerCaseUsd, per: true },
+                    { style: styles.colClientTotal, usd: item.totalUsd, per: false, bold: true },
+                  ].map((cell, at) => (
+                    <View key={at} style={cell.style}>
+                      <Text style={cell.bold ? styles.priceMainBold : styles.priceMain}>
+                        {formatAed(cell.usd)}
+                      </Text>
+                      <Text style={styles.priceSub}>
+                        {formatUsd(cell.usd)}
+                        {cell.per ? ` /${line.unit}` : ''}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               );
             })}
