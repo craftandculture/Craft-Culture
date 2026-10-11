@@ -19,7 +19,7 @@ const TABS: { kind: Kind; label: string; help: string; preselect: boolean }[] = 
   {
     kind: 'retire',
     label: 'Old codes',
-    help: 'Every item whose SKU is not a dashed LWIN — compact codes, brand codes, blanks. Each is renamed "… (old)" and made inactive. Past invoices keep pointing at it; it just cannot be picked for new orders.',
+    help: 'Every item whose SKU is not a dashed LWIN — compact codes, brand codes, blanks. Each is renamed "… (old)" and made inactive. Past invoices keep pointing at it; it just cannot be picked for new orders. Anything sold in the last 90 days that Stock Explorer would not replace is held back automatically — nothing needs unticking.',
     preselect: true,
   },
   {

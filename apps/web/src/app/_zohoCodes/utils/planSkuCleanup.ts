@@ -25,6 +25,8 @@ export interface CleanupContext {
   heldKeys: Set<string>;
   /** Zoho item ids on an undispatched sales order or a draft SO/invoice */
   openItemIds: Set<string>;
+  /** Zoho item ids sold in the last 90 days */
+  recentlySoldItemIds: Set<string>;
   /** Items created this recently are left alone (ISO date) */
   newSince: string;
 }
@@ -97,7 +99,8 @@ export const itemNameFor = (
  * - A dashed item whose name gives a different vintage from its code goes to
  *   review: its code may be wrong.
  *
- * Nothing on an undispatched sales order or a draft is retired.
+ * Nothing on an undispatched sales order or a draft is retired, nor an item
+ * sold in the last 90 days that nothing in Stock Explorer would replace.
  *
  * @param items - Every Zoho item, active and inactive
  * @param ctx - Stock Explorer, inbound and open-document evidence
@@ -140,6 +143,18 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
     return !blocked;
   };
 
+  // Spirits and other non-LWIN lines are matched to Stock Explorer by name:
+  // "Bandida Mezcal - Black" is replaced by Stock Explorer's "Mezcal - Black"
+  const flat = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const byName = [...ctx.stockExplorer.values()]
+    .filter((l) => !/^\d{7}-/.test(l.lwin18) && flat(l.productName).length >= 8)
+    .map((l) => ({ line: l, key: flat(l.productName) }));
+  const replacementFor = (i: CleanupItem, canonical: string | null) => {
+    if (canonical) return ctx.stockExplorer.get(canonical) ?? null;
+    const name = flat(i.name);
+    return byName.find((b) => name.includes(b.key))?.line ?? null;
+  };
+
   // Codes that will still have an active dashed item afterwards
   const covered = new Set<string>();
   const dashed = new Map<string, CleanupItem[]>();
@@ -150,7 +165,26 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
     if (form !== 'dashed' || !canonical) {
       const why =
         form === 'blank' ? 'No SKU' : canonical ? `Old code format (${canonical} in Stock Explorer form)` : `"${i.sku}" is not an LWIN`;
-      retire(i, 'retire', canonical, why);
+      const replacement = replacementFor(i, canonical);
+      if (!replacement && ctx.recentlySoldItemIds.has(i.itemId)) {
+        actions.push({
+          id: i.itemId,
+          itemId: i.itemId,
+          name: i.name,
+          sku: i.sku,
+          kind: 'retire',
+          toName: null,
+          toSku: null,
+          canonical,
+          reason: why,
+          blocked: 'Sold in the last 90 days and not in Stock Explorer, so nothing would replace it — kept until it is received under a Stock Explorer code',
+          stockExplorerName: null,
+          create: null,
+          dependsOn: null,
+        });
+        continue;
+      }
+      retire(i, 'retire', canonical, replacement ? `${why}; replaced by ${replacement.lwin18}` : `${why}; not held, not sold in 90 days`);
       continue;
     }
     dashed.set(canonical, [...(dashed.get(canonical) ?? []), i]);

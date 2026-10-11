@@ -21,6 +21,7 @@ const ctx = (over: Partial<CleanupContext> = {}): CleanupContext => ({
   stockExplorer: new Map(),
   heldKeys: new Set(),
   openItemIds: new Set(),
+  recentlySoldItemIds: new Set(),
   newSince: '2026-09-01',
   ...over,
 });
@@ -96,6 +97,26 @@ describe('planSkuCleanup', () => {
     ];
     const actions = planSkuCleanup(items, ctx({ heldKeys: new Set(['1000002-2015-00750']) }));
     expect(actions.map((a) => [a.id, a.kind])).toEqual([['gone', 'retire_not_held']]);
+  });
+});
+
+describe('planSkuCleanup: what replaces an old item', () => {
+  it('keeps an old item sold recently that nothing in Stock Explorer replaces', () => {
+    const [a] = planSkuCleanup([item({ itemId: 'gin', name: 'Langleys Old Tom 47%', sku: 'GIN-LANG-700-BTL-UAE-TOM' })], ctx({ recentlySoldItemIds: new Set(['gin']) }));
+    expect(a).toMatchObject({ kind: 'retire', blocked: expect.stringContaining('Sold in the last 90 days') });
+  });
+
+  it('retires a sold spirit whose Stock Explorer line matches by name', () => {
+    const actions = planSkuCleanup(
+      [item({ itemId: 'mez', name: 'Bandida Mezcal - Black', sku: 'MEZ-BAN-700-BTL-UAE-BLK' })],
+      ctx({ recentlySoldItemIds: new Set(['mez']), stockExplorer: new Map([se('MEZCALBLAC-0000-06-00700', 'Mezcal - Black')]) }),
+    );
+    expect(actions[0]).toMatchObject({ kind: 'retire', blocked: null, reason: expect.stringContaining('replaced by MEZCALBLAC-0000-06-00700') });
+  });
+
+  it('retires an old wine code that is neither held nor sold recently', () => {
+    const [a] = planSkuCleanup([item({ itemId: 'w', sku: '112130420160600750' })], ctx());
+    expect(a).toMatchObject({ kind: 'retire', blocked: null });
   });
 });
 

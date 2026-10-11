@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, notInArray, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNotNull, ne, notInArray, sql } from 'drizzle-orm';
 
 import INBOUND_SHIPMENT_STATUSES from '@/app/_wms/utils/inboundShipmentStatuses';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
@@ -77,7 +77,7 @@ const fetchDraftItemIds = async () => {
  * @returns Items for the planner and its context
  */
 const loadCleanupInputs = async () => {
-  const [zohoItems, stock, inbound, openLines, draftItemIds] = await Promise.all([
+  const [zohoItems, stock, inbound, openLines, draftItemIds, recentLines] = await Promise.all([
     fetchAllZohoItems(),
     db
       .select({
@@ -100,6 +100,17 @@ const loadCleanupInputs = async () => {
       .innerJoin(zohoSalesOrders, eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId))
       .where(and(notInArray(zohoSalesOrders.status, [...CLOSED]), isNotNull(zohoSalesOrderItems.zohoItemId), gt(zohoSalesOrderItems.quantity, 0))),
     fetchDraftItemIds(),
+    db
+      .selectDistinct({ zohoItemId: zohoSalesOrderItems.zohoItemId })
+      .from(zohoSalesOrderItems)
+      .innerJoin(zohoSalesOrders, eq(zohoSalesOrders.id, zohoSalesOrderItems.salesOrderId))
+      .where(
+        and(
+          gte(zohoSalesOrders.orderDate, new Date(Date.now() - 90 * 86_400_000)),
+          ne(zohoSalesOrders.status, 'cancelled'),
+          isNotNull(zohoSalesOrderItems.zohoItemId),
+        ),
+      ),
   ]);
 
   const stockExplorer = new Map<string, StockExplorerLine>();
@@ -125,6 +136,7 @@ const loadCleanupInputs = async () => {
     stockExplorer,
     heldKeys,
     openItemIds: new Set([...openLines.map((l) => l.zohoItemId!).filter(Boolean), ...draftItemIds]),
+    recentlySoldItemIds: new Set(recentLines.map((l) => l.zohoItemId!).filter(Boolean)),
     newSince: new Date(Date.now() - 30 * 86_400_000).toISOString(),
   };
 
