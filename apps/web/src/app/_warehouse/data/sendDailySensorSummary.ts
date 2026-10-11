@@ -60,7 +60,13 @@ const sendDailySensorSummary = async () => {
         (limits.min !== undefined && v < limits.min),
     ).length;
     const range = `${fmt(r.low)}–${fmt(r.high)} ${limits.unit} (avg ${fmt(r.avg)})`;
-    const gaps = r.count < EXPECTED_PER_DAY * 0.9 ? ` · ${r.count} of ${EXPECTED_PER_DAY} readings` : '';
+    // Missing time in plain words, e.g. "missing about 3 h of readings"
+    const missingMinutes = (EXPECTED_PER_DAY - r.count) * 5;
+    const missing =
+      missingMinutes >= 120
+        ? `about ${Math.round(missingMinutes / 60)} h`
+        : `about ${Math.max(5, Math.round(missingMinutes / 5) * 5)} min`;
+    const gaps = r.count < EXPECTED_PER_DAY * 0.9 ? ` · ⚠️ missing ${missing} of readings` : '';
 
     return outside === 0
       ? `✅ *${limits.name}*: ${range}${gaps}`
