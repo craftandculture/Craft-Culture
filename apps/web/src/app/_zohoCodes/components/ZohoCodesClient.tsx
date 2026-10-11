@@ -100,6 +100,13 @@ const ZohoCodesClient = () => {
     .filter((a) => !a.dependsOn || chosenIds.has(a.dependsOn) || results.get(a.dependsOn)?.ok)
     .sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
 
+  // A pilot that shows both halves: old items retired AND their replacements created
+  const pairs = queue.filter((a) => a.kind === 'create' && a.dependsOn).slice(0, 5);
+  const pairedRetires = new Set(pairs.map((a) => a.dependsOn));
+  const pilot = pairs.length
+    ? [...queue.filter((a) => pairedRetires.has(a.id)), ...pairs]
+    : queue.slice(0, 10);
+
   const run = async (list: Action[]) => {
     setConfirming(false);
     const batchId = crypto.randomUUID();
@@ -325,8 +332,8 @@ const ZohoCodesClient = () => {
                     type="button"
                     disabled={!!running || queue.length === 0}
                     className="rounded-lg border border-border-primary px-3 py-1.5 text-sm hover:bg-fill-muted disabled:opacity-50"
-                    onClick={() => void run(queue.slice(0, 10))}
-                    title="Write the first ten, then check them in Zoho before the rest"
+                    onClick={() => void run(pilot)}
+                    title="Five old items retired with their replacements created, to check in Zoho before the rest"
                   >
                     Try 10 first
                   </button>

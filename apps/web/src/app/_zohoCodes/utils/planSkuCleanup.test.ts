@@ -98,3 +98,11 @@ describe('planSkuCleanup', () => {
     expect(actions.map((a) => [a.id, a.kind])).toEqual([['gone', 'retire_not_held']]);
   });
 });
+
+describe('itemNameFor', () => {
+  it('puts the producer first only when the name leaves it out', async () => {
+    const { itemNameFor } = await import('./planSkuCleanup');
+    expect(itemNameFor({ productName: 'Mezcal - Blanco', vintage: null, producer: 'Bandida' }, 6, 700)).toBe('Bandida, Mezcal - Blanco (6x70cl)');
+    expect(itemNameFor({ productName: 'Elio Grasso, Barolo', vintage: 2016, producer: 'Elio Grasso' }, 6, 750)).toBe('Elio Grasso, Barolo 2016 (6x75cl)');
+  });
+});

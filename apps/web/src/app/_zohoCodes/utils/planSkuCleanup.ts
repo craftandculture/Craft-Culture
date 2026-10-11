@@ -62,14 +62,21 @@ const yearsIn = (name: string) => [...name.matchAll(/\b(19[5-9]\d|20[0-3]\d)\b/g
  * The Zoho item name for a Stock Explorer line
  *
  * Pack and size are part of the name because Zoho refuses two items with one
- * name, and the 6-pack and 3-pack of a wine are two items.
+ * name, and the 6-pack and 3-pack of a wine are two items. The producer leads
+ * when Stock Explorer's name leaves it out, as it does for spirits.
  *
  * @example
  *   itemNameFor({ productName: 'Chateau Talbot', vintage: 2020 }, 6, 750); // 'Chateau Talbot 2020 (6x75cl)'
  */
-export const itemNameFor = (line: Pick<StockExplorerLine, 'productName' | 'vintage'>, bottlesPerCase: number, bottleSizeMl: number) => {
-  const base =
-    line.vintage && !line.productName.includes(String(line.vintage)) ? `${line.productName} ${line.vintage}` : line.productName;
+export const itemNameFor = (
+  line: Pick<StockExplorerLine, 'productName' | 'vintage'> & { producer?: string | null },
+  bottlesPerCase: number,
+  bottleSizeMl: number,
+) => {
+  // "Mezcal - Blanco" means nothing to a picker; "Bandida, Mezcal - Blanco" does
+  const producer = line.producer?.trim();
+  const named = producer && !line.productName.toLowerCase().includes(producer.toLowerCase()) ? `${producer}, ${line.productName}` : line.productName;
+  const base = line.vintage && !named.includes(String(line.vintage)) ? `${named} ${line.vintage}` : named;
   return `${base} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
 };
 
