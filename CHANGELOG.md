@@ -1,3 +1,9 @@
+## [2.0.316](https://github.com/craftandculture/Craft-Culture/compare/v2.0.315...v2.0.316) (2026-10-11)
+
+### Improvements
+
+* daily summary says how long a sensor was missing, not a count ([e2d8383](https://github.com/craftandculture/Craft-Culture/commit/e2d8383a93c09ee8e9aa05dffdfdafacf9bfdb67))
+
 ## [2.0.315](https://github.com/craftandculture/Craft-Culture/compare/v2.0.314...v2.0.315) (2026-10-11)
 
 ### Features
