@@ -123,6 +123,28 @@ const adminApplyActions = adminProcedure
       }
     }
 
+    // Every skip and failure is kept beside the writes, so the batch can be read back
+    const misses = results.filter((r) => !r.ok);
+    if (misses.length) {
+      const byId = new Map(input.actions.map((a) => [a.id, a]));
+      await db.insert(zohoItemChanges).values(
+        misses.map((r) => {
+          const a = byId.get(r.id)!;
+          return {
+            batchId: input.batchId,
+            createdBy: ctx.user.id,
+            zohoItemId: a.kind === 'create' ? r.id : a.itemId,
+            itemName: a.kind === 'create' ? a.name : a.expectName,
+            action: 'skipped',
+            beforeSku: a.kind === 'create' ? null : a.expectSku,
+            afterSku: a.kind === 'create' ? a.sku : a.toSku,
+            reason: r.message,
+            undoneAt: new Date(),
+          };
+        }),
+      );
+    }
+
     return { results };
   });
 

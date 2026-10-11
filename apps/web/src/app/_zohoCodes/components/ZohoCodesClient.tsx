@@ -1,12 +1,14 @@
 'use client';
 
-import { IconAlertTriangle, IconArrowBackUp, IconArrowRight, IconCheck, IconRefresh, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconArrowBackUp, IconArrowRight, IconCheck, IconChevronDown, IconRefresh, IconX } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useMemo, useState } from 'react';
 
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
+
+import BatchChanges from './BatchChanges';
 
 type Plan = inferRouterOutputs<AppRouter>['zohoCodes']['plan'];
 type Action = Plan['actions'][number];
@@ -71,6 +73,7 @@ const ZohoCodesClient = () => {
   const [running, setRunning] = useState<{ done: number; total: number } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [undoing, setUndoing] = useState<string | null>(null);
+  const [openBatch, setOpenBatch] = useState<string | null>(null);
 
   const actions = useMemo(() => plan.data?.actions ?? [], [plan.data]);
   const ready = (a: Action) => !a.blocked && a.kind !== 'review' && !results.get(a.id)?.ok;
@@ -149,6 +152,7 @@ const ZohoCodesClient = () => {
       setRunning({ done: Math.min(i + 10, list.length), total: list.length });
     }
     setRunning(null);
+    setOpenBatch(batchId);
     void queryClient.invalidateQueries({ queryKey: api.zohoCodes.batches.queryKey() });
   };
 
@@ -354,24 +358,34 @@ const ZohoCodesClient = () => {
 
       {(batches.data?.length ?? 0) > 0 && (
         <section className={card}>
-          <h2 className="border-b border-border-muted px-4 py-2.5 text-sm font-semibold">History</h2>
+          <h2 className="border-b border-border-muted px-4 py-2.5 text-sm font-semibold">History — open a run to see exactly what it changed</h2>
           <ul className="divide-y divide-border-muted">
             {batches.data!.map((b) => (
-              <li key={b.batchId} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
-                <span>
-                  {new Date(b.startedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} · {b.inactivated} retired · {b.created} created
-                  {b.live === 0 && <span className="text-text-muted"> · undone</span>}
-                </span>
-                {b.live > 0 && (
+              <li key={b.batchId}>
+                <div className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
                   <button
                     type="button"
-                    disabled={!!undoing || !!running}
-                    onClick={() => void undo(b.batchId)}
-                    className="inline-flex items-center gap-1 rounded-md border border-border-primary px-2 py-1 hover:bg-fill-muted disabled:opacity-50"
+                    onClick={() => setOpenBatch(openBatch === b.batchId ? null : b.batchId)}
+                    className="flex items-center gap-1 text-left hover:underline"
                   >
-                    <IconArrowBackUp size={13} /> {undoing === b.batchId ? 'Undoing…' : 'Undo'}
+                    <IconChevronDown size={13} className={openBatch === b.batchId ? '' : '-rotate-90'} />
+                    {new Date(`${String(b.startedAt).replace(' ', 'T')}Z`).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
+                    {b.inactivated} retired · {b.created} created
+                    {b.skipped ? <span className="text-text-warning"> · {b.skipped} skipped</span> : null}
+                    {b.live === 0 && <span className="text-text-muted"> · undone</span>}
                   </button>
-                )}
+                  {b.live > 0 && (
+                    <button
+                      type="button"
+                      disabled={!!undoing || !!running}
+                      onClick={() => void undo(b.batchId)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border-primary px-2 py-1 hover:bg-fill-muted disabled:opacity-50"
+                    >
+                      <IconArrowBackUp size={13} /> {undoing === b.batchId ? 'Undoing…' : 'Undo'}
+                    </button>
+                  )}
+                </div>
+                {openBatch === b.batchId && <BatchChanges batchId={b.batchId} />}
               </li>
             ))}
           </ul>
