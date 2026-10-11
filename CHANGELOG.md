@@ -1,3 +1,9 @@
+## [2.0.310](https://github.com/craftandculture/Craft-Culture/compare/v2.0.309...v2.0.310) (2026-10-11)
+
+### Documentation
+
+* distributor help centre matches how the portal works now ([3dfa713](https://github.com/craftandculture/Craft-Culture/commit/3dfa713ea089b66181d32fa9f697749d1298d8c9))
+
 ## [2.0.309](https://github.com/craftandculture/Craft-Culture/compare/v2.0.308...v2.0.309) (2026-10-11)
 
 ### Features
