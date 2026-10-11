@@ -951,49 +951,80 @@ const DistributorOrderDetailPage = () => {
 
                     {/* Desktop: Table layout */}
                     <div className="hidden overflow-x-auto md:block">
-                      <table className="w-full text-xs">
-                        <thead className="border-b border-border-muted bg-surface-secondary/50">
+                      <table className="w-full">
+                        <thead className="border-b border-border-muted">
                           <tr>
-                            <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Product</th>
-                            <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Producer</th>
-                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
-                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
-                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Dist. Cost</th>
-                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Price</th>
-                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Total ({currency})</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted text-left">Wine</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted text-left">Quantity</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Dist. cost</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Client price</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Total</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border-muted/50">
+                        <tbody className="divide-y divide-border-muted/60">
                           {order.items.map((item) => {
                             const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
                             const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
                             const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
                             const line = describePcoLine(item);
                             return (
-                              <tr key={item.id} className="hover:bg-surface-muted/20">
-                                <td className="px-2 py-2">
-                                  <span className="text-sm font-medium">{item.productName}</span>
+                              <tr key={item.id} className="align-top hover:bg-surface-muted/20">
+                                <td className="px-4 py-3.5">
+                                  <Typography variant="bodySm" className="font-medium leading-snug">
+                                    {item.productName}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                    {[item.producer, item.vintage].filter(Boolean).join(' · ') || '—'}
+                                  </Typography>
                                 </td>
-                                <td className="px-2 py-2 text-sm">{item.producer || '-'}</td>
-                                <td className="px-2 py-2 text-center text-sm">{item.vintage || '-'}</td>
-                                <td className="whitespace-nowrap px-2 py-2 text-center text-sm text-text-muted">{line.pack}</td>
-                                <td className="whitespace-nowrap px-2 py-2 text-center text-sm font-medium">{line.qty}</td>
-                                <td className="px-2 py-2 text-right text-sm text-text-muted">
-                                  {formatPrice(getAmount(distributorCostPerCase), currency)}
-                                  <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                <td className="whitespace-nowrap px-4 py-3.5">
+                                  <Typography variant="bodySm" className="font-medium">
+                                    {line.count}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                    {line.isSingle ? line.pack : `${line.pack} · ${line.bottles} btl`}
+                                  </Typography>
                                 </td>
-                                <td className="px-2 py-2 text-right text-sm">
-                                  {formatPrice(getAmount(clientPricePerCase), currency)}
-                                  <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                  <Typography variant="bodySm" colorRole="muted">
+                                    {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                    <span className="text-xs"> /{line.unit}</span>
+                                  </Typography>
                                 </td>
-                                <td className="px-2 py-2 text-right text-sm font-semibold">
-                                  {formatPrice(getAmount(clientTotal), currency)}
+                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                  <Typography variant="bodySm">
+                                    {formatPrice(getAmount(clientPricePerCase), currency)}
+                                    <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                  </Typography>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                  <Typography variant="bodySm" className="font-semibold">
+                                    {formatPrice(getAmount(clientTotal), currency)}
+                                  </Typography>
                                 </td>
                               </tr>
                             );
                           })}
                         </tbody>
+                        <tfoot className="border-t border-border-muted">
+                          <tr>
+                            <td className="px-4 py-3.5">
+                              <Typography variant="bodySm" className="font-semibold">
+                                Total
+                              </Typography>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3.5" colSpan={3}>
+                              <Typography variant="bodySm" colorRole="muted">
+                                {summarisePcoQuantities(order.items)}
+                              </Typography>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                              <Typography variant="bodySm" className="font-semibold">
+                                {formatPrice(getAmount(orderTotal), currency)}
+                              </Typography>
+                            </td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   </>

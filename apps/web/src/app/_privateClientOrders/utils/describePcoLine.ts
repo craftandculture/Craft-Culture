@@ -50,6 +50,10 @@ const describePcoLine = ({
     bottles,
     unit: isSingle ? ('btl' as const) : ('case' as const),
     pack: isSingle ? `Bottle · ${size}` : `Case of ${perCase} × ${size}`,
+    /** The quantity alone: "2 cases", "1 bottle" */
+    count: isSingle
+      ? `${quantity} ${quantity === 1 ? 'bottle' : 'bottles'}`
+      : `${quantity} ${quantity === 1 ? 'case' : 'cases'}`,
     qty: isSingle
       ? `${quantity} ${quantity === 1 ? 'bottle' : 'bottles'}`
       : `${quantity} ${quantity === 1 ? 'case' : 'cases'} · ${bottles} btl`,
