@@ -5951,6 +5951,33 @@ export const exportConsigneeProfiles = pgTable('export_consignee_profiles', {
 export type ExportInvoiceRow = typeof exportInvoices.$inferSelect;
 export type ExportConsigneeProfile = typeof exportConsigneeProfiles.$inferSelect;
 
+/**
+ * Zoho Item Changes - every write the Zoho code cleanup made, for undo
+ *
+ * One row per write to a Zoho item: a SKU given its dashes or renamed, or an
+ * item made inactive. A batch is one press of Apply; undoing it replays the
+ * rows backwards.
+ */
+export const zohoItemChanges = pgTable(
+  'zoho_item_changes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    batchId: uuid('batch_id').notNull(),
+    zohoItemId: text('zoho_item_id').notNull(),
+    itemName: text('item_name').notNull(),
+    /** 'set_sku' | 'inactivate' */
+    action: text('action').notNull(),
+    beforeSku: text('before_sku'),
+    afterSku: text('after_sku'),
+    reason: text('reason'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    undoneAt: timestamp('undone_at'),
+    undoneBy: uuid('undone_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('zoho_item_changes_batch_idx').on(table.batchId)],
+);
+
 // ---------------------------------------------------------------------------
 // AI Agents
 // ---------------------------------------------------------------------------

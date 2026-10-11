@@ -2254,6 +2254,31 @@ const runMigrations = async () => {
     console.log('✅ export invoices ready');
 
     /*
+      Zoho code cleanup — every write to a Zoho item (SKU dashed or renamed,
+      item made inactive), so a batch can be undone.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_item_changes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "batch_id" uuid NOT NULL,
+        "zoho_item_id" text NOT NULL,
+        "item_name" text NOT NULL,
+        "action" text NOT NULL,
+        "before_sku" text,
+        "after_sku" text,
+        "reason" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "undone_at" timestamp,
+        "undone_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "zoho_item_changes_batch_idx" ON "zoho_item_changes"("batch_id")`,
+    );
+    console.log('✅ zoho item changes ready');
+
+    /*
       Team Tasks — the team's shared to-do list (jobs, each split into parts
       owned by one person). Tables first; then, once only, the areas and the
       3 October 2026 list the team was working from, so the page opens on real

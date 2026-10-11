@@ -26,6 +26,7 @@ import teamTasksRouter from '@/app/_teamTasks/router';
 import triangulationRouter from '@/app/_triangulation/router';
 import warehouseRouter from '@/app/_warehouse/router';
 import wmsRouter from '@/app/_wms/router';
+import zohoCodesRouter from '@/app/_zohoCodes/router';
 import zohoImportRouter from '@/app/_zohoImport/router';
 import zohoSalesOrdersRouter from '@/app/_zohoSalesOrders/router';
 
@@ -42,6 +43,7 @@ export const appRouter = createTRPCRouter({
   lwin: lwinRouter,
   morningView: morningViewRouter,
   orderChecks: orderChecksRouter,
+  zohoCodes: zohoCodesRouter,
   users: usersRouter,
   notifications: notificationsRouter,
   partners: partnersRouter,

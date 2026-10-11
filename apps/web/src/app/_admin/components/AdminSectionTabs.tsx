@@ -18,6 +18,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Private Orders', href: '/platform/admin/private-orders' },
     { label: 'Zoho Sales', href: '/platform/admin/zoho-sales-orders' },
     { label: 'Order Check', href: '/platform/admin/order-check' },
+    { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
     { label: 'Source', href: '/platform/admin/source' },
     { label: 'Approvals', href: '/platform/admin/quote-approvals' },
     { label: 'Quotes', href: '/platform/quotes' },
