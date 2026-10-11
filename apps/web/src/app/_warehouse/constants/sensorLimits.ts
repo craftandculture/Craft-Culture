@@ -10,18 +10,18 @@ export const SENSOR_STALE_MINUTES = 30;
 /**
  * The sensors Home Assistant sends, with the band each should stay inside
  *
- * Keyed by the `sensor_id` Home Assistant posts. Wine in the cold room is kept
- * at 10–14 °C and 55–75 % humidity; the general warehouse only has a ceiling,
+ * Keyed by the `sensor_id` Home Assistant posts. The cold room alerts above
+ * 16 °C or 80 % humidity (Kevin's limits), and below 10 °C or 55 %; the general warehouse only has a ceiling,
  * because it holds nothing that a cool day harms.
  */
 export const SENSOR_LIMITS: Record<
   string,
   { name: string; unit: string; min?: number; max?: number }
 > = {
-  cold_room_front_temperature: { name: 'Cold Room – Front', unit: '°C', min: 10, max: 14 },
-  cold_room_middle_temperature: { name: 'Cold Room – Middle', unit: '°C', min: 10, max: 14 },
-  cold_room_rear_temperature: { name: 'Cold Room – Rear', unit: '°C', min: 10, max: 14 },
-  cold_room_front_humidity: { name: 'Cold Room – Front Humidity', unit: '%', min: 55, max: 75 },
-  cold_room_rear_humidity: { name: 'Cold Room – Rear Humidity', unit: '%', min: 55, max: 75 },
+  cold_room_front_temperature: { name: 'Cold Room – Front', unit: '°C', min: 10, max: 16 },
+  cold_room_middle_temperature: { name: 'Cold Room – Middle', unit: '°C', min: 10, max: 16 },
+  cold_room_rear_temperature: { name: 'Cold Room – Rear', unit: '°C', min: 10, max: 16 },
+  cold_room_front_humidity: { name: 'Cold Room – Front Humidity', unit: '%', min: 55, max: 80 },
+  cold_room_rear_humidity: { name: 'Cold Room – Rear Humidity', unit: '%', min: 55, max: 80 },
   warehouse_general_temperature: { name: 'Warehouse – General', unit: '°C', max: 35 },
 };
