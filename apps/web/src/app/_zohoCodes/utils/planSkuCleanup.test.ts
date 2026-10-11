@@ -171,6 +171,14 @@ describe('itemNameFor: Zoho limits', () => {
     );
     expect(name.length).toBeLessThanOrEqual(100);
     expect(name).not.toMatch(/1\.5L|abv/);
-    expect(name.endsWith('(1x150cl)')).toBe(true);
+    expect(name.endsWith('2016 (1x150cl)')).toBe(true);
+  });
+
+  it('keeps the vintage when cutting, so vintages of one long wine stay distinct', async () => {
+    const { itemNameFor } = await import('./planSkuCleanup');
+    const long = "Ciacci Piccolomini d'Aragona Brunello di Montalcino Vigna di Pianrosso Riserva Santa Caterina d'Oro";
+    const names = [2006, 2012, 2016].map((v) => itemNameFor({ productName: `${long} ${v} 1.5L 14.5%abv`, vintage: v }, 1, 1500));
+    expect(new Set(names).size).toBe(3);
+    expect(names.every((n) => n.length <= 100)).toBe(true);
   });
 });

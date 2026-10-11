@@ -96,12 +96,14 @@ export const itemNameFor = (
   // "Mezcal - Blanco" means nothing to a picker; "Bandida, Mezcal - Blanco" does
   const producer = line.producer?.trim();
   const named = producer && !productName.toLowerCase().includes(producer.toLowerCase()) ? `${producer}, ${productName}` : productName;
-  const base = line.vintage && !named.includes(String(line.vintage)) ? `${named} ${line.vintage}` : named;
-  const suffix = ` (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
-  // Zoho refuses names over 100 characters; the pack suffix is kept whole
-  const room = NAME_MAX - suffix.length;
-  const fitted = base.length > room ? base.slice(0, room).replace(/[\s,]+\S*$/, '').trim() : base;
-  return `${fitted}${suffix}`.replace(/\s+/g, ' ').trim();
+  // The vintage and pack are what tell two items apart, so only the wine's
+  // name is cut to fit Zoho's 100 characters — never the vintage or pack
+  const vintage = line.vintage ? String(line.vintage) : null;
+  const wine = vintage ? named.replace(new RegExp(`\\s*\\b${vintage}\\b\\s*`), ' ').trim() : named;
+  const tail = `${vintage ? ` ${vintage}` : ''} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
+  const room = NAME_MAX - tail.length;
+  const fitted = wine.length > room ? wine.slice(0, room).replace(/[\s,]+\S*$/, '').trim() : wine;
+  return `${fitted}${tail}`.replace(/\s+/g, ' ').trim();
 };
 
 /**
