@@ -24,52 +24,52 @@ const faqItems = [
   {
     question: 'What is Craft & Culture?',
     answer:
-      'Craft & Culture is a platform connecting wine partners with the UAE/GCC market. As a distributor, you handle the final mile - client verification, payment collection, and delivery for Private Client Orders (PCO).',
+      'Craft & Culture (C&C) connects wine partners with the UAE and GCC market. As a distributor, you handle the final stage of each Private Client Order: client verification, payment collection and delivery.',
   },
   {
-    question: 'What is a PCO order?',
+    question: 'What is a PCO?',
     answer:
-      'PCO stands for Private Client Order. These are orders created by wine partners for individual consumers who want to purchase wine for personal use in the UAE. You receive these orders for fulfillment.',
+      'A Private Client Order: an order a wine partner places on behalf of an individual client for personal use in the UAE. C&C reviews and approves it, then assigns it to you.',
   },
   {
-    question: 'How do I get assigned orders?',
+    question: 'When does an order appear in my portal?',
     answer:
-      'Wine partners create PCO orders which are assigned to you for fulfillment. Orders appear in your dashboard when they reach the verification stage.',
+      'As soon as C&C approves it and assigns it to you. If you verify clients, it arrives at the verification stage; otherwise it arrives ready for client payment.',
   },
   {
-    question: 'What does client verification involve?',
+    question: 'Why can I not confirm client payment?',
     answer:
-      'You need to verify the client can legally receive wine (21+ age, valid ID) and register them in your system. This is required before payment collection.',
+      'Two things must be on the order first: your invoice to the client (uploaded on the order page) and, if you sell each order as a bundle, the bundle SKU. The button explains which one is missing.',
   },
   {
-    question: 'How long does fulfillment take?',
+    question: 'What is the bundle SKU?',
     answer:
-      'After client payment: Local stock orders 1-2 weeks, shipped orders 3-6 weeks. Delivery scheduling happens once payment is confirmed and stock is available.',
-  },
-  {
-    question: 'What payment methods do clients use?',
-    answer:
-      'Bank transfer is the primary method. You invoice the client for the full amount including duty and VAT, collect payment, then confirm in the system.',
+      'If you list each PCO as one bundle product named after the PCO number, its SKU is recorded on the order. It is usually filled in automatically from your stock feed; if not, enter it in the SKU card at the top of the order page. It cannot be changed once the client has paid.',
   },
   {
     question: 'When do I pay Craft & Culture?',
     answer:
-      'After order fulfillment. Typically 3-7 days after delivery. You pay C&C the duty-paid landed cost, retaining your margin.',
+      'After the client has paid you. Mark the order Awaiting Distributor Payment while your payment is being raised, then Confirm Payment to C&C once it is sent. C&C releases the stock to you after that payment is received.',
+  },
+  {
+    question: 'How long does fulfilment take?',
+    answer:
+      'From your payment to C&C: stock already in the UAE usually reaches you within one to two weeks; stock shipped from abroad takes longer, depending on the route. The Stock Tracking panel on each order shows where every item is.',
+  },
+  {
+    question: 'An order says "2 bottles", not "2 cases". Why?',
+    answer:
+      'Wine can be sold by the case or as single bottles. Single bottles are now shown as bottles everywhere, and cases show how many bottles they hold, for example "1 case · 6 btl". Prices say whether they are per case or per bottle.',
   },
   {
     question: 'What if a client cannot be verified?',
     answer:
-      'Mark the order as "Verification Suspended" with notes explaining the issue. C&C and the wine partner will be notified to resolve the situation.',
-  },
-  {
-    question: 'Can clients pay in AED?',
-    answer:
-      'Yes, client invoices are typically in AED. The AED is pegged to USD at 3.67, so conversion is straightforward.',
+      'Mark the order Verification Suspended and add a note explaining why. C&C and the wine partner are notified and will resolve it with you.',
   },
   {
     question: 'Who contacts the client?',
     answer:
-      'You handle all client communication for verification, payment collection, delivery scheduling, and customer service. The wine partner should not contact clients directly except for verification purposes.',
+      'You do, for verification, payment, delivery scheduling and customer service. The wine partner contacts the client only where verification needs it.',
   },
 ];
 
@@ -83,7 +83,7 @@ const DistributorSupportPage = () => {
             Distributor Help Center
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
-            Everything you need to manage PCO orders, client verification, and fulfillment
+            How to verify clients, collect payment and deliver Private Client Orders
           </Typography>
         </div>
 
@@ -113,42 +113,37 @@ const DistributorSupportPage = () => {
 
         {/* Sections */}
         <div className="space-y-6">
-          {/* Getting Started */}
-          <HelpSection id="getting-started" icon={IconRocket} title="Getting Started">
+          {/* Your Portal */}
+          <HelpSection id="getting-started" icon={IconRocket} title="Your Portal">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              Welcome to the Craft & Culture Distributor Portal. Here is how to get started:
+              Sign in at craftculture.xyz with your work email; a sign-in link is sent to your
+              inbox. The portal has two screens.
             </Typography>
 
             <div className="space-y-3">
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  1. Sign In
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Go to craftculture.xyz, click Sign In, and enter your email. Check your inbox for
-                  the magic link and click to access your dashboard.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  2. Dashboard Overview
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Your dashboard shows assigned orders awaiting action, orders in progress, and
-                  recently completed deliveries. The activity feed shows recent updates.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  3. Navigation
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Use the main menu to access: Dashboard (overview), Orders (manage assigned PCO
-                  orders), and Settings (preferences).
-                </Typography>
-              </div>
+              {[
+                {
+                  title: 'Dashboard',
+                  body: 'Opens on what is waiting on you: Verify client, Client payment, Pay C&C, Stock arriving and To deliver (plus SKU missing, if you record bundle SKUs). A tile turns amber when it has orders and reads "All clear" when it has none. Click a tile to see exactly those orders. Below it, the pipeline shows how many orders are at each stage, their value, and an "idle" badge for any order that has not moved in seven days.',
+                },
+                {
+                  title: 'Assigned Orders',
+                  body: 'Every order assigned to you. The tabs follow the same stages as the dashboard (Verification, Payment, Inbound, Delivery, Delivered). A filter opened from the dashboard appears as a chip; click its × to clear it. Choose 20 or 50 orders per page at the bottom of the list.',
+                },
+                {
+                  title: 'An order',
+                  body: 'Shows the bundle SKU (if you use one), the order progress, the actions for its current stage, the payment reference, the line items and the Stock Tracking panel. Download PDF gives the proforma for your finance team; Send to Finance emails it.',
+                },
+              ].map((step, index) => (
+                <div key={step.title} className="rounded-lg bg-fill-secondary/50 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-medium">
+                    {index + 1}. {step.title}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                    {step.body}
+                  </Typography>
+                </div>
+              ))}
             </div>
           </HelpSection>
 
@@ -244,53 +239,60 @@ const DistributorSupportPage = () => {
             </div>
           </HelpSection>
 
-          {/* Payment Collection */}
-          <HelpSection id="payment" icon={IconCreditCard} title="Payment Collection">
+          {/* Payment */}
+          <HelpSection id="payment" icon={IconCreditCard} title="Payment">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              After verification, collect payment from the client:
+              Once the client is verified, the order moves to Awaiting Client Payment. Payment then
+              runs in this order:
             </Typography>
 
-            {/* Payment Steps */}
-            <div className="mt-4 space-y-3">
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  1. Generate Client Invoice
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Create invoice with full amount including products, duty,
-                  logistics and VAT, at the rates in force on the day. Invoice
-                  in AED for local clients.
-                </Typography>
-              </div>
+            <ol className="mt-4 space-y-3">
+              {[
+                {
+                  title: 'Check the bundle SKU',
+                  body: 'If you sell each PCO as a bundle, its SKU must be on the order. It is normally filled in from your stock feed; otherwise enter it in the SKU card at the top of the order page.',
+                },
+                {
+                  title: 'Invoice the client',
+                  body: 'Download the proforma (Download PDF) or send it to your finance team (Send to Finance). It lists every line with your cost and the client price. Invoice the client in AED for the full amount, quoting the payment reference shown on the order.',
+                },
+                {
+                  title: 'Upload your invoice',
+                  body: 'Upload the invoice on the order page. It is required before client payment can be confirmed.',
+                },
+                {
+                  title: 'Confirm Client Payment',
+                  body: 'When the client has paid, click Confirm Client Payment.',
+                },
+                {
+                  title: 'Pay C&C',
+                  body: 'Mark the order Awaiting Distributor Payment while your payment is raised, then Confirm Payment to C&C when it has been sent. C&C then releases the stock to you.',
+                },
+              ].map((step, index) => (
+                <li key={step.title} className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <Typography variant="bodySm" className="font-medium">
+                      {step.title}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                      {step.body}
+                    </Typography>
+                  </div>
+                </li>
+              ))}
+            </ol>
 
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  2. Send Invoice to Client
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Email invoice with payment instructions. Include your bank details for transfer.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  3. Confirm Payment Received
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Once payment clears, mark order as Client Paid in the portal.
-                </Typography>
-              </div>
-            </div>
-
-            {/* Price Breakdown */}
             <div className="mt-4 rounded-lg border border-border-primary p-4">
               <Typography variant="bodySm" className="mb-3 font-medium">
                 What the Client Pays
               </Typography>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">Product Cost (LDF)</span>
-                  <span>Base price</span>
+                  <span className="text-text-muted">Wine</span>
+                  <span>Client price per case or bottle</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   {/*
@@ -299,21 +301,13 @@ const DistributorSupportPage = () => {
                     stale rate in writing is worse than none — the invoice is
                     where the real figures are.
                   */}
-                  <span className="text-text-muted">+ Import duty</span>
-                  <span>UAE customs</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ Logistics</span>
-                  <span>Freezone → Delivery</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">+ VAT</span>
-                  <span>UAE tax</span>
+                  <span className="text-text-muted">Import duty, logistics and VAT</span>
+                  <span>Included in the client price</span>
                 </div>
                 <div className="border-t border-border-primary pt-2">
                   <div className="flex justify-between font-medium">
                     <span>Client Total</span>
-                    <span>Your invoice amount</span>
+                    <span>The Amount Due on the order</span>
                   </div>
                 </div>
               </div>
@@ -323,215 +317,128 @@ const DistributorSupportPage = () => {
           {/* Order Lifecycle */}
           <HelpSection id="order-lifecycle" icon={IconTimeline} title="Order Lifecycle">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              Track orders through each stage of the fulfillment process:
-            </Typography>
-
-            {/* Status Flow */}
-            <div className="my-4 overflow-x-auto">
-              <div className="flex min-w-max items-center justify-center gap-1 py-4">
-                {[
-                  { label: 'Assigned', color: 'bg-blue-500' },
-                  { label: 'Verify', color: 'bg-blue-500' },
-                  { label: 'Payment', color: 'bg-amber-500' },
-                  { label: 'Schedule', color: 'bg-blue-500' },
-                  { label: 'Deliver', color: 'bg-green-500' },
-                ].map((stage, index) => (
-                  <div key={stage.label} className="flex items-center gap-1">
-                    <div className="flex flex-col items-center">
-                      <div className={`h-3 w-3 rounded-full ${stage.color}`} />
-                      <span className="mt-1 text-[10px] text-text-muted">{stage.label}</span>
-                    </div>
-                    {index < 4 && <div className="h-0.5 w-6 bg-border-primary" />}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Awaiting Distributor Verification
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Order assigned to you - verify the client
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Verification Suspended
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Issue with client verification - awaiting resolution
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Awaiting Client Payment
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Client verified, waiting for payment
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Client Paid
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Payment received, ready for fulfillment
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Scheduling Delivery
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Coordinate delivery date with client
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    With Distributor / Out for Delivery
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Stock collected, en route to client
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
-                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-green-500" />
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
-                    Delivered
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Order complete - proceed to settle with C&C
-                  </Typography>
-                </div>
-              </div>
-            </div>
-          </HelpSection>
-
-          {/* Delivery & Fulfillment */}
-          <HelpSection id="fulfillment" icon={IconTruck} title="Delivery & Fulfillment">
-            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              After payment is confirmed, fulfill the order:
-            </Typography>
-
-            <div className="mt-4 space-y-3">
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  1. Schedule Delivery
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Contact client to arrange a convenient delivery date and time. Update the order
-                  status to Scheduling Delivery.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  2. Collect Stock
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  For local inventory: Collect from UAE Freezone warehouse. For shipped orders: Wait
-                  for stock arrival notification.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  3. Complete Delivery
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Deliver to client, obtain proof of delivery (signature/photo). Update order status
-                  to Delivered.
-                </Typography>
-              </div>
-
-              <div className="rounded-lg bg-fill-secondary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-medium">
-                  4. Settle with C&C
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  After delivery, pay C&C the duty-paid landed cost. Typically within 3-7 days of
-                  delivery.
-                </Typography>
-              </div>
-            </div>
-          </HelpSection>
-
-          {/* Stock Status */}
-          <HelpSection id="stock" icon={IconBox} title="Stock Status">
-            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              Understand stock availability for order fulfillment:
+              Orders move through four stages, the same ones shown on your dashboard and as tabs on
+              Assigned Orders:
             </Typography>
 
             <div className="mt-4 space-y-2">
-              <Typography variant="bodySm" className="font-medium">
-                Stock Status Legend
-              </Typography>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="flex items-center gap-2 rounded-lg bg-fill-secondary/50 p-2">
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                  <Typography variant="bodyXs">Local Stock - Ready for collection</Typography>
+              {[
+                {
+                  stage: 'Verification',
+                  who: 'Partner · you',
+                  dot: 'bg-orange-400',
+                  statuses: 'Awaiting Verification, Verification Suspended',
+                  body: 'You check the client can legally receive wine.',
+                },
+                {
+                  stage: 'Payment',
+                  who: 'Client · you',
+                  dot: 'bg-blue-500',
+                  statuses: 'Awaiting Client Payment, Client Paid, Awaiting Distributor Payment',
+                  body: 'The client pays you, then you pay C&C.',
+                },
+                {
+                  stage: 'Inbound',
+                  who: 'C&C',
+                  dot: 'bg-violet-500',
+                  statuses: 'Distributor Paid, Stock In Transit',
+                  body: 'C&C prepares and sends the stock to you.',
+                },
+                {
+                  stage: 'Delivery',
+                  who: 'You',
+                  dot: 'bg-amber-400',
+                  statuses: 'With Distributor, Scheduling Delivery, Delivery Scheduled, Out for Delivery',
+                  body: 'You confirm the stock has arrived and deliver it to the client.',
+                },
+                {
+                  stage: 'Delivered',
+                  who: '',
+                  dot: 'bg-emerald-500',
+                  statuses: 'Delivered',
+                  body: 'The order is complete.',
+                },
+              ].map((row) => (
+                <div key={row.stage} className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                  <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${row.dot}`} />
+                  <div>
+                    <Typography variant="bodySm" className="font-medium">
+                      {row.stage}
+                      {row.who && (
+                        <span className="ml-2 text-xs font-normal text-text-muted">{row.who}</span>
+                      )}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                      {row.body} Statuses: {row.statuses}.
+                    </Typography>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg bg-fill-secondary/50 p-2">
-                  <div className="h-3 w-3 rounded-full bg-blue-500" />
-                  <Typography variant="bodyXs">In Transit - On the way to UAE</Typography>
+              ))}
+            </div>
+          </HelpSection>
+
+          {/* Stock & Delivery */}
+          <HelpSection id="fulfillment" icon={IconTruck} title="Stock & Delivery">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              After your payment to C&C:
+            </Typography>
+
+            <div className="mt-4 space-y-3">
+              {[
+                {
+                  title: 'C&C sends the stock',
+                  body: 'The order moves to Stock In Transit and appears under Stock arriving on your dashboard. The Stock Tracking panel on the order shows where each item is: Sourcing, Confirmed, In Air, At C&C, To Distributor, At Distributor, Delivered.',
+                },
+                {
+                  title: 'Confirm the stock has arrived',
+                  body: 'When it reaches you, click Stock Received. Check the case labels: each carries the PCO number and the total for the order.',
+                },
+                {
+                  title: 'Schedule and deliver',
+                  body: 'Agree a delivery date with the client and record it on the order. When the delivery leaves, mark it Out for Delivery; when the client has it, mark it Delivered.',
+                },
+              ].map((step, index) => (
+                <div key={step.title} className="rounded-lg bg-fill-secondary/50 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-medium">
+                    {index + 1}. {step.title}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                    {step.body}
+                  </Typography>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg bg-fill-secondary/50 p-2">
-                  <div className="h-3 w-3 rounded-full bg-amber-500" />
-                  <Typography variant="bodyXs">Awaiting Shipment - Not yet dispatched</Typography>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-fill-secondary/50 p-2">
-                  <div className="h-3 w-3 rounded-full bg-gray-400" />
-                  <Typography variant="bodyXs">Reserved - Allocated to order</Typography>
-                </div>
-              </div>
+              ))}
+            </div>
+          </HelpSection>
+
+          {/* Cases & Bottles */}
+          <HelpSection id="quantities" icon={IconBox} title="Cases & Bottles">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              A line is sold either by the case or as single bottles, and the portal and proforma
+              always say which:
+            </Typography>
+
+            <div className="mt-4 overflow-hidden rounded-lg border border-border-primary">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border-primary">
+                  {[
+                    ['2 cases', 'Case of 3 × 75cl · 6 btl', 'Two cases of three bottles; prices are /case'],
+                    ['1 case', 'Case of 6 × 75cl · 6 btl', 'One case of six bottles; prices are /case'],
+                    ['2 bottles', 'Bottle · 75cl', 'Two single bottles; prices are /btl'],
+                  ].map(([qty, pack, meaning]) => (
+                    <tr key={pack}>
+                      <td className="whitespace-nowrap px-3 py-2 font-medium">{qty}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-text-muted">{pack}</td>
+                      <td className="px-3 py-2 text-text-muted">{meaning}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-4">
-              <Typography variant="bodyXs" className="font-medium text-text-brand">
-                Delivery Timelines
-              </Typography>
-              <ul className="mt-2 space-y-1">
-                <li className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                  Local stock: 1-2 weeks from payment
-                </li>
-                <li className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                  Air freight: 2-3 weeks from payment
-                </li>
-                <li className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  Ocean freight: 4-6 weeks from payment
-                </li>
-              </ul>
-            </div>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-3 leading-relaxed">
+              Order totals count both, for example &ldquo;3 cases + 2 bottles · 17 btl&rdquo;. Your
+              dashboard and order list count in bottles.
+            </Typography>
           </HelpSection>
 
           {/* FAQ */}

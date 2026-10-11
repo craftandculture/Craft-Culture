@@ -608,10 +608,11 @@ const DistributorOrderDetailPage = () => {
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
-                    Upload Invoice (Optional)
+                    Upload your invoice
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Upload your invoice to send to the partner for their records.
+                    Needed before you can confirm the client&rsquo;s payment. It is also shared with
+                    the partner for their records.
                   </Typography>
                 </div>
                 <Button

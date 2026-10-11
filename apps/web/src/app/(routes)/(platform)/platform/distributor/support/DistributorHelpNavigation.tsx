@@ -15,12 +15,12 @@ import Link from 'next/link';
 import Icon from '@/app/_ui/components/Icon/Icon';
 
 const navItems = [
-  { id: 'getting-started', label: 'Getting Started', icon: IconRocket },
+  { id: 'getting-started', label: 'Your Portal', icon: IconRocket },
   { id: 'verification', label: 'Client Verification', icon: IconUserCheck },
-  { id: 'payment', label: 'Payment Collection', icon: IconCreditCard },
+  { id: 'payment', label: 'Payment', icon: IconCreditCard },
   { id: 'order-lifecycle', label: 'Order Lifecycle', icon: IconTimeline },
-  { id: 'fulfillment', label: 'Delivery', icon: IconTruck },
-  { id: 'stock', label: 'Stock Status', icon: IconBox },
+  { id: 'fulfillment', label: 'Stock & Delivery', icon: IconTruck },
+  { id: 'quantities', label: 'Cases & Bottles', icon: IconBox },
   { id: 'faq', label: 'FAQ', icon: IconHelp },
   { id: 'contact', label: 'Contact', icon: IconMail },
 ];
