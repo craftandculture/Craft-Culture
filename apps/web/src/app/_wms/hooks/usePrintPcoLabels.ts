@@ -64,7 +64,23 @@ const usePrintPcoLabels = () => {
     // The label is unchanged apart from the distributor's SKU, appended to
     // the order line when there is one. Plain ASCII: the label font has no
     // middle dot, and ' | ' is the generator's own line separator.
-    const orderLine = `Total Order: ${totalCases} ${totalCases === 1 ? 'Case' : 'Cases'}${
+    /*
+      Single bottles are counted as bottles. They were added into the case
+      total, so two loose bottles labelled "Total Order: 2 Cases" and the
+      driver went looking for two boxes.
+    */
+    const singles = items
+      .filter((i) => i.caseConfig === 1)
+      .reduce((sum, i) => sum + Math.max(1, i.quantity ?? 1), 0);
+    const cases = totalCases - singles;
+    const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const totalLabel =
+      singles === 0
+        ? plural(cases, 'Case')
+        : cases <= 0
+          ? plural(singles, 'Bottle')
+          : `${plural(cases, 'Case')} + ${plural(singles, 'Bottle')}`;
+    const orderLine = `Total Order: ${totalLabel}${
       order.distributorSku ? `  CD SKU ${order.distributorSku}` : ''
     }`;
 
@@ -83,6 +99,8 @@ const usePrintPcoLabels = () => {
         ? `${item.caseConfig}x${bottleSizeCl}cl`
         : 'pack not set';
 
+      const unit = item.caseConfig === 1 ? 'bottle' : 'case';
+
       return Array.from({ length: qty }, (_, at) => ({
         key: `${line}-${at + 1}`,
         caseNumber: at + 1,
@@ -92,7 +110,9 @@ const usePrintPcoLabels = () => {
           productName: item.productName || 'Unknown Product',
           lwin18: lwin,
           packSize:
-            qty === 1 ? `${pack} | 1 case` : `${pack} | case ${at + 1} of ${qty}`,
+            qty === 1
+              ? `${pack} | 1 ${unit}`
+              : `${pack} | ${unit} ${at + 1} of ${qty}`,
           vintage: item.vintage || undefined,
           lotNumber: `${order.orderNumber || 'PCO'} | ${orderLine}`,
           owner: order.partner?.businessName || undefined,

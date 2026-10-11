@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import saleLwin18Of from '@/app/_privateClientOrders/utils/saleLwin18Of';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import {
@@ -13,6 +14,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createPickListSchema } from '../schemas/pickListSchema';
 import generatePickListNumber from '../utils/generatePickListNumber';
+import resolvePickQuantities from '../utils/resolvePickQuantities';
 import resolvePickStock from '../utils/resolvePickStock';
 
 /**
@@ -104,13 +106,27 @@ const adminCreatePickList = wmsOperatorProcedure
         db,
       });
 
+      /*
+        The line's quantity is in the pack it is SOLD in. Two singles off a
+        6-pack are caseConfig 1, quantity 2 — writing that as quantityCases 2
+        sent the picker for two whole 6-packs. Measured in bottles, through the
+        same helper release-to-pick and re-sync use, the case is cracked at the
+        bay instead.
+      */
+      const quantities = resolvePickQuantities({
+        quantity: neededCases,
+        sku: item.lwin ? saleLwin18Of(item.lwin, item.caseConfig) : null,
+        stockCaseConfig: suggestedStock?.caseConfig,
+      });
+
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
           lwin18: suggestedStock?.lwin18 ?? item.lwin ?? '',
           productName: item.productName,
-          quantityCases: neededCases,
+          quantityCases: quantities.casesNeeded,
+          quantityBottles: quantities.quantityBottles,
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes:
