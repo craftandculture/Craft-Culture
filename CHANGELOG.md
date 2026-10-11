@@ -1,3 +1,9 @@
+## [2.0.311](https://github.com/craftandculture/Craft-Culture/compare/v2.0.310...v2.0.311) (2026-10-11)
+
+### Bug Fixes
+
+* lists show every row they load, not the first 10 ([28c2bb2](https://github.com/craftandculture/Craft-Culture/commit/28c2bb258898639457ba37807d21313b7a9c12c1))
+
 ## [2.0.310](https://github.com/craftandculture/Craft-Culture/compare/v2.0.309...v2.0.310) (2026-10-11)
 
 ### Documentation
