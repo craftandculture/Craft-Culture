@@ -53,6 +53,8 @@ export interface CleanupAction {
   create: (StockExplorerLine & { bottlesPerCase: number; bottleSizeMl: number }) | null;
   /** A retirement that must run first: it frees the name this item takes */
   dependsOn: string | null;
+  /** For a retirement: the Stock Explorer code whose new item replaces it */
+  replacedBy?: string | null;
 }
 
 const SERVICE = /^(storage|repack|transport|monthly|brand development)/i;
@@ -123,7 +125,7 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
   const blockOf = (i: CleanupItem) => (ctx.openItemIds.has(i.itemId) ? 'On an open sales order or draft — retire once it has gone through' : null);
   const seName = (canonical: string | null) => (canonical ? (ctx.stockExplorer.get(canonical)?.productName ?? null) : null);
 
-  const retire = (i: CleanupItem, kind: CleanupKind, canonical: string | null, reason: string) => {
+  const retire = (i: CleanupItem, kind: CleanupKind, canonical: string | null, reason: string, replacedBy: string | null = null) => {
     const blocked = blockOf(i);
     actions.push({
       id: i.itemId,
@@ -139,6 +141,7 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
       stockExplorerName: seName(canonical),
       create: null,
       dependsOn: null,
+      replacedBy,
     });
     return !blocked;
   };
@@ -184,7 +187,13 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
         });
         continue;
       }
-      retire(i, 'retire', canonical, replacement ? `${why}; replaced by ${replacement.lwin18}` : `${why}; not held, not sold in 90 days`);
+      retire(
+        i,
+        'retire',
+        canonical,
+        replacement ? `${why}; replaced by ${replacement.lwin18}` : `${why}; not held, not sold in 90 days`,
+        replacement?.lwin18 ?? null,
+      );
       continue;
     }
     dashed.set(canonical, [...(dashed.get(canonical) ?? []), i]);

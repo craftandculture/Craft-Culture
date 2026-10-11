@@ -9,6 +9,7 @@ import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
 import BatchChanges from './BatchChanges';
+import buildRunQueue from '../utils/buildRunQueue';
 
 type Plan = inferRouterOutputs<AppRouter>['zohoCodes']['plan'];
 type Action = Plan['actions'][number];
@@ -49,8 +50,6 @@ const TABS: { kind: Kind; label: string; help: string; preselect: boolean }[] = 
     preselect: false,
   },
 ];
-
-const ORDER: Record<Kind, number> = { retire: 0, retire_duplicate: 1, retire_not_held: 2, create: 3, review: 9 };
 
 /**
  * Zoho code cleanup
@@ -96,19 +95,8 @@ const ZohoCodesClient = () => {
 
   const shown = actions.filter((a) => a.kind === tab);
   const shownReady = shown.filter(ready);
-  const chosen = actions.filter((a) => selected.has(a.id) && ready(a));
-  const chosenIds = new Set(chosen.map((a) => a.id));
-  // A new item can take its name only once the old item has given it up
-  const queue = chosen
-    .filter((a) => !a.dependsOn || chosenIds.has(a.dependsOn) || results.get(a.dependsOn)?.ok)
-    .sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
-
-  // A pilot that shows both halves: five old items retired AND their replacements created
-  const retiringCodes = new Map(queue.filter((a) => a.kind === 'retire' && a.canonical).map((a) => [a.canonical, a]));
-  const pairs = queue.filter((a) => a.kind === 'create' && retiringCodes.has(a.canonical)).slice(0, 5);
-  const pilot = pairs.length
-    ? [...pairs.map((c) => retiringCodes.get(c.canonical)!), ...pairs]
-    : queue.slice(0, 10);
+  const done = new Set([...results].filter(([, r]) => r.ok).map(([id]) => id));
+  const { queue, pilot } = buildRunQueue(actions, selected, done);
 
   const run = async (list: Action[]) => {
     setConfirming(false);
