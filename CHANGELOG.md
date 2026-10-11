@@ -1,3 +1,9 @@
+## [2.0.312](https://github.com/craftandculture/Craft-Culture/compare/v2.0.311...v2.0.312) (2026-10-11)
+
+### Bug Fixes
+
+* warehouse live feed shows every current sensor, by name ([7b504e4](https://github.com/craftandculture/Craft-Culture/commit/7b504e4a3d3b8064c23a6aa373496e74572dc4dd))
+
 ## [2.0.311](https://github.com/craftandculture/Craft-Culture/compare/v2.0.310...v2.0.311) (2026-10-11)
 
 ### Bug Fixes
