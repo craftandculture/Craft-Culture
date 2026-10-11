@@ -17,38 +17,38 @@ const card = 'rounded-xl border border-border-muted bg-surface-primary shadow-sm
 
 const TABS: { kind: Kind; label: string; help: string; preselect: boolean }[] = [
   {
-    kind: 'add_dashes',
-    label: 'Add dashes',
-    help: 'Compact or mis-dashed SKUs given the dashed Stock Explorer form. The item, its stock and its history stay as they are; only the code changes.',
+    kind: 'retire',
+    label: 'Old codes',
+    help: 'Every item whose SKU is not a dashed LWIN — compact codes, brand codes, blanks. Each is renamed "… (old)" and made inactive. Past invoices keep pointing at it; it just cannot be picked for new orders.',
+    preselect: true,
+  },
+  {
+    kind: 'create',
+    label: 'New items',
+    help: 'Every Stock Explorer line with no active Zoho item under its code, created from the Stock Explorer record — name, vintage, pack and producer — after the old item has given up its name.',
     preselect: true,
   },
   {
     kind: 'retire_duplicate',
     label: 'Duplicates',
-    help: 'Two active items under one Stock Explorer code. The one holding Zoho stock is kept; the other is made inactive (renamed …-OLD first if it holds the dashed code the kept item needs).',
-    preselect: true,
-  },
-  {
-    kind: 'retire_non_lwin',
-    label: 'Not LWIN codes',
-    help: 'Brand codes, "HK - …" codes, blanks and malformed numbers. Made inactive unless they hold Zoho stock or sit on an open order — those are listed so a Stock Explorer code can be given to them.',
+    help: 'Two active items under one dashed code. The one on an open order (else the newest) is kept; the others are retired.',
     preselect: true,
   },
   {
     kind: 'retire_not_held',
     label: 'Not held',
-    help: 'Dashed codes that Stock Explorer does not hold in any pack and nothing inbound, with no Zoho stock and on no open order. Nothing here is selected until you choose; an item can be made active again any time.',
+    help: 'Dashed codes Stock Explorer does not hold in any pack, with nothing inbound. Nothing here is selected until you choose; receiving the wine again creates a fresh item.',
     preselect: false,
   },
   {
     kind: 'review',
     label: 'Review',
-    help: 'Duplicates that cannot be settled automatically: their names disagree on vintage, or more than one holds Zoho stock. Fix these in Zoho by hand.',
+    help: 'Dashed items whose name gives a different vintage from their code, so one of the two is wrong. Check against the Stock Explorer name and fix in Zoho by hand.',
     preselect: false,
   },
 ];
 
-const RETIRE_FIRST: Record<Kind, number> = { retire_duplicate: 0, retire_non_lwin: 1, retire_not_held: 2, add_dashes: 3, review: 9 };
+const ORDER: Record<Kind, number> = { retire: 0, retire_duplicate: 1, retire_not_held: 2, create: 3, review: 9 };
 
 /**
  * Zoho code cleanup
@@ -65,7 +65,7 @@ const ZohoCodesClient = () => {
   const plan = useQuery({ ...api.zohoCodes.plan.queryOptions(), staleTime: Infinity, refetchOnWindowFocus: false });
   const batches = useQuery(api.zohoCodes.batches.queryOptions());
 
-  const [tab, setTab] = useState<Kind>('add_dashes');
+  const [tab, setTab] = useState<Kind>('retire');
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [results, setResults] = useState<Map<string, Result>>(new Map());
   const [running, setRunning] = useState<{ done: number; total: number } | null>(null);
@@ -73,13 +73,13 @@ const ZohoCodesClient = () => {
   const [undoing, setUndoing] = useState<string | null>(null);
 
   const actions = useMemo(() => plan.data?.actions ?? [], [plan.data]);
-  const ready = (a: Action) => !a.blocked && a.kind !== 'review' && !results.get(a.itemId)?.ok;
+  const ready = (a: Action) => !a.blocked && a.kind !== 'review' && !results.get(a.id)?.ok;
 
   // Selection defaults to every ready action in the preselected tabs
   const selected = useMemo(() => {
     if (picked) return picked;
     const pre = new Set(TABS.filter((t) => t.preselect).map((t) => t.kind));
-    return new Set(actions.filter((a) => pre.has(a.kind) && !a.blocked && a.kind !== 'review').map((a) => a.itemId));
+    return new Set(actions.filter((a) => pre.has(a.kind) && !a.blocked && a.kind !== 'review').map((a) => a.id));
   }, [picked, actions]);
 
   const toggle = (ids: string[], on: boolean) => {
@@ -93,12 +93,12 @@ const ZohoCodesClient = () => {
 
   const shown = actions.filter((a) => a.kind === tab);
   const shownReady = shown.filter(ready);
-  const chosen = actions.filter((a) => selected.has(a.itemId) && ready(a));
-  const chosenIds = new Set(chosen.map((a) => a.itemId));
-  // A kept item can take the dashed code only once its duplicate has given it up
+  const chosen = actions.filter((a) => selected.has(a.id) && ready(a));
+  const chosenIds = new Set(chosen.map((a) => a.id));
+  // A new item can take its name only once the old item has given it up
   const queue = chosen
     .filter((a) => !a.dependsOn || chosenIds.has(a.dependsOn) || results.get(a.dependsOn)?.ok)
-    .sort((a, b) => RETIRE_FIRST[a.kind] - RETIRE_FIRST[b.kind]);
+    .sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
 
   const run = async (list: Action[]) => {
     setConfirming(false);
@@ -110,17 +110,33 @@ const ZohoCodesClient = () => {
       try {
         const res = await client.zohoCodes.apply.mutate({
           batchId,
-          actions: slice.map((a) => ({
-            itemId: a.itemId,
-            kind: a.kind as Exclude<Kind, 'review'>,
-            expectSku: a.sku,
-            toSku: a.toSku,
-            reason: a.reason,
-          })),
+          actions: slice.map((a) =>
+            a.kind === 'create'
+              ? {
+                  id: a.id,
+                  kind: 'create' as const,
+                  name: a.name,
+                  sku: a.sku,
+                  producer: a.create?.producer ?? null,
+                  bottlesPerCase: a.create?.bottlesPerCase ?? 1,
+                  bottleSizeMl: a.create?.bottleSizeMl ?? 750,
+                  reason: a.reason,
+                }
+              : {
+                  id: a.id,
+                  kind: a.kind as 'retire' | 'retire_duplicate' | 'retire_not_held',
+                  itemId: a.itemId ?? '',
+                  expectSku: a.sku,
+                  expectName: a.name,
+                  toName: a.toName ?? '',
+                  toSku: a.toSku,
+                  reason: a.reason,
+                },
+          ),
         });
-        for (const r of res.results) next.set(r.itemId, r);
+        for (const r of res.results) next.set(r.id, r);
       } catch (error) {
-        for (const a of slice) next.set(a.itemId, { ok: false, message: error instanceof Error ? error.message : 'Request failed' });
+        for (const a of slice) next.set(a.id, { ok: false, message: error instanceof Error ? error.message : 'Request failed' });
       }
       setResults(new Map(next));
       setRunning({ done: Math.min(i + 10, list.length), total: list.length });
@@ -158,8 +174,9 @@ const ZohoCodesClient = () => {
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Zoho codes</h1>
           <p className="max-w-2xl text-sm text-text-muted">
-            One active Zoho item per Stock Explorer code, in the dashed form. Every change is re-checked against Zoho before it is written, items
-            holding stock or on an open order are never made inactive, and each batch can be undone.
+            A clean start: every item without a dashed LWIN is retired, and every Stock Explorer line gets one active Zoho item under its code.
+            Past invoices are untouched. Nothing on an open sales order or draft is retired, each item is re-checked in Zoho before it is
+            written, and each batch can be undone.
           </p>
         </div>
         <button
@@ -204,10 +221,10 @@ const ZohoCodesClient = () => {
               <p className="max-w-3xl text-xs text-text-muted">{current.help}</p>
               {shownReady.length > 0 && (
                 <div className="flex shrink-0 gap-2 text-xs">
-                  <button type="button" className="underline" onClick={() => toggle(shownReady.map((a) => a.itemId), true)}>
+                  <button type="button" className="underline" onClick={() => toggle(shownReady.map((a) => a.id), true)}>
                     Select all {shownReady.length}
                   </button>
-                  <button type="button" className="underline" onClick={() => toggle(shown.map((a) => a.itemId), false)}>
+                  <button type="button" className="underline" onClick={() => toggle(shown.map((a) => a.id), false)}>
                     None
                   </button>
                 </div>
@@ -219,16 +236,16 @@ const ZohoCodesClient = () => {
             ) : (
               <ul className="max-h-[60vh] divide-y divide-border-muted overflow-y-auto">
                 {shown.map((a) => {
-                  const r = results.get(a.itemId);
+                  const r = results.get(a.id);
                   const can = ready(a);
                   return (
-                    <li key={`${a.itemId}-${a.kind}`} className="flex gap-3 px-4 py-2.5">
+                    <li key={`${a.id}-${a.kind}`} className="flex gap-3 px-4 py-2.5">
                       <input
                         type="checkbox"
                         className="mt-1 shrink-0"
                         disabled={!can || !!running}
-                        checked={can && selected.has(a.itemId)}
-                        onChange={(e) => toggle([a.itemId], e.target.checked)}
+                        checked={can && selected.has(a.id)}
+                        onChange={(e) => toggle([a.id], e.target.checked)}
                         aria-label={`Select ${a.name}`}
                       />
                       <div className="min-w-0 flex-1">
@@ -238,10 +255,15 @@ const ZohoCodesClient = () => {
                           {a.toSku && (
                             <>
                               <IconArrowRight size={11} />
-                              <span className="text-text-primary">{a.toSku}</span>
+                              <span>{a.toSku}</span>
                             </>
                           )}
-                          {a.zohoStock !== 0 && <span className="font-sans">· Zoho stock {a.zohoStock}</span>}
+                          {a.toName && (
+                            <>
+                              <IconArrowRight size={11} />
+                              <span className="font-sans text-text-primary">{a.toName}</span>
+                            </>
+                          )}
                         </p>
                         {a.stockExplorerName && a.stockExplorerName !== a.name && (
                           <p className="text-[11px] text-text-muted">Stock Explorer: {a.stockExplorerName}</p>
@@ -330,8 +352,7 @@ const ZohoCodesClient = () => {
             {batches.data!.map((b) => (
               <li key={b.batchId} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
                 <span>
-                  {new Date(b.startedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} · {b.skus} SKU
-                  {b.skus === 1 ? '' : 's'} changed · {b.inactivated} made inactive
+                  {new Date(b.startedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} · {b.inactivated} retired · {b.created} created
                   {b.live === 0 && <span className="text-text-muted"> · undone</span>}
                 </span>
                 {b.live > 0 && (

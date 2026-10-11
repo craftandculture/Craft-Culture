@@ -5954,9 +5954,9 @@ export type ExportConsigneeProfile = typeof exportConsigneeProfiles.$inferSelect
 /**
  * Zoho Item Changes - every write the Zoho code cleanup made, for undo
  *
- * One row per write to a Zoho item: a SKU given its dashes or renamed, or an
- * item made inactive. A batch is one press of Apply; undoing it replays the
- * rows backwards.
+ * One row per write to a Zoho item: an old item renamed "… (old)" and made
+ * inactive, or a new item created from Stock Explorer. A batch is one press
+ * of Apply; undoing it replays the rows backwards.
  */
 export const zohoItemChanges = pgTable(
   'zoho_item_changes',
@@ -5965,10 +5965,12 @@ export const zohoItemChanges = pgTable(
     batchId: uuid('batch_id').notNull(),
     zohoItemId: text('zoho_item_id').notNull(),
     itemName: text('item_name').notNull(),
-    /** 'set_sku' | 'inactivate' */
+    /** 'rename' | 'inactivate' | 'create' | 'set_sku' */
     action: text('action').notNull(),
     beforeSku: text('before_sku'),
     afterSku: text('after_sku'),
+    beforeName: text('before_name'),
+    afterName: text('after_name'),
     reason: text('reason'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     undoneAt: timestamp('undone_at'),

@@ -7,193 +7,209 @@ export interface CleanupItem {
   name: string;
   sku: string;
   status: 'active' | 'inactive';
-  stockOnHand: number;
   productType: string | null;
   createdTime: string;
 }
 
+export interface StockExplorerLine {
+  lwin18: string;
+  productName: string;
+  producer: string | null;
+  vintage: number | null;
+}
+
 export interface CleanupContext {
-  /** Stock Explorer lines by exact LWIN-18: product name and cases */
-  stockExplorer: Map<string, { name: string; cases: number }>;
+  /** Stock Explorer lines with stock, one per exact dashed LWIN-18 */
+  stockExplorer: Map<string, StockExplorerLine>;
   /** Wine-vintage-size keys held on hand or inbound, any pack */
   heldKeys: Set<string>;
-  /** Zoho item ids on a sales order not yet dispatched */
-  openOrderItemIds: Set<string>;
+  /** Zoho item ids on an undispatched sales order or a draft SO/invoice */
+  openItemIds: Set<string>;
   /** Items created this recently are left alone (ISO date) */
   newSince: string;
 }
 
-export type CleanupKind = 'add_dashes' | 'retire_duplicate' | 'retire_non_lwin' | 'retire_not_held' | 'review';
+export type CleanupKind = 'retire' | 'retire_duplicate' | 'retire_not_held' | 'create' | 'review';
 
 export interface CleanupAction {
-  itemId: string;
+  /** Zoho item id, or `new:<lwin18>` for an item to be created */
+  id: string;
+  itemId: string | null;
   name: string;
   sku: string;
   kind: CleanupKind;
-  /** The SKU it will be given (add_dashes), or renamed to before retiring */
+  /** Name a retired item is given, so the new item can take the old one */
+  toName: string | null;
+  /** A retired item's dashed SKU gets "-OLD", so no lookup finds it again */
   toSku: string | null;
   canonical: string | null;
   reason: string;
   /** Why it cannot run yet; null when it can */
   blocked: string | null;
-  zohoStock: number;
   stockExplorerName: string | null;
-  /** The item a retired duplicate gives way to */
-  keepItemId: string | null;
-  /** Retire the duplicate first: it holds the code this item needs */
+  /** For 'create': what the new item is built from */
+  create: (StockExplorerLine & { bottlesPerCase: number; bottleSizeMl: number }) | null;
+  /** A retirement that must run first: it frees the name this item takes */
   dependsOn: string | null;
 }
 
 const SERVICE = /^(storage|repack|transport|monthly|brand development)/i;
+const NAME_MAX = 100;
 
-const yearsIn = (name: string) => [...name.matchAll(/\b(19[5-9]\d|20[0-3]\d)\b/g)].map((m) => m[1]);
+const yearsIn = (name: string) => [...name.matchAll(/\b(19[5-9]\d|20[0-3]\d)\b/g)].map((m) => m[1]!);
 
 /**
- * Plan the Zoho item-code cleanup: one active item per Stock Explorer code
+ * The Zoho item name for a Stock Explorer line
  *
- * Every LWIN-shaped SKU is matched to its dashed Stock Explorer form.
- * - Alone under its code, a compact or mis-dashed SKU is given the dashes.
- * - Two or more active items under one code: the one holding Zoho stock is
- *   kept (else the one already dashed, else the newest) and the rest retired.
- *   A retired item that holds the dashed code is renamed `…-OLD` first, so
- *   the kept item can take it.
- * - A non-LWIN SKU (brand codes, "HK - …", blanks) is retired. Service lines
- *   are left alone.
- * - A dashed code Stock Explorer does not hold in any pack, with no Zoho
- *   stock, is offered for retirement separately.
+ * Pack and size are part of the name because Zoho refuses two items with one
+ * name, and the 6-pack and 3-pack of a wine are two items.
  *
- * Nothing that holds Zoho stock or sits on an open sales order is retired,
- * and duplicates whose names give different vintages go to review.
+ * @example
+ *   itemNameFor({ productName: 'Chateau Talbot', vintage: 2020 }, 6, 750); // 'Chateau Talbot 2020 (6x75cl)'
+ */
+export const itemNameFor = (line: Pick<StockExplorerLine, 'productName' | 'vintage'>, bottlesPerCase: number, bottleSizeMl: number) => {
+  const base =
+    line.vintage && !line.productName.includes(String(line.vintage)) ? `${line.productName} ${line.vintage}` : line.productName;
+  return `${base} (${bottlesPerCase}x${Math.round(bottleSizeMl / 10)}cl)`;
+};
+
+/**
+ * Plan the clean start: one active Zoho item per Stock Explorer code
+ *
+ * Zoho's own stock count is not used — Stock Explorer is the stock record.
+ * - Every item whose SKU is not a dashed LWIN-18 (compact codes, brand codes,
+ *   blanks) is retired: renamed "… (old)" and made inactive. A retired item
+ *   with a dashed SKU also has "-OLD" added, so no order or receipt can find
+ *   it again. Service lines are left alone.
+ * - Two active items under one dashed code: the one on an open document (else
+ *   the newest) is kept and the rest retired.
+ * - Every Stock Explorer line with no active dashed item is created from the
+ *   Stock Explorer record, after the retirements free its name.
+ * - A dashed code Stock Explorer does not hold in any pack, nor inbound, is
+ *   offered for retirement separately.
+ * - A dashed item whose name gives a different vintage from its code goes to
+ *   review: its code may be wrong.
+ *
+ * Nothing on an undispatched sales order or a draft is retired.
  *
  * @param items - Every Zoho item, active and inactive
- * @param ctx - Stock Explorer, inbound and open-order evidence
- * @returns One action per item that needs one
+ * @param ctx - Stock Explorer, inbound and open-document evidence
+ * @returns The actions, retirements before creations
  */
 const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
   const actions: CleanupAction[] = [];
   const active = items.filter((i) => i.status === 'active');
+  const names = new Set(items.map((i) => i.name.trim().toLowerCase()));
 
-  const takenBy = new Map<string, string>();
-  for (const i of items) takenBy.set(i.sku.trim().toUpperCase(), i.itemId);
+  const retireName = (i: CleanupItem) => {
+    const base = i.name.slice(0, NAME_MAX - 12);
+    let name = `${base} (old)`;
+    if (names.has(name.toLowerCase())) name = `${base} (old ${i.itemId.slice(-5)})`;
+    names.add(name.toLowerCase());
+    // The old name is free for the item that replaces it
+    names.delete(i.name.trim().toLowerCase());
+    return name;
+  };
+  const blockOf = (i: CleanupItem) => (ctx.openItemIds.has(i.itemId) ? 'On an open sales order or draft — retire once it has gone through' : null);
+  const seName = (canonical: string | null) => (canonical ? (ctx.stockExplorer.get(canonical)?.productName ?? null) : null);
 
-  const groups = new Map<string, CleanupItem[]>();
+  const retire = (i: CleanupItem, kind: CleanupKind, canonical: string | null, reason: string) => {
+    const blocked = blockOf(i);
+    actions.push({
+      id: i.itemId,
+      itemId: i.itemId,
+      name: i.name,
+      sku: i.sku,
+      kind,
+      toName: blocked ? null : retireName(i),
+      toSku: !blocked && parseZohoSku(i.sku).form === 'dashed' ? `${i.sku.trim()}-OLD` : null,
+      canonical,
+      reason,
+      blocked,
+      stockExplorerName: seName(canonical),
+      create: null,
+      dependsOn: null,
+    });
+    return !blocked;
+  };
 
-  const base = (i: CleanupItem, canonical: string | null) => ({
-    itemId: i.itemId,
-    name: i.name,
-    sku: i.sku,
-    canonical,
-    zohoStock: i.stockOnHand,
-    stockExplorerName: canonical ? (ctx.stockExplorer.get(canonical)?.name ?? null) : null,
-    toSku: null,
-    keepItemId: null,
-    dependsOn: null,
-  });
-
-  const retireBlock = (i: CleanupItem) =>
-    i.stockOnHand !== 0
-      ? `Holds ${i.stockOnHand} in Zoho — move it to the kept item first`
-      : ctx.openOrderItemIds.has(i.itemId)
-        ? 'On a sales order not yet dispatched'
-        : null;
+  // Codes that will still have an active dashed item afterwards
+  const covered = new Set<string>();
+  const dashed = new Map<string, CleanupItem[]>();
 
   for (const i of active) {
     if (i.productType === 'service' || SERVICE.test(i.name) || SERVICE.test(i.sku)) continue;
     const { canonical, form } = parseZohoSku(i.sku);
-    if (!canonical) {
-      actions.push({
-        ...base(i, null),
-        kind: 'retire_non_lwin',
-        reason: form === 'blank' ? 'No SKU' : `"${i.sku}" is not a Stock Explorer code`,
-        blocked: retireBlock(i),
-      });
+    if (form !== 'dashed' || !canonical) {
+      const why =
+        form === 'blank' ? 'No SKU' : canonical ? `Old code format (${canonical} in Stock Explorer form)` : `"${i.sku}" is not an LWIN`;
+      retire(i, 'retire', canonical, why);
       continue;
     }
-    groups.set(canonical, [...(groups.get(canonical) ?? []), i]);
+    dashed.set(canonical, [...(dashed.get(canonical) ?? []), i]);
   }
 
-  for (const [canonical, members] of groups) {
-    const se = ctx.stockExplorer.get(canonical);
-
-    if (members.length === 1) {
-      const i = members[0]!;
-      if (i.sku.trim().toUpperCase() !== canonical) {
-        const holder = takenBy.get(canonical);
-        actions.push({
-          ...base(i, canonical),
-          kind: 'add_dashes',
-          toSku: canonical,
-          reason: se ? `Stock Explorer holds it as ${canonical}` : `Dashed form ${canonical}`,
-          blocked: holder && holder !== i.itemId ? 'Another (inactive) item already uses the dashed code' : null,
-        });
-      } else if (
-        !ctx.heldKeys.has(lwinPakKeyOf(canonical)) &&
-        i.stockOnHand === 0 &&
-        i.createdTime < ctx.newSince
-      ) {
-        actions.push({
-          ...base(i, canonical),
-          kind: 'retire_not_held',
-          reason: 'Not in Stock Explorer or inbound in any pack, and no Zoho stock',
-          blocked: retireBlock(i),
-        });
-      }
-      continue;
-    }
-
-    const vintages = new Set(members.map((m) => yearsIn(m.name).join('/')).filter(Boolean));
-    const stocked = members.filter((m) => m.stockOnHand !== 0);
-    if (vintages.size > 1 || stocked.length > 1) {
-      for (const m of members) {
-        actions.push({
-          ...base(m, canonical),
-          kind: 'review',
-          reason:
-            vintages.size > 1
-              ? `${members.length} items share ${canonical} but their names give different vintages (${[...vintages].join(', ')})`
-              : `${stocked.length} items under ${canonical} all hold Zoho stock — merge the stock in Zoho first`,
-          blocked: null,
-        });
-      }
-      continue;
-    }
-
-    const isDashed = (m: CleanupItem) => m.sku.trim().toUpperCase() === canonical;
+  for (const [canonical, members] of dashed) {
     const keep =
-      stocked[0] ??
-      members.find(isDashed) ??
+      members.find((m) => ctx.openItemIds.has(m.itemId)) ??
       [...members].sort((a, b) => b.createdTime.localeCompare(a.createdTime))[0]!;
-    const holder = members.find((m) => m !== keep && isDashed(m));
+    covered.add(canonical);
 
     for (const m of members) {
-      if (m === keep) continue;
-      actions.push({
-        ...base(m, canonical),
-        kind: 'retire_duplicate',
-        toSku: isDashed(m) ? `${canonical}-OLD` : null,
-        keepItemId: keep.itemId,
-        reason: `Duplicate of "${keep.name}" (${keep.sku})`,
-        blocked: retireBlock(m),
-      });
+      if (m !== keep) retire(m, 'retire_duplicate', canonical, `Duplicate of "${keep.name}"`);
     }
-    if (!isDashed(keep)) {
+
+    const vintage = canonical.split('-')[1]!;
+    const years = yearsIn(keep.name);
+    if (years.length && !['1000', '0000'].includes(vintage) && !years.includes(vintage)) {
       actions.push({
-        ...base(keep, canonical),
-        kind: 'add_dashes',
-        toSku: canonical,
-        dependsOn: holder?.itemId ?? null,
-        reason: holder
-          ? `Kept item; takes ${canonical} once the duplicate is retired`
-          : `Kept item; Stock Explorer form ${canonical}`,
+        id: keep.itemId,
+        itemId: keep.itemId,
+        name: keep.name,
+        sku: keep.sku,
+        kind: 'review',
+        toName: null,
+        toSku: null,
+        canonical,
+        reason: `Code says ${vintage}, name says ${years.join('/')} — one of them is wrong`,
         blocked: null,
+        stockExplorerName: seName(canonical),
+        create: null,
+        dependsOn: null,
       });
+      continue;
+    }
+
+    if (!ctx.heldKeys.has(lwinPakKeyOf(canonical)) && keep.createdTime < ctx.newSince) {
+      if (retire(keep, 'retire_not_held', canonical, 'Not in Stock Explorer or inbound in any pack')) covered.delete(canonical);
     }
   }
 
-  // A kept item waits on a duplicate that cannot be retired
-  const blockedIds = new Set(actions.filter((a) => a.blocked).map((a) => a.itemId));
-  for (const a of actions) {
-    if (a.dependsOn && blockedIds.has(a.dependsOn)) a.blocked = 'Waits on its duplicate, which cannot be retired yet';
+  const freedBy = new Map(actions.filter((a) => a.toName).map((a) => [a.name.trim().toLowerCase(), a.id]));
+
+  for (const [lwin18, line] of ctx.stockExplorer) {
+    if (covered.has(lwin18)) continue;
+    const [, , pack, size] = lwin18.split('-');
+    const bottlesPerCase = Number(pack) || 1;
+    const bottleSizeMl = Number(size) || 750;
+    let name = itemNameFor(line, bottlesPerCase, bottleSizeMl);
+    if (names.has(name.toLowerCase())) name = `${name} ${lwin18}`;
+    names.add(name.toLowerCase());
+    actions.push({
+      id: `new:${lwin18}`,
+      itemId: null,
+      name,
+      sku: lwin18,
+      kind: 'create',
+      toName: null,
+      toSku: null,
+      canonical: lwin18,
+      reason: 'In Stock Explorer with no active Zoho item under its code',
+      blocked: null,
+      stockExplorerName: line.productName,
+      create: { ...line, bottlesPerCase, bottleSizeMl },
+      dependsOn: freedBy.get(name.toLowerCase()) ?? null,
+    });
   }
 
   return actions;

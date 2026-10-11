@@ -152,7 +152,8 @@ const adminCreateZohoSalesOrder = adminProcedure
       */
       for (const line of plan.lines) {
         const found = await searchItems(line.saleLwin18);
-        let item = found.find((row) => row.sku === line.saleLwin18);
+        // An inactive item is a retired code; ordering against it fails
+        let item = found.find((row) => row.sku === line.saleLwin18 && row.status !== 'inactive');
 
         if (!item && !input.confirmed) {
           throw new TRPCError({

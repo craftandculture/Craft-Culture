@@ -12,7 +12,7 @@ const adminGetBatches = adminProcedure.query(async () =>
     .select({
       batchId: zohoItemChanges.batchId,
       startedAt: sql<Date>`min(${zohoItemChanges.createdAt})`,
-      skus: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'set_sku')::int`,
+      created: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'create')::int`,
       inactivated: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'inactivate')::int`,
       live: sql<number>`count(*) filter (where ${zohoItemChanges.undoneAt} is null)::int`,
     })

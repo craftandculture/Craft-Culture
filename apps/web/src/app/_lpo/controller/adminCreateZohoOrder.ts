@@ -276,9 +276,9 @@ const adminCreateZohoOrder = adminProcedure
       /*
         The pack is part of the identity of a sales line.
 
-        `findOrCreateWineItem` falls back to matching on the first eleven
-        characters of the LWIN, which is wine and vintage — deliberately, so a
-        stock sync finds a wine whose SKU was truncated. Here it is wrong: a
+        `findOrCreateWineItem` used to fall back to matching on the first
+        eleven characters of the LWIN, which is wine and vintage (it now
+        matches the exact code only). Here that was wrong: a
         three-bottle repack differs from its six-pack only in the pack segment,
         so every repack line matched the six-pack, created nothing, and booked
         three bottles against a code Zoho believes is a case of six. The order
@@ -311,7 +311,8 @@ const adminCreateZohoOrder = adminProcedure
           : line.lwin18;
 
       const existing = await searchItems(saleLwin18);
-      const exact = existing.find((row) => row.sku === saleLwin18);
+      // An inactive item is a retired code; ordering against it fails
+      const exact = existing.find((row) => row.sku === saleLwin18 && row.status !== 'inactive');
 
       /*
         Zoho's item names are unique; its SKUs are not enforced.

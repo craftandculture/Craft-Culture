@@ -2276,6 +2276,8 @@ const runMigrations = async () => {
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "zoho_item_changes_batch_idx" ON "zoho_item_changes"("batch_id")`,
     );
+    await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "before_name" text`);
+    await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "after_name" text`);
     console.log('✅ zoho item changes ready');
 
     /*

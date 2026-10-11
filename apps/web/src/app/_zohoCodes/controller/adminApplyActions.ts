@@ -4,15 +4,29 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { zohoItemChanges, zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
-import { getItem, markItemInactive, updateItem } from '@/lib/zoho/items';
+import { createItem, getItem, markItemInactive, searchItems, updateItem } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
 
-const actionSchema = z.object({
+const retireSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['retire', 'retire_duplicate', 'retire_not_held']),
   itemId: z.string(),
-  kind: z.enum(['add_dashes', 'retire_duplicate', 'retire_non_lwin', 'retire_not_held']),
-  /** The SKU the plan saw; a different one live means someone changed it */
+  /** The SKU and name the plan saw; different ones live mean someone changed it */
   expectSku: z.string(),
+  expectName: z.string(),
+  toName: z.string(),
   toSku: z.string().nullable(),
+  reason: z.string(),
+});
+
+const createSchema = z.object({
+  id: z.string(),
+  kind: z.literal('create'),
+  name: z.string().min(1).max(100),
+  sku: z.string().regex(/^[A-Z0-9]+-\d{4}-\d{2}-\d{5}$/),
+  producer: z.string().nullable(),
+  bottlesPerCase: z.number().int().positive(),
+  bottleSizeMl: z.number().int().positive(),
   reason: z.string(),
 });
 
@@ -20,48 +34,63 @@ const actionSchema = z.object({
 const pause = () => new Promise((r) => setTimeout(r, 400));
 
 /**
- * Apply a slice of the cleanup plan to Zoho
+ * Apply a slice of the clean start to Zoho
  *
- * Each item is re-read live first and skipped if it has changed since the
- * plan, become inactive, gained stock, or landed on an open sales order — the
- * plan is evidence, not permission. Every write is logged under the batch so
- * it can be undone. The page sends ten at a time, retirements before dashes,
- * so a duplicate frees its code before the kept item takes it.
+ * Retire: the item is re-read live and skipped if its SKU or name changed, it
+ * is already inactive, or it has landed on an open sales order. Otherwise it
+ * is renamed "… (old)" — freeing its name for the new item — and made
+ * inactive. Create: skipped if an active item already carries the code;
+ * otherwise created from the Stock Explorer record. Every write is logged
+ * under the batch so it can be undone. The page sends retirements first.
  */
 const adminApplyActions = adminProcedure
-  .input(z.object({ batchId: z.string().uuid(), actions: z.array(actionSchema).min(1).max(10) }))
+  .input(
+    z.object({
+      batchId: z.string().uuid(),
+      actions: z.array(z.discriminatedUnion('kind', [retireSchema.extend({ kind: z.literal('retire') }), retireSchema.extend({ kind: z.literal('retire_duplicate') }), retireSchema.extend({ kind: z.literal('retire_not_held') }), createSchema])).min(1).max(10),
+    }),
+  )
   .mutation(async ({ input, ctx }) => {
-    const results: { itemId: string; ok: boolean; message: string }[] = [];
+    const results: { id: string; ok: boolean; message: string }[] = [];
 
-    const log = (itemId: string, itemName: string, action: string, beforeSku: string, afterSku: string, reason: string) =>
-      db.insert(zohoItemChanges).values({ batchId: input.batchId, zohoItemId: itemId, itemName, action, beforeSku, afterSku, reason, createdBy: ctx.user.id });
+    const log = (row: Omit<typeof zohoItemChanges.$inferInsert, 'batchId' | 'createdBy'>) =>
+      db.insert(zohoItemChanges).values({ ...row, batchId: input.batchId, createdBy: ctx.user.id });
 
     for (const a of input.actions) {
       try {
+        if (a.kind === 'create') {
+          const existing = (await searchItems(a.sku)).filter((i) => i.status === 'active' && (i.sku ?? '').trim().toUpperCase() === a.sku);
+          await pause();
+          if (existing.length) {
+            results.push({ id: a.id, ok: false, message: `"${existing[0]!.name}" already carries ${a.sku}` });
+            continue;
+          }
+          const created = await createItem({
+            name: a.name,
+            sku: a.sku,
+            rate: 0,
+            unit: 'Case',
+            item_type: 'inventory',
+            product_type: 'goods',
+            is_taxable: true,
+            description: `${a.bottlesPerCase}x${Math.round(a.bottleSizeMl / 10)}cl`,
+            manufacturer: a.producer ?? undefined,
+            brand: a.producer ?? undefined,
+          });
+          await log({ zohoItemId: created.item_id, itemName: created.name, action: 'create', afterSku: a.sku, afterName: created.name, reason: a.reason });
+          await pause();
+          results.push({ id: a.id, ok: true, message: `Created ${a.sku}` });
+          continue;
+        }
+
         const live = await getItem(a.itemId);
         await pause();
-        const liveSku = (live.sku ?? '').trim();
         if (live.status !== 'active') {
-          results.push({ itemId: a.itemId, ok: false, message: 'Already inactive in Zoho' });
+          results.push({ id: a.id, ok: false, message: 'Already inactive in Zoho' });
           continue;
         }
-        if (liveSku !== a.expectSku.trim()) {
-          results.push({ itemId: a.itemId, ok: false, message: `SKU changed in Zoho to "${liveSku}" — refresh the plan` });
-          continue;
-        }
-
-        if (a.kind === 'add_dashes') {
-          if (!a.toSku) throw new Error('No SKU to set');
-          await updateItem(a.itemId, { name: live.name, sku: a.toSku });
-          await log(a.itemId, live.name, 'set_sku', liveSku, a.toSku, a.reason);
-          await pause();
-          results.push({ itemId: a.itemId, ok: true, message: `SKU now ${a.toSku}` });
-          continue;
-        }
-
-        const stock = Number(live.stock_on_hand ?? 0);
-        if (stock !== 0) {
-          results.push({ itemId: a.itemId, ok: false, message: `Holds ${stock} in Zoho — not retired` });
+        if ((live.sku ?? '').trim() !== a.expectSku.trim() || live.name !== a.expectName) {
+          results.push({ id: a.id, ok: false, message: 'Changed in Zoho since the plan — read Zoho again' });
           continue;
         }
         const [onOrder] = await db
@@ -77,22 +106,20 @@ const adminApplyActions = adminProcedure
           )
           .limit(1);
         if (onOrder) {
-          results.push({ itemId: a.itemId, ok: false, message: 'On a sales order not yet dispatched — not retired' });
+          results.push({ id: a.id, ok: false, message: 'On a sales order not yet dispatched — not retired' });
           continue;
         }
 
-        if (a.toSku) {
-          await updateItem(a.itemId, { name: live.name, sku: a.toSku });
-          await log(a.itemId, live.name, 'set_sku', liveSku, a.toSku, a.reason);
-          await pause();
-        }
-        await markItemInactive(a.itemId);
-        await log(a.itemId, live.name, 'inactivate', a.toSku ?? liveSku, a.toSku ?? liveSku, a.reason);
+        await updateItem(a.itemId, a.toSku ? { name: a.toName, sku: a.toSku } : { name: a.toName });
+        await log({ zohoItemId: a.itemId, itemName: a.toName, action: 'rename', beforeName: live.name, afterName: a.toName, beforeSku: live.sku, afterSku: a.toSku ?? live.sku, reason: a.reason });
         await pause();
-        results.push({ itemId: a.itemId, ok: true, message: a.toSku ? `Renamed ${a.toSku} and made inactive` : 'Made inactive' });
+        await markItemInactive(a.itemId);
+        await log({ zohoItemId: a.itemId, itemName: a.toName, action: 'inactivate', beforeSku: a.toSku ?? live.sku, afterSku: a.toSku ?? live.sku, reason: a.reason });
+        await pause();
+        results.push({ id: a.id, ok: true, message: `Renamed "${a.toName}" and made inactive` });
       } catch (error) {
-        logger.error('Zoho code cleanup: write failed', { itemId: a.itemId, kind: a.kind, error });
-        results.push({ itemId: a.itemId, ok: false, message: error instanceof Error ? error.message : 'Zoho refused the change' });
+        logger.error('Zoho code cleanup: write failed', { id: a.id, kind: a.kind, error });
+        results.push({ id: a.id, ok: false, message: error instanceof Error ? error.message : 'Zoho refused the change' });
       }
     }
 

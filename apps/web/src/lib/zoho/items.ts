@@ -178,10 +178,23 @@ const createItem = async (item: ZohoCreateItemRequest) => {
 };
 
 /**
+ * The Zoho item name for a wine: "Chateau Margaux 2015 (6x75cl)"
+ *
+ * Pack and size are in the name because Zoho refuses two items with one name,
+ * and the 6-pack and the 3-pack of a wine are two items.
+ */
+const wineItemName = (data: WineItemData) => {
+  const hasVintageInName = data.vintage && data.productName.includes(String(data.vintage));
+  const base = data.vintage && !hasVintageInName ? `${data.productName} ${data.vintage}` : data.productName;
+  const pack = `${data.bottlesPerCase ?? 6}x${Math.round((data.bottleSizeMl ?? 750) / 10)}cl`;
+  return base.includes(`(${pack})`) ? base : `${base} (${pack})`;
+};
+
+/**
  * Create a wine inventory item in Zoho
  *
  * Maps WMS stock data to Zoho item fields:
- * - Name = product name + vintage (e.g., "Chateau Margaux 2015")
+ * - Name = product name + vintage + pack (e.g., "Chateau Margaux 2015 (6x75cl)")
  * - SKU = lwin18 (critical for picking)
  * - Description = pack config only (e.g., "6x75cl")
  * - UPC = HS Code (for customs)
@@ -193,12 +206,7 @@ const createWineItem = async (data: WineItemData) => {
   const bottleSizeMl = data.bottleSizeMl ?? 750;
   const bottleSizeCl = Math.round(bottleSizeMl / 10);
 
-  // Build name with vintage: "Chateau Margaux 2015"
-  // Only add vintage if not already in the product name
-  const hasVintageInName = data.vintage && data.productName.includes(String(data.vintage));
-  const itemName = data.vintage && !hasVintageInName
-    ? `${data.productName} ${data.vintage}`
-    : data.productName;
+  const itemName = wineItemName(data);
 
   // Description is just pack config: "6x75cl"
   const description = `${bottlesPerCase}x${bottleSizeCl}cl`;
@@ -238,99 +246,6 @@ const updateItem = async (itemId: string, item: Partial<ZohoCreateItemRequest>) 
 };
 
 /**
- * Find, create, or update a wine item in Zoho by SKU (lwin18)
- *
- * Searches for existing item with matching SKU using multiple strategies:
- * 1. Exact SKU match
- * 2. LWIN-11 prefix match (first 11 digits = wine ID without vintage/pack)
- * 3. Product name search as fallback
- *
- * If found, compares name/manufacturer/brand against desired values and
- * pushes an update to Zoho when any of them have changed. This means
- * renames in the source application propagate to Zoho on next sync.
- *
- * @returns The existing, updated, or newly created Zoho item
- */
-const findOrCreateWineItem = async (data: WineItemData) => {
-  // Strategy 1: Search by full LWIN-18 SKU
-  const existingItems = await searchItems(data.lwin18);
-
-  // Try exact match first
-  let existingItem = existingItems.find((item) => item.sku === data.lwin18);
-
-  // Strategy 2: Try matching by LWIN-11 prefix (first 11 digits = wine identifier)
-  // This handles cases where existing items have truncated SKUs
-  if (!existingItem && data.lwin18.length >= 11) {
-    const lwin11Prefix = data.lwin18.substring(0, 11);
-    existingItem = existingItems.find((item) => item.sku?.startsWith(lwin11Prefix));
-  }
-
-  // Strategy 3: Search by product name if SKU search didn't find anything
-  if (!existingItem) {
-    const nameSearchItems = await searchItems(data.productName);
-    // Match by exact name or name with vintage
-    const nameWithVintage = data.vintage
-      ? `${data.productName} ${data.vintage}`
-      : data.productName;
-    existingItem = nameSearchItems.find(
-      (item) =>
-        item.name === data.productName ||
-        item.name === nameWithVintage ||
-        item.name.toLowerCase() === data.productName.toLowerCase(),
-    );
-  }
-
-  if (existingItem) {
-    // Build the desired item shape (same logic as createWineItem so name format stays consistent)
-    const hasVintageInName =
-      data.vintage && data.productName.includes(String(data.vintage));
-    const desiredName =
-      data.vintage && !hasVintageInName
-        ? `${data.productName} ${data.vintage}`
-        : data.productName;
-    const desiredManufacturer = data.producer ?? undefined;
-    const desiredBrand = data.producer ?? undefined;
-
-    const nameChanged = existingItem.name !== desiredName;
-    const manufacturerChanged =
-      desiredManufacturer !== undefined &&
-      (existingItem as ZohoItem & { manufacturer?: string }).manufacturer !==
-        desiredManufacturer;
-    const brandChanged =
-      desiredBrand !== undefined &&
-      (existingItem as ZohoItem & { brand?: string }).brand !== desiredBrand;
-
-    if (nameChanged || manufacturerChanged || brandChanged) {
-      const updated = await updateItem(existingItem.item_id, {
-        name: desiredName,
-        manufacturer: desiredManufacturer,
-        brand: desiredBrand,
-      });
-      return { item: updated, created: false, updated: true };
-    }
-
-    return { item: existingItem, created: false, updated: false };
-  }
-
-  // Create new item
-  const newItem = await createWineItem(data);
-  return { item: newItem, created: true, updated: false };
-};
-
-/**
- * Delete an item
- */
-const deleteItem = async (itemId: string) => {
-  const response = await zohoFetch<{ code: number; message: string }>(
-    `/items/${itemId}`,
-    {
-      method: 'DELETE',
-    },
-  );
-  return response;
-};
-
-/**
  * Mark item as active
  */
 const markItemActive = async (itemId: string) => {
@@ -351,6 +266,88 @@ const markItemInactive = async (itemId: string) => {
     `/items/${itemId}/inactive`,
     {
       method: 'POST',
+    },
+  );
+  return response;
+};
+
+/**
+ * Find, create, or update a wine item in Zoho by SKU (lwin18)
+ *
+ * Matches on the exact code only — dashes ignored, so an item still holding
+ * the compact form is found. It used to fall back to the first 11 characters
+ * ("1015362-202" covers every vintage 2020–2029) and then to the product
+ * name, which ignores pack; both attached wines to the wrong item and, when
+ * they missed, created duplicates. An inactive item with the code is made
+ * active again rather than duplicated.
+ *
+ * If found, compares name/manufacturer/brand against desired values and
+ * pushes an update to Zoho when any of them have changed. This means
+ * renames in the source application propagate to Zoho on next sync.
+ *
+ * @returns The existing, updated, or newly created Zoho item
+ */
+const findOrCreateWineItem = async (data: WineItemData) => {
+  const flat = (sku: string | undefined) => (sku ?? '').replace(/[-\s]/g, '').toUpperCase();
+  const wanted = flat(data.lwin18);
+  const matches = (await searchItems(data.lwin18)).filter((item) => flat(item.sku) === wanted);
+  let existingItem = matches.find((item) => item.status === 'active') ?? matches[0];
+
+  if (existingItem && existingItem.status !== 'active') {
+    await markItemActive(existingItem.item_id);
+    existingItem = { ...existingItem, status: 'active' };
+  }
+
+  if (existingItem) {
+    // Build the desired item shape (same logic as createWineItem so name format stays consistent)
+    const desiredName = wineItemName(data);
+    const desiredManufacturer = data.producer ?? undefined;
+    const desiredBrand = data.producer ?? undefined;
+
+    const nameChanged = existingItem.name !== desiredName;
+    const manufacturerChanged =
+      desiredManufacturer !== undefined &&
+      (existingItem as ZohoItem & { manufacturer?: string }).manufacturer !==
+        desiredManufacturer;
+    const brandChanged =
+      desiredBrand !== undefined &&
+      (existingItem as ZohoItem & { brand?: string }).brand !== desiredBrand;
+
+    const skuChanged = existingItem.sku !== data.lwin18;
+
+    if (nameChanged || manufacturerChanged || brandChanged || skuChanged) {
+      // A refused tidy-up (a name another item holds) must not stop the
+      // receipt or order that asked for the item
+      try {
+        const updated = await updateItem(existingItem.item_id, {
+          name: desiredName,
+          sku: data.lwin18,
+          manufacturer: desiredManufacturer,
+          brand: desiredBrand,
+        });
+        return { item: updated, created: false, updated: true };
+      } catch (error) {
+        console.warn('Zoho item tidy-up refused; using the item as it is', { itemId: existingItem.item_id, error });
+        return { item: existingItem, created: false, updated: false };
+      }
+    }
+
+    return { item: existingItem, created: false, updated: false };
+  }
+
+  // Create new item
+  const newItem = await createWineItem(data);
+  return { item: newItem, created: true, updated: false };
+};
+
+/**
+ * Delete an item
+ */
+const deleteItem = async (itemId: string) => {
+  const response = await zohoFetch<{ code: number; message: string }>(
+    `/items/${itemId}`,
+    {
+      method: 'DELETE',
     },
   );
   return response;
