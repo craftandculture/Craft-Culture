@@ -71,6 +71,24 @@ const DistributorOrdersList = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
+  // Orders per page — 20 or 50, remembered on this device
+  const [pageSize, setPageSize] = useState<20 | 50>(20);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('distributorOrders.pageSize') === '50') setPageSize(50);
+    } catch {
+      // Storage blocked: stay on 20
+    }
+  }, []);
+  const changePageSize = (size: 20 | 50) => {
+    setPageSize(size);
+    setCursor(0);
+    try {
+      window.localStorage.setItem('distributorOrders.pageSize', String(size));
+    } catch {
+      // Storage blocked: the choice lasts until the page is left
+    }
+  };
   const [currency, setCurrency] = useState<Currency>('AED');
   const [stageFilter, setStageFilter] = useState<DistributorStage | 'all'>('all');
   // Set from dashboard links: a task queue, a missing SKU, or idle orders
@@ -110,7 +128,7 @@ const DistributorOrdersList = () => {
     queryKey: [
       'privateClientOrders.distributorGetMany',
       {
-        limit: 20,
+        limit: pageSize,
         cursor,
         search: search || undefined,
         stageFilter,
@@ -121,7 +139,7 @@ const DistributorOrdersList = () => {
     ],
     queryFn: () =>
       trpcClient.privateClientOrders.distributorGetMany.query({
-        limit: 20,
+        limit: pageSize,
         cursor,
         search: search || undefined,
         stage: stageFilter === 'all' ? undefined : stageFilter,
@@ -711,11 +729,27 @@ const DistributorOrdersList = () => {
             <Typography variant="bodyXs" colorRole="muted">
               Showing {cursor + 1}-{Math.min(cursor + orders.length, totalCount)} of {totalCount}
             </Typography>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+                {([20, 50] as const).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => changePageSize(size)}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                      pageSize === size
+                        ? 'bg-background-primary text-text-primary shadow-sm'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    {size} per page
+                  </button>
+                ))}
+              </div>
               <Button
                 variant="outline"
                 size="md"
-                onClick={() => setCursor(Math.max(0, cursor - 20))}
+                onClick={() => setCursor(Math.max(0, cursor - pageSize))}
                 disabled={cursor === 0}
               >
                 Previous
@@ -723,7 +757,7 @@ const DistributorOrdersList = () => {
               <Button
                 variant="outline"
                 size="md"
-                onClick={() => setCursor(cursor + 20)}
+                onClick={() => setCursor(cursor + pageSize)}
                 disabled={!hasMore}
               >
                 Next
