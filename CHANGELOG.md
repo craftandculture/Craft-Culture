@@ -1,3 +1,9 @@
+## [2.0.302](https://github.com/craftandculture/Craft-Culture/compare/v2.0.301...v2.0.302) (2026-10-11)
+
+### Features
+
+* Zoho Codes names the sales order or draft holding back each item ([0c77cf3](https://github.com/craftandculture/Craft-Culture/commit/0c77cf3187293d5ad53f94e7538467e7dc852e6d))
+
 ## [2.0.301](https://github.com/craftandculture/Craft-Culture/compare/v2.0.300...v2.0.301) (2026-10-11)
 
 ### Bug Fixes
