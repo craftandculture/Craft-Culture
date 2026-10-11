@@ -1,5 +1,6 @@
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 
+import hsCodeForName from './hsCodeForName';
 import parseZohoSku from './parseZohoSku';
 
 export interface CleanupItem {
@@ -9,6 +10,10 @@ export interface CleanupItem {
   status: 'active' | 'inactive';
   productType: string | null;
   createdTime: string;
+  /** HS code as Zoho holds it (UPC field) */
+  upc?: string | null;
+  /** Country of origin as Zoho holds it (ISBN field) */
+  isbn?: string | null;
 }
 
 export interface StockExplorerLine {
@@ -29,9 +34,11 @@ export interface CleanupContext {
   recentlySoldItemIds: Set<string>;
   /** Items created this recently are left alone (ISO date) */
   newSince: string;
+  /** HS code and origin from our records, by dashed LWIN-18 */
+  customs?: Map<string, { hsCode: string | null; country: string | null }>;
 }
 
-export type CleanupKind = 'retire' | 'retire_duplicate' | 'retire_not_held' | 'create' | 'review';
+export type CleanupKind = 'retire' | 'retire_duplicate' | 'retire_not_held' | 'create' | 'set_customs' | 'review';
 
 export interface CleanupAction {
   /** Zoho item id, or `new:<lwin18>` for an item to be created */
@@ -55,6 +62,8 @@ export interface CleanupAction {
   dependsOn: string | null;
   /** For a retirement: the Stock Explorer code whose new item replaces it */
   replacedBy?: string | null;
+  /** HS code (UPC) and country of origin (ISBN) to write — on create and set_customs */
+  customs?: { hsCode: string; country: string | null } | null;
 }
 
 const SERVICE = /^(storage|repack|transport|monthly|brand development)/i;
@@ -124,6 +133,11 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
   };
   const blockOf = (i: CleanupItem) => (ctx.openItemIds.has(i.itemId) ? 'On an open sales order or draft — retire once it has gone through' : null);
   const seName = (canonical: string | null) => (canonical ? (ctx.stockExplorer.get(canonical)?.productName ?? null) : null);
+  const customsFor = (code: string, name: string) => {
+    const known = ctx.customs?.get(code);
+    return { hsCode: known?.hsCode ?? hsCodeForName(name), country: known?.country ?? null };
+  };
+  const kept: CleanupItem[] = [];
 
   const retire = (i: CleanupItem, kind: CleanupKind, canonical: string | null, reason: string, replacedBy: string | null = null) => {
     const blocked = blockOf(i);
@@ -232,6 +246,9 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
 
     if (!ctx.heldKeys.has(lwinPakKeyOf(canonical)) && keep.createdTime < ctx.newSince) {
       if (retire(keep, 'retire_not_held', canonical, 'Not in Stock Explorer or inbound in any pack')) covered.delete(canonical);
+      else kept.push(keep);
+    } else {
+      kept.push(keep);
     }
   }
 
@@ -258,7 +275,38 @@ const planSkuCleanup = (items: CleanupItem[], ctx: CleanupContext) => {
       blocked: null,
       stockExplorerName: line.productName,
       create: { ...line, bottlesPerCase, bottleSizeMl },
+      customs: customsFor(lwin18, name),
       dependsOn: freedBy.get(name.toLowerCase()) ?? null,
+    });
+  }
+
+  // Every item that stays active carries the HS code and origin customs read
+  for (const i of kept) {
+    const code = i.sku.trim().toUpperCase();
+    const want = customsFor(code, i.name);
+    const hsWrong = (i.upc ?? '').replace(/\D/g, '') !== want.hsCode;
+    const originMissing = !(i.isbn ?? '').trim() && want.country;
+    if (!hsWrong && !originMissing) continue;
+    actions.push({
+      id: `customs:${i.itemId}`,
+      itemId: i.itemId,
+      name: i.name,
+      sku: i.sku,
+      kind: 'set_customs',
+      toName: null,
+      toSku: null,
+      canonical: code,
+      reason: [
+        hsWrong ? `HS ${i.upc?.trim() || 'blank'} → ${want.hsCode}` : null,
+        originMissing ? `Origin → ${want.country}` : !(i.isbn ?? '').trim() ? 'Origin not on file — add it on the shipment' : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      blocked: null,
+      stockExplorerName: seName(code),
+      create: null,
+      dependsOn: null,
+      customs: { hsCode: want.hsCode, country: originMissing ? want.country : null },
     });
   }
 

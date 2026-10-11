@@ -1,6 +1,6 @@
 import type { CleanupAction } from './planSkuCleanup';
 
-const LATER: Record<CleanupAction['kind'], number> = { retire: 0, retire_duplicate: 1, retire_not_held: 2, create: 3, review: 9 };
+const LATER: Record<CleanupAction['kind'], number> = { retire: 0, retire_duplicate: 1, retire_not_held: 2, create: 3, set_customs: 4, review: 9 };
 
 /**
  * The order a run writes in, and the pilot

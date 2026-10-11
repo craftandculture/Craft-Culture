@@ -5965,12 +5965,15 @@ export const zohoItemChanges = pgTable(
     batchId: uuid('batch_id').notNull(),
     zohoItemId: text('zoho_item_id').notNull(),
     itemName: text('item_name').notNull(),
-    /** 'rename' | 'inactivate' | 'create' | 'set_sku' */
+    /** 'rename' | 'inactivate' | 'create' | 'set_customs' | 'skipped' */
     action: text('action').notNull(),
     beforeSku: text('before_sku'),
     afterSku: text('after_sku'),
     beforeName: text('before_name'),
     afterName: text('after_name'),
+    /** HS code and origin before and after a 'set_customs' write */
+    beforeDetails: jsonb('before_details').$type<{ upc: string | null; isbn: string | null }>(),
+    afterDetails: jsonb('after_details').$type<{ upc: string | null; isbn: string | null }>(),
     reason: text('reason'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     undoneAt: timestamp('undone_at'),

@@ -2278,6 +2278,8 @@ const runMigrations = async () => {
     );
     await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "before_name" text`);
     await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "after_name" text`);
+    await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "before_details" jsonb`);
+    await client.unsafe(`ALTER TABLE "zoho_item_changes" ADD COLUMN IF NOT EXISTS "after_details" jsonb`);
     console.log('✅ zoho item changes ready');
 
     /*

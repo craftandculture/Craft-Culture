@@ -14,6 +14,7 @@ const adminGetBatches = adminProcedure.query(async () =>
       startedAt: sql<Date>`min(${zohoItemChanges.createdAt})`,
       created: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'create')::int`,
       inactivated: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'inactivate')::int`,
+      customs: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'set_customs')::int`,
       skipped: sql<number>`count(*) filter (where ${zohoItemChanges.action} = 'skipped')::int`,
       live: sql<number>`count(*) filter (where ${zohoItemChanges.undoneAt} is null)::int`,
     })

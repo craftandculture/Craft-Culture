@@ -32,6 +32,12 @@ const TABS: { kind: Kind; label: string; help: string; preselect: boolean }[] = 
     preselect: true,
   },
   {
+    kind: 'set_customs',
+    label: 'HS & origin',
+    help: 'Items that stay active, given the HS code (UPC) from the HS menu and the country of origin (ISBN). Both come from the shipment the wine arrived on, then the catalogue; an HS code no shipment assigned is classified from the name. An origin already in Zoho is never overwritten. New items are created with both.',
+    preselect: true,
+  },
+  {
     kind: 'retire_duplicate',
     label: 'Duplicates',
     help: 'Two active items under one dashed code. The one on an open order (else the newest) is kept; the others are retired.',
@@ -118,9 +124,19 @@ const ZohoCodesClient = () => {
                   producer: a.create?.producer ?? null,
                   bottlesPerCase: a.create?.bottlesPerCase ?? 1,
                   bottleSizeMl: a.create?.bottleSizeMl ?? 750,
+                  customs: a.customs ?? { hsCode: '22042100', country: null },
                   reason: a.reason,
                 }
-              : {
+              : a.kind === 'set_customs'
+                ? {
+                    id: a.id,
+                    kind: 'set_customs' as const,
+                    itemId: a.itemId ?? '',
+                    expectSku: a.sku,
+                    customs: a.customs ?? { hsCode: '22042100', country: null },
+                    reason: a.reason,
+                  }
+                : {
                   id: a.id,
                   kind: a.kind as 'retire' | 'retire_duplicate' | 'retire_not_held',
                   itemId: a.itemId ?? '',
@@ -197,7 +213,7 @@ const ZohoCodesClient = () => {
         <p className={`${card} px-4 py-6 text-sm text-text-danger`}>Could not read Zoho: {plan.error.message}</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border-muted bg-border-muted sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border-muted bg-border-muted sm:grid-cols-3 lg:grid-cols-6">
             {TABS.map((t) => {
               const c = counts(t.kind);
               return (
@@ -358,7 +374,7 @@ const ZohoCodesClient = () => {
                   >
                     <IconChevronDown size={13} className={openBatch === b.batchId ? '' : '-rotate-90'} />
                     {new Date(`${String(b.startedAt).replace(' ', 'T')}Z`).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
-                    {b.inactivated} retired · {b.created} created
+                    {b.inactivated} retired · {b.created} created{b.customs ? ` · ${b.customs} HS & origin` : ''}
                     {b.skipped ? <span className="text-text-warning"> · {b.skipped} skipped</span> : null}
                     {b.live === 0 && <span className="text-text-muted"> · undone</span>}
                   </button>

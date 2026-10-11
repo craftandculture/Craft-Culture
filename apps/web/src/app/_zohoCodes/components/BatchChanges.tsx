@@ -15,6 +15,7 @@ const LABEL: Record<string, string> = {
   create: 'Created',
   skipped: 'Skipped',
   set_sku: 'SKU changed',
+  set_customs: 'HS & origin set',
 };
 
 /**
@@ -60,6 +61,11 @@ const BatchChanges = ({ batchId }: BatchChangesProps) => {
                   (row.afterSku ?? row.beforeSku)
                 )}
               </p>
+              {row.afterDetails && (row.action === 'set_customs' || row.action === 'create') ? (
+                <p className="text-text-muted">
+                  HS {row.afterDetails.upc ?? '—'} · Origin {row.afterDetails.isbn ?? 'not on file'}
+                </p>
+              ) : null}
               {row.action === 'skipped' && row.reason ? <p className="text-text-warning">{row.reason}</p> : null}
             </div>
           </li>

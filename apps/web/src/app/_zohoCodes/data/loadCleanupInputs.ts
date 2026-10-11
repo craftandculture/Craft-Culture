@@ -16,6 +16,7 @@ import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 import type { ZohoItem } from '@/lib/zoho/items';
 import { getSalesOrder, listSalesOrders } from '@/lib/zoho/salesOrders';
 
+import loadCustomsDetails from './loadCustomsDetails';
 import parseZohoSku from '../utils/parseZohoSku';
 import type { CleanupContext, CleanupItem, StockExplorerLine } from '../utils/planSkuCleanup';
 
@@ -130,9 +131,17 @@ const loadCleanupInputs = async () => {
     status: i.status,
     productType: i.product_type ?? null,
     createdTime: i.created_time ?? '',
+    upc: i.upc ?? null,
+    isbn: i.isbn ?? null,
   }));
 
+  const customs = await loadCustomsDetails([
+    ...stockExplorer.keys(),
+    ...items.filter((i) => i.status === 'active' && parseZohoSku(i.sku).form === 'dashed').map((i) => i.sku.trim().toUpperCase()),
+  ]);
+
   const ctx: CleanupContext = {
+    customs,
     stockExplorer,
     heldKeys,
     openItemIds: new Set([...openLines.map((l) => l.zohoItemId!).filter(Boolean), ...draftItemIds]),

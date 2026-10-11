@@ -19,9 +19,24 @@ const retireSchema = z.object({
   reason: z.string(),
 });
 
+const customsSchema = z.object({
+  hsCode: z.string().regex(/^\d{8}$/),
+  country: z.string().nullable(),
+});
+
+const setCustomsSchema = z.object({
+  id: z.string(),
+  kind: z.literal('set_customs'),
+  itemId: z.string(),
+  expectSku: z.string(),
+  customs: customsSchema,
+  reason: z.string(),
+});
+
 const createSchema = z.object({
   id: z.string(),
   kind: z.literal('create'),
+  customs: customsSchema,
   name: z.string().min(1).max(100),
   sku: z.string().regex(/^[A-Z0-9]+-\d{4}-\d{2}-\d{5}$/),
   producer: z.string().nullable(),
@@ -47,7 +62,7 @@ const adminApplyActions = adminProcedure
   .input(
     z.object({
       batchId: z.string().uuid(),
-      actions: z.array(z.discriminatedUnion('kind', [retireSchema.extend({ kind: z.literal('retire') }), retireSchema.extend({ kind: z.literal('retire_duplicate') }), retireSchema.extend({ kind: z.literal('retire_not_held') }), createSchema])).min(1).max(10),
+      actions: z.array(z.discriminatedUnion('kind', [retireSchema.extend({ kind: z.literal('retire') }), retireSchema.extend({ kind: z.literal('retire_duplicate') }), retireSchema.extend({ kind: z.literal('retire_not_held') }), createSchema, setCustomsSchema])).min(1).max(10),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -76,10 +91,48 @@ const adminApplyActions = adminProcedure
             description: `${a.bottlesPerCase}x${Math.round(a.bottleSizeMl / 10)}cl`,
             manufacturer: a.producer ?? undefined,
             brand: a.producer ?? undefined,
+            upc: a.customs.hsCode,
+            isbn: a.customs.country ?? undefined,
           });
-          await log({ zohoItemId: created.item_id, itemName: created.name, action: 'create', afterSku: a.sku, afterName: created.name, reason: a.reason });
+          await log({
+            zohoItemId: created.item_id,
+            itemName: created.name,
+            action: 'create',
+            afterSku: a.sku,
+            afterName: created.name,
+            afterDetails: { upc: a.customs.hsCode, isbn: a.customs.country },
+            reason: a.reason,
+          });
           await pause();
           results.push({ id: a.id, ok: true, message: `Created ${a.sku}` });
+          continue;
+        }
+
+        if (a.kind === 'set_customs') {
+          const live = await getItem(a.itemId);
+          await pause();
+          if (live.status !== 'active' || (live.sku ?? '').trim() !== a.expectSku.trim()) {
+            results.push({ id: a.id, ok: false, message: 'Changed in Zoho since the plan — read Zoho again' });
+            continue;
+          }
+          const isbn = live.isbn?.trim() ? live.isbn : (a.customs.country ?? undefined);
+          if ((live.upc ?? '').replace(/\D/g, '') === a.customs.hsCode && (live.isbn ?? '') === (isbn ?? '')) {
+            results.push({ id: a.id, ok: true, message: 'Already correct' });
+            continue;
+          }
+          await updateItem(a.itemId, { name: live.name, upc: a.customs.hsCode, isbn });
+          await log({
+            zohoItemId: a.itemId,
+            itemName: live.name,
+            action: 'set_customs',
+            beforeSku: live.sku,
+            afterSku: live.sku,
+            beforeDetails: { upc: live.upc ?? null, isbn: live.isbn ?? null },
+            afterDetails: { upc: a.customs.hsCode, isbn: isbn ?? null },
+            reason: a.reason,
+          });
+          await pause();
+          results.push({ id: a.id, ok: true, message: `HS ${a.customs.hsCode}${isbn ? ` · ${isbn}` : ' · origin still blank'}` });
           continue;
         }
 
@@ -134,10 +187,10 @@ const adminApplyActions = adminProcedure
             batchId: input.batchId,
             createdBy: ctx.user.id,
             zohoItemId: a.kind === 'create' ? r.id : a.itemId,
-            itemName: a.kind === 'create' ? a.name : a.expectName,
+            itemName: a.kind === 'create' ? a.name : a.kind === 'set_customs' ? a.expectSku : a.expectName,
             action: 'skipped',
             beforeSku: a.kind === 'create' ? null : a.expectSku,
-            afterSku: a.kind === 'create' ? a.sku : a.toSku,
+            afterSku: a.kind === 'create' ? a.sku : a.kind === 'set_customs' ? a.expectSku : a.toSku,
             reason: r.message,
             undoneAt: new Date(),
           };

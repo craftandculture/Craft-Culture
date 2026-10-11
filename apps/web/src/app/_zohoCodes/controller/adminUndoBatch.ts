@@ -41,6 +41,8 @@ const adminUndoBatch = adminProcedure
             await markItemInactive(row.zohoItemId);
           }
         }
+        else if (row.action === 'set_customs')
+          await updateItem(row.zohoItemId, { name: row.itemName, upc: row.beforeDetails?.upc ?? '', isbn: row.beforeDetails?.isbn ?? '' });
         else if (row.action === 'rename') await updateItem(row.zohoItemId, { name: row.beforeName ?? row.itemName, sku: row.beforeSku ?? '' });
         else await updateItem(row.zohoItemId, { name: row.itemName, sku: row.beforeSku ?? '' });
         await db.update(zohoItemChanges).set({ undoneAt: new Date(), undoneBy: ctx.user.id }).where(eq(zohoItemChanges.id, row.id));

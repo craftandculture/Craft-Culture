@@ -17,6 +17,9 @@ const se = (lwin18: string, productName: string, vintage: number | null = null):
   { lwin18, productName, producer: null, vintage },
 ];
 
+/** The code decisions only, leaving the HS-and-origin top-ups aside */
+const codes = (actions: ReturnType<typeof planSkuCleanup>) => actions.filter((a) => a.kind !== 'set_customs');
+
 const ctx = (over: Partial<CleanupContext> = {}): CleanupContext => ({
   stockExplorer: new Map(),
   heldKeys: new Set(),
@@ -43,7 +46,7 @@ describe('planSkuCleanup', () => {
       [item({ itemId: 'd', name: 'Sassicaia 2018', sku: '1015390-2018-06-00750' })],
       ctx({ stockExplorer: new Map([se('1015390-2018-06-00750', 'Sassicaia', 2018)]), heldKeys: new Set(['1015390-2018-00750']) }),
     );
-    expect(actions).toEqual([]);
+    expect(codes(actions)).toEqual([]);
   });
 
   it('holds back an item on an open order or draft, but still creates the new one', () => {
@@ -81,7 +84,7 @@ describe('planSkuCleanup', () => {
       ],
       ctx({ openItemIds: new Set(['b']), heldKeys: new Set(['1000001-2015-00750']) }),
     );
-    expect(actions.map((a) => [a.id, a.kind])).toEqual([['a', 'retire_duplicate']]);
+    expect(codes(actions).map((a) => [a.id, a.kind])).toEqual([['a', 'retire_duplicate']]);
   });
 
   it('sends a dashed item whose name disagrees with its code vintage to review', () => {
@@ -96,7 +99,7 @@ describe('planSkuCleanup', () => {
       item({ itemId: 'fresh', sku: '1000003-2019-06-00750', createdTime: '2026-10-01' }),
     ];
     const actions = planSkuCleanup(items, ctx({ heldKeys: new Set(['1000002-2015-00750']) }));
-    expect(actions.map((a) => [a.id, a.kind])).toEqual([['gone', 'retire_not_held']]);
+    expect(codes(actions).map((a) => [a.id, a.kind])).toEqual([['gone', 'retire_not_held']]);
   });
 });
 
@@ -125,5 +128,35 @@ describe('itemNameFor', () => {
     const { itemNameFor } = await import('./planSkuCleanup');
     expect(itemNameFor({ productName: 'Mezcal - Blanco', vintage: null, producer: 'Bandida' }, 6, 700)).toBe('Bandida, Mezcal - Blanco (6x70cl)');
     expect(itemNameFor({ productName: 'Elio Grasso, Barolo', vintage: 2016, producer: 'Elio Grasso' }, 6, 750)).toBe('Elio Grasso, Barolo 2016 (6x75cl)');
+  });
+});
+
+describe('planSkuCleanup: HS code and origin', () => {
+  it('creates new items with the shipment HS code and origin, classifying when none', () => {
+    const actions = planSkuCleanup(
+      [],
+      ctx({
+        stockExplorer: new Map([se('1006377-2020-06-00750', 'Chateau Beauregard, Pomerol', 2020), se('VODALT700B-0000-06-00700', 'Altamura Distilleries Vodka')]),
+        customs: new Map([['1006377-2020-06-00750', { hsCode: '22042100', country: 'France' }]]),
+      }),
+    );
+    expect(actions.map((a) => a.customs)).toEqual([
+      { hsCode: '22042100', country: 'France' },
+      { hsCode: '22086000', country: null },
+    ]);
+  });
+
+  it('sets HS on a kept item whose code is off the menu, and origin only where blank', () => {
+    const actions = planSkuCleanup(
+      [
+        item({ itemId: 'a', name: 'Talbot 2020', sku: '1015362-2020-12-00750', upc: '220421', isbn: '' }),
+        item({ itemId: 'b', name: 'Sassicaia 2018', sku: '1015390-2018-06-00750', upc: '22042100', isbn: 'Italy' }),
+      ],
+      ctx({
+        heldKeys: new Set(['1015362-2020-00750', '1015390-2018-00750']),
+        customs: new Map([['1015362-2020-12-00750', { hsCode: '22042100', country: 'France' }]]),
+      }),
+    );
+    expect(actions).toEqual([expect.objectContaining({ id: 'customs:a', kind: 'set_customs', customs: { hsCode: '22042100', country: 'France' } })]);
   });
 });

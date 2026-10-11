@@ -22,6 +22,7 @@ const adminGetBatchChanges = adminProcedure
         afterName: zohoItemChanges.afterName,
         beforeSku: zohoItemChanges.beforeSku,
         afterSku: zohoItemChanges.afterSku,
+        afterDetails: zohoItemChanges.afterDetails,
         reason: zohoItemChanges.reason,
         undoneAt: zohoItemChanges.undoneAt,
         createdAt: zohoItemChanges.createdAt,

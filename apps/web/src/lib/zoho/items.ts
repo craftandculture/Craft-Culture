@@ -29,6 +29,10 @@ export interface ZohoItem {
   vendor_id?: string;
   vendor_name?: string;
   stock_on_hand?: number;
+  /** HS code — the standard field repurposed for customs */
+  upc?: string;
+  /** Country of origin — the standard field repurposed for customs */
+  isbn?: string;
   available_stock?: number;
   actual_available_stock?: number;
   committed_stock?: number;
