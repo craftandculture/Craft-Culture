@@ -1,3 +1,9 @@
+## [2.0.314](https://github.com/craftandculture/Craft-Culture/compare/v2.0.313...v2.0.314) (2026-10-11)
+
+### Features
+
+* cold room and warehouse alerts in [#warehouse](https://github.com/craftandculture/Craft-Culture/issues/warehouse)-data ([d840f6f](https://github.com/craftandculture/Craft-Culture/commit/d840f6f6e236a68d4a347070fbab60229df6d09f))
+
 ## [2.0.313](https://github.com/craftandculture/Craft-Culture/compare/v2.0.312...v2.0.313) (2026-10-11)
 
 ### Bug Fixes
