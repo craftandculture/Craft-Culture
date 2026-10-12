@@ -5,10 +5,12 @@ import { useSearchParams } from 'next/navigation';
 
 import CellarMembersList from '@/app/_cellar/components/CellarMembersList';
 import ApplicationsList from '@/app/_onboarding/components/admin/ApplicationsList';
+import InvitesList from '@/app/_onboarding/components/admin/InvitesList';
 
 const tabs = [
   { id: 'members', label: 'Members' },
   { id: 'applications', label: 'Applications' },
+  { id: 'invites', label: 'Invites' },
 ] as const;
 
 /**
@@ -18,7 +20,7 @@ const tabs = [
  */
 const CellarMembersPage = () => {
   const searchParams = useSearchParams();
-  const tab = searchParams.get('tab') === 'applications' ? 'applications' : 'members';
+  const tab = tabs.find((item) => item.id === searchParams.get('tab'))?.id ?? 'members';
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 sm:py-8">
@@ -40,7 +42,9 @@ const CellarMembersPage = () => {
         ))}
       </div>
 
-      {tab === 'applications' ? <ApplicationsList /> : <CellarMembersList />}
+      {tab === 'applications' && <ApplicationsList />}
+      {tab === 'invites' && <InvitesList />}
+      {tab === 'members' && <CellarMembersList />}
     </div>
   );
 };

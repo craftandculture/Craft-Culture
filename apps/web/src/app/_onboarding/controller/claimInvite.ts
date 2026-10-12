@@ -7,6 +7,7 @@ import {
   cellarApplications,
   cellarInvites,
   partnerMembers,
+  partners,
   users,
 } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
@@ -60,6 +61,9 @@ const claimInvite = protectedProcedure
       }
 
       if (invite.partnerId) {
+        // Created inactive if they had a pending account when invited
+        await tx.update(partners).set({ status: 'active' }).where(eq(partners.id, invite.partnerId));
+
         const [link] = await tx
           .select({ id: partnerMembers.id })
           .from(partnerMembers)

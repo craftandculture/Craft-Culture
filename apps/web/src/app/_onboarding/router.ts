@@ -2,8 +2,12 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminApproveApplication from './controller/adminApproveApplication';
 import adminDeclineApplication from './controller/adminDeclineApplication';
+import adminInviteMember from './controller/adminInviteMember';
 import adminListApplications from './controller/adminListApplications';
+import adminListInvites from './controller/adminListInvites';
 import adminMergeApplication from './controller/adminMergeApplication';
+import adminResendInvite from './controller/adminResendInvite';
+import adminRevokeInvite from './controller/adminRevokeInvite';
 import adminUpdateApplication from './controller/adminUpdateApplication';
 import adminUploadApplicationIdentity from './controller/adminUploadApplicationIdentity';
 import claimInvite from './controller/claimInvite';
@@ -29,6 +33,10 @@ const onboardingRouter = createTRPCRouter({
     updateApplication: adminUpdateApplication,
     uploadApplicationIdentity: adminUploadApplicationIdentity,
     mergeApplication: adminMergeApplication,
+    listInvites: adminListInvites,
+    inviteMember: adminInviteMember,
+    resendInvite: adminResendInvite,
+    revokeInvite: adminRevokeInvite,
   }),
 });
 
