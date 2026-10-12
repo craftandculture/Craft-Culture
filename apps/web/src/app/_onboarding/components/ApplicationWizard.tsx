@@ -157,10 +157,10 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
 
   return (
     <div className="space-y-6">
-      {step === 'about' && greetingName && (
+      {step === 'about' && greetingName && data.invite && (
         <p className="text-text-muted text-center text-sm">
-          {data.invite?.inviterName
-            ? `Welcome, ${greetingName} — ${data.invite.inviterName.split(' ')[0]} has set up your cellar.`
+          {data.invite.inviterName
+            ? `Welcome, ${greetingName}. ${data.invite.inviterName.split(' ')[0]} has prepared your cellar account.`
             : `Welcome, ${greetingName}.`}
         </p>
       )}

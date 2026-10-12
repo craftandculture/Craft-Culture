@@ -17,6 +17,15 @@ const fileToUploadDataUrl = async (file: File) => {
       reader.readAsDataURL(blob);
     });
 
+  /*
+    Uploads travel as base64 in one request, which Vercel caps at 4.5MB. A
+    photo is shrunk below, but a PDF cannot be, so a large one is refused here
+    with a message the person can act on.
+  */
+  if (file.type === 'application/pdf' && file.size > 3 * 1024 * 1024) {
+    throw new Error('That PDF is over 3MB. Please upload a photo of your ID, or a smaller PDF.');
+  }
+
   if (!file.type.startsWith('image/') || file.type === 'image/gif') {
     return { dataUrl: await readAsDataUrl(file), filename: file.name };
   }

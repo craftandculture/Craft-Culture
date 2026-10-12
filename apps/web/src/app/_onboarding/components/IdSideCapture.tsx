@@ -1,7 +1,7 @@
 'use client';
 
 import { IconCamera, IconCheck, IconLoader2, IconUpload } from '@tabler/icons-react';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface IdSideCaptureProps {
   label: string;
@@ -21,6 +21,12 @@ export interface IdSideCaptureProps {
 const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: IdSideCaptureProps) => {
   const camera = useRef<HTMLInputElement>(null);
   const library = useRef<HTMLInputElement>(null);
+  // A camera button only on touch devices — on a laptop it is an image-only file picker
+  const [hasCamera, setHasCamera] = useState(false);
+
+  useEffect(() => {
+    setHasCamera(window.matchMedia('(pointer: coarse)').matches);
+  }, []);
 
   const pick = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -49,6 +55,7 @@ const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: I
         </span>
       ) : null}
       <div className="relative flex gap-2">
+        {hasCamera && (
         <button
           type="button"
           onClick={() => camera.current?.click()}
@@ -57,13 +64,14 @@ const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: I
         >
           <IconCamera size={16} /> {isUploaded ? 'Retake' : 'Take photo'}
         </button>
+        )}
         <button
           type="button"
           onClick={() => library.current?.click()}
           disabled={isUploading}
           className="border-border-primary bg-fill-primary text-text-primary flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50"
         >
-          <IconUpload size={16} /> Upload
+          <IconUpload size={16} /> {isUploaded ? 'Replace' : 'Upload photo or PDF'}
         </button>
       </div>
       <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
