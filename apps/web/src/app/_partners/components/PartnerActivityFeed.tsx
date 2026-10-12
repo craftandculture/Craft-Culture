@@ -113,7 +113,15 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
 const PartnerActivityFeed = () => {
   const api = useTRPC();
   const [streams, setStreams] = useState<Stream[]>([]);
-  const [openDays, setOpenDays] = useState<Set<string>>(new Set());
+  // Folded rows the user has opened: a day's housekeeping, or an order's picks
+  const [opened, setOpened] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setOpened((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const { data, isLoading } = useQuery(
     api.partners.getActivity.queryOptions({
@@ -134,11 +142,45 @@ const PartnerActivityFeed = () => {
 
   const isHousekeeping = (e: Entry) => e.kind === 'internal' || e.kind === 'correction';
 
+  /*
+    Picks for one order become one row. An order of twenty wines was twenty
+    rows a minute apart; what the partner wants to know is that an order took
+    their stock, which one, and how much. The wines are a click away.
+  */
+  type Item =
+    | { type: 'entry'; entry: Entry }
+    | { type: 'order'; ref: string; entries: Entry[] };
+
+  const groupByOrder = (list: Entry[]) => {
+    const items: Item[] = [];
+    const byRef = new Map<string, Entry[]>();
+    for (const entry of list) {
+      if (entry.kind === 'out' && entry.orderRef) {
+        const group = byRef.get(entry.orderRef);
+        if (group) {
+          group.push(entry);
+          continue;
+        }
+        const fresh = [entry];
+        byRef.set(entry.orderRef, fresh);
+        items.push({ type: 'order', ref: entry.orderRef, entries: fresh });
+      } else {
+        items.push({ type: 'entry', entry });
+      }
+    }
+    // A one-wine order reads better as the plain row
+    return items.map((item) =>
+      item.type === 'order' && item.entries.length === 1
+        ? { type: 'entry' as const, entry: item.entries[0]! }
+        : item,
+    );
+  };
+
   const summarise = (dayEntries: Entry[]) => {
     const count = (k: Entry['kind']) => dayEntries.filter((e) => e.kind === k).length;
     return [
       count('in') && `${count('in')} received`,
-      count('out') && `${count('out')} out`,
+      count('out') && `${plural(count('out'), 'wine')} out`,
       count('update') && plural(count('update'), 'order update'),
       count('correction') && plural(count('correction'), 'count correction'),
       count('internal') && plural(count('internal'), 'bay move'),
@@ -147,8 +189,11 @@ const PartnerActivityFeed = () => {
       .join(' · ');
   };
 
+  const summary = data?.summary;
+
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,48rem)_17rem]">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-1.5">
         {STREAMS.map((stream) => {
           const on = streams.includes(stream.key);
@@ -191,7 +236,7 @@ const PartnerActivityFeed = () => {
           {Object.entries(days).map(([day, dayEntries]) => {
             const main = dayEntries.filter((e) => !isHousekeeping(e));
             const housekeeping = dayEntries.filter(isHousekeeping);
-            const open = openDays.has(day);
+            const open = opened.has(`${day}|housekeeping`);
 
             return (
               <section key={day}>
@@ -201,22 +246,69 @@ const PartnerActivityFeed = () => {
                 </div>
 
                 <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
-                  {main.map((entry) => (
-                    <Row key={entry.id} entry={entry} />
-                  ))}
+                  {groupByOrder(main).map((item) => {
+                    if (item.type === 'entry') {
+                      return <Row key={item.entry.id} entry={item.entry} />;
+                    }
+                    const key = `${day}|order|${item.ref}`;
+                    const isOpen = opened.has(key);
+                    const bottles = item.entries.reduce((sum, e) => sum + e.bottles, 0);
+                    const times = item.entries.map((e) => timeLabel(e.at)).sort();
+                    const span =
+                      times[0] === times[times.length - 1]
+                        ? times[0]
+                        : `${times[0]}–${times[times.length - 1]}`;
+                    return (
+                      <div key={key}>
+                        <button
+                          type="button"
+                          onClick={() => toggle(key)}
+                          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-fill-muted/30"
+                        >
+                          <span
+                            className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${KIND_STYLE.out.disc}`}
+                            aria-hidden
+                          >
+                            <Icon icon={KIND_STYLE.out.icon} size="sm" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[12px] font-medium text-text-muted">
+                              Picked for an order
+                            </span>
+                            <span className="block text-[14px] font-medium text-text-primary">
+                              {item.ref} · {plural(item.entries.length, 'wine')}
+                            </span>
+                          </span>
+                          <span className="flex flex-none flex-col items-end gap-1">
+                            <span className="rounded-full bg-fill-muted px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-text-primary">
+                              {plural(bottles, 'bottle')}
+                            </span>
+                            <span className="flex items-center gap-1 text-[11.5px] tabular-nums text-text-muted">
+                              {span}
+                              <Icon
+                                icon={IconChevronDown}
+                                size="xs"
+                                className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                              />
+                            </span>
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="divide-y divide-border-muted border-t border-border-muted bg-fill-muted/20">
+                            {item.entries.map((entry) => (
+                              <Row key={entry.id} entry={entry} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {housekeeping.length > 0 && (
                     <>
                       <button
                         type="button"
-                        onClick={() =>
-                          setOpenDays((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(day)) next.delete(day);
-                            else next.add(day);
-                            return next;
-                          })
-                        }
+                        onClick={() => toggle(`${day}|housekeeping`)}
                         className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-fill-muted/30"
                       >
                         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-fill-muted text-text-muted">
@@ -260,6 +352,40 @@ const PartnerActivityFeed = () => {
           })}
         </div>
       )}
+    </div>
+
+    {/* The week at a glance */}
+    {summary && (
+      <aside className="order-first lg:order-none">
+        <div className="space-y-3 rounded-xl border border-border-muted bg-fill-primary p-4 lg:sticky lg:top-24">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+            Last 7 days
+          </p>
+          {[
+            { label: 'Received', value: plural(summary.receivedBottles, 'bottle'), tint: 'bg-emerald-50 dark:bg-emerald-900/20' },
+            { label: 'Picked out', value: plural(summary.outBottles, 'bottle'), tint: 'bg-amber-50 dark:bg-amber-900/20' },
+          ].map((stat) => (
+            <div key={stat.label} className={`rounded-lg px-3 py-2 ${stat.tint}`}>
+              <p className="text-[12px] text-text-muted">{stat.label}</p>
+              <p className="text-[16px] font-semibold tabular-nums text-text-primary">{stat.value}</p>
+            </div>
+          ))}
+          <div className="border-t border-border-muted pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              Now
+            </p>
+            <p className="mt-2 text-[13px] text-text-primary">
+              <span className="font-semibold tabular-nums">{plural(summary.onHandBottles, 'bottle')}</span>
+              <span className="text-text-muted"> in the warehouse · {plural(summary.onHandWines, 'wine')}</span>
+            </p>
+            <p className="mt-1 text-[13px] text-text-primary">
+              <span className="font-semibold tabular-nums">{summary.ordersInProgress}</span>
+              <span className="text-text-muted"> private-client {summary.ordersInProgress === 1 ? 'order' : 'orders'} in progress</span>
+            </p>
+          </div>
+        </div>
+      </aside>
+    )}
     </div>
   );
 };

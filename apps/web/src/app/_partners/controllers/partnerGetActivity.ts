@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray, ne } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, ne, notInArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import inOurWarehouse from '@/app/_wms/utils/inOurWarehouse';
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
 import db from '@/database/client';
 import {
@@ -11,7 +12,9 @@ import {
   sourceRfqs,
   users,
   wmsLocations,
+  wmsStock,
   wmsStockMovements,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
@@ -30,6 +33,10 @@ export interface PartnerActivityEntry {
   kind: 'in' | 'out' | 'internal' | 'correction' | 'update';
   /** "2 bottles", "7 cases · 42 btl", "−1 case": the quantity, in words */
   quantity: string | null;
+  /** Bottles moved, unsigned, so a group of picks can be totalled */
+  bottles: number;
+  /** The order a pick or dispatch was for (SO-00184, PCO-2026-00081) */
+  orderRef: string | null;
   at: Date;
   /** "Picked", "Order submitted" — what happened, in a couple of words. */
   title: string;
@@ -61,6 +68,10 @@ const STOCK_EVENTS: Record<string, { title: string; kind: PartnerActivityEntry['
  * in bottles — "2 cs · 2 btl" for two loose bottles read as two cases. A
  * count correction keeps its sign, so a removal reads as one.
  */
+/** Bottles a movement moved: its own count when recorded, else cases × pack */
+const bottlesOf = (lwin18: string, cases: number, bottles: number | null) =>
+  Math.abs(bottles ?? cases * (Number(lwin18.split('-')[2]) || 1));
+
 const quantityOf = (lwin18: string, cases: number, bottles: number | null) => {
   const pack = Number(lwin18.split('-')[2]) || 0;
   const plural = (n: number, word: string) => `${n} ${word}${Math.abs(n) === 1 ? '' : 's'}`;
@@ -132,8 +143,13 @@ const partnerGetActivity = winePartnerProcedure
             fromLocation: fromLocation.code,
             toLocation: toLocation.code,
             performedAt: wmsStockMovements.performedAt,
+            // A pick records the order it was for; that is a PCO or a Zoho SO
+            pcoNumber: privateClientOrders.orderNumber,
+            salesOrderNumber: zohoSalesOrders.salesOrderNumber,
           })
           .from(wmsStockMovements)
+          .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
+          .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
           .leftJoin(fromLocation, eq(wmsStockMovements.fromLocationId, fromLocation.id))
           .leftJoin(toLocation, eq(wmsStockMovements.toLocationId, toLocation.id))
           .where(
@@ -169,6 +185,8 @@ const partnerGetActivity = winePartnerProcedure
               title: event.title,
               subject: row.productName,
               quantity: quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
+              bottles: bottlesOf(row.lwin18, row.quantityCases, row.quantityBottles),
+              orderRef: event.kind === 'out' ? (row.pcoNumber ?? row.salesOrderNumber ?? null) : null,
               // Bays mean little to a partner; kept as the small print
               detail:
                 row.fromLocation && row.toLocation
@@ -221,6 +239,8 @@ const partnerGetActivity = winePartnerProcedure
           stream: 'order' as const,
           kind: 'update' as const,
           quantity: null,
+          bottles: 0,
+          orderRef: null,
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.orderNumber} · ${row.clientName}`,
@@ -260,6 +280,8 @@ const partnerGetActivity = winePartnerProcedure
           stream: 'rfq' as const,
           kind: 'update' as const,
           quantity: null,
+          bottles: 0,
+          orderRef: null,
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.rfqNumber}${row.name ? ` · ${row.name}` : ''}`,
@@ -276,7 +298,71 @@ const partnerGetActivity = winePartnerProcedure
     */
     entries.sort((left, right) => right.at.getTime() - left.at.getTime());
 
-    return { entries: entries.slice(0, input.limit) };
+    /*
+      The week at a glance, beside the feed. Out counts picks only: a dispatch
+      moves the same bottles a pick already took, so counting both doubles it.
+    */
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const scope = await partnerMovementScope(partner.id);
+
+    const [weekMoves, [onHand], [inProgress]] = await Promise.all([
+      scope.ownedLwins.length > 0
+        ? db
+            .select({
+              type: wmsStockMovements.movementType,
+              lwin18: wmsStockMovements.lwin18,
+              cases: wmsStockMovements.quantityCases,
+              bottles: wmsStockMovements.quantityBottles,
+            })
+            .from(wmsStockMovements)
+            .where(
+              and(
+                scope.condition,
+                inArray(wmsStockMovements.movementType, ['receive', 'pick']),
+                gte(wmsStockMovements.performedAt, weekAgo),
+              ),
+            )
+        : Promise.resolve([]),
+      db
+        .select({
+          bottles: sql<number>`coalesce(sum(${wmsStock.quantityCases} * coalesce(${wmsStock.caseConfig}, 1) + coalesce(${wmsStock.openBottles}, 0)), 0)::int`,
+          wines: sql<number>`count(distinct ${wmsStock.lwin18})::int`,
+        })
+        .from(wmsStock)
+        .where(
+          and(
+            eq(wmsStock.ownerId, partner.id),
+            sql`${wmsStock.quantityCases} > 0`,
+            // At C&C, not wine already placed with a distributor
+            inOurWarehouse(),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(privateClientOrders)
+        .where(
+          and(
+            eq(privateClientOrders.partnerId, partner.id),
+            notInArray(privateClientOrders.status, ['draft', 'delivered', 'cancelled']),
+          ),
+        ),
+    ]);
+
+    const weekBottles = (type: string) =>
+      weekMoves
+        .filter((m) => m.type === type)
+        .reduce((sum, m) => sum + bottlesOf(m.lwin18, m.cases, m.bottles), 0);
+
+    return {
+      entries: entries.slice(0, input.limit),
+      summary: {
+        receivedBottles: weekBottles('receive'),
+        outBottles: weekBottles('pick'),
+        onHandBottles: Number(onHand?.bottles ?? 0),
+        onHandWines: Number(onHand?.wines ?? 0),
+        ordersInProgress: Number(inProgress?.count ?? 0),
+      },
+    };
   });
 
 export default partnerGetActivity;
