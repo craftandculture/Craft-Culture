@@ -1,3 +1,9 @@
+## [2.0.319](https://github.com/craftandculture/Craft-Culture/compare/v2.0.318...v2.0.319) (2026-10-12)
+
+### Improvements
+
+* partner activity reads as in, out and orders, with housekeeping folded ([579c58e](https://github.com/craftandculture/Craft-Culture/commit/579c58e963ad10e55ed9ece7ae0bd48715df5a1a))
+
 ## [2.0.318](https://github.com/craftandculture/Craft-Culture/compare/v2.0.317...v2.0.318) (2026-10-12)
 
 ### Bug Fixes
