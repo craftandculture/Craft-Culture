@@ -92,14 +92,13 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           </>
         ) : (
           <h1 className="font-heading text-text-primary text-3xl leading-tight">
-            Your collection.
-            <br />
-            One account.
+            Open your Private Cellar account
           </h1>
         )}
         <p className="text-text-muted text-base leading-7">
-          Store in bond in the UAE at 12–14°C, bring your wine in from the UK and
-          Europe, and call cases forward when you want them.
+          Sign up in a few minutes with just your name and email — your Emirates
+          ID and details of your wine can follow later. Joining is free; your
+          membership starts only when you first buy, release or bring wine in.
         </p>
       </div>
 
@@ -126,7 +125,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           </ButtonContent>
         </Button>
         <p className="text-text-muted text-center text-xs">
-          No password needed. Joining costs nothing until you first use your cellar.
+          No password needed — we email you a secure link to continue.
         </p>
       </form>
     </div>

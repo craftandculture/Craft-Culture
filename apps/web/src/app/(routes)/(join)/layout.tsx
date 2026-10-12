@@ -13,7 +13,7 @@ const JoinLayout = async ({ children }: PropsWithChildren) => {
   return (
     <div className="bg-background-muted min-h-screen">
       <header className="mx-auto flex w-full max-w-xl items-center gap-3 px-5 pt-6">
-        <Logo className="h-9 w-auto" />
+        <Logo className="h-16 w-auto" />
         <span className="bg-border-muted h-5 w-px" />
         <span className="text-text-muted text-xs font-semibold uppercase tracking-[0.18em]">
           Private Cellar
