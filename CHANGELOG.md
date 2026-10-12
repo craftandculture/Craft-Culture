@@ -1,3 +1,9 @@
+## [2.0.318](https://github.com/craftandculture/Craft-Culture/compare/v2.0.317...v2.0.318) (2026-10-12)
+
+### Bug Fixes
+
+* Pricing Manager and the price list no longer double a wine's cases when it has pricing under two pack sizes ([560a586](https://github.com/craftandculture/Craft-Culture/commit/560a586a0ca672035d04e48f2c0e0323c64c7de9))
+
 ## [2.0.317](https://github.com/craftandculture/Craft-Culture/compare/v2.0.316...v2.0.317) (2026-10-12)
 
 ### Bug Fixes
