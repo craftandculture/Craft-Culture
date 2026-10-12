@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
 import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
@@ -39,6 +40,7 @@ const adminRouter = createTRPCRouter({
   quoteRelease: adminQuoteRelease,
   getMembers: adminGetMembers,
   getMemberIdentity: adminGetMemberIdentity,
+  encryptIdentityDocuments: adminEncryptIdentityDocuments,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
 });

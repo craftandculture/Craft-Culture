@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
 import { partners, users } from '@/database/schema';
@@ -12,7 +13,8 @@ import updateUserSchema from '../schemas/updateUserSchema';
  * Update user profile during onboarding
  *
  * When a user selects "Wine Partner" (customerType: 'private_clients'),
- * automatically creates a Partner record linked to their account.
+ * automatically creates a Partner record linked to their account — always a new
+ * one; an existing partner with the same name is flagged to admins, never claimed.
  */
 const usersUpdate = protectedProcedure
   .input(updateUserSchema)
@@ -40,13 +42,14 @@ const usersUpdate = protectedProcedure
 
       if (!existingPartner) {
         /*
-          A partner already trading under this name is joined, not duplicated.
+          A new account always gets its own partner record.
 
-          This checked only whether the user already had a record, so a business
-          long since on file — with its stock, its shipments and its pricing
-          margins — got a second, empty one the moment somebody signed in. The
-          margins are keyed on the record, so the new one prices at defaults
-          while the screen shows the rate as set on the old.
+          This used to look for a partner already trading under the typed name
+          and hand it to the new user — its stock, its shipments, its pricing.
+          A name is not proof of identity: anyone typing "Cult Wines" would have
+          been given Cult Wines' account on approval. A genuine member of an
+          existing business is linked by an admin instead (one dropdown on the
+          Users page), and the match is raised so that is not missed.
         */
         const name = updatedUser.name ?? ctx.user.email ?? 'Wine Partner';
         const key = normalisePartnerName(name);
@@ -61,18 +64,21 @@ const usersUpdate = protectedProcedure
             )
           : undefined;
 
+        await db.insert(partners).values({
+          userId: ctx.user.id,
+          type: 'wine_partner',
+          businessName: name,
+        });
+
         if (byName) {
-          // Claim the existing record for this user rather than starting a
-          // second one beside it.
-          await db
-            .update(partners)
-            .set({ userId: ctx.user.id })
-            .where(eq(partners.id, byName.id));
-        } else {
-          await db.insert(partners).values({
-            userId: ctx.user.id,
-            type: 'wine_partner',
-            businessName: name,
+          await createAdminNotifications({
+            type: 'new_user_pending',
+            title: `Possible match: ${byName.businessName}`,
+            message: `${ctx.user.email ?? name} signed up as "${name}", which matches the existing partner "${byName.businessName}". If they genuinely belong to it, link them on the Users page — nothing has been linked automatically.`,
+            entityType: 'user',
+            entityId: ctx.user.id,
+            actionUrl: '/platform/admin/users?filter=pending',
+            metadata: { matchedPartnerId: byName.id },
           });
         }
       }

@@ -232,6 +232,18 @@ export const distributorProcedure = protectedProcedure.use(
  */
 export const stockOwnerProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
+    /*
+      An account awaiting approval holds nothing yet. Only the page redirect
+      stopped a pending user who was already linked to a partner from calling
+      these procedures directly, so the rule is held here as well.
+    */
+    if (ctx.user.approvalStatus !== 'approved') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your account is awaiting approval.',
+      });
+    }
+
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );

@@ -5,6 +5,7 @@ import {
   STOCK_OWNER_PARTNER_TYPES,
 } from '@/app/_auth/constants/accessProfiles';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import decryptIdentityFile from '@/app/_cellar/utils/decryptIdentityFile';
 import resolvePartnerForUser from '@/app/_partners/data/resolvePartnerForUser';
 import db from '@/database/client';
 import { partnerIdentityDocuments } from '@/database/schema';
@@ -14,8 +15,8 @@ import tryCatch from '@/utils/tryCatch';
 /**
  * Serve an identity document to someone entitled to see it
  *
- * Vercel Blob has no private tier, so the stored URL is a permanent
- * unauthenticated link to a government ID. It is never given to a browser.
+ * Vercel Blob has no private tier, so documents are stored encrypted and the
+ * stored URL is never given to a browser.
  * This route checks who is asking, fetches the blob server-side and streams
  * the bytes back, so the only thing a client ever holds is a URL that stops
  * working when their session does.
@@ -80,8 +81,23 @@ export const GET = async (request: Request) => {
 
   const [response] = await tryCatch(fetch(document.fileUrl));
 
-  if (!response?.ok || !response.body) {
+  if (!response?.ok) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 502 });
+  }
+
+  /*
+    Documents are stored encrypted; ones uploaded before encryption are read
+    as they are. Decrypted here, server-side, so the browser only ever sees the
+    plain document behind this session check.
+  */
+  const [plain, decryptError] = await tryCatch(
+    response
+      .arrayBuffer()
+      .then((stored) => decryptIdentityFile(Buffer.from(stored))),
+  );
+
+  if (!plain || decryptError) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 500 });
   }
 
   /*
@@ -95,7 +111,7 @@ export const GET = async (request: Request) => {
     document.fileName.replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 120) ||
     'document';
 
-  return new NextResponse(response.body, {
+  return new NextResponse(new Uint8Array(plain), {
     headers: {
       'Content-Type': document.mimeType,
       'Content-Disposition': `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(document.fileName)}`,
