@@ -12,6 +12,7 @@ import adminUpdateApplication from './controller/adminUpdateApplication';
 import adminUploadApplicationIdentity from './controller/adminUploadApplicationIdentity';
 import claimInvite from './controller/claimInvite';
 import getMyApplication from './controller/getMyApplication';
+import memberGetOverview from './controller/memberGetOverview';
 import saveApplicationStep from './controller/saveApplicationStep';
 import submitApplication from './controller/submitApplication';
 import uploadApplicationIdentity from './controller/uploadApplicationIdentity';
@@ -24,6 +25,10 @@ const onboardingRouter = createTRPCRouter({
     uploadIdentity: uploadApplicationIdentity,
     submit: submitApplication,
     claimInvite,
+  }),
+  /** A member inside their cellar */
+  member: createTRPCRouter({
+    overview: memberGetOverview,
   }),
   /** Kevin and Laraine's side: Cellar members → Applications */
   admin: createTRPCRouter({

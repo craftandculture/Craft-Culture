@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
+import getMembershipTerms from '@/app/_onboarding/data/getMembershipTerms';
 import db from '@/database/client';
 import {
   cellarReleaseRequests,
@@ -10,9 +11,6 @@ import {
   wmsStockMovements,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
-
-/** Cases included in the membership before storage is charged per case */
-const INCLUDED_CASES = 20;
 
 /**
  * Every cellar member, with what they hold and what they are waiting on
@@ -48,7 +46,10 @@ const adminGetMembers = adminProcedure.query(async () => {
       ),
     );
 
-  if (members.length === 0) return { members: [], includedCases: INCLUDED_CASES };
+  // The house terms set on Release Rates — what "over allowance" is measured against
+  const { includedCases } = await getMembershipTerms();
+
+  if (members.length === 0) return { members: [], includedCases };
 
   const ids = members.map((member) => member.id);
 
@@ -180,7 +181,7 @@ const adminGetMembers = adminProcedure.query(async () => {
       bottles: holding?.bottles ?? 0,
       wines: holding?.wines ?? 0,
       valueUsd: Math.round(holding?.value ?? 0),
-      overageCases: Math.max(0, cases - INCLUDED_CASES),
+      overageCases: Math.max(0, cases - includedCases),
       waitingOnUs: waitingOnUs.length,
       waitingOnThem: waitingOnThem.length,
       oldestRequestNumber: oldest?.requestNumber ?? null,
@@ -203,7 +204,7 @@ const adminGetMembers = adminProcedure.query(async () => {
     return b.bottles - a.bottles;
   });
 
-  return { members: rows, includedCases: INCLUDED_CASES };
+  return { members: rows, includedCases };
 });
 
 export default adminGetMembers;

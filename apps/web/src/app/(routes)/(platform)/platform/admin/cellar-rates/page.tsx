@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import type { MembershipTermsCard } from '@/app/_cellar/utils/monthlyMembershipCharge';
 import priceFromRateCard, {
   type ReleaseRateCard,
 } from '@/app/_cellar/utils/priceFromRateCard';
@@ -13,7 +14,9 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-interface RateForm extends ReleaseRateCard {
+import MembershipExample from './MembershipExample';
+
+interface RateForm extends ReleaseRateCard, MembershipTermsCard {
   notes: string;
 }
 
@@ -27,6 +30,9 @@ const EMPTY_FORM: RateForm = {
   repackPerCase: 0,
   deliveryFlat: 0,
   deliveryPerCase: 0,
+  membershipFeeAed: 600,
+  includedCases: 20,
+  extraCaseMonthlyAed: 30,
   notes: '',
 };
 
@@ -38,8 +44,17 @@ const EMPTY_FORM: RateForm = {
 const FIELD_GROUPS: {
   title: string;
   hint: string;
-  fields: { key: keyof ReleaseRateCard; label: string; suffix: string }[];
+  fields: { key: keyof ReleaseRateCard | keyof MembershipTermsCard; label: string; suffix: string }[];
 }[] = [
+  {
+    title: 'Membership',
+    hint: 'Monthly, no VAT (free zone). Cases are the peak held in the month: a sealed case is one, six loose bottles are one, a magnum counts as two bottles',
+    fields: [
+      { key: 'membershipFeeAed', label: 'Monthly fee', suffix: 'AED' },
+      { key: 'includedCases', label: 'Cases included', suffix: 'cases' },
+      { key: 'extraCaseMonthlyAed', label: 'Each case above, per month', suffix: 'AED' },
+    ],
+  },
   {
     title: 'Duty and clearance',
     hint: 'One charge, on the declared value — what is paid at clearance is the duty',
@@ -138,7 +153,7 @@ const CellarRatesPage = () => {
   const preview = priceFromRateCard(form, volume);
 
   const toForm = (
-    rate: (ReleaseRateCard & { notes: string | null }) | null,
+    rate: (ReleaseRateCard & MembershipTermsCard & { notes: string | null }) | null,
   ): RateForm | null =>
     rate
       ? {
@@ -151,6 +166,9 @@ const CellarRatesPage = () => {
           repackPerCase: rate.repackPerCase,
           deliveryFlat: rate.deliveryFlat,
           deliveryPerCase: rate.deliveryPerCase,
+          membershipFeeAed: rate.membershipFeeAed,
+          includedCases: rate.includedCases,
+          extraCaseMonthlyAed: rate.extraCaseMonthlyAed,
           notes: rate.notes ?? '',
         }
       : null;
@@ -200,13 +218,14 @@ const CellarRatesPage = () => {
                           }))
                         }
                       />
-                      {field.suffix === '%' && (
-                        <span className="text-text-muted pr-2.5 text-xs">%</span>
+                      {field.suffix !== '$' && (
+                        <span className="text-text-muted pr-2.5 text-xs">{field.suffix}</span>
                       )}
                     </div>
                   </label>
                 ))}
               </div>
+              {group.title === 'Membership' && <MembershipExample terms={form} />}
             </div>
           ))}
 
@@ -337,6 +356,9 @@ const CellarRatesPage = () => {
               repackPerCase: form.repackPerCase,
               deliveryFlat: form.deliveryFlat,
               deliveryPerCase: form.deliveryPerCase,
+              membershipFeeAed: form.membershipFeeAed,
+              includedCases: Math.round(form.includedCases),
+              extraCaseMonthlyAed: form.extraCaseMonthlyAed,
               notes: form.notes || undefined,
             })
           }

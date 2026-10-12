@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
@@ -655,6 +656,8 @@ const CellarPage = () => {
           </Button>
         </div>
       </header>
+
+      <CellarOverviewPanel />
 
       {/*
         Four cards in four unrelated pastels said nothing — the colours were

@@ -25,6 +25,10 @@ const adminSetReleaseRates = adminProcedure
       repackPerCase: z.number().min(0).default(0),
       deliveryFlat: z.number().min(0).default(0),
       deliveryPerCase: z.number().min(0).default(0),
+      /** Membership: the monthly fee, cases it includes, and each case above */
+      membershipFeeAed: z.number().min(0).max(100_000).optional(),
+      includedCases: z.number().int().min(0).max(10_000).optional(),
+      extraCaseMonthlyAed: z.number().min(0).max(10_000).optional(),
       notes: z.string().max(500).optional(),
     }),
   )
