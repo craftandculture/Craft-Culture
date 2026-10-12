@@ -1,11 +1,12 @@
 'use client';
 
 import { IconArrowRight, IconBrandWhatsapp, IconCheck } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import useTRPC from '@/lib/trpc/browser';
 
+import BringWineIn from './BringWineIn';
 import intakeStages from '../constants/intakeStages';
 import wineSources from '../constants/wineSources';
 
@@ -21,7 +22,14 @@ const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFra
  */
 const CellarOverviewPanel = () => {
   const api = useTRPC();
-  const { data } = useQuery(api.onboarding.member.overview.queryOptions());
+  const { data, refetch } = useQuery(api.onboarding.member.overview.queryOptions());
+  const updateCard = useMutation(
+    api.onboarding.member.updateCard.mutationOptions({
+      onSuccess: ({ url }) => {
+        window.location.assign(url);
+      },
+    }),
+  );
 
   if (!data) return null;
 
@@ -111,7 +119,19 @@ const CellarOverviewPanel = () => {
             Your last payment did not go through — please update your card.
           </p>
         )}
+        {membershipStatus === 'past_due' && (
+          <button
+            type="button"
+            onClick={() => updateCard.mutate()}
+            disabled={updateCard.isPending}
+            className="bg-text-primary text-surface-primary mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold"
+          >
+            Update your card
+          </button>
+        )}
       </div>
+
+      <BringWineIn onAdded={() => void refetch()} />
     </div>
   );
 };

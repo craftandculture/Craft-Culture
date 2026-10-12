@@ -5,12 +5,14 @@ import { useSearchParams } from 'next/navigation';
 
 import CellarMembersList from '@/app/_cellar/components/CellarMembersList';
 import ApplicationsList from '@/app/_onboarding/components/admin/ApplicationsList';
+import IntakesList from '@/app/_onboarding/components/admin/IntakesList';
 import InvitesList from '@/app/_onboarding/components/admin/InvitesList';
 
 const tabs = [
   { id: 'members', label: 'Members' },
   { id: 'applications', label: 'Applications' },
   { id: 'invites', label: 'Invites' },
+  { id: 'intakes', label: 'Intakes' },
 ] as const;
 
 /**
@@ -44,6 +46,7 @@ const CellarMembersPage = () => {
 
       {tab === 'applications' && <ApplicationsList />}
       {tab === 'invites' && <InvitesList />}
+      {tab === 'intakes' && <IntakesList />}
       {tab === 'members' && <CellarMembersList />}
     </div>
   );

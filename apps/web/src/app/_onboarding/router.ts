@@ -4,14 +4,17 @@ import adminApproveApplication from './controller/adminApproveApplication';
 import adminDeclineApplication from './controller/adminDeclineApplication';
 import adminInviteMember from './controller/adminInviteMember';
 import adminListApplications from './controller/adminListApplications';
+import adminListIntakes from './controller/adminListIntakes';
 import adminListInvites from './controller/adminListInvites';
 import adminMergeApplication from './controller/adminMergeApplication';
 import adminResendInvite from './controller/adminResendInvite';
 import adminRevokeInvite from './controller/adminRevokeInvite';
+import adminSetIntakeStage from './controller/adminSetIntakeStage';
 import adminUpdateApplication from './controller/adminUpdateApplication';
 import adminUploadApplicationIdentity from './controller/adminUploadApplicationIdentity';
 import claimInvite from './controller/claimInvite';
 import getMyApplication from './controller/getMyApplication';
+import memberAddIntake from './controller/memberAddIntake';
 import memberCompleteActivation from './controller/memberCompleteActivation';
 import memberGetActivation from './controller/memberGetActivation';
 import memberGetOverview from './controller/memberGetOverview';
@@ -39,6 +42,7 @@ const onboardingRouter = createTRPCRouter({
     completeActivation: memberCompleteActivation,
     updateCard: memberUpdateCard,
     refreshMembership: memberRefreshMembership,
+    addIntake: memberAddIntake,
   }),
   /** Kevin and Laraine's side: Cellar members → Applications */
   admin: createTRPCRouter({
@@ -52,6 +56,8 @@ const onboardingRouter = createTRPCRouter({
     inviteMember: adminInviteMember,
     resendInvite: adminResendInvite,
     revokeInvite: adminRevokeInvite,
+    listIntakes: adminListIntakes,
+    setIntakeStage: adminSetIntakeStage,
   }),
 });
 
