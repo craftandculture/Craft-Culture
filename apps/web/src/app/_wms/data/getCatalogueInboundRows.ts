@@ -15,8 +15,7 @@ import inboundLineKey from '../utils/inboundLineKey';
 import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
-
-
+import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueInboundRow extends CatalogueRow {
   /** Earliest ETA across the shipments carrying this wine, if known */
@@ -33,7 +32,6 @@ const isZeroTransferOwner = (owner: string | null) =>
   !!owner && /(cru wine|crurated)/i.test(owner);
 
 /** Shipment statuses that mean "bought, not yet received into wms_stock". */
-
 
 /** HS codes per category — inbound lines carry no category of their own. */
 const HS_CODES: Record<string, readonly string[] | undefined> = {
@@ -79,7 +77,6 @@ const FIRST_GATED_SHIPMENT = 'SHP-2026-0012';
 const getCatalogueInboundRows = async (
   filters: CatalogueInboundFilters = {},
 ): Promise<CatalogueInboundRow[]> => {
-
   const where = [
     eq(logisticsShipments.type, 'inbound'),
     /*
@@ -177,7 +174,9 @@ const getCatalogueInboundRows = async (
       bottleSizeMl: sql<
         number | null
       >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
-      cases: sql<number>`SUM(COALESCE(${logisticsShipmentItems.cases}, 0))::int`,
+      cases: sql<number>`${sumAcrossPricingRows(
+        sql`COALESCE(${logisticsShipmentItems.cases}, 0)`,
+      )}::int`,
       /*
         What is actually offered, from whichever column holds it.
 
@@ -186,13 +185,13 @@ const getCatalogueInboundRows = async (
         explicit bottle count and fall back to the cased arithmetic, so a row
         can no longer be served with a price and no quantity.
       */
-      bottles: sql<number>`SUM(
-        COALESCE(
+      bottles: sql<number>`${sumAcrossPricingRows(
+        sql`COALESCE(
           NULLIF(${logisticsShipmentItems.totalBottles}, 0),
           COALESCE(${logisticsShipmentItems.cases}, 0)
             * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
-        )
-      )::int`,
+        )`,
+      )}::int`,
       costPerBottle: sql<
         number | null
       >`MAX(${logisticsShipmentItems.productCostPerBottle})`,
@@ -335,7 +334,9 @@ const getCatalogueInboundRows = async (
       bottleSize: r.bottleSizeMl != null ? `${r.bottleSizeMl / 10}cl` : null,
       availableCases: r.cases,
       availableBottles: r.bottles,
-      stage: r.atWarehouse ? ('at_warehouse' as const) : ('in_transit' as const),
+      stage: r.atWarehouse
+        ? ('at_warehouse' as const)
+        : ('in_transit' as const),
       ibPerBottle: round2(ib),
       ibPerCase: round2(ib * cc),
       pcPerBottle: round2(pc),

@@ -33,6 +33,7 @@ import inboundLineKey from '../utils/inboundLineKey';
 import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
+import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 /**
  * Get products with stock and pricing data for the Pricing Manager page
@@ -166,7 +167,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const sortExpressions = {
       productName: sql`MAX(${wmsStock.productName})`,
       vintage: sql`MAX(${wmsStock.vintage})`,
-      totalCases: sql`SUM(${wmsStock.quantityCases})`,
+      totalCases: sumAcrossPricingRows(wmsStock.quantityCases),
       importPrice: sql`MAX(${wmsProductPricing.importPricePerBottle})`,
       sellingPrice: sql`MAX(${wmsProductPricing.sellingPricePerBottle})`,
       margin: sql`CASE WHEN MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.importPricePerBottle}) > 0 THEN (1 - MAX(${wmsProductPricing.importPricePerBottle}) / MAX(${wmsProductPricing.sellingPricePerBottle})) * 100 ELSE -999 END`,
@@ -183,7 +184,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
         caseConfig: sql<number | null>`MAX(${wmsStock.caseConfig})`,
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
-        totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
+        totalCases: sql<number>`${sumAcrossPricingRows(wmsStock.quantityCases)}::int`,
         category: sql<string | null>`MAX(${wmsStock.category})`,
         // Owner(s) holding this SKU — drives the per-row owner badge in the
         // Pricing Manager. Usually one; ownerCount > 1 means the same lwin18 is
@@ -233,9 +234,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         b2bMarginPct: sql<
           number | null
         >`MAX(${wmsProductPricing.b2bMarginPct})`,
-        pcMarginPct: sql<
-          number | null
-        >`MAX(${wmsProductPricing.pcMarginPct})`,
+        pcMarginPct: sql<number | null>`MAX(${wmsProductPricing.pcMarginPct})`,
         // Owner's own rates (explicit settings; null if the owner hasn't set them)
         ownerLogistics: sql<
           number | null
@@ -666,9 +665,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         */
         ...(active.has('notReleased') || active.has('released')
           ? [
-              sql`${
-                active.has('notReleased') ? sql`NOT EXISTS` : sql`EXISTS`
-              } (
+              sql`${active.has('notReleased') ? sql`NOT EXISTS` : sql`EXISTS`} (
                 SELECT 1 FROM wms_product_pricing rel
                  WHERE ${lwinPakKey(sql`rel.lwin18`)} = ${inboundLineKey()}
                    AND rel.pricing_released_at IS NOT NULL
@@ -759,7 +756,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           bottleSizeMl: sql<
             number | null
           >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
-          totalCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+          totalCases: sql<number>`${sumAcrossPricingRows(logisticsShipmentItems.cases)}::int`,
           // A manually corrected import price wins over the shipment's own
           // figure — it was being ignored, so an edit saved and the row went on
           // showing the old cost.

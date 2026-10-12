@@ -13,14 +13,13 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { getInboundStockSchema } from '../schemas/stockQuerySchema';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
-
+import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 /** Inbound shipment statuses (after booking, before WMS receiving) */
 
-
 /**
- * Map HS code to product category.
- * Uses the same HS code mapping as the Zoho import UPC column.
+ * Map HS code to product category. Uses the same HS code mapping as the Zoho
+ * import UPC column.
  */
 const HS_TO_CATEGORY = sql<string | null>`MAX(
   CASE
@@ -32,10 +31,10 @@ const HS_TO_CATEGORY = sql<string | null>`MAX(
 )`;
 
 /**
- * Canonical dashed LWIN — some suppliers (e.g. Cult Wines) store the LWIN as
- * 18 raw digits with no dashes, which otherwise fails to match the canonical
- * dashed records and duplicates the inbound row. Normalize in SQL so both
- * forms group and display as one.
+ * Canonical dashed LWIN — some suppliers (e.g. Cult Wines) store the LWIN as 18
+ * raw digits with no dashes, which otherwise fails to match the canonical
+ * dashed records and duplicates the inbound row. Normalize in SQL so both forms
+ * group and display as one.
  */
 const NORMALIZED_LWIN = sql<string | null>`
   CASE
@@ -50,7 +49,8 @@ const NORMALIZED_LWIN = sql<string | null>`
 
 /**
  * Grouping key for inbound items — same product across shipments should merge.
- * Uses the normalized LWIN when available, falls back to productName + pack config.
+ * Uses the normalized LWIN when available, falls back to productName + pack
+ * config.
  */
 const GROUP_KEY = sql<string>`
   COALESCE(${NORMALIZED_LWIN}, ${logisticsShipmentItems.productName})
@@ -59,9 +59,9 @@ const GROUP_KEY = sql<string>`
 `;
 
 /**
- * Get inbound stock from active logistics shipments.
- * Shows items from shipments that are booked through at_warehouse
- * as virtual "inbound" rows in the Stock Explorer.
+ * Get inbound stock from active logistics shipments. Shows items from shipments
+ * that are booked through at_warehouse as virtual "inbound" rows in the Stock
+ * Explorer.
  */
 const adminGetInboundStock = wmsOperatorProcedure
   .input(getInboundStockSchema)
@@ -89,7 +89,15 @@ const adminGetInboundStock = wmsOperatorProcedure
         category === 'Wine'
           ? ['22042100', '22041000']
           : category === 'Spirits'
-            ? ['22084000', '22083000', '22082000', '22089090', '22085000', '22087000', '22086000']
+            ? [
+                '22084000',
+                '22083000',
+                '22082000',
+                '22089090',
+                '22085000',
+                '22087000',
+                '22086000',
+              ]
             : ['22030000', '22060000'];
       conditions.push(inArray(logisticsShipmentItems.hsCode, hsCodes));
     }
@@ -119,9 +127,13 @@ const adminGetInboundStock = wmsOperatorProcedure
         )`,
         lwin: sql<string | null>`MAX(${NORMALIZED_LWIN})`,
         vintage: sql<number | null>`MAX(${logisticsShipmentItems.vintage})`,
-        bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})`,
-        bottlesPerCase: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})`,
-        expectedCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+        bottleSizeMl: sql<
+          number | null
+        >`MAX(${logisticsShipmentItems.bottleSizeMl})`,
+        bottlesPerCase: sql<
+          number | null
+        >`MAX(${logisticsShipmentItems.bottlesPerCase})`,
+        expectedCases: sql<number>`${sumAcrossPricingRows(logisticsShipmentItems.cases)}::int`,
         /*
           Cost is per BOTTLE, so a split pack keeps it and the case price simply
           follows the new pack — six singles out of a $600 case are $100 each,
@@ -170,7 +182,7 @@ const adminGetInboundStock = wmsOperatorProcedure
     // Sort
     const sortExpr =
       sortBy === 'expectedCases'
-        ? sql`SUM(${logisticsShipmentItems.cases})`
+        ? sumAcrossPricingRows(logisticsShipmentItems.cases)
         : sortBy === 'productName'
           ? sql`MAX(${logisticsShipmentItems.productName})`
           : sortBy === 'vintage'
@@ -215,12 +227,7 @@ const adminGetInboundStock = wmsOperatorProcedure
             eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
           )
           .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
-          .where(
-            and(
-              whereClause,
-              sql`${GROUP_KEY} = ${product.groupKey}`,
-            ),
-          )
+          .where(and(whereClause, sql`${GROUP_KEY} = ${product.groupKey}`))
           .orderBy(asc(logisticsShipments.eta));
 
         return {

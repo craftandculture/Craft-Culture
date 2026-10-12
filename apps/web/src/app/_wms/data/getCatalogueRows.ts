@@ -15,6 +15,7 @@ import {
 
 import inOurWarehouse from '../utils/inOurWarehouse';
 import lwinPakKey from '../utils/lwinPakKey';
+import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueRow {
   lwin18: string;
@@ -139,7 +140,7 @@ const getCatalogueRows = async (
       owner: sql<string | null>`MAX(${wmsStock.ownerName})`,
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
-      availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
+      availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
       importPrice: sql<number | null>`${preferExact(
         wmsProductPricing.importPricePerBottle,
       )}`,
@@ -312,7 +313,8 @@ const getCatalogueRows = async (
     const floor =
       ask > 0
         ? ask /
-          (1 - Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100)
+          (1 -
+            Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100)
         : 0;
 
     const ibFinal = Math.max(ib, floor);
