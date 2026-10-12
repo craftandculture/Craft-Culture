@@ -1,3 +1,9 @@
+## [2.0.317](https://github.com/craftandculture/Craft-Culture/compare/v2.0.316...v2.0.317) (2026-10-12)
+
+### Bug Fixes
+
+* daily summary no longer reports missing readings ([a838091](https://github.com/craftandculture/Craft-Culture/commit/a8380918b26cfce07c280810e3cc838f2b9e35fb))
+
 ## [2.0.316](https://github.com/craftandculture/Craft-Culture/compare/v2.0.315...v2.0.316) (2026-10-11)
 
 ### Improvements
