@@ -32,7 +32,7 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
   const add = useMutation(
     api.onboarding.member.addIntake.mutationOptions({
       onSuccess: () => {
-        toast.success("Thank you — we'll be in touch to arrange it.");
+        toast.success('Thank you. We will be in touch to arrange this.');
         setSource(null);
         setDetails({ holderName: '', approxCases: '', note: '' });
         onAdded();
@@ -106,7 +106,7 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
             value={details.note}
             onChange={(event) => setDetails((current) => ({ ...current, note: event.target.value }))}
           />
-          <p className="text-text-muted text-xs">Don&apos;t have the details? That&apos;s fine — we&apos;ll get them for you.</p>
+          <p className="text-text-muted text-xs">If you do not have these details to hand, we will obtain them on your behalf.</p>
           <button
             type="submit"
             disabled={add.isPending}

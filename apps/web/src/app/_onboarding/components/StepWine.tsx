@@ -62,7 +62,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
   return (
     <StepFrame
       title="Your wine"
-      intro="Where is your wine today? Tick as many as apply."
+      intro="Where your wine is held today. Select all that apply."
       onContinue={() => onSave(answers)}
       onSkip={onSkip}
       onBack={onBack}
@@ -140,7 +140,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
                     />
                   </FieldLabel>
                   <p className="text-text-muted text-xs leading-5">
-                    Don&apos;t have the details? That&apos;s fine — we&apos;ll get them for you.
+                    If you do not have these details to hand, we will obtain them on your behalf.
                   </p>
                 </div>
               )}

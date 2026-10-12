@@ -27,7 +27,7 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
   return (
     <StepFrame
       title="About you"
-      intro="So we know who we're looking after. Only your name is needed now — the rest can wait."
+      intro="The details for your account. Only your name is required at this stage; the remainder may be added later."
       onContinue={() => onSave(values)}
       isBusy={isBusy}
       isContinueDisabled={values.fullName.trim().length < 2}
@@ -41,7 +41,7 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
           placeholder="As on your Emirates ID"
         />
       </FieldLabel>
-      <FieldLabel label="Mobile" hint="WhatsApp is how most members reach us." optional>
+      <FieldLabel label="Mobile" hint="Used for updates on your cellar, including by WhatsApp." optional>
         <input
           className={`${fieldClass} h-12`}
           type="tel"

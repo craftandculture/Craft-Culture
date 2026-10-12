@@ -44,7 +44,7 @@ const StepIdentity = ({ initial, uploaded, uploadingSide, isBusy, onUpload, onSa
   return (
     <StepFrame
       title="Your Emirates ID"
-      intro="We hold your wine in a licensed UAE bond, so we need to know who owns it. You can add this now or later — you'll need it before you buy, release or bring wine in."
+      intro="As a licensed UAE bonded warehouse, we are required to verify the owner of every collection. You may add this now or later; it is required before you buy, release or transfer wine."
       onContinue={() => onSave(values)}
       onSkip={onSkip}
       onBack={onBack}

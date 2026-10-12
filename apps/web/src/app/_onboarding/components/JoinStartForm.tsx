@@ -64,10 +64,10 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
         </span>
         <h1 className="font-heading text-text-primary text-2xl">Check your email</h1>
         <p className="text-text-muted text-sm leading-6">
-          We&apos;ve sent a sign-in link to{' '}
+          We have sent a secure link to{' '}
           <span className="text-text-primary font-semibold">{sentTo}</span>.
           <br />
-          Open it on this device to continue your membership.
+          Open it on this device to continue your application.
         </p>
         <Button variant="ghost" size="md" onClick={() => setSentTo(null)}>
           <ButtonContent iconLeft={IconArrowLeft}>Use a different email</ButtonContent>
@@ -96,9 +96,9 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           </h1>
         )}
         <p className="text-text-muted text-base leading-7">
-          Sign up in a few minutes with just your name and email — your Emirates
-          ID and details of your wine can follow later. Joining is free; your
-          membership starts only when you first buy, release or bring wine in.
+          A professional account for private collectors: bonded storage in the
+          UAE, international sourcing and consolidation, and a complete record of
+          every case you hold. Membership is by application.
         </p>
       </div>
 
@@ -125,7 +125,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           </ButtonContent>
         </Button>
         <p className="text-text-muted text-center text-xs">
-          No password needed — we email you a secure link to continue.
+          We will email you a secure link to begin your application.
         </p>
       </form>
     </div>

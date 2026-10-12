@@ -3,7 +3,7 @@ const wineSources = [
   {
     value: 'uae_in_bond',
     label: 'Build my cellar from wine in bond here in the UAE',
-    hint: 'Choose from what we already hold — nothing has to travel.',
+    hint: 'Select from wine already held in bond in the UAE.',
     isTransfer: false,
   },
   {
@@ -15,19 +15,19 @@ const wineSources = [
   {
     value: 'uk_eu_cellar',
     label: 'Another cellar or merchant in the UK or Europe',
-    hint: 'BBR, Justerini & Brooks, a bonded warehouse — we contact them for you.',
+    hint: 'Berry Bros. & Rudd, Justerini & Brooks or another bonded warehouse. We liaise with them directly.',
     isTransfer: true,
   },
   {
     value: 'with_cc',
     label: 'Already with Craft & Culture',
-    hint: 'We link it to your cellar.',
+    hint: 'We will link it to your cellar account.',
     isTransfer: false,
   },
   {
     value: 'starting_fresh',
     label: 'Starting from scratch',
-    hint: 'We will help you build it.',
+    hint: 'We will help you build your collection.',
     isTransfer: false,
   },
 ] as const;

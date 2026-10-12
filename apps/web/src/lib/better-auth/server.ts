@@ -17,10 +17,21 @@ import loops from '../loops/client';
 
 const isVercelProduction = process.env.VERCEL_ENV === 'production';
 
+/*
+  A preview build trusts its own address and nothing else, so sign-in can be
+  tested before a merge. Production never takes this path.
+*/
+const isVercelPreview = process.env.VERCEL_ENV === 'preview';
+const previewOrigins = isVercelPreview
+  ? [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL]
+      .filter((host): host is string => Boolean(host))
+      .map((host) => `https://${host}`)
+  : [];
+
 const authServerClient = betterAuth({
   baseURL: isVercelProduction
     ? 'https://wine.craftculture.xyz'
-    : serverConfig.appUrl.toString(),
+    : (previewOrigins[0] ?? serverConfig.appUrl.toString()),
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   session: {
@@ -132,7 +143,7 @@ const authServerClient = betterAuth({
         'https://www.craftculture.xyz',
         'https://craft-culture.vercel.app',
       ]
-    : ['http://localhost:3000'],
+    : ['http://localhost:3000', ...previewOrigins],
   database: drizzleAdapter(db, {
     provider: 'pg',
     usePlural: true,
