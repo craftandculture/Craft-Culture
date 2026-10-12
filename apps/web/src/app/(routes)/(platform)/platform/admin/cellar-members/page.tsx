@@ -7,12 +7,14 @@ import CellarMembersList from '@/app/_cellar/components/CellarMembersList';
 import ApplicationsList from '@/app/_onboarding/components/admin/ApplicationsList';
 import IntakesList from '@/app/_onboarding/components/admin/IntakesList';
 import InvitesList from '@/app/_onboarding/components/admin/InvitesList';
+import StorageList from '@/app/_onboarding/components/admin/StorageList';
 
 const tabs = [
   { id: 'members', label: 'Members' },
   { id: 'applications', label: 'Applications' },
   { id: 'invites', label: 'Invites' },
   { id: 'intakes', label: 'Intakes' },
+  { id: 'storage', label: 'Storage' },
 ] as const;
 
 /**
@@ -47,6 +49,7 @@ const CellarMembersPage = () => {
       {tab === 'applications' && <ApplicationsList />}
       {tab === 'invites' && <InvitesList />}
       {tab === 'intakes' && <IntakesList />}
+      {tab === 'storage' && <StorageList />}
       {tab === 'members' && <CellarMembersList />}
     </div>
   );
