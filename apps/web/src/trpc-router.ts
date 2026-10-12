@@ -11,6 +11,7 @@ import lpoRouter from '@/app/_lpo/router';
 import lwinRouter from '@/app/_lwin/router';
 import morningViewRouter from '@/app/_morningView/router';
 import notificationsRouter from '@/app/_notifications/router';
+import onboardingRouter from '@/app/_onboarding/router';
 import orderChecksRouter from '@/app/_orderChecks/router';
 import partnersRouter from '@/app/_partners/router';
 import passkeysRouter from '@/app/_passkeys/router';
@@ -46,6 +47,7 @@ export const appRouter = createTRPCRouter({
   zohoCodes: zohoCodesRouter,
   users: usersRouter,
   notifications: notificationsRouter,
+  onboarding: onboardingRouter,
   partners: partnersRouter,
   passkeys: passkeysRouter,
   pricing: pricingRouter,

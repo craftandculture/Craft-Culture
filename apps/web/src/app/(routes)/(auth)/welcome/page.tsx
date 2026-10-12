@@ -1,6 +1,9 @@
+import { redirect } from 'next/navigation';
+
 import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import WelcomeForm from '@/app/_auth/components/WelcomeForm';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import getCellarApplicationRoute from '@/app/_onboarding/data/getCellarApplicationRoute';
 
 /**
  * Onboarding, with a way back out of an impersonated session
@@ -13,6 +16,12 @@ import getCurrentUser from '@/app/_auth/data/getCurrentUser';
  */
 const Page = async () => {
   const user = await getCurrentUser();
+
+  // A Private Cellar applicant finishes their own application, not this form
+  if (user && !user.isImpersonated) {
+    const route = await getCellarApplicationRoute(user.id);
+    if (route) redirect(route);
+  }
 
   return (
     <>

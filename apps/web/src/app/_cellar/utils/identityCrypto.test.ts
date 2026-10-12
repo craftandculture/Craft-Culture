@@ -36,7 +36,7 @@ describe('identity file encryption', () => {
   it('refuses a tampered file', () => {
     process.env.IDENTITY_ENCRYPTION_KEY = randomBytes(32).toString('base64');
     const { bytes } = encryptIdentityFile(Buffer.from('a government ID'));
-    bytes[bytes.length - 1] ^= 0xff;
+    bytes[bytes.length - 1] = (bytes[bytes.length - 1] ?? 0) ^ 0xff;
 
     expect(() => decryptIdentityFile(bytes)).toThrow();
   });

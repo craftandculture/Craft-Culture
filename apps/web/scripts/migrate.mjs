@@ -2568,6 +2568,115 @@ const runMigrations = async () => {
     `);
     console.log('✅ logistics jobs + movement bonds ready');
 
+    // Private Cellar onboarding: membership pricing on the rate card
+    await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "membership_fee_aed" double precision NOT NULL DEFAULT 600`);
+    await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "included_cases" integer NOT NULL DEFAULT 20`);
+    await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "extra_case_monthly_aed" double precision NOT NULL DEFAULT 30`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_applications" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "status" text DEFAULT 'draft' NOT NULL,
+        "step" text DEFAULT 'about' NOT NULL,
+        "full_name" text,
+        "phone" text,
+        "delivery_address" text,
+        "eid_number" text,
+        "eid_expiry" date,
+        "terms_version" text,
+        "terms_accepted_at" timestamp,
+        "invite_id" uuid,
+        "duplicate_of_partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "submitted_at" timestamp,
+        "decided_at" timestamp,
+        "decided_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "decline_reason" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "cellar_applications_user_idx" ON "cellar_applications" ("user_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_applications_status_idx" ON "cellar_applications" ("status")`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_intakes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "application_id" uuid REFERENCES "cellar_applications"("id") ON DELETE CASCADE,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE CASCADE,
+        "source" text NOT NULL,
+        "holder_name" text,
+        "holder_account_ref" text,
+        "approx_cases" integer,
+        "note" text,
+        "tastes" text,
+        "stage" text DEFAULT 'requested' NOT NULL,
+        "shipment_id" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_intakes_partner_idx" ON "cellar_intakes" ("partner_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_intakes_application_idx" ON "cellar_intakes" ("application_id")`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_intake_files" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "intake_id" uuid NOT NULL REFERENCES "cellar_intakes"("id") ON DELETE CASCADE,
+        "file_url" text NOT NULL,
+        "file_name" text NOT NULL,
+        "mime_type" text,
+        "file_size" integer,
+        "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_intake_files_intake_idx" ON "cellar_intake_files" ("intake_id")`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_memberships" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "status" text DEFAULT 'not_activated' NOT NULL,
+        "zoho_customer_id" text,
+        "zoho_subscription_id" text,
+        "zoho_hosted_page_id" text,
+        "activated_at" timestamp,
+        "activated_by" text,
+        "card_last4" text,
+        "next_billing_at" timestamp,
+        "cancelled_at" timestamp,
+        "last_extra_cases_pushed_for" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "cellar_memberships_partner_idx" ON "cellar_memberships" ("partner_id")`);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_invites" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "email" text NOT NULL,
+        "name" text NOT NULL,
+        "phone" text,
+        "token_hash" text NOT NULL,
+        "status" text DEFAULT 'sent' NOT NULL,
+        "user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "invited_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "expires_at" timestamp NOT NULL,
+        "last_sent_at" timestamp,
+        "accepted_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "cellar_invites_token_idx" ON "cellar_invites" ("token_hash")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_invites_email_idx" ON "cellar_invites" ("email")`);
+    console.log('✅ private cellar onboarding ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

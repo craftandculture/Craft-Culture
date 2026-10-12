@@ -5354,6 +5354,19 @@ export const cellarReleaseRates = pgTable(
     deliveryFlat: doublePrecision('delivery_flat').notNull().default(0),
     deliveryPerCase: doublePrecision('delivery_per_case').notNull().default(0),
 
+    /*
+      Private Cellar membership. A monthly fee covers a number of cases; each
+      case above that is charged per month. Held on the rate card so a member
+      on bespoke terms is one override, not a code change.
+    */
+    membershipFeeAed: doublePrecision('membership_fee_aed')
+      .notNull()
+      .default(600),
+    includedCases: integer('included_cases').notNull().default(20),
+    extraCaseMonthlyAed: doublePrecision('extra_case_monthly_aed')
+      .notNull()
+      .default(30),
+
     notes: text('notes'),
     updatedBy: uuid('updated_by').references(() => users.id, {
       onDelete: 'set null',
@@ -7260,3 +7273,195 @@ export const teamTaskPeople = pgTable('team_task_people', {
 
 export type TeamTask = typeof teamTasks.$inferSelect;
 export type TeamTaskPart = typeof teamTaskParts.$inferSelect;
+
+
+/* -------------------------------------------------------------------------- */
+/*                     Private Cellar onboarding                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A person's application to become a Private Cellar member
+ *
+ * One per user. Created on their first visit to the application, so steps can
+ * be saved and finished later; the collector partner is only created when it
+ * is submitted, so an abandoned form leaves nothing behind but this row.
+ *
+ * `status`: draft → submitted → approved | declined. Invited members are
+ * approved on submit.
+ */
+export const cellarApplications = pgTable(
+  'cellar_applications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** Set on submit — the collector this application became */
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    status: text('status').notNull().default('draft'),
+    /** The step to resume at: about | identity | wine | membership */
+    step: text('step').notNull().default('about'),
+    fullName: text('full_name'),
+    phone: text('phone'),
+    deliveryAddress: text('delivery_address'),
+    eidNumber: text('eid_number'),
+    eidExpiry: date('eid_expiry'),
+    termsVersion: text('terms_version'),
+    termsAcceptedAt: timestamp('terms_accepted_at', { mode: 'date' }),
+    inviteId: uuid('invite_id'),
+    /** An existing partner whose NAME matched — flagged, never linked */
+    duplicateOfPartnerId: uuid('duplicate_of_partner_id').references(
+      () => partners.id,
+      { onDelete: 'set null' },
+    ),
+    submittedAt: timestamp('submitted_at', { mode: 'date' }),
+    decidedAt: timestamp('decided_at', { mode: 'date' }),
+    decidedBy: uuid('decided_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    declineReason: text('decline_reason'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cellar_applications_user_idx').on(table.userId),
+    index('cellar_applications_status_idx').on(table.status),
+  ],
+);
+
+/**
+ * Where a member's wine is, and our progress bringing it in
+ *
+ * One row per source ticked on the application (several are normal). Details
+ * are optional — a cellar that cannot export a stock list must not stop anyone
+ * joining; we get the detail from the holder ourselves.
+ *
+ * `source`: uae_in_bond | lcb | uk_eu_cellar | with_cc | starting_fresh
+ * `stage`: requested → in_progress → arriving_uk → shipping_uae → in_cellar, or closed
+ */
+export const cellarIntakes = pgTable(
+  'cellar_intakes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    applicationId: uuid('application_id').references(
+      () => cellarApplications.id,
+      { onDelete: 'cascade' },
+    ),
+    /** Null until the application is submitted and the collector exists */
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'cascade',
+    }),
+    source: text('source').notNull(),
+    holderName: text('holder_name'),
+    holderAccountRef: text('holder_account_ref'),
+    approxCases: integer('approx_cases'),
+    note: text('note'),
+    /** For building a cellar from UAE stock: what they like to drink */
+    tastes: text('tastes'),
+    stage: text('stage').notNull().default('requested'),
+    shipmentId: uuid('shipment_id'),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_intakes_partner_idx').on(table.partnerId),
+    index('cellar_intakes_application_idx').on(table.applicationId),
+  ],
+);
+
+/** A file a member attached about their wine — stored encrypted */
+export const cellarIntakeFiles = pgTable(
+  'cellar_intake_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    intakeId: uuid('intake_id')
+      .references(() => cellarIntakes.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type'),
+    fileSize: integer('file_size'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [index('cellar_intake_files_intake_idx').on(table.intakeId)],
+);
+
+/**
+ * A member's paid membership, billed through Zoho Billing
+ *
+ * Signing up costs nothing; this becomes `active` on the member's first action
+ * (a transfer in, a purchase, a release, an offer), which is when billing
+ * starts.
+ *
+ * `status`: not_activated | pending_payment | active | past_due | cancelled
+ */
+export const cellarMemberships = pgTable(
+  'cellar_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: text('status').notNull().default('not_activated'),
+    zohoCustomerId: text('zoho_customer_id'),
+    zohoSubscriptionId: text('zoho_subscription_id'),
+    zohoHostedPageId: text('zoho_hosted_page_id'),
+    activatedAt: timestamp('activated_at', { mode: 'date' }),
+    /** The action that triggered activation, e.g. "release" */
+    activatedBy: text('activated_by'),
+    cardLast4: text('card_last4'),
+    nextBillingAt: timestamp('next_billing_at', { mode: 'date' }),
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+    /** "2026-10" — the last month whose extra cases were pushed to Zoho */
+    lastExtraCasesPushedFor: text('last_extra_cases_pushed_for'),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('cellar_memberships_partner_idx').on(table.partnerId)],
+);
+
+/**
+ * An invitation to join Private Cellar, sent by C&C
+ *
+ * The account and the collector are created when the invite is sent, already
+ * approved, so the member's sign-in finds an existing account and the shared
+ * sign-in code never has to know invites exist. Only a hash of the token is
+ * stored.
+ *
+ * `status`: sent | accepted | revoked | expired
+ */
+export const cellarInvites = pgTable(
+  'cellar_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    phone: text('phone'),
+    tokenHash: text('token_hash').notNull(),
+    status: text('status').notNull().default('sent'),
+    userId: uuid('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    invitedBy: uuid('invited_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+    lastSentAt: timestamp('last_sent_at', { mode: 'date' }),
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cellar_invites_token_idx').on(table.tokenHash),
+    index('cellar_invites_email_idx').on(table.email),
+  ],
+);
+
+export type CellarApplication = typeof cellarApplications.$inferSelect;
+export type CellarIntake = typeof cellarIntakes.$inferSelect;
+export type CellarMembership = typeof cellarMemberships.$inferSelect;
+export type CellarInvite = typeof cellarInvites.$inferSelect;

@@ -3,6 +3,7 @@
 import { IconArrowRight, IconCheck } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { AnimatePresence } from 'motion/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, SubmitHandler } from 'react-hook-form';
@@ -280,6 +281,18 @@ const WelcomeForm = () => {
             </ButtonContent>
           </Button>
         </form>
+
+        {!isProvisioned && (
+          <Typography variant="bodySm" colorRole="muted" className="text-center">
+            Private collector?{' '}
+            <Link
+              href="/join/application"
+              className="text-text-brand font-semibold underline-offset-2 hover:underline"
+            >
+              Join Private Cellar →
+            </Link>
+          </Typography>
+        )}
       </MotionDiv>
     </AnimatePresence>
   );
