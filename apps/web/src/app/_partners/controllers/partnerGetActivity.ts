@@ -21,6 +21,15 @@ export interface PartnerActivityEntry {
   id: string;
   /** Which stream it came from, so the UI can mark it. */
   stream: 'stock' | 'order' | 'rfq';
+  /**
+   * What sort of event, for the icon and for folding: stock arriving (`in`),
+   * leaving (`out`), warehouse housekeeping a partner rarely needs to read
+   * (`internal`: bay moves, put-away, repacks), stock-count corrections
+   * (`correction`), and order or RFQ updates (`update`).
+   */
+  kind: 'in' | 'out' | 'internal' | 'correction' | 'update';
+  /** "2 bottles", "7 cases · 42 btl", "−1 case": the quantity, in words */
+  quantity: string | null;
   at: Date;
   /** "Picked", "Order submitted" — what happened, in a couple of words. */
   title: string;
@@ -32,16 +41,36 @@ export interface PartnerActivityEntry {
   reference: string | null;
 }
 
-const STOCK_TITLES: Record<string, string> = {
-  receive: 'Received',
-  putaway: 'Put away',
-  transfer: 'Moved',
-  pick: 'Picked',
-  repack_in: 'From an opened case',
-  repack_out: 'Made into other packs',
-  adjust: 'Adjusted',
-  count: 'Counted',
-  dispatch: 'Dispatched',
+/** Stock movements in a partner's words, and the kind each one is */
+const STOCK_EVENTS: Record<string, { title: string; kind: PartnerActivityEntry['kind'] }> = {
+  receive: { title: 'Received', kind: 'in' },
+  putaway: { title: 'Put away', kind: 'internal' },
+  transfer: { title: 'Moved bay', kind: 'internal' },
+  pick: { title: 'Picked for an order', kind: 'out' },
+  repack_in: { title: 'Repacked', kind: 'internal' },
+  repack_out: { title: 'Repacked', kind: 'internal' },
+  adjust: { title: 'Stock corrected', kind: 'correction' },
+  count: { title: 'Stock count correction', kind: 'correction' },
+  dispatch: { title: 'Dispatched', kind: 'out' },
+};
+
+/**
+ * A movement's quantity in words
+ *
+ * The pack is the third segment of the code. Single-bottle stock is counted
+ * in bottles — "2 cs · 2 btl" for two loose bottles read as two cases. A
+ * count correction keeps its sign, so a removal reads as one.
+ */
+const quantityOf = (lwin18: string, cases: number, bottles: number | null) => {
+  const pack = Number(lwin18.split('-')[2]) || 0;
+  const plural = (n: number, word: string) => `${n} ${word}${Math.abs(n) === 1 ? '' : 's'}`;
+  const sign = cases < 0 ? '−' : '';
+  const n = Math.abs(cases);
+
+  if (pack === 1) return `${sign}${plural(n || Math.abs(bottles ?? 0), 'bottle')}`;
+  if (n === 0 && bottles) return plural(Math.abs(bottles), 'bottle');
+  if (n === 0) return null;
+  return `${sign}${plural(n, 'case')}${bottles && bottles !== n ? ` · ${Math.abs(bottles)} btl` : ''}`;
 };
 
 /** `awaiting_client_payment` → `Awaiting client payment`. */
@@ -96,6 +125,7 @@ const partnerGetActivity = winePartnerProcedure
             id: wmsStockMovements.id,
             movementNumber: wmsStockMovements.movementNumber,
             movementType: wmsStockMovements.movementType,
+            lwin18: wmsStockMovements.lwin18,
             productName: wmsStockMovements.productName,
             quantityCases: wmsStockMovements.quantityCases,
             quantityBottles: wmsStockMovements.quantityBottles,
@@ -126,27 +156,31 @@ const partnerGetActivity = winePartnerProcedure
           .limit(input.limit);
 
         entries.push(
-          ...rows.map((row) => ({
-            id: `stock-${row.id}`,
-            stream: 'stock' as const,
-            at: row.performedAt,
-            title: STOCK_TITLES[row.movementType] ?? row.movementType,
-            subject: row.productName,
-            detail: [
-              row.quantityCases ? `${row.quantityCases} cs` : null,
-              row.quantityBottles ? `${row.quantityBottles} btl` : null,
-              row.fromLocation && row.toLocation
-                ? `${row.fromLocation} → ${row.toLocation}`
-                : row.fromLocation
-                  ? `from ${row.fromLocation}`
-                  : row.toLocation
-                    ? `into ${row.toLocation}`
-                    : null,
-            ]
-              .filter(Boolean)
-              .join(' · '),
-            reference: row.movementNumber,
-          })),
+          ...rows.map((row) => {
+            const event = STOCK_EVENTS[row.movementType] ?? {
+              title: row.movementType,
+              kind: 'internal' as const,
+            };
+            return {
+              id: `stock-${row.id}`,
+              stream: 'stock' as const,
+              kind: event.kind,
+              at: row.performedAt,
+              title: event.title,
+              subject: row.productName,
+              quantity: quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
+              // Bays mean little to a partner; kept as the small print
+              detail:
+                row.fromLocation && row.toLocation
+                  ? `${row.fromLocation} → ${row.toLocation}`
+                  : row.fromLocation
+                    ? `from ${row.fromLocation}`
+                    : row.toLocation
+                      ? `into ${row.toLocation}`
+                      : null,
+              reference: row.movementNumber,
+            };
+          }),
         );
       }
     }
@@ -185,6 +219,8 @@ const partnerGetActivity = winePartnerProcedure
         ...rows.map((row) => ({
           id: `order-${row.id}`,
           stream: 'order' as const,
+          kind: 'update' as const,
+          quantity: null,
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.orderNumber} · ${row.clientName}`,
@@ -222,6 +258,8 @@ const partnerGetActivity = winePartnerProcedure
         ...rows.map((row) => ({
           id: `rfq-${row.id}`,
           stream: 'rfq' as const,
+          kind: 'update' as const,
+          quantity: null,
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.rfqNumber}${row.name ? ` · ${row.name}` : ''}`,
