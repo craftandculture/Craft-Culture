@@ -6,6 +6,7 @@ import {
   type CellarApplication,
   cellarApplications,
   cellarIntakes,
+  cellarMemberships,
   partnerMembers,
   partners,
 } from '@/database/schema';
@@ -85,6 +86,9 @@ const ensureApplicantCellar = async ({
         })
         .returning({ id: partners.id });
       id = created!.id;
+
+      // A cellar opened through the journey is activated on its first action
+      await tx.insert(cellarMemberships).values({ partnerId: id }).onConflictDoNothing();
     }
 
     if (!member) {

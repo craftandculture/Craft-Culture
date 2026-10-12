@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -60,6 +61,7 @@ const PAGE = 50;
  */
 const AvailablePage = () => {
   const api = useTRPC();
+  const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | undefined>();
   const [country, setCountry] = useState('');
@@ -154,7 +156,9 @@ const AvailablePage = () => {
         setBasket(new Map());
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => {
+        if (!catchActivation(error, 'purchase')) toast.error(error.message);
+      },
     }),
   );
 
@@ -193,6 +197,7 @@ const AvailablePage = () => {
 
   return (
     <div className="w-full pb-8">
+      {activationSheet}
       <div className="mb-4">
         <Typography variant="headingMd" className="block">
           Available now

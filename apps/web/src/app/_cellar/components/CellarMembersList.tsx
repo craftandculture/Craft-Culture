@@ -16,6 +16,22 @@ type Filter = 'all' | 'waiting' | 'overage' | 'dormant';
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
+const membershipLabel: Record<string, string> = {
+  not_activated: 'Not activated',
+  pending_payment: 'Awaiting card',
+  active: 'Membership active',
+  past_due: 'Payment failed',
+  cancelled: 'Cancelled',
+};
+
+const membershipPill: Record<string, string> = {
+  not_activated: 'bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-500/10 dark:text-slate-300',
+  pending_payment: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300',
+  active: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300',
+  past_due: 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-300',
+  cancelled: 'bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-500/10 dark:text-slate-300',
+};
+
 const since = (value: string | Date | null) =>
   value ? formatDistanceToNowStrict(new Date(value), { addSuffix: true }) : '—';
 
@@ -184,6 +200,15 @@ const CellarMembersList = () => {
                     <Typography variant="bodySm" className="font-semibold">
                       {member.name}
                     </Typography>
+                    {member.membershipStatus && (
+                      <span
+                        className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+                          membershipPill[member.membershipStatus] ?? membershipPill.not_activated
+                        }`}
+                      >
+                        {membershipLabel[member.membershipStatus] ?? member.membershipStatus}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
                     {member.wines || '—'}

@@ -242,4 +242,4 @@ const zohoFetch = async <T>(
   }
 };
 
-export { getAccessToken, isZohoConfigured, zohoFetch };
+export { getAccessToken, getZohoUrls, isZohoConfigured, zohoFetch };

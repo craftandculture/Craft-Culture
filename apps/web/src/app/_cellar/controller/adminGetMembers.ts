@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import getMembershipTerms from '@/app/_onboarding/data/getMembershipTerms';
 import db from '@/database/client';
 import {
+  cellarMemberships,
   cellarReleaseRequests,
   logisticsShipmentItems,
   partners,
@@ -58,7 +59,7 @@ const adminGetMembers = adminProcedure.query(async () => {
     repacked holds the same wine in a different pack, and open bottles from a
     split case belong to the member exactly as sealed ones do.
   */
-  const [stockRows, requests, movements] = await Promise.all([
+  const [stockRows, requests, movements, memberships] = await Promise.all([
     /*
       Grouped by owner AND wine, with nothing joined on. Costing here would
       mean joining the pricing table, and a wine carrying two pricing rows
@@ -105,6 +106,15 @@ const adminGetMembers = adminProcedure.query(async () => {
       .from(wmsStockMovements)
       .where(inArray(wmsStockMovements.toOwnerId, ids))
       .groupBy(wmsStockMovements.toOwnerId),
+
+    db
+      .select({
+        partnerId: cellarMemberships.partnerId,
+        status: cellarMemberships.status,
+        nextBillingAt: cellarMemberships.nextBillingAt,
+      })
+      .from(cellarMemberships)
+      .where(inArray(cellarMemberships.partnerId, ids)),
   ]);
 
   /*
@@ -187,6 +197,9 @@ const adminGetMembers = adminProcedure.query(async () => {
       oldestRequestNumber: oldest?.requestNumber ?? null,
       oldestSubmittedAt: oldest?.submittedAt ?? null,
       lastMovementAt: movementByOwner.get(member.id)?.lastAt ?? null,
+      // null: a member from before Private Cellar billing, not gated
+      membershipStatus: memberships.find((row) => row.partnerId === member.id)?.status ?? null,
+      nextBillingAt: memberships.find((row) => row.partnerId === member.id)?.nextBillingAt ?? null,
     };
   });
 

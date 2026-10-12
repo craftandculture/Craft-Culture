@@ -19,6 +19,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
+import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
@@ -111,6 +112,7 @@ const formatMoney = (
  */
 const CellarPage = () => {
   const api = useTRPC();
+  const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [openWine, setOpenWine] = useState<string | null>(null);
@@ -218,7 +220,9 @@ const CellarPage = () => {
 
         submitRelease({ requestId: result.requestId });
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => {
+        if (!catchActivation(error, 'release')) toast.error(error.message);
+      },
     }),
   );
 
@@ -255,7 +259,9 @@ const CellarPage = () => {
         setSellAsk('');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => {
+        if (!catchActivation(error, 'offer_for_sale')) toast.error(error.message);
+      },
     }),
   );
 
@@ -658,6 +664,7 @@ const CellarPage = () => {
       </header>
 
       <CellarOverviewPanel />
+      {activationSheet}
 
       {/*
         Four cards in four unrelated pastels said nothing — the colours were

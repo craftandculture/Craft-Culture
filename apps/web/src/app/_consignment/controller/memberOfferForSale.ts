@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import assertActivated from '@/app/_onboarding/data/assertActivated';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
@@ -52,6 +53,8 @@ const memberOfferForSale = stockOwnerProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
+    await assertActivated(ctx.partner.id);
+
     const stockIds = input.lines.map((line) => line.stockId);
 
     /*

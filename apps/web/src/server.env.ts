@@ -23,6 +23,12 @@ const envSchema = z.object({
   ZOHO_REFRESH_TOKEN: z.string().optional(),
   ZOHO_ORGANIZATION_ID: z.string().optional(),
   ZOHO_REGION: z.enum(['us', 'eu', 'in', 'au']).default('us'),
+  /** Zoho Billing org, if it differs from Books (usually the same org) */
+  ZOHO_BILLING_ORGANIZATION_ID: z.string().optional(),
+  ZOHO_BILLING_PLAN_CODE: z.string().default('PRIVATE-CELLAR'),
+  ZOHO_BILLING_EXTRA_CASE_ADDON: z.string().default('CELLAR-EXTRA-CASE'),
+  /** Shared secret Zoho Billing sends on its webhooks */
+  ZOHO_BILLING_WEBHOOK_SECRET: z.string().optional(),
   WMS_DEVICE_TOKEN: z.string().optional(),
   WMS_DEVICE_USER_EMAIL: z.string().email().optional(),
   ZEBRA_PRINTER_IP: z.string().optional(),
@@ -44,6 +50,10 @@ const rawEnv = {
   ZOHO_REFRESH_TOKEN: process.env.ZOHO_REFRESH_TOKEN,
   ZOHO_ORGANIZATION_ID: process.env.ZOHO_ORGANIZATION_ID,
   ZOHO_REGION: process.env.ZOHO_REGION,
+  ZOHO_BILLING_ORGANIZATION_ID: process.env.ZOHO_BILLING_ORGANIZATION_ID,
+  ZOHO_BILLING_PLAN_CODE: process.env.ZOHO_BILLING_PLAN_CODE,
+  ZOHO_BILLING_EXTRA_CASE_ADDON: process.env.ZOHO_BILLING_EXTRA_CASE_ADDON,
+  ZOHO_BILLING_WEBHOOK_SECRET: process.env.ZOHO_BILLING_WEBHOOK_SECRET,
   WMS_DEVICE_TOKEN: process.env.WMS_DEVICE_TOKEN,
   WMS_DEVICE_USER_EMAIL: process.env.WMS_DEVICE_USER_EMAIL,
   ZEBRA_PRINTER_IP: process.env.ZEBRA_PRINTER_IP,

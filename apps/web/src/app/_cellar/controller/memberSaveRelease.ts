@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -52,6 +53,8 @@ const memberSaveRelease = stockOwnerProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
+    await assertActivated(ctx.partner.id);
+
     const stockIds = input.lines.map((line) => line.stockId);
 
     const owned = await db

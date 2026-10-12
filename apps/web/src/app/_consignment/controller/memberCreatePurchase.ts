@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import {
   cellarPurchaseItems,
@@ -45,6 +46,8 @@ const memberCreatePurchase = stockOwnerProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
+    await assertActivated(ctx.partner.id);
+
     const now = new Date();
     const purchaseNumber = await generatePurchaseNumber();
 
