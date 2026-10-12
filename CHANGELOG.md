@@ -1,3 +1,9 @@
+## [2.0.320](https://github.com/craftandculture/Craft-Culture/compare/v2.0.319...v2.0.320) (2026-10-12)
+
+### Features
+
+* partner activity groups picks by order and shows the week ([d9130fd](https://github.com/craftandculture/Craft-Culture/commit/d9130fd1c7ee506a1d99dd01c4cd8877efd2f4c7))
+
 ## [2.0.319](https://github.com/craftandculture/Craft-Culture/compare/v2.0.318...v2.0.319) (2026-10-12)
 
 ### Improvements
