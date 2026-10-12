@@ -12,7 +12,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -818,7 +818,14 @@ const WinePartnerAssignment = ({
 const UserManagementPage = () => {
   const api = useTRPC();
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const searchParams = useSearchParams();
+  // Admin alerts link to ?filter=pending — open on that list rather than all
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const requested = searchParams.get('filter');
+    return requested === 'pending' || requested === 'approved' || requested === 'rejected'
+      ? requested
+      : 'all';
+  });
   const [customerTypeFilter, setCustomerTypeFilter] =
     useState<CustomerTypeFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');

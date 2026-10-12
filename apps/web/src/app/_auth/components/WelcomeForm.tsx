@@ -287,7 +287,7 @@ const WelcomeForm = () => {
             Private collector?{' '}
             <Link
               href="/join/application"
-              className="text-text-brand font-semibold underline-offset-2 hover:underline"
+              className="text-text-primary font-semibold underline underline-offset-2"
             >
               Join Private Cellar →
             </Link>

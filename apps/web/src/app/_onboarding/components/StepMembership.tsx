@@ -74,7 +74,7 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
       >
         <span
           className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border ${
-            accepted ? 'border-border-brand bg-fill-brand text-text-brand-on-fill' : 'border-border-primary'
+            accepted ? 'border-text-primary bg-text-primary text-surface-primary' : 'border-border-primary'
           }`}
         >
           {accepted && <IconCheck size={14} stroke={3} />}
@@ -84,7 +84,7 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
           <Link
             href={PRIVATE_CELLAR_TERMS_PATH}
             target="_blank"
-            className="text-text-brand underline underline-offset-2"
+            className="text-text-primary underline-offset-2 underline underline-offset-2"
             onClick={(event) => event.stopPropagation()}
           >
             Private Cellar membership terms

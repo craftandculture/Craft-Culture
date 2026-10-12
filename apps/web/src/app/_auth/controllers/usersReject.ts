@@ -4,7 +4,7 @@ import z from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
-import { users } from '@/database/schema';
+import { cellarApplications, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -50,6 +50,12 @@ const usersReject = adminProcedure
         approvalStatus: 'rejected',
       })
       .where(eq(users.id, userId));
+
+    // A Private Cellar application closes with the account, so its status page says so
+    await db
+      .update(cellarApplications)
+      .set({ status: 'declined', decidedAt: new Date(), decidedBy: ctx.user.id })
+      .where(eq(cellarApplications.userId, userId));
 
     // Log the rejection action
     await logAdminActivity({

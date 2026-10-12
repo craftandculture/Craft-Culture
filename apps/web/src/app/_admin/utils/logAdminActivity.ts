@@ -4,6 +4,11 @@ import logger from '@/utils/logger';
 
 export type AdminAction =
   | 'user.viewed'
+  | 'cellar_application.approved'
+  | 'cellar_application.declined'
+  | 'cellar_application.merged'
+  | 'cellar_invite.sent'
+  | 'cellar_invite.revoked'
   | 'user.created'
   | 'user.updated'
   | 'user.deleted'

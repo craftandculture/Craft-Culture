@@ -49,7 +49,12 @@ const notifyAdminsOfNewUser = async (user: NewUser) => {
             adminName: admin.name,
             userName: user.name,
             userEmail: user.email,
-            customerType: user.customerType === 'b2b' ? 'Distributor (B2B)' : 'Sales Person (B2C)',
+            customerType:
+              user.customerType === 'b2b'
+                ? 'Distributor (B2B)'
+                : user.customerType === 'private_clients'
+                  ? 'Wine partner / private client'
+                  : 'Sales Person (B2C)',
             signupDate: user.createdAt.toLocaleDateString(),
             adminUrl,
           },

@@ -1,5 +1,11 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminApproveApplication from './controller/adminApproveApplication';
+import adminDeclineApplication from './controller/adminDeclineApplication';
+import adminListApplications from './controller/adminListApplications';
+import adminMergeApplication from './controller/adminMergeApplication';
+import adminUpdateApplication from './controller/adminUpdateApplication';
+import adminUploadApplicationIdentity from './controller/adminUploadApplicationIdentity';
 import claimInvite from './controller/claimInvite';
 import getMyApplication from './controller/getMyApplication';
 import saveApplicationStep from './controller/saveApplicationStep';
@@ -14,6 +20,15 @@ const onboardingRouter = createTRPCRouter({
     uploadIdentity: uploadApplicationIdentity,
     submit: submitApplication,
     claimInvite,
+  }),
+  /** Kevin and Laraine's side: Cellar members → Applications */
+  admin: createTRPCRouter({
+    listApplications: adminListApplications,
+    approveApplication: adminApproveApplication,
+    declineApplication: adminDeclineApplication,
+    updateApplication: adminUpdateApplication,
+    uploadApplicationIdentity: adminUploadApplicationIdentity,
+    mergeApplication: adminMergeApplication,
   }),
 });
 

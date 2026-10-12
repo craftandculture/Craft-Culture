@@ -60,7 +60,7 @@ const StepFrame = ({
       <Button
         type="submit"
         size="lg"
-        colorRole="brand"
+        colorRole="bold"
         isDisabled={isBusy || isContinueDisabled}
         className="sm:min-w-44"
       >

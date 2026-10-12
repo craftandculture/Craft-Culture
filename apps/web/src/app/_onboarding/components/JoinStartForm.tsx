@@ -59,7 +59,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
   if (sentTo) {
     return (
       <div className="bg-fill-primary border-border-muted space-y-5 rounded-2xl border p-7 text-center shadow-sm">
-        <span className="bg-fill-brand/10 text-text-brand mx-auto flex size-14 items-center justify-center rounded-full">
+        <span className="bg-text-primary/10 text-text-primary underline-offset-2 mx-auto flex size-14 items-center justify-center rounded-full">
           <Icon icon={IconMail} size="lg" />
         </span>
         <h1 className="font-heading text-text-primary text-2xl">Check your email</h1>
@@ -81,7 +81,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
       <div className="space-y-3">
         {greeting ? (
           <>
-            <p className="text-text-brand text-sm font-semibold">
+            <p className="text-text-primary underline-offset-2 text-sm font-semibold">
               {greeting.inviterName
                 ? `${greeting.inviterName} has invited you`
                 : 'You have been invited'}
@@ -117,10 +117,10 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
-            className="border-border-primary bg-fill-primary text-text-primary placeholder:text-text-muted/60 focus:border-border-brand h-12 w-full rounded-xl border px-4 text-base outline-none transition-colors"
+            className="border-border-primary bg-fill-primary text-text-primary placeholder:text-text-muted/60 focus:border-text-primary h-12 w-full rounded-xl border px-4 text-base outline-none transition-colors"
           />
         </label>
-        <Button type="submit" size="lg" colorRole="brand" className="w-full" isDisabled={isSending}>
+        <Button type="submit" size="lg" colorRole="bold" className="w-full" isDisabled={isSending}>
           <ButtonContent iconRight={IconArrowRight} isLoading={isSending}>
             Send my sign-in link
           </ButtonContent>

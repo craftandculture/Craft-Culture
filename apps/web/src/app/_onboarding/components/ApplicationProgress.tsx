@@ -27,7 +27,7 @@ const ApplicationProgress = ({ current, onJump }: ApplicationProgressProps) => {
           <span
             key={step.key}
             className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
-              index <= at ? 'bg-fill-brand' : 'bg-border-muted'
+              index <= at ? 'bg-text-primary' : 'bg-border-muted'
             }`}
           />
         ))}
@@ -43,7 +43,7 @@ const ApplicationProgress = ({ current, onJump }: ApplicationProgressProps) => {
                 index === at
                   ? 'text-text-primary'
                   : index < at
-                    ? 'text-text-brand hover:underline'
+                    ? 'text-text-primary underline-offset-2 hover:underline'
                     : 'text-text-muted'
               }`}
             >

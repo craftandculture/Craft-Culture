@@ -9,13 +9,13 @@ const ContactLinks = () => (
       href={WHATSAPP_URL}
       target="_blank"
       rel="noreferrer"
-      className="text-text-brand inline-flex items-center gap-1.5 font-semibold"
+      className="text-text-primary underline-offset-2 inline-flex items-center gap-1.5 font-semibold"
     >
       <IconBrandWhatsapp size={18} /> WhatsApp us
     </a>
     <a
       href="mailto:kevin@craftculture.xyz"
-      className="text-text-brand inline-flex items-center gap-1.5 font-semibold"
+      className="text-text-primary underline-offset-2 inline-flex items-center gap-1.5 font-semibold"
     >
       <IconMail size={18} /> Email us
     </a>

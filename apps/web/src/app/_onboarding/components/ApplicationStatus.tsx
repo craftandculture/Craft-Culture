@@ -82,9 +82,9 @@ const ApplicationStatus = () => {
             <span
               className={`flex size-7 shrink-0 items-center justify-center rounded-full border ${
                 step.done
-                  ? 'border-border-brand bg-fill-brand text-text-brand-on-fill'
+                  ? 'border-text-primary bg-text-primary text-surface-primary'
                   : step.active
-                    ? 'border-border-brand text-text-brand'
+                    ? 'border-text-primary text-text-primary underline-offset-2'
                     : 'border-border-primary text-text-muted'
               }`}
             >
@@ -105,7 +105,7 @@ const ApplicationStatus = () => {
 
       {isReady ? (
         <Link href="/platform/cellar" className="block">
-          <Button size="lg" colorRole="brand" className="w-full">
+          <Button size="lg" colorRole="bold" className="w-full">
             <ButtonContent iconRight={IconArrowRight}>Go to my cellar</ButtonContent>
           </Button>
         </Link>
@@ -118,7 +118,7 @@ const ApplicationStatus = () => {
             </p>
             <Link
               href="/join/application?edit=1"
-              className="text-text-brand inline-flex items-center gap-1 text-sm font-semibold"
+              className="text-text-primary underline-offset-2 inline-flex items-center gap-1 text-sm font-semibold"
             >
               Add details <IconArrowRight size={14} />
             </Link>

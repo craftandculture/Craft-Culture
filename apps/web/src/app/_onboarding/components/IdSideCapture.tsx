@@ -31,7 +31,7 @@ const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: I
   return (
     <div
       className={`relative flex aspect-[1.586] flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border-2 border-dashed p-3 text-center transition-colors ${
-        isUploaded ? 'border-border-brand bg-fill-brand/5' : 'border-border-primary bg-fill-primary'
+        isUploaded ? 'border-text-primary bg-surface-secondary/50' : 'border-border-primary bg-fill-primary'
       }`}
     >
       {previewUrl && (
@@ -44,7 +44,7 @@ const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: I
           <IconLoader2 size={16} className="animate-spin" /> Uploading securely…
         </span>
       ) : isUploaded ? (
-        <span className="text-text-brand relative flex items-center gap-1 text-xs font-semibold">
+        <span className="text-text-primary underline-offset-2 relative flex items-center gap-1 text-xs font-semibold">
           <IconCheck size={16} stroke={3} /> Added
         </span>
       ) : null}
@@ -53,7 +53,7 @@ const IdSideCapture = ({ label, isUploaded, isUploading, previewUrl, onFile }: I
           type="button"
           onClick={() => camera.current?.click()}
           disabled={isUploading}
-          className="bg-fill-brand text-text-brand-on-fill flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          className="bg-text-primary text-surface-primary flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
         >
           <IconCamera size={16} /> {isUploaded ? 'Retake' : 'Take photo'}
         </button>

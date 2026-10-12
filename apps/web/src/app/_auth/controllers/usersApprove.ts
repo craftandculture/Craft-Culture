@@ -4,8 +4,9 @@ import z from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import notifyUserApproved from '@/app/_auth/utils/notifyUserApproved';
+import approveCellarApplication from '@/app/_onboarding/data/approveCellarApplication';
 import db from '@/database/client';
-import { users } from '@/database/schema';
+import { cellarApplications, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -66,6 +67,22 @@ const usersApprove = adminProcedure
         previousStatus: user.approvalStatus,
       },
     });
+
+    /*
+      A Private Cellar applicant approved from here gets the same as approving
+      on Cellar members: their cellar opened, the cellar-ready email and the
+      transfer tasks. Approving only the account would leave the cellar shut.
+    */
+    const [application] = await db
+      .select({ id: cellarApplications.id, status: cellarApplications.status })
+      .from(cellarApplications)
+      .where(eq(cellarApplications.userId, userId))
+      .limit(1);
+
+    if (application && application.status !== 'draft') {
+      await approveCellarApplication(application.id, ctx.user.id);
+      return { success: true };
+    }
 
     // Send approval notification email to user
     void notifyUserApproved({

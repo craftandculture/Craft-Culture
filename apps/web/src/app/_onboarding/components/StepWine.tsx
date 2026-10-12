@@ -77,7 +77,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
             <div
               key={source.value}
               className={`rounded-xl border transition-colors ${
-                chosen ? 'border-border-brand bg-fill-brand/5' : 'border-border-primary'
+                chosen ? 'border-text-primary bg-surface-secondary/50' : 'border-border-primary'
               }`}
             >
               <button
@@ -88,7 +88,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
               >
                 <span
                   className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border ${
-                    chosen ? 'border-border-brand bg-fill-brand text-text-brand-on-fill' : 'border-border-primary'
+                    chosen ? 'border-text-primary bg-text-primary text-surface-primary' : 'border-border-primary'
                   }`}
                 >
                   {chosen && <IconCheck size={14} stroke={3} />}
