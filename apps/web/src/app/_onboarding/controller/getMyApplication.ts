@@ -1,5 +1,6 @@
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
+import findTradeAccount from '../data/findTradeAccount';
 import getApplicationView from '../data/getApplicationView';
 import getMembershipTerms from '../data/getMembershipTerms';
 import getOrCreateApplication from '../data/getOrCreateApplication';
@@ -11,6 +12,10 @@ import getOrCreateApplication from '../data/getOrCreateApplication';
  * approved in the first place.
  */
 const getMyApplication = protectedProcedure.query(async ({ ctx }) => {
+  // A business login is turned away before anything is created for it
+  const tradeAccount = await findTradeAccount(ctx.user.id);
+  if (tradeAccount) return { isTradeAccount: true as const, tradeAccount, email: ctx.user.email };
+
   const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
 
   const [view, terms] = await Promise.all([
@@ -23,6 +28,7 @@ const getMyApplication = protectedProcedure.query(async ({ ctx }) => {
     terms,
     email: ctx.user.email,
     isApproved: ctx.user.approvalStatus === 'approved',
+    isTradeAccount: false as const,
   };
 });
 

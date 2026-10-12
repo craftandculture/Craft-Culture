@@ -7,6 +7,7 @@ import { cellarApplications, cellarIntakes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import { WINE_SOURCE_VALUES } from '../constants/wineSources';
+import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import getApplicationView from '../data/getApplicationView';
 import getOrCreateApplication from '../data/getOrCreateApplication';
 import syncApplicantProfile from '../data/syncApplicantProfile';
@@ -70,6 +71,7 @@ const stepSchema = z.discriminatedUnion('step', [
 const saveApplicationStep = protectedProcedure
   .input(stepSchema)
   .mutation(async ({ ctx, input }) => {
+    await assertNotTradeAccount(ctx.user.id);
     const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
 
     if (application.status === 'declined') {

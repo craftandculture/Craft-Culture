@@ -16,6 +16,7 @@ import StepIdentity from './StepIdentity';
 import StepMembership from './StepMembership';
 import type { WineSourceAnswer } from './StepWine';
 import StepWine from './StepWine';
+import TradeAccountNotice from './TradeAccountNotice';
 import fileToUploadDataUrl from '../utils/fileToUploadDataUrl';
 
 export interface ApplicationWizardProps {
@@ -73,7 +74,7 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
 
   // Where to start: the stored resume point, or on to status / the cellar
   useEffect(() => {
-    if (!data || step) return;
+    if (!data || step || data.isTradeAccount) return;
     const { application } = data;
 
     if (application.status === 'approved' && data.isApproved && application.termsAcceptedAt) {
@@ -95,6 +96,10 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
     return (
       <p className="text-text-danger rounded-2xl border p-6 text-sm">{errorMessage(error)}</p>
     );
+  }
+
+  if (data?.isTradeAccount) {
+    return <TradeAccountNotice businessName={data.tradeAccount} email={data.email} />;
   }
 
   if (isLoading || !data || !step || claim.isPending) {

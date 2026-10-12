@@ -8,6 +8,7 @@ import { cellarApplications, cellarInvites, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
+import findTradeAccount from '../data/findTradeAccount';
 import getOrCreateApplication from '../data/getOrCreateApplication';
 import sendInvite from '../data/sendInvite';
 import newInviteToken from '../utils/newInviteToken';
@@ -42,8 +43,12 @@ const adminInviteMember = adminProcedure
       .where(sql`lower(${users.email}) = ${input.email}`)
       .limit(1);
 
-    if (existing?.role === 'admin') {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'That is a staff account.' });
+    const business = existing ? await findTradeAccount(existing.id) : null;
+    if (business) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `${input.email} is already used for the ${business} business account. Ask for a personal email for their Private Cellar.`,
+      });
     }
 
     const user =

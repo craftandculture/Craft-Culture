@@ -12,6 +12,7 @@ import {
 } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
+import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import findLiveInvite from '../data/findLiveInvite';
 import getOrCreateApplication from '../data/getOrCreateApplication';
 
@@ -29,6 +30,8 @@ import getOrCreateApplication from '../data/getOrCreateApplication';
 const claimInvite = protectedProcedure
   .input(z.object({ token: z.string().max(200) }))
   .mutation(async ({ ctx, input }) => {
+    await assertNotTradeAccount(ctx.user.id);
+
     const invite = await findLiveInvite(input.token);
 
     if (!invite) {

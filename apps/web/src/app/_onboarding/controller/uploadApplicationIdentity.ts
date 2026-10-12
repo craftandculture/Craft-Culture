@@ -3,6 +3,7 @@ import { z } from 'zod';
 import storeIdentityDocument from '@/app/_cellar/data/storeIdentityDocument';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
+import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
 import getApplicationView from '../data/getApplicationView';
 import getOrCreateApplication from '../data/getOrCreateApplication';
@@ -28,6 +29,7 @@ const uploadApplicationIdentity = protectedProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
+    await assertNotTradeAccount(ctx.user.id);
     const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
 
     const partnerId = await ensureApplicantCellar({

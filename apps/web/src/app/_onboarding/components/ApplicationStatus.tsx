@@ -13,6 +13,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import useTRPC from '@/lib/trpc/browser';
 
 import ContactLinks from './ContactLinks';
+import TradeAccountNotice from './TradeAccountNotice';
 
 /**
  * Where a submitted application stands
@@ -34,6 +35,10 @@ const ApplicationStatus = () => {
         <IconLoader2 className="animate-spin" />
       </div>
     );
+  }
+
+  if (data.isTradeAccount) {
+    return <TradeAccountNotice businessName={data.tradeAccount} email={data.email} />;
   }
 
   const { application, missing } = data;

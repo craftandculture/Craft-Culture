@@ -9,6 +9,7 @@ import serverConfig from '@/server.config';
 
 import { PRIVATE_CELLAR_TERMS_VERSION } from '../constants/privateCellarTerms';
 import wineSources from '../constants/wineSources';
+import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
 import getApplicationView from '../data/getApplicationView';
 import getOrCreateApplication from '../data/getOrCreateApplication';
@@ -31,6 +32,7 @@ import sendOnboardingEmail from '../utils/sendOnboardingEmail';
 const submitApplication = protectedProcedure
   .input(z.object({ acceptTerms: z.literal(true) }))
   .mutation(async ({ ctx }) => {
+    await assertNotTradeAccount(ctx.user.id);
     const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
 
     if (application.status === 'declined') {
