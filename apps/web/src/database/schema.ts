@@ -4580,6 +4580,52 @@ export const wmsStockReservations = pgTable(
 export type WmsStockReservation = typeof wmsStockReservations.$inferSelect;
 
 /**
+ * A draft Zoho sales order whose wine is being held while the client finishes it
+ *
+ * Drafts are never synced into zoho_sales_orders (picking, dispatch and the
+ * reports all read that table as real orders), so a draft that should hold
+ * stock is recorded here instead. Its holds sit in wms_stock_reservations with
+ * orderType 'zoho_draft' and orderId = this row, so they come off "available"
+ * and show who holds them like any other. When the order is confirmed in
+ * Zoho and syncs in, its holds are handed to the synced order, line by line.
+ */
+export const zohoDraftHolds = pgTable(
+  'zoho_draft_holds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoSalesOrderId: text('zoho_salesorder_id').notNull().unique(),
+    salesOrderNumber: text('salesorder_number').notNull(),
+    customerName: text('customer_name').notNull(),
+    /** active → confirmed (handed to the synced order) or released */
+    status: text('status').notNull().default('active'),
+    statusReason: text('status_reason'),
+    lastRefreshedAt: timestamp('last_refreshed_at', { mode: 'date' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('zoho_draft_holds_status_idx').on(table.status)],
+);
+
+/** One line of a held draft, as it stood when last read from Zoho */
+export const zohoDraftHoldLines = pgTable(
+  'zoho_draft_hold_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    holdId: uuid('hold_id')
+      .references(() => zohoDraftHolds.id, { onDelete: 'cascade' })
+      .notNull(),
+    zohoLineItemId: text('zoho_line_item_id').notNull(),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    description: text('description'),
+    quantity: doublePrecision('quantity').notNull(),
+    unit: text('unit'),
+    ...timestamps,
+  },
+  (table) => [index('zoho_draft_hold_lines_hold_idx').on(table.holdId)],
+);
+
+/**
  * WMS Case Labels - individual case barcode tracking
  */
 export const wmsCaseLabels = pgTable(

@@ -8,68 +8,49 @@ import normalizeLwin18 from './normalizeLwin18';
 import rankStockByPack from './rankStockByPack';
 import { readOrderedPackOrNull } from './readOrderedPack';
 
-interface HoldShort {
+export interface HoldShort {
   orderItemId: string;
   name: string;
   /** Bottles the line needs that could not be held */
   bottlesShort: number;
 }
 
+export interface HoldLine {
+  /** The order line the hold is recorded against */
+  id: string;
+  sku: string | null;
+  lwin18?: string | null;
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit: string | null;
+}
+
 /**
- * Hold stock for every line of a Zoho sales order that is not already held
+ * Hold stock for a set of order lines that are not already held
  *
- * The one place a sales order takes stock off "available". Before this, only
- * the scheduled sync held stock, and only for a brand-new order: the Sync
- * button held nothing, a line edited in Zoho lost its hold and never got it
- * back, and a held line was held again at release. So a wine on one order
- * still looked free to the next — Talbot went on Super Cellar's and City
- * Drinks' orders that way.
+ * The rules every hold follows — a confirmed sales order's lines, or a draft
+ * order's while the client finishes it (orderType 'zoho_draft'). Lines that
+ * already hold something are left alone, so it is safe to run again.
  *
- * Lines are matched the way release-to-pick and the pick itself match them:
- * pack-agnostic on the LWIN (a 3-pack is sold off a 6-pack), counted in
- * bottles, and held in whole cases of the pack the bay holds — so a few
- * bottles off a case hold that case, as release does, until the pick cracks
- * it. Lines already held are left alone; running it twice changes nothing.
- *
- * @example
- *   const { held, short } = await holdStockForSalesOrder({ db, orderId, orderNumber: 'SO-00140' });
- *
- * @param params.db - Drizzle handle (app or Trigger.dev)
- * @param params.orderId - zoho_sales_orders.id
- * @param params.orderNumber - The SO number, recorded on each hold
- * @returns Cases held, and the lines that could not be fully held
+ * @param params.orderType - What kind of order the holds belong to
+ * @param params.orderId - The order row the holds are recorded against
+ * @param params.lines - Its lines; each `id` is what a hold points at
  */
-const holdStockForSalesOrder = async ({
+export const holdLines = async ({
   db,
+  orderType,
   orderId,
   orderNumber,
+  lines,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
+  orderType: 'zoho' | 'zoho_draft';
   orderId: string;
   orderNumber: string;
+  lines: HoldLine[];
 }) => {
-  const lines: {
-    id: string;
-    sku: string | null;
-    lwin18: string | null;
-    name: string;
-    description: string | null;
-    quantity: number;
-    unit: string | null;
-  }[] = await db
-    .select({
-      id: zohoSalesOrderItems.id,
-      sku: zohoSalesOrderItems.sku,
-      lwin18: zohoSalesOrderItems.lwin18,
-      name: zohoSalesOrderItems.name,
-      description: zohoSalesOrderItems.description,
-      quantity: zohoSalesOrderItems.quantity,
-      unit: zohoSalesOrderItems.unit,
-    })
-    .from(zohoSalesOrderItems)
-    .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
-
   if (!lines.length) return { held: 0, short: [] as HoldShort[] };
 
   const alreadyHeld: { orderItemId: string }[] = await db
@@ -161,7 +142,7 @@ const holdStockForSalesOrder = async ({
       await db.insert(wmsStockReservations).values({
         stockId: stock.id,
         ownerId: stock.ownerId,
-        orderType: 'zoho',
+        orderType,
         orderId,
         orderItemId: line.id,
         orderNumber,
@@ -181,6 +162,66 @@ const holdStockForSalesOrder = async ({
   }
 
   return { held, short };
+};
+
+/**
+ * Hold stock for every line of a Zoho sales order that is not already held
+ *
+ * The one place a sales order takes stock off "available". Before this, only
+ * the scheduled sync held stock, and only for a brand-new order: the Sync
+ * button held nothing, a line edited in Zoho lost its hold and never got it
+ * back, and a held line was held again at release. So a wine on one order
+ * still looked free to the next — Talbot went on Super Cellar's and City
+ * Drinks' orders that way.
+ *
+ * Lines are matched the way release-to-pick and the pick itself match them:
+ * pack-agnostic on the LWIN (a 3-pack is sold off a 6-pack), counted in
+ * bottles, and held in whole cases of the pack the bay holds — so a few
+ * bottles off a case hold that case, as release does, until the pick cracks
+ * it. Lines already held are left alone; running it twice changes nothing.
+ *
+ * @example
+ *   const { held, short } = await holdStockForSalesOrder({ db, orderId, orderNumber: 'SO-00140' });
+ *
+ * @param params.db - Drizzle handle (app or Trigger.dev)
+ * @param params.orderId - zoho_sales_orders.id
+ * @param params.orderNumber - The SO number, recorded on each hold
+ * @returns Cases held, and the lines that could not be fully held
+ */
+const holdStockForSalesOrder = async ({
+  db,
+  orderId,
+  orderNumber,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any;
+  orderId: string;
+  orderNumber: string;
+}) => {
+  const lines: {
+    id: string;
+    sku: string | null;
+    lwin18: string | null;
+    name: string;
+    description: string | null;
+    quantity: number;
+    unit: string | null;
+  }[] = await db
+    .select({
+      id: zohoSalesOrderItems.id,
+      sku: zohoSalesOrderItems.sku,
+      lwin18: zohoSalesOrderItems.lwin18,
+      name: zohoSalesOrderItems.name,
+      description: zohoSalesOrderItems.description,
+      quantity: zohoSalesOrderItems.quantity,
+      unit: zohoSalesOrderItems.unit,
+    })
+    .from(zohoSalesOrderItems)
+    .where(eq(zohoSalesOrderItems.salesOrderId, orderId));
+
+  if (!lines.length) return { held: 0, short: [] as HoldShort[] };
+
+  return holdLines({ db, orderType: 'zoho', orderId, orderNumber, lines });
 };
 
 export default holdStockForSalesOrder;

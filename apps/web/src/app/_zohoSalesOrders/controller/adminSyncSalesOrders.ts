@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
+import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import db from '@/database/client';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
@@ -161,6 +162,10 @@ const adminSyncSalesOrders = adminProcedure
         sync treated it as existing and never held it either — so the wine
         stayed "available" for the next order until release.
       */
+      // A draft that was being held hands its holds over first, so the
+      // order's own hold step only takes what the draft did not have
+      await adoptDraftHolds({ db, zohoSalesOrderId: fullOrder.salesorder_id, orderId: newOrderId });
+
       const hold = await holdStockForSalesOrder({
         db,
         orderId: newOrderId,
@@ -186,9 +191,13 @@ const adminSyncSalesOrders = adminProcedure
     }
   }
 
+  // Held drafts follow their Zoho draft: lines changed, voided, confirmed
+  const drafts = await refreshAllDraftHolds({ db });
+
   return {
     success: true,
     ...results,
+    draftHoldsRefreshed: drafts.refreshed,
     failed,
     shortOnSync,
     message: `Synced ${results.created} new, ${results.updated} updated from ${results.fetched} orders${

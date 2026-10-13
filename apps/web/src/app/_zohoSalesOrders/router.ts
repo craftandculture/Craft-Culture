@@ -9,10 +9,12 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminApproveSalesOrders from './controller/adminApproveSalesOrders';
 import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListFromSalesOrder';
 import adminDismissDeletedSalesOrder from './controller/adminDismissDeletedSalesOrder';
+import { adminListDraftHolds, adminRefreshDraftHold, adminReleaseDraftHold } from './controller/adminDraftHolds';
 import adminGetCustomerInvoiceTotals from './controller/adminGetCustomerInvoiceTotals';
 import adminGetOutstandingOrders from './controller/adminGetOutstandingOrders';
 import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
+import adminHoldDraft from './controller/adminHoldDraft';
 import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminReleaseToPick from './controller/adminReleaseToPick';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
@@ -25,6 +27,11 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   approve: adminApproveSalesOrders,
   createPickList: adminCreatePickListFromSalesOrder,
   releaseToPick: adminReleaseToPick,
+  // Hold a draft SO's wine while the client finishes it
+  holdDraft: adminHoldDraft,
+  draftHolds: adminListDraftHolds,
+  refreshDraftHold: adminRefreshDraftHold,
+  releaseDraftHold: adminReleaseDraftHold,
   dismissDeleted: adminDismissDeletedSalesOrder,
   sync: adminSyncSalesOrders,
   syncInvoices: adminSyncZohoInvoices,

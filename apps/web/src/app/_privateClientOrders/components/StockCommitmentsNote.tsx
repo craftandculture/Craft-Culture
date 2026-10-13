@@ -41,7 +41,7 @@ const StockCommitmentsNote = ({
 
   const short = bottlesWanted > data.freeBottles;
   const claims = [
-    ...data.holds.map((h) => ({ ref: h.orderNumber, who: h.clientName, bottles: h.bottles, how: 'held' })),
+    ...data.holds.map((h) => ({ ref: h.orderNumber, who: h.clientName, bottles: h.bottles, how: h.kind === 'zoho_draft' ? 'held (draft)' : 'held' })),
     ...data.promised.map((p) => ({ ref: p.orderNumber, who: p.clientName, bottles: p.bottles, how: 'promised' })),
   ];
 

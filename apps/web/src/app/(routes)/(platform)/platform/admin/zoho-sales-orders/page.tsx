@@ -20,6 +20,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import DraftHoldsPanel from '@/app/_zohoSalesOrders/components/DraftHoldsPanel';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -248,6 +249,9 @@ const ZohoSalesOrdersPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* Draft orders whose wine is held while the client finishes them */}
+        <DraftHoldsPanel />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

@@ -2568,6 +2568,42 @@ const runMigrations = async () => {
     `);
     console.log('✅ logistics jobs + movement bonds ready');
 
+    /*
+      Draft SO holds — a draft Zoho order's wine held while the client finishes
+      it. Kept out of zoho_sales_orders, which everything reads as real orders.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_draft_holds" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_salesorder_id" text NOT NULL UNIQUE,
+        "salesorder_number" text NOT NULL,
+        "customer_name" text NOT NULL,
+        "status" text NOT NULL DEFAULT 'active',
+        "status_reason" text,
+        "last_refreshed_at" timestamp,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_draft_holds_status_idx" ON "zoho_draft_holds"("status")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_draft_hold_lines" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "hold_id" uuid NOT NULL REFERENCES "zoho_draft_holds"("id") ON DELETE CASCADE,
+        "zoho_line_item_id" text NOT NULL,
+        "sku" text,
+        "name" text NOT NULL,
+        "description" text,
+        "quantity" double precision NOT NULL,
+        "unit" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_draft_hold_lines_hold_idx" ON "zoho_draft_hold_lines"("hold_id")`);
+    console.log('✅ draft SO holds ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
