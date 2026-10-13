@@ -1,3 +1,9 @@
+## [2.0.321](https://github.com/craftandculture/Craft-Culture/compare/v2.0.320...v2.0.321) (2026-10-13)
+
+### Features
+
+* hold stock for a draft sales order while the client finishes it ([1e9198e](https://github.com/craftandculture/Craft-Culture/commit/1e9198ec0c13a0d87ef453037c1b7792a83ec0db))
+
 ## [2.0.320](https://github.com/craftandculture/Craft-Culture/compare/v2.0.319...v2.0.320) (2026-10-12)
 
 ### Features
