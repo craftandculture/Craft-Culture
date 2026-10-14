@@ -1,3 +1,9 @@
+## [2.0.323](https://github.com/craftandculture/Craft-Culture/compare/v2.0.322...v2.0.323) (2026-10-14)
+
+### Features
+
+* City Drinks reorder watch, daily in Slack for the C&C team ([5c414b3](https://github.com/craftandculture/Craft-Culture/commit/5c414b35fd3002da59258acdac133708fc65cf48))
+
 ## [2.0.322](https://github.com/craftandculture/Craft-Culture/compare/v2.0.321...v2.0.322) (2026-10-14)
 
 ### Bug Fixes
