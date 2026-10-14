@@ -4,6 +4,7 @@ import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
 import adminDeriveSold from './controller/adminDeriveSold';
 import adminGetBalances from './controller/adminGetBalances';
 import adminGetCodeSuggestions from './controller/adminGetCodeSuggestions';
+import adminGetDuplicateWines from './controller/adminGetDuplicateWines';
 import adminGetOwed from './controller/adminGetOwed';
 import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
@@ -45,6 +46,7 @@ const distributionRouter = createTRPCRouter({
     getCodeSuggestions: adminGetCodeSuggestions,
     linkCode: adminLinkCode,
     importOutletSales: adminImportOutletSales,
+    getDuplicateWines: adminGetDuplicateWines,
     getOwed: adminGetOwed,
     getSetup: adminGetSetup,
     getStatement: adminGetStatement,
