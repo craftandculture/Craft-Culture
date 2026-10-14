@@ -1,3 +1,9 @@
+## [2.0.324](https://github.com/craftandculture/Craft-Culture/compare/v2.0.323...v2.0.324) (2026-10-14)
+
+### Features
+
+* reorder watch grouped by who acts, with dead lines folded away ([ce02e4b](https://github.com/craftandculture/Craft-Culture/commit/ce02e4b827c85b69f5387b6eda1a4b5c91b2d405))
+
 ## [2.0.323](https://github.com/craftandculture/Craft-Culture/compare/v2.0.322...v2.0.323) (2026-10-14)
 
 ### Features
