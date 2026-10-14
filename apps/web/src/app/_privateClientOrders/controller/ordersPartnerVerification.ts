@@ -7,6 +7,7 @@ import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
+import partnerOrderView from '../utils/partnerOrderView';
 
 const partnerVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -104,7 +105,7 @@ const ordersPartnerVerification = winePartnerProcedure
     // Note: When response is 'no' or 'dont_know', order is suspended
     // Partner members are already aware since their colleague initiated this
 
-    return updatedOrder;
+    return updatedOrder ? partnerOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersPartnerVerification;

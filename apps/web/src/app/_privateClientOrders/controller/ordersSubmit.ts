@@ -7,6 +7,7 @@ import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyAdminsOfOrderSubmission from '../utils/notifyAdminsOfOrderSubmission';
+import partnerOrderView from '../utils/partnerOrderView';
 
 const submitOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -97,7 +98,7 @@ const ordersSubmit = winePartnerProcedure.input(submitOrderSchema).mutation(asyn
     itemCount: order.items?.length,
   });
 
-  return updatedOrder;
+  return updatedOrder ? partnerOrderView(updatedOrder) : updatedOrder;
 });
 
 export default ordersSubmit;

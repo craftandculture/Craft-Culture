@@ -25,15 +25,15 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 import formatSubscriptionBox from '../utils/formatSubscriptionBox';
+import type { PartnerOrder } from '../utils/partnerOrderView';
 
 type Currency = 'USD' | 'AED';
 
-type OrderWithDistributor = PrivateClientOrder & {
+type OrderWithDistributor = PartnerOrder & {
   distributor: { id: string; businessName: string } | null;
   client: { id: string; cityDrinksVerifiedAt: Date | null } | null;
 };

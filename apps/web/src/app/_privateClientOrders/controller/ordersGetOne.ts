@@ -13,6 +13,8 @@ import {
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
+import partnerOrderView from '../utils/partnerOrderView';
+
 /**
  * Get a single private client order by ID
  *
@@ -90,7 +92,10 @@ const ordersGetOne = winePartnerProcedure
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
     return {
-      ...orderResult.order,
+      // No landed, duty, transfer or VAT figures: only the partner's own price and the client's
+      ...partnerOrderView(orderResult.order),
+      /** What the partner's wine costs C&C: their prices on the lines */
+      winePriceUsd: Math.round(items.reduce((sum, item) => sum + (item.totalUsd ?? 0), 0) * 100) / 100,
       distributor: orderResult.distributor,
       client: orderResult.client,
       items,

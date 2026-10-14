@@ -10,6 +10,7 @@ import logger from '@/utils/logger';
 
 import createOrderSchema from '../schemas/createOrderSchema';
 import generateOrderNumber from '../utils/generateOrderNumber';
+import partnerOrderView from '../utils/partnerOrderView';
 
 /** Maximum retries for order number generation in case of race conditions */
 const MAX_ORDER_NUMBER_RETRIES = 3;
@@ -100,7 +101,7 @@ const ordersCreate = winePartnerProcedure
           })
           .returning();
 
-        return order;
+        return order ? partnerOrderView(order) : order;
       } catch (error) {
         // Check if it's a duplicate key error (race condition)
         const isDuplicateError =

@@ -7,6 +7,7 @@ import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
+import partnerOrderView from '../utils/partnerOrderView';
 
 const reinitiateSchema = z.object({
   orderId: z.string().uuid(),
@@ -98,7 +99,7 @@ const ordersPartnerReinitiateVerification = winePartnerProcedure
       clientPhone: order.clientPhone ?? undefined,
     });
 
-    return updatedOrder;
+    return updatedOrder ? partnerOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersPartnerReinitiateVerification;

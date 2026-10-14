@@ -1019,7 +1019,7 @@ const PrivateOrderDetailPage = () => {
               <div className="flex items-center gap-4 text-sm text-text-muted">
                 <span>{order.caseCount ?? 0} cases</span>
                 <span className="font-semibold text-text-primary">
-                  {formatCurrencyValue(getAmount(order.totalUsd), currency)}
+                  Client price {formatCurrencyValue(getAmount(order.totalUsd), currency)}
                 </span>
               </div>
             </div>
@@ -1254,26 +1254,15 @@ const PrivateOrderDetailPage = () => {
               <Typography variant="labelSm" colorRole="muted" className="mb-2">
                 Summary ({currency})
               </Typography>
+              {/* Only the partner's own price and the client's: what lies between is not theirs to see */}
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Landed Duty Free</span>
-                  <span>{formatCurrencyValue(getAmount(order.subtotalUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Import Duty (20%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.dutyUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Transfer (0.75%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.logisticsUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">VAT (5%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.vatUsd), currency)}</span>
+                  <span className="text-text-muted">Your wine price to C&C</span>
+                  <span>{formatCurrencyValue(getAmount(order.winePriceUsd), currency)}</span>
                 </div>
                 <Divider />
                 <div className="flex justify-between font-semibold">
-                  <span>Total</span>
+                  <span>Client price</span>
                   <span>{formatCurrencyValue(getAmount(order.totalUsd), currency)}</span>
                 </div>
               </div>

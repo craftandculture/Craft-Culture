@@ -9,6 +9,7 @@ import {
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import getOrdersSchema from '../schemas/getOrdersSchema';
+import partnerOrderView from '../utils/partnerOrderView';
 
 /**
  * Get list of private client orders for the current wine partner
@@ -76,7 +77,7 @@ const ordersGetMany = winePartnerProcedure
 
     // Flatten the response
     const ordersWithDistributor = ordersList.map((row) => ({
-      ...row.order,
+      ...partnerOrderView(row.order),
       distributor: row.distributor,
       client: row.client,
     }));
