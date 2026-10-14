@@ -1,3 +1,9 @@
+## [2.0.322](https://github.com/craftandculture/Craft-Culture/compare/v2.0.321...v2.0.322) (2026-10-14)
+
+### Bug Fixes
+
+* wine partners see only their wine price and the client price on a PCO, not the breakdown ([e090dde](https://github.com/craftandculture/Craft-Culture/commit/e090dde75d536135282af66f09fa797e7d536677))
+
 ## [2.0.321](https://github.com/craftandculture/Craft-Culture/compare/v2.0.320...v2.0.321) (2026-10-13)
 
 ### Features
