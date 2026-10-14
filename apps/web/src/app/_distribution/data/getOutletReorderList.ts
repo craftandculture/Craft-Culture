@@ -36,14 +36,18 @@ export interface ReorderLine {
    */
   owner: string;
   lwin18: string;
-  status: 'oos' | 'low';
+  /** oos and low are reorders; oneoff sold this quarter but not this month */
+  status: 'oos' | 'low' | 'oneoff';
   regime: string | null;
   held: number;
   inTransit: number;
   sold30: number;
+  sold90: number;
   daysCover: number | null;
   suggestBottles: number;
   suggestCases: number;
+  /** Whether the suggestion is in whole cases or loose bottles */
+  unit: 'case' | 'bottle';
   pack: number;
   supply: SupplyPosition | null;
   /** Other vintages we hold or have coming, when this one is short */
@@ -152,12 +156,19 @@ const getOutletReorderList = async (outletId: string) => {
     const vintage = lwin18.split('-')[1] ?? '';
     const ownCover = (supply?.stock ?? 0) + (supply?.consignor ?? 0) + (supply?.inbound ?? 0);
     const family = familyKeyOf(lwin18);
-    // Other years only matter when we cannot supply this one
+    /*
+      Other years only matter when we cannot supply this one, and only near
+      years: 2018 for a 2020 is a substitute, 1998 for a 1983 is not.
+    */
+    const near = (year: string) =>
+      /^\d{4}$/.test(year) && /^\d{4}$/.test(vintage) && vintage !== '0000'
+        ? Math.abs(Number(year) - Number(vintage)) <= 3
+        : false;
     const alternatives =
-      ownCover > 0 || !family
+      ownCover > 0 || !family || verdict.status === 'oneoff'
         ? []
         : [...(families.get(family) ?? new Map()).entries()]
-            .filter(([year, v]) => year !== vintage && (v.stock > 0 || v.inbound > 0))
+            .filter(([year, v]) => year !== vintage && near(year) && (v.stock > 0 || v.inbound > 0))
             .map(([year, v]) => ({ vintage: year === '0000' ? 'NV' : year, ...v }))
             .sort((a, b) => b.vintage.localeCompare(a.vintage))
             .slice(0, 3);
@@ -180,21 +191,24 @@ const getOutletReorderList = async (outletId: string) => {
       held: Number(row.held) || 0,
       inTransit: Number(row.inTransit) || 0,
       sold30: Number(row.sold30) || 0,
+      sold90: Number(row.sold90) || 0,
       daysCover: verdict.daysCover,
       suggestBottles: verdict.suggestBottles,
       suggestCases: verdict.suggestCases,
+      unit: verdict.unit,
       pack,
       supply,
       alternatives,
     });
   }
 
-  lines.sort((a, b) =>
-    a.status !== b.status
-      ? a.status === 'oos'
-        ? -1
-        : 1
-      : (a.daysCover ?? 0) - (b.daysCover ?? 0) || b.sold30 - a.sold30,
+  const rank = { oos: 0, low: 1, oneoff: 2 } as const;
+  lines.sort(
+    (a, b) =>
+      rank[a.status] - rank[b.status] ||
+      (a.daysCover ?? 0) - (b.daysCover ?? 0) ||
+      b.sold30 - a.sold30 ||
+      b.sold90 - a.sold90,
   );
 
   return { takenAt: rows[0]?.takenAt ?? null, lines };

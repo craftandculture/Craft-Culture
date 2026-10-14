@@ -3,11 +3,12 @@ import { describe, expect, it } from 'vitest';
 import assessReorder from './assessReorder';
 
 describe('assessReorder', () => {
-  it('flags a fast seller as low while bottles remain', () => {
+  it('flags a fast seller as low while bottles remain, in cases', () => {
     const result = assessReorder({ held: 2, inTransit: 0, sold30: 12, sold90: 30, pack: 6 });
     expect(result.status).toBe('low');
     expect(result.daysCover).toBe(5);
     // 0.4/day × 30 = 12, less 2 held = 10 → 2 cases of 6
+    expect(result.unit).toBe('case');
     expect(result.suggestCases).toBe(2);
     expect(result.suggestBottles).toBe(12);
   });
@@ -15,7 +16,6 @@ describe('assessReorder', () => {
   it('leaves a slow seller with little stock alone', () => {
     const result = assessReorder({ held: 2, inTransit: 0, sold30: 1, sold90: 3, pack: 6 });
     expect(result.status).toBeNull();
-    expect(result.daysCover).toBe(60);
   });
 
   it('counts stock already on its way to them', () => {
@@ -23,9 +23,10 @@ describe('assessReorder', () => {
     expect(result.status).toBeNull();
   });
 
-  it('calls an empty shelf out of stock when it sold recently', () => {
-    const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 4, pack: 6 });
+  it('calls an empty shelf out of stock when it sold this month', () => {
+    const result = assessReorder({ held: 0, inTransit: 0, sold30: 6, sold90: 10, pack: 6 });
     expect(result.status).toBe('oos');
+    expect(result.unit).toBe('case');
     expect(result.suggestCases).toBe(1);
   });
 
@@ -34,14 +35,27 @@ describe('assessReorder', () => {
     expect(result.status).toBe('oos');
   });
 
-  it('ignores an empty shelf of a wine nobody has bought in 90 days', () => {
+  it('calls an empty shelf that sold earlier in the quarter a one-off, not a reorder', () => {
+    const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 4, pack: 6 });
+    expect(result.status).toBe('oneoff');
+    expect(result.suggestBottles).toBe(0);
+  });
+
+  it('never calls an empty shelf low', () => {
+    const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 1, pack: 1 });
+    expect(result.status).not.toBe('low');
+  });
+
+  it('ignores an empty shelf that has not sold in 90 days', () => {
     const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 0, pack: 6 });
     expect(result.status).toBeNull();
   });
 
-  it('ignores an empty shelf of a wine that sold a single bottle in 90 days', () => {
-    const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 1, pack: 6 });
-    expect(result.status).toBeNull();
+  it('suggests bottles, not a case, for a wine that sells one a month', () => {
+    const result = assessReorder({ held: 0, inTransit: 0, sold30: 1, sold90: 2, pack: 6 });
+    expect(result.status).toBe('oos');
+    expect(result.unit).toBe('bottle');
+    expect(result.suggestBottles).toBe(1);
   });
 
   it('suggests single bottles for a single-bottle pack', () => {

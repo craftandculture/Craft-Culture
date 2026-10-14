@@ -4,8 +4,8 @@ export const LOW_COVER_DAYS = 14;
 /** A suggested order brings them back up to this many days */
 export const TARGET_COVER_DAYS = 30;
 
-/** An empty shelf only matters for a wine that sold at least this many in 90 days */
-export const MIN_SOLD_90 = 2;
+/** A full case is suggested only when it sells within this many days */
+const CASE_WITHIN_DAYS = 60;
 
 export interface ReorderInput {
   /** Bottles on their shelf */
@@ -24,19 +24,21 @@ export interface ReorderInput {
  * Whether a wine at the distributor needs reordering, and how much
  *
  * Measured in days of cover, not a fixed count: what they hold plus what is
- * already coming, over what they sell a day (their 30-day figure). A fast
- * seller is flagged with stock still on the shelf; a slow one is not nagged
- * about for holding two bottles.
+ * already coming, over what they sell a day (their 30-day figure).
  *
- * Out of stock means nothing on the shelf of a wine that sold at least two in
- * the last 90 days — one bottle sold once, or none in three months, being
- * empty is not news.
- * The suggestion tops cover back up to 30 days, in whole cases, never less
- * than one case.
+ * - `oos`: an empty shelf of a wine that sold in the last 30 days.
+ * - `low`: bottles still on the shelf, under 14 days of cover.
+ * - `oneoff`: an empty shelf of a wine that sold in the last 90 days but not
+ *   this month — a library bottle or one-off parcel. Not a reorder; listed
+ *   for sourcing if anyone wants it again. An empty shelf is never "low".
+ *
+ * The suggestion tops cover up to 30 days. It is in whole cases only when a
+ * case sells within two months; otherwise in bottles, because "1 case" of a
+ * wine that sells one bottle a month is six bottles too many.
  *
  * @example
  *   assessReorder({ held: 2, inTransit: 0, sold30: 12, sold90: 30, pack: 6 });
- *   // { status: 'low', daysCover: 5, perDay: 0.4, suggestBottles: 12, suggestCases: 2 }
+ *   // { status: 'low', daysCover: 5, unit: 'case', suggestCases: 2, suggestBottles: 12 }
  *
  * @param input - Their position and sales for one wine
  * @returns status null when no action is needed
@@ -48,27 +50,36 @@ const assessReorder = ({ held, inTransit, sold30, sold90, pack }: ReorderInput) 
   const casePack = pack > 0 ? pack : 1;
 
   const status =
-    held <= 0 && sold90 >= MIN_SOLD_90
-      ? ('oos' as const)
+    held <= 0
+      ? sold30 >= 1
+        ? ('oos' as const)
+        : sold90 >= 1
+          ? ('oneoff' as const)
+          : null
       : daysCover !== null && daysCover < LOW_COVER_DAYS
         ? ('low' as const)
         : null;
 
-  if (!status) {
-    return { status, daysCover, perDay, suggestBottles: 0, suggestCases: 0 };
+  if (!status || status === 'oneoff') {
+    return { status, daysCover, perDay, unit: 'bottle' as const, suggestBottles: 0, suggestCases: 0 };
   }
 
-  // A wine that only sold in the 90-day window still gets a case's worth
-  const shortfall = Math.max(0, Math.ceil(perDay * TARGET_COVER_DAYS - cover));
-  const suggestCases = Math.max(1, Math.ceil(shortfall / casePack));
+  const shortfall = Math.max(1, Math.ceil(perDay * TARGET_COVER_DAYS - cover));
+  const caseSellsInTime = casePack > 1 && casePack <= perDay * CASE_WITHIN_DAYS;
 
-  return {
-    status,
-    daysCover,
-    perDay,
-    suggestBottles: suggestCases * casePack,
-    suggestCases,
-  };
+  if (caseSellsInTime) {
+    const suggestCases = Math.ceil(shortfall / casePack);
+    return {
+      status,
+      daysCover,
+      perDay,
+      unit: 'case' as const,
+      suggestCases,
+      suggestBottles: suggestCases * casePack,
+    };
+  }
+
+  return { status, daysCover, perDay, unit: 'bottle' as const, suggestBottles: shortfall, suggestCases: 0 };
 };
 
 export default assessReorder;
