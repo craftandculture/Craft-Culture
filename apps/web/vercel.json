@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/warehouse-sensors-daily",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/cd-reorder",
+      "schedule": "15 3 * * *"
     }
   ]
 }
