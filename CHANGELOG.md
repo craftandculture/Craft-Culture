@@ -1,3 +1,9 @@
+## [2.0.325](https://github.com/craftandculture/Craft-Culture/compare/v2.0.324...v2.0.325) (2026-10-14)
+
+### Features
+
+* reorder watch sends what it can, sources the rest, one-offs apart ([538f39b](https://github.com/craftandculture/Craft-Culture/commit/538f39bbfbb51ea70f8f83efb93db6521b3eafe8))
+
 ## [2.0.324](https://github.com/craftandculture/Craft-Culture/compare/v2.0.323...v2.0.324) (2026-10-14)
 
 ### Features
