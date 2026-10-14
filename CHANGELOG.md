@@ -1,3 +1,9 @@
+## [2.0.326](https://github.com/craftandculture/Craft-Culture/compare/v2.0.325...v2.0.326) (2026-10-14)
+
+### Features
+
+* Reorder watch page, linked from the [#cd](https://github.com/craftandculture/Craft-Culture/issues/cd)-stock-levels post ([64ef2af](https://github.com/craftandculture/Craft-Culture/commit/64ef2af1cade482e04353bca83966df353ec8e21))
+
 ## [2.0.325](https://github.com/craftandculture/Craft-Culture/compare/v2.0.324...v2.0.325) (2026-10-14)
 
 ### Features
