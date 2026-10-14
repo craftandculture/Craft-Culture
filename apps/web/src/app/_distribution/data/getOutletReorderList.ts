@@ -11,6 +11,11 @@ import {
   packAgnostic,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import wineOwnersReady from '../utils/wineOwnersReady';
+
+/** An invoice line's code, squashed as the snapshot codes are */
+const squashed = () =>
+  client`UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g'))`;
 
 interface PositionRow {
   code: string;
@@ -25,6 +30,11 @@ interface PositionRow {
 
 export interface ReorderLine {
   wine: string;
+  /**
+   * Who acts on it: "C&C" for our wine and for anything they bought from us
+   * outright, otherwise the consignor whose wine it is
+   */
+  owner: string;
   lwin18: string;
   status: 'oos' | 'low';
   regime: string | null;
@@ -56,12 +66,50 @@ export interface ReorderLine {
  */
 const getOutletReorderList = async (outletId: string) => {
   const hasLinks = await confirmedLinksReady();
+  const hasOwners = await wineOwnersReady();
 
-  const rows = await client<(PositionRow & { takenAt: Date })[]>`
+  const rows = await client<(PositionRow & { takenAt: Date; ownerName: string | null })[]>`
     WITH latest AS (
       SELECT MAX(taken_at) AS taken_at FROM cons_snapshots WHERE outlet_id = ${outletId}
     ),
-    ${codeBridgeCtes(outletId, hasLinks)}
+    ${codeBridgeCtes(outletId, hasLinks)},
+    /* Whose wine it is — the same reading as the daily sales report */
+    outs AS (
+      SELECT ${packAgnostic(squashed)} AS code, m.doc_date, a.owner_id
+      FROM cons_movements m
+      JOIN cons_arrangements a ON a.id = m.arrangement_id
+      WHERE a.outlet_id = ${outletId} AND m.kind = 'out'
+    ),
+    invoiced_owner AS (
+      SELECT DISTINCT ON (o.code) o.code, ow.name AS owner_name
+      FROM outs o
+      JOIN cons_owners ow ON ow.id = o.owner_id
+      ORDER BY o.code, o.doc_date DESC NULLS LAST
+    ),
+    stated_owner AS (
+      ${
+        hasOwners
+          ? client`
+              SELECT DISTINCT ON (code) code, owner_name
+              FROM (
+                SELECT ${packAgnostic(
+                  () => client`UPPER(REGEXP_REPLACE(w.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+                )} AS code, ow.name AS owner_name
+                FROM cons_wine_owners w
+                JOIN cons_owners ow ON ow.id = w.owner_id
+                WHERE w.outlet_id = ${outletId}
+              ) stated
+              ORDER BY code
+            `
+          : client`SELECT NULL::text AS code, NULL::text AS owner_name WHERE false`
+      }
+    ),
+    owner_of AS (
+      SELECT COALESCE(s.code, i.code) AS code, COALESCE(s.owner_name, i.owner_name) AS owner_name
+      FROM stated_owner s
+      FULL JOIN invoiced_owner i ON i.code = s.code
+    ),
+    pos AS (
     SELECT ${packAgnostic(() => resolvedSnapshotCode())} AS code,
            MIN(${resolvedSnapshotCode()}) AS lwin,
            MIN(s.product_name) AS "productName",
@@ -76,6 +124,10 @@ const getOutletReorderList = async (outletId: string) => {
     WHERE s.outlet_id = ${outletId}
       AND s.taken_at = (SELECT taken_at FROM latest)
     GROUP BY 1
+    )
+    SELECT pos.*, o.owner_name AS "ownerName"
+    FROM pos
+    LEFT JOIN owner_of o ON o.code = pos.code
   `;
 
   const { positions, families } = await getCcSupplyPositions();
@@ -110,8 +162,18 @@ const getOutletReorderList = async (outletId: string) => {
             .sort((a, b) => b.vintage.localeCompare(a.vintage))
             .slice(0, 3);
 
+    /*
+      Bought outright, it is our customer's reorder from us whoever supplied
+      it first; consigned, it is the consignor's call.
+    */
+    const owner =
+      row.regime === 'bought' || /craft/i.test(row.ownerName ?? '')
+        ? 'C&C'
+        : (row.ownerName ?? 'Owner unknown');
+
     lines.push({
       wine: (row.productName ?? lwin18).trim(),
+      owner,
       lwin18,
       status: verdict.status,
       regime: row.regime,

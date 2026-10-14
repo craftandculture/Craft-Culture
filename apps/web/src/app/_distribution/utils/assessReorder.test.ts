@@ -39,6 +39,11 @@ describe('assessReorder', () => {
     expect(result.status).toBeNull();
   });
 
+  it('ignores an empty shelf of a wine that sold a single bottle in 90 days', () => {
+    const result = assessReorder({ held: 0, inTransit: 0, sold30: 0, sold90: 1, pack: 6 });
+    expect(result.status).toBeNull();
+  });
+
   it('suggests single bottles for a single-bottle pack', () => {
     const result = assessReorder({ held: 0, inTransit: 0, sold30: 3, sold90: 5, pack: 1 });
     expect(result.status).toBe('oos');

@@ -4,6 +4,9 @@ export const LOW_COVER_DAYS = 14;
 /** A suggested order brings them back up to this many days */
 export const TARGET_COVER_DAYS = 30;
 
+/** An empty shelf only matters for a wine that sold at least this many in 90 days */
+export const MIN_SOLD_90 = 2;
+
 export interface ReorderInput {
   /** Bottles on their shelf */
   held: number;
@@ -25,8 +28,9 @@ export interface ReorderInput {
  * seller is flagged with stock still on the shelf; a slow one is not nagged
  * about for holding two bottles.
  *
- * Out of stock means nothing on the shelf of a wine that sold in the last 90
- * days — a wine nobody has bought in three months being empty is not news.
+ * Out of stock means nothing on the shelf of a wine that sold at least two in
+ * the last 90 days — one bottle sold once, or none in three months, being
+ * empty is not news.
  * The suggestion tops cover back up to 30 days, in whole cases, never less
  * than one case.
  *
@@ -44,7 +48,7 @@ const assessReorder = ({ held, inTransit, sold30, sold90, pack }: ReorderInput) 
   const casePack = pack > 0 ? pack : 1;
 
   const status =
-    held <= 0 && sold90 > 0
+    held <= 0 && sold90 >= MIN_SOLD_90
       ? ('oos' as const)
       : daysCover !== null && daysCover < LOW_COVER_DAYS
         ? ('low' as const)
