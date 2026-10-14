@@ -1,3 +1,9 @@
+## [2.0.327](https://github.com/craftandculture/Craft-Culture/compare/v2.0.326...v2.0.327) (2026-10-14)
+
+### Features
+
+* propose the merges, and perform none ([c9e193e](https://github.com/craftandculture/Craft-Culture/commit/c9e193edca3f66159c901a9f4f49c598b1d8e68b))
+
 ## [2.0.326](https://github.com/craftandculture/Craft-Culture/compare/v2.0.325...v2.0.326) (2026-10-14)
 
 ### Features
