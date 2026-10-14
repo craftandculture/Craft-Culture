@@ -1,6 +1,9 @@
 import { LOW_COVER_DAYS } from './assessReorder';
 import type { ReorderLine } from '../data/getOutletReorderList';
 
+/** Every wine, not just the first few — linked from the post */
+const FULL_LIST_URL = 'https://wine.craftculture.xyz/platform/admin/reorder-watch';
+
 /** How many wines the To source section names before "+N more" */
 const SOURCE_NAMED = 15;
 
@@ -85,7 +88,7 @@ const formatReorderForSlack = (
     return { text: `${header}\n✅ Nothing out of stock or under ${LOW_COVER_DAYS} days of cover.` };
   }
 
-  const summary = `📦 *${toSend.length} to send* · 🔎 ${toSource.length} to source · 🔴 out · 🟠 under ${LOW_COVER_DAYS} days`;
+  const summary = `📦 *${toSend.length} to send* · 🔎 ${toSource.length} to source · 🔴 out · 🟠 under ${LOW_COVER_DAYS} days · <${FULL_LIST_URL}|full list>`;
 
   const owners = [...new Set(toSend.map((l) => l.owner))].sort((a, b) =>
     a === 'C&C' ? -1 : b === 'C&C' ? 1 : a.localeCompare(b),
@@ -105,7 +108,7 @@ const formatReorderForSlack = (
       [
         `*🔎 To source* — selling but nobody holds it, then one-offs`,
         ...named,
-        ...(more > 0 ? [`_+${more} more, slower_`] : []),
+        ...(more > 0 ? [`_+${more} more, slower — <${FULL_LIST_URL}|see the full list>_`] : []),
       ].join('\n'),
     );
   }
