@@ -1,3 +1,11 @@
+## [2.0.329](https://github.com/craftandculture/Craft-Culture/compare/v2.0.328...v2.0.329) (2026-10-15)
+
+### Bug Fixes
+
+* close account-takeover, script-injection and data-exposure gaps from the October security audit ([33df1a6](https://github.com/craftandculture/Craft-Culture/commit/33df1a631ed506d4c6b0de8d2cb3bed60f8f0556))
+* find the month in the heading rather than demanding it alone ([2ced6f5](https://github.com/craftandculture/Craft-Culture/commit/2ced6f540394ea28774c32459390b9ac31c2e9f9))
+* upgrade Next.js, Better Auth and other packages with known security flaws ([a6ac4ae](https://github.com/craftandculture/Craft-Culture/commit/a6ac4ae5c2a39100ea2833acb98d37a73d2f20ec))
+
 ## [2.0.328](https://github.com/craftandculture/Craft-Culture/compare/v2.0.327...v2.0.328) (2026-10-15)
 
 ### Features
