@@ -59,8 +59,20 @@ const MONTHS = [
  * would otherwise land in the wrong year, and a December one read in January
  * would be out by twelve months.
  */
-const monthFromHeading = (heading: string, year: number) => {
-  const index = MONTHS.indexOf(heading.trim().toLowerCase());
+export const monthFromHeading = (heading: string, year: number) => {
+  const text = heading.trim().toLowerCase();
+
+  /*
+    The month is in there somewhere, not necessarily alone.
+
+    City Drinks head the column "August" on one report and "Sales September"
+    on the next, and an exact match rejected the whole file for the word in
+    front of the month. The heading is theirs to write; finding the month in
+    it is ours.
+  */
+  const index = MONTHS.findIndex((month) =>
+    new RegExp(`\\b${month}\\b`).test(text),
+  );
 
   if (index < 0) return null;
 
