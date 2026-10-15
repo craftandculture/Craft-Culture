@@ -14,6 +14,8 @@ export interface StockExportProduct {
   locationCount: number;
   ownerCount: number;
   expiryStatus: string;
+  /** Per-location stock lines, used to name who owns the wine */
+  locations?: { ownerName: string | null; quantityCases: number }[];
 }
 
 interface ExportStockOptions {
@@ -37,14 +39,14 @@ const HEADERS = [
   'Import $/case',
   'Bottles',
   'Locations',
-  'Owners',
+  'Owner',
   'Status',
 ];
 
 const COL_WIDTHS = [
   { wch: 44 }, { wch: 24 }, { wch: 20 }, { wch: 8 }, { wch: 7 }, { wch: 6 },
   { wch: 11 }, { wch: 10 }, { wch: 9 }, { wch: 12 }, { wch: 13 },
-  { wch: 9 }, { wch: 10 }, { wch: 8 }, { wch: 10 },
+  { wch: 9 }, { wch: 10 }, { wch: 32 }, { wch: 10 },
 ];
 
 /**
@@ -58,6 +60,27 @@ const statusLabel = (expiryStatus: string, availableCases: number) => {
   if (availableCases === 1) return 'Final';
   if (availableCases <= 2) return 'Low';
   return 'Good';
+};
+
+/**
+ * Name the owner(s) of a product row. A wine held for several partners lists
+ * each with its cases, largest holding first, so the sheet shows the split
+ * rather than just a count.
+ */
+const ownerLabel = (p: StockExportProduct) => {
+  const cases = new Map<string, number>();
+  for (const loc of p.locations ?? []) {
+    const name = loc.ownerName?.trim() || 'Unassigned';
+    cases.set(name, (cases.get(name) ?? 0) + loc.quantityCases);
+  }
+  if (cases.size === 0) {
+    return p.ownerCount > 0 ? `${p.ownerCount} owner(s)` : '';
+  }
+  if (cases.size === 1) return [...cases.keys()][0] ?? '';
+  return [...cases.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, n]) => `${name} (${n} cs)`)
+    .join('; ');
 };
 
 /**
@@ -93,7 +116,7 @@ const exportStockToExcel = (
       price != null ? Number((price * pack).toFixed(2)) : '',
       p.totalBottles,
       p.locationCount,
-      p.ownerCount,
+      ownerLabel(p),
       statusLabel(p.expiryStatus, p.availableCases),
     ];
   });
