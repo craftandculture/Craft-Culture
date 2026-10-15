@@ -1,3 +1,9 @@
+## [2.0.344](https://github.com/craftandculture/Craft-Culture/compare/v2.0.343...v2.0.344) (2026-10-15)
+
+### Features
+
+* **cellar:** membership terms v3 after legal review ([bb8e350](https://github.com/craftandculture/Craft-Culture/commit/bb8e35037ee4fe99ce4830930a3c559240fa9da5))
+
 ## [2.0.343](https://github.com/craftandculture/Craft-Culture/compare/v2.0.342...v2.0.343) (2026-10-15)
 
 ### Features
