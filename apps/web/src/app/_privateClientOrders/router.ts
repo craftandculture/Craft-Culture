@@ -12,13 +12,17 @@ import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminGetOrderInvoicing from './controller/adminGetOrderInvoicing';
 import adminGetSubscriptionBoxes from './controller/adminGetSubscriptionBoxes';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
+import adminMarkDeliveredInvoicePending from './controller/adminMarkDeliveredInvoicePending';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminMarkPayment from './controller/adminMarkPayment';
 import adminMatchStockLwins from './controller/adminMatchStockLwins';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
+import adminRecordManualInvoice from './controller/adminRecordManualInvoice';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminResetItemInvoicing from './controller/adminResetItemInvoicing';
 import adminSetDistributorSku from './controller/adminSetDistributorSku';
 import adminSetSubscriptionBox from './controller/adminSetSubscriptionBox';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
@@ -143,6 +147,11 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
   adminMarkPartnerPaid,
+  // Manual invoicing of delivered lines
+  adminGetOrderInvoicing,
+  adminMarkDeliveredInvoicePending,
+  adminRecordManualInvoice,
+  adminResetItemInvoicing,
   adminMarkPayment,
   itemsUpdateStockStatus,
   itemsBulkUpdateStockStatus,

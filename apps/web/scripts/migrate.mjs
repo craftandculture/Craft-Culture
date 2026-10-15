@@ -2614,3 +2614,28 @@ const runMigrations = async () => {
 };
 
 runMigrations();
+    /*
+      PCO manual invoicing — per order line: delivered and waiting for a manual
+      invoice, or invoiced against a number and date. Its own table so a missed
+      run cannot break reads of order lines.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "pco_item_invoicing" (
+        "item_id" uuid PRIMARY KEY REFERENCES "private_client_order_items"("id") ON DELETE CASCADE,
+        "order_id" uuid NOT NULL REFERENCES "private_client_orders"("id") ON DELETE CASCADE,
+        "status" text NOT NULL DEFAULT 'pending',
+        "delivered_at" timestamp DEFAULT now() NOT NULL,
+        "delivered_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "invoice_number" text,
+        "invoice_date" timestamp,
+        "invoiced_at" timestamp,
+        "invoiced_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "pco_item_invoicing_order_idx" ON "pco_item_invoicing"("order_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "pco_item_invoicing_status_idx" ON "pco_item_invoicing"("status")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "pco_item_invoicing_number_idx" ON "pco_item_invoicing"("invoice_number")`);
+    console.log('✅ PCO manual invoicing ready');
+

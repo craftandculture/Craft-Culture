@@ -1534,6 +1534,44 @@ export const privateClientOrderActivityLogs = pgTable(
   ],
 ).enableRLS();
 
+/**
+ * Manual invoicing of delivered PCO lines
+ *
+ * Kept beside the order line rather than on it: an order delivered in parts is
+ * invoiced in parts, outside Zoho's automatic invoice, and each line needs to
+ * say whether it is delivered and waiting for an invoice, or invoiced and
+ * against which number — so the same delivery is never invoiced twice. A
+ * separate table also means a missed migration cannot break every read of
+ * order lines; reads check it exists first.
+ */
+export const pcoItemInvoicing = pgTable(
+  'pco_item_invoicing',
+  {
+    itemId: uuid('item_id')
+      .primaryKey()
+      .references(() => privateClientOrderItems.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id')
+      .references(() => privateClientOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** pending = delivered, manual invoice still to raise; invoiced = done */
+    status: text('status').$type<'pending' | 'invoiced'>().notNull().default('pending'),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }).notNull().defaultNow(),
+    deliveredBy: uuid('delivered_by').references(() => users.id, { onDelete: 'set null' }),
+    invoiceNumber: text('invoice_number'),
+    invoiceDate: timestamp('invoice_date', { mode: 'date' }),
+    invoicedAt: timestamp('invoiced_at', { mode: 'date' }),
+    invoicedBy: uuid('invoiced_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('pco_item_invoicing_order_idx').on(table.orderId),
+    index('pco_item_invoicing_status_idx').on(table.status),
+    index('pco_item_invoicing_number_idx').on(table.invoiceNumber),
+  ],
+).enableRLS();
+
+export type PcoItemInvoicing = typeof pcoItemInvoicing.$inferSelect;
+
 export type PrivateClientOrderActivityLog =
   typeof privateClientOrderActivityLogs.$inferSelect;
 

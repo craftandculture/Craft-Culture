@@ -77,6 +77,23 @@ const STAGE_LABELS: Record<PcoStage, string> = {
   delivered: 'Delivered',
 };
 
+/** The order's manual-invoicing state, under its status */
+const InvoicingBadge = ({
+  invoicing,
+}: {
+  invoicing: { state: 'pending' | 'invoiced'; label: string };
+}) => (
+  <span
+    className={`mt-1 block w-fit rounded-full px-2 py-0.5 text-[11px] font-medium ${
+      invoicing.state === 'pending'
+        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+    }`}
+  >
+    {invoicing.label}
+  </span>
+);
+
 const AdminPrivateOrdersPage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,6 +110,8 @@ const AdminPrivateOrdersPage = () => {
   const [stageFilter, setStageFilter] = useState<PcoStage | null>(null);
   const [skuMissingFilter, setSkuMissingFilter] = useState(false);
   const [idleFilter, setIdleFilter] = useState(false);
+  // Manual invoicing: delivered lines waiting for an invoice, or all invoiced
+  const [invoiceFilter, setInvoiceFilter] = useState<'pending' | 'invoiced' | null>(null);
 
   // Dashboard links arrive as ?stage=, ?status=, ?distributor=, ?skuMissing=1
   useEffect(() => {
@@ -107,6 +126,8 @@ const AdminPrivateOrdersPage = () => {
     if (distributor) setDistributorFilter(distributor);
     if (params.get('skuMissing') === '1') setSkuMissingFilter(true);
     if (params.get('idle') === '1') setIdleFilter(true);
+    const invoice = params.get('invoice');
+    if (invoice === 'pending' || invoice === 'invoiced') setInvoiceFilter(invoice);
   }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -120,6 +141,11 @@ const AdminPrivateOrdersPage = () => {
     api.partners.getMany.queryOptions({ type: 'distributor', status: 'active' }),
   );
 
+  // How many orders have a delivered line still waiting for its invoice
+  const { data: invoicePending } = useQuery(
+    api.privateClientOrders.adminGetMany.queryOptions({ limit: 1, invoice: 'pending' }),
+  );
+
   // Fetch orders
   const { data, isLoading, refetch, isFetching } = useQuery({
     ...api.privateClientOrders.adminGetMany.queryOptions({
@@ -130,6 +156,7 @@ const AdminPrivateOrdersPage = () => {
       stage: stageFilter ?? undefined,
       skuMissing: skuMissingFilter || undefined,
       idle: idleFilter || undefined,
+      invoice: invoiceFilter ?? undefined,
       box: selectedBox
         ? {
             tier: selectedBox.tier,
@@ -274,13 +301,15 @@ const AdminPrivateOrdersPage = () => {
                 distributorFilter === 'all' &&
                 !stageFilter &&
                 !skuMissingFilter &&
-                !idleFilter,
+                !idleFilter &&
+                !invoiceFilter,
               apply: () => {
                 setStatusFilter('all');
                 setDistributorFilter('all');
                 setStageFilter(null);
                 setSkuMissingFilter(false);
                 setIdleFilter(false);
+                setInvoiceFilter(null);
               },
             },
             {
@@ -297,6 +326,14 @@ const AdminPrivateOrdersPage = () => {
               warn: true,
               active: distributorFilter === 'unassigned',
               apply: () => setDistributorFilter('unassigned'),
+            },
+            {
+              key: 'invoice-pending',
+              label: 'Invoice pending',
+              count: invoicePending?.meta.totalCount ?? 0,
+              warn: true,
+              active: invoiceFilter === 'pending',
+              apply: () => setInvoiceFilter(invoiceFilter === 'pending' ? null : 'pending'),
             },
             {
               key: 'draft',
@@ -344,6 +381,24 @@ const AdminPrivateOrdersPage = () => {
               className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
             >
               No change in 7 days <span className="text-text-muted">×</span>
+            </button>
+          )}
+          {invoiceFilter === 'invoiced' && (
+            <button
+              type="button"
+              onClick={() => setInvoiceFilter(null)}
+              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+            >
+              Delivered – Invoiced <span className="text-text-muted">×</span>
+            </button>
+          )}
+          {invoiceFilter !== 'invoiced' && (
+            <button
+              type="button"
+              onClick={() => setInvoiceFilter('invoiced')}
+              className="flex items-center gap-1.5 rounded-full border border-border-muted bg-fill-primary px-3 py-1.5 text-sm text-text-muted hover:text-text-primary"
+            >
+              Invoiced
             </button>
           )}
           {skuMissingFilter && (
@@ -612,6 +667,7 @@ const AdminPrivateOrdersPage = () => {
                             </td>
                             <td className="whitespace-nowrap px-4 py-3">
                               <PrivateOrderStatusBadge status={order.status} />
+                              {order.invoicing && <InvoicingBadge invoicing={order.invoicing} />}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <Button
@@ -776,7 +832,10 @@ const AdminPrivateOrdersPage = () => {
                               </Typography>
                             </div>
                           </div>
-                          <PrivateOrderStatusBadge status={order.status} />
+                          <div className="flex flex-col items-end gap-1">
+                            <PrivateOrderStatusBadge status={order.status} />
+                            {order.invoicing && <InvoicingBadge invoicing={order.invoicing} />}
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between">
