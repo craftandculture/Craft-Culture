@@ -101,8 +101,7 @@ export const GET = async (request: NextRequest) => {
       );
     }
 
-    const { feed, category, ownerId, search, stock, reserved } =
-      queryResult.data;
+    const { feed, category, ownerId, search, stock } = queryResult.data;
 
     /*
       A partner feed is what a distributor builds pre-orders on. It shows the
@@ -121,12 +120,7 @@ export const GET = async (request: NextRequest) => {
     const [landed, inbound] = await Promise.all([
       stock === 'inbound'
         ? Promise.resolve([])
-        : getCatalogueRows({
-            category,
-            ownerId: effectiveOwnerId,
-            search,
-            includeReserved: reserved === 'include',
-          }),
+        : getCatalogueRows({ category, ownerId: effectiveOwnerId, search }),
       stock === 'available'
         ? Promise.resolve([])
         : getCatalogueInboundRows({ category, search }),
@@ -161,8 +155,6 @@ export const GET = async (request: NextRequest) => {
         ...row,
         availableCases: 0,
         availableBottles: 0,
-        reservedCases: 0,
-        reservedBottles: 0,
         inTransitBottles: row.availableBottles,
         eta: row.eta,
       });
@@ -175,9 +167,7 @@ export const GET = async (request: NextRequest) => {
           ? 'available'
           : r.inTransitBottles > 0
             ? 'in_transit'
-            : r.reservedBottles > 0
-              ? 'reserved'
-              : 'unavailable';
+            : 'unavailable';
 
       return {
         lwin18: r.lwin18,
@@ -194,8 +184,6 @@ export const GET = async (request: NextRequest) => {
         status,
         availableCases: r.availableCases,
         availableBottles: r.availableBottles,
-        reservedCases: r.reservedCases,
-        reservedBottles: r.reservedBottles,
         inTransitBottles: r.inTransitBottles,
         pricePerBottle: useRetail ? r.pcPerBottle : r.ibPerBottle,
         pricePerCase: useRetail ? r.pcPerCase : r.ibPerCase,
