@@ -23,6 +23,7 @@ const serverConfig = {
   zohoBillingPlanCode: serverEnv.ZOHO_BILLING_PLAN_CODE,
   zohoBillingExtraCaseAddon: serverEnv.ZOHO_BILLING_EXTRA_CASE_ADDON,
   zohoBillingWebhookSecret: serverEnv.ZOHO_BILLING_WEBHOOK_SECRET,
+  cellarBillingMode: serverEnv.CELLAR_BILLING_MODE,
   wmsDeviceToken: serverEnv.WMS_DEVICE_TOKEN,
   wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
   zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.0.112',

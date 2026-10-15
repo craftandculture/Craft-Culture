@@ -12,7 +12,7 @@ const statusLabel: Record<string, string> = {
   not_activated: 'Not activated',
   pending_payment: 'Awaiting card',
   active: 'Active',
-  past_due: 'Payment failed',
+  past_due: 'Paused / payment failed',
   cancelled: 'Cancelled',
 };
 
@@ -34,6 +34,16 @@ const StorageList = () => {
           result.failed.length && `${result.failed.length} failed: ${result.failed.join(', ')}`,
         ].filter(Boolean);
         (result.failed.length ? toast.error : toast.success)(parts.join(' · '));
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const setStatus = useMutation(
+    api.onboarding.admin.setMembershipStatus.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.status === 'active' ? 'Membership resumed' : 'Membership paused');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -69,13 +79,15 @@ const StorageList = () => {
               <th className="px-3 py-2 text-right">Cases held</th>
               <th className="px-3 py-2 text-right">Extra</th>
               <th className="px-3 py-2 text-right">This month</th>
+              <th className="px-3 py-2 text-left">Billing</th>
               <th className="px-4 py-2 text-right">Pushed</th>
+              <th className="px-4 py-2 text-right" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-text-muted px-4 py-10 text-center">
+                <td colSpan={8} className="text-text-muted px-4 py-10 text-center">
                   No billed members yet.
                 </td>
               </tr>
@@ -89,7 +101,29 @@ const StorageList = () => {
                 <td className="px-3 py-2.5 text-right tabular-nums">
                   {row.status === 'active' ? aed(row.totalAed) : '—'}
                 </td>
-                <td className="text-text-muted px-4 py-2.5 text-right text-xs">{row.isPushed ? 'Yes' : '—'}</td>
+                <td className="text-text-muted px-3 py-2.5 text-xs">
+                  {row.zohoSubscriptionId ? 'Card' : 'Invoice'}
+                </td>
+                <td className="text-text-muted px-4 py-2.5 text-right text-xs">
+                  {row.zohoSubscriptionId ? (row.isPushed ? 'Yes' : '—') : 'Add to invoice'}
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  {!row.zohoSubscriptionId && (row.status === 'active' || row.status === 'past_due') && (
+                    <button
+                      type="button"
+                      disabled={setStatus.isPending}
+                      onClick={() =>
+                        setStatus.mutate({
+                          membershipId: row.membershipId,
+                          status: row.status === 'active' ? 'past_due' : 'active',
+                        })
+                      }
+                      className="text-text-brand text-xs hover:underline disabled:opacity-50"
+                    >
+                      {row.status === 'active' ? 'Pause' : 'Resume'}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

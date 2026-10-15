@@ -29,6 +29,8 @@ const envSchema = z.object({
   ZOHO_BILLING_EXTRA_CASE_ADDON: z.string().default('CELLAR-EXTRA-CASE'),
   /** Shared secret Zoho Billing sends on its webhooks */
   ZOHO_BILLING_WEBHOOK_SECRET: z.string().optional(),
+  /** How Private Cellar membership is billed: Zoho Books invoices, or card via Zoho Billing */
+  CELLAR_BILLING_MODE: z.enum(['invoice', 'card']).default('invoice'),
   WMS_DEVICE_TOKEN: z.string().optional(),
   WMS_DEVICE_USER_EMAIL: z.string().email().optional(),
   ZEBRA_PRINTER_IP: z.string().optional(),
@@ -54,6 +56,7 @@ const rawEnv = {
   ZOHO_BILLING_PLAN_CODE: process.env.ZOHO_BILLING_PLAN_CODE,
   ZOHO_BILLING_EXTRA_CASE_ADDON: process.env.ZOHO_BILLING_EXTRA_CASE_ADDON,
   ZOHO_BILLING_WEBHOOK_SECRET: process.env.ZOHO_BILLING_WEBHOOK_SECRET,
+  CELLAR_BILLING_MODE: process.env.CELLAR_BILLING_MODE,
   WMS_DEVICE_TOKEN: process.env.WMS_DEVICE_TOKEN,
   WMS_DEVICE_USER_EMAIL: process.env.WMS_DEVICE_USER_EMAIL,
   ZEBRA_PRINTER_IP: process.env.ZEBRA_PRINTER_IP,

@@ -66,6 +66,8 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       documentTypes: documents.map((document) => document.documentType),
     }),
     membershipStatus: membership?.status ?? 'not_activated',
+    /** Card members fix a failed payment themselves; invoice members are paused by the team */
+    billedByCard: Boolean(membership?.zohoSubscriptionId),
     nextBillingAt: membership?.nextBillingAt ?? null,
     terms,
     cases,

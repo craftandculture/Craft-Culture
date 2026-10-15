@@ -1,4 +1,5 @@
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import serverConfig from '@/server.config';
 
 import getActivationState from '../data/getActivationState';
 import getMembershipTerms from '../data/getMembershipTerms';
@@ -19,6 +20,8 @@ const memberGetActivation = stockOwnerProcedure.query(async ({ ctx }) => {
     documentTypes: state.documentTypes,
     eidNumber: state.eidNumber,
     terms,
+    /** 'invoice': billed through Zoho Books; 'card': Zoho Billing's payment page */
+    billingMode: serverConfig.cellarBillingMode,
   };
 });
 

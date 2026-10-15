@@ -15,7 +15,11 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 1. **Cellar members → Invites → Invite member** creates the account (approved) and the cellar. The link is shown once (Copy / WhatsApp) until the Loops template exists.
 2. The member opens `/join?invite=…`, signs in, completes the four steps, and lands in `/platform/cellar`.
 
-**Activation (first action)**
+**Billing mode** — `CELLAR_BILLING_MODE` (Vercel env): `invoice` (default) or `card`.
+- `invoice`: membership billed through **Zoho Books**. The first action (after the Emirates ID) activates the cellar at once and opens a Team Tasks job, *"<member> — set up monthly membership invoice"*, to create the recurring invoice (AED 600/month, no VAT). Extra storage is read off **Cellar members → Storage** and added to that month's invoice. Non-payment: **Pause** on the Storage tab (status `past_due`) stops buy/release/sell until **Resume**; a paused member cannot re-activate themselves.
+- `card`: Zoho Billing **Premium** (subscriptions, hosted card pages, dunning) — the flow below. Set only once Billing, the gateway, plan and add-on exist.
+
+**Activation (first action)** — card mode
 1. Viewing the cellar and *Available now* is free.
 2. Buy, release, offer for sale or a transfer in → `NOT_ACTIVATED` → *Activate your cellar* sheet: Emirates ID if missing, then Zoho Billing's hosted card page.
 3. Zoho returns to `/platform/cellar/activated` → subscription confirmed → membership `active` (billing starts) → back to where they were.

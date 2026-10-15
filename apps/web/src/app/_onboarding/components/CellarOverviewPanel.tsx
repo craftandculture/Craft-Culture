@@ -33,7 +33,7 @@ const CellarOverviewPanel = () => {
 
   if (!data) return null;
 
-  const { missing, intakes, membershipStatus, terms, cases, thisMonth } = data;
+  const { missing, intakes, membershipStatus, billedByCard, terms, cases, thisMonth } = data;
   const isActive = membershipStatus === 'active' || membershipStatus === 'past_due';
 
   return (
@@ -118,10 +118,12 @@ const CellarOverviewPanel = () => {
         )}
         {membershipStatus === 'past_due' && (
           <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">
-            Your last payment did not go through — please update your card.
+            {billedByCard
+              ? 'Your last payment did not go through — please update your card.'
+              : 'Your membership is paused. Please contact us to settle your membership invoice.'}
           </p>
         )}
-        {membershipStatus === 'past_due' && (
+        {membershipStatus === 'past_due' && billedByCard && (
           <button
             type="button"
             onClick={() => updateCard.mutate()}

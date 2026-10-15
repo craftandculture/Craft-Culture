@@ -9,9 +9,16 @@ import { createSubscriptionHostedPage, findOrCreateBillingCustomer, isBillingCon
 import serverConfig from '@/server.config';
 
 import getActivationState from '../data/getActivationState';
+import getMembershipTerms from '../data/getMembershipTerms';
+import openMembershipInvoiceTask from '../data/openMembershipInvoiceTask';
 
 /**
- * Open Zoho's payment page to start the membership
+ * Start the membership: by invoice, or on Zoho's card page
+ *
+ * Billed by invoice (CELLAR_BILLING_MODE=invoice, the default) the cellar is
+ * active as soon as the ID is on file, and the team is given a job to set up
+ * the member's monthly invoice in Zoho Books. Billed by card, the member is
+ * sent to Zoho Billing's payment page instead.
  *
  * The ID must be on file first — it is the cheaper step to fix and the one
  * we cannot do for them. The page returns to /platform/cellar/activated,
@@ -39,6 +46,35 @@ const memberStartActivation = stockOwnerProcedure
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Please add your Emirates ID first.' });
     }
     if (!state.missing.includes('payment')) return { url: null, alreadyActive: true };
+
+    if (serverConfig.cellarBillingMode === 'invoice') {
+      /*
+        Only a cellar that has never started can start itself. A paused or
+        cancelled membership is the team's decision (usually an unpaid
+        invoice), and pressing "Start membership" must not undo it.
+      */
+      if (state.membership.status === 'past_due' || state.membership.status === 'cancelled') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Your membership is paused. Please contact us and we will sort it out with you.',
+        });
+      }
+
+      const terms = await getMembershipTerms(ctx.partner.id);
+
+      await db
+        .update(cellarMemberships)
+        .set({ status: 'active', activatedAt: new Date(), activatedBy: input.action })
+        .where(eq(cellarMemberships.id, state.membership.id));
+
+      await openMembershipInvoiceTask({
+        memberName: ctx.partner.businessName,
+        partnerId: ctx.partner.id,
+        membershipFeeAed: terms.membershipFeeAed,
+      });
+
+      return { url: null, alreadyActive: false };
+    }
 
     if (!isBillingConfigured()) {
       throw new TRPCError({

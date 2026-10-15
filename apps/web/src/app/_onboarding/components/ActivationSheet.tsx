@@ -28,8 +28,9 @@ const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFra
 /**
  * "Activate your cellar" — shown in place the first time a member acts
  *
- * Two steps, each only if needed: the Emirates ID, then the card on Zoho's
- * payment page. The monthly membership starts when the card goes through.
+ * Two steps, each only if needed: the Emirates ID, then the membership —
+ * started at once when billed by invoice, or on Zoho's card page when billed
+ * by card. The monthly membership starts at that point.
  */
 const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) => {
   const api = useTRPC();
@@ -93,7 +94,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
       await refresh();
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not open the payment page');
+      toast.error(error instanceof Error ? error.message : 'Could not start your membership');
     }
   };
 
@@ -175,8 +176,9 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
               ))}
             </dl>
             <p className="text-text-muted text-xs leading-5">
-              Your card is taken on our billing provider&apos;s secure page. Membership starts today; wine you buy is
-              still paid by bank transfer.
+              {data.billingMode === 'invoice'
+                ? 'Membership starts today. We will send your membership invoice each month, payable by bank transfer; wine you buy is invoiced separately as before.'
+                : "Your card is taken on our billing provider's secure page. Membership starts today; wine you buy is still paid by bank transfer."}
             </p>
             <button
               type="button"
@@ -184,7 +186,13 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
               disabled={start.isPending}
               className="bg-text-primary text-surface-primary h-11 w-full rounded-lg text-sm font-semibold disabled:opacity-40"
             >
-              {start.isPending ? 'Opening…' : 'Add card and start membership'}
+              {start.isPending
+                ? data.billingMode === 'invoice'
+                  ? 'Starting…'
+                  : 'Opening…'
+                : data.billingMode === 'invoice'
+                  ? 'Start membership'
+                  : 'Add card and start membership'}
             </button>
           </div>
         )}

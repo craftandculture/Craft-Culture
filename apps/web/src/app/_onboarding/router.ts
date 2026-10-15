@@ -12,6 +12,7 @@ import adminPushExtraCases from './controller/adminPushExtraCases';
 import adminResendInvite from './controller/adminResendInvite';
 import adminRevokeInvite from './controller/adminRevokeInvite';
 import adminSetIntakeStage from './controller/adminSetIntakeStage';
+import adminSetMembershipStatus from './controller/adminSetMembershipStatus';
 import adminUpdateApplication from './controller/adminUpdateApplication';
 import adminUploadApplicationIdentity from './controller/adminUploadApplicationIdentity';
 import claimInvite from './controller/claimInvite';
@@ -62,6 +63,7 @@ const onboardingRouter = createTRPCRouter({
     setIntakeStage: adminSetIntakeStage,
     getStorage: adminGetStorage,
     pushExtraCases: adminPushExtraCases,
+    setMembershipStatus: adminSetMembershipStatus,
   }),
 });
 
