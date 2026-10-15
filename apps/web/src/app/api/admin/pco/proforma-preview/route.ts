@@ -5,6 +5,7 @@ import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
 import db from '@/database/client';
 import { partners, privateClientOrderItems } from '@/database/schema';
+import logger from '@/utils/logger';
 
 /**
  * Preview proforma invoice PDF for an order
@@ -120,9 +121,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('PDF preview error:', error);
+    logger.error('PDF preview error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate PDF' },
+      { error: 'Failed to generate PDF' },
       { status: 500 },
     );
   }

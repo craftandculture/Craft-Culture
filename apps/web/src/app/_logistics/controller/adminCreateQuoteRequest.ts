@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
 import { logisticsQuoteRequests } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import createQuoteRequestSchema from '../schemas/createQuoteRequestSchema';
@@ -14,7 +14,7 @@ import generateRequestNumber from '../utils/generateRequestNumber';
  * Allows sales team to request freight quotes from logistics.
  * Request numbers are auto-generated in format QRQ-YYYY-XXXX.
  */
-const adminCreateQuoteRequest = protectedProcedure
+const adminCreateQuoteRequest = approvedProcedure
   .input(createQuoteRequestSchema)
   .mutation(async ({ input, ctx }) => {
     try {

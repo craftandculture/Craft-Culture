@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsDispatchBatchOrders, wmsDispatchBatches } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import logger from '@/utils/logger';
 
 import describeOrder from './describeOrder';
@@ -35,12 +36,12 @@ const announceDispatch = async (batchId: string, event: 'dispatched' | 'delivere
 
     const head =
       event === 'delivered'
-        ? `:package: *Delivered* ${batch.batchNumber} to ${batch.distributorName}`
-        : `:truck: *Dispatched* ${batch.batchNumber} to ${batch.distributorName}`;
+        ? `:package: *Delivered* ${escapeSlackText(batch.batchNumber)} to ${escapeSlackText(batch.distributorName)}`
+        : `:truck: *Dispatched* ${escapeSlackText(batch.batchNumber)} to ${escapeSlackText(batch.distributorName)}`;
     const meta = [
       `${orders.length} order${orders.length === 1 ? '' : 's'}`,
       batch.totalCases ? `${batch.totalCases} cases` : null,
-      event === 'dispatched' && by ? `by ${by.name}` : null,
+      event === 'dispatched' && by ? `by ${escapeSlackText(by.name)}` : null,
     ]
       .filter(Boolean)
       .join(' · ');

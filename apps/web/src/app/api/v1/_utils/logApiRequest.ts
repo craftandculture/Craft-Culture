@@ -17,7 +17,10 @@ interface LogApiRequestParams {
 /**
  * Logs an API request to the database for audit and analytics
  *
- * This function is fire-and-forget - it won't block the response
+ * Awaited by the routes for every keyed request: the rate limiter counts these
+ * rows, so a log that lands after the next request is a request it misses.
+ * Unauthenticated (401) attempts are logged without awaiting, so a flood of
+ * bad keys cannot slow the endpoint. Never throws.
  */
 const logApiRequest = async ({
   request,

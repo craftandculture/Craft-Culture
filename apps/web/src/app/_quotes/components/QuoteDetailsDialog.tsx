@@ -39,6 +39,7 @@ import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
+import safeHref from '@/utils/safeHref';
 
 import exportQuoteToPDF from '../utils/exportQuoteToPDF';
 
@@ -1299,7 +1300,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   {/* Payment Link */}
                   {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
                     <a
-                      href={quote.paymentDetails.paymentUrl}
+                      href={safeHref(quote.paymentDetails.paymentUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 rounded bg-fill-brand px-4 py-2 text-sm text-white font-medium hover:bg-fill-brand/90"
@@ -1403,7 +1404,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       <div className="flex items-center gap-2 text-xs text-text-success">
                         <IconCheck className="h-3 w-3" />
                         <span className="font-medium">Proof submitted</span>
-                        <a href={currentQuote.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
+                        <a href={safeHref(currentQuote.paymentProofUrl)} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
                       </div>
                     ) : paymentProofUrl ? (
                       <div className="flex items-center gap-2 text-xs">
@@ -1482,7 +1483,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={quote.poAttachmentUrl}
+                            href={safeHref(quote.poAttachmentUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-text-brand hover:underline text-sm"
@@ -1494,8 +1495,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
+                              const href = safeHref(quote.poAttachmentUrl);
+                              if (!href) return;
                               const link = document.createElement('a');
-                              link.href = quote.poAttachmentUrl!;
+                              link.href = href;
                               link.download = `PO-${quote.poNumber}.pdf`;
                               document.body.appendChild(link);
                               link.click();
@@ -1557,7 +1560,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={quote.poAttachmentUrl}
+                            href={safeHref(quote.poAttachmentUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-text-brand hover:underline text-sm"
@@ -1569,8 +1572,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
+                              const href = safeHref(quote.poAttachmentUrl);
+                              if (!href) return;
                               const link = document.createElement('a');
-                              link.href = quote.poAttachmentUrl!;
+                              link.href = href;
                               link.download = `PO-${quote.poNumber}.pdf`;
                               document.body.appendChild(link);
                               link.click();

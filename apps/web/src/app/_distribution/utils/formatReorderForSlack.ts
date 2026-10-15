@@ -1,3 +1,5 @@
+import escapeSlackText from '@/lib/slack/escapeSlackText';
+
 import { LOW_COVER_DAYS } from './assessReorder';
 import canSendReorderLine from './canSendReorderLine';
 import type { ReorderLine } from '../data/getOutletReorderList';
@@ -22,7 +24,7 @@ const supplyOf = (line: ReorderLine) => {
   const s = line.supply;
   const parts: string[] = [];
   if (s?.stock) parts.push(`✅ ${s.stock} at C&C`);
-  if (s?.consignor) parts.push(`🤝 ${s.consignor} ${s.consignorName ?? 'consignor'} at C&C`);
+  if (s?.consignor) parts.push(`🤝 ${s.consignor} ${escapeSlackText(s.consignorName ?? 'consignor')} at C&amp;C`);
   if (s?.inbound) {
     parts.push(`🚚 ${s.inbound} inbound${s.inboundEta ? ` ${shortDate(s.inboundEta)}` : ''}`);
   }
@@ -44,14 +46,14 @@ const sendLineOf = (line: ReorderLine) => {
     line.status === 'oos'
       ? `0 left${line.inTransit ? ` (${line.inTransit} coming)` : ''}`
       : `${line.held} left (~${line.daysCover}d)`;
-  return `${line.status === 'oos' ? '🔴' : '🟠'} *${line.wine}* · ${line.sold30}/30d · ${shelf} → ${orderOf(line)} · ${supplyOf(line)}`;
+  return `${line.status === 'oos' ? '🔴' : '🟠'} *${escapeSlackText(line.wine)}* · ${line.sold30}/30d · ${shelf} → ${orderOf(line)} · ${supplyOf(line)}`;
 };
 
 /** One wine nobody holds, or a one-off */
 const sourceLineOf = (line: ReorderLine) =>
   line.status === 'oneoff'
-    ? `• ${line.wine} · ${line.sold90}/90d · one-off · ${line.owner}`
-    : `• *${line.wine}* · ${line.sold30}/30d · ${line.held ? `${line.held} left` : 'out'} · ${line.owner}`;
+    ? `• ${escapeSlackText(line.wine)} · ${line.sold90}/90d · one-off · ${escapeSlackText(line.owner)}`
+    : `• *${escapeSlackText(line.wine)}* · ${line.sold30}/30d · ${line.held ? `${line.held} left` : 'out'} · ${escapeSlackText(line.owner)}`;
 
 /**
  * The reorder watch as a Slack message, grouped by who has to act
@@ -82,7 +84,7 @@ const formatReorderForSlack = (
       })
     : 'unknown';
 
-  const header = `*${outletName} — reorder watch* · stock as of ${asOf}`;
+  const header = `*${escapeSlackText(outletName)} — reorder watch* · stock as of ${asOf}`;
 
   const toSend = lines.filter(canSendReorderLine);
   const toSource = lines.filter((l) => !canSendReorderLine(l));
@@ -99,7 +101,7 @@ const formatReorderForSlack = (
 
   const sections = owners.map((owner) =>
     [
-      `*${owner === 'C&C' ? 'C&C — we send' : `${owner} — prompt ${owner}`}*`,
+      `*${owner === 'C&C' ? 'C&amp;C — we send' : `${escapeSlackText(owner)} — prompt ${escapeSlackText(owner)}`}*`,
       ...toSend.filter((l) => l.owner === owner).map(sendLineOf),
     ].join('\n'),
   );

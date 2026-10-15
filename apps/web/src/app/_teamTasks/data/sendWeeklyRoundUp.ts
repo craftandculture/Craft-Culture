@@ -2,6 +2,7 @@ import { and, eq, gte, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 
 import dubaiToday from '../utils/dubaiToday';
@@ -35,7 +36,7 @@ const sendWeeklyRoundUp = async () => {
     : [];
   const overdueJobs = new Set(parts.filter((p) => !p.done && p.due && p.due < today).map((p) => p.taskId)).size;
 
-  const list = closed.slice(0, 12).map((c) => `• ${c.title}`).join('\n');
+  const list = closed.slice(0, 12).map((c) => `• ${escapeSlackText(c.title)}`).join('\n');
   const more = closed.length > 12 ? `\n…and ${closed.length - 12} more` : '';
 
   return postTasksSlack(

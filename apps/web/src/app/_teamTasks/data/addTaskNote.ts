@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 
 import getPeople from './getPeople';
 import logTaskEvent from './logTaskEvent';
@@ -36,10 +37,10 @@ const addTaskNote = async (taskId: string, body: string, actor: { id: string; na
     const tags = [...new Set(parts.filter((p) => !p.done && p.ownerId !== actor.id).map((p) => p.ownerId))].map((id) =>
       slackTag(team.find((m) => m.id === id)),
     );
-    const quoted = body.length > 600 ? `${body.slice(0, 600)}…` : body;
+    const quoted = escapeSlackText(body.length > 600 ? `${body.slice(0, 600)}…` : body);
 
     const slack = await postTasksSlack(
-      `Note on ${jobLink(task)} from *${actor.name}*${tags.length ? ` for ${tags.join(' ')}` : ''}:\n> ${quoted.replace(/\n/g, '\n> ')}`,
+      `Note on ${jobLink(task)} from *${escapeSlackText(actor.name)}*${tags.length ? ` for ${tags.join(' ')}` : ''}:\n> ${quoted.replace(/\n/g, '\n> ')}`,
     );
 
     return slack;

@@ -13,6 +13,8 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import distributorOrderView from '../utils/distributorOrderView';
+
 /**
  * Get a single private client order by ID for distributor
  *
@@ -122,7 +124,7 @@ const distributorGetOne = distributorProcedure
       .where(eq(partners.id, partnerId));
 
     return {
-      ...orderResult.order,
+      ...distributorOrderView(orderResult.order),
       partner: orderResult.partner,
       client: orderResult.client,
       distributor,

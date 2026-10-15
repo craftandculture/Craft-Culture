@@ -1,3 +1,5 @@
+import escapeSlackText from '@/lib/slack/escapeSlackText';
+
 import type { DailyOutletSales } from './buildDailySales';
 import formatSalesPeriod from './formatSalesPeriod';
 
@@ -48,10 +50,10 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
         ].join('\n');
 
   const lineText = (line: (typeof day.lines)[number]) => {
-    const owner = line.ownerName ? ` · ${line.ownerName}` : '';
+    const owner = line.ownerName ? ` · ${escapeSlackText(line.ownerName)}` : '';
     const worth = line.value !== null ? ` · ${money(line.value, line.currency)}` : '';
 
-    return `• ${line.sold} × ${line.productName}${owner}${worth}`;
+    return `• ${line.sold} × ${escapeSlackText(line.productName)}${owner}${worth}`;
   };
 
   /*
@@ -96,7 +98,7 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
   // Not linked last: it is a to-do, not an owner
   const byOwner = [...owners.entries()]
     .sort((a, b) => (a[0] === 'Not linked' ? 1 : b[0] === 'Not linked' ? -1 : b[1] - a[1]))
-    .map(([name, bottles]) => `${name}: ${bottles}`)
+    .map(([name, bottles]) => `${escapeSlackText(name)}: ${bottles}`)
     .join(' · ');
 
   const notes: string[] = [];

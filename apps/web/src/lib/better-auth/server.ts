@@ -1,10 +1,17 @@
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { admin, magicLink } from 'better-auth/plugins';
 
+import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import notifyAdminsOfNewUser from '@/app/_auth/utils/notifyAdminsOfNewUser';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import clientConfig from '@/client.config';
 import db from '@/database/client';
 import * as schema from '@/database/schema';
@@ -60,7 +67,6 @@ const authServerClient = betterAuth({
 
         logger.info('[Better Auth] Sending magic link', {
           email,
-          landingPageUrl,
           tokenLength: token?.length,
           env: serverConfig.env,
         });
@@ -144,7 +150,7 @@ const authServerClient = betterAuth({
         type: 'string',
         required: true,
         defaultValue: 'b2c',
-        input: true,
+        input: false,
       },
       role: {
         type: 'string',
@@ -156,13 +162,13 @@ const authServerClient = betterAuth({
         type: 'date',
         required: false,
         defaultValue: null,
-        input: true,
+        input: false,
       },
       pricingModelId: {
         type: 'string',
         required: false,
         defaultValue: null,
-        input: true,
+        input: false,
       },
       approvalStatus: {
         type: 'string',
@@ -183,6 +189,31 @@ const authServerClient = betterAuth({
         input: false,
       },
     },
+  },
+  hooks: {
+    /*
+      Impersonation is for C&C staff only.
+
+      The admin plugin lets any admin-role user impersonate, and some partners
+      hold admin logins. The admin screens call the impersonate endpoint from
+      the browser (the cookie it sets does not survive a tRPC round trip), so
+      the staff rule is enforced here, where every caller — browser or
+      usersAdminImpersonate — has to pass. The audit entry is written by the
+      session create hook below for the same reason.
+    */
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/admin/impersonate-user') return;
+
+      const current = await getSessionFromCtx<{ role: string; email: string }>(
+        ctx,
+      );
+
+      if (!isTeamMember(current?.user)) {
+        throw new APIError('FORBIDDEN', {
+          message: 'Only C&C staff can impersonate users',
+        });
+      }
+    }),
   },
   databaseHooks: {
     user: {
@@ -284,6 +315,41 @@ const authServerClient = betterAuth({
     session: {
       create: {
         after: async (session) => {
+          // An impersonation session is audited here, whichever route created
+          // it, so the trail cannot be skipped by calling the auth endpoint
+          // directly.
+          const impersonatedBy = (session as { impersonatedBy?: string | null })
+            .impersonatedBy;
+
+          if (impersonatedBy) {
+            try {
+              const target = await db.query.users.findFirst({
+                where: { id: session.userId },
+                columns: { id: true, email: true, name: true },
+              });
+
+              await logAdminActivity({
+                adminId: impersonatedBy,
+                action: 'user.impersonation_started',
+                entityType: 'user',
+                entityId: session.userId,
+                ipAddress: session.ipAddress ?? undefined,
+                userAgent: session.userAgent ?? undefined,
+                metadata: {
+                  targetUserId: session.userId,
+                  targetUserEmail: target?.email,
+                  targetUserName: target?.name,
+                  sessionId: session.id,
+                },
+              });
+            } catch (error) {
+              logger.error('[Better Auth] Failed to audit impersonation', {
+                error,
+                sessionId: session.id,
+              });
+            }
+          }
+
           // Log all user sign-ins for admin monitoring
           void logUserActivity({
             userId: session.userId,

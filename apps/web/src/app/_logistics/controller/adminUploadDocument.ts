@@ -105,6 +105,7 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
       const blob = await put(blobFilename, buffer, {
         access: 'public',
         contentType: detectedType.mime,
+        addRandomSuffix: true,
       });
 
       finalUrl = blob.url;

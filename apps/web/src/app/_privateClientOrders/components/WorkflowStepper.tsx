@@ -16,11 +16,13 @@ import { format } from 'date-fns';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 
+import type { DistributorHiddenField } from '../utils/distributorOrderView';
 import type { PartnerOrder } from '../utils/partnerOrderView';
 
 interface WorkflowStepperProps {
-  // Shown to partners as well as C&C, so it reads nothing a partner is not sent
-  order: PartnerOrder & {
+  // Shown to partners and distributors as well as C&C, so it reads nothing
+  // either of them is not sent
+  order: Omit<PartnerOrder, DistributorHiddenField> & {
     distributor?: {
       id: string;
       businessName: string;

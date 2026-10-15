@@ -98,6 +98,7 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
       const blob = await put(blobFilename, buffer, {
         access: 'public',
         contentType: detectedType.mime,
+        addRandomSuffix: true,
       });
 
       finalUrl = blob.url;

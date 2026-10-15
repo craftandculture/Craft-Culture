@@ -10,6 +10,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import neutraliseCsvFormula from '@/utils/neutraliseCsvFormula';
 
 import type { ZohoCleanupWine } from '../controller/adminGetZohoCleanup';
 import lwinDifferences from '../utils/lwinDifferences';
@@ -347,7 +348,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
    */
   const download = () => {
     const escape = (value: string | number | null) => {
-      const text = String(value ?? '');
+      const text = typeof value === 'number' ? String(value) : neutraliseCsvFormula(value ?? '');
       return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
     };
 

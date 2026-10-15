@@ -94,6 +94,7 @@ const distributorUploadDeliveryPhoto = distributorProcedure
     const blob = await put(blobFilename, buffer, {
       access: 'public',
       contentType: detected.mime,
+      addRandomSuffix: true,
     });
 
     const now = new Date();

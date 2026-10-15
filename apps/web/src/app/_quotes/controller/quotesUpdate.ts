@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import updateQuoteSchema from '../schemas/updateQuoteSchema';
@@ -15,10 +15,9 @@ import updateQuoteSchema from '../schemas/updateQuoteSchema';
  *   await trpcClient.quotes.update.mutate({
  *     id: "uuid-here",
  *     name: "Updated Quote Name",
- *     status: "sent"
  *   });
  */
-const quotesUpdate = protectedProcedure
+const quotesUpdate = approvedProcedure
   .input(updateQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { id, ...updates } = input;

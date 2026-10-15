@@ -43,7 +43,7 @@ export const GET = async (request: NextRequest) => {
   const { apiKeyId, partnerId, permissions } = authResult.data;
 
   if (!permissions.includes('read:inventory')) {
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 403,
@@ -60,7 +60,7 @@ export const GET = async (request: NextRequest) => {
 
   const rateLimitResult = await checkRateLimit(apiKeyId);
   if (!rateLimitResult.allowed) {
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 429,
@@ -83,7 +83,7 @@ export const GET = async (request: NextRequest) => {
     });
 
     if (!queryResult.success) {
-      void logApiRequest({
+      await logApiRequest({
         request,
         endpoint,
         statusCode: 400,
@@ -206,7 +206,7 @@ export const GET = async (request: NextRequest) => {
       },
     };
 
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 200,
@@ -216,11 +216,12 @@ export const GET = async (request: NextRequest) => {
     });
 
     return NextResponse.json(response, {
-      headers: { 'Cache-Control': 's-maxage=120, stale-while-revalidate=300' },
+      // Per-key data (partner feeds are masked): never cache in a shared CDN
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     logger.error('Error fetching catalogue:', error);
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 500,

@@ -42,8 +42,10 @@ interface PaymentTrackerProps {
     | 'distributorPaidAt'
     | 'distributorPaymentReference'
     | 'partnerPaidAt'
-    | 'partnerPaymentReference'
-  >;
+  > & {
+    /** Absent for distributors, who are not sent C&C's payment to the partner */
+    partnerPaymentReference?: PrivateClientOrder['partnerPaymentReference'];
+  };
   isAdmin?: boolean;
   canVerifyPayments?: boolean;
   onPaymentConfirmed?: () => void;
@@ -120,7 +122,7 @@ const buildPaymentInfo = (order: PaymentTrackerProps['order']): PaymentInfo[] =>
       description: 'C&C pays Partner for the product',
       paidAt: order.partnerPaidAt,
       confirmedBy: null,
-      reference: order.partnerPaymentReference,
+      reference: order.partnerPaymentReference ?? null,
       status: getPaymentStatus(order, 'partner'),
     },
   ];

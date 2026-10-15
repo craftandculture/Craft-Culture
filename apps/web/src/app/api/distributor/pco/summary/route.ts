@@ -5,6 +5,7 @@ import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import renderOrderSummaryPDF from '@/app/_privateClientOrders/utils/renderOrderSummaryPDF';
 import db from '@/database/client';
 import { partners, privateClientOrderItems, privateClientOrders } from '@/database/schema';
+import logger from '@/utils/logger';
 
 /**
  * Download a summary PDF for multiple distributor orders
@@ -154,9 +155,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Summary PDF generation error:', error);
+    logger.error('Summary PDF generation error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate PDF' },
+      { error: 'Failed to generate PDF' },
       { status: 500 },
     );
   }

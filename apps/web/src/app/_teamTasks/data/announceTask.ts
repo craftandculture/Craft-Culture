@@ -2,6 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 
 import getPeople from './getPeople';
@@ -45,17 +46,17 @@ const announceTask = async (taskId: string, kind: Kind) => {
   const tag = (userId: string) => {
     const member = team.find((m) => m.id === userId);
     if (!member) return 'someone';
-    return member.slackMemberId ? `<@${member.slackMemberId}>` : `*${member.name}*`;
+    return member.slackMemberId ? `<@${member.slackMemberId}>` : `*${escapeSlackText(member.name)}*`;
   };
 
   const link = `${serverConfig.appUrl}/platform/admin/tasks?job=${task.id}`;
-  const lines = [`${HEAD[kind]}: *<${link}|${task.title}>*${task.urgent && kind === 'opened' ? ' (urgent)' : ''}`];
+  const lines = [`${HEAD[kind]}: *<${link}|${escapeSlackText(task.title.replace(/\|/g, ''))}>*${task.urgent && kind === 'opened' ? ' (urgent)' : ''}`];
 
   if (kind === 'opened' || kind === 'reopened') {
     const open = parts.filter((p) => !p.done);
     lines.push(
       open.length
-        ? open.map((p) => `${tag(p.ownerId)} ${p.what}${p.due ? ` (due ${shortDate(p.due)})` : ''}`).join(' · ')
+        ? open.map((p) => `${tag(p.ownerId)} ${escapeSlackText(p.what)}${p.due ? ` (due ${shortDate(p.due)})` : ''}`).join(' · ')
         : 'No owner yet',
     );
   }

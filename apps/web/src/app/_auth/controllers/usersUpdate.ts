@@ -1,10 +1,11 @@
 import { eq } from 'drizzle-orm';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
 import { partners, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
-
+import logger from '@/utils/logger';
 
 import updateUserSchema from '../schemas/updateUserSchema';
 
@@ -40,13 +41,17 @@ const usersUpdate = protectedProcedure
 
       if (!existingPartner) {
         /*
-          A partner already trading under this name is joined, not duplicated.
+          A partner already trading under this name is never claimed here.
 
-          This checked only whether the user already had a record, so a business
-          long since on file — with its stock, its shipments and its pricing
-          margins — got a second, empty one the moment somebody signed in. The
-          margins are keyed on the record, so the new one prices at defaults
-          while the screen shows the rate as set on the old.
+          Creating a record whenever the user had none gave a business long
+          since on file — with its stock, its shipments and its pricing
+          margins — a second, empty one the moment somebody signed in. But
+          handing the existing record to whoever signs up under the same name
+          let any unapproved signup take over that partner. So a name match
+          creates nothing: the admins are told, and they link the user through
+          the existing Assign Partner action on the user's admin page
+          (users.assignPartner, usersAssignPartner.ts). Only a name with no
+          match gets a fresh wine partner record.
         */
         const name = updatedUser.name ?? ctx.user.email ?? 'Wine Partner';
         const key = normalisePartnerName(name);
@@ -62,12 +67,24 @@ const usersUpdate = protectedProcedure
           : undefined;
 
         if (byName) {
-          // Claim the existing record for this user rather than starting a
-          // second one beside it.
-          await db
-            .update(partners)
-            .set({ userId: ctx.user.id })
-            .where(eq(partners.id, byName.id));
+          logger.info(
+            'Onboarding user matches an existing partner by name; not linking',
+            { userId: ctx.user.id, partnerId: byName.id },
+          );
+
+          try {
+            await createAdminNotifications({
+              type: 'new_user_pending',
+              title: 'Signup matches an existing partner',
+              message: `${name} (${ctx.user.email}) signed up under the name of an existing partner, ${byName.businessName}. Review and assign the partner manually if this is the same business.`,
+              entityType: 'user',
+              entityId: ctx.user.id,
+              actionUrl: `/platform/admin/users/${ctx.user.id}`,
+              metadata: { matchedPartnerId: byName.id },
+            });
+          } catch (error) {
+            logger.error('Failed to notify admins of partner name match:', error);
+          }
         } else {
           await db.insert(partners).values({
             userId: ctx.user.id,

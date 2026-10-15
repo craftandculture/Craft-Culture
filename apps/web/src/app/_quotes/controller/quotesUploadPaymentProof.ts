@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import uploadPaymentProofSchema from '../schemas/uploadPaymentProofSchema';
 
@@ -23,7 +23,7 @@ const ALLOWED_IMAGE_TYPES = [
  *     fileType: "image/png"
  *   });
  */
-const quotesUploadPaymentProof = protectedProcedure
+const quotesUploadPaymentProof = approvedProcedure
   .input(uploadPaymentProofSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { file, filename } = input;
@@ -76,6 +76,7 @@ const quotesUploadPaymentProof = protectedProcedure
       const blob = await put(blobFilename, buffer, {
         access: 'public',
         contentType: detectedType.mime,
+        addRandomSuffix: true,
       });
 
       return {

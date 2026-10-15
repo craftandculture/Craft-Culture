@@ -3,7 +3,7 @@ import db from '@/database/client';
 import exchangeRateService, {
   type SupportedCurrency,
 } from '@/lib/currency/exchangeRateService';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import getQuoteRequestSchema from '../schemas/getQuoteRequestSchema';
 
@@ -21,7 +21,7 @@ interface QuoteData {
   subtotalBeforeCommissionUsd: number;
 }
 
-const quotesGet = protectedProcedure
+const quotesGet = approvedProcedure
   .input(getQuoteRequestSchema)
   .query(async ({ input: { lineItems }, ctx: { user } }) => {
     const offerIds = lineItems.map((item) => item.offerId);

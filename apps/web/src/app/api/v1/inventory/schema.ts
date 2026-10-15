@@ -19,9 +19,11 @@ export interface InventoryItem {
   imageUrl: string | null;
   offers: {
     id: string;
-    source: 'cultx' | 'local_inventory';
-    price: number;
-    currency: string;
+    /** Withheld from partner-feed keys */
+    source?: 'cultx' | 'local_inventory';
+    /** Base offer price; withheld from partner-feed keys */
+    price?: number;
+    currency?: string;
     unitCount: number;
     unitSize: string;
     availableQuantity: number;

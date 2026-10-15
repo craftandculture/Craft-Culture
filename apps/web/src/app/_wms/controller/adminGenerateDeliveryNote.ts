@@ -184,6 +184,7 @@ const adminGenerateDeliveryNote = wmsOperatorProcedure
     const blob = await put(blobFilename, pdfBuffer, {
       access: 'public',
       contentType: 'application/pdf',
+      addRandomSuffix: true,
     });
 
     // Create delivery note record

@@ -13,6 +13,7 @@ import {
   wmsStock,
   zohoSalesOrders,
 } from '@/database/schema';
+import logger from '@/utils/logger';
 
 /**
  * Convert a stored bottle size (e.g. "75cl", "750ml") to a whole-number cl value
@@ -190,9 +191,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Picking list PDF error:', error);
+    logger.error('Picking list PDF error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate PDF' },
+      { error: 'Failed to generate PDF' },
       { status: 500 },
     );
   }

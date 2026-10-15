@@ -1,5 +1,7 @@
 import z from 'zod';
 
+import isHttpsUrl from '@/utils/isHttpsUrl';
+
 /**
  * Schema for creating a licensed partner entity
  *
@@ -33,7 +35,7 @@ const createPartnerSchema = z.object({
   businessEmail: z.string().email().optional().or(z.literal('')),
   taxId: z.string().optional(),
   // Branding
-  logoUrl: z.string().url().optional().or(z.literal('')),
+  logoUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional().or(z.literal('')),
   // Payment configuration (partner can have both bank transfer AND payment link)
   paymentDetails: z
     .object({
@@ -44,7 +46,7 @@ const createPartnerSchema = z.object({
       iban: z.string().optional(),
       swiftBic: z.string().optional(),
       reference: z.string().optional(),
-      paymentUrl: z.string().url().optional(),
+      paymentUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional(),
     })
     .optional(),
   // Other

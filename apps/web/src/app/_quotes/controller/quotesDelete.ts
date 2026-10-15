@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
@@ -14,7 +14,7 @@ import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
  * @example
  *   await trpcClient.quotes.delete.mutate({ id: "uuid-here" });
  */
-const quotesDelete = protectedProcedure
+const quotesDelete = approvedProcedure
   .input(getQuoteByIdSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     // Verify quote exists and belongs to user

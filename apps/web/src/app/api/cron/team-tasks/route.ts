@@ -4,6 +4,7 @@ import sendBondReminders from '@/app/_logistics/data/sendBondReminders';
 import sendMorningDigests from '@/app/_teamTasks/data/sendMorningDigests';
 import sendOverdueAlerts from '@/app/_teamTasks/data/sendOverdueAlerts';
 import sendWeeklyRoundUp from '@/app/_teamTasks/data/sendWeeklyRoundUp';
+import isCronAuthorised from '@/lib/cron/isCronAuthorised';
 import logger from '@/utils/logger';
 
 export const dynamic = 'force-dynamic';
@@ -22,9 +23,7 @@ export const maxDuration = 60;
  * digests.
  */
 export const GET = async (request: Request) => {
-  const secret = process.env.CRON_SECRET;
-
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!isCronAuthorised(request)) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
@@ -44,6 +43,6 @@ export const GET = async (request: Request) => {
 
     logger.error('Team Tasks morning run failed', { error: message });
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 };

@@ -95,6 +95,7 @@ const adminUploadQuoteRequestAttachment = adminProcedure
       const blob = await put(blobFilename, buffer, {
         access: 'public',
         contentType: detectedType.mime,
+        addRandomSuffix: true,
       });
 
       // Create attachment record

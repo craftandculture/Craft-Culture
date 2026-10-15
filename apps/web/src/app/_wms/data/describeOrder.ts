@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { privateClientOrders, zohoSalesOrders } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 
 /**
  * How an order reads in a warehouse post: its numbers and who it is for
@@ -26,7 +27,7 @@ const describeOrder = async (orderId: string, fallback: string) => {
 
   if (zoho) {
     const numbers = [zoho.inv, zoho.so, zoho.ref].filter(Boolean).join(' · ');
-    return `${numbers || fallback} — ${zoho.customer}`;
+    return escapeSlackText(`${numbers || fallback} — ${zoho.customer}`);
   }
 
   const [pco] = await db
@@ -34,7 +35,7 @@ const describeOrder = async (orderId: string, fallback: string) => {
     .from(privateClientOrders)
     .where(eq(privateClientOrders.id, orderId));
 
-  return pco ? `${pco.number} — ${pco.client}` : fallback;
+  return escapeSlackText(pco ? `${pco.number} — ${pco.client}` : fallback);
 };
 
 export default describeOrder;

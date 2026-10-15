@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
@@ -20,7 +20,7 @@ import submitPaymentProofSchema from '../schemas/submitPaymentProofSchema';
  *     paymentProofUrl: "https://blob.vercel-storage.com/..."
  *   });
  */
-const quotesSubmitPaymentProof = protectedProcedure
+const quotesSubmitPaymentProof = approvedProcedure
   .input(submitPaymentProofSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId, paymentProofUrl } = input;

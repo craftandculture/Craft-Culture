@@ -73,6 +73,7 @@ const adminUploadReceivingPhoto = wmsOperatorProcedure
     const blob = await put(blobFilename, buffer, {
       access: 'public',
       contentType: detected.mime,
+      addRandomSuffix: true,
     });
 
     return {

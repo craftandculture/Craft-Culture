@@ -38,6 +38,7 @@ poetry/core/*
 __pycache__
 
 .env
+.env*
 !.env.example
 
 tmp
@@ -61,3 +62,7 @@ repomix-output.xml
 /payslip.html
 # Accidental build-artifact filename from a botched shell redirect
 apps/web/loadProducts*
+
+# Claude Code local state: personal permissions and agent worktrees
+**/.claude/settings.local.json
+.claude/worktrees/

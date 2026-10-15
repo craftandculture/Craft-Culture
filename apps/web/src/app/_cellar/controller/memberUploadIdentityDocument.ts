@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
+import { del, put } from '@vercel/blob';
 import { and, eq } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
@@ -99,14 +99,15 @@ const memberUploadIdentityDocument = stockOwnerProcedure
       { access: 'public', contentType: detected.mime, addRandomSuffix: true },
     );
 
-    await db
+    const replaced = await db
       .delete(partnerIdentityDocuments)
       .where(
         and(
           eq(partnerIdentityDocuments.partnerId, ctx.partner.id),
           eq(partnerIdentityDocuments.documentType, input.documentType),
         ),
-      );
+      )
+      .returning({ fileUrl: partnerIdentityDocuments.fileUrl });
 
     await db.insert(partnerIdentityDocuments).values({
       partnerId: ctx.partner.id,
@@ -117,6 +118,20 @@ const memberUploadIdentityDocument = stockOwnerProcedure
       fileSize: buffer.length,
       uploadedBy: ctx.user.id,
     });
+
+    /*
+      The replaced copy's blob stays publicly reachable by URL until it is
+      deleted, so remove it. Best effort: the new document is already stored,
+      and a failed clean-up must not fail the upload.
+    */
+    const oldUrls = replaced.map((row) => row.fileUrl).filter((url) => url && url !== blob.url);
+    if (oldUrls.length) {
+      await del(oldUrls).catch((error: unknown) => {
+        logger.error('Could not delete replaced identity document blob', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
 
     return { uploaded: true, documentType: input.documentType };
   });

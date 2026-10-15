@@ -2,6 +2,7 @@ import { getSessionCookie } from 'better-auth/cookies';
 import { NextRequest, NextResponse } from 'next/server';
 
 import clientConfig from './client.config';
+import constantTimeEqual from './utils/constantTimeEqual';
 
 const protectedRoutes = [
   /(?:^|\/)([\w-]+\/)?platform/,
@@ -17,12 +18,13 @@ const wmsRoutes = [
 export const middleware = async (request: NextRequest) => {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Check for device token in URL (for Enterprise Browser/TC27)
-  const deviceToken = searchParams.get('device_token');
+  // Device token from a header, or the URL for Enterprise Browser/TC27 scanners
+  // that can only open links
+  const deviceToken = request.headers.get('x-device-token') ?? searchParams.get('device_token');
   const wmsDeviceToken = process.env.WMS_DEVICE_TOKEN;
 
-  // Allow WMS routes with valid device token
-  if (deviceToken && wmsDeviceToken && deviceToken === wmsDeviceToken) {
+  // Allow WMS routes with valid device token (constant-time: edge runtime has no node crypto)
+  if (deviceToken && wmsDeviceToken && constantTimeEqual(deviceToken, wmsDeviceToken)) {
     if (wmsRoutes.some((route) => route.test(pathname))) {
       const response = NextResponse.next();
       response.headers.set('x-pathname', pathname);

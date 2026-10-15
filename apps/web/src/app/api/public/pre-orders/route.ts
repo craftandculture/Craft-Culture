@@ -2,6 +2,7 @@ import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import inOurWarehouse from '@/app/_wms/utils/inOurWarehouse';
 import db from '@/database/client';
 import { products, wmsStock } from '@/database/schema';
 
@@ -24,6 +25,10 @@ export const OPTIONS = () => {
  * GET /api/public/pre-orders
  *
  * Public endpoint returning available warehouse stock for the pre-order marketing page.
+ * Uses the catalogue's own definition of stock that is for sale: not flagged
+ * not-for-sale (members' cellars held in storage) and in our warehouse rather
+ * than placed with a distributor, so consigned stock held for its owner is
+ * never advertised.
  * Queries WMS stock grouped by product, joined with product master data for region/country.
  * No authentication required. Cached for 5 minutes.
  *
@@ -45,7 +50,11 @@ export const GET = async (request: NextRequest) => {
     const sortBy = searchParams.get('sortBy') || 'totalCases';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    const conditions = [sql`${wmsStock.availableCases} > 0`];
+    const conditions = [
+      sql`${wmsStock.availableCases} > 0`,
+      eq(wmsStock.notForSale, false),
+      inOurWarehouse(),
+    ];
 
     if (category) {
       conditions.push(eq(wmsStock.category, category));

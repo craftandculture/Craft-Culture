@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
 
@@ -13,7 +13,7 @@ import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
  * @example
  *   await trpcClient.quotes.getOne.query({ id: "uuid-here" });
  */
-const quotesGetOne = protectedProcedure
+const quotesGetOne = approvedProcedure
   .input(getQuoteByIdSchema)
   .query(async ({ input, ctx: { user } }) => {
     const [quote] = await db

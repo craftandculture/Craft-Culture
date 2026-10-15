@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, lt } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 
 import getPeople from './getPeople';
 import dubaiToday from '../utils/dubaiToday';
@@ -40,9 +41,9 @@ const sendOverdueAlerts = async () => {
   const team = await getPeople();
   const tag = (id: string) => {
     const m = team.find((t) => t.id === id);
-    return m?.slackMemberId ? `<@${m.slackMemberId}>` : `*${m?.name ?? 'someone'}*`;
+    return m?.slackMemberId ? `<@${m.slackMemberId}>` : `*${escapeSlackText(m?.name ?? 'someone')}*`;
   };
-  const lines = rows.map((r) => `${tag(r.ownerId)} *${r.title}*: ${r.what} (was due ${shortDate(r.due as string)})`);
+  const lines = rows.map((r) => `${tag(r.ownerId)} *${escapeSlackText(r.title)}*: ${escapeSlackText(r.what)} (was due ${shortDate(r.due as string)})`);
   const result = await postTasksSlack(`Overdue:\n${lines.join('\n')}`);
 
   if (result.posted) {

@@ -16,6 +16,37 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
   },
   allowedDevOrigins: ['jasper.ngrok.app'],
+  poweredByHeader: false,
+  /*
+    Baseline security headers. Framing is limited to our own origin (the WMS
+    label page prints through a same-origin iframe); no full CSP yet, as the
+    quote pages and MDX docs rely on inline script and style. Camera stays
+    allowed for our own pages because the WMS photo capture uses it.
+  */
+  headers: async () => {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+        ],
+      },
+      // Magic-link and device tokens travel in these URLs: never leak them in a Referer
+      {
+        source: '/auth/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        source: '/wms/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+    ];
+  },
   pageExtensions: ['ts', 'tsx', 'mdx'],
   webpack: (config) => {
     config.resolve.alias.canvas = false;

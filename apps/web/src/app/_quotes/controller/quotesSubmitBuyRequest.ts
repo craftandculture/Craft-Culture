@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
@@ -19,7 +19,7 @@ import submitBuyRequestSchema from '../schemas/submitBuyRequestSchema';
  *     quoteId: "uuid-here"
  *   });
  */
-const quotesSubmitBuyRequest = protectedProcedure
+const quotesSubmitBuyRequest = approvedProcedure
   .input(submitBuyRequestSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId } = input;

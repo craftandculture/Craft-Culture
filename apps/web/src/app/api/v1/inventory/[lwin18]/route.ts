@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { PARTNER_FEED_PERMISSION } from '@/app/_partners/schemas/createApiKeySchema';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -9,6 +10,7 @@ import logger from '@/utils/logger';
 import checkRateLimit from '../../_middleware/checkRateLimit';
 import validateApiKey from '../../_middleware/validateApiKey';
 import logApiRequest from '../../_utils/logApiRequest';
+import toInventoryOffer from '../../_utils/toInventoryOffer';
 import type { InventoryItem } from '../schema';
 
 interface RouteParams {
@@ -49,7 +51,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
   // Check permissions
   if (!permissions.includes('read:inventory')) {
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 403,
@@ -68,7 +70,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
   const rateLimitResult = await checkRateLimit(apiKeyId);
   if (!rateLimitResult.allowed) {
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 429,
@@ -84,7 +86,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
     // Validate LWIN18 format (alphanumeric only)
     if (!/^[a-zA-Z0-9]+$/.test(lwin18)) {
       const responseTimeMs = Date.now() - startTime;
-      void logApiRequest({
+      await logApiRequest({
         request,
         endpoint,
         statusCode: 400,
@@ -108,7 +110,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
 
     if (!product) {
       const responseTimeMs = Date.now() - startTime;
-      void logApiRequest({
+      await logApiRequest({
         request,
         endpoint,
         statusCode: 404,
@@ -126,6 +128,9 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
       .from(productOffers)
       .where(eq(productOffers.productId, product.id));
 
+    // Partner-feed keys see one supplier: no offer source or base price
+    const partnerFeed = permissions.includes(PARTNER_FEED_PERMISSION);
+
     // Transform to response format
     const inventoryItem: InventoryItem = {
       lwin18: product.lwin18,
@@ -135,20 +140,11 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
       country: product.country,
       vintage: product.year,
       imageUrl: product.imageUrl,
-      offers: offers.map((offer) => ({
-        id: offer.id,
-        source: offer.source,
-        price: offer.price,
-        currency: offer.currency,
-        unitCount: offer.unitCount,
-        unitSize: offer.unitSize,
-        availableQuantity: offer.availableQuantity,
-        inStock: offer.availableQuantity > 0,
-      })),
+      offers: offers.map((offer) => toInventoryOffer(offer, partnerFeed)),
     };
 
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 200,
@@ -161,7 +157,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
   } catch (error) {
     logger.error('Error fetching product:', error);
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 500,

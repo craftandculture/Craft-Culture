@@ -156,7 +156,9 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
   );
 
   // Impersonation - call Better Auth client directly (not through tRPC)
-  // This ensures the session cookie is properly set in the browser
+  // This ensures the session cookie is properly set in the browser. The
+  // staff-only rule and the audit log entry are enforced server side in the
+  // Better Auth hooks, so this path cannot bypass either.
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   const handleImpersonate = async (targetUserId: string, targetUserName: string | null, targetUserEmail: string) => {

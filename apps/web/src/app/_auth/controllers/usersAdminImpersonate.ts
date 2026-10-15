@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 
-import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import authServerClient from '@/lib/better-auth/server';
@@ -17,13 +17,24 @@ const inputSchema = z.object({
  * Admin endpoint to impersonate a user
  *
  * Uses Better Auth's admin plugin to create a properly signed
- * impersonation session for the target user.
+ * impersonation session for the target user. Staff only: partners holding
+ * admin logins may not impersonate. The same rule is enforced on the auth
+ * endpoint itself, and the audit entry is written by the session create hook
+ * in lib/better-auth/server.ts, so neither can be skipped by calling the
+ * endpoint directly from the browser.
  */
 const usersAdminImpersonate = adminProcedure
   .input(inputSchema)
   .mutation(async ({ ctx, input }) => {
     const { userId } = input;
     const admin = ctx.user;
+
+    if (!isTeamMember(admin)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only C&C staff can impersonate users',
+      });
+    }
 
     // Prevent self-impersonation
     if (userId === admin.id) {
@@ -48,11 +59,9 @@ const usersAdminImpersonate = adminProcedure
     }
 
     const headersList = await headers();
-    const ipAddress =
-      headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip');
-    const userAgent = headersList.get('user-agent');
 
-    // Use Better Auth's admin plugin to create impersonation session
+    // Use Better Auth's admin plugin to create impersonation session. The
+    // session create hook records the impersonation in the admin audit log.
     const result = await authServerClient.api.impersonateUser({
       body: { userId },
       headers: headersList,
@@ -64,21 +73,6 @@ const usersAdminImpersonate = adminProcedure
         message: 'Failed to create impersonation session',
       });
     }
-
-    // Log the impersonation
-    await logAdminActivity({
-      adminId: admin.id,
-      action: 'user.impersonation_started',
-      entityType: 'user',
-      entityId: targetUser.id,
-      ipAddress: ipAddress ?? undefined,
-      userAgent: userAgent ?? undefined,
-      metadata: {
-        targetUserId: targetUser.id,
-        targetUserEmail: targetUser.email,
-        targetUserName: targetUser.name,
-      },
-    });
 
     return {
       success: true,

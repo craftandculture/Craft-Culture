@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import isHttpsUrl from '@/utils/isHttpsUrl';
+
 /**
  * Schema for payment details (bank transfer or payment link)
  */
@@ -13,7 +15,7 @@ const paymentDetailsSchema = z.object({
   swiftBic: z.string().optional(),
   reference: z.string().optional(),
   // Payment link
-  paymentUrl: z.string().url().optional(),
+  paymentUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional(),
 });
 
 /**

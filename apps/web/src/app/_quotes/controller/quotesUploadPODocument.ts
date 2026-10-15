@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import uploadPODocumentSchema from '../schemas/uploadPODocumentSchema';
@@ -24,7 +24,7 @@ const ALLOWED_MIME_TYPES = [
  *     fileType: "application/pdf"
  *   });
  */
-const quotesUploadPODocument = protectedProcedure
+const quotesUploadPODocument = approvedProcedure
   .input(uploadPODocumentSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { file, filename } = input;
@@ -80,6 +80,7 @@ const quotesUploadPODocument = protectedProcedure
       const blob = await put(blobFilename, buffer, {
         access: 'public',
         contentType: mimeType,
+        addRandomSuffix: true,
       });
 
       return {

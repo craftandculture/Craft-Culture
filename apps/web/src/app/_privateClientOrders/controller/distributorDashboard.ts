@@ -15,6 +15,7 @@ import {
   DISTRIBUTOR_STAGES,
   DISTRIBUTOR_VISIBLE_STATUSES,
 } from '../constants';
+import distributorOrderView from '../utils/distributorOrderView';
 
 /**
  * The distributor's dashboard: what is waiting on them, where their orders
@@ -186,7 +187,7 @@ const distributorDashboard = distributorProcedure.query(
         delivered: stageTotals(DISTRIBUTOR_STAGES.delivered),
       },
       recentOrders: recentOrders.map((row) => ({
-        ...row.order,
+        ...distributorOrderView(row.order),
         partner: row.partner,
       })),
       ordersByPartner: ordersByPartner.map((p) => ({

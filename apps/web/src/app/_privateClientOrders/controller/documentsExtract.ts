@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 
 const extractDocumentSchema = z.object({
@@ -16,7 +16,7 @@ const extractDocumentSchema = z.object({
  * Sends the document to a background job for processing.
  * The job will extract structured data from invoices and payment proofs.
  */
-const documentsExtract = protectedProcedure.input(extractDocumentSchema).mutation(async ({ input, ctx }) => {
+const documentsExtract = approvedProcedure.input(extractDocumentSchema).mutation(async ({ input, ctx }) => {
   const { documentId } = input;
   const { user } = ctx;
 

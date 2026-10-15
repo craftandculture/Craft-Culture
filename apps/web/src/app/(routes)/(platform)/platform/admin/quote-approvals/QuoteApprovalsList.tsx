@@ -24,6 +24,7 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import safeHref from '@/utils/safeHref';
 
 import QuoteApprovalDialog from './QuoteApprovalDialog';
 
@@ -275,7 +276,10 @@ const QuoteApprovalsList = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(quote.poAttachmentUrl!, '_blank')}
+              onClick={() => {
+                const href = safeHref(quote.poAttachmentUrl);
+                if (href) window.open(href, '_blank', 'noopener,noreferrer');
+              }}
             >
               <ButtonContent iconLeft={IconDownload}>
                 <span className="hidden lg:inline">Download PO</span>

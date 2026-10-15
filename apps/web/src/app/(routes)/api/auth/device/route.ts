@@ -4,6 +4,7 @@ import db from '@/database/client';
 import auth from '@/lib/better-auth/server';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
+import matchesSecret from '@/utils/matchesSecret';
 
 /**
  * Device authentication endpoint for WMS terminals (TC27)
@@ -11,7 +12,8 @@ import logger from '@/utils/logger';
  * This allows warehouse devices to authenticate without magic links
  * by using a pre-shared device token stored in environment variables.
  *
- * Usage: GET /api/auth/device?token=YOUR_DEVICE_TOKEN
+ * Usage: GET /api/auth/device?token=YOUR_DEVICE_TOKEN, or send the token in an
+ * `x-device-token` header (preferred: it stays out of URLs and logs)
  *
  * The device token and user email must be configured in:
  * - WMS_DEVICE_TOKEN: A secure random token
@@ -19,7 +21,7 @@ import logger from '@/utils/logger';
  */
 export const GET = async (request: NextRequest) => {
   const url = new URL(request.url);
-  const token = url.searchParams.get('token');
+  const token = request.headers.get('x-device-token') ?? url.searchParams.get('token');
 
   // Validate redirect to prevent open redirect attacks
   const allowedPrefixes = ['/platform/', '/wms/'];
@@ -43,7 +45,7 @@ export const GET = async (request: NextRequest) => {
     );
   }
 
-  if (!token || token !== serverConfig.wmsDeviceToken) {
+  if (!token || !matchesSecret(token, serverConfig.wmsDeviceToken)) {
     logger.warn('[Device Auth] Invalid token attempt');
     return NextResponse.json(
       { error: 'Invalid device token' },
