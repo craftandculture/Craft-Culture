@@ -1,3 +1,9 @@
+## [2.0.335](https://github.com/craftandculture/Craft-Culture/compare/v2.0.334...v2.0.335) (2026-10-15)
+
+### Bug Fixes
+
+* export invoice sections show their case count instead of their line count ([92f1fc8](https://github.com/craftandculture/Craft-Culture/commit/92f1fc8deb14444313a7b06ffded2b08d21225f1))
+
 ## [2.0.334](https://github.com/craftandculture/Craft-Culture/compare/v2.0.333...v2.0.334) (2026-10-15)
 
 ### Reverts
