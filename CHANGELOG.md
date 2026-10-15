@@ -1,3 +1,9 @@
+## [2.0.328](https://github.com/craftandculture/Craft-Culture/compare/v2.0.327...v2.0.328) (2026-10-15)
+
+### Features
+
+* reorder watch flags partial fills, confirms substitutions, exports to Excel ([b71cd0b](https://github.com/craftandculture/Craft-Culture/commit/b71cd0b2de3f7fbdec5684fa182c77401573f4ea))
+
 ## [2.0.327](https://github.com/craftandculture/Craft-Culture/compare/v2.0.326...v2.0.327) (2026-10-14)
 
 ### Features
