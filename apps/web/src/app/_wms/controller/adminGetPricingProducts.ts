@@ -188,6 +188,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         // The newest lot's paid and landed cost — see lotShipmentCost
         lotProductCost: sql<number | null>`(array_agg(ship.product_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
         lotLandedCost: sql<number | null>`(array_agg(ship.landed_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+        lotOwnLine: sql<boolean | null>`(array_agg(ship.own_line ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
         productName: sql<string>`MAX(${wmsStock.productName})`,
         producer: sql<string | null>`MAX(${wmsStock.producer})`,
         vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
@@ -384,7 +385,17 @@ const adminGetPricingProducts = wmsOperatorProcedure
         p.importPricePerBottle != null && p.importPricePerBottle > 0
           ? p.importPricePerBottle
           : null;
-      const importPaid = manualImport ?? ship?.productCost ?? null;
+      /*
+        The invoice wins where the stock has its own line on it; a typed import
+        price only fills in where there is none (old stock, repacks). Typed
+        prices live on the shared per-wine row, so letting them win hid every
+        owner's invoice behind one hand-entered figure.
+      */
+      const invoiceCost =
+        p.lotOwnLine && ship.productCost != null && ship.productCost > 0
+          ? ship.productCost
+          : null;
+      const importPaid = invoiceCost ?? manualImport ?? ship?.productCost ?? null;
       const systemLogistics =
         ship && ship.landedCost != null && ship.productCost != null
           ? Math.max(
@@ -450,7 +461,8 @@ const adminGetPricingProducts = wmsOperatorProcedure
     // Landed = import (paid goods, ex-freight) + system logistics (live group
     // freight = shipment landed − product) + FZ→mainland transfer (default
     // $2.50) + manual override. Replaces the old flat owner logistics rate.
-    const importPaidExpr = sql`COALESCE(NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
+    // Same rule as the rows: an own invoice line beats a typed import price
+    const importPaidExpr = sql`COALESCE(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END, NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
     const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
     // Logistics = per-line override if set; else live freight; else $22.50
     // fallback for C&C-owned wine with no freight profile (old imports).
