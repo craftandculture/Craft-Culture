@@ -59,8 +59,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
 
   const sectionTotals = (sectionId: string) => {
     const lines = doc.lines.filter((l) => l.sectionId === sectionId);
-    // Qty is always cartons, so a section's cases are its Qty column
-    return { cases: lines.reduce((sum, l) => sum + l.qty, 0), amount: lines.reduce((sum, l) => sum + l.amount, 0) };
+    return { lines: lines.length, amount: lines.reduce((sum, l) => sum + l.amount, 0) };
   };
   const setField = (l: ExportLine, field: 'description' | 'hsCode' | 'origin', label: string) => (v: string) =>
     onApply([{ op: 'setLine', lineId: l.id, field, value: v }], `Line ${lineNumber.get(l.id)} ${label}: ${v}`);
@@ -119,7 +118,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
               className="shrink-0 rounded-full border border-border-muted bg-fill-primary px-3 py-1 text-[11px] font-medium text-text-muted hover:border-border-brand hover:text-text-primary"
             >
               {section.refs.length > 1 ? `${section.refs[0]?.invoiceNumber} +${section.refs.length - 1}` : section.refs[0]?.invoiceNumber}
-              <span className="ml-1.5 tabular-nums text-text-muted">{sectionTotals(section.id).cases} cs</span>
+              <span className="ml-1.5 tabular-nums text-text-muted">{sectionTotals(section.id).lines}</span>
             </button>
           ))}
         </nav>
@@ -154,7 +153,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                     <div className="flex items-center justify-between gap-4">
                       <span>{formatSectionTitle(section)}</span>
                       <span className="shrink-0 font-normal text-white/80 tabular-nums">
-                        {sectionTotals(section.id).cases} case{sectionTotals(section.id).cases === 1 ? '' : 's'} · {cur} {money(sectionTotals(section.id).amount)}
+                        {sectionTotals(section.id).lines} line{sectionTotals(section.id).lines === 1 ? '' : 's'} · {cur} {money(sectionTotals(section.id).amount)}
                       </span>
                     </div>
                   </td>
