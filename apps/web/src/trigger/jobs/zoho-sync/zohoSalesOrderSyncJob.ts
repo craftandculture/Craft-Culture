@@ -11,6 +11,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
+import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
 import {
   wmsStockReservations,
   zohoInvoices,
@@ -215,6 +216,8 @@ export const zohoSalesOrderSyncJob = schedules.task({
           // Hold WMS stock for the new order — the same step the Sync button,
           // line edits and release use, so all four hold stock the same way
           try {
+            await adoptDraftHolds({ db: triggerDb, zohoSalesOrderId: fullOrder.salesorder_id, orderId: newOrder.id });
+
             const hold = await holdStockForSalesOrder({
               db: triggerDb,
               orderId: newOrder.id,
@@ -309,6 +312,13 @@ export const zohoSalesOrderSyncJob = schedules.task({
       }
     } catch (error) {
       logger.error('Failed to release stock for closed orders', { error });
+    }
+
+    try {
+      const drafts = await refreshAllDraftHolds({ db: triggerDb });
+      if (drafts.active) logger.info('Draft holds refreshed', drafts);
+    } catch (error) {
+      logger.error('Failed to refresh draft holds', { error });
     }
 
     logger.info('Zoho sales order sync completed', results);

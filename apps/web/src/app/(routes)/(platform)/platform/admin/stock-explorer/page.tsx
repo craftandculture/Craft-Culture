@@ -615,12 +615,15 @@ const ReservationHolders = ({
             className="border-border-muted bg-background-primary inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs"
           >
             <span className="font-medium">{reservation.orderNumber}</span>
+            {reservation.clientName ? (
+              <span className="text-text-primary">{reservation.clientName}</span>
+            ) : null}
             <span className="text-text-muted">
               {reservation.quantityCases} case
               {reservation.quantityCases === 1 ? '' : 's'}
             </span>
             <span className="text-text-muted uppercase">
-              {reservation.orderType}
+              {reservation.orderType === 'zoho_draft' ? 'draft SO' : reservation.orderType}
             </span>
             <button
               type="button"

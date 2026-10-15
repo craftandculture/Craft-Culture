@@ -4,7 +4,7 @@ import { wmsStock, wmsStockReservations } from '@/database/schema';
 
 interface ReleaseParams {
   orderId: string;
-  orderType: 'zoho' | 'pco';
+  orderType: 'zoho' | 'pco' | 'zoho_draft';
   reason: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;

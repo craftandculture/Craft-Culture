@@ -7,6 +7,7 @@ import {
   privateClientOrders,
   wmsStock,
   wmsStockReservations,
+  zohoDraftHolds,
   zohoSalesOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -99,7 +100,8 @@ const adminGetStockCommitments = adminProcedure
     // Client names for the holds, from whichever kind of order holds them
     const zohoIds = holdRows.filter((h) => h.orderType === 'zoho').map((h) => h.orderId);
     const pcoIds = holdRows.filter((h) => h.orderType === 'pco').map((h) => h.orderId);
-    const [zohoNames, pcoNames] = await Promise.all([
+    const draftIds = holdRows.filter((h) => h.orderType === 'zoho_draft').map((h) => h.orderId);
+    const [zohoNames, pcoNames, draftNames] = await Promise.all([
       zohoIds.length
         ? db
             .select({ id: zohoSalesOrders.id, name: zohoSalesOrders.customerName })
@@ -112,8 +114,14 @@ const adminGetStockCommitments = adminProcedure
             .from(privateClientOrders)
             .where(inArray(privateClientOrders.id, pcoIds))
         : [],
+      draftIds.length
+        ? db
+            .select({ id: zohoDraftHolds.id, name: zohoDraftHolds.customerName })
+            .from(zohoDraftHolds)
+            .where(inArray(zohoDraftHolds.id, draftIds))
+        : [],
     ]);
-    const nameOf = new Map([...zohoNames, ...pcoNames].map((r) => [r.id, r.name]));
+    const nameOf = new Map([...zohoNames, ...pcoNames, ...draftNames].map((r) => [r.id, r.name]));
 
     const sameWine = new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('%', '\\d{2}')}$`);
     const promisedByOrder = new Map<string, { orderNumber: string; clientName: string; bottles: number }>();

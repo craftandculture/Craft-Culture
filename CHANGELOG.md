@@ -1,3 +1,63 @@
+## [2.0.328](https://github.com/craftandculture/Craft-Culture/compare/v2.0.327...v2.0.328) (2026-10-15)
+
+### Features
+
+* reorder watch flags partial fills, confirms substitutions, exports to Excel ([b71cd0b](https://github.com/craftandculture/Craft-Culture/commit/b71cd0b2de3f7fbdec5684fa182c77401573f4ea))
+
+## [2.0.327](https://github.com/craftandculture/Craft-Culture/compare/v2.0.326...v2.0.327) (2026-10-14)
+
+### Features
+
+* propose the merges, and perform none ([c9e193e](https://github.com/craftandculture/Craft-Culture/commit/c9e193edca3f66159c901a9f4f49c598b1d8e68b))
+
+## [2.0.326](https://github.com/craftandculture/Craft-Culture/compare/v2.0.325...v2.0.326) (2026-10-14)
+
+### Features
+
+* Reorder watch page, linked from the [#cd](https://github.com/craftandculture/Craft-Culture/issues/cd)-stock-levels post ([64ef2af](https://github.com/craftandculture/Craft-Culture/commit/64ef2af1cade482e04353bca83966df353ec8e21))
+
+## [2.0.325](https://github.com/craftandculture/Craft-Culture/compare/v2.0.324...v2.0.325) (2026-10-14)
+
+### Features
+
+* reorder watch sends what it can, sources the rest, one-offs apart ([538f39b](https://github.com/craftandculture/Craft-Culture/commit/538f39bbfbb51ea70f8f83efb93db6521b3eafe8))
+
+## [2.0.324](https://github.com/craftandculture/Craft-Culture/compare/v2.0.323...v2.0.324) (2026-10-14)
+
+### Features
+
+* reorder watch grouped by who acts, with dead lines folded away ([ce02e4b](https://github.com/craftandculture/Craft-Culture/commit/ce02e4b827c85b69f5387b6eda1a4b5c91b2d405))
+
+## [2.0.323](https://github.com/craftandculture/Craft-Culture/compare/v2.0.322...v2.0.323) (2026-10-14)
+
+### Features
+
+* City Drinks reorder watch, daily in Slack for the C&C team ([5c414b3](https://github.com/craftandculture/Craft-Culture/commit/5c414b35fd3002da59258acdac133708fc65cf48))
+
+## [2.0.322](https://github.com/craftandculture/Craft-Culture/compare/v2.0.321...v2.0.322) (2026-10-14)
+
+### Bug Fixes
+
+* wine partners see only their wine price and the client price on a PCO, not the breakdown ([e090dde](https://github.com/craftandculture/Craft-Culture/commit/e090dde75d536135282af66f09fa797e7d536677))
+
+## [2.0.321](https://github.com/craftandculture/Craft-Culture/compare/v2.0.320...v2.0.321) (2026-10-13)
+
+### Features
+
+* hold stock for a draft sales order while the client finishes it ([1e9198e](https://github.com/craftandculture/Craft-Culture/commit/1e9198ec0c13a0d87ef453037c1b7792a83ec0db))
+
+## [2.0.320](https://github.com/craftandculture/Craft-Culture/compare/v2.0.319...v2.0.320) (2026-10-12)
+
+### Features
+
+* partner activity groups picks by order and shows the week ([d9130fd](https://github.com/craftandculture/Craft-Culture/commit/d9130fd1c7ee506a1d99dd01c4cd8877efd2f4c7))
+
+## [2.0.319](https://github.com/craftandculture/Craft-Culture/compare/v2.0.318...v2.0.319) (2026-10-12)
+
+### Improvements
+
+* partner activity reads as in, out and orders, with housekeeping folded ([579c58e](https://github.com/craftandculture/Craft-Culture/commit/579c58e963ad10e55ed9ece7ae0bd48715df5a1a))
+
 ## [2.0.318](https://github.com/craftandculture/Craft-Culture/compare/v2.0.317...v2.0.318) (2026-10-12)
 
 ### Bug Fixes

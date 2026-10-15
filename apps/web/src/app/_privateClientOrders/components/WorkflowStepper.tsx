@@ -15,10 +15,12 @@ import {
 import { format } from 'date-fns';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
-import type { PrivateClientOrder } from '@/database/schema';
+
+import type { PartnerOrder } from '../utils/partnerOrderView';
 
 interface WorkflowStepperProps {
-  order: PrivateClientOrder & {
+  // Shown to partners as well as C&C, so it reads nothing a partner is not sent
+  order: PartnerOrder & {
     distributor?: {
       id: string;
       businessName: string;

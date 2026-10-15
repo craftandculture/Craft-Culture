@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
+import partnerOrderView from '../utils/partnerOrderView';
+
 const approveRevisionsSchema = z.object({
   orderId: z.string().uuid(),
 });
@@ -79,7 +81,7 @@ const ordersApproveRevisions = winePartnerProcedure
       actionUrl: `/platform/admin/private-orders/${orderId}`,
     });
 
-    return updatedOrder;
+    return updatedOrder ? partnerOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersApproveRevisions;

@@ -7,6 +7,7 @@ import { partners, privateClientOrderActivityLogs, privateClientOrderDocuments, 
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
+import partnerOrderView from '../utils/partnerOrderView';
 
 const acknowledgeSchema = z.object({
   orderId: z.string().uuid(),
@@ -115,7 +116,7 @@ const ordersPartnerAcknowledgeInvoice = winePartnerProcedure
       });
     }
 
-    return updatedOrder;
+    return updatedOrder ? partnerOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersPartnerAcknowledgeInvoice;
