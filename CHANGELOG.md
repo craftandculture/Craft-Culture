@@ -1,3 +1,9 @@
+## [2.0.332](https://github.com/craftandculture/Craft-Culture/compare/v2.0.331...v2.0.332) (2026-10-15)
+
+### Reverts
+
+* reserved stock in the catalogue broke the Available Now feed ([9c6f683](https://github.com/craftandculture/Craft-Culture/commit/9c6f683969117d0605d11d0d47003d330b699c95))
+
 ## [2.0.331](https://github.com/craftandculture/Craft-Culture/compare/v2.0.330...v2.0.331) (2026-10-15)
 
 ### Bug Fixes
