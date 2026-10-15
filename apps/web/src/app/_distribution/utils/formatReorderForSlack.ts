@@ -1,4 +1,5 @@
 import { LOW_COVER_DAYS } from './assessReorder';
+import canSendReorderLine from './canSendReorderLine';
 import type { ReorderLine } from '../data/getOutletReorderList';
 
 /** Every wine, not just the first few — linked from the post */
@@ -10,15 +11,11 @@ const SOURCE_NAMED = 15;
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' });
 
-/** "1 cs", or "2 btl" when a case would outlast two months of sales */
+/** "1 cs of 6", or "2 btl" when a case would outlast two months of sales */
 const orderOf = (line: ReorderLine) =>
-  line.unit === 'case' ? `${line.suggestCases} cs` : `${line.suggestBottles} btl`;
-
-/** Whether anything can be sent: stock, consignor stock, inbound or a near vintage */
-const canSend = (line: ReorderLine) =>
-  line.status !== 'oneoff' &&
-  ((line.supply?.stock ?? 0) + (line.supply?.consignor ?? 0) + (line.supply?.inbound ?? 0) > 0 ||
-    line.alternatives.length > 0);
+  line.unit === 'case'
+    ? `${line.suggestCases} cs of ${line.pack}`
+    : `${line.suggestBottles} btl`;
 
 /** What can be sent, in one phrase */
 const supplyOf = (line: ReorderLine) => {
@@ -29,10 +26,16 @@ const supplyOf = (line: ReorderLine) => {
   if (s?.inbound) {
     parts.push(`🚚 ${s.inbound} inbound${s.inboundEta ? ` ${shortDate(s.inboundEta)}` : ''}`);
   }
-  if (parts.length > 0) return parts.join(' · ');
+  if (parts.length > 0) {
+    // Less than the order can be filled from what is held and coming
+    const partial =
+      line.available < line.suggestBottles ? ` · ⚠️ only ${line.available} of ${line.suggestBottles}` : '';
+    return `${parts.join(' · ')}${partial}`;
+  }
+  // Another vintage is a substitution City Drinks has to agree to
   return `🔁 ${line.alternatives
     .map((a) => `${a.vintage} (${a.stock ? `${a.stock} btl` : 'inbound'})`)
-    .join(', ')}`;
+    .join(', ')} — confirm vintage`;
 };
 
 /** One wine to send: sales, shelf, what to send, from where */
@@ -81,8 +84,8 @@ const formatReorderForSlack = (
 
   const header = `*${outletName} — reorder watch* · stock as of ${asOf}`;
 
-  const toSend = lines.filter(canSend);
-  const toSource = lines.filter((l) => !canSend(l));
+  const toSend = lines.filter(canSendReorderLine);
+  const toSource = lines.filter((l) => !canSendReorderLine(l));
 
   if (toSend.length === 0 && toSource.length === 0) {
     return { text: `${header}\n✅ Nothing out of stock or under ${LOW_COVER_DAYS} days of cover.` };

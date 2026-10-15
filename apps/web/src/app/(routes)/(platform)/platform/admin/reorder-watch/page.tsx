@@ -3,16 +3,14 @@ import { redirect } from 'next/navigation';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import getOutletReorderList from '@/app/_distribution/data/getOutletReorderList';
 import type { ReorderLine } from '@/app/_distribution/data/getOutletReorderList';
+import canSendReorderLine from '@/app/_distribution/utils/canSendReorderLine';
 import isStaff from '@/app/_distribution/utils/isStaff';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { client } from '@/database/client';
 
 export const dynamic = 'force-dynamic';
 
-const canSend = (line: ReorderLine) =>
-  line.status !== 'oneoff' &&
-  ((line.supply?.stock ?? 0) + (line.supply?.consignor ?? 0) + (line.supply?.inbound ?? 0) > 0 ||
-    line.alternatives.length > 0);
+const canSend = canSendReorderLine;
 
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' });
@@ -25,7 +23,7 @@ const supplyOf = (line: ReorderLine) => {
   if (s?.inbound) parts.push(`${s.inbound} inbound${s.inboundEta ? ` ${shortDate(s.inboundEta)}` : ''}`);
   if (parts.length) return parts.join(' · ');
   if (line.alternatives.length) {
-    return `Other vintage: ${line.alternatives
+    return `Other vintage — confirm with the distributor: ${line.alternatives
       .map((a) => `${a.vintage} (${a.stock ? `${a.stock} btl` : 'inbound'})`)
       .join(', ')}`;
   }
@@ -74,7 +72,14 @@ const Lines = ({ lines, showSupply }: { lines: ReorderLine[]; showSupply: boolea
             </td>
             {showSupply && (
               <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums">
-                {line.unit === 'case' ? `${line.suggestCases} cs` : `${line.suggestBottles} btl`}
+                {line.unit === 'case'
+                  ? `${line.suggestCases} cs of ${line.pack}`
+                  : `${line.suggestBottles} btl`}
+                {line.available > 0 && line.available < line.suggestBottles && (
+                  <span className="mt-0.5 block text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                    only {line.available} of {line.suggestBottles}
+                  </span>
+                )}
               </td>
             )}
             {showSupply && <td className="px-3 py-2 text-text-muted">{supplyOf(line)}</td>}
@@ -143,6 +148,41 @@ const ReorderWatchPage = async () => {
                 </span>
               </h2>
             </Typography>
+
+            {/* A plain GET form: picks become the export's query, no script needed */}
+            <form
+              action="/api/admin/reorder-watch/export"
+              method="get"
+              className="flex flex-wrap items-end gap-3 rounded-xl border border-border-muted bg-fill-primary p-3"
+            >
+              <label className="flex flex-col gap-1 text-xs text-text-muted">
+                Section
+                <select name="section" defaultValue="all" className="rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-sm text-text-primary">
+                  <option value="all">To send and To source</option>
+                  <option value="send">To send</option>
+                  <option value="source">To source</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-text-muted">
+                Owner
+                <select name="owner" defaultValue="all" className="rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-sm text-text-primary">
+                  <option value="all">All owners</option>
+                  {[...new Set(lines.map((l) => l.owner))].sort().map((owner) => (
+                    <option key={owner} value={owner}>
+                      {owner}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="rounded-md bg-text-primary px-3 py-1.5 text-sm font-medium text-background-primary hover:opacity-90"
+              >
+                Export to Excel
+              </button>
+              <span className="text-xs text-text-muted">One sheet per owner.</span>
+            </form>
+
             <div className="space-y-2">
               <h3 className="text-sm font-semibold">To send</h3>
               {toSend.length ? <Lines lines={toSend} showSupply /> : <p className="text-sm text-text-muted">Nothing.</p>}

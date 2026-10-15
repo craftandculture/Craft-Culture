@@ -50,6 +50,11 @@ export interface ReorderLine {
   unit: 'case' | 'bottle';
   pack: number;
   supply: SupplyPosition | null;
+  /**
+   * Bottles of this vintage that can be sent: ours at C&C, the consignor's at
+   * C&C, and inbound. Under suggestBottles is a partial fill.
+   */
+  available: number;
   /** Other vintages we hold or have coming, when this one is short */
   alternatives: Array<{ vintage: string; stock: number; inbound: number }>;
 }
@@ -198,6 +203,7 @@ const getOutletReorderList = async (outletId: string) => {
       unit: verdict.unit,
       pack,
       supply,
+      available: ownCover,
       alternatives,
     });
   }
