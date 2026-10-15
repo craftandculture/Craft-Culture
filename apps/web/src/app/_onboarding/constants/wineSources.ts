@@ -2,32 +2,32 @@
 const wineSources = [
   {
     value: 'uae_in_bond',
-    label: 'Build my cellar from wine in bond here in the UAE',
-    hint: 'Select from wine already held in bond in the UAE.',
+    label: 'Interested in wine available here in the UAE',
+    hint: 'Browse wines held in bond in the UAE, and add any you choose to your cellar.',
     isTransfer: false,
   },
   {
     value: 'lcb',
-    label: 'At LCB (UK bond)',
-    hint: 'We arrange the transfer into our account at LCB Burton.',
+    label: 'Wine held at LCB (UK bond)',
+    hint: 'Should you wish, we can arrange a transfer into our account at LCB Burton.',
     isTransfer: true,
   },
   {
     value: 'uk_eu_cellar',
-    label: 'Another cellar or merchant in the UK or Europe',
-    hint: 'Berry Bros. & Rudd, Justerini & Brooks or another bonded warehouse. We liaise with them directly.',
+    label: 'Wine with another cellar or merchant in the UK or Europe',
+    hint: 'Such as Berry Bros. & Rudd or Justerini & Brooks. Should you wish to bring it in, we can liaise with them on your behalf.',
     isTransfer: true,
   },
   {
     value: 'with_cc',
-    label: 'Already with Craft & Culture',
-    hint: 'We will link it to your cellar account.',
+    label: 'Wine already with Craft & Culture',
+    hint: 'We can show it in your cellar account.',
     isTransfer: false,
   },
   {
     value: 'starting_fresh',
-    label: 'Starting from scratch',
-    hint: 'We will help you build your collection.',
+    label: 'Just starting out',
+    hint: 'We would be glad to help you build a collection, whenever you are ready.',
     isTransfer: false,
   },
 ] as const;
