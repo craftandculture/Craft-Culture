@@ -31,8 +31,26 @@ stored hashed, 14 days) · membership terms on `cellar_release_rates`
 (`membership_fee_aed`, `included_cases`, `extra_case_monthly_aed`).
 
 One calculation for the month's charge (`_cellar/utils/monthlyMembershipCharge`)
-and one case count (`_cellar/utils/countChargeableCases`: sealed case = 1,
-loose bottles in sixes rounded up, magnum = 2 bottles).
+and one case count (`_cellar/utils/countChargeableCases`), in **case units**:
+everything measured in standard 75cl bottles (half bottle ½, magnum 2, double
+magnum 4, Imperial 8, other sizes by volume); a sealed case of up to 6 bottles
+(≤4.5 L) = ½, 7–12 bottles (≤9 L) = 1, above 12 one per 12 or part; loose
+bottles pooled, every 6 or part = ½. Sizes are parsed from cl/ml/L
+(`bottleMillilitres`) — '150cl' used to be read as 150 ml.
+
+## Rate card (Oct 2026)
+
+Storage priced at London +20% (BBR/Octavian ~£17/12-bottle case/yr):
+
+| | Default |
+|---|---|
+| Membership | AED 600 / month, no VAT |
+| Included | 20 × 12-bottle cases (240 bottles; a 6-bottle case uses ½) |
+| Extra 12-bottle case | AED 8 / month (`extra_case_monthly_aed`) |
+| Extra 6-bottle case | AED 4 / month (half, derived) |
+| Counted | at month end, from what is held that day |
+
+Example: 40 × 12-bottle cases → AED 600 + 20 × 8 = AED 760 / month.
 
 No duplicates: `ensureApplicantCellar` reuses the application's cellar, then a
 collector the user already belongs to, then one with the same business email.
@@ -47,7 +65,7 @@ to merge.
   (default `PRIVATE-CELLAR`), `ZOHO_BILLING_EXTRA_CASE_ADDON` (default `CELLAR-EXTRA-CASE`).
 - **Zoho**: enable Billing on the Books organisation; connect a UAE card gateway;
   plan `PRIVATE-CELLAR` (monthly, no tax); add-on `CELLAR-EXTRA-CASE`
-  (quantity-based, same price as Release Rates); dunning retries then unpaid;
+  (quantity-based, priced per **6-bottle unit** = half the Release Rates extra-case price, i.e. AED 4); dunning retries then unpaid;
   add `ZohoSubscriptions.fullaccess.all` to the refresh token's scopes;
   webhook → `https://wine.craftculture.xyz/api/webhooks/zoho-billing?secret=<secret>`
   for payment and subscription events.
@@ -67,5 +85,5 @@ to merge.
 ## Known limits
 
 - Storage counts cases **as held when pushed**, not the peak in the month — push near month end.
-- The extra-case price charged is the Zoho add-on's price; keep it equal to Release Rates.
+- Zoho is sent 6-bottle units (two per 12-bottle case); the add-on's price must stay at half the Release Rates extra-case price.
 - The terms at `/legal/private-cellar-terms` are a draft for legal review.

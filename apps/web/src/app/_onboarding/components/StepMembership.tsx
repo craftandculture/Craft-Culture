@@ -36,8 +36,8 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
 
   const rows = [
     ['Membership', `${formatAed(terms.membershipFeeAed)} a month`],
-    ['Included', `Storage for up to ${terms.includedCases} cases`],
-    ['Above that', `${formatAed(terms.extraCaseMonthlyAed)} per case, per month`],
+    ['Included', `Storage for up to ${terms.includedCases} cases of 12 (a 6-bottle case counts as half)`],
+    ['Above that', `${formatAed(terms.extraCaseMonthlyAed)} per 12-bottle case, ${formatAed(terms.extraCaseMonthlyAed / 2)} per 6-bottle case, per month`],
     ['VAT', 'None — held in a free zone bond'],
     ['Commitment', "Monthly, with 30 days' notice"],
   ];

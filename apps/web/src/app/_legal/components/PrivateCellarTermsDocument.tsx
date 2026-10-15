@@ -49,8 +49,10 @@ const PrivateCellarTermsDocument = ({
     {
       title: '4. Storage allowance and additional cases',
       paragraphs: [
-        `The fee includes storage for up to ${includedCases} cases. Each case held above that is charged at ${aed(extraCaseMonthlyAed)} per month, added to the following month's invoice.`,
-        'Cases are counted as follows: a sealed case counts as one case whatever it contains; loose bottles are counted together, every six bottles (or part of six) counting as one case; a magnum counts as two bottles, and larger formats by the number of standard 75cl bottles they hold.',
+        `The fee includes storage for up to ${includedCases} 12-bottle cases. A 6-bottle case counts as half a case, so the allowance holds ${includedCases * 12} standard bottles in any mix.`,
+        `Above the allowance, each 12-bottle case is charged at ${aed(extraCaseMonthlyAed)} per month and each 6-bottle case at ${aed(extraCaseMonthlyAed / 2)} per month, added to the following month's invoice.`,
+        'Cases are counted in standard 75cl bottles. A half bottle (37.5cl) counts as half a bottle, a magnum (1.5L) as two, a double magnum (3L) as four and an Imperial (6L) as eight; other sizes count by volume. A 6-bottle case is a case of up to six standard bottles (up to 4.5 litres). A 12-bottle case is a case of seven to twelve standard bottles (over 4.5 litres and up to 9 litres). A case of more than twelve counts as one 12-bottle case for every twelve bottles or part of twelve. Loose bottles and mixed cases are counted together, every six bottles or part of six counting as one 6-bottle case.',
+        'Cases are counted at the end of each calendar month, from what is held in your cellar that day.',
       ],
     },
     {

@@ -23,7 +23,7 @@ export interface ActivationSheetProps {
 
 type Side = 'emirates_id_front' | 'emirates_id_back';
 
-const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
+const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })}`;
 
 /**
  * "Activate your cellar" — shown in place the first time a member acts
@@ -163,8 +163,8 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
             <dl className="border-border-muted divide-border-muted divide-y rounded-xl border text-sm">
               {[
                 ['Membership', `${aed(data.terms.membershipFeeAed)} a month`],
-                ['Included', `Up to ${data.terms.includedCases} cases`],
-                ['Above that', `${aed(data.terms.extraCaseMonthlyAed)} per case, per month`],
+                ['Included', `Up to ${data.terms.includedCases} cases of 12 (a 6-bottle case counts as half)`],
+                ['Above that', `${aed(data.terms.extraCaseMonthlyAed)} per 12-bottle case, ${aed(data.terms.extraCaseMonthlyAed / 2)} per 6-bottle case, per month`],
                 ['VAT', 'None — free zone'],
                 ['Commitment', "Monthly, 30 days' notice"],
               ].map(([label, value]) => (

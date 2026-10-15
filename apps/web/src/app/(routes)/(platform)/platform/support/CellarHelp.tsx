@@ -52,7 +52,7 @@ const faqItems = [
   {
     question: 'What happens if I go over my storage allowance?',
     answer:
-      'Membership includes twenty cases. Beyond that, storage is charged per case per month and appears on your regular invoice. Nothing is refused or moved on your behalf.',
+      'Membership includes twenty 12-bottle cases (a 6-bottle case counts as half). Beyond that, each 12-bottle case is AED 8 a month and each 6-bottle case AED 4, counted at month end and added to your next invoice. Nothing is refused or moved on your behalf.',
   },
   {
     question: 'Who sees that a wine is mine when it is for sale?',
@@ -304,8 +304,9 @@ const CellarHelp = () => {
               className="leading-relaxed"
             >
               Storage is covered by your membership, which includes twenty
-              cases. Beyond that, storage is charged per case per month on your
-              regular invoice.
+              12-bottle cases (a 6-bottle case counts as half). Beyond that,
+              each 12-bottle case is AED 8 a month and each 6-bottle case AED 4,
+              counted at month end and added to your regular invoice.
             </Typography>
             <Typography
               variant="bodySm"

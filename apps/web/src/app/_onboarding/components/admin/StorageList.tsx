@@ -97,9 +97,10 @@ const StorageList = () => {
       </div>
 
       <p className="text-text-muted text-xs leading-5">
-        Cases are counted as held now (sealed case = 1, loose bottles in sixes, magnum = 2), so push close to month
-        end. The per-case price charged is the CELLAR-EXTRA-CASE add-on price in Zoho Billing — keep it in line with
-        Release Rates.
+        Cases are counted as held now, in standard 75cl bottles (magnum = 2, Imperial = 8): a case of up to 6
+        bottles is half, 7–12 bottles one, loose bottles in sixes at half each — so push close to month end. Zoho is
+        sent 6-bottle units (two per 12-bottle case): price the CELLAR-EXTRA-CASE add-on at half the Release Rates
+        extra-case price.
       </p>
     </div>
   );

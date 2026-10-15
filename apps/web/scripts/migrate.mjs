@@ -2632,7 +2632,7 @@ const runMigrations = async () => {
     // Private Cellar onboarding: membership pricing on the rate card
     await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "membership_fee_aed" double precision NOT NULL DEFAULT 600`);
     await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "included_cases" integer NOT NULL DEFAULT 20`);
-    await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "extra_case_monthly_aed" double precision NOT NULL DEFAULT 30`);
+    await client.unsafe(`ALTER TABLE "cellar_release_rates" ADD COLUMN IF NOT EXISTS "extra_case_monthly_aed" double precision NOT NULL DEFAULT 8`);
 
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS "cellar_applications" (
@@ -2737,6 +2737,17 @@ const runMigrations = async () => {
     await client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "cellar_invites_token_idx" ON "cellar_invites" ("token_hash")`);
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "cellar_invites_email_idx" ON "cellar_invites" ("email")`);
     console.log('✅ private cellar onboarding ready');
+
+    /*
+      Private Cellar storage re-priced to London +20% (Oct 2026): AED 8 per
+      12-bottle case above the allowance, a 6-bottle case at half. Only cards
+      still on the old AED 30 default move; a bespoke per-member price stays.
+    */
+    await client.unsafe(`ALTER TABLE "cellar_release_rates" ALTER COLUMN "extra_case_monthly_aed" SET DEFAULT 8`);
+    await dataFix('cellar extra-case price AED 30 -> 8', async () => {
+      await client`UPDATE "cellar_release_rates" SET "extra_case_monthly_aed" = 8 WHERE "extra_case_monthly_aed" = 30`;
+    });
+    console.log('✅ cellar storage re-priced');
 
     await client.end();
     process.exit(0);

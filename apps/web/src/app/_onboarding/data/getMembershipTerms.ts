@@ -36,7 +36,7 @@ const getMembershipTerms = async (partnerId?: string | null) => {
   return {
     membershipFeeAed: card?.membershipFeeAed ?? 600,
     includedCases: card?.includedCases ?? 20,
-    extraCaseMonthlyAed: card?.extraCaseMonthlyAed ?? 30,
+    extraCaseMonthlyAed: card?.extraCaseMonthlyAed ?? 8,
   };
 };
 

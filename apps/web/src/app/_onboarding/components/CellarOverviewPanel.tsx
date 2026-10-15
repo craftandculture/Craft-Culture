@@ -104,14 +104,16 @@ const CellarOverviewPanel = () => {
         </p>
         {isActive ? (
           <p className="text-text-primary mt-1 text-sm tabular-nums">
-            {cases} {cases === 1 ? 'case' : 'cases'} → {aed(terms.membershipFeeAed)}
+            {cases} {cases === 1 ? 'case' : 'cases'} of 12 → {aed(terms.membershipFeeAed)}
             {thisMonth.extraCases > 0 && ` + ${thisMonth.extraCases} × ${aed(terms.extraCaseMonthlyAed)}`} ={' '}
             <span className="font-semibold">{aed(thisMonth.totalAed)}</span>
           </p>
         ) : (
           <p className="text-text-primary mt-1 text-sm leading-6">
             Free until you first buy, release, sell or bring wine in. Then {aed(terms.membershipFeeAed)} a month for
-            up to {terms.includedCases} cases, {aed(terms.extraCaseMonthlyAed)} for each case above. No VAT.
+            up to {terms.includedCases} cases of 12 (a 6-bottle case counts as half), then{' '}
+            {aed(terms.extraCaseMonthlyAed)} per 12-bottle case and {aed(terms.extraCaseMonthlyAed / 2)} per 6-bottle
+            case. No VAT.
           </p>
         )}
         {membershipStatus === 'past_due' && (

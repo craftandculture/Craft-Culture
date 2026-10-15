@@ -1,35 +1,61 @@
+import bottleMillilitres from './bottleMillilitres';
+
 export interface ChargeableStockRow {
   /** Sealed cases */
   quantityCases: number;
   /** Loose bottles from opened cases */
   openBottles: number;
   bottleSize: string | null;
+  /** Bottles per sealed case; unknown is treated as twelve */
+  caseConfig: number | null;
 }
 
+/** A standard bottle, the unit everything is measured in */
+const STANDARD_ML = 750;
+
 /**
- * Cases a member is charged storage for, from what they hold
+ * Case units a member is charged storage for, from what they hold
  *
- * A sealed case counts as one whatever it holds. Loose bottles are pooled and
- * every six count as a case, rounded up; a magnum counts as two bottles, and
- * larger formats by how many 75cl bottles they hold.
+ * Storage is priced the way the London trade prices it: by volume, in 6-bottle
+ * and 12-bottle cases (4.5 and 9 litres). Everything is measured in standard
+ * 75cl bottles — a magnum is two, an Imperial eight, a half bottle half.
+ *
+ * - A sealed case of up to 6 bottles is half a unit.
+ * - A sealed case of 7 to 12 bottles is one unit; above 12, one unit for every
+ *   12 or part of 12.
+ * - Loose bottles are pooled and every 6, or part of 6, is half a unit.
+ *
+ * A 12-bottle case is therefore one case of the allowance and one extra-case
+ * charge; a 6-bottle case is half of each.
  *
  * @example
- *   countChargeableCases([{ quantityCases: 3, openBottles: 7, bottleSize: '750ml' }]); // 5
+ *   countChargeableCases([{ quantityCases: 2, openBottles: 0, bottleSize: '75cl', caseConfig: 12 }]); // 2
+ *   countChargeableCases([{ quantityCases: 2, openBottles: 0, bottleSize: '75cl', caseConfig: 6 }]); // 1
  *
  * @param rows - The member's stock rows
- * @returns Chargeable cases
+ * @returns Case units, in halves
  */
 const countChargeableCases = (rows: ChargeableStockRow[]) => {
-  let sealed = 0;
-  let looseEquivalent = 0;
+  let units = 0;
+  let looseBottles = 0;
 
   for (const row of rows) {
-    sealed += Math.max(0, row.quantityCases);
-    const millilitres = Number.parseInt(row.bottleSize ?? '750', 10) || 750;
-    looseEquivalent += Math.max(0, row.openBottles) * Math.max(1, Math.round(millilitres / 750));
+    const bottlesPerBottle = bottleMillilitres(row.bottleSize) / STANDARD_ML;
+    const sealed = Math.max(0, row.quantityCases);
+
+    if (sealed > 0) {
+      // Rounded so 0.9333… x 6 is not read as just over 6
+      const perCase = Math.round(Math.max(1, row.caseConfig ?? 12) * bottlesPerBottle * 1000) / 1000;
+      const unitsPerCase = perCase <= 6 ? 0.5 : Math.ceil(perCase / 12);
+      units += sealed * unitsPerCase;
+    }
+
+    looseBottles += Math.max(0, row.openBottles) * bottlesPerBottle;
   }
 
-  return sealed + Math.ceil(looseEquivalent / 6);
+  const loose = Math.round(looseBottles * 1000) / 1000;
+
+  return units + Math.ceil(loose / 6) * 0.5;
 };
 
 export default countChargeableCases;

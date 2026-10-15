@@ -13,6 +13,9 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import countChargeableCases from '../utils/countChargeableCases';
+import monthlyMembershipCharge from '../utils/monthlyMembershipCharge';
+
 /**
  * Every cellar member, with what they hold and what they are waiting on
  *
@@ -48,7 +51,8 @@ const adminGetMembers = adminProcedure.query(async () => {
     );
 
   // The house terms set on Release Rates — what "over allowance" is measured against
-  const { includedCases } = await getMembershipTerms();
+  const terms = await getMembershipTerms();
+  const { includedCases } = terms;
 
   if (members.length === 0) return { members: [], includedCases };
 
@@ -59,7 +63,7 @@ const adminGetMembers = adminProcedure.query(async () => {
     repacked holds the same wine in a different pack, and open bottles from a
     split case belong to the member exactly as sealed ones do.
   */
-  const [stockRows, requests, movements, memberships] = await Promise.all([
+  const [stockRows, requests, movements, memberships, chargeRows] = await Promise.all([
     /*
       Grouped by owner AND wine, with nothing joined on. Costing here would
       mean joining the pricing table, and a wine carrying two pricing rows
@@ -115,6 +119,18 @@ const adminGetMembers = adminProcedure.query(async () => {
       })
       .from(cellarMemberships)
       .where(inArray(cellarMemberships.partnerId, ids)),
+
+    // The rows storage is charged on, counted by the same rule the member is billed by
+    db
+      .select({
+        ownerId: wmsStock.ownerId,
+        quantityCases: wmsStock.quantityCases,
+        openBottles: wmsStock.openBottles,
+        bottleSize: wmsStock.bottleSize,
+        caseConfig: wmsStock.caseConfig,
+      })
+      .from(wmsStock)
+      .where(inArray(wmsStock.ownerId, ids)),
   ]);
 
   /*
@@ -172,7 +188,9 @@ const adminGetMembers = adminProcedure.query(async () => {
 
   const rows = members.map((member) => {
     const holding = holdings.get(member.id);
-    const cases = holding?.cases ?? 0;
+    const cases = countChargeableCases(
+      chargeRows.filter((row) => row.ownerId === member.id),
+    );
     const mine = requests.filter((row) => row.partnerId === member.id);
 
     /*
@@ -191,7 +209,7 @@ const adminGetMembers = adminProcedure.query(async () => {
       bottles: holding?.bottles ?? 0,
       wines: holding?.wines ?? 0,
       valueUsd: Math.round(holding?.value ?? 0),
-      overageCases: Math.max(0, cases - includedCases),
+      overageCases: monthlyMembershipCharge(cases, terms).extraCases,
       waitingOnUs: waitingOnUs.length,
       waitingOnThem: waitingOnThem.length,
       oldestRequestNumber: oldest?.requestNumber ?? null,

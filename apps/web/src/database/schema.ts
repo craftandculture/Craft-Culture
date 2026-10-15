@@ -5447,9 +5447,10 @@ export const cellarReleaseRates = pgTable(
       .notNull()
       .default(600),
     includedCases: integer('included_cases').notNull().default(20),
+    /** Per 12-bottle case above the allowance; a 6-bottle case is half */
     extraCaseMonthlyAed: doublePrecision('extra_case_monthly_aed')
       .notNull()
-      .default(30),
+      .default(8),
 
     notes: text('notes'),
     updatedBy: uuid('updated_by').references(() => users.id, {

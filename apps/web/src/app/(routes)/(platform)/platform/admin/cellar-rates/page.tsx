@@ -32,7 +32,7 @@ const EMPTY_FORM: RateForm = {
   deliveryPerCase: 0,
   membershipFeeAed: 600,
   includedCases: 20,
-  extraCaseMonthlyAed: 30,
+  extraCaseMonthlyAed: 8,
   notes: '',
 };
 
@@ -48,11 +48,11 @@ const FIELD_GROUPS: {
 }[] = [
   {
     title: 'Membership',
-    hint: 'Monthly, no VAT (free zone). Cases are the peak held in the month: a sealed case is one, six loose bottles are one, a magnum counts as two bottles',
+    hint: 'Monthly, no VAT (free zone). Counted in standard 75cl bottles at month end: a 12-bottle case (7–12 bottles) is one, a 6-bottle case (up to 6) is half, loose bottles in sixes at half each. A 6-bottle case is charged at half the price below',
     fields: [
       { key: 'membershipFeeAed', label: 'Monthly fee', suffix: 'AED' },
-      { key: 'includedCases', label: 'Cases included', suffix: 'cases' },
-      { key: 'extraCaseMonthlyAed', label: 'Each case above, per month', suffix: 'AED' },
+      { key: 'includedCases', label: '12-bottle cases included', suffix: 'cases' },
+      { key: 'extraCaseMonthlyAed', label: 'Each 12-bottle case above, per month', suffix: 'AED' },
     ],
   },
   {

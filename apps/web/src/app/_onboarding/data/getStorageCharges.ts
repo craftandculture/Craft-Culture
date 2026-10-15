@@ -30,6 +30,7 @@ const getStorageCharges = async () => {
           quantityCases: wmsStock.quantityCases,
           openBottles: wmsStock.openBottles,
           bottleSize: wmsStock.bottleSize,
+          caseConfig: wmsStock.caseConfig,
         })
         .from(wmsStock)
         .where(inArray(wmsStock.ownerId, ids))
