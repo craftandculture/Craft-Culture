@@ -1,3 +1,9 @@
+## [2.0.339](https://github.com/craftandculture/Craft-Culture/compare/v2.0.338...v2.0.339) (2026-10-15)
+
+### Features
+
+* PCO manual invoicing — Delivered, Manual Invoice Pending → Invoiced ([51b5275](https://github.com/craftandculture/Craft-Culture/commit/51b52751d451d2942baa272367dfce1886bd7677))
+
 ## [2.0.338](https://github.com/craftandculture/Craft-Culture/compare/v2.0.337...v2.0.338) (2026-10-15)
 
 ### Bug Fixes
