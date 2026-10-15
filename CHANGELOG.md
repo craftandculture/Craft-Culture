@@ -1,3 +1,9 @@
+## [2.0.338](https://github.com/craftandculture/Craft-Culture/compare/v2.0.337...v2.0.338) (2026-10-15)
+
+### Bug Fixes
+
+* Pricing Manager import cost comes from the stock's own invoice, not a typed figure ([116343e](https://github.com/craftandculture/Craft-Culture/commit/116343e8e1f9a94f7cf4ed6317b125f7ae384cb9))
+
 ## [2.0.337](https://github.com/craftandculture/Craft-Culture/compare/v2.0.336...v2.0.337) (2026-10-15)
 
 ### Bug Fixes
