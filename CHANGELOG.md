@@ -1,3 +1,9 @@
+## [2.0.334](https://github.com/craftandculture/Craft-Culture/compare/v2.0.333...v2.0.334) (2026-10-15)
+
+### Reverts
+
+* reserved stock in the catalogue, reapplied without its fix ([356e72d](https://github.com/craftandculture/Craft-Culture/commit/356e72da97b4cab2d9a24eaae7b0cd1165cab3a6))
+
 ## [2.0.333](https://github.com/craftandculture/Craft-Culture/compare/v2.0.332...v2.0.333) (2026-10-15)
 
 ### Features
