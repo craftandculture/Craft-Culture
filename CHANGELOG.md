@@ -1,3 +1,9 @@
+## [2.0.345](https://github.com/craftandculture/Craft-Culture/compare/v2.0.344...v2.0.345) (2026-10-15)
+
+### Bug Fixes
+
+* **cellar:** softer wording on the Your wine step ([0249a8e](https://github.com/craftandculture/Craft-Culture/commit/0249a8e0bf4060c78f1b5998c193a3a832afaa49))
+
 ## [2.0.344](https://github.com/craftandculture/Craft-Culture/compare/v2.0.343...v2.0.344) (2026-10-15)
 
 ### Features
