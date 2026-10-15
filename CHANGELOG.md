@@ -1,3 +1,9 @@
+## [2.0.343](https://github.com/craftandculture/Craft-Culture/compare/v2.0.342...v2.0.343) (2026-10-15)
+
+### Features
+
+* **cellar:** bill Private Cellar membership by Zoho Books invoice, no card needed ([99c95c2](https://github.com/craftandculture/Craft-Culture/commit/99c95c2fbbafdc910344421d85b42e5dd66c39ff))
+
 ## [2.0.342](https://github.com/craftandculture/Craft-Culture/compare/v2.0.341...v2.0.342) (2026-10-15)
 
 ### Features
