@@ -6,6 +6,7 @@ import db from '@/database/client';
 import {
   cellarApplications,
   cellarInvites,
+  notifications,
   partnerMembers,
   partners,
   users,
@@ -20,12 +21,12 @@ import getOrCreateApplication from '../data/getOrCreateApplication';
  * Accept an invitation on arriving at the application
  *
  * The invite created the account and the cellar already, so for the person it
- * was sent to this only records the acceptance and ties the application to
- * that cellar. Signed in as someone else — a forwarded link — it is refused:
- * the invite belongs to an email, not to whoever holds the link.
+ * was sent to this only records the acceptance and ties the application to that
+ * cellar. Signed in as someone else — a forwarded link — it is refused: the
+ * invite belongs to an email, not to whoever holds the link.
  *
- * Someone who already had an account (an old sign-up still pending) is
- * approved and joined to the invited cellar here, keeping their login.
+ * Someone who already had an account (an old sign-up still pending) is approved
+ * and joined to the invited cellar here, keeping their login.
  */
 const claimInvite = protectedProcedure
   .input(z.object({ token: z.string().max(200) }))
@@ -37,7 +38,8 @@ const claimInvite = protectedProcedure
     if (!invite) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'This invitation has expired or been withdrawn. Please contact us for a new one.',
+        message:
+          'This invitation has expired or been withdrawn. Please contact us for a new one.',
       });
     }
 
@@ -51,6 +53,18 @@ const claimInvite = protectedProcedure
     const application = await getOrCreateApplication(ctx.user.id, invite.name);
 
     await db.transaction(async (tx) => {
+      // A reused email can carry alerts from an old trade or test login; a new
+      // member's bell should start clean (kept, just marked read)
+      await tx
+        .update(notifications)
+        .set({ isRead: true, readAt: new Date() })
+        .where(
+          and(
+            eq(notifications.userId, ctx.user.id),
+            eq(notifications.isRead, false),
+          ),
+        );
+
       if (ctx.user.approvalStatus !== 'approved') {
         await tx
           .update(users)
@@ -65,7 +79,10 @@ const claimInvite = protectedProcedure
 
       if (invite.partnerId) {
         // Created inactive if they had a pending account when invited
-        await tx.update(partners).set({ status: 'active' }).where(eq(partners.id, invite.partnerId));
+        await tx
+          .update(partners)
+          .set({ status: 'active' })
+          .where(eq(partners.id, invite.partnerId));
 
         const [link] = await tx
           .select({ id: partnerMembers.id })
@@ -101,7 +118,11 @@ const claimInvite = protectedProcedure
       if (invite.status !== 'accepted') {
         await tx
           .update(cellarInvites)
-          .set({ status: 'accepted', acceptedAt: new Date(), userId: ctx.user.id })
+          .set({
+            status: 'accepted',
+            acceptedAt: new Date(),
+            userId: ctx.user.id,
+          })
           .where(eq(cellarInvites.id, invite.id));
       }
     });
