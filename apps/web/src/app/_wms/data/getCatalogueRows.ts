@@ -11,7 +11,6 @@ import {
   wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
-  wmsStockReservations,
 } from '@/database/schema';
 
 import inOurWarehouse from '../utils/inOurWarehouse';
@@ -31,9 +30,6 @@ export interface CatalogueRow {
   bottleSize: string | null;
   availableCases: number;
   availableBottles: number;
-  /** Cases held by an active order reservation (0 unless includeReserved) */
-  reservedCases: number;
-  reservedBottles: number;
   /** In-Bond B2B (trade) price */
   ibPerBottle: number;
   ibPerCase: number;
@@ -46,12 +42,6 @@ export interface CatalogueFilters {
   category?: string; // 'Wine' | 'Spirits' | 'RTD'
   ownerId?: string;
   search?: string;
-  /**
-   * Also return wines whose every case is reserved, with the reserved count.
-   * Off by default: the quote builder and LPO matcher sell from these rows and
-   * must not see stock they cannot sell.
-   */
-  includeReserved?: boolean;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -82,31 +72,8 @@ const getCatalogueRows = async (
     apart — which is why a client's cellar in storage used to appear here
     with an in-bond and a private-client price computed for it.
   */
-  /*
-    Reserved is counted from the orders actually holding the stock, not from
-    the stock row's reservedCases counter. A counter left behind by an order
-    released without clearing it would otherwise show a client a wine as
-    reserved for nobody.
-  */
-  const activeReservations = db
-    .select({
-      stockId: wmsStockReservations.stockId,
-      cases: sql<number>`SUM(${wmsStockReservations.quantityCases})`.as(
-        'reserved_cases',
-      ),
-    })
-    .from(wmsStockReservations)
-    .where(eq(wmsStockReservations.status, 'active'))
-    .groupBy(wmsStockReservations.stockId)
-    .as('active_reservations');
-
   const where = [
-    filters.includeReserved
-      ? or(
-          gt(wmsStock.availableCases, 0),
-          sql`COALESCE(${activeReservations.cases}, 0) > 0`,
-        )!
-      : gt(wmsStock.availableCases, 0),
+    gt(wmsStock.availableCases, 0),
     eq(wmsStock.notForSale, false),
     /*
       Wine placed with a distributor is theirs to sell. Leaving it here would
@@ -174,7 +141,6 @@ const getCatalogueRows = async (
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
-      reservedCases: sql<number>`${sumAcrossPricingRows(sql`COALESCE(${activeReservations.cases}, 0)`)}::int`,
       importPrice: sql<number | null>`${preferExact(
         wmsProductPricing.importPricePerBottle,
       )}`,
@@ -219,7 +185,6 @@ const getCatalogueRows = async (
       wmsOwnerPricingSettings,
       eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
     )
-    .leftJoin(activeReservations, eq(activeReservations.stockId, wmsStock.id))
     .leftJoin(
       liveMandates,
       sql`${liveMandates.lwinKey} = ${lwinPakKey(wmsStock.lwin18)}`,
@@ -370,8 +335,6 @@ const getCatalogueRows = async (
       bottleSize: r.bottleSize,
       availableCases: r.availableCases,
       availableBottles: r.availableCases * cc,
-      reservedCases: filters.includeReserved ? r.reservedCases : 0,
-      reservedBottles: filters.includeReserved ? r.reservedCases * cc : 0,
       ibPerBottle: round2(ibFinal),
       ibPerCase: round2(ibFinal * cc),
       pcPerBottle: round2(pcFinal),
