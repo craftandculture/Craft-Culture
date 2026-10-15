@@ -1,3 +1,9 @@
+## [2.0.337](https://github.com/craftandculture/Craft-Culture/compare/v2.0.336...v2.0.337) (2026-10-15)
+
+### Bug Fixes
+
+* Pricing Manager costs each owner's stock from the shipment it arrived on ([8d056e0](https://github.com/craftandculture/Craft-Culture/commit/8d056e08a069b5255aaf6c90719fc422ac6e281f))
+
 ## [2.0.336](https://github.com/craftandculture/Craft-Culture/compare/v2.0.335...v2.0.336) (2026-10-15)
 
 ### Reverts
