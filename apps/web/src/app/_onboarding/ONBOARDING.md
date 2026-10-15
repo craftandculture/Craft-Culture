@@ -16,7 +16,7 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 2. The member opens `/join?invite=…`, signs in, completes the four steps, and lands in `/platform/cellar`.
 
 **Billing mode** — `CELLAR_BILLING_MODE` (Vercel env): `invoice` (default) or `card`.
-- `invoice`: membership billed through **Zoho Books**. The first action (after the Emirates ID) activates the cellar at once and opens a Team Tasks job, *"<member> — set up monthly membership invoice"*, to create the recurring invoice (AED 600/month, no VAT). Extra storage is read off **Cellar members → Storage** and added to that month's invoice. Non-payment: **Pause** on the Storage tab (status `past_due`) stops buy/release/sell until **Resume**; a paused member cannot re-activate themselves.
+- `invoice`: membership billed through **Zoho Books**. The first action (after the Emirates ID) activates the cellar at once and opens a Team Tasks job, *"<member> — set up monthly membership invoice"*, to create the recurring invoice (AED 600/month; VAT as confirmed by our tax adviser). Extra storage is read off **Cellar members → Storage** and added to that month's invoice. Non-payment: **Pause** on the Storage tab (status `past_due`) stops buy/release/sell until **Resume**; a paused member cannot re-activate themselves.
 - `card`: Zoho Billing **Premium** (subscriptions, hosted card pages, dunning) — the flow below. Set only once Billing, the gateway, plan and add-on exist.
 
 **Activation (first action)** — card mode
@@ -37,9 +37,9 @@ stored hashed, 14 days) · membership terms on `cellar_release_rates`
 One calculation for the month's charge (`_cellar/utils/monthlyMembershipCharge`)
 and one case count (`_cellar/utils/countChargeableCases`), in **case units**:
 everything measured in standard 75cl bottles (half bottle ½, magnum 2, double
-magnum 4, Imperial 8, other sizes by volume); a sealed case of up to 6 bottles
-(≤4.5 L) = ½, 7–12 bottles (≤9 L) = 1, above 12 one per 12 or part; loose
-bottles pooled, every 6 or part = ½. Sizes are parsed from cl/ml/L
+magnum 4, Imperial 8, other sizes by volume), rounded up to the next six — each
+sealed case on its own (up to 6 = ½, 7–12 = 1, 13–18 = 1½…), loose bottles
+pooled the same way. This is the single rule terms s.5 states (v3). Sizes are parsed from cl/ml/L
 (`bottleMillilitres`) — '150cl' used to be read as 150 ml.
 
 ## Rate card (Oct 2026)
@@ -48,7 +48,7 @@ Storage priced at London +20% (BBR/Octavian ~£17/12-bottle case/yr):
 
 | | Default |
 |---|---|
-| Membership | AED 600 / month, no VAT |
+| Membership | AED 600 / month + VAT where applicable (free-zone zero-rating NOT yet confirmed — terms v3 deliberately make no VAT promise) |
 | Included | 20 × 12-bottle cases (240 bottles; a 6-bottle case uses ½) |
 | Extra 12-bottle case | AED 8 / month (`extra_case_monthly_aed`) |
 | Extra 6-bottle case | AED 4 / month (half, derived) |

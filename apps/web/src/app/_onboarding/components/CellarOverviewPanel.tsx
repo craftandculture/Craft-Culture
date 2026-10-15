@@ -113,7 +113,7 @@ const CellarOverviewPanel = () => {
             Free until you first buy, release, sell or bring wine in. Then {aed(terms.membershipFeeAed)} a month for
             up to {terms.includedCases} cases of 12 (a 6-bottle case counts as half), then{' '}
             {aed(terms.extraCaseMonthlyAed)} per 12-bottle case and {aed(terms.extraCaseMonthlyAed / 2)} per 6-bottle
-            case. No VAT.
+            case.
           </p>
         )}
         {membershipStatus === 'past_due' && (

@@ -10,6 +10,7 @@ import useTRPC from '@/lib/trpc/browser';
 import FieldLabel from './FieldLabel';
 import IdSideCapture from './IdSideCapture';
 import fieldClass from '../constants/fieldClass';
+import { PRIVATE_CELLAR_TERMS_PATH } from '../constants/privateCellarTerms';
 import fileToUploadDataUrl from '../utils/fileToUploadDataUrl';
 
 export type ActivationAction = 'purchase' | 'release' | 'offer_for_sale' | 'transfer_in' | 'other';
@@ -148,7 +149,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
               ))}
             </div>
             <p className="text-text-muted flex items-center gap-2 text-xs">
-              <IconLock size={14} /> Encrypted when stored, seen only by our team and you.
+              <IconLock size={14} /> Stored securely, seen only by our team and you.
             </p>
             <button
               type="button"
@@ -166,7 +167,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
                 ['Membership', `${aed(data.terms.membershipFeeAed)} a month`],
                 ['Included', `Up to ${data.terms.includedCases} cases of 12 (a 6-bottle case counts as half)`],
                 ['Above that', `${aed(data.terms.extraCaseMonthlyAed)} per 12-bottle case, ${aed(data.terms.extraCaseMonthlyAed / 2)} per 6-bottle case, per month`],
-                ['VAT', 'None — free zone'],
+                ['VAT', 'Added only where it applies'],
                 ['Commitment', "Monthly, 30 days' notice"],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 px-4 py-2.5">
@@ -178,7 +179,12 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
             <p className="text-text-muted text-xs leading-5">
               {data.billingMode === 'invoice'
                 ? 'Membership starts today. We will send your membership invoice each month, payable by bank transfer; wine you buy is invoiced separately as before.'
-                : "Your card is taken on our billing provider's secure page. Membership starts today; wine you buy is still paid by bank transfer."}
+                : "Your card is taken on our billing provider's secure page. Membership starts today; wine you buy is still paid by bank transfer."}{' '}
+              By starting, you accept the{' '}
+              <a href={PRIVATE_CELLAR_TERMS_PATH} target="_blank" rel="noreferrer" className="underline">
+                membership terms
+              </a>{' '}
+              and the monthly fee and storage charges above, which continue until your membership ends.
             </p>
             <button
               type="button"

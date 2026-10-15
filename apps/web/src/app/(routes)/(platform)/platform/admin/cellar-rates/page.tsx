@@ -48,7 +48,7 @@ const FIELD_GROUPS: {
 }[] = [
   {
     title: 'Membership',
-    hint: 'Monthly, no VAT (free zone). Counted in standard 75cl bottles at month end: a 12-bottle case (7–12 bottles) is one, a 6-bottle case (up to 6) is half, loose bottles in sixes at half each. A 6-bottle case is charged at half the price below',
+    hint: 'Monthly, plus VAT where it applies. Counted at month end in standard 75cl bottles, each case (and loose bottles together) rounded up to the next six: up to 6 is half a case, 7–12 one. A 6-bottle unit is charged at half the price below',
     fields: [
       { key: 'membershipFeeAed', label: 'Monthly fee', suffix: 'AED' },
       { key: 'includedCases', label: '12-bottle cases included', suffix: 'cases' },

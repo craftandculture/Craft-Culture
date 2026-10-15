@@ -38,14 +38,14 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
     ['Membership', `${formatAed(terms.membershipFeeAed)} a month`],
     ['Included', `Storage for up to ${terms.includedCases} cases of 12 (a 6-bottle case counts as half)`],
     ['Above that', `${formatAed(terms.extraCaseMonthlyAed)} per 12-bottle case, ${formatAed(terms.extraCaseMonthlyAed / 2)} per 6-bottle case, per month`],
-    ['VAT', 'None — held in a free zone bond'],
+    ['VAT', 'Added only where it applies'],
     ['Commitment', "Monthly, with 30 days' notice"],
   ];
 
   return (
     <StepFrame
       title="Membership"
-      intro="There is no charge to open your account. Membership begins when you first buy, release, sell or transfer wine into your cellar, and your payment card is requested at that point."
+      intro="There is no charge to open your account. Membership begins when you first buy, release, sell or transfer wine into your cellar, and we confirm it with you at that point."
       onContinue={onSubmit}
       onBack={onBack}
       continueLabel="Submit"

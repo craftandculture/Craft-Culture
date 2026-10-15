@@ -18,12 +18,12 @@ const STANDARD_ML = 750;
  *
  * Storage is priced the way the London trade prices it: by volume, in 6-bottle
  * and 12-bottle cases (4.5 and 9 litres). Everything is measured in standard
- * 75cl bottles — a magnum is two, an Imperial eight, a half bottle half.
+ * 75cl bottles — a magnum is two, an Imperial eight, a half bottle half — and
+ * rounded up to the next six, which is the one rule the terms state (s.5):
  *
- * - A sealed case of up to 6 bottles is half a unit.
- * - A sealed case of 7 to 12 bottles is one unit; above 12, one unit for every
- *   12 or part of 12.
- * - Loose bottles are pooled and every 6, or part of 6, is half a unit.
+ * - Each sealed case is rounded up on its own: up to 6 bottles is half a unit,
+ *   7 to 12 is one, 13 to 18 one and a half, and so on.
+ * - Loose bottles are pooled and rounded up the same way.
  *
  * A 12-bottle case is therefore one case of the allowance and one extra-case
  * charge; a 6-bottle case is half of each.
@@ -46,8 +46,7 @@ const countChargeableCases = (rows: ChargeableStockRow[]) => {
     if (sealed > 0) {
       // Rounded so 0.9333… x 6 is not read as just over 6
       const perCase = Math.round(Math.max(1, row.caseConfig ?? 12) * bottlesPerBottle * 1000) / 1000;
-      const unitsPerCase = perCase <= 6 ? 0.5 : Math.ceil(perCase / 12);
-      units += sealed * unitsPerCase;
+      units += sealed * Math.ceil(perCase / 6) * 0.5;
     }
 
     looseBottles += Math.max(0, row.openBottles) * bottlesPerBottle;

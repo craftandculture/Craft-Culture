@@ -41,7 +41,7 @@ const openMembershipInvoiceTask = async ({
     if (!people.length) return false;
 
     const today = dubaiToday();
-    const what = `Zoho Books → new recurring invoice: AED ${membershipFeeAed.toLocaleString('en-GB')} monthly, no VAT, starting today. Extra storage is added from Cellar members → Storage each month.`;
+    const what = `Zoho Books → new recurring invoice: AED ${membershipFeeAed.toLocaleString('en-GB')} monthly (VAT as confirmed by our tax adviser), starting today. Extra storage is added from Cellar members → Storage each month.`;
 
     const taskId = await db.transaction(async (tx) => {
       const areaId = await resolveArea(tx, null, 'Private Cellar');

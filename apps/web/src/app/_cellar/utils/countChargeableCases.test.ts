@@ -27,9 +27,11 @@ describe('countChargeableCases', () => {
     expect(countChargeableCases([row(1, 1, '600cl')])).toBe(1);
   });
 
-  it('counts a case above 12 bottles as one unit per 12 or part', () => {
-    // 12 magnums = 24 bottles
+  it('rounds a case above 12 bottles up to the next six', () => {
+    // 12 magnums = 24 bottles; 9 magnums = 18; a case of 13 rounds to 18
     expect(countChargeableCases([row(1, 12, '150cl')])).toBe(2);
+    expect(countChargeableCases([row(1, 9, '150cl')])).toBe(1.5);
+    expect(countChargeableCases([row(1, 13)])).toBe(1.5);
   });
 
   it('counts twelve half bottles as a 6-bottle case', () => {
