@@ -1,3 +1,9 @@
+## [2.0.342](https://github.com/craftandculture/Craft-Culture/compare/v2.0.341...v2.0.342) (2026-10-15)
+
+### Features
+
+* **cellar:** storage priced at London +20% — AED 8 per 12-bottle case, AED 4 per 6-bottle case ([3a5a7d8](https://github.com/craftandculture/Craft-Culture/commit/3a5a7d82c420af52a61bb744ad5b183821fd8625))
+
 ## [2.0.341](https://github.com/craftandculture/Craft-Culture/compare/v2.0.340...v2.0.341) (2026-10-15)
 
 ### Features
