@@ -1,3 +1,9 @@
+## [2.0.330](https://github.com/craftandculture/Craft-Culture/compare/v2.0.329...v2.0.330) (2026-10-15)
+
+### Features
+
+* the price lists can show wines held for an order as Reserved instead of hiding them ([cbf70e1](https://github.com/craftandculture/Craft-Culture/commit/cbf70e15aefd6915e1bc0213879f16fe244be08c))
+
 ## [2.0.329](https://github.com/craftandculture/Craft-Culture/compare/v2.0.328...v2.0.329) (2026-10-15)
 
 ### Bug Fixes
