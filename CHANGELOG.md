@@ -1,3 +1,9 @@
+## [2.0.331](https://github.com/craftandculture/Craft-Culture/compare/v2.0.330...v2.0.331) (2026-10-15)
+
+### Bug Fixes
+
+* the Stock Explorer export names the owner of each wine instead of counting owners ([ba9557e](https://github.com/craftandculture/Craft-Culture/commit/ba9557e2c4861fb5ce32fa2454bab2376daee619))
+
 ## [2.0.330](https://github.com/craftandculture/Craft-Culture/compare/v2.0.329...v2.0.330) (2026-10-15)
 
 ### Features
