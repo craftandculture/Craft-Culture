@@ -1,3 +1,9 @@
+## [2.0.340](https://github.com/craftandculture/Craft-Culture/compare/v2.0.339...v2.0.340) (2026-10-15)
+
+### Bug Fixes
+
+* manual invoicing migration ran outside the migration function ([b8eb434](https://github.com/craftandculture/Craft-Culture/commit/b8eb4342089f29b9b7e9026aa64615a20b854eff))
+
 ## [2.0.339](https://github.com/craftandculture/Craft-Culture/compare/v2.0.338...v2.0.339) (2026-10-15)
 
 ### Features
