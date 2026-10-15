@@ -13,6 +13,12 @@ export const catalogueQuerySchema = z.object({
     .enum(['available', 'inbound', 'all'])
     .optional()
     .default('available'),
+  /**
+   * 'include' also returns landed wines held by an active order reservation,
+   * with status 'reserved' when nothing is left to sell. Off by default so an
+   * integration never sees stock it cannot order.
+   */
+  reserved: z.enum(['include', 'exclude']).optional().default('exclude'),
 });
 
 export type CatalogueQuery = z.infer<typeof catalogueQuerySchema>;
@@ -30,9 +36,12 @@ export interface CatalogueResponseItem {
   caseConfig: number;
   bottleSize: string | null;
   /** Sellable now, coming, or neither */
-  status: 'available' | 'in_transit' | 'unavailable';
+  status: 'available' | 'in_transit' | 'reserved' | 'unavailable';
   availableCases: number;
   availableBottles: number;
+  /** Held for a confirmed order — only populated with reserved=include */
+  reservedCases: number;
+  reservedBottles: number;
   /** Bought and on its way, not yet received */
   inTransitBottles: number;
   /** Price for the requested feed (IB for trade, PC for retail) */
