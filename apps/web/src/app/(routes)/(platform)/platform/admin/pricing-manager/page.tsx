@@ -2885,7 +2885,7 @@ const PricingManagerPage = () => {
                         key={`${isInbound ? 'inb-' : ''}${product.lwin18}${
                           isInbound
                             ? `-${(product as { shipmentNumber?: string | null }).shipmentNumber ?? ''}`
-                            : ''
+                            : `-${(product as { ownerId?: string | null }).ownerId ?? ''}`
                         }`}
                       >
                       {/*

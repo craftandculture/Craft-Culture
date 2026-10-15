@@ -7,7 +7,6 @@ import {
   gte,
   ilike,
   inArray,
-  isNotNull,
   or,
   sql,
 } from 'drizzle-orm';
@@ -32,6 +31,7 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import inboundLineKey from '../utils/inboundLineKey';
 import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
@@ -179,6 +179,15 @@ const adminGetPricingProducts = wmsOperatorProcedure
     const products = await db
       .select({
         lwin18: wmsStock.lwin18,
+        /*
+          One row per wine PER OWNER. The same wine held by two owners has two
+          costs — Crurated's Montille and Ihab's arrived on different invoices
+          at different prices — and one row could only show one of them.
+        */
+        ownerId: wmsStock.ownerId,
+        // The newest lot's paid and landed cost — see lotShipmentCost
+        lotProductCost: sql<number | null>`(array_agg(ship.product_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+        lotLandedCost: sql<number | null>`(array_agg(ship.landed_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
         productName: sql<string>`MAX(${wmsStock.productName})`,
         producer: sql<string | null>`MAX(${wmsStock.producer})`,
         vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
@@ -255,54 +264,13 @@ const adminGetPricingProducts = wmsOperatorProcedure
         wmsOwnerPricingSettings,
         eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
       )
+      .leftJoin(lotShipmentCost, sql`true`)
       .where(and(...whereConditions))
-      .groupBy(wmsStock.lwin18)
+      .groupBy(wmsStock.lwin18, wmsStock.ownerId)
       .having(and(...conditions))
       .orderBy(orderFn(sortExpr))
       .limit(limit)
       .offset(offset);
-
-    // Pull the latest shipment's product + landed cost for every row so we can
-    // show the PAID import price (product cost) and the live system logistics
-    // (freight = landed − product) as separate columns.
-    const allLwin18s = products.map((p) => p.lwin18);
-    const shipCostMap: Record<
-      string,
-      { productCost: number | null; landedCost: number | null }
-    > = {};
-
-    if (allLwin18s.length > 0) {
-      // Match pack-agnostically (LWIN7 + vintage + bottle size, ignoring the pack
-      // digits) so a repacked SKU (e.g. …-03-00750) inherits the base wine's
-      // per-bottle cost from the original shipment line (…-12-00750).
-      const pakStock = sql`split_part(${wmsStock.lwin18}, '-', 1) || '-' || split_part(${wmsStock.lwin18}, '-', 2) || '-' || split_part(${wmsStock.lwin18}, '-', 4)`;
-      const pakItem = sql`split_part(${logisticsShipmentItems.lwin}, '-', 1) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 2) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 4)`;
-      const shipmentRows = await db
-        .select({
-          lwin18: wmsStock.lwin18,
-          productCostPerBottle: logisticsShipmentItems.productCostPerBottle,
-          landedCostPerBottle: logisticsShipmentItems.landedCostPerBottle,
-          createdAt: logisticsShipmentItems.createdAt,
-        })
-        .from(wmsStock)
-        .innerJoin(
-          logisticsShipmentItems,
-          and(
-            isNotNull(logisticsShipmentItems.lwin),
-            sql`${pakItem} = ${pakStock}`,
-          ),
-        )
-        .where(inArray(wmsStock.lwin18, allLwin18s))
-        .orderBy(desc(logisticsShipmentItems.createdAt));
-
-      for (const row of shipmentRows) {
-        if (shipCostMap[row.lwin18] != null) continue;
-        shipCostMap[row.lwin18] = {
-          productCost: row.productCostPerBottle,
-          landedCost: row.landedCostPerBottle,
-        };
-      }
-    }
 
     // Break landed cost into its parts: import (paid goods, ex-freight) + system
     // logistics (live group freight) + transfer + override. A stored manual
@@ -411,7 +379,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
     }
 
     const enrichedProducts = products.map((p) => {
-      const ship = shipCostMap[p.lwin18];
+      const ship = { productCost: p.lotProductCost, landedCost: p.lotLandedCost };
       const manualImport =
         p.importPricePerBottle != null && p.importPricePerBottle > 0
           ? p.importPricePerBottle
@@ -450,7 +418,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
         eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
       )
       .where(and(...whereConditions))
-      .groupBy(wmsStock.lwin18)
+      .groupBy(wmsStock.lwin18, wmsStock.ownerId)
       .having(and(...conditions))
       .as('counted');
 
@@ -574,10 +542,7 @@ const adminGetPricingProducts = wmsOperatorProcedure
           eq(wmsOwnerPricing.ownerId, wmsStock.ownerId),
         ),
       )
-      .leftJoin(
-        sql`(SELECT DISTINCT ON (split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4)) split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4) AS pak, product_cost_per_bottle AS product_cost, landed_cost_per_bottle AS landed_cost FROM logistics_shipment_items WHERE lwin IS NOT NULL ORDER BY split_part(lwin,'-',1)||'-'||split_part(lwin,'-',2)||'-'||split_part(lwin,'-',4), created_at DESC) ship`,
-        sql`ship.pak = split_part(${wmsStock.lwin18},'-',1)||'-'||split_part(${wmsStock.lwin18},'-',2)||'-'||split_part(${wmsStock.lwin18},'-',4)`,
-      )
+      .leftJoin(lotShipmentCost, sql`true`)
       .where(and(...summaryConditions));
 
     // Blended margin = C&C's portfolio margin between in-bond and landed:
