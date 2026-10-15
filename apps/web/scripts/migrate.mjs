@@ -2604,16 +2604,6 @@ const runMigrations = async () => {
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_draft_hold_lines_hold_idx" ON "zoho_draft_hold_lines"("hold_id")`);
     console.log('✅ draft SO holds ready');
 
-    await client.end();
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Migration failed:', error);
-    await client.end();
-    process.exit(1);
-  }
-};
-
-runMigrations();
     /*
       PCO manual invoicing — per order line: delivered and waiting for a manual
       invoice, or invoiced against a number and date. Its own table so a missed
@@ -2639,3 +2629,13 @@ runMigrations();
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "pco_item_invoicing_number_idx" ON "pco_item_invoicing"("invoice_number")`);
     console.log('✅ PCO manual invoicing ready');
 
+    await client.end();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    await client.end();
+    process.exit(1);
+  }
+};
+
+runMigrations();
