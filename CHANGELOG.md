@@ -1,3 +1,9 @@
+## [2.0.346](https://github.com/craftandculture/Craft-Culture/compare/v2.0.345...v2.0.346) (2026-10-15)
+
+### Bug Fixes
+
+* **cellar:** first test-run findings ([a6a3a28](https://github.com/craftandculture/Craft-Culture/commit/a6a3a287c05261ca9c76def94cd3e09ef3168e0e))
+
 ## [2.0.345](https://github.com/craftandculture/Craft-Culture/compare/v2.0.344...v2.0.345) (2026-10-15)
 
 ### Bug Fixes
