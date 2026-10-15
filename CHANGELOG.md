@@ -1,3 +1,24 @@
+## [2.0.341](https://github.com/craftandculture/Craft-Culture/compare/v2.0.340...v2.0.341) (2026-10-15)
+
+### Features
+
+* **cellar:** activate on first action, membership by card via Zoho Billing ([c0fdd9f](https://github.com/craftandculture/Craft-Culture/commit/c0fdd9f15e30796cfa3a655d32f99d3d11c2b21e))
+* **cellar:** applications tab for Kevin and Laraine ([911e543](https://github.com/craftandculture/Craft-Culture/commit/911e543c518c9dc080e0b2347406c8366b926620))
+* **cellar:** bring wine in, and track each transfer ([b229e8a](https://github.com/craftandculture/Craft-Culture/commit/b229e8a5777b2f7415fd32dc968fd21b304a8b9e))
+* **cellar:** invite members to Private Cellar ([f1851d2](https://github.com/craftandculture/Craft-Culture/commit/f1851d2200ad6136684d250cc5cf8d7de01c7155))
+* **cellar:** membership pricing on the rate card, and the member's overview ([bd549e6](https://github.com/craftandculture/Craft-Culture/commit/bd549e657ec53dc0bc537d285e6563468563c29b))
+* **cellar:** private cellar application at /join ([ea89088](https://github.com/craftandculture/Craft-Culture/commit/ea89088684fb9cf194eaed4ec9e6f8be3bdcc916))
+* **cellar:** private cellar membership terms page and module guide ([5e31158](https://github.com/craftandculture/Craft-Culture/commit/5e31158cdfc74b18a5e7fd7abebe2b71a7108f9d))
+* **cellar:** storage tab and push extra cases to Zoho Billing ([db92646](https://github.com/craftandculture/Craft-Culture/commit/db92646460f9c30ecaefc723bbff2e859ef9555d))
+
+### Bug Fixes
+
+* **auth:** allow sign-in on preview builds; professional copy on Private Cellar sign-up ([22787e2](https://github.com/craftandculture/Craft-Culture/commit/22787e27c0260d1061d9e4f922cb551ca9a7e960))
+* **cellar:** a business login cannot join Private Cellar ([1ff9ed1](https://github.com/craftandculture/Craft-Culture/commit/1ff9ed1fe417e61db6b51861f1e08c5e10790b91))
+* **cellar:** ID upload — camera button on phones only, clear message for large PDFs; greeting for invites only ([639a320](https://github.com/craftandculture/Craft-Culture/commit/639a320eab38045a4e8878e070acf8eb07e445a2))
+* **cellar:** sign-up page copy says what it is; larger logo ([d81a272](https://github.com/craftandculture/Craft-Culture/commit/d81a272893e4b7549ec50c0b5df8e3be481ba80b))
+* close three holes before cellar onboarding opens up ([3df210a](https://github.com/craftandculture/Craft-Culture/commit/3df210a0e570b78a62f6cc2516456add0f5a897e))
+
 ## [2.0.340](https://github.com/craftandculture/Craft-Culture/compare/v2.0.339...v2.0.340) (2026-10-15)
 
 ### Bug Fixes
