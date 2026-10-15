@@ -8,7 +8,9 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { logisticsDocuments, logisticsShipmentCostLines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
+import isFetchableLogisticsFileUrl from '../utils/isFetchableLogisticsFileUrl';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
 
 /** USD-pegged currencies convert at a fixed rate; others need the LLM's rate. */
@@ -102,6 +104,11 @@ const adminExtractShipmentInvoice = adminProcedure
       'You extract logistics charge lines from freight/clearance invoices. Return numbers only for amounts and the currency.';
 
     const parseOne = async (fileUrl: string, mimeType: string | null) => {
+      // SSRF guard: only our Blob store or Hillebrand's document host
+      if (!isFetchableLogisticsFileUrl(fileUrl)) {
+        logger.error('Refusing to fetch logistics document from an unrecognised host');
+        return null;
+      }
       const fileRes = await fetch(fileUrl);
       if (!fileRes.ok) return null;
       const buffer = Buffer.from(await fileRes.arrayBuffer());

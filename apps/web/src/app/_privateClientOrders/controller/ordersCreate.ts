@@ -1,9 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
-import { privateClientOrders } from '@/database/schema';
+import { privateClientContacts, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -52,6 +52,28 @@ const ordersCreate = winePartnerProcedure
       does not quietly multiply records for a regular.
     */
     let clientId = input.clientId ?? null;
+
+    // A saved client must be one of this partner's own; another partner's
+    // client id is treated as not found rather than linked to this order.
+    if (clientId) {
+      const [ownClient] = await db
+        .select({ id: privateClientContacts.id })
+        .from(privateClientContacts)
+        .where(
+          and(
+            eq(privateClientContacts.id, clientId),
+            eq(privateClientContacts.partnerId, partnerId),
+          ),
+        )
+        .limit(1);
+
+      if (!ownClient) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Client not found',
+        });
+      }
+    }
 
     if (!clientId && input.clientName?.trim()) {
       const resolved = await findOrCreateClientForPartner(partnerId, {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import { teamProcedure } from '@/lib/trpc/procedures';
 
 import getTeam from '../data/getTeam';
@@ -40,7 +41,7 @@ const reassignPart = teamProcedure
 
     const slack =
       task && task.status === 'open'
-        ? await postTasksSlack(`${slackTag(to)} ${ctx.user.name} passed you a part of ${jobLink(task)}: ${part.what}`)
+        ? await postTasksSlack(`${slackTag(to)} ${escapeSlackText(ctx.user.name)} passed you a part of ${jobLink(task)}: ${escapeSlackText(part.what)}`)
         : { posted: false, reason: null };
 
     return { slack };

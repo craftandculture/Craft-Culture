@@ -3,7 +3,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import parseOutletSalesReport from './parseOutletSalesReport';
+import parseOutletSalesReport, {
+  monthFromHeading,
+} from './parseOutletSalesReport';
 
 /** City Drinks' real August 2026 report, kept verbatim */
 const workbook = fs
@@ -59,5 +61,24 @@ describe('parseOutletSalesReport', () => {
     expect(parsed.lines.some((line) => /total/i.test(line.outletCode))).toBe(
       false,
     );
+  });
+});
+
+describe('the month heading as City Drinks write it', () => {
+  /*
+    They headed August "August" and September "Sales September". An exact
+    match rejected the whole file for the word in front of the month.
+  */
+  it.each([
+    ['August', '2026-08'],
+    ['Sales September', '2026-09'],
+    ['  sales  october ', '2026-10'],
+    ['Sales December', '2026-12'],
+  ])('reads %s', (heading, expected) => {
+    expect(monthFromHeading(heading, 2026)).toBe(expected);
+  });
+
+  it('refuses a heading naming no month', () => {
+    expect(monthFromHeading('Quantity', 2026)).toBeNull();
   });
 });

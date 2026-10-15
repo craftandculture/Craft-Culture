@@ -33,6 +33,7 @@ import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTime
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
+import ManualInvoicingCard from '@/app/_privateClientOrders/components/ManualInvoicingCard';
 import OrderNoteComposer from '@/app/_privateClientOrders/components/OrderNoteComposer';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
@@ -1316,6 +1317,11 @@ const AdminPrivateOrderDetailPage = () => {
               excludeStatuses={['at_distributor']}
             />
           )}
+
+        {/* Manual invoicing — delivered lines awaiting, or carrying, a manual invoice */}
+        {order.items && order.items.length > 0 && order.status !== 'draft' && (
+          <ManualInvoicingCard orderId={orderId} />
+        )}
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

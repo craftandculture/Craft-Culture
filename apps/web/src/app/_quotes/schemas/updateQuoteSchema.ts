@@ -29,7 +29,10 @@ const updateQuoteSchema = z.object({
   clientEmail: z.string().email().max(255).optional(),
   clientCompany: z.string().min(1).max(255).optional(),
   notes: z.string().max(5000).optional(),
-  status: z.enum(['draft', 'sent', 'accepted', 'rejected', 'expired']).optional(),
+  // No `status` here: a quote moves through its workflow only via the
+  // dedicated endpoints (submit buy request, PO, payment proof, admin
+  // approval), never by the owner setting it directly — that let a user mark
+  // their own quote accepted.
   currency: z.enum(['USD', 'AED']).optional(),
   totalUsd: z.number().optional(),
   totalAed: z.number().optional(),

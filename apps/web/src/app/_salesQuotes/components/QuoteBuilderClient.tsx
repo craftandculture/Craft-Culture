@@ -111,7 +111,8 @@ const QuoteBuilderClient = () => {
     ...api.salesQuotes.admin.save.mutationOptions(),
     onSuccess: (saved) => {
       toast.success('Quote saved');
-      setForm((current) => ({ ...current, id: saved.id }));
+      // a new quote's slug comes back with its random suffix
+      setForm((current) => ({ ...current, id: saved.id, slug: saved.slug }));
       void invalidate();
     },
     onError: (error) => toast.error(describeSaveError(error.message, lines)),

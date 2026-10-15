@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get commission summary for the current B2C user
@@ -13,7 +13,7 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.commissions.getSummary.query();
  */
-const commissionsGetSummary = protectedProcedure.query(async ({ ctx: { user } }) => {
+const commissionsGetSummary = approvedProcedure.query(async ({ ctx: { user } }) => {
   // Verify user is B2C (only B2C users earn commission)
   const [userData] = await db
     .select({ customerType: users.customerType })

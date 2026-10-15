@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import acceptAlternativeSchema from '../schemas/acceptAlternativeSchema';
@@ -21,7 +21,7 @@ import acceptAlternativeSchema from '../schemas/acceptAlternativeSchema';
  *     alternativeIndex: 0
  *   });
  */
-const quotesAcceptAlternative = protectedProcedure
+const quotesAcceptAlternative = approvedProcedure
   .input(acceptAlternativeSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId, productId, alternativeIndex } = input;

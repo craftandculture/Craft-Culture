@@ -23,6 +23,12 @@ export const POST = async (request: Request) => {
           throw new Error('Unauthorized');
         }
 
+        // A signup awaiting approval has nothing it may upload yet; without
+        // this, any self-registered account could write to Blob storage.
+        if (user.approvalStatus !== 'approved') {
+          throw new Error('Forbidden');
+        }
+
         return {
           allowedContentTypes: [
             'application/pdf',

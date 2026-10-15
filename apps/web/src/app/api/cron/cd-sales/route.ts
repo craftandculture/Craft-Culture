@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import sendDailySalesReport from '@/app/_distribution/data/sendDailySalesReport';
+import isCronAuthorised from '@/lib/cron/isCronAuthorised';
 import logger from '@/utils/logger';
 
 export const dynamic = 'force-dynamic';
@@ -16,9 +17,7 @@ export const maxDuration = 60;
  * posts to Slack.
  */
 export const GET = async (request: Request) => {
-  const secret = process.env.CRON_SECRET;
-
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!isCronAuthorised(request)) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
@@ -31,6 +30,6 @@ export const GET = async (request: Request) => {
 
     logger.error('Daily sales report failed', { error: message });
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 };

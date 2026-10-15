@@ -1,3 +1,71 @@
+## [2.0.339](https://github.com/craftandculture/Craft-Culture/compare/v2.0.338...v2.0.339) (2026-10-15)
+
+### Features
+
+* PCO manual invoicing — Delivered, Manual Invoice Pending → Invoiced ([51b5275](https://github.com/craftandculture/Craft-Culture/commit/51b52751d451d2942baa272367dfce1886bd7677))
+
+## [2.0.338](https://github.com/craftandculture/Craft-Culture/compare/v2.0.337...v2.0.338) (2026-10-15)
+
+### Bug Fixes
+
+* Pricing Manager import cost comes from the stock's own invoice, not a typed figure ([116343e](https://github.com/craftandculture/Craft-Culture/commit/116343e8e1f9a94f7cf4ed6317b125f7ae384cb9))
+
+## [2.0.337](https://github.com/craftandculture/Craft-Culture/compare/v2.0.336...v2.0.337) (2026-10-15)
+
+### Bug Fixes
+
+* Pricing Manager costs each owner's stock from the shipment it arrived on ([8d056e0](https://github.com/craftandculture/Craft-Culture/commit/8d056e08a069b5255aaf6c90719fc422ac6e281f))
+
+## [2.0.336](https://github.com/craftandculture/Craft-Culture/compare/v2.0.335...v2.0.336) (2026-10-15)
+
+### Reverts
+
+* Revert "fix: export invoice sections show their case count instead of their line count" ([07dfca3](https://github.com/craftandculture/Craft-Culture/commit/07dfca342fbb09107e0464f159dd59bd2bcdfaaf))
+
+## [2.0.335](https://github.com/craftandculture/Craft-Culture/compare/v2.0.334...v2.0.335) (2026-10-15)
+
+### Bug Fixes
+
+* export invoice sections show their case count instead of their line count ([92f1fc8](https://github.com/craftandculture/Craft-Culture/commit/92f1fc8deb14444313a7b06ffded2b08d21225f1))
+
+## [2.0.334](https://github.com/craftandculture/Craft-Culture/compare/v2.0.333...v2.0.334) (2026-10-15)
+
+### Reverts
+
+* reserved stock in the catalogue, reapplied without its fix ([356e72d](https://github.com/craftandculture/Craft-Culture/commit/356e72da97b4cab2d9a24eaae7b0cd1165cab3a6))
+
+## [2.0.333](https://github.com/craftandculture/Craft-Culture/compare/v2.0.332...v2.0.333) (2026-10-15)
+
+### Features
+
+* the price lists can show wines held for an order as Reserved instead of hiding them ([4276d67](https://github.com/craftandculture/Craft-Culture/commit/4276d672ebca18e343e4af4f71715aa84fe6e3ad))
+
+## [2.0.332](https://github.com/craftandculture/Craft-Culture/compare/v2.0.331...v2.0.332) (2026-10-15)
+
+### Reverts
+
+* reserved stock in the catalogue broke the Available Now feed ([9c6f683](https://github.com/craftandculture/Craft-Culture/commit/9c6f683969117d0605d11d0d47003d330b699c95))
+
+## [2.0.331](https://github.com/craftandculture/Craft-Culture/compare/v2.0.330...v2.0.331) (2026-10-15)
+
+### Bug Fixes
+
+* the Stock Explorer export names the owner of each wine instead of counting owners ([ba9557e](https://github.com/craftandculture/Craft-Culture/commit/ba9557e2c4861fb5ce32fa2454bab2376daee619))
+
+## [2.0.330](https://github.com/craftandculture/Craft-Culture/compare/v2.0.329...v2.0.330) (2026-10-15)
+
+### Features
+
+* the price lists can show wines held for an order as Reserved instead of hiding them ([cbf70e1](https://github.com/craftandculture/Craft-Culture/commit/cbf70e15aefd6915e1bc0213879f16fe244be08c))
+
+## [2.0.329](https://github.com/craftandculture/Craft-Culture/compare/v2.0.328...v2.0.329) (2026-10-15)
+
+### Bug Fixes
+
+* close account-takeover, script-injection and data-exposure gaps from the October security audit ([33df1a6](https://github.com/craftandculture/Craft-Culture/commit/33df1a631ed506d4c6b0de8d2cb3bed60f8f0556))
+* find the month in the heading rather than demanding it alone ([2ced6f5](https://github.com/craftandculture/Craft-Culture/commit/2ced6f540394ea28774c32459390b9ac31c2e9f9))
+* upgrade Next.js, Better Auth and other packages with known security flaws ([a6ac4ae](https://github.com/craftandculture/Craft-Culture/commit/a6ac4ae5c2a39100ea2833acb98d37a73d2f20ec))
+
 ## [2.0.328](https://github.com/craftandculture/Craft-Culture/compare/v2.0.327...v2.0.328) (2026-10-15)
 
 ### Features

@@ -13,6 +13,7 @@ import {
   DISTRIBUTOR_VISIBLE_STATUSES,
 } from '../constants';
 import getOrdersSchema from '../schemas/getOrdersSchema';
+import distributorOrderView from '../utils/distributorOrderView';
 
 const distributorGetOrdersSchema = getOrdersSchema.extend({
   /** A pipeline stage: a group of statuses (see DISTRIBUTOR_STAGES) */
@@ -120,7 +121,7 @@ const distributorGetMany = distributorProcedure
 
     // Flatten the response
     const ordersWithPartner = ordersList.map((row) => ({
-      ...row.order,
+      ...distributorOrderView(row.order),
       bottleCount: Number(row.bottleCount ?? 0),
       partner: row.partner,
       client: row.client,

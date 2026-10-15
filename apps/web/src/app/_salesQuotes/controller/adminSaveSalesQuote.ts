@@ -8,6 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { saveSalesQuoteSchema } from '../schemas/salesQuoteSchemas';
 import quoteTotals from '../utils/quoteTotals';
+import withSlugSuffix from '../utils/withSlugSuffix';
 
 /**
  * Create or update a sales quote.
@@ -18,26 +19,31 @@ import quoteTotals from '../utils/quoteTotals';
  * never drifts from the lines.
  *
  * Saving never changes `status`: publishing is a separate, deliberate action.
+ *
+ * A new quote's slug gets a random suffix so its public link cannot be
+ * guessed; existing quotes keep the slug they were saved with.
  */
 const adminSaveSalesQuote = adminProcedure
   .input(saveSalesQuoteSchema)
   .mutation(async ({ ctx, input }) => {
-    const { id, lines, options, contactEmail, ...rest } = input;
+    const { id, lines, options, contactEmail, ...fields } = input;
+    const slug = id ? input.slug : withSlugSuffix(input.slug);
+    const rest = { ...fields, slug };
 
     const clash = await db
       .select({ id: salesQuotes.id })
       .from(salesQuotes)
       .where(
         id
-          ? and(eq(salesQuotes.slug, input.slug), ne(salesQuotes.id, id))
-          : eq(salesQuotes.slug, input.slug),
+          ? and(eq(salesQuotes.slug, slug), ne(salesQuotes.id, id))
+          : eq(salesQuotes.slug, slug),
       )
       .limit(1);
 
     if (clash.length) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: `The slug "${input.slug}" is already used by another quote`,
+        message: `The slug "${slug}" is already used by another quote`,
       });
     }
 

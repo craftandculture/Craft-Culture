@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, inArray, isNull, notInArray, or, sql } from 'driz
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
-import db from '@/database/client';
+import db, { client } from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import {
   partners,
@@ -13,6 +13,8 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { DISTRIBUTOR_SKU_LOCKED_STATUSES, PCO_STAGES } from '../constants';
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
+import describeInvoicing from '../utils/describeInvoicing';
+import pcoInvoicingReady from '../utils/pcoInvoicingReady';
 
 const adminGetOrdersSchema = z.object({
   limit: z.number().min(1).max(100).default(20),
@@ -26,6 +28,11 @@ const adminGetOrdersSchema = z.object({
   idle: z.boolean().optional(),
   /** Orders whose distributor needs a bundle SKU that isn't recorded yet */
   skuMissing: z.boolean().optional(),
+  /**
+   * Manual invoicing: `pending` — a delivered line still waits for its
+   * invoice; `invoiced` — delivered lines all invoiced, none pending
+   */
+  invoice: z.enum(['pending', 'invoiced']).optional(),
   /** A distributor's orders, or 'unassigned' for orders with none */
   distributor: z.union([z.literal('unassigned'), z.string().uuid()]).optional(),
   /** One subscription box; a null variant means the box with no variant */
@@ -49,7 +56,8 @@ const distributorPartner = alias(partners, 'distributor_partner');
 const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, search, status, partnerId, box, distributor, stage, skuMissing, idle } = input;
+    const { limit, cursor, search, status, partnerId, box, distributor, stage, skuMissing, idle, invoice } = input;
+    const invoicingReady = await pcoInvoicingReady();
 
     // Build where conditions
     const conditions = [];
@@ -98,6 +106,15 @@ const adminGetMany = wmsOperatorProcedure
         box.variant === null
           ? isNull(privateClientOrders.subscriptionVariant)
           : eq(privateClientOrders.subscriptionVariant, box.variant),
+      );
+    }
+
+    if (invoice && invoicingReady) {
+      conditions.push(
+        invoice === 'pending'
+          ? sql`EXISTS (SELECT 1 FROM pco_item_invoicing i WHERE i.order_id = ${privateClientOrders.id} AND i.status = 'pending')`
+          : sql`EXISTS (SELECT 1 FROM pco_item_invoicing i WHERE i.order_id = ${privateClientOrders.id} AND i.status = 'invoiced')
+                AND NOT EXISTS (SELECT 1 FROM pco_item_invoicing i WHERE i.order_id = ${privateClientOrders.id} AND i.status = 'pending')`,
       );
     }
 
@@ -155,12 +172,33 @@ const adminGetMany = wmsOperatorProcedure
       .limit(limit)
       .offset(cursor);
 
+    /*
+      Manual-invoicing label per order on this page: lines on the order, and
+      how many are delivered awaiting an invoice or invoiced.
+    */
+    const ids = ordersList.map((row) => row.order.id);
+    const invoicingBy = new Map<string, ReturnType<typeof describeInvoicing>>();
+    if (invoicingReady && ids.length > 0) {
+      const counts = await client<{ orderId: string; lines: number; pending: number; invoiced: number }[]>`
+        SELECT it.order_id AS "orderId",
+               COUNT(*)::int AS lines,
+               COUNT(*) FILTER (WHERE inv.status = 'pending')::int AS pending,
+               COUNT(*) FILTER (WHERE inv.status = 'invoiced')::int AS invoiced
+        FROM private_client_order_items it
+        LEFT JOIN pco_item_invoicing inv ON inv.item_id = it.id
+        WHERE it.order_id = ANY(${ids}::uuid[])
+        GROUP BY it.order_id
+      `;
+      counts.forEach((c) => invoicingBy.set(c.orderId, describeInvoicing(c)));
+    }
+
     // Flatten the response
     const ordersWithPartner = ordersList.map((row) => ({
       ...row.order,
       partner: row.partner,
       client: row.client,
       distributor: row.distributor?.id ? row.distributor : null,
+      invoicing: invoicingBy.get(row.order.id) ?? null,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;

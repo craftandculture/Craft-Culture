@@ -1,18 +1,10 @@
-import crypto from 'crypto';
-
 import { NextResponse } from 'next/server';
 
 import sendDailySensorSummary from '@/app/_warehouse/data/sendDailySensorSummary';
 import logger from '@/utils/logger';
+import matchesSecret from '@/utils/matchesSecret';
 
 export const dynamic = 'force-dynamic';
-
-/** Constant-time compare of a bearer token against a secret, both trimmed */
-const matches = (token: string, secret: string | undefined) => {
-  const a = Buffer.from(token.trim());
-  const b = Buffer.from((secret ?? '').trim());
-  return b.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
-};
 
 /**
  * Cold room daily summary to #warehouse-data
@@ -24,7 +16,7 @@ const matches = (token: string, secret: string | undefined) => {
 export const GET = async (request: Request) => {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer /, '');
 
-  if (!matches(token, process.env.CRON_SECRET) && !matches(token, process.env.WAREHOUSE_API_KEY)) {
+  if (!matchesSecret(token, process.env.CRON_SECRET) && !matchesSecret(token, process.env.WAREHOUSE_API_KEY)) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
@@ -34,6 +26,6 @@ export const GET = async (request: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Cold room daily summary failed', { error: message });
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 };

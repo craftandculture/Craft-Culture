@@ -50,6 +50,19 @@ at all.
 Use `writeProductPricing()` for every pricing write. It updates every row sharing
 the pack-agnostic key and inserts only when there is none.
 
+### Cost belongs to the lot, not the wine
+
+Import cost is read per stock row through `lotShipmentCost()`: the line on the
+shipment that stock arrived on, then the same supplier SKU, then the exact
+LWIN18, and only then the latest line for the wine anywhere (repacks, and stock
+with no shipment recorded). It used to be that last rule alone, so two lots of
+one wine shared whichever cost arrived last — Ihab's village Chambolle took the
+Clos des Danguerins price, his Montille took Crurated's.
+
+Rows are therefore one per wine **per owner**. Manual import prices, overrides,
+transfers and sell prices still live on the shared `wms_product_pricing` row,
+so editing them changes every owner's row of that wine.
+
 ### An in-transit line is its LWIN *or its product name*
 
 Most in-transit stock arrives from a supplier's spreadsheet with no LWIN, so the
@@ -108,9 +121,11 @@ overwritten by the server's old value before the blur that would have saved it.
 ## Known gaps
 
 - **Release is per wine, not per owner** — see above.
-- **The same wine held by two owners** has two costs and therefore two prices;
-  the catalogue collapses them with `MAX()`, so which price a customer sees is
-  arbitrary rather than chosen.
+- **The same wine held by two owners** now has two costs in the Pricing
+  Manager (one row per owner), but manual import, override and sell prices are
+  still shared per wine, and the catalogue still collapses owners with `MAX()`.
+  Stock Explorer, the catalogue and the cellar read cost their own way — move
+  them onto `lotShipmentCost()` rather than adding a fifth rule.
 - **Landed-cost feeds pricing before freight is allocated**, so a part-costed
   shipment prices as if it were cheap.
 - The landed→in-bond→PC calculation exists in three places (row render, Excel

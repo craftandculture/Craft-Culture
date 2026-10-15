@@ -2,6 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsLocations, wmsPickListItems, wmsPickLists } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -58,7 +59,7 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
       : [];
 
     const order = await describeOrder(pl.orderId, pl.orderNumber);
-    const link = `<${serverConfig.appUrl}/platform/admin/wms/pick/${pl.id}|${pl.pickListNumber}>`;
+    const link = `<${serverConfig.appUrl}/platform/admin/wms/pick/${pl.id}|${escapeSlackText(pl.pickListNumber)}>`;
 
     const cases = items.reduce((n, i) => n + (i.bottles ? 0 : i.cases), 0);
     const bottles = items.reduce((n, i) => n + (i.bottles ?? 0), 0);
@@ -70,18 +71,18 @@ const announcePickList = async (pickListId: string, event: PickListEvent, actorN
       .slice(0, 15)
       .map((i) => {
         const qty = i.bottles ? `${i.bottles} btl (split case)` : `${i.cases} cs`;
-        return `• ${qty}  ${i.name}${i.location && event === 'released' ? `  _${i.location}_` : ''}`;
+        return `• ${qty}  ${escapeSlackText(i.name)}${i.location && event === 'released' ? `  _${escapeSlackText(i.location)}_` : ''}`;
       });
     if (items.length > 15) lines.push(`…and ${items.length - 15} more lines`);
 
     let meta = `${items.length} line${items.length === 1 ? '' : 's'} · ${size || 'no quantities'}`;
-    if (event === 'released' && assignee) meta += ` · assigned to ${assignee.name}`;
-    if (event === 'started' && actorName) meta += ` · ${actorName}`;
+    if (event === 'released' && assignee) meta += ` · assigned to ${escapeSlackText(assignee.name)}`;
+    if (event === 'started' && actorName) meta += ` · ${escapeSlackText(actorName)}`;
     if (event === 'completed') {
       const mins = pl.startedAt && pl.completedAt ? Math.round((pl.completedAt.getTime() - pl.startedAt.getTime()) / 60000) : null;
-      meta += `${completedBy ? ` · by ${completedBy}` : ''}${mins !== null ? ` · ${mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`}` : ''}`;
+      meta += `${completedBy ? ` · by ${escapeSlackText(completedBy)}` : ''}${mins !== null ? ` · ${mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`}` : ''}`;
     }
-    if (event === 'cancelled' && actorName) meta += ` · by ${actorName}`;
+    if (event === 'cancelled' && actorName) meta += ` · by ${escapeSlackText(actorName)}`;
 
     const showLines = event === 'released' || event === 'completed';
     return await postWarehouseSlack(

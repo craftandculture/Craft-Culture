@@ -3,6 +3,7 @@ import { and, eq, isNull, lte } from 'drizzle-orm';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -56,9 +57,9 @@ const sendMorningDigests = async () => {
 
     if (token && person.slackMemberId) {
       const line = (r: (typeof mine)[number]) =>
-        `• <${url}?job=${r.taskId}|${r.title.replace(/[<>|]/g, '')}>: ${r.what}${r.due! < today ? ` (was due ${shortDate(r.due!)})` : ''}`;
+        `• <${url}?job=${r.taskId}|${escapeSlackText(r.title.replace(/[<>|]/g, ''))}>: ${escapeSlackText(r.what)}${r.due! < today ? ` (was due ${shortDate(r.due!)})` : ''}`;
       const text = [
-        `Good morning ${person.name.split(' ')[0]}. On your list: ${summary}.`,
+        `Good morning ${escapeSlackText(person.name.split(' ')[0])}. On your list: ${summary}.`,
         overdue.length ? `*Overdue*\n${overdue.map(line).join('\n')}` : '',
         dueToday.length ? `*Due today*\n${dueToday.map(line).join('\n')}` : '',
       ]

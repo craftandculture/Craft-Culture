@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 const cancelOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -17,7 +17,7 @@ const cancelOrderSchema = z.object({
  * Admins can cancel any order.
  * Partners can only cancel their own orders that are in draft or submitted status.
  */
-const ordersCancel = protectedProcedure.input(cancelOrderSchema).mutation(async ({ input, ctx }) => {
+const ordersCancel = approvedProcedure.input(cancelOrderSchema).mutation(async ({ input, ctx }) => {
   const { orderId, reason } = input;
   const { user } = ctx;
 

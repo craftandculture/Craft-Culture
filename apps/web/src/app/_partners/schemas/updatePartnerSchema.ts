@@ -1,5 +1,7 @@
 import z from 'zod';
 
+import isHttpsUrl from '@/utils/isHttpsUrl';
+
 const paymentDetailsSchema = z.object({
   // Bank transfer details
   bankName: z.string().optional(),
@@ -10,7 +12,7 @@ const paymentDetailsSchema = z.object({
   swiftBic: z.string().optional(),
   reference: z.string().optional(),
   // Payment link
-  paymentUrl: z.string().url().optional().or(z.literal('')),
+  paymentUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional().or(z.literal('')),
 });
 
 const updatePartnerSchema = z.object({
@@ -40,7 +42,7 @@ const updatePartnerSchema = z.object({
   commissionRate: z.number().min(0).max(100).optional(),
   notes: z.string().optional(),
   // Branding
-  logoUrl: z.string().url().optional().or(z.literal('')),
+  logoUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional().or(z.literal('')),
   // Payment configuration (partner can have both bank transfer AND payment link)
   paymentDetails: paymentDetailsSchema.optional(),
   // PCO pricing settings

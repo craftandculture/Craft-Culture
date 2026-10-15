@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 const commissionsGetDetailsSchema = z.object({
   limit: z.number().min(1).max(50).default(20),
@@ -16,7 +16,7 @@ const commissionsGetDetailsSchema = z.object({
  * @example
  *   await trpcClient.commissions.getDetails.query({ limit: 20, cursor: 0 });
  */
-const commissionsGetDetails = protectedProcedure
+const commissionsGetDetails = approvedProcedure
   .input(commissionsGetDetailsSchema)
   .query(async ({ input, ctx: { user } }) => {
     const { limit, cursor } = input;

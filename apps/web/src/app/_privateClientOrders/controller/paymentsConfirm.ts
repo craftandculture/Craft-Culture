@@ -9,7 +9,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrders,
 } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
@@ -23,7 +23,7 @@ const confirmPaymentSchema = z.object({
  * Updates the payment timestamp and reference for the specified stage.
  * Also updates the order status to the next appropriate state.
  */
-const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(async ({ input, ctx }) => {
+const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(async ({ input, ctx }) => {
   const { orderId, paymentStage, reference } = input;
   const { user } = ctx;
 
@@ -93,6 +93,16 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
         throw new TRPCError({
           code: 'CONFLICT',
           message: 'Client payment already confirmed',
+        });
+      }
+      // The client pays once the distributor has verified the client, so the
+      // order must be waiting on that payment. Any other status would let the
+      // partner skip verification (or reopen a finished order) by marking it
+      // paid.
+      if (order.status !== 'awaiting_client_payment') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot confirm client payment for an order with status "${order.status}". The order must be awaiting client payment.`,
         });
       }
       updateData.clientPaidAt = now;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import alertSilentSensors from '@/app/_warehouse/data/alertSilentSensors';
+import isCronAuthorised from '@/lib/cron/isCronAuthorised';
 import logger from '@/utils/logger';
 
 export const dynamic = 'force-dynamic';
@@ -15,9 +16,7 @@ export const dynamic = 'force-dynamic';
  * unset.
  */
 export const GET = async (request: Request) => {
-  const secret = process.env.CRON_SECRET;
-
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!isCronAuthorised(request)) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
@@ -27,6 +26,6 @@ export const GET = async (request: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Warehouse sensor watch failed', { error: message });
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 };

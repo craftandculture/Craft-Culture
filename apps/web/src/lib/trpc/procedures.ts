@@ -110,7 +110,7 @@ export const teamProcedure = protectedProcedure.use(async ({ ctx, next }) => {
  * jobs C&C has shared with their partner in Team Tasks. Injects the partnerId
  * so every read and write is limited to that partner's shared jobs.
  */
-export const partnerTaskProcedure = protectedProcedure.use(
+export const partnerTaskProcedure = approvedProcedure.use(
   async ({ ctx, next }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
@@ -146,7 +146,7 @@ export const partnerTaskProcedure = protectedProcedure.use(
  * Users must be explicitly linked to a wine partner by an admin.
  * Injects the partnerId into the context for data isolation.
  */
-export const winePartnerProcedure = protectedProcedure.use(
+export const winePartnerProcedure = approvedProcedure.use(
   async ({ ctx, next }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
@@ -190,7 +190,7 @@ export const winePartnerProcedure = protectedProcedure.use(
  * Users must be explicitly linked to a distributor by an admin.
  * Injects the partnerId into the context for data isolation.
  */
-export const distributorProcedure = protectedProcedure.use(
+export const distributorProcedure = approvedProcedure.use(
   async ({ ctx, next }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
@@ -230,7 +230,7 @@ export const distributorProcedure = protectedProcedure.use(
  * or a private collector. Distributors are deliberately excluded: they fulfil
  * orders, they do not own stock, so nothing here would be theirs to see.
  */
-export const stockOwnerProcedure = protectedProcedure.use(
+export const stockOwnerProcedure = approvedProcedure.use(
   async ({ ctx, next }) => {
     /*
       An account awaiting approval holds nothing yet. Only the page redirect
@@ -286,7 +286,7 @@ export const stockOwnerProcedure = protectedProcedure.use(
  * Users must be explicitly linked to a supplier by an admin.
  * Injects the partnerId into the context for data isolation.
  */
-export const supplierProcedure = protectedProcedure.use(
+export const supplierProcedure = approvedProcedure.use(
   async ({ ctx, next }) => {
     const { eq, and } = await import('drizzle-orm');
     const { partners, partnerMembers } = await import('@/database/schema');

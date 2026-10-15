@@ -84,7 +84,6 @@ const refreshAccessToken = async (): Promise<string> => {
 
   logger.info('Zoho token refresh starting', {
     clientIdPreview: `${clientId.slice(0, 10)}...${clientId.slice(-4)}`,
-    refreshTokenPreview: `${refreshToken.slice(0, 10)}...${refreshToken.slice(-4)}`,
   });
 
   const params = new URLSearchParams({

@@ -25,8 +25,8 @@ const trailingCols = (labels: QuoteLabels) =>
 
 const renderQuoteRow = (line: PreparedLine, labels: QuoteLabels) => {
   const format = labels.bottlesOnly
-    ? line.size
-    : `${line.pack} &times; ${line.size}`;
+    ? escapeHtml(line.size)
+    : `${line.pack} &times; ${escapeHtml(line.size)}`;
   const magnumChip = line.mag
     ? ` <span class="lf">${MAGNUM_ICON}${largeFormatLabel(line.sizeCl)}</span>`
     : '';

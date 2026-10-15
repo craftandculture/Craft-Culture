@@ -8,9 +8,12 @@ import { DEFAULT_REGION_ORDER, INBOUND } from '../constants';
 import type { QuoteLabels } from '../types';
 import STANDARD_TEMPLATE from './standardTemplate';
 import escapeHtml from '../utils/escapeHtml';
+import escapeQuoteText from '../utils/escapeQuoteText';
 import formatQuoteDate from '../utils/formatQuoteDate';
+import jsStringLiteral from '../utils/jsStringLiteral';
 import prepareQuoteLine from '../utils/prepareQuoteLine';
 import renderQuoteRow from '../utils/renderQuoteRow';
+import sanitizeQuoteHtml from '../utils/sanitizeQuoteHtml';
 
 
 /** The subset of a stored quote the renderer needs. */
@@ -108,9 +111,11 @@ const renderQuote = (quote: RenderableQuote) => {
   const priceBasis = options.priceBasis || 'In Bond, UAE';
   const prefilled = items.some((item) => item.qty > 0);
 
-  const leadNote =
-    options.leadNote ||
-    'Prices are <strong style="color:var(--teal2)">In Bond, UAE</strong> &mdash; exclusive of duty, tax &amp; delivery, and match the C&amp;C price sheet. ' +
+  // Lead note, payment terms and extra terms carry light markup by design
+  // (<b>, <strong>, entities), so they are sanitised to that markup, not escaped
+  const leadNote = options.leadNote
+    ? sanitizeQuoteHtml(options.leadNote)
+    : 'Prices are <strong style="color:var(--teal2)">In Bond, UAE</strong> &mdash; exclusive of duty, tax &amp; delivery, and match the C&amp;C price sheet. ' +
       (perBottle
         ? '<strong style="color:var(--teal2)">Priced &amp; ordered per bottle.</strong> '
         : '<strong style="color:var(--teal2)">Sold by the case</strong> &mdash; single bottles where noted. ') +
@@ -128,7 +133,7 @@ const renderQuote = (quote: RenderableQuote) => {
     (inbound
       ? `<li><b>${escapeHtml(INBOUND)}</b> &mdash; purchased and in transit to our UAE bonded warehouse; reserve now against the incoming parcel.</li>`
       : '') +
-    (options.extraTerms ?? []).map((term) => `<li>${term}</li>`).join('');
+    (options.extraTerms ?? []).map((term) => `<li>${sanitizeQuoteHtml(term)}</li>`).join('');
 
   const bodyClass = [
     perBottle ? 'bottle-mode' : '',
@@ -140,13 +145,14 @@ const renderQuote = (quote: RenderableQuote) => {
   const subtitle = quote.subtitle || `Prepared for ${quote.client}`;
 
   const replacements: Record<string, string> = {
-    '{{TITLE}}': options.title || `${quote.h1} — Craft & Culture`,
-    '{{OG_DESC}}': `${subtitle} · ${inStock} fine wines, prices ${priceBasis}.`,
-    '{{PRICE_BASIS}}': priceBasis,
+    '{{TITLE}}': escapeQuoteText(options.title || `${quote.h1} — Craft & Culture`),
+    '{{OG_DESC}}': escapeQuoteText(`${subtitle} · ${inStock} fine wines, prices ${priceBasis}.`),
+    '{{PRICE_BASIS}}': escapeQuoteText(priceBasis),
+    '{{PRICE_BASIS_JS}}': jsStringLiteral(priceBasis),
     // default reproduces the previously hardcoded line exactly
-    '{{PAYMENT_TERMS}}':
-      options.paymentTerms ||
-      '<b>Payment terms:</b> 30 days from date of invoice.',
+    '{{PAYMENT_TERMS}}': options.paymentTerms
+      ? sanitizeQuoteHtml(options.paymentTerms)
+      : '<b>Payment terms:</b> 30 days from date of invoice.',
     // only claim a promo when a line actually carries one
     '{{PROMO_TERM}}': items.some((item) => item.promo)
       ? '<li><b style="color:#f0b429">Discount Promo</b> &mdash; promotional pricing on the ' +
@@ -155,12 +161,15 @@ const renderQuote = (quote: RenderableQuote) => {
     '{{PRICE_TERMS}}':
       'All prices are <b>In Bond, UAE</b> &mdash; exclusive of duty, tax &amp; delivery. ' +
       `Quotation valid until ${validUntil} and subject to availability.`,
-    '{{SLUG}}': quote.slug,
-    '{{EYEBROW}}': quote.eyebrow,
-    '{{H1}}': quote.h1,
-    '{{SUBTITLE}}': subtitle,
-    '{{CLIENT}}': quote.client,
-    '{{QUOTEREF}}': quote.quoteRef,
+    '{{SLUG}}': escapeHtml(quote.slug),
+    '{{EYEBROW}}': escapeQuoteText(quote.eyebrow),
+    '{{H1}}': escapeQuoteText(quote.h1),
+    '{{SUBTITLE}}': escapeQuoteText(subtitle),
+    '{{CLIENT}}': escapeQuoteText(quote.client),
+    '{{CLIENT_JS}}': jsStringLiteral(quote.client),
+    '{{QUOTEREF}}': escapeQuoteText(quote.quoteRef),
+    '{{QUOTEREF_JS}}': jsStringLiteral(quote.quoteRef),
+    '{{QUOTEREF_URL}}': escapeHtml(encodeURIComponent(quote.quoteRef ?? '')),
     '{{VALIDUNTIL}}': validUntil,
     '{{PROMOUNTIL}}': quote.promoUntil
       ? formatQuoteDate(quote.promoUntil)

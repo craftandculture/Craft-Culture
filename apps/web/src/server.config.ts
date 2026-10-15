@@ -13,7 +13,7 @@ const serverConfig = {
   twilioAuthToken: serverEnv.TWILIO_AUTH_TOKEN,
   twilioPhoneNumber: serverEnv.TWILIO_PHONE_NUMBER,
   adminPhoneNumber: serverEnv.ADMIN_PHONE_NUMBER,
-  adminDomains: ['byont.nl', 'craftculture.xyz'],
+  adminDomains: ['craftculture.xyz'],
   zohoClientId: serverEnv.ZOHO_CLIENT_ID,
   zohoClientSecret: serverEnv.ZOHO_CLIENT_SECRET,
   zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,

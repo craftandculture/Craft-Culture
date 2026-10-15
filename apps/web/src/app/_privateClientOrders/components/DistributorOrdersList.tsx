@@ -30,7 +30,6 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { DistributorQueue, DistributorStage } from '../constants';
@@ -40,13 +39,14 @@ import {
   DISTRIBUTOR_STAGES,
 } from '../constants';
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
+import type { DistributorOrder } from '../utils/distributorOrderView';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
 const DEFAULT_EXCHANGE_RATE = 3.67;
 
-type OrderWithPartner = PrivateClientOrder & {
+type OrderWithPartner = DistributorOrder & {
   bottleCount: number;
   partner: { id: string; businessName: string; logoUrl: string | null } | null;
   client: { id: string; cityDrinksVerifiedAt: Date | null } | null;

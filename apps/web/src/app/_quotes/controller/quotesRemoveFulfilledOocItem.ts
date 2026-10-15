@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 const removeFulfilledOocItemSchema = z.object({
@@ -24,7 +24,7 @@ const removeFulfilledOocItemSchema = z.object({
  *     requestId: "ooc-123"
  *   });
  */
-const quotesRemoveFulfilledOocItem = protectedProcedure
+const quotesRemoveFulfilledOocItem = approvedProcedure
   .input(removeFulfilledOocItemSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId, requestId } = input;

@@ -6,7 +6,7 @@ import { fileTypeFromBuffer } from 'file-type';
 
 import db from '@/database/client';
 import { partnerMembers, privateClientOrderDocuments } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 import logger from '@/utils/logger';
 
@@ -26,7 +26,7 @@ const ALLOWED_DOCUMENT_TYPES = [
  * Stores the file in Vercel Blob and creates a database record.
  * Supports partner invoices, C&C invoices, distributor invoices, and payment proofs.
  */
-const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
+const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
   const { orderId, documentType, file, filename } = input;
   const { user } = ctx;
 
@@ -111,6 +111,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
     const blob = await put(blobFilename, buffer, {
       access: 'public',
       contentType: detectedType.mime,
+      addRandomSuffix: true,
     });
 
     // Create database record

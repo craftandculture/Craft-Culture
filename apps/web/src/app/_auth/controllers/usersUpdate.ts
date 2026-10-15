@@ -5,7 +5,7 @@ import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
 import { partners, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
-
+import logger from '@/utils/logger';
 
 import updateUserSchema from '../schemas/updateUserSchema';
 
@@ -13,8 +13,7 @@ import updateUserSchema from '../schemas/updateUserSchema';
  * Update user profile during onboarding
  *
  * When a user selects "Wine Partner" (customerType: 'private_clients'),
- * automatically creates a Partner record linked to their account — always a new
- * one; an existing partner with the same name is flagged to admins, never claimed.
+ * automatically creates a Partner record linked to their account.
  */
 const usersUpdate = protectedProcedure
   .input(updateUserSchema)
@@ -42,14 +41,17 @@ const usersUpdate = protectedProcedure
 
       if (!existingPartner) {
         /*
-          A new account always gets its own partner record.
+          A partner already trading under this name is never claimed here.
 
-          This used to look for a partner already trading under the typed name
-          and hand it to the new user — its stock, its shipments, its pricing.
-          A name is not proof of identity: anyone typing "Cult Wines" would have
-          been given Cult Wines' account on approval. A genuine member of an
-          existing business is linked by an admin instead (one dropdown on the
-          Users page), and the match is raised so that is not missed.
+          Creating a record whenever the user had none gave a business long
+          since on file — with its stock, its shipments and its pricing
+          margins — a second, empty one the moment somebody signed in. But
+          handing the existing record to whoever signs up under the same name
+          let any unapproved signup take over that partner. So a name match
+          creates nothing: the admins are told, and they link the user through
+          the existing Assign Partner action on the user's admin page
+          (users.assignPartner, usersAssignPartner.ts). Only a name with no
+          match gets a fresh wine partner record.
         */
         const name = updatedUser.name ?? ctx.user.email ?? 'Wine Partner';
         const key = normalisePartnerName(name);
@@ -64,21 +66,30 @@ const usersUpdate = protectedProcedure
             )
           : undefined;
 
-        await db.insert(partners).values({
-          userId: ctx.user.id,
-          type: 'wine_partner',
-          businessName: name,
-        });
-
         if (byName) {
-          await createAdminNotifications({
-            type: 'new_user_pending',
-            title: `Possible match: ${byName.businessName}`,
-            message: `${ctx.user.email ?? name} signed up as "${name}", which matches the existing partner "${byName.businessName}". If they genuinely belong to it, link them on the Users page — nothing has been linked automatically.`,
-            entityType: 'user',
-            entityId: ctx.user.id,
-            actionUrl: '/platform/admin/users?filter=pending',
-            metadata: { matchedPartnerId: byName.id },
+          logger.info(
+            'Onboarding user matches an existing partner by name; not linking',
+            { userId: ctx.user.id, partnerId: byName.id },
+          );
+
+          try {
+            await createAdminNotifications({
+              type: 'new_user_pending',
+              title: 'Signup matches an existing partner',
+              message: `${name} (${ctx.user.email}) signed up under the name of an existing partner, ${byName.businessName}. Review and assign the partner manually if this is the same business.`,
+              entityType: 'user',
+              entityId: ctx.user.id,
+              actionUrl: `/platform/admin/users/${ctx.user.id}`,
+              metadata: { matchedPartnerId: byName.id },
+            });
+          } catch (error) {
+            logger.error('Failed to notify admins of partner name match:', error);
+          }
+        } else {
+          await db.insert(partners).values({
+            userId: ctx.user.id,
+            type: 'wine_partner',
+            businessName: name,
           });
         }
       }

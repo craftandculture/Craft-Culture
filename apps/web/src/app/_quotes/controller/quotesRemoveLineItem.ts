@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 const removeLineItemSchema = z.object({
@@ -24,7 +24,7 @@ const removeLineItemSchema = z.object({
  *     productId: "product-123"
  *   });
  */
-const quotesRemoveLineItem = protectedProcedure
+const quotesRemoveLineItem = approvedProcedure
   .input(removeLineItemSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId, productId } = input;

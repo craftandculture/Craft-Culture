@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import submitPOSchema from '../schemas/submitPOSchema';
@@ -20,7 +20,7 @@ import submitPOSchema from '../schemas/submitPOSchema';
  *     poAttachmentUrl: "https://..."
  *   });
  */
-const quotesSubmitPO = protectedProcedure
+const quotesSubmitPO = approvedProcedure
   .input(submitPOSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     const { quoteId, poNumber, poAttachmentUrl } = input;

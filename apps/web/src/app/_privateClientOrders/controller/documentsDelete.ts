@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 const deleteDocumentSchema = z.object({
@@ -18,7 +18,7 @@ const deleteDocumentSchema = z.object({
  * Removes the file from Vercel Blob and deletes the database record.
  * Only the uploader or an admin can delete a document.
  */
-const documentsDelete = protectedProcedure.input(deleteDocumentSchema).mutation(async ({ input, ctx }) => {
+const documentsDelete = approvedProcedure.input(deleteDocumentSchema).mutation(async ({ input, ctx }) => {
   const { documentId } = input;
   const { user } = ctx;
 

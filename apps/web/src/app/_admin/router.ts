@@ -1,4 +1,8 @@
-import { adminProcedure, protectedProcedure } from '@/lib/trpc/procedures';
+import {
+  adminProcedure,
+  approvedProcedure,
+  protectedProcedure,
+} from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import activityLogCreate from './controllers/activityLogCreate';
@@ -40,7 +44,7 @@ const userActivityLogsRouter = createTRPCRouter({
 });
 
 const settingsRouter = createTRPCRouter({
-  get: protectedProcedure
+  get: approvedProcedure
     .input(settingsGetInputSchema)
     .query(async ({ input }) => {
       return await settingsGetController(input);

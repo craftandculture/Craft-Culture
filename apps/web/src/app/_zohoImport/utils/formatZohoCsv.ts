@@ -1,3 +1,5 @@
+import neutraliseCsvFormula from '@/utils/neutraliseCsvFormula';
+
 import type { ZohoItem } from '../schemas/zohoItemSchema';
 
 /**
@@ -59,7 +61,8 @@ const formatZohoRow = (item: ZohoItem, supplierName: string): string[] => {
 /**
  * Escape a CSV field value
  */
-const escapeCsvField = (value: string): string => {
+const escapeCsvField = (raw: string): string => {
+  const value = neutraliseCsvFormula(raw);
   // If value contains comma, newline, or quote, wrap in quotes and escape quotes
   if (value.includes(',') || value.includes('\n') || value.includes('"')) {
     return `"${value.replace(/"/g, '""')}"`;

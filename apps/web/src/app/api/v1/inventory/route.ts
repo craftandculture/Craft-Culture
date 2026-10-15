@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { PARTNER_FEED_PERMISSION } from '@/app/_partners/schemas/createApiKeySchema';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -11,7 +12,7 @@ import { inventoryQuerySchema } from './schema';
 import checkRateLimit from '../_middleware/checkRateLimit';
 import validateApiKey from '../_middleware/validateApiKey';
 import logApiRequest from '../_utils/logApiRequest';
-
+import toInventoryOffer from '../_utils/toInventoryOffer';
 
 /**
  * GET /api/v1/inventory
@@ -46,7 +47,7 @@ export const GET = async (request: NextRequest) => {
   // Check permissions
   if (!permissions.includes('read:inventory')) {
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 403,
@@ -65,7 +66,7 @@ export const GET = async (request: NextRequest) => {
   const rateLimitResult = await checkRateLimit(apiKeyId);
   if (!rateLimitResult.allowed) {
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 429,
@@ -89,7 +90,7 @@ export const GET = async (request: NextRequest) => {
 
     if (!queryResult.success) {
       const responseTimeMs = Date.now() - startTime;
-      void logApiRequest({
+      await logApiRequest({
         request,
         endpoint,
         statusCode: 400,
@@ -104,7 +105,15 @@ export const GET = async (request: NextRequest) => {
       );
     }
 
-    const { cursor, limit, source, inStock } = queryResult.data;
+    const { cursor, limit, inStock } = queryResult.data;
+
+    /*
+      Same rule as the catalogue: a partner-feed key sees one supplier, so
+      neither the offer source nor a filter on it (which would disclose the
+      source through the results) is available to it.
+    */
+    const partnerFeed = permissions.includes(PARTNER_FEED_PERMISSION);
+    const source = partnerFeed ? undefined : queryResult.data.source;
 
     // Get products with offers
     const productsWithOffers = await db.query.products.findMany({
@@ -183,16 +192,7 @@ export const GET = async (request: NextRequest) => {
       country: product.country,
       vintage: product.year,
       imageUrl: product.imageUrl,
-      offers: product.productOffers.map((offer) => ({
-        id: offer.id,
-        source: offer.source,
-        price: offer.price,
-        currency: offer.currency,
-        unitCount: offer.unitCount,
-        unitSize: offer.unitSize,
-        availableQuantity: offer.availableQuantity,
-        inStock: offer.availableQuantity > 0,
-      })),
+      offers: product.productOffers.map((offer) => toInventoryOffer(offer, partnerFeed)),
     }));
 
     const response: InventoryListResponse = {
@@ -204,7 +204,7 @@ export const GET = async (request: NextRequest) => {
     };
 
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 200,
@@ -217,7 +217,7 @@ export const GET = async (request: NextRequest) => {
   } catch (error) {
     logger.error('Error fetching inventory:', error);
     const responseTimeMs = Date.now() - startTime;
-    void logApiRequest({
+    await logApiRequest({
       request,
       endpoint,
       statusCode: 500,

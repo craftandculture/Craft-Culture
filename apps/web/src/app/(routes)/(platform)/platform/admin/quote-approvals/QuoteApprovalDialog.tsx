@@ -33,6 +33,7 @@ import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
+import safeHref from '@/utils/safeHref';
 
 import ReviewLineItemRow from './ReviewLineItemRow';
 
@@ -1374,7 +1375,7 @@ const QuoteApprovalDialog = ({
                                 Payment Link
                               </Typography>
                               <a
-                                href={selectedPartner.paymentDetails.paymentUrl}
+                                href={safeHref(selectedPartner.paymentDetails.paymentUrl)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm text-text-brand hover:underline break-all"
@@ -1481,7 +1482,7 @@ const QuoteApprovalDialog = ({
                       </Typography>
                       <div className="flex flex-wrap items-center gap-3">
                         <a
-                          href={quote.poAttachmentUrl}
+                          href={safeHref(quote.poAttachmentUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
@@ -1493,8 +1494,10 @@ const QuoteApprovalDialog = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => {
+                            const href = safeHref(quote.poAttachmentUrl);
+                            if (!href) return;
                             const link = document.createElement('a');
-                            link.href = quote.poAttachmentUrl!;
+                            link.href = href;
                             link.download = `PO-${quote.poNumber}.pdf`;
                             document.body.appendChild(link);
                             link.click();
@@ -1807,7 +1810,7 @@ const QuoteApprovalDialog = ({
                           Payment Link
                         </Typography>
                         <a
-                          href={quote.paymentDetails.paymentUrl}
+                          href={safeHref(quote.paymentDetails.paymentUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-text-brand hover:underline break-all"
@@ -1834,7 +1837,7 @@ const QuoteApprovalDialog = ({
                         )}
                       </div>
                       <a
-                        href={quote.paymentProofUrl}
+                        href={safeHref(quote.paymentProofUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg bg-fill-success px-4 py-2 text-sm font-medium text-white hover:bg-fill-success/90 transition-colors"

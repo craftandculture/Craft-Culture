@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 
 import getPeople from './getPeople';
 import logTaskEvent from './logTaskEvent';
@@ -58,8 +59,8 @@ const setPartDone = async (partId: string, done: boolean, actor: { id: string; n
       .from(teamTaskParts)
       .where(and(eq(teamTaskParts.waitsForPartId, part.id), eq(teamTaskParts.done, false)));
     if (waiting.length && !task.waitingOn) {
-      const tags = waiting.map((w) => `${slackTag(people.find((t) => t.id === w.ownerId))} ${w.what}`);
-      slack = await postTasksSlack(`Your turn on *${task.title}*: ${ownerName} finished "${part.what}".\n${tags.join(' · ')}`);
+      const tags = waiting.map((w) => `${slackTag(people.find((t) => t.id === w.ownerId))} ${escapeSlackText(w.what)}`);
+      slack = await postTasksSlack(`Your turn on *${escapeSlackText(task.title)}*: ${escapeSlackText(ownerName)} finished "${escapeSlackText(part.what)}".\n${tags.join(' · ')}`);
     }
   }
 

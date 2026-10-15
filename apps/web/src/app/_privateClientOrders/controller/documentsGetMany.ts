@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { partnerMembers, privateClientOrderDocuments, users } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 const getDocumentsSchema = z.object({
   orderId: z.string().uuid(),
@@ -15,7 +15,7 @@ const getDocumentsSchema = z.object({
  *
  * Returns documents with uploader info, ordered by upload date descending.
  */
-const documentsGetMany = protectedProcedure.input(getDocumentsSchema).query(async ({ input, ctx }) => {
+const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async ({ input, ctx }) => {
   const { orderId } = input;
   const { user } = ctx;
 

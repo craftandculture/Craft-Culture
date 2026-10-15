@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/procedures';
+import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import getQuotesSchema from '../schemas/getQuotesSchema';
 
@@ -17,7 +17,7 @@ import getQuotesSchema from '../schemas/getQuotesSchema';
  *     status: "draft"
  *   });
  */
-const quotesGetMany = protectedProcedure
+const quotesGetMany = approvedProcedure
   .input(getQuotesSchema)
   .query(async ({ input, ctx: { user } }) => {
     const { limit, cursor, search, status } = input;
