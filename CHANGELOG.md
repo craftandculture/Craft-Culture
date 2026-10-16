@@ -1,3 +1,9 @@
+## [2.0.362](https://github.com/craftandculture/Craft-Culture/compare/v2.0.361...v2.0.362) (2026-10-16)
+
+### Features
+
+* export jobs take cases and bottles, and the invoice number picks a Zoho invoice ([88672b5](https://github.com/craftandculture/Craft-Culture/commit/88672b5999543df4da3aeb81e1f8ff4f0df41891))
+
 ## [2.0.361](https://github.com/craftandculture/Craft-Culture/compare/v2.0.360...v2.0.361) (2026-10-16)
 
 ### Bug Fixes
