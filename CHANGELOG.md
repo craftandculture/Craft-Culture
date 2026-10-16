@@ -1,3 +1,9 @@
+## [2.0.377](https://github.com/craftandculture/Craft-Culture/compare/v2.0.376...v2.0.377) (2026-10-16)
+
+### Features
+
+* **cellar:** a proper welcome on the join page ([839ad1b](https://github.com/craftandculture/Craft-Culture/commit/839ad1bf267c2a681a1212d77d10fe4d54fd0c5c))
+
 ## [2.0.376](https://github.com/craftandculture/Craft-Culture/compare/v2.0.375...v2.0.376) (2026-10-16)
 
 ### Bug Fixes
