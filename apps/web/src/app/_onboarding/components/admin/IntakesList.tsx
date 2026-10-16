@@ -104,7 +104,19 @@ const IntakesList = () => {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
-                {isTransfer && (
+                {isTransfer && !shipment && shipments.length === 0 && (
+                  /* Every inbound shipment is received or cancelled, so there is nothing to link yet */
+                  <span className="flex items-center gap-2">
+                    <span className="text-text-muted text-xs">No open shipments yet</span>
+                    <Link
+                      href="/platform/admin/logistics/shipments/new"
+                      className="border-border-muted text-text-primary hover:bg-fill-muted inline-flex h-9 items-center rounded-lg border px-3 text-xs font-semibold"
+                    >
+                      New shipment
+                    </Link>
+                  </span>
+                )}
+                {isTransfer && (shipment || shipments.length > 0) && (
                   <select
                     value={shipment?.shipmentId ?? ''}
                     disabled={linkShipment.isPending}
