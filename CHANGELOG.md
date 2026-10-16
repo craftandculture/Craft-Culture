@@ -1,3 +1,9 @@
+## [2.0.349](https://github.com/craftandculture/Craft-Culture/compare/v2.0.348...v2.0.349) (2026-10-16)
+
+### Bug Fixes
+
+* **cellar:** Available now opens on wine, wine is green, names get the room ([bf38f55](https://github.com/craftandculture/Craft-Culture/commit/bf38f55397c4ba6bf5ec30093eae2ca916ada0a3))
+
 ## [2.0.348](https://github.com/craftandculture/Craft-Culture/compare/v2.0.347...v2.0.348) (2026-10-16)
 
 ### Features
