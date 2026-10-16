@@ -6,6 +6,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import HowToPayPanel from '@/app/_cellar/components/HowToPayPanel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -31,7 +32,7 @@ const STATES: Record<
   reserved: {
     label: 'Reserved for you',
     tone: 'waiting',
-    detail: 'Send the transfer, then tell us you have.',
+    detail: 'Pay by bank transfer using the details above, then press “I have paid”.',
   },
   payment_claimed: {
     label: 'Checking your transfer',
@@ -209,6 +210,15 @@ const PurchasesPage = () => {
               </div>
 
               <div className="border-border-muted bg-fill-muted/30 border-t px-4 py-3">
+                {purchase.status === 'reserved' && (
+                  <div className="mb-3">
+                    <HowToPayPanel
+                      details={data?.paymentDetails ?? null}
+                      amountUsd={purchase.totalUsd}
+                      reference={purchase.purchaseNumber}
+                    />
+                  </div>
+                )}
                 {/*
                   A table, not a sentence. "Charmes · 2020 · 1 case" left the
                   producer, the format and the per-bottle price out, which are

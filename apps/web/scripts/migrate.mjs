@@ -2749,6 +2749,21 @@ const runMigrations = async () => {
     });
     console.log('✅ cellar storage re-priced');
 
+    /*
+      Where members pay for wine bought in bond (Oct 2026). Its own table so a
+      missed migration can only blank the bank panel, never the rate card.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_payment_settings" (
+        "id" text PRIMARY KEY DEFAULT 'house' NOT NULL,
+        "details" jsonb NOT NULL,
+        "updated_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ cellar payment settings ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

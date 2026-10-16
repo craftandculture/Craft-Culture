@@ -7425,6 +7425,30 @@ export const cellarApplications = pgTable(
  * `source`: uae_in_bond | lcb | uk_eu_cellar | with_cc | starting_fresh
  * `stage`: requested → in_progress → arriving_uk → shipping_uae → in_cellar, or closed
  */
+/**
+ * Where members pay C&C: the bank details shown on every reserved purchase
+ *
+ * One row (id 'house'). Kept apart from the rate card on purpose — every rate
+ * read selects the whole card, so a column added there that a deploy failed to
+ * migrate would break them all; this table is only ever read behind a guard.
+ */
+export const cellarPaymentSettings = pgTable('cellar_payment_settings', {
+  id: text('id').primaryKey().default('house'),
+  details: jsonb('details')
+    .$type<{
+      accountName?: string;
+      bankName?: string;
+      iban?: string;
+      swiftBic?: string;
+      accountNumber?: string;
+      currency?: string;
+      note?: string;
+    }>()
+    .notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+});
+
 export const cellarIntakes = pgTable(
   'cellar_intakes',
   {

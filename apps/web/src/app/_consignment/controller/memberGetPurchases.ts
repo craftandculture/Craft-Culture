@@ -1,5 +1,6 @@
 import { desc, eq, inArray } from 'drizzle-orm';
 
+import getMemberPaymentDetails from '@/app/_cellar/data/getMemberPaymentDetails';
 import db from '@/database/client';
 import { cellarPurchaseItems, cellarPurchases } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
@@ -19,7 +20,11 @@ const memberGetPurchases = stockOwnerProcedure.query(async ({ ctx }) => {
     .orderBy(desc(cellarPurchases.createdAt))
     .limit(100);
 
-  if (purchases.length === 0) return { purchases: [] };
+  if (purchases.length === 0) return { purchases: [], paymentDetails: null };
+
+  const paymentDetails = purchases.some((purchase) => ['reserved', 'payment_claimed'].includes(purchase.status))
+    ? await getMemberPaymentDetails()
+    : null;
 
   const items = await db
     .select({
@@ -70,6 +75,8 @@ const memberGetPurchases = stockOwnerProcedure.query(async ({ ctx }) => {
       createdAt: purchase.createdAt,
       items: byPurchase.get(purchase.id) ?? [],
     })),
+    /** Where to pay, shown while anything is still owed */
+    paymentDetails,
   };
 });
 

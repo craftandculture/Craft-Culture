@@ -3,9 +3,11 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
 import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
+import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
 import adminQuoteRelease from './controller/adminQuoteRelease';
+import adminSetPaymentDetails from './controller/adminSetPaymentDetails';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import memberAcceptRelease from './controller/memberAcceptRelease';
 import memberAmendRelease from './controller/memberAmendRelease';
@@ -41,6 +43,8 @@ const adminRouter = createTRPCRouter({
   getMembers: adminGetMembers,
   getMemberIdentity: adminGetMemberIdentity,
   encryptIdentityDocuments: adminEncryptIdentityDocuments,
+  getPaymentDetails: adminGetPaymentDetails,
+  setPaymentDetails: adminSetPaymentDetails,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
 });
