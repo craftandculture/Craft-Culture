@@ -1,3 +1,11 @@
+## [2.0.376](https://github.com/craftandculture/Craft-Culture/compare/v2.0.375...v2.0.376) (2026-10-16)
+
+### Bug Fixes
+
+* deleting a user no longer fails on records they created or approved ([1b95997](https://github.com/craftandculture/Craft-Culture/commit/1b95997417dc592d836b6f91b5cbd0a1eeec20d4))
+* deleting a user returns straight to the Users list ([5ad4d71](https://github.com/craftandculture/Craft-Culture/commit/5ad4d71ceccf905d1849360252e990e16f1a38e7))
+* user delete hands required records to the deleting admin ([01ea521](https://github.com/craftandculture/Craft-Culture/commit/01ea521f280a3e5a6798ec8dd450944b665fdd9a))
+
 ## [2.0.375](https://github.com/craftandculture/Craft-Culture/compare/v2.0.374...v2.0.375) (2026-10-16)
 
 ### Features
