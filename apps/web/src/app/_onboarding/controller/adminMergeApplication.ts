@@ -89,7 +89,25 @@ const adminMergeApplication = staffAdminProcedure
         }
 
         await tx.update(cellarIntakes).set({ partnerId: targetId }).where(eq(cellarIntakes.partnerId, own.id));
-        await tx.delete(cellarMemberships).where(eq(cellarMemberships.partnerId, own.id));
+        /*
+          The membership follows the person. Deleting it lost an active
+          member's status and start date; it moves to the target unless the
+          target already has one, which then stands.
+        */
+        const [targetMembership] = await tx
+          .select({ id: cellarMemberships.id })
+          .from(cellarMemberships)
+          .where(eq(cellarMemberships.partnerId, targetId))
+          .limit(1);
+
+        if (targetMembership) {
+          await tx.delete(cellarMemberships).where(eq(cellarMemberships.partnerId, own.id));
+        } else {
+          await tx
+            .update(cellarMemberships)
+            .set({ partnerId: targetId })
+            .where(eq(cellarMemberships.partnerId, own.id));
+        }
         await tx
           .delete(partnerMembers)
           .where(and(eq(partnerMembers.partnerId, own.id), eq(partnerMembers.userId, application.userId)));

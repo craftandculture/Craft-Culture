@@ -43,7 +43,7 @@ const CellarTabs = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="border-border-muted -mx-4 mb-5 flex gap-1 overflow-x-auto border-b px-4 sm:mx-0 sm:px-0">
+    <nav className="border-border-muted -mx-3 mb-5 flex gap-1 overflow-x-auto border-b px-3 sm:mx-0 sm:px-0">
       {tabs.map((tab) => {
         const isActive =
           tab.href === '/platform/cellar'
