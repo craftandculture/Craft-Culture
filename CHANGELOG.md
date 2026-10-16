@@ -1,3 +1,9 @@
+## [2.0.374](https://github.com/craftandculture/Craft-Culture/compare/v2.0.373...v2.0.374) (2026-10-16)
+
+### Features
+
+* the [#logistics](https://github.com/craftandculture/Craft-Culture/issues/logistics) digest links every item, matches the board, mentions who acts, skips quiet days and sums up the week on Fridays ([d066a5a](https://github.com/craftandculture/Craft-Culture/commit/d066a5adebb1bbd37a682e7f144fe9c7c91a472c))
+
 ## [2.0.373](https://github.com/craftandculture/Craft-Culture/compare/v2.0.372...v2.0.373) (2026-10-16)
 
 ### Bug Fixes
