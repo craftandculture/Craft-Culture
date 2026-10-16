@@ -881,7 +881,12 @@ const UserManagementPage = () => {
   const { mutate: deleteUser, isPending: isDeleting } = useMutation(
     api.users.delete.mutationOptions({
       onSuccess: () => {
+        toast.success('User deleted');
         void refetch();
+      },
+      // Failures were silent, so a refused delete looked like nothing happened
+      onError: (error) => {
+        toast.error(error.message);
       },
     }),
   );
