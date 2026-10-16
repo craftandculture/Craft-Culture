@@ -4,9 +4,11 @@ import adminApproveApplication from './controller/adminApproveApplication';
 import adminDeclineApplication from './controller/adminDeclineApplication';
 import adminGetStorage from './controller/adminGetStorage';
 import adminInviteMember from './controller/adminInviteMember';
+import adminLinkIntakeShipment from './controller/adminLinkIntakeShipment';
 import adminListApplications from './controller/adminListApplications';
 import adminListIntakes from './controller/adminListIntakes';
 import adminListInvites from './controller/adminListInvites';
+import adminListLinkableShipments from './controller/adminListLinkableShipments';
 import adminMergeApplication from './controller/adminMergeApplication';
 import adminPushExtraCases from './controller/adminPushExtraCases';
 import adminResendInvite from './controller/adminResendInvite';
@@ -61,6 +63,8 @@ const onboardingRouter = createTRPCRouter({
     revokeInvite: adminRevokeInvite,
     listIntakes: adminListIntakes,
     setIntakeStage: adminSetIntakeStage,
+    linkIntakeShipment: adminLinkIntakeShipment,
+    listLinkableShipments: adminListLinkableShipments,
     getStorage: adminGetStorage,
     pushExtraCases: adminPushExtraCases,
     setMembershipStatus: adminSetMembershipStatus,

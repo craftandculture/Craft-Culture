@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, like, sql } from 'drizzle-orm';
 
+import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -356,6 +357,9 @@ const adminReceiveShipment = wmsOperatorProcedure
 
       return txCreatedStock;
     });
+
+    // Members' transfers on this shipment are now in their cellars
+    await advanceShipmentIntakes(shipmentId);
 
     // 7. Sync products to Zoho (best-effort, outside transaction)
     for (const zohoItem of zohoSyncItems) {

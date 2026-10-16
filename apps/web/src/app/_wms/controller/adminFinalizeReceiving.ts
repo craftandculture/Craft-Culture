@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsShipments, wmsReceivingDrafts, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -46,6 +47,9 @@ const adminFinalizeReceiving = wmsOperatorProcedure
         updatedAt: new Date(),
       })
       .where(eq(logisticsShipments.id, shipmentId));
+
+    // Members' transfers on this shipment are now in their cellars
+    await advanceShipmentIntakes(shipmentId);
 
     // Backfill photos from draft items to stock records before deleting
     const [draft] = await db

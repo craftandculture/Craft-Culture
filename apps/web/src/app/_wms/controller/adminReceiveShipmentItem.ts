@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
+import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -355,6 +356,7 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
           updatedAt: new Date(),
         })
         .where(eq(logisticsShipments.id, shipmentId));
+      await advanceShipmentIntakes(shipmentId);
     }
 
     // 8. Sync product to Zoho (non-blocking)

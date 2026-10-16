@@ -12,7 +12,9 @@ import {
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import getIntakeShipments from '../data/getIntakeShipments';
 import getMembershipTerms from '../data/getMembershipTerms';
+import laterIntakeStage from '../utils/laterIntakeStage';
 import missingProfileItems from '../utils/missingProfileItems';
 
 /**
@@ -57,6 +59,8 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   ]);
 
   const cases = countChargeableCases(stock);
+  const shown = intakes.filter((intake) => intake.source !== 'starting_fresh');
+  const shipments = await getIntakeShipments(shown);
 
   return {
     missing: missingProfileItems({
@@ -72,7 +76,22 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
     terms,
     cases,
     thisMonth: monthlyMembershipCharge(cases, terms),
-    intakes: intakes.filter((intake) => intake.source !== 'starting_fresh'),
+    intakes: shown.map((intake) => {
+      const shipment = shipments.get(intake.id);
+      return {
+        ...intake,
+        stage: laterIntakeStage(intake.stage, shipment?.impliedStage ?? null),
+        shipment: shipment
+          ? {
+              transportMode: shipment.transportMode,
+              eta: shipment.eta,
+              arrivedAt: shipment.arrivedAt,
+              wines: shipment.wines,
+              cases: shipment.memberCases,
+            }
+          : null,
+      };
+    }),
   };
 });
 

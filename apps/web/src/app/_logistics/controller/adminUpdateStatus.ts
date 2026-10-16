@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -96,6 +97,9 @@ const adminUpdateStatus = adminProcedure
         newStatus: status,
         notes,
       });
+
+      // Members whose transfer rides on this shipment follow it
+      await advanceShipmentIntakes(id);
 
       // Trigger milestone notification job (fire and forget)
       tasks

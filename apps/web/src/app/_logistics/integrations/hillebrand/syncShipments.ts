@@ -1,5 +1,6 @@
 import { desc, eq, like } from 'drizzle-orm';
 
+import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsDeletedHillebrandIds, logisticsShipments } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -368,6 +369,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
               updatedAt: new Date(),
             })
             .where(eq(logisticsShipments.id, existing.id));
+          await advanceShipmentIntakes(existing.id);
 
           result.updated++;
           result.shipments.push({

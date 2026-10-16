@@ -44,17 +44,22 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
   );
 
   return (
-    <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm">
+    <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm sm:p-5">
       {activationSheet}
       <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Bring your wine in</p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <p className="text-text-muted mt-1 text-xs leading-5">
+        Should you wish us to bring wine in, tell us where it is held and we will take care of the rest.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {offered.map((item) => (
           <button
             key={item.value}
             type="button"
             onClick={() => setSource(source === item.value ? null : item.value)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-              source === item.value ? 'bg-text-primary text-surface-primary' : 'bg-surface-muted text-text-muted hover:text-text-primary'
+            className={`h-10 rounded-lg border px-3 text-xs font-semibold transition-colors sm:h-9 sm:rounded-full ${
+              source === item.value
+                ? 'bg-text-primary text-surface-primary border-transparent'
+                : 'border-border-muted bg-surface-primary text-text-muted hover:text-text-primary'
             }`}
           >
             {item.value === 'uae_in_bond'
@@ -70,7 +75,7 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
 
       {source && (
         <form
-          className="mt-3 space-y-2"
+          className="mt-4 space-y-2 sm:max-w-lg"
           onSubmit={(event) => {
             event.preventDefault();
             add.mutate({

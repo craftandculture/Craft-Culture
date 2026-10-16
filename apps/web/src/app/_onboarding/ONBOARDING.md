@@ -27,6 +27,10 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 
 Members created before this journey have no `cellar_memberships` row and are **not gated**.
 
+**Transfers follow their shipment** — on **Cellar members → Intakes**, *Link a shipment* ties a transfer (LCB or another cellar) to the inbound logistics shipment carrying it. From then on:
+- the stage follows the shipment's status: booked/picked up → *arranging*; in transit to at warehouse → *shipping to the UAE*; delivered → *in your cellar*. It only ever moves forward, and the earlier stages (including *arriving at our UK bond*) stay manual. `advanceShipmentIntakes` is called wherever shipment status is written (status change, Hillebrand sync, receiving, finalise), stores the stage and tells the member once; reads also derive it from the shipment, so a missed call only costs the message;
+- the member's card lists the wines on that shipment that are **theirs** (a line's override owner, else the shipment's partner — the receiving rule, so the card shows what lands in their cellar), with mode and ETA. On a consolidated shipment, **set the owner on each collector's lines**; the Intakes row warns when none are assigned.
+
 ## Data
 
 `cellar_applications` (one per user) · `cellar_intakes` (one per wine source) ·
