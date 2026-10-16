@@ -22,7 +22,7 @@ const getShipmentsSchema = z.object({
       'cancelled',
     ])
     .optional(),
-  type: z.enum(['inbound', 'outbound', 're_export']).optional(),
+  type: z.enum(['inbound', 'outbound', 're_export', 'mainland_transfer']).optional(),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
   partnerId: z.string().uuid().optional(),
 });

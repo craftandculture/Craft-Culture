@@ -32,6 +32,7 @@ const adminGetDocumentCompliance = adminProcedure
       inbound: ['bill_of_lading', 'commercial_invoice', 'packing_list', 'certificate_of_origin'],
       outbound: ['commercial_invoice', 'packing_list', 'export_permit'],
       re_export: ['commercial_invoice', 'packing_list', 'import_permit', 'export_permit'],
+      mainland_transfer: ['commercial_invoice', 'packing_list', 're_export_boe'],
     };
 
     // Get all active shipments (not delivered or cancelled)

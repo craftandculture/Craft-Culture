@@ -8,7 +8,7 @@ const createShipmentSchema = z.object({
   name: z.string().max(100).optional(),
 
   // Required fields
-  type: z.enum(['inbound', 'outbound', 're_export']),
+  type: z.enum(['inbound', 'outbound', 're_export', 'mainland_transfer']),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']),
 
   // Partner (for inbound) or client contact (for outbound)

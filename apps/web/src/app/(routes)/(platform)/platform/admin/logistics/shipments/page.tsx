@@ -61,6 +61,7 @@ const typeOptions: { value: ShipmentType | 'all'; label: string }[] = [
   { value: 'inbound', label: 'Inbound' },
   { value: 'outbound', label: 'Outbound' },
   { value: 're_export', label: 'Re-Export' },
+  { value: 'mainland_transfer', label: 'Mainland Transfer' },
 ];
 
 const transportModeIcons: Record<TransportMode, typeof IconShip> = {
@@ -365,7 +366,7 @@ const ShipmentsListPage = () => {
                           <div className="flex items-center gap-2 text-xs text-text-muted">
                             <span className="font-mono">{shipment.shipmentNumber}</span>
                             <span>·</span>
-                            <span>{shipment.type === 'inbound' ? 'Import' : 'Export'}</span>
+                            <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
                             <span>·</span>
                             <span className="truncate">
                               {origin} → {destination}

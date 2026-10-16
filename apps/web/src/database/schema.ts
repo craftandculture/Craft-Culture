@@ -2854,6 +2854,7 @@ export const logisticsShipmentType = pgEnum('logistics_shipment_type', [
   'inbound', // Partner to UAE warehouse
   'outbound', // UAE warehouse to client
   're_export', // UAE warehouse to another destination
+  'mainland_transfer', // UAE to UAE, e.g. free zone bond to a mainland client
 ]);
 
 /**

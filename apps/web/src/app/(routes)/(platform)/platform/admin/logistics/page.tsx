@@ -587,7 +587,7 @@ const LogisticsDashboardPage = () => {
                         <div className="flex items-center gap-2 text-xs text-text-muted">
                           <span className="font-mono">{shipment.shipmentNumber}</span>
                           <span>·</span>
-                          <span>{shipment.type === 'inbound' ? 'Import' : 'Export'}</span>
+                          <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
                           {shipment.name && (
                             <>
                               <span>·</span>

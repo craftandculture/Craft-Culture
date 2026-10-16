@@ -11,7 +11,7 @@ const updateShipmentSchema = z.object({
   name: z.string().max(100).nullable().optional(),
 
   // Optional updates
-  type: z.enum(['inbound', 'outbound', 're_export']).optional(),
+  type: z.enum(['inbound', 'outbound', 're_export', 'mainland_transfer']).optional(),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
 
   // Partner (for inbound) or client contact (for outbound)

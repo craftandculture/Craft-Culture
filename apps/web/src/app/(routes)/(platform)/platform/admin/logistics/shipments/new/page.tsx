@@ -22,7 +22,7 @@ import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-type ShipmentType = 'inbound' | 'outbound' | 're_export';
+type ShipmentType = 'inbound' | 'outbound' | 're_export' | 'mainland_transfer';
 type TransportMode = 'sea_fcl' | 'sea_lcl' | 'air' | 'road';
 
 /**
@@ -119,6 +119,7 @@ const NewShipmentPage = () => {
                       <SelectItem value="inbound">Inbound (Partner → UAE)</SelectItem>
                       <SelectItem value="outbound">Outbound (UAE → Client)</SelectItem>
                       <SelectItem value="re_export">Re-Export</SelectItem>
+                      <SelectItem value="mainland_transfer">Mainland Transfer (UAE → UAE)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

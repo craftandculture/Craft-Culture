@@ -865,7 +865,7 @@ const ShipmentDetailPage = () => {
                     <span>·</span>
                   </>
                 )}
-                <span>{shipment.type === 'inbound' ? 'Import' : 'Export'}</span>
+                <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
                 <span>·</span>
                 <span>
                   {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
@@ -975,7 +975,7 @@ const ShipmentDetailPage = () => {
                     <dd>
                       <Select
                         value={shipment.type}
-                        onValueChange={(value: 'inbound' | 'outbound' | 're_export') => {
+                        onValueChange={(value: 'inbound' | 'outbound' | 're_export' | 'mainland_transfer') => {
                           updateShipment({ id: shipmentId, type: value });
                         }}
                       >
@@ -986,6 +986,7 @@ const ShipmentDetailPage = () => {
                           <SelectItem value="inbound">Import</SelectItem>
                           <SelectItem value="outbound">Export</SelectItem>
                           <SelectItem value="re_export">Re-Export</SelectItem>
+                          <SelectItem value="mainland_transfer">Mainland Transfer</SelectItem>
                         </SelectContent>
                       </Select>
                     </dd>

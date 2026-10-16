@@ -239,6 +239,13 @@ const runMigrations = async () => {
     );
     console.log('✅ logistics_document_type BOE values ready');
 
+    // Shipments: UAE-to-UAE mainland transfer type.
+    console.log('🔄 Ensuring logistics_shipment_type has mainland_transfer...');
+    await client.unsafe(
+      `ALTER TYPE "logistics_shipment_type" ADD VALUE IF NOT EXISTS 'mainland_transfer'`,
+    );
+    console.log('✅ logistics_shipment_type mainland_transfer ready');
+
     // Pricing Manager: per-SKU FZ→mainland transfer fee ($/btl; null = $2.50 default).
     console.log('🔄 Ensuring wms_product_pricing.transfer_price_per_bottle column...');
     await client.unsafe(
