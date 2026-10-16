@@ -1,3 +1,9 @@
+## [2.0.384](https://github.com/craftandculture/Craft-Culture/compare/v2.0.383...v2.0.384) (2026-10-16)
+
+### Features
+
+* **cellar:** investment platforms, multiple locations and tighter collection copy ([4f1e4ae](https://github.com/craftandculture/Craft-Culture/commit/4f1e4aef81c9fa4e5eaf15fc7c9af7799e03fc5a))
+
 ## [2.0.383](https://github.com/craftandculture/Craft-Culture/compare/v2.0.382...v2.0.383) (2026-10-16)
 
 ### Features
