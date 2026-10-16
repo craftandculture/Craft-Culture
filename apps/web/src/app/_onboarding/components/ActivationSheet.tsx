@@ -208,32 +208,48 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
               ))}
             </ul>
 
-            <label className="border-border-muted flex cursor-pointer items-start gap-3 rounded-xl border p-3.5">
-              <input
-                type="checkbox"
-                checked={hasAccepted}
-                onChange={(event) => setHasAccepted(event.target.checked)}
-                className="mt-0.5 size-4 flex-shrink-0 accent-current"
-              />
-              <span className="text-text-muted text-xs leading-5">
-                I accept the{' '}
+            {data.hasAcceptedTerms ? (
+              <p className="text-text-muted text-xs leading-5">
+                Under the{' '}
                 <a
                   href={PRIVATE_CELLAR_TERMS_PATH}
                   target="_blank"
                   rel="noreferrer"
                   className="text-text-primary font-semibold underline underline-offset-2"
                 >
-                  membership terms
+                  Private Cellar Terms
                 </a>{' '}
-                and the monthly fee and storage charges above, which continue until my membership ends. Prices
-                exclude VAT, which is added only where it applies.
-              </span>
-            </label>
+                you agreed when you opened your cellar, your membership and storage charges start today and
+                continue until your membership ends. Prices exclude VAT, which is added only where it applies.
+              </p>
+            ) : (
+              <label className="border-border-muted flex cursor-pointer items-start gap-3 rounded-xl border p-3.5">
+                <input
+                  type="checkbox"
+                  checked={hasAccepted}
+                  onChange={(event) => setHasAccepted(event.target.checked)}
+                  className="mt-0.5 size-4 flex-shrink-0 accent-current"
+                />
+                <span className="text-text-muted text-xs leading-5">
+                  I have read and agree to the{' '}
+                  <a
+                    href={PRIVATE_CELLAR_TERMS_PATH}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-text-primary font-semibold underline underline-offset-2"
+                  >
+                    Private Cellar Terms
+                  </a>
+                  , including the monthly fee and storage charges above. Prices exclude VAT, which is added only
+                  where it applies.
+                </span>
+              </label>
+            )}
 
             <button
               type="button"
               onClick={() => void addCard()}
-              disabled={start.isPending || !hasAccepted}
+              disabled={start.isPending || (!data.hasAcceptedTerms && !hasAccepted)}
               className="bg-text-primary text-surface-primary h-12 w-full rounded-xl text-sm font-semibold transition-opacity disabled:opacity-40"
             >
               {start.isPending
@@ -241,7 +257,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
                   ? 'Starting…'
                   : 'Opening…'
                 : data.billingMode === 'invoice'
-                  ? 'Start membership'
+                  ? 'Confirm and start membership'
                   : 'Add card and start membership'}
             </button>
           </div>
