@@ -11,8 +11,10 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import CodeLinkPanel from './CodeLinkPanel';
+import MonthSummaryPanel from './MonthSummaryPanel';
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
+import UnmatchedLinesPanel from './UnmatchedLinesPanel';
 import ownerColour from '../utils/ownerColour';
 
 
@@ -115,6 +117,19 @@ const DistributionClient = () => {
     Said by hand, and believed ever after. Applied on the next read of the
     invoices, which is why the toast says to run one.
   */
+  /*
+    One month for the page. The summary, the unmatched lines and the owner
+    statement all answer for the same month, and three independent pickers is
+    how two of them end up answering for different ones.
+  */
+  const [statementMonth, setStatementMonth] = useState(() => {
+    const now = new Date();
+    const when = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    );
+
+    return `${when.getUTCFullYear()}-${String(when.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
   const [bulkRef, setBulkRef] = useState('');
   const [bulkOwner, setBulkOwner] = useState('');
 
@@ -427,10 +442,21 @@ const DistributionClient = () => {
               outletId={outletId}
               owners={setup.data?.owners ?? []}
               soldMonths={outlet?.soldMonths ?? []}
+              month={statementMonth}
+              onMonthChange={setStatementMonth}
             />
           </div>
         </div>
       </div>
+
+      {/*
+        The month before the wines. What City Drinks owe us and what we owe
+        each partner is the question the page exists to answer; the per-wine
+        position below is how it is checked.
+      */}
+      <MonthSummaryPanel outletId={outletId} month={statementMonth} />
+
+      <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
 
       <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
 

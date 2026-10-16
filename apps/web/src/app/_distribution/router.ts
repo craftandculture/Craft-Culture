@@ -2,12 +2,15 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
 import adminDeriveSold from './controller/adminDeriveSold';
+import adminExportStatement from './controller/adminExportStatement';
 import adminGetBalances from './controller/adminGetBalances';
 import adminGetCodeSuggestions from './controller/adminGetCodeSuggestions';
 import adminGetDuplicateWines from './controller/adminGetDuplicateWines';
+import adminGetMonthSummary from './controller/adminGetMonthSummary';
 import adminGetOwed from './controller/adminGetOwed';
 import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
+import adminGetUnmatchedLines from './controller/adminGetUnmatchedLines';
 import adminImportOutletSales from './controller/adminImportOutletSales';
 import adminLinkCode from './controller/adminLinkCode';
 import adminPullOutletStock from './controller/adminPullOutletStock';
@@ -42,12 +45,15 @@ const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
     autoLinkCodes: adminAutoLinkCodes,
     deriveSold: adminDeriveSold,
+    exportStatement: adminExportStatement,
     getBalances: adminGetBalances,
     getCodeSuggestions: adminGetCodeSuggestions,
     linkCode: adminLinkCode,
     importOutletSales: adminImportOutletSales,
     getDuplicateWines: adminGetDuplicateWines,
+    getMonthSummary: adminGetMonthSummary,
     getOwed: adminGetOwed,
+    getUnmatchedLines: adminGetUnmatchedLines,
     getSetup: adminGetSetup,
     getStatement: adminGetStatement,
     pullOutletStock: adminPullOutletStock,

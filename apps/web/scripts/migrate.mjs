@@ -2160,6 +2160,31 @@ const runMigrations = async () => {
     console.log('✅ cons_wine_closed ready');
 
     /*
+      Lines on the distributor's sheet that reach no wine of ours.
+
+      They were counted in a toast and then gone, which is the same as dropping
+      them: a bottle sold that we cannot attribute is money nobody will ever be
+      billed for, and it has to stay on the screen until somebody answers it.
+      Replaced wholesale each time a month is re-imported.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_import_unmatched" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "month" text NOT NULL,
+        "outlet_code" text,
+        "product_name" text,
+        "bottles" double precision NOT NULL DEFAULT 0,
+        "reason" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_import_unmatched_month_idx" ON "cons_import_unmatched"("outlet_id","month")`,
+    );
+    console.log('✅ cons_import_unmatched ready');
+
+    /*
       Export invoices — the combined commercial invoice & packing list.
 
       The document is JSON; versions keep every state with the ops and request
@@ -2567,6 +2592,62 @@ const runMigrations = async () => {
       )
     `);
     console.log('✅ logistics jobs + movement bonds ready');
+
+    /*
+      Purchasing: a distributor's replenishment sheet and our answer to each
+      line. Kept whole — header and every original cell — because the answer
+      goes back as their own file with our status written beside it.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "purchasing_requests" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid REFERENCES "cons_outlets"("id") ON DELETE SET NULL,
+        "distributor_name" text NOT NULL,
+        "file_name" text,
+        "source_file" text,
+        "header" jsonb,
+        "column_map" jsonb,
+        "received_at" timestamp DEFAULT now() NOT NULL,
+        "status" text NOT NULL DEFAULT 'open',
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "purchasing_requests_outlet_idx" ON "purchasing_requests"("outlet_id")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "purchasing_request_lines" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "request_id" uuid NOT NULL REFERENCES "purchasing_requests"("id") ON DELETE CASCADE,
+        "row_index" integer NOT NULL,
+        "raw" jsonb,
+        "their_code" text,
+        "their_name" text NOT NULL,
+        "ownership" text,
+        "requested_qty" integer NOT NULL DEFAULT 0,
+        "lwin18" text,
+        "match_source" text,
+        "match_score" double precision,
+        "buckets" jsonb,
+        "suggested_status" text,
+        "suggested_note" text,
+        "status" text,
+        "note" text,
+        "decided_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "decided_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "purchasing_request_lines_request_idx" ON "purchasing_request_lines"("request_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "purchasing_request_lines_lwin18_idx" ON "purchasing_request_lines"("lwin18")`,
+    );
+    console.log('✅ purchasing requests ready');
 
     /*
       Draft SO holds — a draft Zoho order's wine held while the client finishes

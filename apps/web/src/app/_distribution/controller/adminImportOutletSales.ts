@@ -13,6 +13,7 @@ import {
 import parseOutletSalesReport from '../utils/parseOutletSalesReport';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
+import unmatchedReady from '../utils/unmatchedReady';
 
 interface CodeRow {
   outletCode: string;
@@ -120,6 +121,8 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
 
     const rows: Record<string, unknown>[] = [];
     const unattributed: string[] = [];
+    /* Kept as rows too, so the list outlives the toast that announced it */
+    const unmatchedRows: Record<string, unknown>[] = [];
     let unattributedBottles = 0;
 
     for (const line of parsed.lines) {
@@ -134,9 +137,19 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
         */
         const { reason } = resolveOwner({ tag: null, owners });
 
+        const why = known ? 'never invoiced to this outlet' : reason;
+
         unattributed.push(
-          `${line.outletCode} · ${line.productName} — ${line.bottles} btl · ${known ? 'never invoiced to this outlet' : reason}`,
+          `${line.outletCode} · ${line.productName} — ${line.bottles} btl · ${why}`,
         );
+        unmatchedRows.push({
+          outlet_id: input.outletId,
+          month: parsed.month,
+          outlet_code: line.outletCode,
+          product_name: line.productName,
+          bottles: line.bottles,
+          reason: why,
+        });
         unattributedBottles += line.bottles;
         continue;
       }
@@ -171,6 +184,21 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
 
     if (rows.length > 0) {
       await client`INSERT INTO cons_movements ${client(rows)}`;
+    }
+
+    /*
+      Replaced wholesale for the month, so re-importing a corrected sheet does
+      not leave yesterday's unanswered lines beside today's.
+    */
+    if (await unmatchedReady()) {
+      await client`
+        DELETE FROM cons_import_unmatched
+        WHERE outlet_id = ${input.outletId} AND month = ${parsed.month}
+      `;
+
+      if (unmatchedRows.length > 0) {
+        await client`INSERT INTO cons_import_unmatched ${client(unmatchedRows)}`;
+      }
     }
 
     return {

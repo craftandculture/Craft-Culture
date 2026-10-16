@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import formatBottles from '@/app/_triangulation/utils/formatBottles';
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -13,6 +14,9 @@ import ownerColour from '../utils/ownerColour';
 
 export interface StatementPanelProps {
   outletId: string | null;
+  /** Lifted, so the summary, the unmatched list and this read one month */
+  month: string;
+  onMonthChange: (month: string) => void;
   owners: { id: string; name: string }[];
   /** The months a sale can be asked about, newest first */
   soldMonths: { month: string; bottles: number; source: string }[];
@@ -27,13 +31,6 @@ const money = (value: number, currency: string | null) => {
   return currency ? `${currency} ${amount}` : amount;
 };
 
-/** The month before this one, which is what a settlement is usually about */
-const lastMonth = () => {
-  const now = new Date();
-  const when = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-
-  return `${when.getUTCFullYear()}-${String(when.getUTCMonth() + 1).padStart(2, '0')}`;
-};
 
 /**
  * What to tell an owner sold, and what we owe them for it
@@ -51,12 +48,13 @@ const StatementPanel = ({
   outletId,
   owners,
   soldMonths,
+  month,
+  onMonthChange,
 }: StatementPanelProps) => {
   const api = useTRPC();
   const [ownerId, setOwnerId] = useState('');
   /* The same colour the owner carries on the table, so the two screens agree */
   const colour = ownerColour(owners.findIndex((row) => row.id === ownerId));
-  const [month, setMonth] = useState(lastMonth());
 
   const statement = useQuery({
     ...api.distribution.admin.getStatement.queryOptions({
@@ -66,6 +64,21 @@ const StatementPanel = ({
     }),
     enabled: Boolean(ownerId && outletId),
   });
+
+  /* What actually goes to Crurated and to Cru, in the columns they argue in */
+  const exportOne = useMutation(
+    api.distribution.admin.exportStatement.mutationOptions({
+      onSuccess: (result) => {
+        const link = document.createElement('a');
+
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${result.base64}`;
+        link.download = result.filename;
+        link.click();
+        toast.success(`Exported ${result.filename}`);
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
 
   const lines = statement.data?.lines ?? [];
   const summary = statement.data?.summary;
@@ -84,12 +97,22 @@ const StatementPanel = ({
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="mt-1 max-w-xl">
-              What sold, and what we owe for it at the import price. Send this
-              and they invoice against it.
+              What sold, and what we owe for it at the landed cost on their own
+              shipment. Send this and they invoice against it.
             </p>
           </Typography>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <button
+            type="button"
+            disabled={exportOne.isPending || !ownerId || lines.length === 0}
+            onClick={() =>
+              exportOne.mutate({ outletId: outletId ?? '', ownerId, month })
+            }
+            className="border-border-primary hover:bg-fill-muted/30 min-h-9 rounded-md border px-3 text-xs font-medium disabled:opacity-50"
+          >
+            {exportOne.isPending ? 'Building…' : 'Export'}
+          </button>
           <label className="flex flex-col gap-1">
             <span className="text-text-muted text-xs">Owner</span>
             <select
@@ -110,7 +133,7 @@ const StatementPanel = ({
             <input
               type="month"
               value={month}
-              onChange={(event) => setMonth(event.target.value)}
+              onChange={(event) => onMonthChange(event.target.value)}
               className="border-border-primary bg-fill-primary text-text-primary min-h-9 rounded-md border px-2 text-sm"
             />
           </label>
