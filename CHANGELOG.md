@@ -1,3 +1,9 @@
+## [2.0.348](https://github.com/craftandculture/Craft-Culture/compare/v2.0.347...v2.0.348) (2026-10-16)
+
+### Features
+
+* **cellar:** Available now redesign; empty cellar and currency fixes ([a5b6ab0](https://github.com/craftandculture/Craft-Culture/commit/a5b6ab014624ad74a080e52d9f00fb76c53070cb))
+
 ## [2.0.347](https://github.com/craftandculture/Craft-Culture/compare/v2.0.346...v2.0.347) (2026-10-16)
 
 ### Features
