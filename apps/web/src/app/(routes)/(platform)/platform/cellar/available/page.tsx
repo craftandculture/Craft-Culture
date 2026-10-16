@@ -17,6 +17,11 @@ import { toast } from 'sonner';
 
 import bottleName from '@/app/_cellar/utils/bottleName';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -84,6 +89,8 @@ const AvailablePage = () => {
     row's cases and a part case would have to be a fraction of one.
   */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
+  /* Reserving commits the member to a bank transfer, so it is reviewed first */
+  const [isReviewing, setIsReviewing] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
@@ -163,6 +170,7 @@ const AvailablePage = () => {
           `${result.purchaseNumber} reserved — pay by bank transfer within 48 hours.`,
         );
         setBasket(new Map());
+        setIsReviewing(false);
         void refetch();
       },
       onError: (error) => {
@@ -268,7 +276,7 @@ const AvailablePage = () => {
         >
           <Icon icon={IconMinus} size="xs" />
         </button>
-        <span className="min-w-[64px] px-1 text-center text-xs font-semibold tabular-nums">
+        <span className="min-w-[64px] whitespace-nowrap px-1 text-center text-xs font-semibold tabular-nums">
           {unitCount(wine, chosen)}
         </span>
         <button
@@ -715,23 +723,86 @@ const AvailablePage = () => {
                 <button
                   type="button"
                   disabled={isPlacing}
-                  onClick={() =>
-                    placeOrder({
-                      lines: basketLines.map((line) => ({
-                        lwin18: line.wine.lwin18,
-                        cases: line.cases,
-                      })),
-                    })
-                  }
+                  onClick={() => setIsReviewing(true)}
                   className="bg-surface-primary text-text-primary h-10 flex-1 rounded-lg px-4 text-sm font-semibold disabled:opacity-50 sm:flex-none"
                 >
-                  {isPlacing ? 'Reserving…' : 'Reserve and pay'}
+                  Review and reserve
                 </button>
               </div>
             </div>
           )}
         </>
       )}
+
+      <Dialog open={isReviewing} onOpenChange={(open) => !isPlacing && setIsReviewing(open)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm your reservation</DialogTitle>
+            <DialogDescription>
+              Please check your selection. Nothing is reserved until you confirm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ul className="divide-border-muted border-border-muted mt-2 max-h-[40vh] divide-y overflow-y-auto rounded-xl border">
+            {basketLines.map((line) => (
+              <li key={line.wine.lwin18} className="flex items-start justify-between gap-4 px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="text-text-primary text-sm font-semibold leading-snug">
+                    {displayName(line.wine.product)}
+                  </p>
+                  <p className="text-text-muted text-xs">
+                    {[line.wine.vintage ?? 'NV', bottleName(line.wine.bottleSize), unitCount(line.wine, line.cases)].join(' · ')}
+                  </p>
+                </div>
+                <p className="text-text-primary flex-shrink-0 text-sm font-semibold tabular-nums">
+                  {money(line.cases * line.wine.caseConfig * line.wine.pricePerBottleUsd)}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 flex items-baseline justify-between px-1">
+            <span className="text-text-muted text-sm">
+              Total · {basketBottles} {basketBottles === 1 ? 'bottle' : 'bottles'}
+            </span>
+            <span className="text-text-primary text-xl font-bold tabular-nums">{money(basketTotal)}</span>
+          </div>
+
+          <div className="bg-surface-secondary/60 text-text-muted mt-3 space-y-1.5 rounded-xl p-3.5 text-xs leading-5">
+            <p>Prices are in bond, duty suspended. The wine stays in bond in your cellar until you call it forward.</p>
+            <p>
+              We hold it for you for 48 hours and send bank transfer details with your reference. It moves into your
+              cellar once we confirm your payment has arrived.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setIsReviewing(false)}
+              disabled={isPlacing}
+              className="border-border-muted text-text-primary h-11 rounded-lg border px-4 text-sm font-semibold"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={isPlacing}
+              onClick={() =>
+                placeOrder({
+                  lines: basketLines.map((line) => ({
+                    lwin18: line.wine.lwin18,
+                    cases: line.cases,
+                  })),
+                })
+              }
+              className="bg-text-primary text-surface-primary h-11 rounded-lg px-5 text-sm font-semibold disabled:opacity-50"
+            >
+              {isPlacing ? 'Reserving…' : `Confirm reservation · ${money(basketTotal)}`}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
