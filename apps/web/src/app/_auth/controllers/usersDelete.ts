@@ -56,19 +56,30 @@ const usersDelete = adminProcedure
       (ref) => !ref.handledByDatabase,
     );
 
-    const countRows = async (table: string, column: string) => {
-      const [row] = await db.execute<{ n: number }>(sql`
-        SELECT count(*)::int AS n FROM ${sql.identifier(table)}
-         WHERE ${sql.identifier(column)} = ${userId}
-      `);
-      return row?.n ?? 0;
-    };
+    // One round trip for every column, rather than one per column
+    const counts =
+      references.length === 0
+        ? []
+        : [
+            ...(await db.execute<{ i: number; n: number }>(
+              sql.join(
+                references.map(
+                  (ref, i) => sql`
+                    SELECT ${i}::int AS i, count(*)::int AS n
+                      FROM ${sql.identifier(ref.table)}
+                     WHERE ${sql.identifier(ref.column)} = ${userId}`,
+                ),
+                sql` UNION ALL `,
+              ),
+            )),
+          ];
+    const held = counts
+      .filter((c) => c.n > 0)
+      .map((c) => ({ ref: references[c.i]!, n: c.n }));
 
-    const blockers: string[] = [];
-    for (const ref of references.filter((r) => !r.nullable)) {
-      const n = await countRows(ref.table, ref.column);
-      if (n > 0) blockers.push(`${ref.table.replace(/_/g, ' ')} (${n})`);
-    }
+    const blockers = held
+      .filter((h) => !h.ref.nullable)
+      .map((h) => `${h.ref.table.replace(/_/g, ' ')} (${h.n})`);
 
     if (blockers.length > 0) {
       throw new TRPCError({
@@ -79,7 +90,7 @@ const usersDelete = adminProcedure
 
     const cleared: Record<string, number> = {};
     await db.transaction(async (tx) => {
-      for (const ref of references.filter((r) => r.nullable)) {
+      for (const { ref } of held.filter((h) => h.ref.nullable)) {
         const result = await tx.execute(sql`
           UPDATE ${sql.identifier(ref.table)}
              SET ${sql.identifier(ref.column)} = NULL

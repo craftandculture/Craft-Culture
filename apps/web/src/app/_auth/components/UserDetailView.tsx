@@ -78,9 +78,14 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
   const [editedCustomerType, setEditedCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>('b2c');
   const [editedRole, setEditedRole] = useState<'user' | 'admin' | 'wms_operator'>('user');
 
+  // Set once the delete succeeds, so the page stops asking for a user that no
+  // longer exists (which flashed "User not found" before the redirect)
+  const [isLeaving, setIsLeaving] = useState(false);
+
   // Fetch user data
   const { data, isLoading, error } = useQuery({
     ...api.users.adminGetOne.queryOptions({ userId }),
+    enabled: !isLeaving,
   });
 
   // Mutations
@@ -145,12 +150,22 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
 
   const { mutate: deleteUser, isPending: isDeleting } = useMutation(
     api.users.delete.mutationOptions({
+      onMutate: () => {
+        toast.loading('Deleting user…', { id: 'delete-user' });
+      },
       onSuccess: () => {
-        toast.success('User deleted');
-        router.push('/platform/admin/users');
+        setIsLeaving(true);
+        queryClient.removeQueries({
+          queryKey: api.users.adminGetOne.queryKey({ userId }),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: api.users.getPaginated.queryKey(),
+        });
+        toast.success('User deleted', { id: 'delete-user' });
+        router.replace('/platform/admin/users');
       },
       onError: (err) => {
-        toast.error(err.message || 'Failed to delete user');
+        toast.error(err.message || 'Failed to delete user', { id: 'delete-user' });
       },
     }),
   );
@@ -188,6 +203,18 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
       <div className="flex items-center justify-center py-16">
         <Icon icon={IconLoader2} size="lg" className="animate-spin text-text-muted" />
       </div>
+    );
+  }
+
+  if (isLeaving) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <Typography variant="bodyMd" colorRole="muted">
+            User deleted · returning to Users…
+          </Typography>
+        </CardContent>
+      </Card>
     );
   }
 
