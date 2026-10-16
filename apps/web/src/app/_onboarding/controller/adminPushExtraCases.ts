@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import { setExtraCaseQuantity } from '@/lib/zoho/billing';
 import logger from '@/utils/logger';
 
@@ -20,7 +20,7 @@ import dubaiMonth from '../utils/dubaiMonth';
  * so it is safe to press again after a failure. Members on zero extra cases
  * are pushed too, clearing last month's quantity.
  */
-const adminPushExtraCases = adminProcedure.mutation(async () => {
+const adminPushExtraCases = staffAdminProcedure.mutation(async () => {
   const month = dubaiMonth();
   const rows = await getStorageCharges();
 

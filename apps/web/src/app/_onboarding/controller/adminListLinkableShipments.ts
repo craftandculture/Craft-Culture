@@ -2,13 +2,13 @@ import { and, desc, eq, notInArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipments, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Inbound shipments a transfer can be linked to — every one not yet received
  * or cancelled, newest first
  */
-const adminListLinkableShipments = adminProcedure.query(async () =>
+const adminListLinkableShipments = staffAdminProcedure.query(async () =>
   db
     .select({
       id: logisticsShipments.id,

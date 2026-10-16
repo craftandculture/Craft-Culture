@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partnerIdentityDocuments } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
 
@@ -24,7 +24,7 @@ import identityFileHeader from '../utils/identityFileHeader';
  *
  * @returns Counts of documents encrypted, already encrypted, and failed
  */
-const adminEncryptIdentityDocuments = adminProcedure.mutation(async () => {
+const adminEncryptIdentityDocuments = staffAdminProcedure.mutation(async () => {
   if (!identityEncryptionKey()) {
     return {
       encrypted: 0,

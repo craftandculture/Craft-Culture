@@ -5,7 +5,7 @@ import { z } from 'zod';
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { cellarApplications, users } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import sendOnboardingEmail from '../utils/sendOnboardingEmail';
 
@@ -16,7 +16,7 @@ import sendOnboardingEmail from '../utils/sendOnboardingEmail';
  * applicant is told — with the reason, if one is given, since it is shown
  * to them on their status page as well.
  */
-const adminDeclineApplication = adminProcedure
+const adminDeclineApplication = staffAdminProcedure
   .input(
     z.object({
       applicationId: z.string().uuid(),

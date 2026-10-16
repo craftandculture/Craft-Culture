@@ -13,7 +13,7 @@ import {
   partnerMembers,
   partners,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 /**
@@ -29,7 +29,7 @@ import logger from '@/utils/logger';
  * retired this way: an active one may already hold stock, and merging that is
  * the Partners screen's full merge.
  */
-const adminMergeApplication = adminProcedure
+const adminMergeApplication = staffAdminProcedure
   .input(z.object({ applicationId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const [application] = await db

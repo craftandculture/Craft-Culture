@@ -104,6 +104,24 @@ export const teamProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
+ * Staff admin procedure
+ *
+ * An admin who is also on the C&C team: admin role AND a C&C email address.
+ * For screens holding members' identity documents, bank details and money —
+ * the Private Cellar and consignment admin — which a partner holding an admin
+ * login must never reach.
+ */
+export const staffAdminProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    ctx.accessControl(
+      () => ctx.user.role === 'admin' && isTeamMember(ctx.user),
+    );
+
+    return await next({ ctx });
+  },
+);
+
+/**
  * Partner task procedure
  *
  * For partner logins (wine partner, distributor or private collector) on the

@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarIntakes, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import getIntakeShipments from '../data/getIntakeShipments';
 import laterIntakeStage from '../utils/laterIntakeStage';
@@ -15,7 +15,7 @@ import laterIntakeStage from '../utils/laterIntakeStage';
  * Applications instead. A transfer linked to a shipment carries it, with the
  * member's share of its cases, and shows the stage the shipment implies.
  */
-const adminListIntakes = adminProcedure.query(async () => {
+const adminListIntakes = staffAdminProcedure.query(async () => {
   const rows = await db
     .select({ intake: cellarIntakes, memberName: partners.businessName, memberStatus: partners.status })
     .from(cellarIntakes)

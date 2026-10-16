@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarIntakes, logisticsShipments } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import advanceShipmentIntakes from '../data/advanceShipmentIntakes';
 
@@ -18,7 +18,7 @@ import advanceShipmentIntakes from '../data/advanceShipmentIntakes';
  * @example
  *   await trpcClient.onboarding.admin.linkIntakeShipment.mutate({ intakeId, shipmentId });
  */
-const adminLinkIntakeShipment = adminProcedure
+const adminLinkIntakeShipment = staffAdminProcedure
   .input(
     z.object({
       intakeId: z.string().uuid(),

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarIntakes } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import { INTAKE_STAGE_VALUES } from '../constants/intakeStages';
 import notifyIntakeStage from '../data/notifyIntakeStage';
@@ -15,7 +15,7 @@ import notifyIntakeStage from '../data/notifyIntakeStage';
  * The member's Incoming card follows the stage. Closing (for a source that
  * came to nothing, or is finished) hides it without a message.
  */
-const adminSetIntakeStage = adminProcedure
+const adminSetIntakeStage = staffAdminProcedure
   .input(
     z.object({
       intakeId: z.string().uuid(),

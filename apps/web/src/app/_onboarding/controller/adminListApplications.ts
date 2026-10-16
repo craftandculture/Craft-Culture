@@ -9,7 +9,7 @@ import {
   partners,
   users,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import missingProfileItems from '../utils/missingProfileItems';
 
@@ -21,7 +21,7 @@ import missingProfileItems from '../utils/missingProfileItems';
  * what is missing, the wine sources and any possible duplicate, which is
  * everything needed to decide without opening another screen.
  */
-const adminListApplications = adminProcedure.query(async () => {
+const adminListApplications = staffAdminProcedure.query(async () => {
   const duplicate = alias(partners, 'duplicate');
 
   const rows = await db

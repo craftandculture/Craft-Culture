@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarInvites, users } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Every Private Cellar invitation, newest first
@@ -10,7 +10,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * An unaccepted invitation past its date reads as expired here; the row is
  * not rewritten, since resending brings it back.
  */
-const adminListInvites = adminProcedure.query(async () => {
+const adminListInvites = staffAdminProcedure.query(async () => {
   const rows = await db
     .select({ invite: cellarInvites, inviterName: users.name })
     .from(cellarInvites)

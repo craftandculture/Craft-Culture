@@ -93,7 +93,25 @@ const storeIdentityDocument = async ({
     decrypts for the member or an admin only. The path is foldered and given a
     random suffix as well, so it is not guessable from a member's name.
   */
-  const { bytes } = encryptIdentityFile(buffer);
+  const { bytes, encrypted } = encryptIdentityFile(buffer);
+
+  /*
+    Never stored in the clear outside development. Blob storage is public, so
+    a missing or malformed key would put government IDs at an open URL with
+    only a log line to say so; refusing the upload makes the fault visible.
+  */
+  if (!encrypted && process.env.NODE_ENV === 'production') {
+    logger.error('Refused an identity upload: IDENTITY_ENCRYPTION_KEY is missing or invalid', {
+      partnerId,
+      documentType,
+    });
+
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message:
+        'We cannot accept documents at the moment. Please try again later or contact us.',
+    });
+  }
 
   const blob = await put(
     `identity/${partnerId}/${documentType}/${safeName}`,

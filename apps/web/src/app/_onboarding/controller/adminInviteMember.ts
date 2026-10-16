@@ -5,7 +5,7 @@ import { z } from 'zod';
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { cellarApplications, cellarInvites, users } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
 import findTradeAccount from '../data/findTradeAccount';
@@ -24,7 +24,7 @@ import newInviteToken from '../utils/newInviteToken';
  * keeps it; their cellar is attached to it, and they are approved when they
  * accept. One live invitation per email: inviting again replaces the last.
  */
-const adminInviteMember = adminProcedure
+const adminInviteMember = staffAdminProcedure
   .input(
     z.object({
       name: z.string().trim().min(2).max(120),

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import getCommittedBottles from '../data/getCommittedBottles';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
@@ -22,7 +22,7 @@ import notifyMandateUpdate from '../utils/notifyMandateUpdate';
  * different number would leave the figure they agreed and the figure on the
  * shelf disagreeing, with only one of them in writing.
  */
-const adminDecideMandate = adminProcedure
+const adminDecideMandate = staffAdminProcedure
   .input(
     z.object({
       mandateId: z.string().uuid(),

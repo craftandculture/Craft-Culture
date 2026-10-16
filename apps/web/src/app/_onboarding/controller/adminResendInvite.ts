@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarInvites } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import sendInvite from '../data/sendInvite';
 import newInviteToken from '../utils/newInviteToken';
@@ -14,7 +14,7 @@ import newInviteToken from '../utils/newInviteToken';
  *
  * The old link stops working — only the latest one sent is live.
  */
-const adminResendInvite = adminProcedure
+const adminResendInvite = staffAdminProcedure
   .input(z.object({ inviteId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const [invite] = await db.select().from(cellarInvites).where(eq(cellarInvites.id, input.inviteId)).limit(1);

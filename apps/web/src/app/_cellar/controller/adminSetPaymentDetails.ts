@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarPaymentSettings } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 const field = z
   .string()
@@ -21,7 +21,7 @@ const field = z
  * @example
  *   await trpcClient.cellar.admin.setPaymentDetails.mutate({ accountName, bankName, iban, swiftBic });
  */
-const adminSetPaymentDetails = adminProcedure
+const adminSetPaymentDetails = staffAdminProcedure
   .input(
     z
       .object({

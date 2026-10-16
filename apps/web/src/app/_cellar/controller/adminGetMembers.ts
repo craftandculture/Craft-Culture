@@ -11,7 +11,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import countChargeableCases from '../utils/countChargeableCases';
 import monthlyMembershipCharge from '../utils/monthlyMembershipCharge';
@@ -35,7 +35,7 @@ import monthlyMembershipCharge from '../utils/monthlyMembershipCharge';
  * and never shipped is a fact worth seeing, and a list that quietly omitted
  * them would read as a list of all members.
  */
-const adminGetMembers = adminProcedure.query(async () => {
+const adminGetMembers = staffAdminProcedure.query(async () => {
   const members = await db
     .select({
       id: partners.id,

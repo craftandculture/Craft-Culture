@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarPaymentSettings } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /** The bank details members are shown when paying for wine, for editing */
-const adminGetPaymentDetails = adminProcedure.query(async () => {
+const adminGetPaymentDetails = staffAdminProcedure.query(async () => {
   const [row] = await db
     .select()
     .from(cellarPaymentSettings)

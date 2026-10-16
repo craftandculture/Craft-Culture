@@ -5,7 +5,7 @@ import {
   consignmentPayoutRuns,
   consignmentSettlements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Payout runs, and what is waiting for the next one
@@ -14,7 +14,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * holding on members' behalf and have not yet paid over, so it should be
  * visible without opening anything.
  */
-const adminGetPayoutRuns = adminProcedure.query(async () => {
+const adminGetPayoutRuns = staffAdminProcedure.query(async () => {
   const runs = await db
     .select()
     .from(consignmentPayoutRuns)

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Pause, resume or cancel a membership billed by invoice
@@ -18,7 +18,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.onboarding.admin.setMembershipStatus.mutate({ membershipId, status: 'past_due' });
  */
-const adminSetMembershipStatus = adminProcedure
+const adminSetMembershipStatus = staffAdminProcedure
   .input(
     z.object({
       membershipId: z.string().uuid(),

@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarReleaseRates, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * The house rate card, and where every member stands against it
@@ -18,7 +18,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * "the house rate, because nobody has set one" is an answer to that. A member
  * missing from the list would instead read as a member who is not chargeable.
  */
-const adminGetReleaseRates = adminProcedure.query(async () => {
+const adminGetReleaseRates = staffAdminProcedure.query(async () => {
   const [rates, members] = await Promise.all([
     db.select().from(cellarReleaseRates),
     db

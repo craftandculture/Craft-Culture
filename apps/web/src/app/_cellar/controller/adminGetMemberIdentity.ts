@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { partnerIdentityDocuments, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * What identification a member has given us
@@ -12,7 +12,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * the server; an admin viewing a document goes through /api/cellar/identity,
  * which authenticates the request and streams the bytes itself.
  */
-const adminGetMemberIdentity = adminProcedure
+const adminGetMemberIdentity = staffAdminProcedure
   .input(z.object({ partnerId: z.string().uuid() }))
   .query(async ({ input }) => {
     const [partner] = await db

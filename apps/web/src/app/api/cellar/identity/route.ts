@@ -5,6 +5,7 @@ import {
   STOCK_OWNER_PARTNER_TYPES,
 } from '@/app/_auth/constants/accessProfiles';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import decryptIdentityFile from '@/app/_cellar/utils/decryptIdentityFile';
 import resolvePartnerForUser from '@/app/_partners/data/resolvePartnerForUser';
 import db from '@/database/client';
@@ -21,7 +22,8 @@ import tryCatch from '@/utils/tryCatch';
  * the bytes back, so the only thing a client ever holds is a URL that stops
  * working when their session does.
  *
- * Admins may read any member's document; a member may read only their own.
+ * C&C staff admins may read any member's document; a member may read only
+ * their own.
  */
 export const GET = async (request: Request) => {
   const url = new URL(request.url);
@@ -38,7 +40,11 @@ export const GET = async (request: Request) => {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   }
 
-  const isAdmin = user.role === 'admin';
+  /*
+    C&C staff only. Some partners hold admin logins, and role alone would let
+    them stream every member's Emirates ID or passport.
+  */
+  const isAdmin = user.role === 'admin' && isTeamMember(user);
 
   /*
     A member's own partner is resolved from the session, never taken from the

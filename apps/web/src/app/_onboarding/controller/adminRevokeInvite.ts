@@ -5,7 +5,7 @@ import { z } from 'zod';
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { cellarInvites } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Withdraw an invitation so its link no longer works
@@ -13,7 +13,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * The account and cellar it created stay — they hold nothing yet, and a
  * later invite or application reuses them rather than making duplicates.
  */
-const adminRevokeInvite = adminProcedure
+const adminRevokeInvite = staffAdminProcedure
   .input(z.object({ inviteId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const [invite] = await db.select().from(cellarInvites).where(eq(cellarInvites.id, input.inviteId)).limit(1);

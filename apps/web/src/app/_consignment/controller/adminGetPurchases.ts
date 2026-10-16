@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarPurchaseItems, cellarPurchases } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Purchases waiting on us
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * The queue that matters is `payment_claimed` — a member says the money is
  * sent and nothing moves until somebody checks the bank and confirms it.
  */
-const adminGetPurchases = adminProcedure
+const adminGetPurchases = staffAdminProcedure
   .input(
     z
       .object({

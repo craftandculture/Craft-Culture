@@ -7,7 +7,7 @@ import {
   consignmentPayoutRuns,
   consignmentSettlements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import generateRunNumber from '../utils/generateRunNumber';
 
@@ -25,7 +25,7 @@ import generateRunNumber from '../utils/generateRunNumber';
  * The run is a draft. Nothing reaches Zoho until it is approved, so the figures
  * can be read and argued with first.
  */
-const adminCreatePayoutRun = adminProcedure
+const adminCreatePayoutRun = staffAdminProcedure
   .input(
     z.object({
       /** Sales settled on or before this date are swept in */

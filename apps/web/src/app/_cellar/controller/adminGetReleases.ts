@@ -8,7 +8,7 @@ import {
   cellarReleaseRequests,
   partners,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import backfillReleaseItems from '../data/backfillReleaseItems';
 import getCostPerBottle from '../data/getCostPerBottle';
@@ -21,7 +21,7 @@ import computeReleaseQuote from '../utils/computeReleaseQuote';
  * wines has not asked us for anything, and a queue that shows unfinished
  * baskets trains people to ignore it.
  */
-const adminGetReleases = adminProcedure
+const adminGetReleases = staffAdminProcedure
   .input(
     z
       .object({

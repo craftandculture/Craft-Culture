@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { saleMandateLots, saleMandates } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Offers across every member
@@ -12,7 +12,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * something has not asked us for anything, and a queue that shows unfinished
  * work trains people to ignore it.
  */
-const adminGetMandates = adminProcedure
+const adminGetMandates = staffAdminProcedure
   .input(
     z
       .object({

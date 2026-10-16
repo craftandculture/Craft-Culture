@@ -5,7 +5,7 @@ import { z } from 'zod';
 import storeIdentityDocument from '@/app/_cellar/data/storeIdentityDocument';
 import db from '@/database/client';
 import { cellarApplications, users } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
 
@@ -16,7 +16,7 @@ import ensureApplicantCellar from '../data/ensureApplicantCellar';
  * is — encrypted, on their cellar, which is created (inactive) if they have
  * not got that far yet.
  */
-const adminUploadApplicationIdentity = adminProcedure
+const adminUploadApplicationIdentity = staffAdminProcedure
   .input(
     z.object({
       applicationId: z.string().uuid(),

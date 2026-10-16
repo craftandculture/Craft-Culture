@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarReleaseRates } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Set the rate card a member's releases are priced from
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * Passing no partner sets the house default, which every member without a card
  * of their own falls back to.
  */
-const adminSetReleaseRates = adminProcedure
+const adminSetReleaseRates = staffAdminProcedure
   .input(
     z.object({
       partnerId: z.string().uuid().nullable(),

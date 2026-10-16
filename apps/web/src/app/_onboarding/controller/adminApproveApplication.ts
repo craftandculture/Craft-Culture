@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import approveCellarApplication from '../data/approveCellarApplication';
 
@@ -10,7 +10,7 @@ import approveCellarApplication from '../data/approveCellarApplication';
  *
  * See `approveCellarApplication` — the same path the Users page takes.
  */
-const adminApproveApplication = adminProcedure
+const adminApproveApplication = staffAdminProcedure
   .input(z.object({ applicationId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const partnerId = await approveCellarApplication(input.applicationId, ctx.user.id);

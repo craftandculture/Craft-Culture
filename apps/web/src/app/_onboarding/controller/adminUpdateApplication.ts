@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarApplications } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import syncApplicantProfile from '../data/syncApplicantProfile';
 
@@ -22,7 +22,7 @@ const optionalText = (max: number) =>
  * than finishing the form. What is typed here is saved exactly as given —
  * an emptied field is cleared — and copied onto their cellar.
  */
-const adminUpdateApplication = adminProcedure
+const adminUpdateApplication = staffAdminProcedure
   .input(
     z.object({
       applicationId: z.string().uuid(),

@@ -8,7 +8,7 @@ import {
   consignmentPayoutRuns,
   consignmentSettlements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import { zohoCreateBillJob } from '@/trigger/jobs/zoho-sync';
 
 /**
@@ -28,7 +28,7 @@ import { zohoCreateBillJob } from '@/trigger/jobs/zoho-sync';
  * hold a request open against Zoho's rate limits, and the job is idempotent on
  * `zohoBillId`, so a retry cannot double-bill.
  */
-const adminApprovePayoutRun = adminProcedure
+const adminApprovePayoutRun = staffAdminProcedure
   .input(z.object({ runId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const [run] = await db
