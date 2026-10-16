@@ -1,3 +1,9 @@
+## [2.0.373](https://github.com/craftandculture/Craft-Culture/compare/v2.0.372...v2.0.373) (2026-10-16)
+
+### Bug Fixes
+
+* the shipments list filters drafts and cancelled shipments again ([4db0e94](https://github.com/craftandculture/Craft-Culture/commit/4db0e94bde79e29010c4959e4fae0f536e97c34b))
+
 ## [2.0.372](https://github.com/craftandculture/Craft-Culture/compare/v2.0.371...v2.0.372) (2026-10-16)
 
 ### Bug Fixes
