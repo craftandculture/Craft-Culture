@@ -88,18 +88,21 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
   const points = [
     {
       icon: IconTemperature,
-      title: 'Ideal storage, duty-free',
-      detail: 'Kept at 12–14°C, humidity controlled and monitored around the clock. Duty is only paid on delivery.',
+      title: 'Professionally cellared at 12–14°C',
+      detail:
+        'Your wine is stored in our temperature-controlled bonded facility, monitored around the clock. Duty and VAT remain suspended until your wine is released for local delivery.',
     },
     {
       icon: IconWorld,
-      title: 'From your merchants to your cellar',
-      detail: 'We collect from merchants and bonded warehouses in the UK and Europe and ship to the UAE.',
+      title: 'We bring your collection to you',
+      detail:
+        'Have wine held with merchants or bonded warehouses in the UK or Europe? We coordinate collection, consolidation and shipment directly into your UAE cellar.',
     },
     {
       icon: IconListDetails,
-      title: 'Your collection at a glance',
-      detail: 'See every case you hold, buy from our cellar, sell or arrange a delivery at any time.',
+      title: 'Your collection, all in one place',
+      detail:
+        'View and manage your holdings through your private cellar. Add wines from abroad, buy from our in-bond collection, sell, or arrange delivery when you’re ready to enjoy them.',
     },
   ];
 
@@ -109,7 +112,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
         {greeting ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900">
             <Icon icon={IconMailOpened} size="xs" />
-            {greeting.inviterName ? `An invitation from ${greeting.inviterName}` : 'You have been invited'}
+            {greeting.inviterName ? `Personally invited by ${greeting.inviterName}` : 'You have been personally invited'}
           </span>
         ) : (
           <span className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.18em]">
@@ -119,8 +122,12 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
         <h1 className="font-heading text-text-primary text-4xl leading-tight tracking-tight sm:text-5xl">
           {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your Private Cellar account'}
         </h1>
+        <p className="text-text-primary max-w-xl text-xl font-medium leading-snug sm:text-2xl">
+          Your private cellar with Craft &amp; Culture.
+        </p>
         <p className="text-text-muted max-w-xl text-base leading-7 sm:text-lg sm:leading-8">
-          A private cellar for your collection in the UAE, cared for by Craft &amp; Culture.
+          Store, manage and grow your wine collection in the UAE, with professional bonded storage and seamless access
+          whenever you need it.
         </p>
       </div>
 
@@ -134,9 +141,11 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
       >
         <div>
           <p className="text-text-primary text-lg font-semibold">
-            {greeting ? 'Accept your invitation' : 'Begin your application'}
+            {greeting ? 'Join your private cellar' : 'Begin your application'}
           </p>
-          <p className="text-text-muted mt-0.5 text-sm">A few minutes to complete. Your progress is saved as you go.</p>
+          <p className="text-text-muted mt-0.5 text-sm">
+            Set up your access in just a few minutes. You can complete the rest later.
+          </p>
         </div>
         <label className="block space-y-2">
           <span className="text-text-primary text-sm font-semibold">Your email</span>
@@ -160,7 +169,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           {!isSending && <Icon icon={IconArrowRight} size="sm" />}
         </button>
         <p className="text-text-muted flex items-center justify-center gap-1.5 text-center text-xs">
-          <Icon icon={IconLock} size="xs" /> No password needed. We email you a secure link.
+          <Icon icon={IconLock} size="xs" /> No password required. We’ll email you a secure sign-in link.
         </p>
       </form>
 
