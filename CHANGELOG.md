@@ -1,3 +1,9 @@
+## [2.0.390](https://github.com/craftandculture/Craft-Culture/compare/v2.0.389...v2.0.390) (2026-10-16)
+
+### Features
+
+* home KPI tiles follow the Index house style, and large totals read in millions ([b62ef9f](https://github.com/craftandculture/Craft-Culture/commit/b62ef9fb7eab083d5e2e237f083ded657afc2790))
+
 ## [2.0.389](https://github.com/craftandculture/Craft-Culture/compare/v2.0.388...v2.0.389) (2026-10-16)
 
 ### Features
