@@ -1,48 +1,127 @@
-import { and, eq, gte, inArray, lt, lte, ne } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsJobs, logisticsQuotes, logisticsShipments } from '@/database/schema';
+import { logisticsJobs, logisticsQuotes, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 
-import getBondClaimsDue from './getBondClaimsDue';
-import { logisticsDigestMessage } from './logisticsSlackMessages';
+import {
+  type DigestItem,
+  type DigestSection,
+  type WeeklySummary,
+  digestUrl,
+  logisticsDigestMessage,
+  quoteUrl,
+  shortDate,
+  weeklySummaryMessage,
+} from './logisticsSlackMessages';
 import postLogisticsSlack from './postLogisticsSlack';
+import getAttentionGroups from '../data/getAttentionGroups';
 import NOT_ARRIVED_STATUSES from '../utils/notArrivedStatuses';
 
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Post the weekday-morning logistics digest to #logistics
+ * Slack member ids to mention when something needs action, comma separated
+ * (Slack profile › ⋯ › Copy member ID). Unset, nobody is mentioned.
+ */
+export const LOGISTICS_MENTION_ENV = 'SLACK_LOGISTICS_MENTION_IDS';
+
+const mentionText = () =>
+  (process.env[LOGISTICS_MENTION_ENV] ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => `<@${id}>`)
+    .join(' ');
+
+const isFridayInDubai = (now: Date) =>
+  now.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Asia/Dubai' }) === 'Fri';
+
+/**
+ * The last seven days' movements, for the Friday summary
  *
- * Five checks: inbound arrivals due in the next three days, shipments whose
- * ETA has passed without arriving (last 90 days, as on the board), movement
- * bond claims due within 14 days or missed, pending forwarder quotes expiring
- * within seven days, and export jobs shipped whose documents are not yet
- * sent. A quiet morning still posts one line, so silence means a failure.
+ * Imports count when they arrived (ATA, else delivered), exports and mainland
+ * transfers when they left (ATD, else delivered) — the same rule as the
+ * monthly report. Bottles come from the line items, falling back to the
+ * shipment's own count.
+ *
+ * @param now - The end of the week
+ * @returns The week's totals
+ */
+export const getWeeklySummary = async (now = new Date()): Promise<WeeklySummary> => {
+  const from = new Date(now.getTime() - 7 * DAY);
+  const movedAt = sql`CASE WHEN ${logisticsShipments.type} = 'inbound'
+    THEN COALESCE(${logisticsShipments.ata}, ${logisticsShipments.deliveredAt})
+    ELSE COALESCE(${logisticsShipments.atd}, ${logisticsShipments.deliveredAt}) END`;
+
+  const rows = await db
+    .select({
+      type: logisticsShipments.type,
+      freightUsd: logisticsShipments.freightCostUsd,
+      bottles: sql<number>`COALESCE((
+        SELECT SUM(COALESCE(
+          ${logisticsShipmentItems.totalBottles},
+          ${logisticsShipmentItems.cases} * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
+        ))
+        FROM ${logisticsShipmentItems}
+        WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+      ), ${logisticsShipments.totalBottles}, 0)`,
+    })
+    .from(logisticsShipments)
+    .where(
+      and(
+        ne(logisticsShipments.status, 'cancelled'),
+        sql`${movedAt} >= ${from.toISOString()}::timestamp`,
+        sql`${movedAt} < ${now.toISOString()}::timestamp`,
+      ),
+    );
+
+  const of = (types: string[]) => rows.filter((r) => types.includes(r.type));
+  const sum = (rs: typeof rows) => rs.reduce((n, r) => n + Number(r.bottles ?? 0), 0);
+  const imports = of(['inbound']);
+  const exports = of(['outbound', 're_export']);
+  const transfers = of(['mainland_transfer']);
+  const costed = imports.filter((r) => r.freightUsd != null);
+  const freightUsd = costed.reduce((n, r) => n + Number(r.freightUsd), 0);
+  const costedBottles = sum(costed);
+
+  return {
+    from,
+    to: now,
+    bottlesIn: sum(imports),
+    shipmentsIn: imports.length,
+    bottlesOut: sum(exports),
+    shipmentsOut: exports.length,
+    bottlesTransferred: sum(transfers),
+    shipmentsTransferred: transfers.length,
+    freightUsd,
+    freightPerBottle: costedBottles > 0 ? freightUsd / costedBottles : null,
+  };
+};
+
+/**
+ * Build the weekday-morning digest's sections
+ *
+ * The board's Needs attention groups (the same function feeds the dashboard),
+ * plus what is arriving in the next three days and quotes expiring within a
+ * week. Every reference links to its shipment, export job or quote.
  *
  * @param now - The moment to judge by
- * @returns The counts posted, and why the post did not go if it did not
+ * @returns The sections, in the order they are shown
  */
-const sendLogisticsDigest = async (now = new Date()) => {
+export const getDigestSections = async (now = new Date()): Promise<DigestSection[]> => {
   const in3Days = new Date(now.getTime() + 3 * DAY);
   const in7Days = new Date(now.getTime() + 7 * DAY);
-  const since = new Date(now.getTime() - 90 * DAY);
 
-  const columns = {
-    id: logisticsShipments.id,
-    shipmentNumber: logisticsShipments.shipmentNumber,
-    name: logisticsShipments.name,
-    eta: logisticsShipments.eta,
-    jobNumber: logisticsJobs.jobNumber,
-  };
-
-  const base = () =>
+  const [groups, arriving, quotes, awaitingDocs] = await Promise.all([
+    getAttentionGroups(now),
     db
-      .select(columns)
+      .select({
+        id: logisticsShipments.id,
+        shipmentNumber: logisticsShipments.shipmentNumber,
+        name: logisticsShipments.name,
+        eta: logisticsShipments.eta,
+      })
       .from(logisticsShipments)
-      .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id));
-
-  const [arriving, overdue, bonds, quotes, awaitingDocs] = await Promise.all([
-    base()
       .where(
         and(
           eq(logisticsShipments.type, 'inbound'),
@@ -52,19 +131,9 @@ const sendLogisticsDigest = async (now = new Date()) => {
         ),
       )
       .orderBy(logisticsShipments.eta),
-    base()
-      .where(
-        and(
-          gte(logisticsShipments.createdAt, since),
-          ne(logisticsShipments.status, 'cancelled'),
-          lt(logisticsShipments.eta, now),
-          inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES]),
-        ),
-      )
-      .orderBy(logisticsShipments.eta),
-    getBondClaimsDue(now),
     db
       .select({
+        id: logisticsQuotes.id,
         quoteNumber: logisticsQuotes.quoteNumber,
         forwarderName: logisticsQuotes.forwarderName,
         validUntil: logisticsQuotes.validUntil,
@@ -89,18 +158,90 @@ const sendLogisticsDigest = async (now = new Date()) => {
       .orderBy(logisticsJobs.jobNumber),
   ]);
 
-  const failure = await postLogisticsSlack(
-    logisticsDigestMessage({ arriving, overdue, bonds, quotes, awaitingDocs }),
-  );
+  type BoardRow = (typeof groups)[number]['shipments'][number];
+  const fromBoard = (key: string, note?: (s: BoardRow) => string | null): DigestItem[] =>
+    (groups.find((g) => g.key === key)?.shipments ?? []).map((s) => ({
+      ref: s.jobNumber ?? s.shipmentNumber,
+      url: digestUrl(s),
+      name: ('clientName' in s && s.clientName) || s.name || null,
+      note: note ? note(s) : null,
+    }));
+
+  return [
+    {
+      title: 'Arriving in the next 3 days',
+      action: false,
+      items: arriving.map((s) => ({
+        ref: s.shipmentNumber,
+        url: digestUrl(s),
+        name: s.name,
+        note: s.eta ? shortDate(s.eta) : null,
+      })),
+    },
+    {
+      title: 'ETA passed, not received',
+      action: true,
+      items: fromBoard('overdue', (s) => (s.eta ? `ETA ${shortDate(s.eta)}` : null)),
+    },
+    {
+      title: 'Bond claims due or missed',
+      action: true,
+      items: fromBoard('bond_claims', (s) =>
+        'bondDaysLeft' in s && typeof s.bondDaysLeft === 'number'
+          ? s.bondDaysLeft < 0
+            ? 'missed'
+            : `${s.bondDaysLeft} days left`
+          : null,
+      ),
+    },
+    {
+      title: 'Shipped, documents not sent',
+      action: true,
+      items: awaitingDocs.map((j) => ({
+        ref: j.jobNumber,
+        url: digestUrl({ id: j.shipmentId, jobNumber: j.jobNumber }),
+        name: j.clientName,
+      })),
+    },
+    { title: 'No cases or bottles entered', action: true, items: fromBoard('no_quantities') },
+    { title: 'Export jobs with no invoice', action: true, items: fromBoard('no_invoice') },
+    {
+      title: 'Quotes expiring within 7 days',
+      action: false,
+      items: quotes.map((q) => ({
+        ref: q.quoteNumber,
+        url: quoteUrl(q.id),
+        name: q.forwarderName,
+        note: q.validUntil ? shortDate(q.validUntil) : null,
+      })),
+    },
+    { title: 'Draft for over 7 days', action: false, items: fromBoard('stale_draft') },
+  ];
+};
+
+/**
+ * Post the weekday-morning logistics digest to #logistics
+ *
+ * Nothing is posted on a quiet morning. On Fridays the week's summary follows,
+ * quiet or not, so the channel hears from the job at least weekly.
+ *
+ * @param now - The moment to judge by
+ * @returns What was posted, and why a post did not go if it did not
+ */
+const sendLogisticsDigest = async (now = new Date()) => {
+  const sections = await getDigestSections(now);
+  const text = logisticsDigestMessage(sections, mentionText());
+  const digestFailure = text ? await postLogisticsSlack(text) : null;
+
+  let weeklyFailure: string | null = null;
+  const friday = isFridayInDubai(now);
+  if (friday) weeklyFailure = await postLogisticsSlack(weeklySummaryMessage(await getWeeklySummary(now)));
 
   return {
-    posted: failure === null,
-    reason: failure,
-    arriving: arriving.length,
-    overdue: overdue.length,
-    bonds: bonds.length,
-    quotes: quotes.length,
-    awaitingDocs: awaitingDocs.length,
+    digest: text ? (digestFailure === null ? 'posted' : 'failed') : 'quiet, not posted',
+    weekly: friday ? (weeklyFailure === null ? 'posted' : 'failed') : 'not Friday',
+    reason: digestFailure ?? weeklyFailure,
+    counts: Object.fromEntries(sections.map((s) => [s.title, s.items.length])),
   };
 };
 

@@ -105,11 +105,11 @@ const adminUpdateStatus = adminProcedure
           logger.error('Failed to trigger milestone notification', { err, shipmentId: id });
         });
 
-      // Tell #logistics when an inbound shipment lands; never blocks the update
+      // Tell #logistics when an inbound shipment departs or lands; never blocks the update
       if (
         shipment.type === 'inbound' &&
         status !== previousStatus &&
-        (status === 'at_warehouse' || status === 'delivered')
+        (status === 'in_transit' || status === 'at_warehouse' || status === 'delivered')
       ) {
         queueLogisticsSlack(inboundStatusMessage(shipment, status));
       }

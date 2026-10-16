@@ -16,6 +16,8 @@ import {
   getHillebrandShipments,
 } from './getShipments';
 import type { HillebrandShipment } from './getShipments';
+import { inboundStatusMessage } from '../../notifications/logisticsSlackMessages';
+import postLogisticsSlack from '../../notifications/postLogisticsSlack';
 import { forwardOnlyStatus } from '../../utils/shipmentStatuses';
 
 /**
@@ -292,6 +294,10 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
             destinationCity: logisticsShipments.destinationCity,
             destinationWarehouse: logisticsShipments.destinationWarehouse,
             partnerNotes: logisticsShipments.partnerNotes,
+            name: logisticsShipments.name,
+            originCity: logisticsShipments.originCity,
+            totalCases: logisticsShipments.totalCases,
+            totalBottles: logisticsShipments.totalBottles,
           })
           .from(logisticsShipments)
           .where(eq(logisticsShipments.hillebrandShipmentId, hShipment.id))
@@ -415,6 +421,25 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
               newStatus: status,
               notes: 'Updated from Hillebrand tracking',
             });
+
+            // Tell #logistics when Hillebrand reports an import has left or landed
+            if (existing.type === 'inbound' && (status === 'in_transit' || status === 'delivered')) {
+              await postLogisticsSlack(
+                inboundStatusMessage(
+                  {
+                    id: existing.id,
+                    shipmentNumber: existing.shipmentNumber,
+                    name: existing.name,
+                    originCity: shipmentData.originCity ?? existing.originCity,
+                    destinationCity: existing.destinationCity ?? destinationCity,
+                    totalCases: hasItems ? existing.totalCases : totalCases,
+                    totalBottles: hasItems ? existing.totalBottles : totalBottles,
+                    eta: shipmentData.eta ?? null,
+                  },
+                  status,
+                ),
+              );
+            }
           }
           await advanceShipmentIntakes(existing.id);
 
