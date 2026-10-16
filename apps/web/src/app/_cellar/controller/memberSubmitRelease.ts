@@ -1,7 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -21,6 +22,9 @@ import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 const memberSubmitRelease = stockOwnerProcedure
   .input(z.object({ requestId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
+    /* A paused membership stops deliveries, the same as it stops buying. */
+    await assertActivated(ctx.partner.id);
+
     const [request] = await db
       .select({
         id: cellarReleaseRequests.id,
@@ -63,14 +67,27 @@ const memberSubmitRelease = stockOwnerProcedure
       });
     }
 
-    await db
+    const [submitted] = await db
       .update(cellarReleaseRequests)
       .set({
         status: 'submitted',
         submittedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(cellarReleaseRequests.id, request.id));
+      .where(
+        and(
+          eq(cellarReleaseRequests.id, request.id),
+          inArray(cellarReleaseRequests.status, [...EDITABLE_STATUSES]),
+        ),
+      )
+      .returning({ id: cellarReleaseRequests.id });
+
+    if (!submitted) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This request has already been submitted.',
+      });
+    }
 
     await notifyReleaseUpdate({
       event: 'submitted',

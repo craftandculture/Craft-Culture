@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -35,10 +36,16 @@ const memberAmendRelease = stockOwnerProcedure
           }),
         )
         .min(1, 'A request needs at least one wine. Withdraw it instead.')
-        .max(200),
+        .max(200)
+        .refine(
+          (lines) => new Set(lines.map((line) => line.stockId)).size === lines.length,
+          'Each wine can appear only once. Combine the quantities on one line.',
+        ),
     }),
   )
   .mutation(async ({ ctx, input }) => {
+    await assertActivated(ctx.partner.id);
+
     const [request] = await db
       .select({
         id: cellarReleaseRequests.id,
@@ -119,32 +126,54 @@ const memberAmendRelease = stockOwnerProcedure
       }
     }
 
-    await db
-      .delete(cellarReleaseRequestItems)
-      .where(eq(cellarReleaseRequestItems.requestId, request.id));
+    /*
+      One transaction, and the request is touched first under the status it
+      was read with. An admin quoting at the same moment either lands first —
+      and this refuses — or waits, so a quote is never accepted against a list
+      that changed underneath it.
+    */
+    await db.transaction(async (tx) => {
+      const [touched] = await tx
+        .update(cellarReleaseRequests)
+        .set({ updatedAt: new Date() })
+        .where(
+          and(
+            eq(cellarReleaseRequests.id, request.id),
+            eq(cellarReleaseRequests.status, request.status),
+          ),
+        )
+        .returning({ id: cellarReleaseRequests.id });
 
-    await db.insert(cellarReleaseRequestItems).values(
-      input.lines.map((line) => {
-        const stock = ownedById.get(line.stockId);
+      if (!touched) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'This request has just been priced. Please refresh to see the quote.',
+        });
+      }
 
-        return {
-          requestId: request.id,
-          stockId: line.stockId,
-          lotNumber: stock?.lotNumber ?? null,
-          lwin18: stock?.lwin18 ?? '',
-          productName: stock?.productName ?? '',
-          vintage: stock?.vintage ?? null,
-          bottleSize: stock?.bottleSize ?? null,
-          caseConfig: stock?.caseConfig ?? null,
-          bottles: line.bottles,
-        };
-      }),
-    );
+      await tx
+        .delete(cellarReleaseRequestItems)
+        .where(eq(cellarReleaseRequestItems.requestId, request.id));
 
-    await db
-      .update(cellarReleaseRequests)
-      .set({ updatedAt: new Date() })
-      .where(eq(cellarReleaseRequests.id, request.id));
+      await tx.insert(cellarReleaseRequestItems).values(
+        input.lines.map((line) => {
+          const stock = ownedById.get(line.stockId);
+
+          return {
+            requestId: request.id,
+            stockId: line.stockId,
+            lotNumber: stock?.lotNumber ?? null,
+            lwin18: stock?.lwin18 ?? '',
+            productName: stock?.productName ?? '',
+            vintage: stock?.vintage ?? null,
+            bottleSize: stock?.bottleSize ?? null,
+            caseConfig: stock?.caseConfig ?? null,
+            bottles: line.bottles,
+          };
+        }),
+      );
+    });
 
     if (request.status === 'submitted') {
       await notifyReleaseUpdate({

@@ -49,7 +49,11 @@ const memberSaveRelease = stockOwnerProcedure
           }),
         )
         .min(1, 'Choose at least one wine')
-        .max(200),
+        .max(200)
+        .refine(
+          (lines) => new Set(lines.map((line) => line.stockId)).size === lines.length,
+          'Each wine can appear only once. Combine the quantities on one line.',
+        ),
     }),
   )
   .mutation(async ({ ctx, input }) => {

@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarReleaseRequests } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 
@@ -17,7 +17,7 @@ import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
  * September — the same reason a shipment records the FX rate it was priced at
  * rather than only the result.
  */
-const adminQuoteRelease = adminProcedure
+const adminQuoteRelease = staffAdminProcedure
   .input(
     z.object({
       requestId: z.string().uuid(),
@@ -60,6 +60,36 @@ const adminQuoteRelease = adminProcedure
       });
     }
 
+    /*
+      Only a request the member has handed over can be priced or sent back. A
+      draft is still being written, and a withdrawn or cancelled one is closed;
+      quoting either reopened it under the member.
+    */
+    const actionable =
+      input.outcome === 'cancel'
+        ? ['draft', 'submitted', 'under_review', 'revision_requested']
+        : ['submitted', 'under_review', 'revision_requested'];
+
+    if (!actionable.includes(request.status)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: `This request is ${request.status.replace(/_/g, ' ')} and cannot be changed here.`,
+      });
+    }
+
+    /* Every write below re-checks the status it was read with. */
+    const stillAsRead = and(
+      eq(cellarReleaseRequests.id, request.id),
+      eq(cellarReleaseRequests.status, request.status),
+    );
+
+    const changedMeanwhile = () =>
+      new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'The member changed this request while you were working on it. Refresh and look again.',
+      });
+
     if (input.outcome === 'request_revisions') {
       /*
         The note is the entire content of this action. Without it the member
@@ -81,7 +111,11 @@ const adminQuoteRelease = adminProcedure
           adminNotes: input.adminNotes,
           updatedAt: new Date(),
         })
-        .where(eq(cellarReleaseRequests.id, request.id));
+        .where(stillAsRead)
+        .returning({ id: cellarReleaseRequests.id })
+        .then(([row]) => {
+          if (!row) throw changedMeanwhile();
+        });
 
       await notifyReleaseUpdate({
         event: 'revision',
@@ -102,7 +136,11 @@ const adminQuoteRelease = adminProcedure
           adminNotes: input.adminNotes,
           updatedAt: new Date(),
         })
-        .where(eq(cellarReleaseRequests.id, request.id));
+        .where(stillAsRead)
+        .returning({ id: cellarReleaseRequests.id })
+        .then(([row]) => {
+          if (!row) throw changedMeanwhile();
+        });
 
       return { status: 'cancelled' as const };
     }
@@ -141,9 +179,14 @@ const adminQuoteRelease = adminProcedure
         quotedBy: ctx.user.id,
         updatedAt: new Date(),
       })
-      .where(eq(cellarReleaseRequests.id, request.id));
+      .where(stillAsRead)
+      .returning({ id: cellarReleaseRequests.id })
+      .then(([row]) => {
+        if (!row) throw changedMeanwhile();
+      });
 
-    const total = clearance + delivery + service + extra;
+    /* The same figure the member is asked to accept, repack included. */
+    const total = clearance + delivery + service + repack + extra;
 
     await notifyReleaseUpdate({
       event: 'quoted',

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -44,14 +44,38 @@ const memberWithdrawRelease = stockOwnerProcedure
       throw new TRPCError({
         code: 'CONFLICT',
         message:
-          'This one is already being fulfilled. Speak to us and we will sort it out.',
+          'This delivery is already being prepared. Please contact us and we will arrange any change.',
       });
     }
 
-    await db
+    /*
+      Re-checked at the write. Accepting a quote and withdrawing at the same
+      moment otherwise cancels a request whose order has already been raised.
+    */
+    const [withdrawn] = await db
       .update(cellarReleaseRequests)
       .set({ status: 'cancelled', updatedAt: new Date() })
-      .where(eq(cellarReleaseRequests.id, request.id));
+      .where(
+        and(
+          eq(cellarReleaseRequests.id, request.id),
+          inArray(cellarReleaseRequests.status, [
+            'draft',
+            'submitted',
+            'under_review',
+            'revision_requested',
+          ]),
+          isNull(cellarReleaseRequests.privateClientOrderId),
+        ),
+      )
+      .returning({ id: cellarReleaseRequests.id });
+
+    if (!withdrawn) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'This request has just changed. Please refresh to see where it stands.',
+      });
+    }
 
     return { requestNumber: request.requestNumber };
   });
