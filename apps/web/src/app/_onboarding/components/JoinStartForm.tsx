@@ -88,20 +88,18 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
   const points = [
     {
       icon: IconTemperature,
-      title: 'Cellared duty-free at 12–14°C',
-      detail:
-        'In the C&C bonded warehouse, humidity controlled and monitored around the clock. Duty and VAT are only paid when wine is delivered to you.',
+      title: 'Ideal storage, duty-free',
+      detail: 'Kept at 12–14°C, humidity controlled and monitored around the clock. Duty is only paid on delivery.',
     },
     {
       icon: IconWorld,
-      title: 'Collected from your merchants',
-      detail:
-        'We arrange collection from your merchants and bonded warehouses in the UK and Europe, and ship it to your cellar in the UAE.',
+      title: 'From your merchants to your cellar',
+      detail: 'We collect from merchants and bonded warehouses in the UK and Europe and ship to the UAE.',
     },
     {
       icon: IconListDetails,
-      title: 'Your whole collection in one place',
-      detail: 'Every case you hold, on record. Buy from our cellar, sell, or arrange a delivery whenever you wish.',
+      title: 'Your collection at a glance',
+      detail: 'See every case you hold, buy from our cellar, sell or arrange a delivery at any time.',
     },
   ];
 
@@ -122,8 +120,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your Private Cellar account'}
         </h1>
         <p className="text-text-muted max-w-xl text-base leading-7 sm:text-lg sm:leading-8">
-          A private cellar with Craft &amp; Culture: your wine kept duty-free in our bonded warehouse, collected from
-          your merchants abroad, and every case on record.
+          A private cellar for your collection in the UAE, cared for by Craft &amp; Culture.
         </p>
       </div>
 
@@ -139,7 +136,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           <p className="text-text-primary text-lg font-semibold">
             {greeting ? 'Accept your invitation' : 'Begin your application'}
           </p>
-          <p className="text-text-muted mt-0.5 text-sm">It takes a few minutes, and you can finish later.</p>
+          <p className="text-text-muted mt-0.5 text-sm">A few minutes to complete. Your progress is saved as you go.</p>
         </div>
         <label className="block space-y-2">
           <span className="text-text-primary text-sm font-semibold">Your email</span>
