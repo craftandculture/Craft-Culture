@@ -1,3 +1,10 @@
+## [2.0.383](https://github.com/craftandculture/Craft-Culture/compare/v2.0.382...v2.0.383) (2026-10-16)
+
+### Features
+
+* **cellar:** clearer Your collection step ([bb6b6ed](https://github.com/craftandculture/Craft-Culture/commit/bb6b6ed989bad0bd0015205a027349f5eff633c8))
+* **cellar:** investment-company option and searchable vaults and merchants ([55ad076](https://github.com/craftandculture/Craft-Culture/commit/55ad076113b6753a681ba21939ab7a066a4567c7))
+
 ## [2.0.382](https://github.com/craftandculture/Craft-Culture/compare/v2.0.381...v2.0.382) (2026-10-16)
 
 ### Features
