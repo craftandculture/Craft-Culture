@@ -1,3 +1,9 @@
+## [2.0.360](https://github.com/craftandculture/Craft-Culture/compare/v2.0.359...v2.0.360) (2026-10-16)
+
+### Bug Fixes
+
+* **copy:** C&C warehouse in place of Ras Al Khaimah on customer screens ([34399e4](https://github.com/craftandculture/Craft-Culture/commit/34399e493cf0dde8e469ddbe369ef54d73a58f26))
+
 ## [2.0.359](https://github.com/craftandculture/Craft-Culture/compare/v2.0.358...v2.0.359) (2026-10-16)
 
 ### Features
