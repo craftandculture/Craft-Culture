@@ -20,6 +20,8 @@ export const createExportJobSchema = z.object({
   invoiceValue: z.number().min(0).nullable().optional(),
   invoiceCurrency: text(3).min(3).default('AED'),
   exportInvoiceId: z.string().uuid().nullable().optional(),
+  totalCases: z.number().int().min(0).nullable().optional(),
+  totalBottles: z.number().int().min(0).nullable().optional(),
   notes: optionalText(2000),
 });
 
@@ -41,6 +43,8 @@ export const updateExportJobSchema = z.object({
   invoiceValue: z.number().min(0).nullable().optional(),
   invoiceCurrency: text(3).min(3).optional(),
   exportInvoiceId: z.string().uuid().nullable().optional(),
+  totalCases: z.number().int().min(0).nullable().optional(),
+  totalBottles: z.number().int().min(0).nullable().optional(),
   notes: optionalText(2000),
 });
 

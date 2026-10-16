@@ -1,9 +1,9 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAcceptQuote from './controller/adminAcceptQuote';
+import adminAddExportDocument from './controller/adminAddExportDocument';
 import adminAddGroupCostLine from './controller/adminAddGroupCostLine';
 import adminAddItem from './controller/adminAddItem';
-import adminAddExportDocument from './controller/adminAddExportDocument';
 import adminAddShipmentCostLine from './controller/adminAddShipmentCostLine';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
@@ -55,6 +55,7 @@ import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
 import adminSaveBond from './controller/adminSaveBond';
+import adminSearchZohoInvoices from './controller/adminSearchZohoInvoices';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
@@ -136,6 +137,7 @@ const adminRouter = createTRPCRouter({
     getOne: adminGetExportJob,
     create: adminCreateExportJob,
     update: adminUpdateExportJob,
+    searchZohoInvoices: adminSearchZohoInvoices,
     saveBond: adminSaveBond,
     addDocument: adminAddExportDocument,
   }),

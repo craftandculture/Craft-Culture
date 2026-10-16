@@ -12,6 +12,7 @@ import useTRPC from '@/lib/trpc/browser';
 import ClientPicker, { type ClientValue } from './ClientPicker';
 import ExportInvoiceSelect from './ExportInvoiceSelect';
 import { card, input, label, money, pill, primaryButton, secondaryButton, sectionHeading } from './exportUi';
+import ZohoInvoiceInput from './ZohoInvoiceInput';
 import { EXPORT_MODES, type ExportMode } from '../../utils/exportStages';
 
 const CURRENCIES = ['AED', 'USD', 'EUR', 'GBP'];
@@ -41,6 +42,8 @@ const NewExportJobForm = () => {
   const [invoiceValue, setInvoiceValue] = useState('');
   const [invoiceCurrency, setInvoiceCurrency] = useState('AED');
   const [notes, setNotes] = useState('');
+  const [cases, setCases] = useState('');
+  const [bottles, setBottles] = useState('');
 
   const create = useMutation({
     ...api.logistics.admin.exports.create.mutationOptions(),
@@ -68,6 +71,13 @@ const NewExportJobForm = () => {
       toast.error('Enter the invoice value as a number');
       return;
     }
+    const count = (v: string) => (v.trim() === '' ? 0 : Number(v));
+    const totalCases = count(cases);
+    const totalBottles = count(bottles);
+    if (![totalCases, totalBottles].every((n) => Number.isInteger(n) && n >= 0)) {
+      toast.error('Enter cases and bottles as whole numbers');
+      return;
+    }
     create.mutate({
       clientName: client.clientName.trim(),
       zohoCustomerId: client.zohoCustomerId,
@@ -81,6 +91,8 @@ const NewExportJobForm = () => {
       invoiceNumber: invoiceNumber.trim() || null,
       invoiceValue: value,
       invoiceCurrency,
+      totalCases,
+      totalBottles,
       notes: notes.trim() || null,
     });
   };
@@ -162,6 +174,18 @@ const NewExportJobForm = () => {
             </label>
             <input id="carrier" value={carrierName} onChange={(e) => setCarrierName(e.target.value)} className={input} />
           </div>
+          <div>
+            <label htmlFor="cases" className={label}>
+              Cases
+            </label>
+            <input id="cases" inputMode="numeric" value={cases} onChange={(e) => setCases(e.target.value)} className={input} />
+          </div>
+          <div>
+            <label htmlFor="bottles" className={label}>
+              Bottles
+            </label>
+            <input id="bottles" inputMode="numeric" value={bottles} onChange={(e) => setBottles(e.target.value)} className={input} />
+          </div>
         </div>
       </section>
 
@@ -169,7 +193,7 @@ const NewExportJobForm = () => {
         <p className={sectionHeading}>Invoice</p>
         <div>
           <label htmlFor="export-invoice" className={label}>
-            Link an export invoice (optional)
+            Link a C&C export invoice (optional)
           </label>
           <ExportInvoiceSelect
             id="export-invoice"
@@ -187,9 +211,20 @@ const NewExportJobForm = () => {
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_7rem]">
           <div>
             <label htmlFor="invoice-number" className={label}>
-              Invoice number
+              Invoice number (Zoho)
             </label>
-            <input id="invoice-number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className={input} />
+            <ZohoInvoiceInput
+              id="invoice-number"
+              value={invoiceNumber}
+              onChange={setInvoiceNumber}
+              zohoCustomerId={client.zohoCustomerId}
+              onPick={(inv) => {
+                setInvoiceNumber(inv.invoiceNumber);
+                setInvoiceValue(String(Math.round(inv.total * 100) / 100));
+                setInvoiceCurrency(inv.currency);
+                if (!client.zohoCustomerId) setClient({ clientName: inv.customerName, zohoCustomerId: inv.zohoCustomerId });
+              }}
+            />
           </div>
           <div>
             <label htmlFor="invoice-value" className={label}>
@@ -214,7 +249,7 @@ const NewExportJobForm = () => {
             </select>
           </div>
         </div>
-        <p className="text-xs text-text-muted">You can upload the invoice itself on the job once it is open.</p>
+        <p className="text-xs text-text-muted">Start typing an invoice number or client to pick a Zoho invoice. Everything can be edited on the job later, and the invoice PDF uploaded there.</p>
 
         {mode === 'bonded' ? (
           <div className="flex gap-2 rounded-lg bg-violet-50 p-3 text-sm text-violet-800 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/10 dark:text-violet-200 dark:ring-violet-900">

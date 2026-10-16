@@ -84,6 +84,8 @@ const adminGetExportJob = adminProcedure
       destinationCity: shipment.destinationCity,
       destinationCountry: shipment.destinationCountry,
       carrierName: shipment.carrierName,
+      totalCases: shipment.totalCases ?? 0,
+      totalBottles: shipment.totalBottles ?? 0,
       awbNumber: shipment.awbNumber,
       blNumber: shipment.blNumber,
       notes: shipment.internalNotes,

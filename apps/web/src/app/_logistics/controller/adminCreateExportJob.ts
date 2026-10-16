@@ -59,6 +59,8 @@ const adminCreateExportJob = adminProcedure
               destinationCountry: input.destinationCountry ?? null,
               destinationWarehouse: null,
               carrierName: input.carrierName ?? null,
+              totalCases: input.totalCases ?? 0,
+              totalBottles: input.totalBottles ?? 0,
               internalNotes: input.notes ?? null,
               createdBy: user.id,
             })

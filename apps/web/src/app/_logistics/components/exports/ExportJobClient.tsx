@@ -35,6 +35,7 @@ import {
   stageTone,
 } from './exportUi';
 import useExportUpload, { type ExportDocumentKind } from './useExportUpload';
+import ZohoInvoiceInput from './ZohoInvoiceInput';
 import { EXPORT_MODES, EXPORT_STAGES, type ExportMode, type ExportStage, modeLabel, stageLabel } from '../../utils/exportStages';
 
 const DOC_LABEL: Record<string, string> = {
@@ -52,25 +53,6 @@ const UPLOAD_KINDS: { key: ExportDocumentKind; label: string }[] = [
   { key: 'stamped', label: 'Stamped bond paperwork' },
   { key: 'other', label: 'Other' },
 ];
-
-/**
- * One export job: its stage, details, invoice, bond and documents
- *
- * The stage strip is the job's progress; pressing the next stage moves it on.
- * Details are edited in place and saved together.
- */
-const ExportJobClient = ({ shipmentId }: { shipmentId: string }) => {
-  const api = useTRPC();
-  const { data: job, isLoading, error } = useQuery(api.logistics.admin.exports.getOne.queryOptions({ shipmentId }));
-
-  if (isLoading) return <p className="py-16 text-center text-sm text-text-muted">Loading job…</p>;
-  if (error || !job) {
-    return <p className={`${card} p-6 text-sm text-text-muted`}>This export job could not be loaded{error ? `: ${error.message}` : ''}.</p>;
-  }
-
-  // The form holds its own edits; documents, bond and history read the fresh query
-  return <JobView key={job.shipmentId} job={job} />;
-};
 
 type Job = inferRouterOutputs<AppRouter>['logistics']['admin']['exports']['getOne'];
 
@@ -95,6 +77,8 @@ const JobView = ({ job }: { job: Job }) => {
   const [invoiceValue, setInvoiceValue] = useState(job.invoiceValue?.toString() ?? '');
   const [invoiceCurrency, setInvoiceCurrency] = useState(job.invoiceCurrency);
   const [notes, setNotes] = useState(job.notes ?? '');
+  const [cases, setCases] = useState(job.totalCases ? String(job.totalCases) : '');
+  const [bottles, setBottles] = useState(job.totalBottles ? String(job.totalBottles) : '');
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: api.logistics.admin.exports.getOne.queryKey({ shipmentId: job.shipmentId }) });
@@ -131,6 +115,13 @@ const JobView = ({ job }: { job: Job }) => {
       toast.error('Enter the invoice value as a number');
       return;
     }
+    const count = (v: string) => (v.trim() === '' ? 0 : Number(v));
+    const totalCases = count(cases);
+    const totalBottles = count(bottles);
+    if (![totalCases, totalBottles].every((n) => Number.isInteger(n) && n >= 0)) {
+      toast.error('Enter cases and bottles as whole numbers');
+      return;
+    }
     update.mutate(
       {
         shipmentId: job.shipmentId,
@@ -148,13 +139,15 @@ const JobView = ({ job }: { job: Job }) => {
         invoiceNumber: invoiceNumber.trim() || null,
         invoiceValue: value,
         invoiceCurrency,
+        totalCases,
+        totalBottles,
         notes: notes.trim() || null,
       },
       { onSuccess: () => toast.success('Job saved') },
     );
   };
 
-  const field = (id: string, text: string, value: string, set: (v: string) => void, extra?: { inputMode?: 'decimal' }) => (
+  const field = (id: string, text: string, value: string, set: (v: string) => void, extra?: { inputMode?: 'decimal' | 'numeric' }) => (
     <div>
       <label htmlFor={id} className={label}>
         {text}
@@ -263,6 +256,8 @@ const JobView = ({ job }: { job: Job }) => {
               {field('carrier', 'Carrier or transporter', carrierName, setCarrierName)}
               {mode === 'air' ? field('awb', 'AWB number', awbNumber, setAwbNumber) : null}
               {mode === 'sea_fcl' || mode === 'sea_lcl' ? field('bl', 'BL number', blNumber, setBlNumber) : null}
+              {field('cases', 'Cases', cases, setCases, { inputMode: 'numeric' })}
+              {field('bottles', 'Bottles', bottles, setBottles, { inputMode: 'numeric' })}
             </div>
             <div>
               <label htmlFor="notes" className={label}>
@@ -277,7 +272,7 @@ const JobView = ({ job }: { job: Job }) => {
             <p className={sectionHeading}>Invoice</p>
             <div>
               <label htmlFor="export-invoice" className={label}>
-                Export invoice
+                C&C export invoice
               </label>
               <ExportInvoiceSelect
                 id="export-invoice"
@@ -302,7 +297,23 @@ const JobView = ({ job }: { job: Job }) => {
               ) : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_6rem]">
-              {field('invoice-number', 'Invoice number', invoiceNumber, setInvoiceNumber)}
+              <div>
+                <label htmlFor="invoice-number" className={label}>
+                  Invoice number (Zoho)
+                </label>
+                <ZohoInvoiceInput
+                  id="invoice-number"
+                  value={invoiceNumber}
+                  onChange={setInvoiceNumber}
+                  zohoCustomerId={client.zohoCustomerId}
+                  onPick={(inv) => {
+                    setInvoiceNumber(inv.invoiceNumber);
+                    setInvoiceValue(String(Math.round(inv.total * 100) / 100));
+                    setInvoiceCurrency(inv.currency);
+                    if (!client.zohoCustomerId) setClient({ clientName: inv.customerName, zohoCustomerId: inv.zohoCustomerId });
+                  }}
+                />
+              </div>
               {field('invoice-value', 'Final invoice value', invoiceValue, setInvoiceValue, { inputMode: 'decimal' })}
               {field('invoice-currency', 'Currency', invoiceCurrency, (v) => setInvoiceCurrency(v.toUpperCase().slice(0, 3)))}
             </div>
@@ -407,6 +418,25 @@ const JobView = ({ job }: { job: Job }) => {
       </div>
     </div>
   );
+};
+
+/**
+ * One export job: its stage, details, invoice, bond and documents
+ *
+ * The stage strip is the job's progress; pressing the next stage moves it on.
+ * Details are edited in place and saved together.
+ */
+const ExportJobClient = ({ shipmentId }: { shipmentId: string }) => {
+  const api = useTRPC();
+  const { data: job, isLoading, error } = useQuery(api.logistics.admin.exports.getOne.queryOptions({ shipmentId }));
+
+  if (isLoading) return <p className="py-16 text-center text-sm text-text-muted">Loading job…</p>;
+  if (error || !job) {
+    return <p className={`${card} p-6 text-sm text-text-muted`}>This export job could not be loaded{error ? `: ${error.message}` : ''}.</p>;
+  }
+
+  // The form holds its own edits; documents, bond and history read the fresh query
+  return <JobView key={job.shipmentId} job={job} />;
 };
 
 export default ExportJobClient;
