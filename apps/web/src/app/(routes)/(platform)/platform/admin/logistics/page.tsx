@@ -62,7 +62,7 @@ const LogisticsDashboardPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading, refetch, isFetching, error } = useQuery({
     ...api.logistics.admin.getDashboardMetrics.queryOptions(),
   });
 
@@ -134,7 +134,7 @@ const LogisticsDashboardPage = () => {
     {
       label: 'Quote requests open',
       value: String((metrics?.quoteRequests?.pendingCount ?? 0) + (metrics?.quoteRequests?.inProgressCount ?? 0)),
-      href: '/platform/admin/logistics/requests',
+      href: '/platform/admin/logistics/quotes',
       flag: (metrics?.quoteRequests?.pendingCount ?? 0) > 0,
     },
     {
@@ -155,8 +155,8 @@ const LogisticsDashboardPage = () => {
     { label: 'All shipments', href: '/platform/admin/logistics/shipments', icon: IconShip },
     { label: 'Export jobs', href: '/platform/admin/logistics/exports', icon: IconTruckDelivery },
     { label: 'Freight quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
-    { label: 'Quote requests', href: '/platform/admin/logistics/requests', icon: IconClipboardList },
-    { label: 'Invoices', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
+    { label: 'Freight bills', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
+    { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
     { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
     { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },
   ];
@@ -197,6 +197,12 @@ const LogisticsDashboardPage = () => {
             </Link>
           </div>
         </div>
+
+        {error ? (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-200 dark:bg-red-500/10 dark:text-red-200 dark:ring-red-900">
+            The dashboard figures could not be loaded, so the counts below are not real: {error.message}
+          </p>
+        ) : null}
 
         {/* Status strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

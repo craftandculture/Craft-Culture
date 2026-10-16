@@ -90,7 +90,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       // Finished shipments drop off a week after they finish, so the list is live work
       .where(
         sql`NOT (${logisticsShipments.status} IN ('delivered', 'cancelled')
-          AND COALESCE(${logisticsShipments.deliveredAt}, ${logisticsShipments.updatedAt}) < ${sevenDaysAgo})`,
+          AND COALESCE(${logisticsShipments.deliveredAt}, ${logisticsShipments.updatedAt}) < ${sevenDaysAgo.toISOString()}::timestamp)`,
       )
       .orderBy(desc(logisticsShipments.createdAt))
       .limit(20),
