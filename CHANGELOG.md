@@ -1,3 +1,9 @@
+## [2.0.378](https://github.com/craftandculture/Craft-Culture/compare/v2.0.377...v2.0.378) (2026-10-16)
+
+### Bug Fixes
+
+* **cellar:** readable logo and refined copy on the join page ([e8d51e5](https://github.com/craftandculture/Craft-Culture/commit/e8d51e55adf4d6fd4ffbd92c56f7d675498a169f))
+
 ## [2.0.377](https://github.com/craftandculture/Craft-Culture/compare/v2.0.376...v2.0.377) (2026-10-16)
 
 ### Features
