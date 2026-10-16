@@ -43,6 +43,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       .where(eq(partnerIdentityDocuments.partnerId, partnerId)),
     db
       .select({
+        lwin18: wmsStock.lwin18,
         quantityCases: wmsStock.quantityCases,
         openBottles: wmsStock.openBottles,
         bottleSize: wmsStock.bottleSize,
@@ -59,6 +60,14 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   ]);
 
   const cases = countChargeableCases(stock);
+  // A summary of the cellar for the member: what they hold, not what it costs
+  const bottles = stock.reduce(
+    (sum, row) => sum + Math.max(0, row.quantityCases) * Math.max(1, row.caseConfig ?? 12) + Math.max(0, row.openBottles),
+    0,
+  );
+  const wines = new Set(
+    stock.filter((row) => row.quantityCases > 0 || row.openBottles > 0).map((row) => row.lwin18),
+  ).size;
   const shown = intakes.filter((intake) => intake.source !== 'starting_fresh');
   const shipments = await getIntakeShipments(shown);
 
@@ -75,6 +84,8 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
     nextBillingAt: membership?.nextBillingAt ?? null,
     terms,
     cases,
+    bottles,
+    wines,
     thisMonth: monthlyMembershipCharge(cases, terms),
     intakes: shown.map((intake) => {
       const shipment = shipments.get(intake.id);
