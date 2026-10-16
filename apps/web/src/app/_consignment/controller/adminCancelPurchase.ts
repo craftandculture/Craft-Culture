@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarPurchases } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import releasePurchaseHolds from '../utils/releasePurchaseHolds';
 
@@ -16,7 +16,7 @@ import releasePurchaseHolds from '../utils/releasePurchaseHolds';
  * has moved: that is a sale, and reversing it means selling the wine back
  * rather than deleting the record of it.
  */
-const adminCancelPurchase = adminProcedure
+const adminCancelPurchase = staffAdminProcedure
   .input(
     z.object({
       purchaseId: z.string().uuid(),
@@ -45,13 +45,11 @@ const adminCancelPurchase = adminProcedure
     const now = new Date();
 
     await db.transaction(async (tx) => {
-      await releasePurchaseHolds(
-        tx,
-        purchase.id,
-        input.reason ?? `${purchase.purchaseNumber} cancelled`,
-      );
-
-      await tx
+      /*
+        Closed first, and only from an open state, so a cancel that lands as
+        the payment is confirmed cannot reopen the hold under a completed sale.
+      */
+      const [closed] = await tx
         .update(cellarPurchases)
         .set({
           status: 'cancelled',
@@ -59,7 +57,26 @@ const adminCancelPurchase = adminProcedure
           notes: input.reason ?? purchase.notes,
           updatedAt: now,
         })
-        .where(eq(cellarPurchases.id, purchase.id));
+        .where(
+          and(
+            eq(cellarPurchases.id, purchase.id),
+            inArray(cellarPurchases.status, ['reserved', 'payment_claimed']),
+          ),
+        )
+        .returning({ id: cellarPurchases.id });
+
+      if (!closed) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This purchase has changed. Please refresh to see where it stands.',
+        });
+      }
+
+      await releasePurchaseHolds(
+        tx,
+        purchase.id,
+        input.reason ?? `${purchase.purchaseNumber} cancelled`,
+      );
     });
 
     return { purchaseNumber: purchase.purchaseNumber };

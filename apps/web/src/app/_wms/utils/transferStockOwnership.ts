@@ -160,6 +160,13 @@ const transferStockOwnership = async ({
 
   let destinationStockId = stockId;
 
+  /*
+    Wine a member has just bought is theirs to keep, not ours to list. Left
+    as it was, a pool sale out of a listed row hands the buyer a row that is
+    still on the catalogue, and the next buyer can buy it from them.
+  */
+  const boughtForCellar = reasonCode === 'pool_sale';
+
   if (isFullTransfer) {
     await tx
       .update(wmsStock)
@@ -170,6 +177,7 @@ const transferStockOwnership = async ({
         consignmentCommissionPercent:
           consignmentCommissionPercent ??
           sourceStock.consignmentCommissionPercent,
+        ...(boughtForCellar ? { notForSale: true } : {}),
         updatedAt: new Date(),
       })
       .where(eq(wmsStock.id, stockId));
@@ -246,9 +254,10 @@ const transferStockOwnership = async ({
             Carried, not cleared. Changing who owns wine is the moment it might
             genuinely become ours to sell, but that has to be said out loud —
             inferring it here would quietly list a client's cellar the first
-            time it moved between owners.
+            time it moved between owners. A pool sale goes the other way:
+            the buyer's wine comes off the list.
           */
-          notForSale: sourceStock.notForSale,
+          notForSale: boughtForCellar ? true : sourceStock.notForSale,
           consignmentCommissionPercent:
             consignmentCommissionPercent ??
             sourceStock.consignmentCommissionPercent,

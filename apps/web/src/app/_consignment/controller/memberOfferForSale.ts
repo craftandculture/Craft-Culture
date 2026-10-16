@@ -44,8 +44,12 @@ const memberOfferForSale = stockOwnerProcedure
             bottles: z.number().int().min(1),
           }),
         )
-        .min(1, 'Choose at least one parcel')
-        .max(50),
+        .min(1, 'Choose at least one wine')
+        .max(50)
+        .refine(
+          (lines) => new Set(lines.map((line) => line.stockId)).size === lines.length,
+          'Each wine can appear only once. Combine the quantities on one line.',
+        ),
       /** What the member receives per bottle, before C&C's commission is added */
       askPerBottleUsd: z.number().positive().max(1_000_000),
       expiresAt: z.string().nullable().optional(),
@@ -98,7 +102,7 @@ const memberOfferForSale = stockOwnerProcedure
       if (!stock) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'One of those parcels is not held in your cellar.',
+          message: 'One of those wines is not held in your cellar.',
         });
       }
 
@@ -130,7 +134,7 @@ const memberOfferForSale = stockOwnerProcedure
     if (!first) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'One of those parcels is not held in your cellar.',
+        message: 'One of those wines is not held in your cellar.',
       });
     }
 

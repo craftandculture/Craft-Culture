@@ -58,7 +58,30 @@ export const expireCellarReservationsJob = schedules.task({
       return { expired: 0 };
     }
 
+    let expired = 0;
+
     for (const purchase of lapsed) {
+      /*
+        Closed first, and only if it is still merely reserved. A member who
+        marks the transfer sent in the same moment keeps their purchase and its
+        holds; releasing first and checking second left them marked paid with
+        nothing held.
+      */
+      const [closed] = await triggerDb
+        .update(cellarPurchases)
+        .set({ status: 'expired', updatedAt: now })
+        .where(
+          and(
+            eq(cellarPurchases.id, purchase.id),
+            eq(cellarPurchases.status, 'reserved'),
+          ),
+        )
+        .returning({ id: cellarPurchases.id });
+
+      if (!closed) continue;
+
+      expired += 1;
+
       const items = await triggerDb
         .select({ reservationId: cellarPurchaseItems.reservationId })
         .from(cellarPurchaseItems)
@@ -84,21 +107,6 @@ export const expireCellarReservationsJob = schedules.task({
             ),
           );
       }
-
-      await triggerDb
-        .update(cellarPurchases)
-        .set({ status: 'expired', updatedAt: now })
-        .where(
-          and(
-            eq(cellarPurchases.id, purchase.id),
-            /*
-              Re-checked at the point of writing. A member can mark a transfer
-              sent in the seconds between the read above and this update, and
-              expiring that purchase would take wine off somebody who has paid.
-            */
-            eq(cellarPurchases.status, 'reserved'),
-          ),
-        );
 
       /*
         Told, not silently dropped. A member who sent the transfer late needs to
@@ -149,7 +157,7 @@ export const expireCellarReservationsJob = schedules.task({
       });
     }
 
-    return { expired: lapsed.length };
+    return { expired };
   },
 });
 

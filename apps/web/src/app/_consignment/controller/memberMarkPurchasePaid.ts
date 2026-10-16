@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -47,7 +47,11 @@ const memberMarkPurchasePaid = stockOwnerProcedure
       });
     }
 
-    await db
+    /*
+      Only from an open state. Written unconditionally, a claim landing as the
+      hourly job expires the purchase reopens it with its holds already gone.
+    */
+    const [claimed] = await db
       .update(cellarPurchases)
       .set({
         status: 'payment_claimed',
@@ -55,7 +59,21 @@ const memberMarkPurchasePaid = stockOwnerProcedure
         paymentReference: input.paymentReference,
         updatedAt: new Date(),
       })
-      .where(eq(cellarPurchases.id, purchase.id));
+      .where(
+        and(
+          eq(cellarPurchases.id, purchase.id),
+          inArray(cellarPurchases.status, ['reserved', 'payment_claimed']),
+        ),
+      )
+      .returning({ id: cellarPurchases.id });
+
+    if (!claimed) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'This reservation has just closed. Please refresh, and contact us if you have already sent the payment.',
+      });
+    }
 
     return { purchaseNumber: purchase.purchaseNumber };
   });

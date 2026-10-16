@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import transferStockOwnership from '@/app/_wms/utils/transferStockOwnership';
@@ -9,7 +9,7 @@ import {
   cellarPurchases,
   wmsStockReservations,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import recordPoolSale from '../utils/recordPoolSale';
 
@@ -28,7 +28,7 @@ import recordPoolSale from '../utils/recordPoolSale';
  *
  * The buyer is a cellar member, so the commission rate is the collector rate.
  */
-const adminConfirmPurchasePayment = adminProcedure
+const adminConfirmPurchasePayment = staffAdminProcedure
   .input(
     z.object({
       purchaseId: z.string().uuid(),
@@ -46,7 +46,15 @@ const adminConfirmPurchasePayment = adminProcedure
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Purchase not found' });
     }
 
-    if (['completed', 'cancelled'].includes(purchase.status)) {
+    if (purchase.status === 'expired') {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'This purchase expired and its wine went back on the list. Ask the member to order again, so the wine is reserved before it is transferred.',
+      });
+    }
+
+    if (!['reserved', 'payment_claimed'].includes(purchase.status)) {
       throw new TRPCError({
         code: 'CONFLICT',
         message: `This purchase is already ${purchase.status}.`,
@@ -68,6 +76,37 @@ const adminConfirmPurchasePayment = adminProcedure
     const now = new Date();
 
     await db.transaction(async (tx) => {
+      /*
+        Claimed first, and only from an open state. A double click, or a cancel
+        or expiry landing at the same moment, finds no row to claim and stops
+        here — otherwise the wine moves twice and the member is settled twice.
+      */
+      const [claimed] = await tx
+        .update(cellarPurchases)
+        .set({
+          status: 'completed',
+          paymentConfirmedAt: now,
+          paymentConfirmedBy: ctx.user.id,
+          paymentReference: input.paymentReference ?? purchase.paymentReference,
+          completedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(cellarPurchases.id, purchase.id),
+            inArray(cellarPurchases.status, ['reserved', 'payment_claimed']),
+          ),
+        )
+        .returning({ id: cellarPurchases.id });
+
+      if (!claimed) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'This purchase changed while you were confirming it. Refresh to see where it stands.',
+        });
+      }
+
       for (const item of items) {
         /*
           Released first, not overridden. transferStockOwnership refuses to move
@@ -119,18 +158,6 @@ const adminConfirmPurchasePayment = adminProcedure
           });
         }
       }
-
-      await tx
-        .update(cellarPurchases)
-        .set({
-          status: 'completed',
-          paymentConfirmedAt: now,
-          paymentConfirmedBy: ctx.user.id,
-          paymentReference: input.paymentReference ?? purchase.paymentReference,
-          completedAt: now,
-          updatedAt: now,
-        })
-        .where(eq(cellarPurchases.id, purchase.id));
     });
 
     return {

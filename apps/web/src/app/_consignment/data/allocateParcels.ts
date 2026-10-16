@@ -3,9 +3,18 @@ import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
 import inOurWarehouse from '@/app/_wms/utils/inOurWarehouse';
 import lwinPakKey from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
-import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
+import {
+  cellarMemberships,
+  partners,
+  saleMandateLots,
+  saleMandates,
+  wmsStock,
+  wmsStockReservations,
+} from '@/database/schema';
 
 import { COMMITTING_STATUSES } from '../utils/mandateStatuses';
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface AllocationRequest {
   lwin18: string;
@@ -45,25 +54,47 @@ export interface AllocatedParcel {
  * Allocation happens when the order is placed, not when it is paid, because
  * that is what the reservation is taken against.
  *
+ * Three limits keep it from selling what is not ours to sell:
+ *
+ * - **Live holds.** A cellar purchase's reservation does not decrement
+ *   `availableCases`, so every active `cellar_purchase` hold on a row is
+ *   subtracted here. Without it two members reserve the same case.
+ * - **The offer, not the row.** Listing a mandate opens the whole stock row,
+ *   but only the bottles still on the lot are for sale. A member who offers 2
+ *   of 10 cases sells 2.
+ * - **A collector's wine is never house supply.** A collector row with no live
+ *   lot — wine they bought, or what is left after their offer sold — would
+ *   otherwise be sold as C&C's own and settle to nobody.
+ *
+ * Pass the purchase's transaction so the rows are locked until the holds are
+ * written; two buyers then queue rather than both seeing the same case free.
+ *
  * @param lwin18 - The wine being bought
  * @param cases - How many cases
  * @param buyerPartnerId - Who is buying, so their own stock is skipped
+ * @param executor - The open transaction, so the rows are locked
  * @returns Parcels totalling the requested cases, or fewer if there are not enough
  */
 const allocateParcels = async (
   lwin18: string,
   cases: number,
   buyerPartnerId: string,
+  executor: Tx | typeof db = db,
 ): Promise<AllocatedParcel[]> => {
   /*
     Pack-agnostic, matching the catalogue. A member buying "a case" of a wine
     the catalogue lists once may be served from a 6-pack or a 12-pack row, and
     the row carries its own caseConfig so the bottle count stays honest.
   */
-  const rows = await db
+  const rows = await executor
     .select({
       id: wmsStock.id,
       ownerId: wmsStock.ownerId,
+      /*
+        A collector is anyone filed as one or holding a membership: legacy
+        members were filed as wine partners before the collector type existed.
+      */
+      isCollector: sql<boolean>`(${partners.type} = 'private_collector' OR EXISTS (SELECT 1 FROM ${cellarMemberships} WHERE ${cellarMemberships.partnerId} = ${wmsStock.ownerId}))`,
       ownerName: wmsStock.ownerName,
       availableCases: wmsStock.availableCases,
       caseConfig: wmsStock.caseConfig,
@@ -74,6 +105,7 @@ const allocateParcels = async (
       bottleSize: wmsStock.bottleSize,
     })
     .from(wmsStock)
+    .leftJoin(partners, eq(wmsStock.ownerId, partners.id))
     .where(
       and(
         sql`${lwinPakKey(wmsStock.lwin18)} = ${lwinPakKey(sql`${lwin18}`)}`,
@@ -82,7 +114,8 @@ const allocateParcels = async (
         inOurWarehouse(),
       ),
     )
-    .orderBy(asc(wmsStock.createdAt));
+    .orderBy(asc(wmsStock.createdAt))
+    .for('update', { of: wmsStock });
 
   const sellable = rows.filter((row) => row.ownerId !== buyerPartnerId);
 
@@ -92,12 +125,13 @@ const allocateParcels = async (
     Which of these parcels belong to a live mandate, and which mandate. A
     parcel with no mandate is C&C's own supply and settles to nobody.
   */
-  const lots = await db
+  const lots = await executor
     .select({
       lotId: saleMandateLots.id,
       stockId: saleMandateLots.stockId,
       mandateId: saleMandates.id,
       offeredAt: saleMandates.offeredAt,
+      bottlesRemaining: saleMandateLots.bottlesRemaining,
     })
     .from(saleMandateLots)
     .innerJoin(saleMandates, eq(saleMandateLots.mandateId, saleMandates.id))
@@ -113,6 +147,28 @@ const allocateParcels = async (
     );
 
   const lotByStock = new Map(lots.map((lot) => [lot.stockId, lot]));
+
+  const holds = await executor
+    .select({
+      stockId: wmsStockReservations.stockId,
+      cases: sql<number>`sum(${wmsStockReservations.quantityCases})::int`,
+    })
+    .from(wmsStockReservations)
+    .where(
+      and(
+        inArray(
+          wmsStockReservations.stockId,
+          sellable.map((row) => row.id),
+        ),
+        eq(wmsStockReservations.orderType, 'cellar_purchase'),
+        eq(wmsStockReservations.status, 'active'),
+      ),
+    )
+    .groupBy(wmsStockReservations.stockId);
+
+  const heldByStock = new Map(
+    holds.map((hold) => [hold.stockId, Number(hold.cases) || 0]),
+  );
 
   const ordered = [...sellable].sort((a, b) => {
     const aLot = lotByStock.get(a.id);
@@ -138,11 +194,20 @@ const allocateParcels = async (
   for (const row of ordered) {
     if (remaining <= 0) break;
 
-    const take = Math.min(remaining, row.availableCases);
+    const lot = lotByStock.get(row.id);
+
+    if (!lot && row.isCollector) continue;
+
+    const held = heldByStock.get(row.id) ?? 0;
+    const free = row.availableCases - held;
+    const offered = lot
+      ? Math.floor(lot.bottlesRemaining / Math.max(row.caseConfig ?? 1, 1)) -
+        held
+      : free;
+
+    const take = Math.min(remaining, free, offered);
 
     if (take <= 0) continue;
-
-    const lot = lotByStock.get(row.id);
 
     allocation.push({
       stockId: row.id,
