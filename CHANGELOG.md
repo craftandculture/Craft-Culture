@@ -1,3 +1,10 @@
+## [2.0.350](https://github.com/craftandculture/Craft-Culture/compare/v2.0.349...v2.0.350) (2026-10-16)
+
+### Bug Fixes
+
+* **cellar:** Available now speaks in bottles and cases of N ([aa9fa8f](https://github.com/craftandculture/Craft-Culture/commit/aa9fa8f23a4e3ddddce0bf4625b94d0eb036534e))
+* **cellar:** lint order in Available now ([98180a0](https://github.com/craftandculture/Craft-Culture/commit/98180a0da4f64dc56fbee243750aeac1787c0d46))
+
 ## [2.0.349](https://github.com/craftandculture/Craft-Culture/compare/v2.0.348...v2.0.349) (2026-10-16)
 
 ### Bug Fixes
