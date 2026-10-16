@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
 import recordPoolSale from '../utils/recordPoolSale';
 
 /**
@@ -158,6 +159,14 @@ const adminConfirmPurchasePayment = staffAdminProcedure
           });
         }
       }
+    });
+
+    await notifyPurchaseUpdate({
+      event: 'completed',
+      purchaseId: purchase.id,
+      purchaseNumber: purchase.purchaseNumber,
+      buyerPartnerId: purchase.buyerPartnerId,
+      buyerName: purchase.buyerName,
     });
 
     return {

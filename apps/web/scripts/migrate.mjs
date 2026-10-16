@@ -2884,6 +2884,18 @@ const runMigrations = async () => {
     `);
     console.log('✅ cellar payment settings ready');
 
+    /*
+      Purchases and memberships tell people when they move (Oct 2026). A
+      value missing here only drops the notice — createNotification is always
+      called inside a catch — never the purchase.
+    */
+    for (const value of ['cellar_purchase_update', 'cellar_membership_update']) {
+      await client.unsafe(
+        `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS '${value}'`,
+      );
+    }
+    console.log('✅ cellar purchase and membership notifications ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

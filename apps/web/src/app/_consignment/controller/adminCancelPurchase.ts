@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { cellarPurchases } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
 import releasePurchaseHolds from '../utils/releasePurchaseHolds';
 
 /**
@@ -77,6 +78,15 @@ const adminCancelPurchase = staffAdminProcedure
         purchase.id,
         input.reason ?? `${purchase.purchaseNumber} cancelled`,
       );
+    });
+
+    await notifyPurchaseUpdate({
+      event: 'cancelled_by_us',
+      purchaseId: purchase.id,
+      purchaseNumber: purchase.purchaseNumber,
+      buyerPartnerId: purchase.buyerPartnerId,
+      buyerName: purchase.buyerName,
+      reason: input.reason,
     });
 
     return { purchaseNumber: purchase.purchaseNumber };

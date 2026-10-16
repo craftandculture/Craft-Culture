@@ -1,11 +1,13 @@
 import { eq } from 'drizzle-orm';
 
+import getCellarStaffIds from '@/app/_cellar/data/getCellarStaffIds';
+import getPartnerUserIds from '@/app/_cellar/data/getPartnerUserIds';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { partnerMembers, partners, users } from '@/database/schema';
+import { partners } from '@/database/schema';
 import serverConfig from '@/server.config';
 
-export type ReleaseEvent = 'submitted' | 'quoted' | 'revision';
+export type ReleaseEvent = 'submitted' | 'quoted' | 'revision' | 'accepted';
 
 export interface NotifyReleaseUpdateParams {
   event: ReleaseEvent;
@@ -52,35 +54,11 @@ const notifyReleaseUpdate = async ({
   amended,
 }: NotifyReleaseUpdateParams) => {
   try {
-    const recipients = await (async () => {
-      if (event === 'submitted') {
-        const admins = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.role, 'admin'));
-
-        return admins.map((admin) => admin.id);
-      }
-
-      const [owner] = await db
-        .select({ userId: partners.userId })
-        .from(partners)
-        .where(eq(partners.id, partnerId))
-        .limit(1);
-
-      const members = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, partnerId));
-
-      return [
-        ...new Set(
-          [...members.map((member) => member.userId), owner?.userId].filter(
-            (id): id is string => Boolean(id),
-          ),
-        ),
-      ];
-    })();
+    /* Work for the team goes to C&C staff; everything else to the member. */
+    const recipients =
+      event === 'submitted' || event === 'accepted'
+        ? await getCellarStaffIds()
+        : await getPartnerUserIds(partnerId);
 
     if (recipients.length === 0) return;
 
@@ -100,6 +78,12 @@ const notifyReleaseUpdate = async ({
         message: amended
           ? `${partner?.name ?? 'A member'} has added more wine to ${requestNumber}. Re-open it before quoting.`
           : `${partner?.name ?? 'A member'} has asked for wine to be brought out of bond on ${requestNumber}.`,
+        actionUrl: `${serverConfig.appUrl}/platform/admin/cellar-releases`,
+      },
+      accepted: {
+        type: 'cellar_release_submitted' as const,
+        title: 'Delivery quote accepted',
+        message: `${partner?.name ?? 'A member'} has accepted the quote on ${requestNumber}. The order is raised and ready to prepare.`,
         actionUrl: `${serverConfig.appUrl}/platform/admin/cellar-releases`,
       },
       quoted: {

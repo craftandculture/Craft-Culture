@@ -6,6 +6,8 @@ import db from '@/database/client';
 import { cellarPurchases } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
+
 /**
  * A member says they have sent the money
  *
@@ -72,6 +74,18 @@ const memberMarkPurchasePaid = stockOwnerProcedure
         code: 'CONFLICT',
         message:
           'This reservation has just closed. Please refresh, and contact us if you have already sent the payment.',
+      });
+    }
+
+    /* Told once, on the first claim, not again if they press it twice. */
+    if (purchase.status === 'reserved') {
+      await notifyPurchaseUpdate({
+        event: 'payment_claimed',
+        purchaseId: purchase.id,
+        purchaseNumber: purchase.purchaseNumber,
+        buyerPartnerId: purchase.buyerPartnerId,
+        buyerName: purchase.buyerName,
+        totalUsd: purchase.totalUsd,
       });
     }
 

@@ -15,6 +15,7 @@ import { reservedUntilFrom } from '../constants/purchaseTerms';
 import allocateParcels from '../data/allocateParcels';
 import getCatalogueRowFor from '../data/getCatalogueRowFor';
 import generatePurchaseNumber from '../utils/generatePurchaseNumber';
+import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
 
 /**
  * Open purchases a member may hold at once
@@ -262,6 +263,15 @@ const memberCreatePurchase = stockOwnerProcedure
         message: 'Could not start that purchase',
       });
     }
+
+    await notifyPurchaseUpdate({
+      event: 'reserved',
+      purchaseId: result.id,
+      purchaseNumber,
+      buyerPartnerId: ctx.partner.id,
+      buyerName: ctx.partner.businessName,
+      totalUsd: result.total,
+    });
 
     return {
       purchaseId: result.id,

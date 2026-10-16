@@ -1,8 +1,6 @@
-import { eq } from 'drizzle-orm';
-
+import getCellarStaffIds from '@/app/_cellar/data/getCellarStaffIds';
+import getPartnerUserIds from '@/app/_cellar/data/getPartnerUserIds';
 import createNotification from '@/app/_notifications/utils/createNotification';
-import db from '@/database/client';
-import { partnerMembers, partners, users } from '@/database/schema';
 import serverConfig from '@/server.config';
 
 export type MandateEvent = 'offered' | 'listed' | 'sent_back';
@@ -46,35 +44,11 @@ const notifyMandateUpdate = async ({
   adminNotes,
 }: NotifyMandateUpdateParams) => {
   try {
-    const recipients = await (async () => {
-      if (event === 'offered') {
-        const admins = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.role, 'admin'));
-
-        return admins.map((admin) => admin.id);
-      }
-
-      const [owner] = await db
-        .select({ userId: partners.userId })
-        .from(partners)
-        .where(eq(partners.id, ownerId))
-        .limit(1);
-
-      const members = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, ownerId));
-
-      return [
-        ...new Set(
-          [...members.map((member) => member.userId), owner?.userId].filter(
-            (id): id is string => Boolean(id),
-          ),
-        ),
-      ];
-    })();
+    /* Work for the team goes to C&C staff; everything else to the member. */
+    const recipients =
+      event === 'offered'
+        ? await getCellarStaffIds()
+        : await getPartnerUserIds(ownerId);
 
     if (recipients.length === 0) return;
 

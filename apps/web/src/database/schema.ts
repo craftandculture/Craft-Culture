@@ -810,6 +810,10 @@ export const notificationType = pgEnum('notification_type', [
   'mandate_sent_back',
   /* A 48-hour hold that lapsed before the money arrived */
   'cellar_purchase_expired',
+  /* Reserved, paid, confirmed or cancelled: team or member, by event */
+  'cellar_purchase_update',
+  /* A membership paused or resumed by the team */
+  'cellar_membership_update',
 ]);
 
 /**

@@ -6,6 +6,8 @@ import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import notifyMembershipChange from '../data/notifyMembershipChange';
+
 /**
  * Pause, resume or cancel a membership billed by invoice
  *
@@ -41,6 +43,19 @@ const adminSetMembershipStatus = staffAdminProcedure
       });
     }
 
+    /*
+      A membership that never started is started by the member, which is what
+      opens the invoice job. Resuming it here would make it active with nobody
+      asked to bill it.
+    */
+    if (input.status === 'active' && membership.status === 'not_activated') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'This membership has not started yet. The member starts it from their cellar, which also opens the invoice job.',
+      });
+    }
+
     await db
       .update(cellarMemberships)
       .set({
@@ -49,6 +64,14 @@ const adminSetMembershipStatus = staffAdminProcedure
         cancelledAt: input.status === 'cancelled' ? new Date() : null,
       })
       .where(eq(cellarMemberships.id, membership.id));
+
+    if (input.status === 'past_due' && membership.status === 'active') {
+      await notifyMembershipChange(membership.partnerId, 'paused');
+    }
+
+    if (input.status === 'active' && membership.status === 'past_due') {
+      await notifyMembershipChange(membership.partnerId, 'resumed');
+    }
 
     return { status: input.status };
   });

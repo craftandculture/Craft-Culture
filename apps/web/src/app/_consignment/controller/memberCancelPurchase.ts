@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { cellarPurchases } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
 import releasePurchaseHolds from '../utils/releasePurchaseHolds';
 
 /**
@@ -93,6 +94,14 @@ const memberCancelPurchase = stockOwnerProcedure
         purchase.id,
         `${purchase.purchaseNumber} cancelled by the buyer`,
       );
+    });
+
+    await notifyPurchaseUpdate({
+      event: 'member_cancelled',
+      purchaseId: purchase.id,
+      purchaseNumber: purchase.purchaseNumber,
+      buyerPartnerId: purchase.buyerPartnerId,
+      buyerName: purchase.buyerName,
     });
 
     return { purchaseNumber: purchase.purchaseNumber };
