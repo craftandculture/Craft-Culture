@@ -13,6 +13,12 @@ const wineSources = [
     isTransfer: true,
   },
   {
+    value: 'investment_company',
+    label: 'Wine held with a wine investment company',
+    hint: 'We can coordinate the transfer from your investment portfolio into your private cellar.',
+    isTransfer: true,
+  },
+  {
     value: 'with_cc',
     label: 'Wine already with Craft & Culture',
     hint: 'We will add your existing holdings to your private cellar.',

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 
 import fieldClass from '../constants/fieldClass';
+import wineHolders from '../constants/wineHolders';
 import type { WineSource } from '../constants/wineSources';
 import wineSources from '../constants/wineSources';
 import useActivationGate from '../hooks/useActivationGate';
@@ -68,7 +69,9 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
                 ? 'Already with C&C'
                 : item.value === 'lcb'
                   ? 'From LCB'
-                  : 'From another cellar'}
+                  : item.value === 'investment_company'
+                    ? 'From an investment company'
+                    : 'From another cellar'}
           </button>
         ))}
       </div>
@@ -86,15 +89,23 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
             });
           }}
         >
-          {source === 'uk_eu_cellar' && (
-            <input
-              className={`${fieldClass} h-10 text-sm`}
-              placeholder="Who holds it? e.g. Berry Bros. & Rudd"
-              value={details.holderName}
-              onChange={(event) => setDetails((current) => ({ ...current, holderName: event.target.value }))}
-            />
+          {(source === 'uk_eu_cellar' || source === 'investment_company') && (
+            <>
+              <input
+                className={`${fieldClass} h-10 text-sm`}
+                list={`bring-holders-${source}`}
+                placeholder={source === 'investment_company' ? 'Which company?' : 'Where is it held?'}
+                value={details.holderName}
+                onChange={(event) => setDetails((current) => ({ ...current, holderName: event.target.value }))}
+              />
+              <datalist id={`bring-holders-${source}`}>
+                {(wineHolders[source] ?? []).map((holder) => (
+                  <option key={holder} value={holder} />
+                ))}
+              </datalist>
+            </>
           )}
-          {(source === 'lcb' || source === 'uk_eu_cellar') && (
+          {(source === 'lcb' || source === 'uk_eu_cellar' || source === 'investment_company') && (
             <input
               className={`${fieldClass} h-10 text-sm`}
               inputMode="numeric"

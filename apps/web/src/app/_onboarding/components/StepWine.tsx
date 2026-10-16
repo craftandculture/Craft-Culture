@@ -6,6 +6,7 @@ import { useState } from 'react';
 import FieldLabel from './FieldLabel';
 import StepFrame from './StepFrame';
 import fieldClass from '../constants/fieldClass';
+import wineHolders from '../constants/wineHolders';
 import type { WineSource } from '../constants/wineSources';
 import wineSources from '../constants/wineSources';
 
@@ -133,15 +134,30 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
                 </div>
               )}
 
-              {chosen && answer && source.value === 'uk_eu_cellar' && (
+              {chosen &&
+                answer &&
+                (source.value === 'uk_eu_cellar' || source.value === 'investment_company') && (
                 <div className="space-y-4 px-4 pb-4">
-                  <FieldLabel label="Where is your wine held?" optional>
+                  <FieldLabel
+                    label={source.value === 'investment_company' ? 'Which company?' : 'Where is your wine held?'}
+                    optional
+                  >
                     <input
                       className={`${fieldClass} h-11`}
+                      list={`holders-${source.value}`}
                       value={answer.holderName}
                       onChange={(event) => update(source.value, 'holderName', event.target.value)}
-                      placeholder="Merchant or warehouse name"
+                      placeholder={
+                        source.value === 'investment_company'
+                          ? 'Start typing, e.g. Cult Wines'
+                          : 'Start typing a vault, merchant or warehouse'
+                      }
                     />
+                    <datalist id={`holders-${source.value}`}>
+                      {(wineHolders[source.value] ?? []).map((holder) => (
+                        <option key={holder} value={holder} />
+                      ))}
+                    </datalist>
                   </FieldLabel>
                   <FieldLabel label="Approximate collection size" optional>
                     <div className="flex flex-wrap gap-2">
@@ -187,6 +203,9 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
           );
         })}
       </div>
+      <p className="text-text-muted text-xs leading-5">
+        Ticking an option is enough. Every detail is optional and can be added later from your cellar.
+      </p>
     </StepFrame>
   );
 };
