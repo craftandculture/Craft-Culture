@@ -1,3 +1,9 @@
+## [2.0.368](https://github.com/craftandculture/Craft-Culture/compare/v2.0.367...v2.0.368) (2026-10-16)
+
+### Features
+
+* a new shipment opens with the route and references that fit its type, and takes partner, name and dates ([a0021fc](https://github.com/craftandculture/Craft-Culture/commit/a0021fcb0e010b7db0c89f9eaa0f67ce376123b6))
+
 ## [2.0.367](https://github.com/craftandculture/Craft-Culture/compare/v2.0.366...v2.0.367) (2026-10-16)
 
 ### Features
