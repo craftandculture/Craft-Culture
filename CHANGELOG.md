@@ -1,3 +1,10 @@
+## [2.0.365](https://github.com/craftandculture/Craft-Culture/compare/v2.0.364...v2.0.365) (2026-10-16)
+
+### Features
+
+* export jobs can be a mainland transfer, and the jobs list filters by it ([b1edec2](https://github.com/craftandculture/Craft-Culture/commit/b1edec2f9737ef43ee2b22cce4afd900a479d564))
+* the logistics dashboard leads with what needs attention, and finished shipments drop off after a week ([24322e9](https://github.com/craftandculture/Craft-Culture/commit/24322e96e26486a5373ef47e96384ea2c838fef5))
+
 ## [2.0.364](https://github.com/craftandculture/Craft-Culture/compare/v2.0.363...v2.0.364) (2026-10-16)
 
 ### Features
