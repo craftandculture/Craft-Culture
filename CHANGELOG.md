@@ -1,3 +1,9 @@
+## [2.0.361](https://github.com/craftandculture/Craft-Culture/compare/v2.0.360...v2.0.361) (2026-10-16)
+
+### Bug Fixes
+
+* price the payout from the Pricing Manager, and remember what it said ([79d8147](https://github.com/craftandculture/Craft-Culture/commit/79d8147981900d60eb2f69d616cfc32676313ec5))
+
 ## [2.0.360](https://github.com/craftandculture/Craft-Culture/compare/v2.0.359...v2.0.360) (2026-10-16)
 
 ### Bug Fixes
