@@ -1,3 +1,9 @@
+## [2.0.354](https://github.com/craftandculture/Craft-Culture/compare/v2.0.353...v2.0.354) (2026-10-16)
+
+### Features
+
+* **partner:** help page rebuilt around what partners do; footer contact fixed ([b37af77](https://github.com/craftandculture/Craft-Culture/commit/b37af7703e3e7edb09006bdf830cdb60089b597b))
+
 ## [2.0.353](https://github.com/craftandculture/Craft-Culture/compare/v2.0.352...v2.0.353) (2026-10-16)
 
 ### Features
