@@ -71,7 +71,7 @@ const AvailablePage = () => {
   const api = useTRPC();
   const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<string | undefined>();
+  const [category, setCategory] = useState<string | undefined>('Wine');
   const [country, setCountry] = useState('');
   const [producer, setProducer] = useState('');
   const [vintage, setVintage] = useState('');
@@ -201,7 +201,7 @@ const AvailablePage = () => {
   );
 
   const selectClass =
-    'border-border-muted text-text-primary bg-surface-primary h-10 w-full rounded-lg border px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-text-primary/20 sm:h-9 lg:w-auto';
+    'border-border-muted text-text-primary bg-surface-primary h-10 w-full min-w-0 rounded-lg border px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-text-primary/20 sm:h-9';
 
   const categoryTone = (category: string | null | undefined) =>
     category === 'Spirits'
@@ -209,7 +209,7 @@ const AvailablePage = () => {
       : category === 'RTD'
         ? 'bg-sky-500'
         : category === 'Wine'
-          ? 'bg-rose-600'
+          ? 'bg-emerald-500'
           : 'bg-slate-400';
 
   const origin = (wine: (typeof wines)[number]) =>
@@ -313,8 +313,9 @@ const AvailablePage = () => {
         one run of grey.
       */}
       <div className="border-border-muted bg-surface-secondary/40 mb-4 rounded-xl border p-3 sm:p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative lg:w-80 lg:flex-shrink-0">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative md:w-80 md:flex-shrink-0">
             <Icon
               icon={IconSearch}
               size="sm"
@@ -331,7 +332,7 @@ const AvailablePage = () => {
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
             {[
               { id: undefined, label: 'Everything', tone: '' },
-              { id: 'Wine', label: 'Wine', tone: 'bg-rose-600' },
+              { id: 'Wine', label: 'Wine', tone: 'bg-emerald-500' },
               { id: 'Spirits', label: 'Spirits', tone: 'bg-amber-500' },
               { id: 'RTD', label: 'RTD', tone: 'bg-sky-500' },
             ].map((chip) => (
@@ -362,7 +363,7 @@ const AvailablePage = () => {
           <button
             type="button"
             onClick={() => setShowFilters((open) => !open)}
-            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold lg:hidden"
+            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
           >
             <Icon icon={IconFilter} size="xs" />
             {showFilters ? 'Hide filters' : 'Filter and sort'}
@@ -373,9 +374,9 @@ const AvailablePage = () => {
             )}
           </button>
 
-          <div
-            className={`${showFilters ? 'grid' : 'hidden'} grid-cols-2 gap-2 lg:ml-auto lg:flex lg:flex-nowrap`}
-          >
+          </div>
+
+          <div className={`${showFilters ? 'grid' : 'hidden'} grid-cols-2 gap-2 md:grid md:grid-cols-4`}>
             <select
               value={country}
               onChange={(event) => {
@@ -399,7 +400,7 @@ const AvailablePage = () => {
                 setProducer(event.target.value);
                 setLimit(PAGE);
               }}
-              className={`${selectClass} lg:max-w-[180px]`}
+              className={selectClass}
               aria-label="Producer"
             >
               <option value="">All producers</option>
@@ -496,8 +497,8 @@ const AvailablePage = () => {
                 label: 'Wines',
                 value: filtered.length.toLocaleString('en-US'),
                 icon: IconBottle,
-                tone: 'border-rose-100 from-rose-50/50 dark:border-rose-900/50 dark:from-rose-500/10',
-                iconTone: 'bg-rose-100/70 text-rose-600 dark:bg-rose-500/20',
+                tone: 'border-emerald-100 from-emerald-50/50 dark:border-emerald-900/50 dark:from-emerald-500/10',
+                iconTone: 'bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20',
               },
               {
                 label: 'Bottles',
@@ -583,12 +584,12 @@ const AvailablePage = () => {
             <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-surface-secondary/90 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
                 <tr className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  <th className="px-4 py-2.5 text-left">Wine</th>
-                  <th className="px-3 py-2.5 text-center">Vintage</th>
-                  <th className="px-3 py-2.5 text-center">Format</th>
-                  <th className="px-3 py-2.5 text-right">Available</th>
-                  <th className="px-3 py-2.5 text-right">Price</th>
-                  <th className="w-[150px] px-4 py-2.5 text-right">Add to cellar</th>
+                  <th className="w-full min-w-[280px] px-4 py-2.5 text-left">Wine</th>
+                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Vintage</th>
+                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Format</th>
+                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-right">Available</th>
+                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-right">Price</th>
+                  <th className="w-px whitespace-nowrap px-4 py-2.5 text-right">Add to cellar</th>
                 </tr>
               </thead>
               <tbody className="divide-border-muted divide-y">
