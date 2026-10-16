@@ -12,6 +12,9 @@ const getQuotesSchema = z.object({
   status: z.enum(['draft', 'pending', 'accepted', 'rejected', 'expired']).optional(),
   forwarderName: z.string().optional(),
   shipmentId: z.string().uuid().optional(),
+  requestId: z.string().uuid().optional(),
+  /** Only quotes that do not answer a quote request */
+  withoutRequest: z.boolean().optional(),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
 
   // Search

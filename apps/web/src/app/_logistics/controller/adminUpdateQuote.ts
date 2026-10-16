@@ -64,6 +64,13 @@ const adminUpdateQuote = adminProcedure.input(updateQuoteSchema).mutation(async 
       .where(eq(logisticsQuotes.id, id))
       .returning();
 
+    if (!updatedQuote) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The database returned no row',
+      });
+    }
+
     // Replace line items if provided
     if (lineItems !== undefined) {
       // Delete existing line items

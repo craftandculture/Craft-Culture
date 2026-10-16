@@ -2,7 +2,6 @@
 
 import {
   IconArrowLeft,
-  IconLoader2,
   IconPlus,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -154,7 +153,7 @@ const NewQuoteRequestPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/platform/admin/logistics/requests">
+            <Link href="/platform/admin/logistics/quotes">
               <Icon icon={IconArrowLeft} size="sm" />
             </Link>
           </Button>
@@ -513,13 +512,11 @@ const NewQuoteRequestPage = () => {
         {/* Actions */}
         <div className="flex items-center justify-end gap-4">
           <Button variant="outline" asChild>
-            <Link href="/platform/admin/logistics/requests">Cancel</Link>
+            <Link href="/platform/admin/logistics/quotes">Cancel</Link>
           </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? (
-              <ButtonContent iconLeft={IconLoader2} iconLeftClassName="animate-spin">
-                Creating...
-              </ButtonContent>
+              <ButtonContent isLoading>Creating...</ButtonContent>
             ) : (
               <ButtonContent iconLeft={IconPlus}>Create Request</ButtonContent>
             )}

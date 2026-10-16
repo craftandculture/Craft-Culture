@@ -112,6 +112,13 @@ const adminUploadQuoteRequestAttachment = adminProcedure
         })
         .returning();
 
+      if (!attachment) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'The database returned no row',
+        });
+      }
+
       logger.info('Uploaded quote request attachment', {
         attachmentId: attachment.id,
         requestId,

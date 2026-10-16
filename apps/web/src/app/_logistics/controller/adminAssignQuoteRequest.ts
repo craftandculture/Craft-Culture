@@ -54,6 +54,13 @@ const adminAssignQuoteRequest = adminProcedure
       .where(eq(logisticsQuoteRequests.id, requestId))
       .returning();
 
+    if (!updated) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The database returned no row',
+      });
+    }
+
     logger.info('Assigned quote request', {
       requestId,
       assignedTo: assigneeId,

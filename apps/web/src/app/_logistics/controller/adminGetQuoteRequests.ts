@@ -1,7 +1,7 @@
-import { and, count, desc, eq, ilike, lt, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, lt, or } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsQuoteRequests, users } from '@/database/schema';
+import { logisticsQuoteRequests, logisticsQuotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
@@ -9,8 +9,8 @@ import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
 /**
  * List quote requests with filtering and pagination
  *
- * Returns requests with requester info and supports filtering by status,
- * priority, and assignment.
+ * Returns requests with requester info and the quotes received against each
+ * one, and supports filtering by status, priority, and assignment.
  */
 const adminGetQuoteRequests = adminProcedure
   .input(getQuoteRequestsSchema)
@@ -106,8 +106,31 @@ const adminGetQuoteRequests = adminProcedure
     const items = hasMore ? requests.slice(0, -1) : requests;
     const nextCursor = hasMore ? items[items.length - 1]?.id : undefined;
 
+    // The quotes each request has received, cheapest first
+    const requestIds = items.map((r) => r.id);
+    const quoteRows = requestIds.length
+      ? await db
+          .select({
+            id: logisticsQuotes.id,
+            requestId: logisticsQuotes.requestId,
+            quoteNumber: logisticsQuotes.quoteNumber,
+            forwarderName: logisticsQuotes.forwarderName,
+            totalPrice: logisticsQuotes.totalPrice,
+            currency: logisticsQuotes.currency,
+            transitDays: logisticsQuotes.transitDays,
+            status: logisticsQuotes.status,
+            validUntil: logisticsQuotes.validUntil,
+          })
+          .from(logisticsQuotes)
+          .where(inArray(logisticsQuotes.requestId, requestIds))
+          .orderBy(asc(logisticsQuotes.totalPrice))
+      : [];
+
     return {
-      requests: items,
+      requests: items.map((r) => ({
+        ...r,
+        quotes: quoteRows.filter((q) => q.requestId === r.id),
+      })),
       totalCount: countResult?.count ?? 0,
       nextCursor,
     };

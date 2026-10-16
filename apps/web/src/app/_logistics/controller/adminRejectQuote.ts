@@ -54,6 +54,13 @@ const adminRejectQuote = adminProcedure.input(rejectQuoteSchema).mutation(async 
       .where(eq(logisticsQuotes.id, quoteId))
       .returning();
 
+    if (!rejectedQuote) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The database returned no row',
+      });
+    }
+
     logger.info('Rejected freight quote', {
       quoteId,
       reason,

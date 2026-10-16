@@ -53,6 +53,13 @@ const adminCreateQuoteRequest = approvedProcedure
         })
         .returning();
 
+      if (!request) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'The database returned no row',
+        });
+      }
+
       logger.info('Created quote request', {
         requestId: request.id,
         requestNumber,

@@ -2,14 +2,13 @@
 
 import {
   IconArrowLeft,
-  IconLoader2,
   IconPlus,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -60,6 +59,10 @@ const categoryOptions = [
 
 /**
  * Create new freight quote page
+ *
+ * Opened from a quote request (?requestId=) it answers that request: the
+ * route, transport mode and cargo are copied from it and the quote is linked
+ * to it. Opened from a shipment (?shipmentId=) it is linked to that shipment.
  */
 const NewQuotePage = () => {
   const router = useRouter();
@@ -67,6 +70,10 @@ const NewQuotePage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const shipmentId = searchParams.get('shipmentId') || undefined;
+  const requestId = searchParams.get('requestId') || undefined;
+  const backHref = requestId
+    ? `/platform/admin/logistics/requests/${requestId}`
+    : '/platform/admin/logistics/quotes';
 
   // Form state
   const [forwarderName, setForwarderName] = useState('');
@@ -93,12 +100,31 @@ const NewQuotePage = () => {
     enabled: !!shipmentId,
   });
 
+  // If answering a quote request, fetch it to copy its route and cargo
+  const { data: request } = useQuery({
+    ...api.logistics.admin.requests.getOne.queryOptions({ requestId: requestId! }),
+    enabled: !!requestId,
+  });
+
+  // Copy the request's route once it loads, without overwriting anything typed
+  const prefilledFrom = useRef<string | null>(null);
+  useEffect(() => {
+    if (!request || prefilledFrom.current === request.id) return;
+    prefilledFrom.current = request.id;
+    setOriginCountry((v) => v || request.originCountry || '');
+    setOriginCity((v) => v || request.originCity || '');
+    setDestinationCountry((v) => v || request.destinationCountry || '');
+    setDestinationCity((v) => v || request.destinationCity || '');
+    setTransportMode((v) => v || request.transportMode || '');
+  }, [request]);
+
   // Create mutation
   const { mutate: createQuote, isPending } = useMutation({
     ...api.logistics.admin.quotes.create.mutationOptions(),
     onSuccess: (result) => {
       toast.success('Quote created successfully');
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes', 'getMany']] });
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
       router.push(`/platform/admin/logistics/quotes/${result.id}`);
     },
@@ -121,19 +147,19 @@ const NewQuotePage = () => {
   };
 
   const updateLineItem = (index: number, field: keyof LineItem, value: string | number | null) => {
-    const newItems = [...lineItems];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const current = lineItems[index];
+    if (!current) return;
+
+    const updated: LineItem = { ...current, [field]: value };
 
     // Auto-calculate total if unit price and quantity are set
     if (field === 'unitPrice' || field === 'quantity') {
-      const unitPrice = field === 'unitPrice' ? (value as number) : newItems[index].unitPrice;
-      const quantity = field === 'quantity' ? (value as number) : newItems[index].quantity;
-      if (unitPrice !== null && quantity) {
-        newItems[index].total = unitPrice * quantity;
+      if (updated.unitPrice !== null && updated.quantity) {
+        updated.total = updated.unitPrice * updated.quantity;
       }
     }
 
-    setLineItems(newItems);
+    setLineItems(lineItems.map((item, i) => (i === index ? updated : item)));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -154,6 +180,7 @@ const NewQuotePage = () => {
       forwarderContact: forwarderContact || undefined,
       forwarderEmail: forwarderEmail || undefined,
       shipmentId,
+      requestId,
       originCountry: originCountry || undefined,
       originCity: originCity || undefined,
       destinationCountry: destinationCountry || undefined,
@@ -185,7 +212,7 @@ const NewQuotePage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/platform/admin/logistics/quotes">
+            <Link href={backHref}>
               <Icon icon={IconArrowLeft} size="sm" />
             </Link>
           </Button>
@@ -196,8 +223,72 @@ const NewQuotePage = () => {
                 Linked to shipment: {shipment.shipmentNumber}
               </Typography>
             )}
+            {request && (
+              <Typography variant="bodySm" colorRole="muted">
+                Answering request {request.requestNumber}
+              </Typography>
+            )}
           </div>
         </div>
+
+        {/* The request being answered, so the cargo is in view while pricing */}
+        {request && (
+          <Card>
+            <div className="p-4 pb-0">
+              <CardTitle>Request {request.requestNumber}</CardTitle>
+            </div>
+            <CardContent>
+              <dl className="grid gap-3 text-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs text-text-muted">Route</dt>
+                  <dd>
+                    {request.originCity || request.originCountry} →{' '}
+                    {request.destinationCity || request.destinationCountry}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Cargo</dt>
+                  <dd className="capitalize">
+                    {[
+                      request.productType,
+                      request.totalCases ? `${request.totalCases} cases` : null,
+                      request.totalPallets ? `${request.totalPallets} pallets` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Weight and volume</dt>
+                  <dd>
+                    {[
+                      request.totalWeightKg ? `${request.totalWeightKg.toFixed(0)} kg` : null,
+                      request.totalVolumeM3 ? `${request.totalVolumeM3.toFixed(2)} m³` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '-'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Requirements</dt>
+                  <dd>
+                    {[
+                      request.requiresThermalLiner ? 'Thermal liner' : null,
+                      request.requiresTracker ? 'Tracker' : null,
+                      request.requiresInsurance ? 'Insurance' : null,
+                      request.temperatureControlled ? 'Temperature controlled' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || 'None'}
+                  </dd>
+                </div>
+              </dl>
+              {request.productDescription && (
+                <p className="mt-3 text-sm text-text-muted">{request.productDescription}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Forwarder Details */}
         <Card>
@@ -507,13 +598,11 @@ const NewQuotePage = () => {
         {/* Actions */}
         <div className="flex items-center justify-end gap-4">
           <Button variant="outline" asChild>
-            <Link href="/platform/admin/logistics/quotes">Cancel</Link>
+            <Link href={backHref}>Cancel</Link>
           </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? (
-              <ButtonContent iconLeft={IconLoader2} iconLeftClassName="animate-spin">
-                Creating...
-              </ButtonContent>
+              <ButtonContent isLoading>Creating...</ButtonContent>
             ) : (
               <ButtonContent iconLeft={IconPlus}>Create Quote</ButtonContent>
             )}

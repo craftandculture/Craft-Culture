@@ -68,7 +68,7 @@ const QuoteComparePage = () => {
               You need to select at least 2 quotes (up to 5) to compare them side-by-side.
             </Typography>
             <Button asChild>
-              <Link href="/platform/admin/logistics/quotes">Back to Quotes</Link>
+              <Link href="/platform/admin/logistics/quotes">Back to freight quotes</Link>
             </Button>
           </CardContent>
         </Card>
@@ -98,7 +98,7 @@ const QuoteComparePage = () => {
               {error?.message || 'Failed to load quotes for comparison'}
             </Typography>
             <Button className="mt-4" asChild>
-              <Link href="/platform/admin/logistics/quotes">Back to Quotes</Link>
+              <Link href="/platform/admin/logistics/quotes">Back to freight quotes</Link>
             </Button>
           </CardContent>
         </Card>
@@ -221,13 +221,13 @@ const QuoteComparePage = () => {
                         </div>
                         <div className="flex flex-col gap-1">
                           {isLowestPrice && (
-                            <Badge variant="success">
+                            <Badge colorRole="success">
                               <IconTrophy className="h-3 w-3 mr-1" />
                               Best Price
                             </Badge>
                           )}
                           {isFastest && (
-                            <Badge variant="default">
+                            <Badge colorRole="info">
                               <IconClock className="h-3 w-3 mr-1" />
                               Fastest
                             </Badge>

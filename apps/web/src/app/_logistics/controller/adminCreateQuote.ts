@@ -1,7 +1,12 @@
 import { TRPCError } from '@trpc/server';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsQuoteLineItems, logisticsQuotes } from '@/database/schema';
+import {
+  logisticsQuoteLineItems,
+  logisticsQuoteRequests,
+  logisticsQuotes,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -12,7 +17,8 @@ import generateQuoteNumber from '../utils/generateQuoteNumber';
  * Create a new freight quote
  *
  * Creates a quote record with optional line items for detailed cost breakdown.
- * Quote numbers are auto-generated in format QTE-YYYY-XXXX.
+ * Quote numbers are auto-generated in format QTE-YYYY-XXXX. A quote that
+ * answers a request moves that request to "quoted" if it was still open.
  */
 const adminCreateQuote = adminProcedure.input(createQuoteSchema).mutation(async ({ input, ctx }) => {
   const { lineItems, ...quoteData } = input;
@@ -47,6 +53,10 @@ const adminCreateQuote = adminProcedure.input(createQuoteSchema).mutation(async 
       })
       .returning();
 
+    if (!quote) {
+      throw new Error('Quote insert returned no row');
+    }
+
     // Create line items if provided
     if (lineItems && lineItems.length > 0) {
       await db.insert(logisticsQuoteLineItems).values(
@@ -61,6 +71,18 @@ const adminCreateQuote = adminProcedure.input(createQuoteSchema).mutation(async 
           sortOrder: index,
         })),
       );
+    }
+
+    if (quote.requestId) {
+      await db
+        .update(logisticsQuoteRequests)
+        .set({ status: 'quoted', updatedAt: new Date() })
+        .where(
+          and(
+            eq(logisticsQuoteRequests.id, quote.requestId),
+            inArray(logisticsQuoteRequests.status, ['pending', 'in_progress']),
+          ),
+        );
     }
 
     logger.info('Created freight quote', {

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, lt, or } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsQuotes, logisticsShipments, users } from '@/database/schema';
@@ -10,10 +10,21 @@ import getQuotesSchema from '../schemas/getQuotesSchema';
  * List freight quotes with filters and pagination
  *
  * Returns paginated list of quotes with optional filtering by status,
- * forwarder, shipment, and transport mode. Includes cursor-based pagination.
+ * forwarder, shipment, request and transport mode. Includes cursor-based
+ * pagination.
  */
 const adminGetQuotes = adminProcedure.input(getQuotesSchema).query(async ({ input }) => {
-  const { limit, cursor, status, forwarderName, shipmentId, transportMode, search } = input;
+  const {
+    limit,
+    cursor,
+    status,
+    forwarderName,
+    shipmentId,
+    requestId,
+    withoutRequest,
+    transportMode,
+    search,
+  } = input;
 
   // Build WHERE conditions
   const conditions = [];
@@ -28,6 +39,14 @@ const adminGetQuotes = adminProcedure.input(getQuotesSchema).query(async ({ inpu
 
   if (shipmentId) {
     conditions.push(eq(logisticsQuotes.shipmentId, shipmentId));
+  }
+
+  if (requestId) {
+    conditions.push(eq(logisticsQuotes.requestId, requestId));
+  }
+
+  if (withoutRequest) {
+    conditions.push(isNull(logisticsQuotes.requestId));
   }
 
   if (transportMode) {
@@ -53,7 +72,8 @@ const adminGetQuotes = adminProcedure.input(getQuotesSchema).query(async ({ inpu
       .limit(1);
 
     if (cursorQuote) {
-      conditions.push(gt(logisticsQuotes.createdAt, cursorQuote.createdAt));
+      // Newest first, so the next page is everything older than the cursor
+      conditions.push(lt(logisticsQuotes.createdAt, cursorQuote.createdAt));
     }
   }
 

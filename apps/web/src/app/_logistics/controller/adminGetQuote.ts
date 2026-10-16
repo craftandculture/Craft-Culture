@@ -4,6 +4,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import {
   logisticsQuoteLineItems,
+  logisticsQuoteRequests,
   logisticsQuotes,
   logisticsShipments,
   users,
@@ -13,7 +14,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 /**
  * Get a single freight quote with all details
  *
- * Returns the quote with line items, linked shipment info, and user details.
+ * Returns the quote with line items, linked shipment info, the request it
+ * answers, and user details.
  */
 const adminGetQuote = adminProcedure
   .input(z.object({ id: z.string().uuid() }))
@@ -52,7 +54,7 @@ const adminGetQuote = adminProcedure
     }
 
     // Run all secondary queries in parallel for better performance
-    const [lineItems, acceptedByResult, rejectedByResult] = await Promise.all([
+    const [lineItems, acceptedByResult, rejectedByResult, requestResult] = await Promise.all([
       // Get line items
       db
         .select()
@@ -77,6 +79,24 @@ const adminGetQuote = adminProcedure
             .where(eq(users.id, result.quote.rejectedBy))
             .limit(1)
         : Promise.resolve([]),
+
+      // Get the request this quote answers, if any
+      result.quote.requestId
+        ? db
+            .select({
+              id: logisticsQuoteRequests.id,
+              requestNumber: logisticsQuoteRequests.requestNumber,
+              status: logisticsQuoteRequests.status,
+              transportMode: logisticsQuoteRequests.transportMode,
+              originCountry: logisticsQuoteRequests.originCountry,
+              originCity: logisticsQuoteRequests.originCity,
+              destinationCountry: logisticsQuoteRequests.destinationCountry,
+              destinationCity: logisticsQuoteRequests.destinationCity,
+            })
+            .from(logisticsQuoteRequests)
+            .where(eq(logisticsQuoteRequests.id, result.quote.requestId))
+            .limit(1)
+        : Promise.resolve([]),
     ]);
 
     const acceptedByUser = acceptedByResult[0] || null;
@@ -88,6 +108,7 @@ const adminGetQuote = adminProcedure
       createdByUser: result.createdByUser?.id ? result.createdByUser : null,
       acceptedByUser,
       rejectedByUser,
+      request: requestResult[0] ?? null,
       lineItems,
     };
   });

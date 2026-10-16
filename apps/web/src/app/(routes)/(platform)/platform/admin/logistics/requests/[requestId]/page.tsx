@@ -7,6 +7,7 @@ import {
   IconClock,
   IconDownload,
   IconFileText,
+  IconGitCompare,
   IconLoader2,
   IconPaperclip,
   IconPlus,
@@ -42,20 +43,33 @@ import useTRPC from '@/lib/trpc/browser';
 type RequestStatus = (typeof logisticsQuoteRequestStatus.enumValues)[number];
 type RequestPriority = (typeof logisticsQuoteRequestPriority.enumValues)[number];
 
-const statusBadgeVariants: Record<RequestStatus, 'default' | 'warning' | 'success' | 'error' | 'secondary'> = {
+type BadgeRole = 'muted' | 'info' | 'warning' | 'success' | 'danger';
+
+const statusBadgeVariants: Record<RequestStatus, BadgeRole> = {
   pending: 'warning',
-  in_progress: 'secondary',
-  quoted: 'success',
+  in_progress: 'info',
+  quoted: 'info',
   completed: 'success',
-  cancelled: 'error',
+  cancelled: 'danger',
 };
 
-const priorityBadgeVariants: Record<RequestPriority, 'default' | 'warning' | 'success' | 'error' | 'secondary'> = {
-  low: 'default',
-  normal: 'secondary',
+const priorityBadgeVariants: Record<RequestPriority, BadgeRole> = {
+  low: 'muted',
+  normal: 'muted',
   high: 'warning',
-  urgent: 'error',
+  urgent: 'danger',
 };
+
+const quoteBadgeVariants: Record<string, BadgeRole> = {
+  draft: 'muted',
+  pending: 'warning',
+  accepted: 'success',
+  rejected: 'danger',
+  expired: 'muted',
+};
+
+/** The most quotes the comparison screen sets side by side */
+const MAX_COMPARE = 5;
 
 const statusIcons: Record<RequestStatus, typeof IconClock> = {
   pending: IconClock,
@@ -187,6 +201,15 @@ const QuoteRequestDetailPage = () => {
   }
 
   const StatusIcon = statusIcons[request.status];
+
+  // Cheapest first; rejected and expired quotes sink to the bottom
+  const isLive = (status: string) => status !== 'rejected' && status !== 'expired';
+  const quotes = [...(request.quotes ?? [])].sort(
+    (a, b) => Number(!isLive(a.status)) - Number(!isLive(b.status)) || a.totalPrice - b.totalPrice,
+  );
+  const liveQuotes = quotes.filter((q) => isLive(q.status));
+  const bestQuoteId = liveQuotes[0]?.id;
+  const compareIds = (liveQuotes.length >= 2 ? liveQuotes : quotes).slice(0, MAX_COMPARE).map((q) => q.id);
   const canAssign = request.status === 'pending';
   const canComplete = request.status === 'in_progress' || request.status === 'quoted';
   const canAddQuote = request.status !== 'completed' && request.status !== 'cancelled';
@@ -198,7 +221,7 @@ const QuoteRequestDetailPage = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/platform/admin/logistics/requests">
+              <Link href="/platform/admin/logistics/quotes">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Link>
             </Button>
@@ -208,20 +231,20 @@ const QuoteRequestDetailPage = () => {
                   Logistics
                 </Link>
                 <span>/</span>
-                <Link href="/platform/admin/logistics/requests" className="hover:text-text-primary">
-                  Quote Requests
+                <Link href="/platform/admin/logistics/quotes" className="hover:text-text-primary">
+                  Freight quotes
                 </Link>
                 <span>/</span>
                 <span>{request.requestNumber}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Typography variant="headingLg">{request.requestNumber}</Typography>
-                <Badge variant={statusBadgeVariants[request.status]}>
+                <Badge colorRole={statusBadgeVariants[request.status]}>
                   <Icon icon={StatusIcon} size="xs" className="mr-1" />
                   {request.status.replace('_', ' ').charAt(0).toUpperCase() +
                     request.status.replace('_', ' ').slice(1)}
                 </Badge>
-                <Badge variant={priorityBadgeVariants[request.priority]}>
+                <Badge colorRole={priorityBadgeVariants[request.priority]}>
                   {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
                 </Badge>
               </div>
@@ -235,9 +258,7 @@ const QuoteRequestDetailPage = () => {
                 disabled={isAssigning}
               >
                 {isAssigning ? (
-                  <ButtonContent iconLeft={IconLoader2} iconLeftClassName="animate-spin">
-                    Assigning...
-                  </ButtonContent>
+                  <ButtonContent isLoading>Assigning...</ButtonContent>
                 ) : (
                   <ButtonContent iconLeft={IconUser}>Assign to Me</ButtonContent>
                 )}
@@ -356,22 +377,22 @@ const QuoteRequestDetailPage = () => {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {request.requiresThermalLiner && (
-                      <Badge variant="secondary">
+                      <Badge colorRole="muted">
                         <IconSnowflake className="h-3 w-3 mr-1" />
                         Thermal Liner Required
                       </Badge>
                     )}
                     {request.requiresTracker && (
-                      <Badge variant="secondary">
+                      <Badge colorRole="muted">
                         <IconThermometer className="h-3 w-3 mr-1" />
                         Temperature Tracker Required
                       </Badge>
                     )}
                     {request.requiresInsurance && (
-                      <Badge variant="secondary">Insurance Required</Badge>
+                      <Badge colorRole="muted">Insurance Required</Badge>
                     )}
                     {request.temperatureControlled && (
-                      <Badge variant="secondary">
+                      <Badge colorRole="muted">
                         Temperature Controlled
                         {request.minTemperature !== null && request.maxTemperature !== null && (
                           <span className="ml-1">
@@ -389,24 +410,33 @@ const QuoteRequestDetailPage = () => {
             <Card>
               <div className="p-4 pb-0">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Quotes ({request.quotes?.length ?? 0})</CardTitle>
-                  {canAddQuote && (
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/platform/admin/logistics/quotes/new?requestId=${requestId}`}>
-                        <ButtonContent iconLeft={IconPlus}>Add Quote</ButtonContent>
-                      </Link>
-                    </Button>
-                  )}
+                  <CardTitle>Quotes ({quotes.length})</CardTitle>
+                  <div className="flex items-center gap-2">
+                    {compareIds.length >= 2 && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
+                          <ButtonContent iconLeft={IconGitCompare}>Compare quotes</ButtonContent>
+                        </Link>
+                      </Button>
+                    )}
+                    {canAddQuote && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/platform/admin/logistics/quotes/new?requestId=${requestId}`}>
+                          <ButtonContent iconLeft={IconPlus}>Add Quote</ButtonContent>
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
               <CardContent>
-                {!request.quotes || request.quotes.length === 0 ? (
+                {quotes.length === 0 ? (
                   <Typography variant="bodyMd" colorRole="muted" className="text-center py-4">
                     No quotes have been added to this request yet.
                   </Typography>
                 ) : (
                   <div className="space-y-3">
-                    {request.quotes.map((quote) => (
+                    {quotes.map((quote) => (
                       <Link
                         key={quote.id}
                         href={`/platform/admin/logistics/quotes/${quote.id}`}
@@ -417,9 +447,12 @@ const QuoteRequestDetailPage = () => {
                             <Typography variant="bodySm" className="font-mono">
                               {quote.quoteNumber}
                             </Typography>
-                            <Badge variant={quote.status === 'accepted' ? 'success' : 'secondary'}>
-                              {quote.status}
+                            <Badge colorRole={quoteBadgeVariants[quote.status] ?? 'muted'}>
+                              {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
                             </Badge>
+                            {quote.id === bestQuoteId && quotes.length > 1 && (
+                              <Badge colorRole="success">Best price</Badge>
+                            )}
                           </div>
                           <Typography variant="bodyMd">{quote.forwarderName}</Typography>
                         </div>
@@ -609,7 +642,7 @@ const QuoteRequestDetailPage = () => {
                     </div>
                   )}
                   {request.isFlexibleDates && (
-                    <Badge variant="secondary">Dates are flexible</Badge>
+                    <Badge colorRole="muted">Dates are flexible</Badge>
                   )}
                 </CardContent>
               </Card>
