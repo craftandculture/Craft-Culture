@@ -126,9 +126,9 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
       links: [
         { href: '/platform/admin/logistics', label: 'Dashboard' },
         { href: '/platform/admin/logistics/shipments', label: 'Shipments' },
-        { href: '/platform/admin/logistics/quotes', label: 'Quotes' },
-        { href: '/platform/admin/logistics/requests', label: 'Requests' },
-        { href: '/platform/admin/logistics/invoices', label: 'Invoices' },
+        { href: '/platform/admin/logistics/exports', label: 'Exports' },
+        { href: '/platform/admin/logistics/quotes', label: 'Freight quotes' },
+        { href: '/platform/admin/logistics/invoices', label: 'Freight bills' },
         { href: '/platform/admin/logistics/reports', label: 'Reports' },
       ],
     });

@@ -5,6 +5,7 @@ import {
   IconCalendarDue,
   IconChevronRight,
   IconCoin,
+  IconFileText,
   IconPackageExport,
   IconPlus,
   IconSearch,
@@ -24,6 +25,7 @@ import {
   pill,
   pillClass,
   primaryButton,
+  secondaryButton,
   sectionHeading,
   stageTone,
 } from './exportUi';
@@ -103,9 +105,14 @@ const ExportJobsClient = () => {
           <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Export jobs</h1>
           <p className="mt-0.5 text-sm text-text-muted">Exports leaving the UAE, mainland transfers within it, and the bonds on bonded transfers</p>
         </div>
-        <Link href="/platform/admin/logistics/exports/new" className={primaryButton}>
-          <IconPlus size={16} /> New export job
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/platform/admin/logistics/export-invoices" className={secondaryButton}>
+            <IconFileText size={16} /> Export invoices
+          </Link>
+          <Link href="/platform/admin/logistics/exports/new" className={primaryButton}>
+            <IconPlus size={16} /> New export job
         </Link>
+        </div>
       </div>
 
       {error ? (
