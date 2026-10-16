@@ -368,7 +368,6 @@ const ShipmentsListPage = () => {
                           <div className="flex items-center gap-2 text-xs text-text-muted">
                             <span className="font-mono">{shipment.shipmentNumber}</span>
                             <span>·</span>
-                                                        <span>·</span>
                             <span className="truncate">
                               {origin} → {destination}
                             </span>

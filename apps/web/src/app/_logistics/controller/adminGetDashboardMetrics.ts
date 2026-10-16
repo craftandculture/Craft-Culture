@@ -23,6 +23,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 const adminGetDashboardMetrics = adminProcedure.query(async () => {
   const now = new Date();
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -50,7 +51,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       .from(logisticsShipments)
       .groupBy(logisticsShipments.status),
 
-    // Recent shipments (top 10)
+    // Recent shipments: live, or finished in the last week (top 20)
     db
       .select({
         id: logisticsShipments.id,
@@ -86,6 +87,11 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
         createdAt: logisticsShipments.createdAt,
       })
       .from(logisticsShipments)
+      // Finished shipments drop off a week after they finish, so the list is live work
+      .where(
+        sql`NOT (${logisticsShipments.status} IN ('delivered', 'cancelled')
+          AND COALESCE(${logisticsShipments.deliveredAt}, ${logisticsShipments.updatedAt}) < ${sevenDaysAgo})`,
+      )
       .orderBy(desc(logisticsShipments.createdAt))
       .limit(20),
 

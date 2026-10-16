@@ -9,10 +9,8 @@ import {
   IconChevronRight,
   IconClipboardList,
   IconCloudDownload,
-  IconCurrencyDollar,
   IconFileInvoice,
   IconFileText,
-  IconPackageImport,
   IconPlane,
   IconPlus,
   IconReceipt,
@@ -27,17 +25,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import BondsOutstandingCard from '@/app/_logistics/components/exports/BondsOutstandingCard';
+import NeedsAttentionCard from '@/app/_logistics/components/NeedsAttentionCard';
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
-import Card from '@/app/_ui/components/Card/Card';
-import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import type { logisticsTransportMode } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -76,6 +71,7 @@ const LogisticsDashboardPage = () => {
     onSuccess: (result) => {
       toast.success(`Synced ${result.created} new, ${result.updated} updated shipments`);
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getAttention']] });
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to sync with Hillebrand');
@@ -93,109 +89,16 @@ const LogisticsDashboardPage = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="space-y-6">
-          {/* Header skeleton */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <Skeleton className="mb-2 h-8 w-48" />
-              <Skeleton className="h-5 w-72" />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-9 w-28" />
-              <Skeleton className="h-9 w-24" />
-              <Skeleton className="h-9 w-9" />
-              <Skeleton className="h-9 w-32" />
-            </div>
-          </div>
-
-          {/* Status Cards skeleton */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div>
-                      <Skeleton className="mb-1 h-3 w-20" />
-                      <Skeleton className="h-6 w-8" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Middle Section skeleton */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <div className="p-4 pb-3">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                </div>
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-5 w-12" />
-                    </div>
-                    <Skeleton className="h-2 w-full rounded-full" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Recent Shipments skeleton */}
-          <Card>
-            <div className="p-4 pb-0">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-36" />
-                <Skeleton className="h-8 w-24" />
-              </div>
-            </div>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border-primary">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between gap-4 p-4">
-                    <div className="flex items-center gap-4 min-w-0 flex-1">
-                      <Skeleton className="h-10 w-10 rounded-lg" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <Skeleton className="h-4 w-24" />
-                          <Skeleton className="h-5 w-20 rounded-full" />
-                        </div>
-                        <Skeleton className="h-5 w-48" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <Skeleton className="hidden sm:block h-4 w-16" />
-                      <Skeleton className="hidden md:block h-8 w-16" />
-                      <Skeleton className="h-5 w-5" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Links skeleton */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="space-y-5">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {[...Array(5)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="flex items-center gap-3 p-4">
-                  <Skeleton className="h-6 w-6" />
-                  <div className="flex-1">
-                    <Skeleton className="mb-1 h-5 w-24" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <Skeleton className="h-5 w-5" />
-                </CardContent>
-              </Card>
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <Skeleton className="h-96 rounded-xl" />
+            <Skeleton className="h-96 rounded-xl" />
           </div>
         </div>
       </div>
@@ -203,19 +106,69 @@ const LogisticsDashboardPage = () => {
   }
 
   const metrics = data;
+  const shipments = metrics?.shipments;
+  const recent = metrics?.recentShipments ?? [];
+  const visible = recent.filter((s) => typeFilter === 'all' || s.type === typeFilter);
+
+  // Where shipments are on the way in, read left to right
+  const tiles = [
+    { label: 'Active', value: shipments?.active ?? 0, tone: 'bg-surface-secondary text-text-primary' },
+    { label: 'In transit', value: shipments?.inTransit ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
+    {
+      label: 'At port or customs',
+      value: (shipments?.arrivedPort ?? 0) + (shipments?.customsClearance ?? 0),
+      tone: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
+    },
+    { label: 'At warehouse', value: shipments?.atWarehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+    { label: 'Opened, last 30 days', value: shipments?.recentActivityCount ?? 0, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300' },
+  ];
+
+  const docsFlag = (metrics?.documents.expiredCount ?? 0) + (metrics?.documents.expiringCount ?? 0);
+  const sideRows = [
+    {
+      label: 'Freight quotes to review',
+      value: String(metrics?.quotes.pendingCount ?? 0),
+      href: '/platform/admin/logistics/quotes',
+      flag: (metrics?.quotes.expiringCount ?? 0) > 0,
+    },
+    {
+      label: 'Quote requests open',
+      value: String((metrics?.quoteRequests?.pendingCount ?? 0) + (metrics?.quoteRequests?.inProgressCount ?? 0)),
+      href: '/platform/admin/logistics/requests',
+      flag: (metrics?.quoteRequests?.pendingCount ?? 0) > 0,
+    },
+    {
+      label: 'Documents expired or expiring',
+      value: String(docsFlag),
+      href: '/platform/admin/logistics/reports',
+      flag: docsFlag > 0,
+    },
+    {
+      label: 'Landed cost this month',
+      value: formatCurrency(metrics?.costs.monthlyLanded ?? 0),
+      href: '/platform/admin/logistics/reports',
+      flag: false,
+    },
+  ];
+
+  const links = [
+    { label: 'All shipments', href: '/platform/admin/logistics/shipments', icon: IconShip },
+    { label: 'Export jobs', href: '/platform/admin/logistics/exports', icon: IconTruckDelivery },
+    { label: 'Freight quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
+    { label: 'Quote requests', href: '/platform/admin/logistics/requests', icon: IconClipboardList },
+    { label: 'Invoices', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
+    { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
+    { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },
+  ];
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Typography variant="headingLg" className="mb-2">
-              Logistics Dashboard
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Overview of shipments, documents, and costs
-            </Typography>
+            <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Logistics</h1>
+            <p className="mt-0.5 text-sm text-text-muted">Imports, exports and mainland transfers</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -225,328 +178,61 @@ const LogisticsDashboardPage = () => {
               disabled={isSyncing}
               title="Sync shipments from Hillebrand"
             >
-              <Icon
-                icon={IconCloudDownload}
-                size="sm"
-                className={isSyncing ? 'animate-pulse' : ''}
-              />
-              <span className="hidden sm:inline ml-1">Hillebrand</span>
+              <Icon icon={IconCloudDownload} size="sm" className={isSyncing ? 'animate-pulse' : ''} />
+              <span className="ml-1 hidden sm:inline">Hillebrand</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching} title="Refresh">
+              <Icon icon={IconRefresh} size="sm" className={isFetching ? 'animate-spin' : ''} />
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/platform/admin/logistics/tools/pdf-extract">
-                <ButtonContent iconLeft={IconFileText}>PDF Tool</ButtonContent>
+              <Link href="/platform/admin/logistics/exports/new">
+                <ButtonContent iconLeft={IconTruckDelivery}>New export job</ButtonContent>
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void refetch()}
-              disabled={isFetching}
+            <Link
+              href="/platform/admin/logistics/shipments/new"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-text-primary px-3.5 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90"
             >
-              <Icon
-                icon={IconRefresh}
-                size="sm"
-                className={isFetching ? 'animate-spin' : ''}
-              />
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/platform/admin/logistics/exports">
-                <ButtonContent iconLeft={IconTruckDelivery}>Export jobs</ButtonContent>
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/platform/admin/logistics/shipments/new">
-                <ButtonContent iconLeft={IconPlus}>New Shipment</ButtonContent>
-              </Link>
-            </Button>
+              <IconPlus size={16} /> New shipment
+            </Link>
           </div>
         </div>
 
-        {/* C&C money held on bonded transfers; hidden when none is */}
-        <BondsOutstandingCard />
-
-        {/* Status Cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <Icon icon={IconShip} size="md" className="text-blue-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Active Shipments
-                  </Typography>
-                  <Typography variant="headingMd" className="text-blue-600">
-                    {metrics?.shipments.active ?? 0}
-                  </Typography>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                  <Icon icon={IconPlane} size="md" className="text-purple-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    In Transit
-                  </Typography>
-                  <Typography variant="headingMd" className="text-purple-600">
-                    {metrics?.shipments.inTransit ?? 0}
-                  </Typography>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                  <Icon icon={IconAnchor} size="md" className="text-orange-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    At Port
-                  </Typography>
-                  <Typography variant="headingMd" className="text-orange-600">
-                    {metrics?.shipments.arrivedPort ?? 0}
-                  </Typography>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                  <Icon icon={IconPackageImport} size="md" className="text-emerald-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    At Warehouse
-                  </Typography>
-                  <Typography variant="headingMd" className="text-emerald-600">
-                    {metrics?.shipments.atWarehouse ?? 0}
-                  </Typography>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Status strip */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {tiles.map((t) => (
+            <Link
+              key={t.label}
+              href="/platform/admin/logistics/shipments"
+              className={`rounded-xl px-4 py-3 transition-opacity hover:opacity-80 ${t.tone}`}
+            >
+              <p className="text-2xl font-semibold tabular-nums">{t.value}</p>
+              <p className="mt-0.5 text-xs font-medium opacity-80">{t.label}</p>
+            </Link>
+          ))}
         </div>
 
-        {/* Middle Section - Documents, Costs, Quotes, Requests */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {/* Document Compliance */}
-          <Card>
-            <div className="p-4 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Icon icon={IconFileText} size="sm" colorRole="muted" />
-                  Document Compliance
-                </CardTitle>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          {/* Main column: what needs acting on, then live work */}
+          <div className="min-w-0 space-y-5">
+            <NeedsAttentionCard />
+
+            <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+              <div className="flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">Recent shipments</p>
+                  <p className="mt-0.5 text-xs text-text-muted">Live, and finished in the last 7 days</p>
+                </div>
                 <Link
-                  href="/platform/admin/logistics/reports"
-                  className="text-sm text-text-brand hover:underline"
+                  href="/platform/admin/logistics/shipments"
+                  className="inline-flex items-center gap-1 text-sm text-text-muted transition-colors hover:text-text-primary"
                 >
-                  View Details
+                  View all <IconArrowRight size={14} />
                 </Link>
               </div>
-            </div>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    Compliance Rate
-                  </Typography>
-                  <Typography
-                    variant="headingSm"
-                    className={
-                      (metrics?.documents.complianceRate ?? 100) >= 90
-                        ? 'text-green-600'
-                        : (metrics?.documents.complianceRate ?? 100) >= 70
-                          ? 'text-orange-600'
-                          : 'text-red-600'
-                    }
-                  >
-                    {metrics?.documents.complianceRate ?? 100}%
-                  </Typography>
-                </div>
-                <div className="h-2 rounded-full bg-surface-secondary overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      (metrics?.documents.complianceRate ?? 100) >= 90
-                        ? 'bg-green-500'
-                        : (metrics?.documents.complianceRate ?? 100) >= 70
-                          ? 'bg-orange-500'
-                          : 'bg-red-500'
-                    }`}
-                    style={{ width: `${metrics?.documents.complianceRate ?? 100}%` }}
-                  />
-                </div>
-                <div className="flex gap-4 text-sm">
-                  {(metrics?.documents.expiredCount ?? 0) > 0 && (
-                    <div className="flex items-center gap-1 text-red-600">
-                      <IconAlertTriangle className="h-4 w-4" />
-                      <span>{metrics?.documents.expiredCount} expired</span>
-                    </div>
-                  )}
-                  {(metrics?.documents.expiringCount ?? 0) > 0 && (
-                    <div className="flex items-center gap-1 text-orange-600">
-                      <IconAlertTriangle className="h-4 w-4" />
-                      <span>{metrics?.documents.expiringCount} expiring</span>
-                    </div>
-                  )}
-                  {(metrics?.documents.expiredCount ?? 0) === 0 &&
-                    (metrics?.documents.expiringCount ?? 0) === 0 && (
-                      <Typography variant="bodySm" colorRole="muted">
-                        All documents up to date
-                      </Typography>
-                    )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cost Overview */}
-          <Card>
-            <div className="p-4 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Icon icon={IconCurrencyDollar} size="sm" colorRole="muted" />
-                  Costs (This Month)
-                </CardTitle>
-                <Link
-                  href="/platform/admin/logistics/reports"
-                  className="text-sm text-text-brand hover:underline"
-                >
-                  View Report
-                </Link>
-              </div>
-            </div>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    Freight Costs
-                  </Typography>
-                  <Typography variant="headingSm">
-                    {formatCurrency(metrics?.costs.monthlyFreight ?? 0)}
-                  </Typography>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    Total Landed Cost
-                  </Typography>
-                  <Typography variant="headingSm" className="text-text-brand">
-                    {formatCurrency(metrics?.costs.monthlyLanded ?? 0)}
-                  </Typography>
-                </div>
-                <div className="h-px bg-border-primary" />
-                <Typography variant="bodyXs" colorRole="muted">
-                  {metrics?.shipments.recentActivityCount ?? 0} shipments in last 30 days
-                </Typography>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quotes Summary */}
-          <Card>
-            <div className="p-4 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Icon icon={IconFileInvoice} size="sm" colorRole="muted" />
-                  Freight Quotes
-                </CardTitle>
-                <Link
-                  href="/platform/admin/logistics/quotes"
-                  className="text-sm text-text-brand hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
-            </div>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    Pending Review
-                  </Typography>
-                  <Typography variant="headingSm" className="text-orange-600">
-                    {metrics?.quotes.pendingCount ?? 0}
-                  </Typography>
-                </div>
-                {(metrics?.quotes.expiringCount ?? 0) > 0 && (
-                  <div className="flex items-center gap-2 rounded-lg bg-orange-50 p-2 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400">
-                    <IconAlertTriangle className="h-4 w-4" />
-                    <Typography variant="bodySm">
-                      {metrics?.quotes.expiringCount} quotes expiring soon
-                    </Typography>
-                  </div>
-                )}
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href="/platform/admin/logistics/quotes/new">
-                    <ButtonContent iconLeft={IconPlus}>New Quote</ButtonContent>
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quote Requests Summary */}
-          <Card>
-            <div className="p-4 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Icon icon={IconClipboardList} size="sm" colorRole="muted" />
-                  Quote Requests
-                </CardTitle>
-                <Link
-                  href="/platform/admin/logistics/requests"
-                  className="text-sm text-text-brand hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
-            </div>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    Pending
-                  </Typography>
-                  <Typography variant="headingSm" className="text-orange-600">
-                    {metrics?.quoteRequests?.pendingCount ?? 0}
-                  </Typography>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">
-                    In Progress
-                  </Typography>
-                  <Typography variant="headingSm" className="text-blue-600">
-                    {metrics?.quoteRequests?.inProgressCount ?? 0}
-                  </Typography>
-                </div>
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href="/platform/admin/logistics/requests/new">
-                    <ButtonContent iconLeft={IconPlus}>New Request</ButtonContent>
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Shipments */}
-        <Card>
-          <div className="p-4 pb-0">
-            <div className="flex items-center justify-between">
-              <CardTitle>Recent Shipments</CardTitle>
-              <div className="ml-auto mr-2 hidden flex-wrap items-center gap-1.5 sm:flex">
+              <div className="-mx-px flex gap-1.5 overflow-x-auto px-4 py-3">
                 {(['all', 'inbound', 'outbound', 'mainland_transfer', 're_export'] as const).map((t) => {
-                  const count = (metrics?.recentShipments ?? []).filter((s) => t === 'all' || s.type === t).length;
+                  const count = recent.filter((s) => t === 'all' || s.type === t).length;
                   if (t !== 'all' && count === 0) return null;
                   const active = typeFilter === t;
                   return (
@@ -554,7 +240,7 @@ const LogisticsDashboardPage = () => {
                       key={t}
                       type="button"
                       onClick={() => setTypeFilter(t)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                         active
                           ? 'bg-text-primary text-surface-primary'
                           : 'bg-surface-secondary text-text-muted hover:text-text-primary'
@@ -566,154 +252,115 @@ const LogisticsDashboardPage = () => {
                   );
                 })}
               </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/platform/admin/logistics/shipments">
-                  <ButtonContent iconRight={IconArrowRight}>View All</ButtonContent>
-                </Link>
-              </Button>
-            </div>
-          </div>
-          <CardContent className="p-0">
-            {!metrics?.recentShipments || metrics.recentShipments.length === 0 ? (
-              <div className="p-8 text-center">
-                <Icon icon={IconShip} size="xl" className="mx-auto mb-4 text-text-muted" />
-                <Typography variant="bodySm" colorRole="muted">
-                  No shipments yet
-                </Typography>
-              </div>
-            ) : (
-              <div className="divide-y divide-border-primary">
-                {metrics.recentShipments
-                  .filter((s) => typeFilter === 'all' || s.type === typeFilter)
-                  .map((shipment) => {
-                  const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
-                  const origin =
-                    shipment.originCity ?? shipment.originCountry ?? 'Origin';
-                  const destination =
-                    shipment.destinationCity ??
-                    shipment.destinationWarehouse ??
-                    'Destination';
 
-                  return (
-                    <Link
-                      key={shipment.id}
-                      href={`/platform/admin/logistics/shipments/${shipment.id}`}
-                      className="flex items-start gap-4 p-4 hover:bg-surface-secondary transition-colors"
-                    >
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg mt-0.5 ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}>
-                        <Icon icon={ModeIcon} size="md" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <Typography variant="headingSm" className="truncate">
-                            {shipment.name ?? `${origin} → ${destination}`}
-                          </Typography>
-                          <ShipmentTypeBadge type={shipment.type} />
-                          <ShipmentStatusBadge status={shipment.status} />
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-text-muted">
-                          <span className="font-mono">{shipment.shipmentNumber}</span>
-                          <span>·</span>
-                                                    {shipment.name && (
-                            <>
-                              <span>·</span>
-                              <span className="truncate">
-                                {origin} → {destination}
+              {visible.length === 0 ? (
+                <p className="border-t border-border-muted px-4 py-10 text-center text-sm text-text-muted">
+                  No live shipments. Finished ones are under View all.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border-muted border-t border-border-muted">
+                  {visible.map((shipment) => {
+                    const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
+                    const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
+                    const destination = shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination';
+                    return (
+                      <li key={shipment.id}>
+                        <Link
+                          href={`/platform/admin/logistics/shipments/${shipment.id}`}
+                          className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary"
+                        >
+                          <span
+                            className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}
+                          >
+                            <Icon icon={ModeIcon} size="sm" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className="truncate text-sm font-medium text-text-primary">
+                                {shipment.name ?? `${origin} → ${destination}`}
                               </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                              <ShipmentTypeBadge type={shipment.type} />
+                              <ShipmentStatusBadge status={shipment.status} />
+                            </span>
+                            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-text-muted">
+                              <span className="font-mono">{shipment.shipmentNumber}</span>
+                              {shipment.name ? (
+                                <>
+                                  <span>·</span>
+                                  <span className="truncate">
+                                    {origin} → {destination}
+                                  </span>
+                                </>
+                              ) : null}
+                            </span>
+                          </span>
+                          <ShipmentMetrics
+                            cases={shipment.totalCases}
+                            bottles={shipment.totalBottles}
+                            etaLabel={shipment.eta ? formatDate(shipment.eta) : null}
+                          />
+                          <IconChevronRight className="size-4 shrink-0 text-text-muted" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
 
-                      <div className="flex items-center gap-3 shrink-0 sm:gap-4">
-                        <ShipmentMetrics
-                          cases={shipment.totalCases}
-                          bottles={shipment.totalBottles}
-                          etaLabel={shipment.eta ? formatDate(shipment.eta) : null}
-                        />
-                        <IconChevronRight className="h-5 w-5 shrink-0 text-text-muted" />
-                      </div>
+          {/* Side column: money held, the smaller counts, and the way to everything else */}
+          <aside className="space-y-5">
+            <BondsOutstandingCard />
+
+            <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+              <p className="px-4 pb-2 pt-4 text-sm font-semibold text-text-primary">At a glance</p>
+              <ul className="divide-y divide-border-muted border-t border-border-muted">
+                {sideRows.map((r) => (
+                  <li key={r.label}>
+                    <Link
+                      href={r.href}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-surface-secondary"
+                    >
+                      <span className="flex items-center gap-2 text-text-muted">
+                        {r.flag ? <IconAlertTriangle size={14} className="text-amber-600" /> : null}
+                        {r.label}
+                      </span>
+                      <span className="font-semibold tabular-nums text-text-primary">{r.value}</span>
                     </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-        {/* Quick Links */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Link href="/platform/admin/logistics/shipments">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconShip} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">All Shipments</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    View and manage shipments
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/logistics/quotes">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconFileInvoice} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Freight Quotes</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Compare forwarder quotes
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/logistics/reports">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconChartBar} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Reports</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Compliance and cost reports
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/logistics/invoices">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconReceipt} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Invoices</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Hillebrand invoices
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <a href="https://craftculture.xyz/logistics-manual" target="_blank" rel="noopener noreferrer">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconBook} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Manual</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Operators manual
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </a>
+            <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
+              <p className="px-4 pb-2 pt-4 text-sm font-semibold text-text-primary">Go to</p>
+              <ul className="grid grid-cols-2 gap-1 p-2 pt-0">
+                {links.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      href={l.href}
+                      className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-text-primary transition-colors hover:bg-surface-secondary"
+                    >
+                      <l.icon size={16} className="shrink-0 text-text-muted" />
+                      <span className="truncate">{l.label}</span>
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <a
+                    href="https://craftculture.xyz/logistics-manual"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-text-primary transition-colors hover:bg-surface-secondary"
+                  >
+                    <IconBook size={16} className="shrink-0 text-text-muted" />
+                    <span className="truncate">Manual</span>
+                  </a>
+                </li>
+              </ul>
+            </section>
+          </aside>
         </div>
       </div>
     </div>

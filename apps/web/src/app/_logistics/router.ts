@@ -33,6 +33,7 @@ import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoic
 import adminFindLwinMismatches from './controller/adminFindLwinMismatches';
 import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGenerateInboundDeliveryNote from './controller/adminGenerateInboundDeliveryNote';
+import adminGetAttention from './controller/adminGetAttention';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetExportJob from './controller/adminGetExportJob';
@@ -80,6 +81,8 @@ import partnerUploadDocument from './controller/partnerUploadDocument';
 const adminRouter = createTRPCRouter({
   // Dashboard
   getDashboardMetrics: adminGetDashboardMetrics,
+  // Exceptions for the dashboard, grouped by reason
+  getAttention: adminGetAttention,
 
   // Shipment CRUD
   create: adminCreate,
