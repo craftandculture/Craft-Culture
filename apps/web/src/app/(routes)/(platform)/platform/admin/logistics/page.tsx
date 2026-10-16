@@ -23,11 +23,13 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import BondsOutstandingCard from '@/app/_logistics/components/exports/BondsOutstandingCard';
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
+import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -61,6 +63,7 @@ const formatCurrency = (amount: number) => {
  * Logistics Dashboard - overview of shipments, compliance, costs, and quotes
  */
 const LogisticsDashboardPage = () => {
+  const [typeFilter, setTypeFilter] = useState<ShipmentType | 'all'>('all');
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -541,6 +544,28 @@ const LogisticsDashboardPage = () => {
           <div className="p-4 pb-0">
             <div className="flex items-center justify-between">
               <CardTitle>Recent Shipments</CardTitle>
+              <div className="ml-auto mr-2 hidden flex-wrap items-center gap-1.5 sm:flex">
+                {(['all', 'inbound', 'outbound', 'mainland_transfer', 're_export'] as const).map((t) => {
+                  const count = (metrics?.recentShipments ?? []).filter((s) => t === 'all' || s.type === t).length;
+                  if (t !== 'all' && count === 0) return null;
+                  const active = typeFilter === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTypeFilter(t)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? 'bg-text-primary text-surface-primary'
+                          : 'bg-surface-secondary text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      {t === 'all' ? 'All' : shipmentTypeConfig[t].label}
+                      <span className="tabular-nums opacity-70">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/platform/admin/logistics/shipments">
                   <ButtonContent iconRight={IconArrowRight}>View All</ButtonContent>
@@ -558,7 +583,9 @@ const LogisticsDashboardPage = () => {
               </div>
             ) : (
               <div className="divide-y divide-border-primary">
-                {metrics.recentShipments.map((shipment) => {
+                {metrics.recentShipments
+                  .filter((s) => typeFilter === 'all' || s.type === typeFilter)
+                  .map((shipment) => {
                   const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                   const origin =
                     shipment.originCity ?? shipment.originCountry ?? 'Origin';
@@ -573,8 +600,8 @@ const LogisticsDashboardPage = () => {
                       href={`/platform/admin/logistics/shipments/${shipment.id}`}
                       className="flex items-start gap-4 p-4 hover:bg-surface-secondary transition-colors"
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary mt-0.5">
-                        <Icon icon={ModeIcon} size="md" className="text-text-muted" />
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg mt-0.5 ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}>
+                        <Icon icon={ModeIcon} size="md" />
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -582,13 +609,13 @@ const LogisticsDashboardPage = () => {
                           <Typography variant="headingSm" className="truncate">
                             {shipment.name ?? `${origin} → ${destination}`}
                           </Typography>
+                          <ShipmentTypeBadge type={shipment.type} />
                           <ShipmentStatusBadge status={shipment.status} />
                         </div>
                         <div className="flex items-center gap-2 text-xs text-text-muted">
                           <span className="font-mono">{shipment.shipmentNumber}</span>
                           <span>·</span>
-                          <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
-                          {shipment.name && (
+                                                    {shipment.name && (
                             <>
                               <span>·</span>
                               <span className="truncate">

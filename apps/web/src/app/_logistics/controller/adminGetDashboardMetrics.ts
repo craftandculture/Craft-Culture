@@ -87,7 +87,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       })
       .from(logisticsShipments)
       .orderBy(desc(logisticsShipments.createdAt))
-      .limit(10),
+      .limit(20),
 
     // Required docs count
     db

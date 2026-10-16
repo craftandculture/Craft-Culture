@@ -30,6 +30,7 @@ import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconcil
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
+import ShipmentTypeBadge from '@/app/_logistics/components/ShipmentTypeBadge';
 import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
@@ -865,7 +866,7 @@ const ShipmentDetailPage = () => {
                     <span>·</span>
                   </>
                 )}
-                <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
+                <ShipmentTypeBadge type={shipment.type} />
                 <span>·</span>
                 <span>
                   {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}

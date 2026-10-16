@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
+import ShipmentTypeBadge, { shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -352,8 +353,8 @@ const ShipmentsListPage = () => {
                   <Card className="cursor-pointer transition-colors hover:border-border-brand">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary mt-0.5">
-                          <Icon icon={ModeIcon} size="md" className="text-text-muted" />
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg mt-0.5 ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}>
+                          <Icon icon={ModeIcon} size="md" />
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -361,13 +362,13 @@ const ShipmentsListPage = () => {
                             <Typography variant="headingSm" className="truncate">
                               {shipment.name ?? `${origin} → ${destination}`}
                             </Typography>
-                            <ShipmentStatusBadge status={shipment.status} />
+                            <ShipmentTypeBadge type={shipment.type} />
+                          <ShipmentStatusBadge status={shipment.status} />
                           </div>
                           <div className="flex items-center gap-2 text-xs text-text-muted">
                             <span className="font-mono">{shipment.shipmentNumber}</span>
                             <span>·</span>
-                            <span>{shipment.type === 'inbound' ? 'Import' : shipment.type === 'mainland_transfer' ? 'Mainland Transfer' : 'Export'}</span>
-                            <span>·</span>
+                                                        <span>·</span>
                             <span className="truncate">
                               {origin} → {destination}
                             </span>
