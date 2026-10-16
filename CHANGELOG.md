@@ -1,3 +1,9 @@
+## [2.0.357](https://github.com/craftandculture/Craft-Culture/compare/v2.0.356...v2.0.357) (2026-10-16)
+
+### Bug Fixes
+
+* **cellar:** say so when there is no shipment to link ([7f29400](https://github.com/craftandculture/Craft-Culture/commit/7f29400e9bc09442f44d0fef8fe4bfa78aca484a))
+
 ## [2.0.356](https://github.com/craftandculture/Craft-Culture/compare/v2.0.355...v2.0.356) (2026-10-16)
 
 ### Bug Fixes
