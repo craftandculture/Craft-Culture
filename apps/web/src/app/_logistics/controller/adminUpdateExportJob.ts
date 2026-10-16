@@ -10,6 +10,8 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import { exportStageMessage } from '../notifications/logisticsSlackMessages';
+import queueLogisticsSlack from '../notifications/queueLogisticsSlack';
 import { updateExportJobSchema } from '../schemas/exportJobSchemas';
 import { EXPORT_MODES, EXPORT_STAGES, stageLabel } from '../utils/exportStages';
 
@@ -29,7 +31,15 @@ const adminUpdateExportJob = adminProcedure
     const { shipmentId } = input;
 
     const [current] = await db
-      .select({ job: logisticsJobs, status: logisticsShipments.status })
+      .select({
+        job: logisticsJobs,
+        status: logisticsShipments.status,
+        originCity: logisticsShipments.originCity,
+        destinationCity: logisticsShipments.destinationCity,
+        carrierName: logisticsShipments.carrierName,
+        awbNumber: logisticsShipments.awbNumber,
+        blNumber: logisticsShipments.blNumber,
+      })
       .from(logisticsJobs)
       .innerJoin(logisticsShipments, eq(logisticsShipments.id, logisticsJobs.shipmentId))
       .where(eq(logisticsJobs.shipmentId, shipmentId));
@@ -98,6 +108,25 @@ const adminUpdateExportJob = adminProcedure
         });
       }
     });
+
+    // Tell #logistics when a job ships or its documents go; never blocks the update
+    if (stageChanged && (stage.key === 'shipped' || stage.key === 'docs_sent')) {
+      queueLogisticsSlack(
+        exportStageMessage(
+          {
+            shipmentId,
+            jobNumber: current.job.jobNumber,
+            clientName: input.clientName ?? current.job.clientName,
+            originCity: input.originCity !== undefined ? input.originCity : current.originCity,
+            destinationCity: input.destinationCity !== undefined ? input.destinationCity : current.destinationCity,
+            carrierName: input.carrierName !== undefined ? input.carrierName : current.carrierName,
+            awbNumber: input.awbNumber !== undefined ? input.awbNumber : current.awbNumber,
+            blNumber: input.blNumber !== undefined ? input.blNumber : current.blNumber,
+          },
+          stage.key,
+        ),
+      );
+    }
 
     return { ok: true };
   });

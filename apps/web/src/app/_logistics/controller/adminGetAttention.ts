@@ -4,18 +4,10 @@ import db from '@/database/client';
 import { logisticsJobs, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-const DAY = 24 * 60 * 60 * 1000;
+import getBondClaimsDue from '../notifications/getBondClaimsDue';
+import NOT_ARRIVED from '../utils/notArrivedStatuses';
 
-/** Statuses a shipment has not yet reached the warehouse or client in */
-const NOT_ARRIVED = [
-  'draft',
-  'booked',
-  'picked_up',
-  'in_transit',
-  'arrived_port',
-  'customs_clearance',
-  'cleared',
-] as const;
+const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * What on the logistics board needs someone to act, grouped by reason
@@ -28,6 +20,8 @@ const NOT_ARRIVED = [
  * - ETA passed: due, but not yet at the warehouse or delivered
  * - Export job with no invoice: no Zoho number and no C&C export invoice linked
  * - Draft for over 7 days: opened and never moved on
+ * - Bond claims due or missed: bonded export jobs whose movement bond claim
+ *   is due within 14 days or past its deadline, with the days left on each
  */
 const adminGetAttention = adminProcedure.query(async () => {
   const now = new Date();
@@ -60,7 +54,7 @@ const adminGetAttention = adminProcedure.query(async () => {
 
   const live = and(gte(logisticsShipments.createdAt, since), ne(logisticsShipments.status, 'cancelled'));
 
-  const [noQuantities, overdue, noInvoice, staleDrafts] = await Promise.all([
+  const [noQuantities, overdue, noInvoice, staleDrafts, bondsDue] = await Promise.all([
     base()
       .where(and(live, sql`${cases} = 0`))
       .orderBy(desc(logisticsShipments.createdAt))
@@ -90,6 +84,7 @@ const adminGetAttention = adminProcedure.query(async () => {
       )
       .orderBy(logisticsShipments.createdAt)
       .limit(25),
+    getBondClaimsDue(now),
   ]);
 
   return [
@@ -97,6 +92,7 @@ const adminGetAttention = adminProcedure.query(async () => {
     { key: 'overdue', label: 'ETA passed, not yet received', shipments: overdue },
     { key: 'no_invoice', label: 'Export jobs with no invoice', shipments: noInvoice },
     { key: 'stale_draft', label: 'Draft for over 7 days', shipments: staleDrafts },
+    { key: 'bond_claims', label: 'Bond claims due or missed', shipments: bondsDue.slice(0, 25) },
   ];
 });
 

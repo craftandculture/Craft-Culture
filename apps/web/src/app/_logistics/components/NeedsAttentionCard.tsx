@@ -13,7 +13,8 @@ import ShipmentTypeBadge from './ShipmentTypeBadge';
  * The logistics dashboard's first card: what needs someone to act
  *
  * One row per reason with a count; opening a row lists the shipments behind it,
- * each linking to its export job or shipment. Reasons with nothing in them are
+ * each linking to its export job or shipment. Bond claims show the days left
+ * to claim, or "Missed" once the deadline has passed. Reasons with nothing in them are
  * hidden, and when there is nothing at all the card says so in one line.
  */
 const NeedsAttentionCard = () => {
@@ -79,6 +80,17 @@ const NeedsAttentionCard = () => {
                         {g.key === 'overdue' && s.eta ? (
                           <span className="shrink-0 text-xs text-text-muted">
                             ETA {new Date(s.eta).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        ) : null}
+                        {'bondDaysLeft' in s ? (
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              s.bondDaysLeft < 0
+                                ? 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
+                            }`}
+                          >
+                            {s.bondDaysLeft < 0 ? 'Missed' : `${s.bondDaysLeft} days left`}
                           </span>
                         ) : null}
                       </Link>

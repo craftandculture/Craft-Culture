@@ -10,6 +10,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { shipmentMilestoneNotificationJob } from '@/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob';
 import logger from '@/utils/logger';
 
+import { inboundStatusMessage } from '../notifications/logisticsSlackMessages';
+import queueLogisticsSlack from '../notifications/queueLogisticsSlack';
 import { SHIPMENT_STATUS_KEYS } from '../utils/shipmentStatuses';
 
 const updateStatusSchema = z.object({
@@ -102,6 +104,15 @@ const adminUpdateStatus = adminProcedure
         .catch((err) => {
           logger.error('Failed to trigger milestone notification', { err, shipmentId: id });
         });
+
+      // Tell #logistics when an inbound shipment lands; never blocks the update
+      if (
+        shipment.type === 'inbound' &&
+        status !== previousStatus &&
+        (status === 'at_warehouse' || status === 'delivered')
+      ) {
+        queueLogisticsSlack(inboundStatusMessage(shipment, status));
+      }
 
       return shipment;
     } catch (error) {
