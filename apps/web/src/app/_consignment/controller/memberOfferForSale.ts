@@ -4,11 +4,11 @@ import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
-import getCommittedBottles from '../data/getCommittedBottles';
 import generateMandateNumber from '../utils/generateMandateNumber';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
@@ -94,7 +94,7 @@ const memberOfferForSale = stockOwnerProcedure
       nothing moves and nothing is reserved — so without this the same six
       bottles can be offered twice, accepted twice, and listed twice.
     */
-    const committed = await getCommittedBottles(stockIds);
+    const committed = await getClaimedBottles(stockIds);
 
     for (const line of input.lines) {
       const stock = ownedById.get(line.stockId);
@@ -123,8 +123,8 @@ const memberOfferForSale = stockOwnerProcedure
           code: 'BAD_REQUEST',
           message:
             available <= 0
-              ? `All of your ${stock.productName} is already under offer. Withdraw that offer first if you want to change it.`
-              : `${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} free to offer${spokenFor > 0 ? ` — the rest is already under offer` : ''}.`,
+              ? `All of your ${stock.productName} is already under offer or due for delivery. Withdraw that first if you want to change it.`
+              : `${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} free to offer${spokenFor > 0 ? ` — the rest is already under offer or due for delivery` : ''}.`,
         });
       }
     }

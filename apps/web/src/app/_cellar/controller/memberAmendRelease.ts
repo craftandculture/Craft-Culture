@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -105,6 +106,12 @@ const memberAmendRelease = stockOwnerProcedure
 
     const ownedById = new Map(owned.map((row) => [row.id, row]));
 
+    /* Offered for sale or due on another delivery, so not free to add here. */
+    const claimed = await getClaimedBottles(
+      input.lines.map((line) => line.stockId),
+      { exceptRequestId: request.id },
+    );
+
     for (const line of input.lines) {
       const stock = ownedById.get(line.stockId);
 
@@ -116,12 +123,14 @@ const memberAmendRelease = stockOwnerProcedure
       }
 
       const available =
-        stock.quantityCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+        stock.quantityCases * (stock.caseConfig ?? 1) +
+        (stock.openBottles ?? 0) -
+        (claimed.get(stock.id) ?? 0);
 
       if (line.bottles > available) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `You hold ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName}.`,
+          message: `${Math.max(available, 0)} ${available === 1 ? "bottle" : "bottles"} of ${stock.productName} ${available === 1 ? "is" : "are"} free to deliver. The rest is under offer or already on a delivery.`,
         });
       }
     }

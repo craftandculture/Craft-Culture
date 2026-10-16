@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import generateOrderNumber from '@/app/_privateClientOrders/utils/generateOrderNumber';
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -14,6 +15,8 @@ import {
   wmsStock,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+
+import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 
 /**
  * Accept the quoted cost, and turn the request into an order
@@ -106,6 +109,11 @@ const memberAcceptRelease = stockOwnerProcedure
 
     const heldById = new Map(held.map((row) => [row.id, row]));
 
+    /* Offered for sale or due on another delivery since this was quoted. */
+    const claimed = await getClaimedBottles(stockIds, {
+      exceptRequestId: request.id,
+    });
+
     for (const line of lines) {
       const stock = line.stockId ? heldById.get(line.stockId) : undefined;
 
@@ -117,12 +125,14 @@ const memberAcceptRelease = stockOwnerProcedure
       }
 
       const available =
-        stock.quantityCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+        stock.quantityCases * (stock.caseConfig ?? 1) +
+        (stock.openBottles ?? 0) -
+        (claimed.get(stock.id) ?? 0);
 
       if (line.bottles > available) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: `Only ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} remain. Contact us and we will re-quote.`,
+          message: `Only ${Math.max(available, 0)} ${available === 1 ? "bottle" : "bottles"} of ${stock.productName} ${available === 1 ? "is" : "are"} free to deliver now. Contact us and we will re-quote.`,
         });
       }
     }
@@ -241,6 +251,13 @@ const memberAcceptRelease = stockOwnerProcedure
         .where(eq(cellarReleaseRequests.id, request.id));
 
       return created;
+    });
+
+    await notifyReleaseUpdate({
+      event: 'accepted',
+      partnerId: ctx.partner.id,
+      requestId: request.id,
+      requestNumber: request.requestNumber,
     });
 
     return { orderNumber: order.orderNumber, bottles };

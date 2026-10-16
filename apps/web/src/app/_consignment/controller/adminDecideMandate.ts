@@ -2,11 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
-import getCommittedBottles from '../data/getCommittedBottles';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
 /**
@@ -128,7 +128,9 @@ const adminDecideMandate = staffAdminProcedure
       offers over the same bottles can both be waiting here, and accepting both
       would put the same wine on the list twice.
     */
-    const committed = await getCommittedBottles(stockIds, mandate.id);
+    const committed = await getClaimedBottles(stockIds, {
+      exceptMandateId: mandate.id,
+    });
 
     for (const lot of lots) {
       const stock = heldById.get(lot.stockId);

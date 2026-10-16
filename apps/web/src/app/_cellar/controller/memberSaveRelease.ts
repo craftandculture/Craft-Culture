@@ -3,6 +3,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -88,6 +89,14 @@ const memberSaveRelease = stockOwnerProcedure
     */
     let ownedById = new Map(owned.map((row) => [row.id, row]));
 
+    /*
+      Bottles already offered for sale or due on another delivery are not free
+      to request. The request being edited is left out of its own count.
+    */
+    const claimed = await getClaimedBottles(stockIds, {
+      exceptRequestId: input.requestId,
+    });
+
     for (const line of input.lines) {
       const stock = ownedById.get(line.stockId);
 
@@ -99,12 +108,14 @@ const memberSaveRelease = stockOwnerProcedure
       }
 
       const available =
-        stock.quantityCases * (stock.caseConfig ?? 1) + (stock.openBottles ?? 0);
+        stock.quantityCases * (stock.caseConfig ?? 1) +
+        (stock.openBottles ?? 0) -
+        (claimed.get(line.stockId) ?? 0);
 
       if (line.bottles > available) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `You hold ${available} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName}.`,
+          message: `${Math.max(available, 0)} ${available === 1 ? 'bottle' : 'bottles'} of ${stock.productName} ${available === 1 ? 'is' : 'are'} free to deliver. The rest is under offer or already on a delivery.`,
         });
       }
     }
@@ -206,6 +217,11 @@ const memberSaveRelease = stockOwnerProcedure
 
       ownedById = new Map(mergedStock.map((row) => [row.id, row]));
 
+      /* The open request is now part of this one, so its claim is left out. */
+      const mergedClaimed = await getClaimedBottles(mergedStockIds, {
+        exceptRequestId: openRequest.id,
+      });
+
       for (const line of input.lines) {
         const stock = mergedStock.find((row) => row.id === line.stockId);
 
@@ -218,12 +234,13 @@ const memberSaveRelease = stockOwnerProcedure
 
         const available =
           stock.quantityCases * (stock.caseConfig ?? 1) +
-          (stock.openBottles ?? 0);
+          (stock.openBottles ?? 0) -
+          (mergedClaimed.get(line.stockId) ?? 0);
 
         if (line.bottles > available) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: `${openRequest.requestNumber} already covers some of that. Together it would be ${line.bottles} bottles of ${stock.productName} and you hold ${available}.`,
+            message: `${openRequest.requestNumber} already covers some of that. Together it would be ${line.bottles} bottles of ${stock.productName} and ${Math.max(available, 0)} ${available === 1 ? 'is' : 'are'} free to deliver.`,
           });
         }
 
