@@ -1,7 +1,8 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
+  logisticsJobs,
   logisticsShipmentItems,
   logisticsShipments,
   partners,
@@ -9,7 +10,7 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import getShipmentsSchema from '../schemas/getShipmentsSchema';
+import getShipmentsSchema, { SHIPMENT_STAGE_GROUPS, type ShipmentStageGroup } from '../schemas/getShipmentsSchema';
 
 /**
  * Get list of shipments with pagination and filters
@@ -23,14 +24,11 @@ import getShipmentsSchema from '../schemas/getShipmentsSchema';
  *   });
  */
 const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ input }) => {
-  const { limit, cursor, search, status, type, transportMode, partnerId } = input;
+  const { limit, cursor, search, status, stage, type, transportMode, partnerId, sort } = input;
 
-  // Build where conditions
+  // Every filter but the status ones; the tile counts are taken over these, so
+  // each tile says how many it would show when pressed
   const conditions = [];
-
-  if (status) {
-    conditions.push(eq(logisticsShipments.status, status));
-  }
 
   if (type) {
     conditions.push(eq(logisticsShipments.type, type));
@@ -57,16 +55,49 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         ilike(logisticsShipments.awbNumber, `%${search}%`),
         ilike(logisticsShipments.originCity, `%${search}%`),
         ilike(logisticsShipments.destinationCity, `%${search}%`),
+        // Partner, the supplier Hillebrand names, and any wine on the shipment
+        ilike(partners.businessName, `%${search}%`),
+        ilike(logisticsShipments.partnerNotes, `%${search}%`),
+        sql`EXISTS (
+          SELECT 1 FROM ${logisticsShipmentItems}
+          WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
+            AND (${logisticsShipmentItems.productName} ILIKE ${`%${search}%`}
+              OR ${logisticsShipmentItems.producer} ILIKE ${`%${search}%`})
+        )`,
       )!,
     );
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const baseWhere = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const statusConditions = [
+    ...conditions,
+    ...(status ? [eq(logisticsShipments.status, status)] : []),
+    ...(stage ? [inArray(logisticsShipments.status, [...SHIPMENT_STAGE_GROUPS[stage]])] : []),
+  ];
+  const whereClause = statusConditions.length > 0 ? and(...statusConditions) : undefined;
+
+  const byStatus = await db
+    .select({ status: logisticsShipments.status, count: sql<number>`count(*)` })
+    .from(logisticsShipments)
+    .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
+    .where(baseWhere)
+    .groupBy(logisticsShipments.status);
+
+  const stageCounts = Object.fromEntries(
+    (Object.keys(SHIPMENT_STAGE_GROUPS) as ShipmentStageGroup[]).map((key) => [
+      key,
+      byStatus
+        .filter((r) => (SHIPMENT_STAGE_GROUPS[key] as readonly string[]).includes(r.status))
+        .reduce((n, r) => n + Number(r.count), 0),
+    ]),
+  ) as Record<ShipmentStageGroup, number>;
 
   // Get total count
   const [countResult] = await db
     .select({ count: sql<number>`count(*)` })
     .from(logisticsShipments)
+    .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .where(whereClause);
 
   const totalCount = Number(countResult?.count ?? 0);
@@ -102,12 +133,18 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         name: users.name,
         email: users.email,
       },
+      jobNumber: logisticsJobs.jobNumber,
     })
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .leftJoin(users, eq(logisticsShipments.createdBy, users.id))
+    .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
     .where(whereClause)
-    .orderBy(desc(logisticsShipments.createdAt))
+    .orderBy(
+      ...(sort === 'eta'
+        ? [sql`${logisticsShipments.eta} IS NULL`, asc(logisticsShipments.eta)]
+        : [desc(logisticsShipments.createdAt)]),
+    )
     .limit(limit)
     .offset(cursor);
 
@@ -118,6 +155,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     totalBottles: Number(row.itemBottles),
     partner: row.partner,
     createdByUser: row.createdByUser,
+    jobNumber: row.jobNumber,
   }));
 
   const nextCursor = cursor + limit < totalCount ? cursor + limit : null;
@@ -128,6 +166,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
       totalCount,
       nextCursor,
       hasMore: nextCursor !== null,
+      stageCounts,
     },
   };
 });
