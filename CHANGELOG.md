@@ -1,3 +1,14 @@
+## [2.0.367](https://github.com/craftandculture/Craft-Culture/compare/v2.0.366...v2.0.367) (2026-10-16)
+
+### Features
+
+* an export job creates its export invoice, the two link both ways, and the issued PDF lands in the job's documents ([dfaa666](https://github.com/craftandculture/Craft-Culture/commit/dfaa666d38515b3e5f897aee9984ebdbdd78d971))
+* bond claims due show on the board, and [#logistics](https://github.com/craftandculture/Craft-Culture/issues/logistics) gets a morning digest and arrival and dispatch posts ([761823d](https://github.com/craftandculture/Craft-Culture/commit/761823d88455f3d1484ca4f2e8cd7a8aecfe584f))
+* logistics reports show the month: bottles by type, freight per bottle and on-time arrivals ([48c2e3f](https://github.com/craftandculture/Craft-Culture/commit/48c2e3f0cfb3e2129c5c16284d1a341f2c32ff02))
+* shipment groups recalculate freight on their own, link their shipments, and ask before moving or removing one ([8c2ccfa](https://github.com/craftandculture/Craft-Culture/commit/8c2ccfaf5d0271de0d125eb02b0eb2eb65c94a78))
+* the shipment page shows the next step, steps that fit its type, editable details, and asks before deleting ([9ae6bdf](https://github.com/craftandculture/Craft-Culture/commit/9ae6bdf1ab9696f94dea9553e9d410856505dfc5))
+* the shipments list counts every shipment, sorts by arrival, pages, and finds a shipment by partner, supplier or wine ([873c3d2](https://github.com/craftandculture/Craft-Culture/commit/873c3d2d47200c18a2a9f9ca8436fd7657ca862f))
+
 ## [2.0.366](https://github.com/craftandculture/Craft-Culture/compare/v2.0.365...v2.0.366) (2026-10-16)
 
 ### Bug Fixes
