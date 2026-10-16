@@ -88,20 +88,20 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
   const points = [
     {
       icon: IconTemperature,
-      title: 'Stored duty-free at 12–14°C',
+      title: 'Cellared duty-free at 12–14°C',
       detail:
-        'In the C&C bonded warehouse, humidity controlled and logged around the clock. Duty and VAT are only paid when wine is delivered to you.',
+        'In the C&C bonded warehouse, humidity controlled and monitored around the clock. Duty and VAT are only paid when wine is delivered to you.',
     },
     {
       icon: IconWorld,
-      title: 'Bring wine in from anywhere',
+      title: 'Collected from your merchants',
       detail:
-        'We collect from merchants and bonded warehouses in the UK and Europe and bring it together to the UAE.',
+        'We arrange collection from your merchants and bonded warehouses in the UK and Europe, and ship it to your cellar in the UAE.',
     },
     {
       icon: IconListDetails,
-      title: 'Every case on record',
-      detail: 'See what you hold, buy from our cellar, sell, or request a delivery, all from one account.',
+      title: 'Your whole collection in one place',
+      detail: 'Every case you hold, on record. Buy from our cellar, sell, or arrange a delivery whenever you wish.',
     },
   ];
 
@@ -122,8 +122,8 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your Private Cellar account'}
         </h1>
         <p className="text-text-muted max-w-xl text-base leading-7 sm:text-lg sm:leading-8">
-          Your own cellar with Craft &amp; Culture: your wine stored duty-free in our bonded warehouse, sourced and
-          brought in from merchants abroad, and every case on record.
+          A private cellar with Craft &amp; Culture: your wine kept duty-free in our bonded warehouse, collected from
+          your merchants abroad, and every case on record.
         </p>
       </div>
 
