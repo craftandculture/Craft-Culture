@@ -1,3 +1,9 @@
+## [2.0.356](https://github.com/craftandculture/Craft-Culture/compare/v2.0.355...v2.0.356) (2026-10-16)
+
+### Bug Fixes
+
+* **cellar:** tighter purchase cards ([a0303ad](https://github.com/craftandculture/Craft-Culture/commit/a0303ad3c528325ca49c7fcd8d0a8e306cfd1f26))
+
 ## [2.0.355](https://github.com/craftandculture/Craft-Culture/compare/v2.0.354...v2.0.355) (2026-10-16)
 
 ### Features
