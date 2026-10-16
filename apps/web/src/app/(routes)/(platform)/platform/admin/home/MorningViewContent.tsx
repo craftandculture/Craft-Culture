@@ -46,14 +46,66 @@ const formatDate = () =>
     year: 'numeric',
   });
 
-/** Format currency for display */
+/**
+ * Format currency for display
+ *
+ * Millions from a million up, so a year's revenue reads "USD 1.01M" rather
+ * than "USD 1013.4k"; thousands below that.
+ */
 const formatCurrency = (amount: number | null | undefined, currency: Currency) => {
   const prefix = currency === 'USD' ? 'USD' : 'AED';
   const val = amount ?? 0;
-  if (val >= 1000) {
+  const size = Math.abs(val);
+  if (size >= 1_000_000) {
+    return `${prefix} ${(val / 1_000_000).toFixed(2)}M`;
+  }
+  if (size >= 1000) {
     return `${prefix} ${(val / 1000).toFixed(1)}k`;
   }
   return `${prefix} ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+};
+
+/** Tile tints, from the Stock Explorer / Team Tasks house style */
+const TONES = {
+  slate: {
+    tile: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
+    icon: 'bg-slate-100 text-slate-500 dark:bg-slate-500/20',
+    value: 'text-text-primary',
+  },
+  emerald: {
+    tile: 'border-emerald-100 from-emerald-50/50 dark:border-emerald-900/50 dark:from-emerald-500/10',
+    icon: 'bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20',
+    value: 'text-text-primary',
+  },
+  blue: {
+    tile: 'border-blue-100 from-blue-50/50 dark:border-blue-900/50 dark:from-blue-500/10',
+    icon: 'bg-blue-100/70 text-blue-600 dark:bg-blue-500/20',
+    value: 'text-text-primary',
+  },
+  amber: {
+    tile: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10',
+    icon: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20',
+    value: 'text-amber-600',
+  },
+  red: {
+    tile: 'border-red-100 from-red-50/50 dark:border-red-900/50 dark:from-red-500/10',
+    icon: 'bg-red-100/70 text-red-500 dark:bg-red-500/20',
+    value: 'text-red-600',
+  },
+} as const;
+
+/** A change against the previous period, as a coloured percentage */
+const changeLine = (current: number, previous: number, period: string) => {
+  if (!(previous > 0)) {
+    return <span className="text-text-muted">No data last {period}</span>;
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return (
+    <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+      {pct >= 0 ? '+' : ''}
+      {pct}% vs last {period}
+    </span>
+  );
 };
 
 /** Format relative time */
@@ -160,7 +212,7 @@ const MorningViewContent = () => {
       {/* ── Greeting + Currency Toggle ──────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             {getGreeting()}{firstName ? `, ${firstName}` : ''}
           </h1>
           <p className="mt-1 text-sm text-text-muted">
@@ -171,18 +223,18 @@ const MorningViewContent = () => {
           <button
             type="button"
             onClick={() => setRedacted((r) => !r)}
-            className="rounded-lg border border-border-muted bg-surface-primary p-1.5 text-text-muted transition-colors hover:text-text-primary"
+            className="rounded-full border border-border-muted bg-surface-primary p-1.5 text-text-muted shadow-sm transition-colors hover:text-text-primary"
             title={redacted ? 'Show values' : 'Hide values'}
           >
             {redacted ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
           </button>
-          <div className="flex items-center rounded-lg border border-border-muted bg-surface-primary p-0.5">
+          <div className="flex items-center rounded-full border border-border-muted bg-surface-muted p-0.5">
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
                 currency === 'USD'
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-surface-primary'
                   : 'text-text-muted hover:text-text-primary'
               }`}
             >
@@ -191,9 +243,9 @@ const MorningViewContent = () => {
             <button
               type="button"
               onClick={() => setCurrency('AED')}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
                 currency === 'AED'
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-surface-primary'
                   : 'text-text-muted hover:text-text-primary'
               }`}
             >
@@ -218,131 +270,124 @@ const MorningViewContent = () => {
         </div>
       )}
 
-      {/* ── KPI Cards — centered text ──────────── */}
-      {data && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {/* PCO Orders */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Open Orders
-              </p>
-              <p className="mt-2 text-3xl font-bold tracking-tight">
-                {data.kpis.openOrders}
-              </p>
-              <p className="mt-1.5 text-[12px] font-semibold">
-                {data.kpis.openOrdersThisWeek > 0
-                  ? <span className="text-emerald-600">+{data.kpis.openOrdersThisWeek} this week</span>
-                  : <span className="font-normal text-text-muted">Active orders</span>}
-              </p>
-            </CardContent>
-          </Card>
+      {/* ── KPI tiles — house style, tinted by meaning ──────────── */}
+      {data && (() => {
+        const pick = (usd: number, aed: number) => (currency === 'USD' ? usd : aed);
+        const money = (usd: number, aed: number) =>
+          redacted ? '•••' : formatCurrency(pick(usd, aed), currency);
+        const k = data.kpis;
 
-          {/* Invoiced (Month) */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Invoiced (Month)
-              </p>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
-                {redacted ? '***' : formatCurrency(
-                  currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
-                  currency,
-                )}
-              </p>
-              <p className="mt-1.5 text-[12px] font-semibold">
-                {redacted ? <span className="font-normal text-text-muted">&nbsp;</span> : (() => {
-                  const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
-                  const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
-                  if (previous > 0) {
-                    const pct = Math.round(((current - previous) / previous) * 100);
-                    return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last month</span>;
-                  }
-                  return <span className="font-normal text-text-muted">No data last month</span>;
-                })()}
-              </p>
-            </CardContent>
-          </Card>
+        const tiles: {
+          label: string;
+          value: React.ReactNode;
+          sub: React.ReactNode;
+          icon: typeof IconShoppingCart;
+          tone: keyof typeof TONES;
+          href?: string;
+        }[] = [
+          {
+            label: 'Open orders',
+            value: k.openOrders,
+            sub:
+              k.openOrdersThisWeek > 0 ? (
+                <span className="text-emerald-600">+{k.openOrdersThisWeek} this week</span>
+              ) : (
+                'Active orders'
+              ),
+            icon: IconShoppingCart,
+            tone: 'slate',
+            href: '/platform/admin/private-orders',
+          },
+          {
+            label: 'Invoiced this month',
+            value: money(k.revenueMonthUsd, k.revenueMonthAed),
+            sub: redacted
+              ? '\u00a0'
+              : changeLine(
+                  pick(k.revenueMonthUsd, k.revenueMonthAed),
+                  pick(k.revenueLastMonthUsd, k.revenueLastMonthAed),
+                  'month',
+                ),
+            icon: IconFileText,
+            tone: 'emerald',
+          },
+          {
+            label: 'Invoiced this year',
+            value: money(k.revenueYearUsd, k.revenueYearAed),
+            sub: redacted
+              ? '\u00a0'
+              : changeLine(
+                  pick(k.revenueYearUsd, k.revenueYearAed),
+                  pick(k.revenueLastYearUsd, k.revenueLastYearAed),
+                  'year',
+                ),
+            icon: IconCurrencyDollar,
+            tone: 'emerald',
+          },
+          {
+            label: 'Pending dispatch',
+            value: k.pendingDispatch,
+            sub: `${k.stagedBatches} ${k.stagedBatches === 1 ? 'batch' : 'batches'} staged`,
+            icon: IconBuildingWarehouse,
+            tone: 'blue',
+            href: '/platform/admin/wms/dispatch',
+          },
+          {
+            label: 'Agent alerts',
+            value: k.agentAlerts,
+            sub: k.agentAlerts > 0 ? `${k.agentAlerts} high priority` : 'No alerts',
+            icon: IconBolt,
+            tone: k.agentAlerts > 0 ? 'amber' : 'slate',
+            href: '/platform/admin/agents',
+          },
+          {
+            label: 'Overdue invoices',
+            value: k.overdueInvoices,
+            sub:
+              k.overdueInvoices > 0
+                ? money(k.overdueAmountUsd, k.overdueAmountAed)
+                : 'All clear',
+            icon: IconAlertTriangle,
+            tone: k.overdueInvoices > 0 ? 'red' : 'emerald',
+          },
+        ];
 
-          {/* Invoiced (Year) */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Invoiced (Year)
-              </p>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
-                {redacted ? '***' : formatCurrency(
-                  currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
-                  currency,
-                )}
-              </p>
-              <p className="mt-1.5 text-[12px] font-semibold">
-                {redacted ? <span className="font-normal text-text-muted">&nbsp;</span> : (() => {
-                  const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
-                  const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
-                  if (previous > 0) {
-                    const pct = Math.round(((current - previous) / previous) * 100);
-                    return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last year</span>;
-                  }
-                  return <span className="font-normal text-text-muted">No data last year</span>;
-                })()}
-              </p>
-            </CardContent>
-          </Card>
+        return (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+            {tiles.map((tile) => {
+              const tone = TONES[tile.tone];
+              const TileIcon = tile.icon;
+              const body = (
+                <>
+                  <span className={`mx-auto mb-1.5 flex size-7 items-center justify-center rounded-md ${tone.icon}`}>
+                    <TileIcon size={15} />
+                  </span>
+                  <span className={`block text-2xl font-bold leading-tight tracking-tight tabular-nums ${tone.value}`}>
+                    {tile.value}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] font-medium text-text-muted">{tile.label}</span>
+                  <span className="mt-0.5 block text-[11px] font-semibold text-text-muted/80">{tile.sub}</span>
+                </>
+              );
+              const className = `block rounded-xl border bg-gradient-to-b to-transparent px-3 py-3.5 text-center shadow-sm transition ${tone.tile}`;
 
-          {/* Pending Dispatch */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Pending Dispatch
-              </p>
-              <p className="mt-2 text-3xl font-bold tracking-tight">
-                {data.kpis.pendingDispatch}
-              </p>
-              <p className="mt-1.5 text-[12px] text-text-muted">
-                {data.kpis.stagedBatches} batches staged
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Agent Alerts */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Agent Alerts
-              </p>
-              <p className={`mt-2 text-3xl font-bold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
-                {data.kpis.agentAlerts}
-              </p>
-              <p className="mt-1.5 text-[12px] text-text-muted">
-                {data.kpis.agentAlerts > 0
-                  ? `${data.kpis.agentAlerts} high priority`
-                  : 'No alerts'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Overdue Invoice */}
-          <Card>
-            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Overdue Invoice
-              </p>
-              <p className={`mt-2 text-3xl font-bold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {data.kpis.overdueInvoices}
-              </p>
-              <p className="mt-1.5 text-[12px] text-text-muted">
-                {data.kpis.overdueInvoices > 0
-                  ? redacted ? '***' : formatCurrency(
-                      currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
-                      currency,
-                    )
-                  : 'All clear'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              return tile.href ? (
+                <Link
+                  key={tile.label}
+                  href={tile.href}
+                  className={`${className} hover:-translate-y-px hover:shadow-md`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div key={tile.label} className={className}>
+                  {body}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── Two-column layout ────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-5">
@@ -354,7 +399,7 @@ const MorningViewContent = () => {
                 <p className="text-[15px] font-bold">Intelligence Briefing</p>
                 <Link
                   href="/platform/admin/agents"
-                  className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
+                  className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
                 >
                   View all &rarr;
                 </Link>
@@ -422,7 +467,7 @@ const MorningViewContent = () => {
                 <p className="text-[15px] font-bold">Recent Orders</p>
                 <Link
                   href="/platform/admin/private-orders"
-                  className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
+                  className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
                 >
                   All orders &rarr;
                 </Link>
