@@ -1228,7 +1228,7 @@ const UserManagementPage = () => {
                                   <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete User</AlertDialogTitle>
                                   <AlertDialogDescription>
@@ -1366,7 +1366,7 @@ const UserManagementPage = () => {
                               <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete User</AlertDialogTitle>
                               <AlertDialogDescription>
