@@ -3,11 +3,10 @@ import { describe, expect, it } from 'vitest';
 import missingProfileItems from './missingProfileItems';
 
 describe('missingProfileItems', () => {
-  it('lists everything for an empty profile, ID first', () => {
+  it('lists the ID and mobile for an empty profile, ID first — never the address', () => {
     expect(missingProfileItems({ documentTypes: [] })).toEqual([
       'Emirates ID',
       'Mobile',
-      'Delivery address',
     ]);
   });
 

@@ -61,8 +61,8 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
 
   return (
     <StepFrame
-      title="Your wine"
-      intro="Tell us where your wine is today and how we might help. Choose any that apply; nothing is arranged until you ask."
+      title="Your collection"
+      intro="Where is your collection today? Choose any that apply, and we will take care of the rest when you are ready."
       onContinue={() => onSave(answers)}
       onSkip={onSkip}
       onBack={onBack}

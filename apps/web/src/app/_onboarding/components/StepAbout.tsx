@@ -18,7 +18,13 @@ export interface StepAboutProps {
   onSave: (values: StepAboutValues) => void;
 }
 
-/** Step one: who they are. Only the name is needed. */
+/**
+ * Step one: who they are — a name, and a mobile for cellar updates
+ *
+ * No delivery address here: it is not needed until they ask for a delivery,
+ * and asking for a home address before someone has seen their cellar is
+ * friction for nothing. It is collected at the first delivery.
+ */
 const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
   const [values, setValues] = useState(initial);
   const set = (key: keyof StepAboutValues) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -26,11 +32,11 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
 
   return (
     <StepFrame
-      title="About you"
-      intro="The details for your account. Only your name is required at this stage; the remainder may be added later."
+      title="Your details"
+      intro="A few details to set up your cellar. We use your mobile to keep you updated on your wine."
       onContinue={() => onSave(values)}
       isBusy={isBusy}
-      isContinueDisabled={values.fullName.trim().length < 2}
+      isContinueDisabled={values.fullName.trim().length < 2 || values.phone.replace(/\D/g, '').length < 7}
     >
       <FieldLabel label="Full name">
         <input
@@ -41,7 +47,7 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
           placeholder="As on your Emirates ID"
         />
       </FieldLabel>
-      <FieldLabel label="Mobile" hint="Used for updates on your cellar, including by WhatsApp." optional>
+      <FieldLabel label="Mobile" hint="For cellar and delivery updates, including WhatsApp.">
         <input
           className={`${fieldClass} h-12`}
           type="tel"
@@ -50,15 +56,6 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
           value={values.phone}
           onChange={set('phone')}
           placeholder="+971 50 000 0000"
-        />
-      </FieldLabel>
-      <FieldLabel label="UAE delivery address" hint="Where we deliver your wine when you ask for it." optional>
-        <textarea
-          className={`${fieldClass} min-h-24 py-3`}
-          autoComplete="street-address"
-          value={values.deliveryAddress}
-          onChange={set('deliveryAddress')}
-          placeholder="Villa / apartment, building, area, emirate"
         />
       </FieldLabel>
     </StepFrame>

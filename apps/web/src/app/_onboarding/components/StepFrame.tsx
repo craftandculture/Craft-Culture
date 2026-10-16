@@ -57,17 +57,15 @@ const StepFrame = ({
           </Button>
         )}
       </div>
-      <Button
+      {/* Near-black like every other primary action across the cellar */}
+      <button
         type="submit"
-        size="lg"
-        colorRole="bold"
-        isDisabled={isBusy || isContinueDisabled}
-        className="w-full sm:w-auto sm:min-w-44"
+        disabled={isBusy || isContinueDisabled}
+        className="bg-text-primary text-surface-primary inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-base font-semibold transition-opacity disabled:opacity-40 sm:w-auto sm:min-w-64"
       >
-        <ButtonContent iconRight={IconArrowRight} isLoading={isBusy}>
-          {continueLabel}
-        </ButtonContent>
-      </Button>
+        {isBusy ? 'Saving…' : continueLabel}
+        {!isBusy && <IconArrowRight size={18} />}
+      </button>
     </div>
   </form>
 );

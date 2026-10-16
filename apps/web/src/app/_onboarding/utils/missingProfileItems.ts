@@ -1,5 +1,6 @@
 interface MissingProfileItemsInput {
   phone?: string | null;
+  /** Not asked for until the first delivery, so never listed as missing */
   deliveryAddress?: string | null;
   eidNumber?: string | null;
   documentTypes: string[];
@@ -13,14 +14,9 @@ interface MissingProfileItemsInput {
  *
  * @example
  *   missingProfileItems({ phone: null, documentTypes: [] });
- *   // ['Emirates ID', 'Mobile', 'Delivery address']
+ *   // ['Emirates ID', 'Mobile']
  */
-const missingProfileItems = ({
-  phone,
-  deliveryAddress,
-  eidNumber,
-  documentTypes,
-}: MissingProfileItemsInput) => {
+const missingProfileItems = ({ phone, eidNumber, documentTypes }: MissingProfileItemsInput) => {
   const missing: string[] = [];
 
   const idComplete =
@@ -30,7 +26,6 @@ const missingProfileItems = ({
 
   if (!idComplete) missing.push('Emirates ID');
   if (!phone?.trim()) missing.push('Mobile');
-  if (!deliveryAddress?.trim()) missing.push('Delivery address');
 
   return missing;
 };

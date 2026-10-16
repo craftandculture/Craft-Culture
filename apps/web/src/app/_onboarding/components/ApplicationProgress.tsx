@@ -3,9 +3,9 @@
 import { IconCheck } from '@tabler/icons-react';
 
 export const APPLICATION_STEPS = [
-  { key: 'about', label: 'About you' },
-  { key: 'identity', label: 'Identity' },
-  { key: 'wine', label: 'Your wine' },
+  { key: 'about', label: 'Your details' },
+  { key: 'identity', label: 'Verification' },
+  { key: 'wine', label: 'Your collection' },
   { key: 'membership', label: 'Membership' },
 ] as const;
 

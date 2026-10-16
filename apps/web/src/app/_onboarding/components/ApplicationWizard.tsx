@@ -165,7 +165,7 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
       {step === 'about' && greetingName && data.invite && (
         <p className="text-text-muted text-center text-sm">
           {data.invite.inviterName
-            ? `Welcome, ${greetingName}. ${data.invite.inviterName.split(' ')[0]} has prepared your cellar account.`
+            ? `Welcome, ${greetingName}. ${data.invite.inviterName.split(' ')[0]} has prepared your private cellar.`
             : `Welcome, ${greetingName}.`}
         </p>
       )}
@@ -252,9 +252,10 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
         />
       )}
 
-      <p className="text-text-muted text-center text-xs">
-        Signed in as {data.email}. Your answers are saved as you go.
-      </p>
+      <div className="text-center">
+        <p className="text-text-muted text-xs">Your progress is saved automatically.</p>
+        <p className="text-text-muted/70 mt-0.5 text-[11px]">Signed in as {data.email}</p>
+      </div>
     </div>
   );
 };

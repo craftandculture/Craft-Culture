@@ -45,7 +45,7 @@ const VerifyContent = () => {
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <Icon icon={IconMail} size="xl" colorRole="brand" />
+      <Icon icon={IconMail} size="xl" />
       <Typography variant="headingMd" className="text-center">
         Confirm sign-in
       </Typography>
@@ -53,15 +53,15 @@ const VerifyContent = () => {
         Click below to finish signing in. This extra step stops automated email
         scanners from using up your one-time link.
       </Typography>
-      <Button
-        variant="default"
-        colorRole="brand"
+      <button
+        type="button"
         onClick={() => {
           window.location.replace(verifyHref);
         }}
+        className="bg-text-primary text-surface-primary mt-2 h-12 w-full max-w-xs rounded-xl px-6 text-base font-semibold"
       >
         Sign in to Craft &amp; Culture
-      </Button>
+      </button>
     </div>
   );
 };

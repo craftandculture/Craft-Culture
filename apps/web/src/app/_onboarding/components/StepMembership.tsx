@@ -45,7 +45,7 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
   return (
     <StepFrame
       title="Membership"
-      intro="There is no charge to open your account. Membership begins the first time you buy, sell, request a delivery or bring wine into your cellar, and we confirm it with you at that point."
+      intro="There is no charge to open your cellar. Membership begins the first time you buy, sell, request a delivery or bring wine into your cellar, and we confirm it with you at that point."
       onContinue={onSubmit}
       onBack={onBack}
       continueLabel="Submit"
