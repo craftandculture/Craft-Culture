@@ -17,6 +17,12 @@ import { EXPORT_MODES, type ExportMode } from '../../utils/exportStages';
 
 const CURRENCIES = ['AED', 'USD', 'EUR', 'GBP'];
 
+/** An export job either leaves the UAE or moves stock within it */
+const JOB_KINDS = [
+  { key: 'outbound', label: 'Export (leaving UAE)' },
+  { key: 'mainland_transfer', label: 'Mainland transfer (UAE → UAE)' },
+] as const;
+
 /**
  * Open an export job
  *
@@ -36,6 +42,7 @@ const NewExportJobForm = () => {
   const [destinationCity, setDestinationCity] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('');
   const [mode, setMode] = useState<ExportMode>('land');
+  const [shipmentType, setShipmentType] = useState<'outbound' | 'mainland_transfer'>('outbound');
   const [carrierName, setCarrierName] = useState('');
   const [exportInvoiceId, setExportInvoiceId] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -86,6 +93,7 @@ const NewExportJobForm = () => {
       destinationCity: destinationCity.trim(),
       destinationCountry: destinationCountry.trim() || null,
       mode,
+      shipmentType,
       carrierName: carrierName.trim() || null,
       exportInvoiceId,
       invoiceNumber: invoiceNumber.trim() || null,
@@ -119,6 +127,25 @@ const NewExportJobForm = () => {
             Client *
           </label>
           <ClientPicker id="client" value={client} onChange={setClient} />
+        </div>
+
+        <div>
+          <span className={label}>Kind *</span>
+          <div className="flex flex-wrap gap-2">
+            {JOB_KINDS.map((k) => (
+              <button
+                key={k.key}
+                type="button"
+                className={pill(shipmentType === k.key)}
+                onClick={() => {
+                  setShipmentType(k.key);
+                  if (k.key === 'mainland_transfer' && !destinationCountry.trim()) setDestinationCountry('UAE');
+                }}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>

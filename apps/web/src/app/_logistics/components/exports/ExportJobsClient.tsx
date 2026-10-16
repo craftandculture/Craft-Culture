@@ -29,6 +29,7 @@ import {
 } from './exportUi';
 import { BOND_STEP_LABEL } from '../../utils/bondStatus';
 import { EXPORT_STAGES, modeLabel, stageLabel } from '../../utils/exportStages';
+import ShipmentTypeBadge from '../ShipmentTypeBadge';
 
 type Focus = '' | 'open' | 'shipped' | 'bonds' | 'dueSoon' | 'overdue';
 
@@ -44,6 +45,7 @@ const ExportJobsClient = () => {
   const { data, isLoading, error } = useQuery(api.logistics.admin.exports.getMany.queryOptions());
   const [focus, setFocus] = useState<Focus>('');
   const [stage, setStage] = useState('');
+  const [kind, setKind] = useState<'' | 'outbound' | 'mainland_transfer'>('');
   const [search, setSearch] = useState('');
 
   const jobs = data?.jobs ?? [];
@@ -78,6 +80,7 @@ const ExportJobsClient = () => {
     if (focus === 'dueSoon' && !j.bond?.dueSoon) return false;
     if (focus === 'overdue' && !j.bond?.overdue) return false;
     if (stage && j.stage !== stage) return false;
+    if (kind && j.shipmentType !== kind) return false;
     return (
       !q ||
       [j.jobNumber, j.shipmentNumber, j.clientName, j.destination, j.invoiceNumber, j.reference]
@@ -98,7 +101,7 @@ const ExportJobsClient = () => {
             <span className="text-text-primary">Exports</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Export jobs</h1>
-          <p className="mt-0.5 text-sm text-text-muted">Everything leaving the UAE, and the bonds on bonded transfers</p>
+          <p className="mt-0.5 text-sm text-text-muted">Exports leaving the UAE, mainland transfers within it, and the bonds on bonded transfers</p>
         </div>
         <Link href="/platform/admin/logistics/exports/new" className={primaryButton}>
           <IconPlus size={16} /> New export job
@@ -149,6 +152,21 @@ const ExportJobsClient = () => {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
+        {(
+          [
+            ['', 'All jobs'],
+            ['outbound', 'Exports'],
+            ['mainland_transfer', 'Mainland transfers'],
+          ] as const
+        ).map(([k, text]) => (
+          <button key={k || 'all'} type="button" className={pill(kind === k)} onClick={() => setKind(k)}>
+            {text}
+            <span className="ml-1.5 tabular-nums opacity-60">{k ? jobs.filter((j) => j.shipmentType === k).length : jobs.length}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
         <button type="button" className={pill(stage === '')} onClick={() => setStage('')}>
           All stages
         </button>
@@ -183,6 +201,7 @@ const ExportJobsClient = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-text-primary">{j.jobNumber}</span>
                       <span className={pillClass(stageTone(j.stage))}>{stageLabel(j.stage)}</span>
+                      <ShipmentTypeBadge type={j.shipmentType} />
                       <span className={pillClass('slate')}>{modeLabel(j.mode)}</span>
                     </div>
                     <p className="mt-0.5 truncate text-sm text-text-primary">{j.clientName}</p>

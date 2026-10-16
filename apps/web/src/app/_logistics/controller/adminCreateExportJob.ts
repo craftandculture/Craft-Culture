@@ -49,7 +49,7 @@ const adminCreateExportJob = adminProcedure
             .insert(logisticsShipments)
             .values({
               shipmentNumber,
-              type: 'outbound',
+              type: input.shipmentType,
               transportMode: mode.transportMode,
               status: 'draft',
               originCity: input.originCity,

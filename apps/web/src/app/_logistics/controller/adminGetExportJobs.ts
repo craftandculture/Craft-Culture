@@ -24,6 +24,7 @@ const adminGetExportJobs = adminProcedure.query(async () => {
         id: logisticsShipments.id,
         shipmentNumber: logisticsShipments.shipmentNumber,
         transportMode: logisticsShipments.transportMode,
+        type: logisticsShipments.type,
         originCity: logisticsShipments.originCity,
         originCountry: logisticsShipments.originCountry,
         destinationCity: logisticsShipments.destinationCity,
@@ -46,6 +47,7 @@ const adminGetExportJobs = adminProcedure.query(async () => {
     jobs: rows.map(({ job, shipment, bond }) => ({
       shipmentId: shipment.id,
       shipmentNumber: shipment.shipmentNumber,
+      shipmentType: shipment.type,
       jobNumber: job.jobNumber,
       stage: job.stage,
       mode: exportModeOf(shipment.transportMode, job.bondedTransfer),

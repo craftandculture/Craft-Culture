@@ -69,6 +69,7 @@ const adminUpdateExportJob = adminProcedure
           ...(input.totalCases !== undefined && { totalCases: input.totalCases ?? 0 }),
           ...(input.totalBottles !== undefined && { totalBottles: input.totalBottles ?? 0 }),
           ...(mode && { transportMode: mode.transportMode }),
+          ...(input.shipmentType && { type: input.shipmentType }),
           ...(stageChanged && { status: stage.status }),
           ...(stageChanged && stage.key === 'shipped' && { atd: new Date() }),
           ...(stageChanged && stage.key === 'docs_sent' && { deliveredAt: new Date() }),

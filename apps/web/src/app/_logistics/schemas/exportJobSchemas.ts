@@ -15,6 +15,8 @@ export const createExportJobSchema = z.object({
   destinationCity: text(120).min(1, 'Enter the destination'),
   destinationCountry: optionalText(120),
   mode: z.enum(EXPORT_MODE_KEYS),
+  /** Leaving the UAE, or a UAE to UAE move such as free zone to mainland */
+  shipmentType: z.enum(['outbound', 'mainland_transfer']).default('outbound'),
   carrierName: optionalText(120),
   invoiceNumber: optionalText(80),
   invoiceValue: z.number().min(0).nullable().optional(),
@@ -35,6 +37,7 @@ export const updateExportJobSchema = z.object({
   destinationCity: text(120).min(1, 'Enter the destination').optional(),
   destinationCountry: optionalText(120),
   mode: z.enum(EXPORT_MODE_KEYS).optional(),
+  shipmentType: z.enum(['outbound', 'mainland_transfer']).optional(),
   stage: z.enum(EXPORT_STAGE_KEYS).optional(),
   carrierName: optionalText(120),
   awbNumber: optionalText(80),

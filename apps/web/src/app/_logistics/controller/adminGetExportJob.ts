@@ -74,6 +74,7 @@ const adminGetExportJob = adminProcedure
       today,
       shipmentId,
       shipmentNumber: shipment.shipmentNumber,
+      shipmentType: shipment.type,
       jobNumber: job.jobNumber,
       stage: job.stage,
       mode: exportModeOf(shipment.transportMode, job.bondedTransfer),

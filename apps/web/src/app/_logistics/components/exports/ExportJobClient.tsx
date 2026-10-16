@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
+import ShipmentTypeBadge from '../ShipmentTypeBadge';
 import BondPanel from './BondPanel';
 import ClientPicker, { type ClientValue } from './ClientPicker';
 import ExportInvoiceSelect from './ExportInvoiceSelect';
@@ -46,6 +47,12 @@ const DOC_LABEL: Record<string, string> = {
   other: 'Other',
 };
 
+/** An export job either leaves the UAE or moves stock within it */
+const JOB_KINDS = [
+  { key: 'outbound', label: 'Export (leaving UAE)' },
+  { key: 'mainland_transfer', label: 'Mainland transfer (UAE → UAE)' },
+] as const;
+
 const UPLOAD_KINDS: { key: ExportDocumentKind; label: string }[] = [
   { key: 'invoice', label: 'Invoice' },
   { key: 'awb', label: 'Airway bill' },
@@ -65,6 +72,9 @@ const JobView = ({ job }: { job: Job }) => {
 
   const [client, setClient] = useState<ClientValue>({ clientName: job.clientName, zohoCustomerId: job.zohoCustomerId });
   const [mode, setMode] = useState<ExportMode>(job.mode);
+  const [shipmentType, setShipmentType] = useState<'outbound' | 'mainland_transfer'>(
+    job.shipmentType === 'mainland_transfer' ? 'mainland_transfer' : 'outbound',
+  );
   const [originCity, setOriginCity] = useState(job.originCity ?? '');
   const [originCountry, setOriginCountry] = useState(job.originCountry ?? '');
   const [destinationCity, setDestinationCity] = useState(job.destinationCity ?? '');
@@ -128,6 +138,7 @@ const JobView = ({ job }: { job: Job }) => {
         clientName: client.clientName.trim(),
         zohoCustomerId: client.zohoCustomerId,
         mode,
+        shipmentType,
         originCity: originCity.trim(),
         originCountry: originCountry.trim() || null,
         destinationCity: destinationCity.trim(),
@@ -171,6 +182,7 @@ const JobView = ({ job }: { job: Job }) => {
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-text-primary">
             <span className="font-mono">{job.jobNumber}</span>
             <span className={pillClass(stageTone(job.stage))}>{stageLabel(job.stage)}</span>
+            <ShipmentTypeBadge type={job.shipmentType} />
           </h1>
           <p className="mt-0.5 truncate text-sm text-text-muted">
             {job.clientName} · {modeLabel(job.mode)} · {job.originCity || '—'} → {job.destinationCity || '—'} ·{' '}
@@ -237,6 +249,16 @@ const JobView = ({ job }: { job: Job }) => {
                 Client *
               </label>
               <ClientPicker id="client" value={client} onChange={setClient} />
+            </div>
+            <div>
+              <span className={label}>Kind</span>
+              <div className="flex flex-wrap gap-2">
+                {JOB_KINDS.map((k) => (
+                  <button key={k.key} type="button" className={pill(shipmentType === k.key)} onClick={() => setShipmentType(k.key)}>
+                    {k.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <span className={label}>Mode</span>
