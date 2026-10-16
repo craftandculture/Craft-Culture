@@ -1,13 +1,21 @@
 'use client';
 
-import { IconFilter, IconSearch, IconX } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconBuildingCastle,
+  IconFilter,
+  IconMail,
+  IconMinus,
+  IconPackages,
+  IconPlus,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
-import Button from '@/app/_ui/components/Button/Button';
-import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -193,180 +201,278 @@ const AvailablePage = () => {
   );
 
   const selectClass =
-    'border-border-muted text-text-primary bg-background-primary h-9 rounded-lg border px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/40';
+    'border-border-muted text-text-primary bg-surface-primary h-10 w-full rounded-lg border px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-text-primary/20 sm:h-9 lg:w-auto';
+
+  const categoryTone = (category: string | null | undefined) =>
+    category === 'Spirits'
+      ? 'bg-amber-500'
+      : category === 'RTD'
+        ? 'bg-sky-500'
+        : category === 'Wine'
+          ? 'bg-rose-600'
+          : 'bg-slate-400';
+
+  const origin = (wine: (typeof wines)[number]) =>
+    [wine.producer, wine.region ?? wine.country].filter(Boolean).join(' · ');
+
+  /* One stepper for the table and the phone cards, so the two cannot drift. */
+  const caseControl = (wine: (typeof wines)[number]) => {
+    const chosen = basket.get(wine.lwin18) ?? 0;
+
+    /*
+      Loose bottles with no whole case behind them cannot be bought in bond. A
+      disabled stepper would invite a click to find out why.
+    */
+    if (wine.availableCases <= 0) {
+      return (
+        <a
+          href="mailto:enquiries@craftculture.xyz"
+          className="text-text-muted hover:text-text-primary text-xs font-medium underline underline-offset-2"
+        >
+          Ask us
+        </a>
+      );
+    }
+
+    if (!chosen) {
+      return (
+        <button
+          type="button"
+          onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
+          className="border-border-muted text-text-primary hover:bg-text-primary hover:text-surface-primary inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold transition-colors sm:h-8"
+          aria-label={`Add a case of ${wine.product}`}
+        >
+          <Icon icon={IconPlus} size="xs" /> Add
+        </button>
+      );
+    }
+
+    return (
+      <span className="bg-text-primary text-surface-primary inline-flex h-9 items-center rounded-lg sm:h-8">
+        <button
+          type="button"
+          aria-label={`One fewer case of ${wine.product}`}
+          onClick={() => addCases(wine.lwin18, -1, wine.availableCases)}
+          className="flex h-full w-8 items-center justify-center rounded-l-lg hover:bg-white/10"
+        >
+          <Icon icon={IconMinus} size="xs" />
+        </button>
+        <span className="min-w-[44px] text-center text-xs font-semibold tabular-nums">
+          {chosen} {chosen === 1 ? 'case' : 'cases'}
+        </span>
+        <button
+          type="button"
+          aria-label={`One more case of ${wine.product}`}
+          disabled={chosen >= wine.availableCases}
+          onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
+          className="flex h-full w-8 items-center justify-center rounded-r-lg hover:bg-white/10 disabled:opacity-30"
+        >
+          <Icon icon={IconPlus} size="xs" />
+        </button>
+      </span>
+    );
+  };
+
+  const availability = (wine: (typeof wines)[number]) =>
+    wine.caseConfig > 1
+      ? `${wine.availableCases} ${wine.availableCases === 1 ? 'case' : 'cases'} · ${wine.availableBottles} btl`
+      : `${wine.availableBottles} ${wine.availableBottles === 1 ? 'bottle' : 'bottles'}`;
+
+  const pill =
+    'bg-surface-muted text-text-primary inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums';
 
   return (
-    <div className="w-full pb-8">
+    <div className="w-full pb-28">
       {activationSheet}
-      <div className="mb-4">
-        <Typography variant="headingMd" className="block">
-          Available now
-        </Typography>
-        <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Held in bond with us and ready to add to your cellar. Prices are in
-          bond, duty suspended &mdash; wine bought here stays where it is.
-        </Typography>
-      </div>
 
-      <div className="mb-4 lg:flex lg:items-center lg:gap-4">
-        <div className="relative lg:w-80 lg:flex-shrink-0">
-          <Icon
-            icon={IconSearch}
-            size="sm"
-            className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search wine, producer or vintage"
-            className="pl-9"
-          />
+      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Typography variant="headingMd" className="block">
+            Available now
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted" className="mt-1 block max-w-2xl">
+            Held in bond with us and ready to add to your cellar. Prices are in bond, duty suspended &mdash; wine you
+            buy here stays where it is.
+          </Typography>
         </div>
+        {/*
+          One line, not a link on every row. A per-row mailto navigated the page
+          away from the list somebody was halfway through reading.
+        */}
+        <a
+          href="mailto:enquiries@craftculture.xyz"
+          className="border-border-muted text-text-primary hover:bg-fill-muted inline-flex h-9 flex-shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 text-xs font-semibold transition-colors sm:self-auto"
+        >
+          <Icon icon={IconMail} size="xs" /> Looking for something else?
+        </a>
+      </header>
 
-        <div className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0 lg:mt-0">
-          {[
-            { id: undefined, label: 'Everything' },
-            { id: 'Wine', label: 'Wine' },
-            { id: 'Spirits', label: 'Spirits' },
-            { id: 'RTD', label: 'RTD' },
-          ].map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => {
-                setCategory(chip.id);
+      {/*
+        Search, kind and the narrowing filters live in one panel, so the page
+        reads as controls, then figures, then wine — three bands rather than
+        one run of grey.
+      */}
+      <div className="border-border-muted bg-surface-secondary/40 mb-4 rounded-xl border p-3 sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative lg:w-80 lg:flex-shrink-0">
+            <Icon
+              icon={IconSearch}
+              size="sm"
+              className="text-text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search wine, producer or vintage"
+              className="bg-surface-primary pl-9"
+            />
+          </div>
+
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+            {[
+              { id: undefined, label: 'Everything', tone: '' },
+              { id: 'Wine', label: 'Wine', tone: 'bg-rose-600' },
+              { id: 'Spirits', label: 'Spirits', tone: 'bg-amber-500' },
+              { id: 'RTD', label: 'RTD', tone: 'bg-sky-500' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  setCategory(chip.id);
+                  setLimit(PAGE);
+                }}
+                aria-pressed={category === chip.id}
+                className={`inline-flex h-9 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-xs font-semibold transition-colors ${
+                  category === chip.id
+                    ? 'bg-text-primary text-surface-primary'
+                    : 'border-border-muted bg-surface-primary text-text-muted hover:text-text-primary border'
+                }`}
+              >
+                {chip.tone && <span className={`size-1.5 rounded-full ${chip.tone}`} />}
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {/*
+            Hidden behind a toggle on small screens: three selects above the
+            fold on a phone push the wine itself off it.
+          */}
+          <button
+            type="button"
+            onClick={() => setShowFilters((open) => !open)}
+            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold lg:hidden"
+          >
+            <Icon icon={IconFilter} size="xs" />
+            {showFilters ? 'Hide filters' : 'Filter and sort'}
+            {activeFilters.length > 0 && (
+              <span className="bg-text-primary text-surface-primary rounded-full px-1.5 text-[10px]">
+                {activeFilters.length}
+              </span>
+            )}
+          </button>
+
+          <div
+            className={`${showFilters ? 'grid' : 'hidden'} grid-cols-2 gap-2 lg:ml-auto lg:flex lg:flex-nowrap`}
+          >
+            <select
+              value={country}
+              onChange={(event) => {
+                setCountry(event.target.value);
                 setLimit(PAGE);
               }}
-              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                category === chip.id
-                  ? 'bg-fill-brand text-text-on-brand'
-                  : 'border-border-muted text-text-muted hover:text-text-primary border'
-              }`}
+              className={selectClass}
+              aria-label="Country"
             >
-              {chip.label}
-            </button>
-          ))}
+              <option value="">All countries</option>
+              {countries.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={producer}
+              onChange={(event) => {
+                setProducer(event.target.value);
+                setLimit(PAGE);
+              }}
+              className={`${selectClass} lg:max-w-[180px]`}
+              aria-label="Producer"
+            >
+              <option value="">All producers</option>
+              {producers.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={vintage}
+              onChange={(event) => {
+                setVintage(event.target.value);
+                setLimit(PAGE);
+              }}
+              className={selectClass}
+              aria-label="Vintage"
+            >
+              <option value="">All vintages</option>
+              {vintages.map((option) => (
+                <option key={option} value={String(option)}>
+                  {option}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as SortKey)}
+              className={selectClass}
+              aria-label="Sort"
+            >
+              {SORTS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/*
-          Country, producer and vintage are how anyone actually narrows a wine
-          list. Hidden behind a toggle on small screens, because three selects
-          above the fold on a phone pushes the wine itself off it.
+          What is being excluded, and a one-click way out of each. A filter that
+          cannot be seen is one somebody forgets they set.
         */}
-        <button
-          type="button"
-          onClick={() => setShowFilters((open) => !open)}
-          className="border-border-muted text-text-muted hover:text-text-primary mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors lg:hidden"
-        >
-          <Icon icon={IconFilter} size="xs" />
-          {showFilters ? 'Hide filters' : 'Filters'}
-          {activeFilters.length > 0 && (
-            <span className="bg-fill-brand text-text-on-brand rounded-full px-1.5 text-[10px]">
-              {activeFilters.length}
-            </span>
-          )}
-        </button>
-
-        <div
-          className={`${showFilters ? 'flex' : 'hidden'} mt-2 flex-wrap gap-2 lg:mt-0 lg:flex lg:flex-nowrap`}
-        >
-          <select
-            value={country}
-            onChange={(event) => {
-              setCountry(event.target.value);
-              setLimit(PAGE);
-            }}
-            className={selectClass}
-            aria-label="Country"
-          >
-            <option value="">All countries</option>
-            {countries.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+        {activeFilters.length > 0 && (
+          <div className="border-border-muted mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3">
+            {activeFilters.map((filter) => (
+              <button
+                key={filter.label}
+                type="button"
+                onClick={filter.clear}
+                className="bg-surface-primary border-border-muted text-text-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
+              >
+                {filter.label}
+                <Icon icon={IconX} size="xs" />
+              </button>
             ))}
-          </select>
-
-          <select
-            value={producer}
-            onChange={(event) => {
-              setProducer(event.target.value);
-              setLimit(PAGE);
-            }}
-            className={`${selectClass} max-w-[180px]`}
-            aria-label="Producer"
-          >
-            <option value="">All producers</option>
-            {producers.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={vintage}
-            onChange={(event) => {
-              setVintage(event.target.value);
-              setLimit(PAGE);
-            }}
-            className={selectClass}
-            aria-label="Vintage"
-          >
-            <option value="">All vintages</option>
-            {vintages.map((option) => (
-              <option key={option} value={String(option)}>
-                {option}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as SortKey)}
-            className={`${selectClass} lg:ml-auto`}
-            aria-label="Sort"
-          >
-            {SORTS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/*
-        What is currently being excluded, and a one-click way out of each. A
-        filter that cannot be seen is a filter somebody forgets they set, and
-        then the catalogue looks empty for no reason.
-      */}
-      {activeFilters.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          {activeFilters.map((filter) => (
             <button
-              key={filter.label}
               type="button"
-              onClick={filter.clear}
-              className="border-border-muted text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors"
+              onClick={() => {
+                setCountry('');
+                setProducer('');
+                setVintage('');
+              }}
+              className="text-text-muted hover:text-text-primary px-1 text-xs font-semibold underline underline-offset-2"
             >
-              {filter.label}
-              <Icon icon={IconX} size="xs" />
+              Clear all
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              setCountry('');
-              setProducer('');
-              setVintage('');
-            }}
-            className="text-text-brand px-1 text-xs font-medium"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="block py-6">
@@ -377,224 +483,228 @@ const AvailablePage = () => {
       {!isLoading && filtered.length === 0 && (
         <div className="border-border-muted rounded-xl border px-6 py-14 text-center">
           <Typography variant="bodyMd" colorRole="muted" className="block">
-            {search || activeFilters.length > 0
-              ? 'Nothing matches that.'
-              : 'Nothing available just now.'}
+            {search || activeFilters.length > 0 ? 'Nothing matches that.' : 'Nothing available just now.'}
           </Typography>
         </div>
       )}
 
       {!isLoading && filtered.length > 0 && (
         <>
-          {/*
-            One line, not a link on every row. The per-row "Enquire" was a
-            mailto, which navigates the page away from the list somebody was
-            halfway through reading — and buying out of the catalogue is not
-            built, so a control on each line promised something no click could
-            deliver.
-          */}
           <dl className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: 'Wines', value: filtered.length.toLocaleString('en-US') },
-              { label: 'Bottles', value: totalBottles.toLocaleString('en-US') },
-              { label: 'Producers', value: String(shownProducers.size) },
+              {
+                label: 'Wines',
+                value: filtered.length.toLocaleString('en-US'),
+                icon: IconBottle,
+                tone: 'border-rose-100 from-rose-50/50 dark:border-rose-900/50 dark:from-rose-500/10',
+                iconTone: 'bg-rose-100/70 text-rose-600 dark:bg-rose-500/20',
+              },
+              {
+                label: 'Bottles',
+                value: totalBottles.toLocaleString('en-US'),
+                icon: IconPackages,
+                tone: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10',
+                iconTone: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20',
+              },
+              {
+                label: 'Producers',
+                value: String(shownProducers.size),
+                icon: IconBuildingCastle,
+                tone: 'border-violet-100 from-violet-50/50 dark:border-violet-900/50 dark:from-violet-500/10',
+                iconTone: 'bg-violet-100/70 text-violet-600 dark:bg-violet-500/20',
+              },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="border-border-muted rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+                className={`flex items-center gap-3 rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 ${stat.tone}`}
               >
-                <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  {stat.label}
-                </dt>
-                <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
-                  {stat.value}
-                </dd>
+                <span
+                  className={`hidden size-9 flex-shrink-0 items-center justify-center rounded-lg sm:flex ${stat.iconTone}`}
+                >
+                  <stat.icon size={18} />
+                </span>
+                <div className="min-w-0">
+                  <dd className="text-text-primary m-0 text-lg font-bold leading-tight tabular-nums sm:text-xl">
+                    {stat.value}
+                  </dd>
+                  <dt className="text-text-muted text-[11px] font-medium">{stat.label}</dt>
+                </div>
               </div>
             ))}
           </dl>
 
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <Typography variant="bodyXs" colorRole="muted">
-              Showing {shown.length.toLocaleString('en-US')} of{' '}
-              {filtered.length.toLocaleString('en-US')}
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              Something not here? Ask your account team at{' '}
-              <a
-                className="text-text-brand font-medium"
-                href="mailto:enquiries@craftculture.xyz"
-              >
-                enquiries@craftculture.xyz
-              </a>
-            </Typography>
-          </div>
+          <Typography variant="bodyXs" colorRole="muted" className="mb-2 block">
+            Showing {shown.length.toLocaleString('en-US')} of {filtered.length.toLocaleString('en-US')}
+          </Typography>
 
-          <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[68vh] sm:overflow-auto">
-            <table className="w-full min-w-[780px] text-sm">
-              <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
-                <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
-                  <th className="w-[38%] min-w-[220px] px-3 py-2 text-left">
-                    Wine
-                  </th>
-                  <th className="hidden px-3 py-2 text-left md:table-cell">
-                    Producer
-                  </th>
-                  <th className="hidden px-3 py-2 text-center sm:table-cell">
-                    Vintage
-                  </th>
-                  <th className="px-3 py-2 text-center">Format</th>
-                  <th className="px-3 py-2 text-right">Available</th>
-                  <th className="hidden px-3 py-2 text-right lg:table-cell">
-                    $ / case
-                  </th>
-                  <th className="px-3 py-2 text-right">$ / btl</th>
-                  <th className="w-[132px] px-3 py-2 text-right">Cases</th>
+          {/* A phone gets cards: a seven-column table cannot be read at that width */}
+          <ul className="space-y-2 sm:hidden">
+            {shown.map((wine) => {
+              const isChosen = Boolean(basket.get(wine.lwin18));
+              return (
+                <li
+                  key={`${wine.lwin18}-${wine.vintage ?? ''}`}
+                  className={`bg-surface-primary rounded-xl border p-3 shadow-sm ${
+                    isChosen ? 'border-text-primary' : 'border-border-muted'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-1.5 size-2 flex-shrink-0 rounded-full ${categoryTone(wine.category)}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-text-primary text-sm font-semibold leading-snug">
+                        {displayName(wine.product)}
+                      </p>
+                      <p className="text-text-muted mt-0.5 truncate text-xs">{origin(wine)}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <span className={pill}>{wine.vintage ?? 'NV'}</span>
+                        <span className={pill}>
+                          {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
+                          {wine.bottleSize ?? '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-border-muted mt-3 flex items-end justify-between gap-3 border-t pt-3">
+                    <div>
+                      <p className="text-text-primary text-base font-bold tabular-nums">
+                        {money(wine.pricePerBottleUsd)}
+                        <span className="text-text-muted text-xs font-normal"> / btl</span>
+                      </p>
+                      <p className="text-text-muted text-[11px]">{availability(wine)}</p>
+                    </div>
+                    {caseControl(wine)}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="border-border-muted hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-surface-secondary/90 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
+                <tr className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                  <th className="px-4 py-2.5 text-left">Wine</th>
+                  <th className="px-3 py-2.5 text-center">Vintage</th>
+                  <th className="px-3 py-2.5 text-center">Format</th>
+                  <th className="px-3 py-2.5 text-right">Available</th>
+                  <th className="px-3 py-2.5 text-right">Price</th>
+                  <th className="w-[150px] px-4 py-2.5 text-right">Add to cellar</th>
                 </tr>
               </thead>
               <tbody className="divide-border-muted divide-y">
-                {shown.map((wine) => (
-                  <tr
-                    key={`${wine.lwin18}-${wine.vintage ?? ''}`}
-                    className="hover:bg-fill-muted/40 group transition-colors"
-                  >
-                    <td className="text-text-primary max-w-0 px-3 py-2 text-[13px] font-medium">
-                      {/*
-                        Truncated rather than allowed to set the table's width.
-                        Names run to seventy characters here, and one long one
-                        pushed the price columns off the right of the page.
-                      */}
-                      <span className="block truncate" title={wine.product}>
-                        {displayName(wine.product)}
-                      </span>
-                      <span className="text-text-muted block truncate text-xs md:hidden">
-                        {wine.producer}
-                      </span>
-                    </td>
-                    <td className="text-text-muted hidden max-w-0 px-3 py-2 text-[13px] md:table-cell">
-                      <span className="block truncate" title={wine.producer ?? ''}>
-                        {wine.producer ?? '—'}
-                      </span>
-                    </td>
-                    <td className="text-text-muted hidden px-3 py-2 text-center text-[13px] tabular-nums sm:table-cell">
-                      {wine.vintage ?? 'NV'}
-                    </td>
-                    <td className="text-text-primary px-3 py-2 text-center text-[13px]">
-                      {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
-                      {wine.bottleSize ?? '—'}
-                    </td>
-                    <td className="px-3 py-2 text-right text-[13px] tabular-nums">
-                      <span className="text-text-primary">
-                        {wine.availableBottles}
-                      </span>
-                      <span className="text-text-muted block text-[11px]">
-                        {wine.caseConfig > 1
-                          ? `${wine.availableCases} ${wine.availableCases === 1 ? 'case' : 'cases'}`
-                          : 'bottles'}
-                      </span>
-                    </td>
-                    <td className="text-text-muted hidden px-3 py-2 text-right text-[13px] tabular-nums lg:table-cell">
-                      {wine.caseConfig > 1 ? money(wine.pricePerCaseUsd) : '—'}
-                    </td>
-                    <td className="text-text-primary px-3 py-2 text-right text-[13px] font-semibold tabular-nums">
-                      {money(wine.pricePerBottleUsd)}
-                    </td>
-                    {/*
-                      Whole cases. A part case in bond would be a fraction of a
-                      stock row, and nothing is physically opened anyway until
-                      the wine is called forward.
-                    */}
-                    <td className="px-3 py-2 text-right">
-                      {wine.availableCases > 0 ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            aria-label={`One fewer case of ${wine.product}`}
-                            disabled={!basket.get(wine.lwin18)}
-                            onClick={() =>
-                              addCases(wine.lwin18, -1, wine.availableCases)
-                            }
-                            className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-25"
-                          >
-                            &minus;
-                          </button>
+                {shown.map((wine) => {
+                  const isChosen = Boolean(basket.get(wine.lwin18));
+                  return (
+                    <tr
+                      key={`${wine.lwin18}-${wine.vintage ?? ''}`}
+                      className={`group transition-colors ${
+                        isChosen
+                          ? 'bg-emerald-50/50 shadow-[inset_3px_0_0] shadow-emerald-500 dark:bg-emerald-500/10'
+                          : 'hover:bg-fill-muted/40'
+                      }`}
+                    >
+                      <td className="max-w-0 px-4 py-3">
+                        {/*
+                          Truncated rather than allowed to set the table's
+                          width. Names run to seventy characters here.
+                        */}
+                        <div className="flex items-start gap-2.5">
                           <span
-                            className={`min-w-[28px] text-center text-xs font-semibold tabular-nums ${
-                              basket.get(wine.lwin18)
-                                ? 'text-text-brand'
-                                : 'text-text-muted'
-                            }`}
-                          >
-                            {basket.get(wine.lwin18) ?? 0}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`One more case of ${wine.product}`}
-                            disabled={
-                              (basket.get(wine.lwin18) ?? 0) >= wine.availableCases
-                            }
-                            onClick={() =>
-                              addCases(wine.lwin18, 1, wine.availableCases)
-                            }
-                            className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-25"
-                          >
-                            +
-                          </button>
+                            className={`mt-1.5 size-2 flex-shrink-0 rounded-full ${categoryTone(wine.category)}`}
+                            title={wine.category ?? undefined}
+                          />
+                          <div className="min-w-0">
+                            <span
+                              className="text-text-primary block truncate text-[13.5px] font-semibold"
+                              title={wine.product}
+                            >
+                              {displayName(wine.product)}
+                            </span>
+                            <span className="text-text-muted block truncate text-xs">{origin(wine) || '—'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={pill}>{wine.vintage ?? 'NV'}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={pill}>
+                          {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
+                          {wine.bottleSize ?? '—'}
                         </span>
-                      ) : (
-                        /*
-                          Loose bottles with no whole case behind them cannot be
-                          bought in bond. A disabled stepper would invite a click
-                          to find out why.
-                        */
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Ask us
-                        </Typography>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="text-text-muted whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums">
+                        {availability(wine)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                        <span className="text-text-primary block text-[14px] font-bold">
+                          {money(wine.pricePerBottleUsd)}
+                          <span className="text-text-muted text-[11px] font-normal"> / btl</span>
+                        </span>
+                        {wine.caseConfig > 1 && (
+                          <span className="text-text-muted block text-[11px]">
+                            {money(wine.pricePerCaseUsd)} / case
+                          </span>
+                        )}
+                      </td>
+                      {/*
+                        Whole cases. A part case in bond would be a fraction of
+                        a stock row, and nothing is opened until called forward.
+                      */}
+                      <td className="px-4 py-3 text-right">{caseControl(wine)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/*
             A page at a time, on request. A hard cut with no control reads as
-            "that is all there is", which for a catalogue of four hundred is
-            the one thing it must not say.
+            "that is all there is", which for a catalogue of four hundred is the
+            one thing it must not say.
           */}
+          {filtered.length > shown.length && (
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setLimit((current) => current + PAGE)}
+                className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted h-10 rounded-lg border px-5 text-xs font-semibold shadow-sm transition-colors"
+              >
+                Show {Math.min(PAGE, filtered.length - shown.length)} more
+              </button>
+            </div>
+          )}
+
           {/*
             A bar rather than a separate basket page. Choosing wine and
             committing to it are one motion here, and sending someone to another
             screen to find the total is how a half-built order gets abandoned.
           */}
           {basketLines.length > 0 && (
-            <div className="border-border-muted bg-background-primary sticky bottom-0 z-20 -mx-3 mt-3 flex flex-col gap-2 border-t px-3 py-3 sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:rounded-xl sm:border sm:px-4">
+            <div className="bg-text-primary text-surface-primary sticky bottom-3 z-20 mt-4 flex flex-col gap-3 rounded-xl px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <Typography variant="bodySm" className="block font-semibold">
-                  {basketLines.length}{' '}
-                  {basketLines.length === 1 ? 'wine' : 'wines'} &middot;{' '}
-                  {basketBottles} {basketBottles === 1 ? 'bottle' : 'bottles'}
-                  <span className="text-text-brand ml-2 tabular-nums">
-                    {money(basketTotal)}
-                  </span>
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="block">
-                  Held in bond, duty suspended. Reserved 48 hours for your bank
-                  transfer &mdash; the wine moves once we confirm it has landed.
-                </Typography>
+                <p className="text-sm font-semibold">
+                  {basketLines.length} {basketLines.length === 1 ? 'wine' : 'wines'} &middot; {basketBottles}{' '}
+                  {basketBottles === 1 ? 'bottle' : 'bottles'}
+                  <span className="ml-2 tabular-nums">{money(basketTotal)}</span>
+                </p>
+                <p className="text-xs opacity-70">
+                  Held in bond, duty suspended. Reserved for 48 hours for your bank transfer; the wine moves once we
+                  confirm it has arrived.
+                </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setBasket(new Map())}
-                  className="text-text-muted hover:text-text-primary px-2 py-1 text-xs font-medium transition-colors"
+                  className="h-9 px-2 text-xs font-semibold opacity-70 transition-opacity hover:opacity-100"
                 >
                   Clear
                 </button>
-                <Button
-                  colorRole="brand"
-                  size="sm"
-                  isDisabled={isPlacing}
+                <button
+                  type="button"
+                  disabled={isPlacing}
                   onClick={() =>
                     placeOrder({
                       lines: basketLines.map((line) => ({
@@ -603,24 +713,11 @@ const AvailablePage = () => {
                       })),
                     })
                   }
+                  className="bg-surface-primary text-text-primary h-10 flex-1 rounded-lg px-4 text-sm font-semibold disabled:opacity-50 sm:flex-none"
                 >
-                  <ButtonContent>
-                    {isPlacing ? 'Reserving…' : 'Reserve and pay'}
-                  </ButtonContent>
-                </Button>
+                  {isPlacing ? 'Reserving…' : 'Reserve and pay'}
+                </button>
               </div>
-            </div>
-          )}
-
-          {filtered.length > shown.length && (
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setLimit((current) => current + PAGE)}
-                className="border-border-muted text-text-primary hover:bg-fill-muted rounded-lg border px-4 py-2 text-xs font-medium transition-colors"
-              >
-                Show {Math.min(PAGE, filtered.length - shown.length)} more
-              </button>
             </div>
           )}
         </>

@@ -124,7 +124,14 @@ const CellarPage = () => {
   /* What the member has picked, in bottles, keyed by the parcel it comes from. */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
 
-  const [currency, setCurrency] = useState<Currency>('USD');
+  /*
+    A collector is billed and thinks in dirhams; a trade owner prices in
+    dollars. The toggle wins once pressed.
+  */
+  const [currencyChoice, setCurrency] = useState<Currency | null>(null);
+  const currency: Currency =
+    currencyChoice ??
+    (data?.partner.type === 'private_collector' ? 'AED' : 'USD');
 
   const money = (value: number, precise = false) =>
     formatMoney(value, currency, precise);
@@ -428,6 +435,8 @@ const CellarPage = () => {
 
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
+  const isEmptyCellar =
+    !isLoading && wines.length === 0 && inbound.length === 0;
 
   const requestByStock = useMemo(() => {
     const map = new Map<string, { requestNumber: string }>();
@@ -673,7 +682,12 @@ const CellarPage = () => {
         the only card that colours itself is wine in transit, which colours
         itself only when there is some.
       */}
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+      {!isEmptyCellar && (
+      <div
+        className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
+          inbound.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'
+        }`}
+      >
         {[
           {
             icon: IconBottle,
@@ -703,7 +717,10 @@ const CellarPage = () => {
             detail: `${inbound.length} ${inbound.length === 1 ? 'line' : 'lines'}`,
             alert: inbound.length > 0,
           },
-        ].map((card) => (
+        ]
+          // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
+          .filter((card) => card.label !== 'In transit' || inbound.length > 0)
+          .map((card) => (
           <div
             key={card.label}
             className={`rounded-xl border px-3 py-2 text-center ${
@@ -729,6 +746,7 @@ const CellarPage = () => {
           </div>
         ))}
       </div>
+      )}
 
       {inbound.length > 0 && (
         <section className="border-border-muted mb-5 rounded-xl border">
@@ -1217,6 +1235,33 @@ const CellarPage = () => {
         </section>
       )}
 
+      {isEmptyCellar ? (
+        /*
+          A new member has nothing held yet. Four zero tiles, a search box and
+          an empty table said so four times; one card says it once and points
+          somewhere useful.
+        */
+        <div className="border-border-muted rounded-xl border bg-gradient-to-b from-slate-50/70 to-transparent px-6 py-12 text-center dark:from-slate-500/10">
+          <span className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-500/20">
+            <IconBottle size={20} />
+          </span>
+          <p className="text-text-primary text-base font-semibold">
+            Your cellar is empty for now
+          </p>
+          <p className="text-text-muted mx-auto mt-1 max-w-md text-sm leading-6">
+            Your wines will appear here as soon as they arrive in bond. In the
+            meantime, you can browse what we hold today, or tell us about wine
+            you would like to bring in.
+          </p>
+          <Link
+            href="/platform/cellar/available"
+            className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
+          >
+            Browse Available now
+          </Link>
+        </div>
+      ) : (
+        <>
       {/*
         Search and filters on one line above small screens. Stacked, they cost
         three bands of vertical space before a member sees a single wine.
@@ -1871,6 +1916,8 @@ const CellarPage = () => {
           </tbody>
         </table>
       </div>
+        </>
+      )}
 
       {basket.size > 0 && (
         <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 overflow-hidden rounded-xl border shadow-lg">
