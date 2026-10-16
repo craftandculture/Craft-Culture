@@ -10,21 +10,11 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { shipmentMilestoneNotificationJob } from '@/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob';
 import logger from '@/utils/logger';
 
+import { SHIPMENT_STATUS_KEYS } from '../utils/shipmentStatuses';
+
 const updateStatusSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum([
-    'draft',
-    'booked',
-    'picked_up',
-    'in_transit',
-    'arrived_port',
-    'customs_clearance',
-    'cleared',
-    'at_warehouse',
-    'dispatched',
-    'delivered',
-    'cancelled',
-  ]),
+  status: z.enum(SHIPMENT_STATUS_KEYS),
   notes: z.string().optional(),
 });
 

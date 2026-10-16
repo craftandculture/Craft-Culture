@@ -2,7 +2,12 @@ import { desc, eq, like } from 'drizzle-orm';
 
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
-import { logisticsDeletedHillebrandIds, logisticsShipments } from '@/database/schema';
+import {
+  logisticsDeletedHillebrandIds,
+  logisticsShipmentActivityLogs,
+  logisticsShipmentItems,
+  logisticsShipments,
+} from '@/database/schema';
 import logger from '@/utils/logger';
 
 import {
@@ -11,6 +16,7 @@ import {
   getHillebrandShipments,
 } from './getShipments';
 import type { HillebrandShipment } from './getShipments';
+import { forwardOnlyStatus } from '../../utils/shipmentStatuses';
 
 /**
  * Parse a date string from Hillebrand API
@@ -278,7 +284,15 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
 
         // Check if we already have this shipment
         const [existing] = await db
-          .select({ id: logisticsShipments.id, shipmentNumber: logisticsShipments.shipmentNumber })
+          .select({
+            id: logisticsShipments.id,
+            shipmentNumber: logisticsShipments.shipmentNumber,
+            status: logisticsShipments.status,
+            type: logisticsShipments.type,
+            destinationCity: logisticsShipments.destinationCity,
+            destinationWarehouse: logisticsShipments.destinationWarehouse,
+            partnerNotes: logisticsShipments.partnerNotes,
+          })
           .from(logisticsShipments)
           .where(eq(logisticsShipments.hillebrandShipmentId, hShipment.id))
           .limit(1);
@@ -361,14 +375,47 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
         });
 
         if (existing) {
-          // Update existing shipment
+          // Hillebrand refreshes tracking and dates, but never undoes what the
+          // app or a person has set: the status only moves forward, and the
+          // type, destination, notes and (once lines exist) the counts are kept
+          const status = forwardOnlyStatus(existing.status, shipmentData.status);
+          const [hasItems] = await db
+            .select({ id: logisticsShipmentItems.id })
+            .from(logisticsShipmentItems)
+            .where(eq(logisticsShipmentItems.shipmentId, existing.id))
+            .limit(1);
+          const {
+            type: _type,
+            destinationCity,
+            destinationWarehouse,
+            partnerNotes,
+            totalCases,
+            totalBottles,
+            ...tracking
+          } = shipmentData;
+
           await db
             .update(logisticsShipments)
             .set({
-              ...shipmentData,
+              ...tracking,
+              status,
+              ...(!existing.destinationCity && { destinationCity }),
+              ...(!existing.destinationWarehouse && { destinationWarehouse }),
+              ...(!existing.partnerNotes && { partnerNotes }),
+              ...(!hasItems && { totalCases, totalBottles }),
               updatedAt: new Date(),
             })
             .where(eq(logisticsShipments.id, existing.id));
+
+          if (status !== existing.status) {
+            await db.insert(logisticsShipmentActivityLogs).values({
+              shipmentId: existing.id,
+              action: 'status_changed',
+              previousStatus: existing.status,
+              newStatus: status,
+              notes: 'Updated from Hillebrand tracking',
+            });
+          }
           await advanceShipmentIntakes(existing.id);
 
           result.updated++;
