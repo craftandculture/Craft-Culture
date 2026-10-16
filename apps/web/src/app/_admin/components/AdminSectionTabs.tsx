@@ -28,6 +28,7 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Dashboard', href: '/platform/admin/logistics' },
     { label: 'Shipments', href: '/platform/admin/logistics/shipments' },
     { label: 'Exports', href: '/platform/admin/logistics/exports' },
+    { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices' },
     { label: 'Freight quotes', href: '/platform/admin/logistics/quotes' },
     { label: 'Freight bills', href: '/platform/admin/logistics/invoices' },
     { label: 'Reports', href: '/platform/admin/logistics/reports' },
