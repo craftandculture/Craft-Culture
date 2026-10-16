@@ -1,3 +1,9 @@
+## [2.0.380](https://github.com/craftandculture/Craft-Culture/compare/v2.0.379...v2.0.380) (2026-10-16)
+
+### Features
+
+* **cellar:** onboarding that feels like opening a cellar, not paperwork ([440f4e0](https://github.com/craftandculture/Craft-Culture/commit/440f4e0cad403d82a4929e80b0627428b0124424))
+
 ## [2.0.379](https://github.com/craftandculture/Craft-Culture/compare/v2.0.378...v2.0.379) (2026-10-16)
 
 ### Features
