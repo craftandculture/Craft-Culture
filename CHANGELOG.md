@@ -1,3 +1,9 @@
+## [2.0.366](https://github.com/craftandculture/Craft-Culture/compare/v2.0.365...v2.0.366) (2026-10-16)
+
+### Bug Fixes
+
+* the Hillebrand sync only moves a shipment forward and no longer overwrites what the team set ([428a1d9](https://github.com/craftandculture/Craft-Culture/commit/428a1d9aa08e8bc9a811d529c389de89b11d5f97))
+
 ## [2.0.365](https://github.com/craftandculture/Craft-Culture/compare/v2.0.364...v2.0.365) (2026-10-16)
 
 ### Features
