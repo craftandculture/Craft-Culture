@@ -1,3 +1,9 @@
+## [2.0.387](https://github.com/craftandculture/Craft-Culture/compare/v2.0.386...v2.0.387) (2026-10-16)
+
+### Documentation
+
+* **cellar:** onboarding guide reflects the new steps, payments and copy rules ([d436b03](https://github.com/craftandculture/Craft-Culture/commit/d436b03047e46f1fbd638ef59d01c1c2c9cec27f))
+
 ## [2.0.386](https://github.com/craftandculture/Craft-Culture/compare/v2.0.385...v2.0.386) (2026-10-16)
 
 ### Features
