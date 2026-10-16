@@ -7,7 +7,7 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 
 **Joining from the website**
 1. `/join` — email → sign-in link (magic link; existing email signs that account in).
-2. `/join/application` — About you (name required) · Identity · Your wine · Membership (accept terms). Every step but the name has *Complete later*; answers save as they go.
+2. `/join/application` — Your details (name + mobile, both required) · Verification (Emirates ID) · Your collection · Membership (accept terms). Every step after the first has *Complete later*; progress saves automatically. No delivery address at sign-up: it is asked for at the first delivery and never listed as missing (`missingProfileItems`).
 3. Submit → `/join/status` (open sign-up) while Kevin and Laraine review.
 4. Admin approves on **Cellar members → Applications** → cellar opens, cellar-ready email, a Team Tasks job per wine source.
 
@@ -24,6 +24,10 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 2. Buy, release, offer for sale or a transfer in → `NOT_ACTIVATED` → *Activate your cellar* sheet: Emirates ID if missing, then Zoho Billing's hosted card page.
 3. Zoho returns to `/platform/cellar/activated` → subscription confirmed → membership `active` (billing starts) → back to where they were.
 4. Failed payment → `past_due` → actions paused → *Update your card*.
+
+**Member payments** — C&C's bank details are set once on **Cellar rates → Member payments** (table `cellar_payment_settings`, row `house`), read behind a guard (`getMemberPaymentDetails`) so a missing table only falls back to "details will follow by email". Every reserved purchase shows a folded green *How to pay* row (amount, AED equivalent, purchase number as reference, copy buttons); reserving goes through a review dialog and lands on Purchases.
+
+**Member copy rules (Oct 2026)** — collector-led, not operational: delivery wording (never "call forward" / "release" / "parcel"); "the C&C bonded warehouse", never Ras Al Khaimah / RAK in client copy (customs and export documents, the registered address and the terms' governing-law clause keep it); active members never see the fee or a monthly total — the panel shows wines, bottles, cases and the allowance; the wine is the hero, payment is subordinate; primary actions near-black, accents green. Terms version is `2026-10-v4`.
 
 Members created before this journey have no `cellar_memberships` row and are **not gated**.
 
