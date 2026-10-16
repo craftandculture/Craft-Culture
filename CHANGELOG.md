@@ -1,3 +1,9 @@
+## [2.0.386](https://github.com/craftandculture/Craft-Culture/compare/v2.0.385...v2.0.386) (2026-10-16)
+
+### Features
+
+* **cellar:** membership terms v5, single acceptance, and a cleaner membership step ([08a1dfd](https://github.com/craftandculture/Craft-Culture/commit/08a1dfd8032b33b67c9737564431f610fa874d82))
+
 ## [2.0.385](https://github.com/craftandculture/Craft-Culture/compare/v2.0.384...v2.0.385) (2026-10-16)
 
 ### Features
