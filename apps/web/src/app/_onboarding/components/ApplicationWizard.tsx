@@ -10,6 +10,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 import type { ApplicationStepKey } from './ApplicationProgress';
 import ApplicationProgress from './ApplicationProgress';
+import CellarOpened from './CellarOpened';
 import StepAbout from './StepAbout';
 import type { IdSide } from './StepIdentity';
 import StepIdentity from './StepIdentity';
@@ -46,6 +47,7 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
   const { data, isLoading, error } = useQuery(queryOptions);
   const [step, setStep] = useState<ApplicationStepKey | null>(null);
   const [uploadingSide, setUploadingSide] = useState<IdSide | null>(null);
+  const [isOpened, setIsOpened] = useState(false);
   const hasClaimed = useRef(false);
 
   type View = Awaited<ReturnType<typeof saveStep.mutateAsync>>;
@@ -110,6 +112,10 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
     );
   }
 
+  if (isOpened) {
+    return <CellarOpened firstName={data.application.fullName?.trim().split(/\s+/)[0] ?? null} />;
+  }
+
   const { application, intakes, documentTypes, terms } = data;
 
   const move = async (next: ApplicationStepKey) => {
@@ -145,11 +151,12 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
 
   const submitApplication = async () => {
     try {
-      await submit.mutateAsync({ acceptTerms: true });
+      // The submit's own answer, not the view loaded before it
+      const result = await submit.mutateAsync({ acceptTerms: true });
       await queryClient.invalidateQueries({ queryKey: queryOptions.queryKey });
-      if (data.isApproved) {
-        toast.success('Welcome to your Private Cellar');
-        router.push('/platform/cellar');
+      if (result.isApproved) {
+        setIsOpened(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         router.push('/join/status');
       }
@@ -246,6 +253,7 @@ const ApplicationWizard = ({ invite, isEditing = false }: ApplicationWizardProps
         <StepMembership
           terms={terms}
           hasAccepted={Boolean(application.termsAcceptedAt)}
+          opensImmediately={data.isApproved}
           isBusy={submit.isPending}
           onSubmit={() => void submitApplication()}
           onBack={() => void move('wine')}
