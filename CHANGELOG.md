@@ -1,3 +1,9 @@
+## [2.0.372](https://github.com/craftandculture/Craft-Culture/compare/v2.0.371...v2.0.372) (2026-10-16)
+
+### Bug Fixes
+
+* Export invoices is back as a Logistics tab ([1a9c406](https://github.com/craftandculture/Craft-Culture/commit/1a9c4063ce2ed53f316eec3d41bccd95ec223b44))
+
 ## [2.0.371](https://github.com/craftandculture/Craft-Culture/compare/v2.0.370...v2.0.371) (2026-10-16)
 
 ### Bug Fixes
