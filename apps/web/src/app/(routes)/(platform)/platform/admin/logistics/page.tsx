@@ -140,7 +140,7 @@ const LogisticsDashboardPage = () => {
     {
       label: 'Documents expired or expiring',
       value: String(docsFlag),
-      href: '/platform/admin/logistics/reports',
+      href: '/platform/admin/logistics/reports/compliance',
       flag: docsFlag > 0,
     },
     {
