@@ -244,7 +244,7 @@ const PartnerSupportPage = () => {
             </p>
             <dl className="grid gap-2.5 sm:grid-cols-2">
               {[
-                { term: 'Conditions', detail: '12–14°C, humidity controlled, continuously logged.' },
+                { term: 'Conditions', detail: '12–16°C, humidity controlled, continuously logged.' },
                 { term: 'Security', detail: 'CCTV and restricted access within the bonded facility.' },
                 { term: 'Ownership', detail: 'Held against your account and moved only on your instruction.' },
                 {
