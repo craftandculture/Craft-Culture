@@ -1,3 +1,9 @@
+## [2.0.363](https://github.com/craftandculture/Craft-Culture/compare/v2.0.362...v2.0.363) (2026-10-16)
+
+### Features
+
+* shipments can be a Mainland Transfer, for UAE to UAE moves ([75a6247](https://github.com/craftandculture/Craft-Culture/commit/75a624726a082a599fac88f62f83a5d24ff65c8f))
+
 ## [2.0.362](https://github.com/craftandculture/Craft-Culture/compare/v2.0.361...v2.0.362) (2026-10-16)
 
 ### Features
