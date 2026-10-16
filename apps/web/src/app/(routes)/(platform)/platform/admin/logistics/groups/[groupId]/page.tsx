@@ -1,11 +1,13 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconCalculator,
   IconLoader2,
   IconPencil,
   IconPlus,
+  IconSearch,
   IconSparkles,
   IconTrash,
   IconUpload,
@@ -14,9 +16,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { upload } from '@vercel/blob/client';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
+import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
+import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
+import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
+import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
+import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
+import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
+import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -68,6 +78,19 @@ const bottlesOf = (i: {
   cases: number;
   bottlesPerCase: number | null;
 }) => i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
+
+/** Days either side of the group's date that the shipment picker shows by default. */
+const PICKER_WINDOW_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** An action waiting on the in-page confirmation dialog. */
+interface PendingConfirm {
+  title: string;
+  description: string;
+  actionLabel: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+}
 
 const selectCls =
   'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
@@ -227,6 +250,29 @@ const ShipmentGroupDetailPage = () => {
   const { data: inboundData } = useQuery(
     api.logistics.admin.getMany.queryOptions({ type: 'inbound', limit: 100 }),
   );
+  // Names for "in another group", so a move can say where it is moving from.
+  const { data: allGroups } = useQuery(
+    api.logistics.admin.groups.getMany.queryOptions(),
+  );
+
+  // Shipment picker: search box, date window around the group, "Show all".
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerShowAll, setPickerShowAll] = useState(false);
+  const deferredSearch = useDeferredValue(pickerSearch.trim());
+  // The base list is the 100 newest inbound; a typed search also asks the
+  // server so an older shipment can still be found by number or name.
+  const { data: searchData } = useQuery({
+    ...api.logistics.admin.getMany.queryOptions({
+      type: 'inbound',
+      limit: 100,
+      search: deferredSearch,
+    }),
+    enabled: deferredSearch.length >= 2,
+  });
+
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(
+    null,
+  );
 
   const [weightKg, setWeightKg] = useState('');
   const [line, setLine] = useState({
@@ -249,6 +295,53 @@ const ShipmentGroupDetailPage = () => {
     [data],
   );
 
+  const groupNames = useMemo(
+    () => new Map((allGroups ?? []).map((g) => [g.id, g.name])),
+    [allGroups],
+  );
+
+  /**
+   * The group's date for the picker window: the earliest ETA among its
+   * members, or when it was created if no member has an ETA yet.
+   */
+  const anchorDate = useMemo(() => {
+    const etas = (data?.shipments ?? [])
+      .map((s) => (s.eta ? new Date(s.eta).getTime() : null))
+      .filter((t): t is number => t != null);
+    if (etas.length > 0) return Math.min(...etas);
+    return data?.group.createdAt ? new Date(data.group.createdAt).getTime() : null;
+  }, [data]);
+
+  const pickerCandidates = useMemo(() => {
+    const byId = new Map(
+      [...(inboundData?.data ?? []), ...(deferredSearch.length >= 2 ? (searchData?.data ?? []) : [])].map(
+        (s) => [s.id, s],
+      ),
+    );
+    const all = Array.from(byId.values()).filter((s) => !memberIds.has(s.id));
+    const q = deferredSearch.toLowerCase();
+    const matched = q
+      ? all.filter((s) =>
+          [
+            s.shipmentNumber,
+            s.name,
+            s.originCountry,
+            s.originCity,
+            s.originWarehouse,
+            s.partner?.businessName,
+          ].some((v) => v?.toLowerCase().includes(q)),
+        )
+      : all;
+    const inWindow = (s: (typeof all)[number]) =>
+      anchorDate != null &&
+      s.eta != null &&
+      Math.abs(new Date(s.eta).getTime() - anchorDate) <=
+        PICKER_WINDOW_DAYS * DAY_MS;
+    // A typed search looks everywhere; otherwise default to the date window.
+    const shown = pickerShowAll || q ? matched : matched.filter(inWindow);
+    return { shown, hiddenCount: matched.length - shown.length };
+  }, [inboundData, searchData, deferredSearch, memberIds, anchorDate, pickerShowAll]);
+
   const invalidate = () =>
     Promise.all([
       queryClient.invalidateQueries({
@@ -256,6 +349,10 @@ const ShipmentGroupDetailPage = () => {
       }),
       queryClient.invalidateQueries({
         queryKey: api.logistics.admin.groups.getMany.queryKey(),
+      }),
+      // The picker reads group membership off the shipments list.
+      queryClient.invalidateQueries({
+        queryKey: api.logistics.admin.getMany.queryKey(),
       }),
     ]);
 
@@ -444,6 +541,7 @@ const ShipmentGroupDetailPage = () => {
     }
   };
 
+  /** Save the membership with one shipment added or removed. */
   const toggleShipment = (shipmentId: string) => {
     const next = new Set(memberIds);
     if (next.has(shipmentId)) next.delete(shipmentId);
@@ -451,6 +549,50 @@ const ShipmentGroupDetailPage = () => {
     updateMut.mutate(
       { id: groupId, shipmentIds: Array.from(next) },
       { onSuccess: () => toast.success('Shipments updated') },
+    );
+  };
+
+  /** Add a shipment, asking first when that moves it out of another group. */
+  const addShipment = (s: {
+    id: string;
+    shipmentNumber: string;
+    groupId: string | null;
+  }) => {
+    if (s.groupId && s.groupId !== groupId) {
+      const from = groupNames.get(s.groupId) ?? 'another group';
+      setPendingConfirm({
+        title: `Move ${s.shipmentNumber}?`,
+        description: `Move from ${from} to this group? Both groups' landed costs will be recalculated.`,
+        actionLabel: 'Move shipment',
+        onConfirm: () => toggleShipment(s.id),
+      });
+      return;
+    }
+    toggleShipment(s.id);
+  };
+
+  /** Remove a member shipment after confirmation. */
+  const removeShipment = (s: { id: string; shipmentNumber: string }) =>
+    setPendingConfirm({
+      title: `Remove ${s.shipmentNumber}?`,
+      description:
+        'The shipment leaves this group and the remaining shipments are recalculated. Its own landed cost figures are left as they are.',
+      actionLabel: 'Remove',
+      destructive: true,
+      onConfirm: () => toggleShipment(s.id),
+    });
+
+  // Group reference (AWB / container): editable in the header. Saving it
+  // copies it onto members whose AWB or container number is still empty.
+  const [editingRef, setEditingRef] = useState(false);
+  const [refDraft, setRefDraft] = useState('');
+  const commitReference = () => {
+    const reference = refDraft.trim() || null;
+    setEditingRef(false);
+    if (reference === (data?.group.reference ?? null)) return;
+    updateMut.mutate(
+      { id: groupId, reference },
+      { onSuccess: () => toast.success('Reference saved') },
     );
   };
 
@@ -493,6 +635,8 @@ const ShipmentGroupDetailPage = () => {
     costLines,
     metrics,
     documents,
+    costStatus,
+    itemsMissingProductCost,
   } = data;
   const goods = totalProductCost;
   const logistics = metrics.totalLogisticsUsd;
@@ -536,20 +680,56 @@ const ShipmentGroupDetailPage = () => {
                   <Typography variant="headingSm">{group.name}</Typography>
                 </button>
               )}
-              <Typography variant="bodyXs" colorRole="muted">
-                {group.reference ? `${group.reference} · ` : ''}
-                {shipments.length} shipments · {totalCases.toLocaleString()}{' '}
-                cases · {totalBottles.toLocaleString()} bottles
-              </Typography>
+              <div className="flex flex-wrap items-center gap-1">
+                {editingRef ? (
+                  <input
+                    autoFocus
+                    value={refDraft}
+                    onChange={(e) => setRefDraft(e.target.value)}
+                    onBlur={commitReference}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitReference();
+                      if (e.key === 'Escape') setEditingRef(false);
+                    }}
+                    placeholder="AWB / container reference"
+                    className="border-border-primary bg-background-primary focus:border-border-brand w-56 rounded border px-1.5 py-0.5 text-xs focus:outline-none"
+                    aria-label="Group reference"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    title="Set the AWB or container reference. It is copied onto member shipments that have none."
+                    onClick={() => {
+                      setRefDraft(group.reference ?? '');
+                      setEditingRef(true);
+                    }}
+                    className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 text-xs hover:underline"
+                  >
+                    {group.reference || '+ Add reference'}
+                    <IconPencil className="h-3 w-3 opacity-60" />
+                  </button>
+                )}
+                <Typography variant="bodyXs" colorRole="muted">
+                  · {shipments.length} shipments ·{' '}
+                  {totalCases.toLocaleString()} cases ·{' '}
+                  {totalBottles.toLocaleString()} bottles
+                </Typography>
+              </div>
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (confirm('Delete this group? Shipments will be unassigned.'))
-                deleteMut.mutate({ id: groupId });
-            }}
+            onClick={() =>
+              setPendingConfirm({
+                title: 'Delete this group?',
+                description:
+                  'Its shipments will be unassigned and its cost ledger deleted. Landed cost already written onto the bottles is left as it is.',
+                actionLabel: 'Delete group',
+                destructive: true,
+                onConfirm: () => deleteMut.mutate({ id: groupId }),
+              })
+            }
           >
             <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
           </Button>
@@ -580,9 +760,14 @@ const ShipmentGroupDetailPage = () => {
                       className="flex items-center justify-between gap-3 py-2"
                     >
                       <div className="min-w-0">
-                        <Typography variant="labelSm" className="truncate">
-                          {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
-                        </Typography>
+                        <Link
+                          href={`/platform/admin/logistics/shipments/${s.id}`}
+                          className="block truncate hover:underline"
+                        >
+                          <Typography variant="labelSm" className="truncate">
+                            {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
+                          </Typography>
+                        </Link>
                         <Typography variant="bodyXs" colorRole="muted">
                           {s.items.length} lines · {bottles.toLocaleString()}{' '}
                           bottles
@@ -592,7 +777,8 @@ const ShipmentGroupDetailPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleShipment(s.id)}
+                        onClick={() => removeShipment(s)}
+                        disabled={updateMut.isPending}
                       >
                         <ButtonContent>Remove</ButtonContent>
                       </Button>
@@ -607,34 +793,87 @@ const ShipmentGroupDetailPage = () => {
         {/* Add inbound shipments */}
         <Card>
           <CardContent className="gap-3 p-4">
-            <Typography variant="labelSm">Add inbound shipments</Typography>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Typography variant="labelSm">Add inbound shipments</Typography>
+              <label className="text-text-muted flex cursor-pointer items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={pickerShowAll}
+                  onChange={(e) => setPickerShowAll(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Show all
+              </label>
+            </div>
+            <div className="relative">
+              <IconSearch className="text-text-muted pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <input
+                value={pickerSearch}
+                onChange={(e) => setPickerSearch(e.target.value)}
+                placeholder="Search by shipment number, name or origin"
+                className={`${selectCls} w-full pl-8`}
+                aria-label="Search shipments"
+              />
+            </div>
+            <Typography variant="bodyXs" colorRole="muted">
+              {pickerSearch.trim()
+                ? 'Searching all inbound shipments.'
+                : pickerShowAll
+                  ? 'Showing all recent inbound shipments.'
+                  : anchorDate != null
+                    ? `Showing shipments with an ETA within ${PICKER_WINDOW_DAYS} days of ${new Date(anchorDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}.`
+                    : 'Showing shipments near the group date.'}
+              {!pickerShowAll && !pickerSearch.trim() && pickerCandidates.hiddenCount > 0
+                ? ` ${pickerCandidates.hiddenCount} more outside this window.`
+                : ''}
+            </Typography>
             <div className="divide-border-muted max-h-56 divide-y overflow-y-auto">
-              {(inboundData?.data ?? [])
-                .filter((s) => !memberIds.has(s.id))
-                .map((s) => (
-                  <label
-                    key={s.id}
-                    className="hover:bg-fill-primary-hover flex cursor-pointer items-center gap-3 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={false}
-                      onChange={() => toggleShipment(s.id)}
-                      className="h-4 w-4"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <Typography variant="bodySm" className="truncate">
-                        {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {s.totalCases} cases · {s.totalBottles} bottles
-                        {s.groupId && s.groupId !== groupId
-                          ? ' · in another group'
-                          : ''}
-                      </Typography>
-                    </div>
-                  </label>
-                ))}
+              {pickerCandidates.shown.length === 0 ? (
+                <Typography variant="bodyXs" colorRole="muted" className="py-2">
+                  No matching shipments.
+                </Typography>
+              ) : (
+                pickerCandidates.shown.map((s) => {
+                  const otherGroup =
+                    s.groupId && s.groupId !== groupId
+                      ? (groupNames.get(s.groupId) ?? 'another group')
+                      : null;
+                  const origin = [s.originCity, s.originCountry]
+                    .filter(Boolean)
+                    .join(', ');
+                  return (
+                    <label
+                      key={s.id}
+                      className="hover:bg-fill-primary-hover flex cursor-pointer items-center gap-3 py-2"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        disabled={updateMut.isPending}
+                        onChange={() => addShipment(s)}
+                        className="h-4 w-4"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="truncate">
+                          {s.shipmentNumber} {s.name ? `· ${s.name}` : ''}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {s.totalCases} cases · {s.totalBottles} bottles
+                          {origin ? ` · ${origin}` : ''}
+                          {s.eta
+                            ? ` · ETA ${new Date(s.eta).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
+                            : ' · no ETA'}
+                        </Typography>
+                      </div>
+                      {otherGroup && (
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          In {otherGroup}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
@@ -710,8 +949,17 @@ const ShipmentGroupDetailPage = () => {
                         {docLabel(d.documentType)}
                       </Typography>
                       <button
-                        onClick={() => delDocMut.mutate({ id: d.id })}
+                        onClick={() =>
+                          setPendingConfirm({
+                            title: 'Remove this document?',
+                            description: `${d.fileName} will be removed from this group and from all of its shipments.`,
+                            actionLabel: 'Remove document',
+                            destructive: true,
+                            onConfirm: () => delDocMut.mutate({ id: d.id }),
+                          })
+                        }
                         className="text-text-muted hover:text-red-500"
+                        aria-label="Remove document"
                       >
                         <IconTrash className="h-3.5 w-3.5" />
                       </button>
@@ -1107,22 +1355,45 @@ const ShipmentGroupDetailPage = () => {
               </Button>
             </div>
 
-            <div className="border-border-muted flex justify-end border-t pt-3">
+            <div className="border-border-muted flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+              {costStatus === 'stale' ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  <IconAlertTriangle className="h-3.5 w-3.5" />
+                  Costs out of date. Landed cost on the bottles does not match
+                  this ledger; recalculate to apply it.
+                </span>
+              ) : costStatus === 'missing' ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  <IconAlertTriangle className="h-3.5 w-3.5" />
+                  Costs out of date. There are no bottles to spread these
+                  costs across; add items to the member shipments.
+                </span>
+              ) : (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Landed cost is recalculated automatically when costs or
+                  shipments change.
+                </Typography>
+              )}
               <Button
+                variant="outline"
+                size="sm"
                 onClick={() => calcMut.mutate({ id: groupId })}
-                disabled={
-                  calcMut.isPending ||
-                  shipments.length === 0 ||
-                  costLines.length === 0
-                }
+                disabled={calcMut.isPending || shipments.length === 0}
               >
                 <ButtonContent
                   iconLeft={calcMut.isPending ? IconLoader2 : IconCalculator}
                 >
-                  Calculate &amp; apply
+                  Recalculate
                 </ButtonContent>
               </Button>
             </div>
+            {itemsMissingProductCost > 0 && (
+              <Typography variant="bodyXs" className="text-amber-700 dark:text-amber-300">
+                {itemsMissingProductCost}{' '}
+                {itemsMissingProductCost === 1 ? 'line has' : 'lines have'} no
+                product cost, so their landed cost is logistics only.
+              </Typography>
+            )}
           </CardContent>
         </Card>
 
@@ -1155,13 +1426,50 @@ const ShipmentGroupDetailPage = () => {
               colorRole="muted"
               className="text-center"
             >
-              {group.allocatedAt
-                ? 'Applied to items — landed cost is written onto each bottle for pricing.'
-                : 'Live preview. Hit “Calculate & apply” to write landed cost onto each bottle.'}
+              {costStatus === 'current'
+                ? 'Applied to items. Landed cost is written onto each bottle for pricing.'
+                : costStatus === 'none'
+                  ? 'Live preview. Landed cost is written onto each bottle once costs are added.'
+                  : 'Live preview. The figures on the bottles are out of date; use Recalculate.'}
             </Typography>
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={pendingConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingConfirm?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingConfirm?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline" size="sm">
+                <ButtonContent>Cancel</ButtonContent>
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                size="sm"
+                colorRole={pendingConfirm?.destructive ? 'danger' : 'bold'}
+                onClick={() => {
+                  pendingConfirm?.onConfirm();
+                  setPendingConfirm(null);
+                }}
+              >
+                <ButtonContent>{pendingConfirm?.actionLabel}</ButtonContent>
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };

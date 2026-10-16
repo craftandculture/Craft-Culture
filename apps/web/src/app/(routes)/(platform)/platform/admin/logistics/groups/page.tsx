@@ -79,6 +79,10 @@ const ShipmentGroupsPage = () => {
                   onChange={(e) => setReference(e.target.value)}
                 />
               </div>
+              <Typography variant="bodyXs" colorRole="muted">
+                The reference is copied onto member shipments as their AWB (air) or container
+                number (sea) wherever that is still empty.
+              </Typography>
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setCreating(false)}>
                   <ButtonContent>Cancel</ButtonContent>

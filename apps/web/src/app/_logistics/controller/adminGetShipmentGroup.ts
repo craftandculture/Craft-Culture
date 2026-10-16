@@ -12,10 +12,16 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getShipmentGroupSchema } from '../schemas/shipmentGroupSchemas';
+import recalcGroupLandedCost from '../utils/recalcGroupLandedCost';
 
 /**
  * Get one consolidation group with its member shipments and their items,
  * so the group page can show the bottles the costs will be spread across.
+ *
+ * `costStatus` says whether the landed cost written on the bottles matches the
+ * ledger: allocation runs automatically on every cost or membership change, so
+ * `stale` means a recalculation failed or an input changed elsewhere, and
+ * `missing` means there is nothing to spread the costs across yet.
  */
 const adminGetShipmentGroup = adminProcedure
   .input(getShipmentGroupSchema)
@@ -101,8 +107,28 @@ const adminGetShipmentGroup = adminProcedure
       .where(eq(logisticsGroupDocuments.groupId, group.id))
       .orderBy(desc(logisticsGroupDocuments.createdAt));
 
+    // Same allocation the writes run, computed without writing, so the check
+    // cannot disagree with what "Recalculate" would apply.
+    let costStatus: 'none' | 'current' | 'stale' | 'missing' = 'none';
+    if (costLines.length > 0 || group.allocatedAt) {
+      if (totalBottles === 0) {
+        costStatus = 'missing';
+      } else {
+        try {
+          const check = await recalcGroupLandedCost(group.id, { dryRun: true });
+          costStatus = !check ? 'missing' : check.isStale ? 'stale' : 'current';
+        } catch (error) {
+          console.error('Failed to check group allocation', { error, groupId: group.id });
+          costStatus = 'stale';
+        }
+      }
+    }
+    const itemsMissingProductCost = items.filter((i) => i.productCostPerBottle == null).length;
+
     return {
       group,
+      costStatus,
+      itemsMissingProductCost,
       shipments: shipmentsWithItems,
       itemCount: items.length,
       totalBottles,
