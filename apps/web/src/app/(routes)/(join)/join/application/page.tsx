@@ -24,7 +24,11 @@ const ApplicationPage = async ({ searchParams }: ApplicationPageProps) => {
     redirect(invite ? `/join?invite=${encodeURIComponent(invite)}` : '/join');
   }
 
-  return <ApplicationWizard invite={invite ?? null} isEditing={edit === '1'} />;
+  return (
+    <div className="mx-auto w-full max-w-xl">
+      <ApplicationWizard invite={invite ?? null} isEditing={edit === '1'} />
+    </div>
+  );
 };
 
 export default ApplicationPage;

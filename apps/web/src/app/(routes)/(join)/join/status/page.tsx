@@ -12,7 +12,11 @@ const ApplicationStatusPage = async () => {
   const user = await getCurrentUser();
   if (!user) redirect('/join');
 
-  return <ApplicationStatus />;
+  return (
+    <div className="mx-auto w-full max-w-xl">
+      <ApplicationStatus />
+    </div>
+  );
 };
 
 export default ApplicationStatusPage;

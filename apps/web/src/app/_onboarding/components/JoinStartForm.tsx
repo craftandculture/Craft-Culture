@@ -1,6 +1,15 @@
 'use client';
 
-import { IconArrowLeft, IconArrowRight, IconMail } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconListDetails,
+  IconLock,
+  IconMail,
+  IconMailOpened,
+  IconTemperature,
+  IconWorld,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -58,7 +67,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
 
   if (sentTo) {
     return (
-      <div className="bg-fill-primary border-border-muted space-y-5 rounded-2xl border p-7 text-center shadow-sm">
+      <div className="bg-fill-primary border-border-muted mx-auto max-w-md space-y-5 rounded-2xl border p-7 text-center shadow-sm">
         <span className="bg-text-primary/10 text-text-primary underline-offset-2 mx-auto flex size-14 items-center justify-center rounded-full">
           <Icon icon={IconMail} size="lg" />
         </span>
@@ -76,36 +85,62 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
     );
   }
 
+  const points = [
+    {
+      icon: IconTemperature,
+      title: 'Stored duty-free at 12–14°C',
+      detail:
+        'In the C&C bonded warehouse, humidity controlled and logged around the clock. Duty and VAT are only paid when wine is delivered to you.',
+    },
+    {
+      icon: IconWorld,
+      title: 'Bring wine in from anywhere',
+      detail:
+        'We collect from merchants and bonded warehouses in the UK and Europe and bring it together to the UAE.',
+    },
+    {
+      icon: IconListDetails,
+      title: 'Every case on record',
+      detail: 'See what you hold, buy from our cellar, sell, or request a delivery, all from one account.',
+    },
+  ];
+
   return (
-    <div className="space-y-8">
-      <div className="space-y-3">
+    <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-x-14 lg:gap-y-10">
+      <div className="space-y-4 lg:col-start-1">
         {greeting ? (
-          <>
-            <p className="text-text-primary underline-offset-2 text-sm font-semibold">
-              {greeting.inviterName
-                ? `${greeting.inviterName} has invited you`
-                : 'You have been invited'}
-            </p>
-            <h1 className="font-heading text-text-primary text-3xl leading-tight">
-              Welcome, {greeting.name.split(' ')[0]}.
-            </h1>
-          </>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900">
+            <Icon icon={IconMailOpened} size="xs" />
+            {greeting.inviterName ? `An invitation from ${greeting.inviterName}` : 'You have been invited'}
+          </span>
         ) : (
-          <h1 className="font-heading text-text-primary text-3xl leading-tight">
-            Open your Private Cellar account
-          </h1>
+          <span className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.18em]">
+            By application
+          </span>
         )}
-        <p className="text-text-muted text-base leading-7">
-          A professional account for private collectors: bonded storage in the
-          UAE, international sourcing and consolidation, and a complete record of
-          every case you hold. Membership is by application.
+        <h1 className="font-heading text-text-primary text-4xl leading-tight tracking-tight sm:text-5xl">
+          {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your Private Cellar account'}
+        </h1>
+        <p className="text-text-muted max-w-xl text-base leading-7 sm:text-lg sm:leading-8">
+          Your own cellar with Craft &amp; Culture: your wine stored duty-free in our bonded warehouse, sourced and
+          brought in from merchants abroad, and every case on record.
         </p>
       </div>
 
+      {/*
+        The card sits beside the welcome on a wide screen and straight after it
+        on a phone, so the one thing to do is never below the fold.
+      */}
       <form
         onSubmit={send}
-        className="bg-fill-primary border-border-muted space-y-4 rounded-2xl border p-6 shadow-sm"
+        className="bg-fill-primary border-border-muted h-fit space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/5 sm:p-7 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center"
       >
+        <div>
+          <p className="text-text-primary text-lg font-semibold">
+            {greeting ? 'Accept your invitation' : 'Begin your application'}
+          </p>
+          <p className="text-text-muted mt-0.5 text-sm">It takes a few minutes, and you can finish later.</p>
+        </div>
         <label className="block space-y-2">
           <span className="text-text-primary text-sm font-semibold">Your email</span>
           <input
@@ -119,15 +154,32 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
             className="border-border-primary bg-fill-primary text-text-primary placeholder:text-text-muted/60 focus:border-text-primary h-12 w-full rounded-xl border px-4 text-base outline-none transition-colors"
           />
         </label>
-        <Button type="submit" size="lg" colorRole="bold" className="w-full" isDisabled={isSending}>
-          <ButtonContent iconRight={IconArrowRight} isLoading={isSending}>
-            Send my sign-in link
-          </ButtonContent>
-        </Button>
-        <p className="text-text-muted text-center text-xs">
-          We will email you a secure link to begin your application.
+        <button
+          type="submit"
+          disabled={isSending}
+          className="bg-text-primary text-surface-primary inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition-opacity disabled:opacity-50"
+        >
+          {isSending ? 'Sending…' : 'Send my sign-in link'}
+          {!isSending && <Icon icon={IconArrowRight} size="sm" />}
+        </button>
+        <p className="text-text-muted flex items-center justify-center gap-1.5 text-center text-xs">
+          <Icon icon={IconLock} size="xs" /> No password needed. We email you a secure link.
         </p>
       </form>
+
+      <ul className="grid gap-3 sm:grid-cols-3 lg:col-start-1 lg:grid-cols-1">
+        {points.map((point) => (
+          <li key={point.title} className="flex gap-3.5">
+            <span className="flex size-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900">
+              <Icon icon={point.icon} size="sm" />
+            </span>
+            <div>
+              <p className="text-text-primary text-sm font-semibold">{point.title}</p>
+              <p className="text-text-muted mt-0.5 text-sm leading-6">{point.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
