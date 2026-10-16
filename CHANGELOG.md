@@ -1,3 +1,9 @@
+## [2.0.359](https://github.com/craftandculture/Craft-Culture/compare/v2.0.358...v2.0.359) (2026-10-16)
+
+### Features
+
+* the month across every partner, exportable, with nothing dropped ([3f11cfe](https://github.com/craftandculture/Craft-Culture/commit/3f11cfe954403e6a3c87c02238ab003e47e961e9))
+
 ## [2.0.358](https://github.com/craftandculture/Craft-Culture/compare/v2.0.357...v2.0.358) (2026-10-16)
 
 ### Bug Fixes
