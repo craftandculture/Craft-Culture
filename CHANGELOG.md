@@ -1,3 +1,10 @@
+## [2.0.351](https://github.com/craftandculture/Craft-Culture/compare/v2.0.350...v2.0.351) (2026-10-16)
+
+### Features
+
+* **cellar:** clearer activation sheet ([85c210c](https://github.com/craftandculture/Craft-Culture/commit/85c210c87d2d04e90c5b60c729b1cc916fe8fa0b))
+* **cellar:** review before reserving ([b7bff8d](https://github.com/craftandculture/Craft-Culture/commit/b7bff8d6dca5fd3ffb8404a7353072f9e737dea8))
+
 ## [2.0.350](https://github.com/craftandculture/Craft-Culture/compare/v2.0.349...v2.0.350) (2026-10-16)
 
 ### Bug Fixes
