@@ -6,7 +6,11 @@ import db from '@/database/client';
 export interface UserReference {
   table: string;
   column: string;
-  /** The database removes or clears these rows itself (cascade / set null / default) */
+  /**
+   * The database deals with these rows itself. Only true for cascade, or
+   * set null on a column that can actually be null: SET NULL on a NOT NULL
+   * column fails the delete (private_client_order_documents.uploaded_by did)
+   */
   handledByDatabase: boolean;
   /** The column can be cleared, so the record survives without its author */
   nullable: boolean;
@@ -54,7 +58,8 @@ const userReferenceColumns = async () => {
       (r): UserReference => ({
         table: r.table_name,
         column: r.column_name,
-        handledByDatabase: ['c', 'n', 'd'].includes(r.del_type),
+        handledByDatabase:
+          r.del_type === 'c' || (r.del_type === 'n' && !r.not_null),
         nullable: !r.not_null,
       }),
     );

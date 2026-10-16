@@ -14,9 +14,10 @@ import userReferenceColumns from '../utils/userReferenceColumns';
  *
  * Admin-only action that permanently deletes a user. Rows the database
  * removes itself (sessions, accounts) go with them; records they only touched
- * ("approved by", "updated by", activity) are kept with that field cleared. A
- * user who is the required author of a record (e.g. created a shipment) is
- * refused with a list of what holds them, as deleting would orphan it.
+ * ("approved by", "updated by", activity) are kept with that field cleared.
+ * Records that must keep an author (e.g. a shipment they created, a document
+ * they uploaded) are reassigned to the admin deleting them, and the
+ * reassignment is written to the admin activity log.
  * Use with caution - this action cannot be undone
  */
 const usersDelete = adminProcedure
@@ -77,26 +78,21 @@ const usersDelete = adminProcedure
       .filter((c) => c.n > 0)
       .map((c) => ({ ref: references[c.i]!, n: c.n }));
 
-    const blockers = held
-      .filter((h) => !h.ref.nullable)
-      .map((h) => `${h.ref.table.replace(/_/g, ' ')} (${h.n})`);
-
-    if (blockers.length > 0) {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: `${user.name ?? user.email} cannot be deleted: they are recorded as the author of ${blockers.join(', ')}. Reject the account instead to remove their access.`,
-      });
-    }
-
     const cleared: Record<string, number> = {};
+    const reassigned: Record<string, number> = {};
     await db.transaction(async (tx) => {
-      for (const { ref } of held.filter((h) => h.ref.nullable)) {
+      for (const { ref } of held) {
+        // A record that must name someone keeps the deleting admin instead
+        const replacement = ref.nullable ? null : ctx.user.id;
         const result = await tx.execute(sql`
           UPDATE ${sql.identifier(ref.table)}
-             SET ${sql.identifier(ref.column)} = NULL
+             SET ${sql.identifier(ref.column)} = ${replacement}
            WHERE ${sql.identifier(ref.column)} = ${userId}
         `);
-        if (result.count > 0) cleared[`${ref.table}.${ref.column}`] = result.count;
+        if (result.count > 0) {
+          (ref.nullable ? cleared : reassigned)[`${ref.table}.${ref.column}`] =
+            result.count;
+        }
       }
       await tx.delete(users).where(eq(users.id, userId));
     });
@@ -113,6 +109,7 @@ const usersDelete = adminProcedure
         userRole: user.role,
         approvalStatus: user.approvalStatus,
         clearedReferences: cleared,
+        reassignedToAdmin: reassigned,
       },
     });
 
