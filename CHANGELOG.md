@@ -1,3 +1,15 @@
+## [2.0.389](https://github.com/craftandculture/Craft-Culture/compare/v2.0.388...v2.0.389) (2026-10-16)
+
+### Features
+
+* cellar actions that commit wine or money ask first, and a paused member sees a contact screen instead of the price ([2c8b0e3](https://github.com/craftandculture/Craft-Culture/commit/2c8b0e333b1bdec75a35261f592569810d77ad74))
+* members and the team are told when a cellar purchase, delivery or membership moves ([27ba93a](https://github.com/craftandculture/Craft-Culture/commit/27ba93a1063a420b29d6ef5930add015cfd9022e))
+
+### Bug Fixes
+
+* merging an application keeps its membership, and the cellar tabs no longer overflow on phones ([dd73f13](https://github.com/craftandculture/Craft-Culture/commit/dd73f13e2e06a6823010948ffe5ae28bbe0ebb82))
+* wine offered for sale and wine due for delivery can no longer be claimed twice ([54de99b](https://github.com/craftandculture/Craft-Culture/commit/54de99bfe9866106259f6c841140a7e7563765e7))
+
 ## [2.0.388](https://github.com/craftandculture/Craft-Culture/compare/v2.0.387...v2.0.388) (2026-10-16)
 
 ### Bug Fixes
