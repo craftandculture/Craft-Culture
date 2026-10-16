@@ -19,6 +19,7 @@ import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import bottleName from '@/app/_cellar/utils/bottleName';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -240,7 +241,7 @@ const AvailablePage = () => {
           type="button"
           onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
           className="border-border-muted text-text-primary hover:bg-text-primary hover:text-surface-primary inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold transition-colors sm:h-8"
-          aria-label={`Add a case of ${wine.product}`}
+          aria-label={`Add ${wine.caseConfig > 1 ? 'a case' : 'a bottle'} of ${wine.product}`}
         >
           <Icon icon={IconPlus} size="xs" /> Add
         </button>
@@ -251,18 +252,18 @@ const AvailablePage = () => {
       <span className="bg-text-primary text-surface-primary inline-flex h-9 items-center rounded-lg sm:h-8">
         <button
           type="button"
-          aria-label={`One fewer case of ${wine.product}`}
+          aria-label={`One fewer ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           onClick={() => addCases(wine.lwin18, -1, wine.availableCases)}
           className="flex h-full w-8 items-center justify-center rounded-l-lg hover:bg-white/10"
         >
           <Icon icon={IconMinus} size="xs" />
         </button>
-        <span className="min-w-[44px] text-center text-xs font-semibold tabular-nums">
-          {chosen} {chosen === 1 ? 'case' : 'cases'}
+        <span className="min-w-[64px] px-1 text-center text-xs font-semibold tabular-nums">
+          {unitCount(wine, chosen)}
         </span>
         <button
           type="button"
-          aria-label={`One more case of ${wine.product}`}
+          aria-label={`One more ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           disabled={chosen >= wine.availableCases}
           onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
           className="flex h-full w-8 items-center justify-center rounded-r-lg hover:bg-white/10 disabled:opacity-30"
@@ -273,9 +274,19 @@ const AvailablePage = () => {
     );
   };
 
-  const availability = (wine: (typeof wines)[number]) =>
+  /*
+    A private client counts bottles, and cases only as "a case of six". A
+    wine sold by the bottle has a pack of one, which the trade notation
+    rendered as cases of one.
+  */
+  const unitCount = (wine: (typeof wines)[number], count: number) =>
     wine.caseConfig > 1
-      ? `${wine.availableCases} ${wine.availableCases === 1 ? 'case' : 'cases'} · ${wine.availableBottles} btl`
+      ? `${count} ${count === 1 ? 'case' : 'cases'} of ${wine.caseConfig}`
+      : `${count} ${count === 1 ? 'bottle' : 'bottles'}`;
+
+  const availability = (wine: (typeof wines)[number]) =>
+    wine.caseConfig > 1 && wine.availableCases > 0
+      ? unitCount(wine, wine.availableCases)
       : `${wine.availableBottles} ${wine.availableBottles === 1 ? 'bottle' : 'bottles'}`;
 
   const pill =
@@ -559,8 +570,7 @@ const AvailablePage = () => {
                       <div className="mt-2 flex flex-wrap gap-1">
                         <span className={pill}>{wine.vintage ?? 'NV'}</span>
                         <span className={pill}>
-                          {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
-                          {wine.bottleSize ?? '—'}
+                          {bottleName(wine.bottleSize)}
                         </span>
                       </div>
                     </div>
@@ -586,7 +596,7 @@ const AvailablePage = () => {
                 <tr className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
                   <th className="w-full min-w-[280px] px-4 py-2.5 text-left">Wine</th>
                   <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Vintage</th>
-                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Format</th>
+                  <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Bottle</th>
                   <th className="w-px whitespace-nowrap px-3 py-2.5 text-right">Available</th>
                   <th className="w-px whitespace-nowrap px-3 py-2.5 text-right">Price</th>
                   <th className="w-px whitespace-nowrap px-4 py-2.5 text-right">Add to cellar</th>
@@ -630,8 +640,7 @@ const AvailablePage = () => {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <span className={pill}>
-                          {wine.caseConfig > 1 ? `${wine.caseConfig}×` : ''}
-                          {wine.bottleSize ?? '—'}
+                          {bottleName(wine.bottleSize)}
                         </span>
                       </td>
                       <td className="text-text-muted whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums">
@@ -644,7 +653,7 @@ const AvailablePage = () => {
                         </span>
                         {wine.caseConfig > 1 && (
                           <span className="text-text-muted block text-[11px]">
-                            {money(wine.pricePerCaseUsd)} / case
+                            {money(wine.pricePerCaseUsd)} per case of {wine.caseConfig}
                           </span>
                         )}
                       </td>
