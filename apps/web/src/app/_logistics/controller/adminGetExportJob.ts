@@ -20,6 +20,10 @@ import { exportModeOf } from '../utils/exportStages';
 /**
  * One export job: its details, documents, bond and history
  *
+ * An issued export invoice linked to the job is listed among its documents
+ * even before its PDF has been filed as a document row, marked as coming from
+ * the export invoice so it cannot be removed from here.
+ *
  * @example
  *   await trpcClient.logistics.admin.exports.getOne.query({ shipmentId });
  */
@@ -38,7 +42,7 @@ const adminGetExportJob = adminProcedure
     const { job, shipment, bond } = row;
     const today = dubaiToday();
 
-    const [documents, history, linkedInvoice] = await Promise.all([
+    const [documentRows, history, linkedInvoice] = await Promise.all([
       db
         .select({
           id: logisticsDocuments.id,
@@ -63,12 +67,34 @@ const adminGetExportJob = adminProcedure
         .limit(30),
       job.exportInvoiceId
         ? db
-            .select({ id: exportInvoices.id, number: exportInvoices.number, pdfUrl: exportInvoices.pdfUrl })
+            .select({
+              id: exportInvoices.id,
+              number: exportInvoices.number,
+              status: exportInvoices.status,
+              pdfUrl: exportInvoices.pdfUrl,
+              issuedAt: exportInvoices.issuedAt,
+            })
             .from(exportInvoices)
             .where(eq(exportInvoices.id, job.exportInvoiceId))
             .then((r) => r[0] ?? null)
         : Promise.resolve(null),
     ]);
+
+    const documents = documentRows.map((d) => ({ ...d, fromExportInvoice: false }));
+    if (
+      linkedInvoice?.status === 'issued' &&
+      linkedInvoice.pdfUrl &&
+      !documents.some((d) => d.fileUrl === linkedInvoice.pdfUrl)
+    ) {
+      documents.unshift({
+        id: `export-invoice-${linkedInvoice.id}`,
+        documentType: 'commercial_invoice',
+        fileName: `${linkedInvoice.number ?? 'Export invoice'}.pdf`,
+        fileUrl: linkedInvoice.pdfUrl,
+        uploadedAt: linkedInvoice.issuedAt ?? job.updatedAt,
+        fromExportInvoice: true,
+      });
+    }
 
     return {
       today,

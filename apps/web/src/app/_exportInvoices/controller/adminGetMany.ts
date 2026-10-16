@@ -18,6 +18,7 @@ const adminGetMany = adminProcedure.query(async () => {
       number: row.number,
       status: row.status,
       consigneeName: row.consigneeName,
+      zohoCustomerId: row.zohoCustomerId,
       invoices: parsed.success ? parsed.data.sources.map((s) => s.invoiceNumber) : [],
       currency: parsed.success ? parsed.data.header.currency : 'AED',
       total: totals?.total ?? null,

@@ -238,6 +238,14 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                 {revising ? 'Revising' : editable ? 'Draft' : data.status === 'cancelled' ? 'Cancelled' : 'Issued'}
               </Badge>
               <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
+              {data.linkedJob && (
+                <Link
+                  href={`/platform/admin/logistics/exports/${data.linkedJob.shipmentId}`}
+                  className="rounded-full bg-fill-muted px-2 py-0.5 text-xs font-medium text-text-primary hover:underline"
+                >
+                  Export job {data.linkedJob.jobNumber} →
+                </Link>
+              )}
             </div>
             {data.status === 'issued' && (
               <p className="mt-0.5 text-xs text-text-muted">Frozen. Edit reopens it under the same number; earlier PDFs stay in History.</p>

@@ -1,8 +1,9 @@
 import { TRPCError } from '@trpc/server';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { exportInvoiceSources, exportInvoiceVersions, exportInvoices } from '@/database/schema';
+import { exportInvoiceSources, exportInvoiceVersions, exportInvoices, logisticsJobs } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import logger from '@/utils/logger';
@@ -14,7 +15,8 @@ import buildExportDraft from '../data/buildExportDraft';
  *
  * The draft is saved as version 1 with a snapshot of each invoice, so a later
  * reissue in Zoho is noticed. Standing rules are replayed in the build and
- * reported, so the operator can see which ones applied.
+ * reported, so the operator can see which ones applied. Started from an export
+ * job (shipmentId given), the draft is linked to that job straight away.
  */
 const adminCreateDraft = adminProcedure
   .input(
@@ -22,6 +24,8 @@ const adminCreateDraft = adminProcedure
       zohoCustomerId: z.string(),
       consigneeName: z.string(),
       zohoInvoiceIds: z.array(z.string()).min(1),
+      /** The export job this draft was started from, if any */
+      shipmentId: z.string().uuid().optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -31,7 +35,11 @@ const adminCreateDraft = adminProcedure
 
     let built;
     try {
-      built = await buildExportDraft(input);
+      built = await buildExportDraft({
+        zohoCustomerId: input.zohoCustomerId,
+        consigneeName: input.consigneeName,
+        zohoInvoiceIds: input.zohoInvoiceIds,
+      });
     } catch (error) {
       logger.error('Export draft build failed', { error, input });
       throw new TRPCError({
@@ -68,6 +76,12 @@ const adminCreateDraft = adminProcedure
           snapshotTotal: i.totalUsd,
         })),
       );
+      if (input.shipmentId) {
+        await tx
+          .update(logisticsJobs)
+          .set({ exportInvoiceId: row.id, updatedAt: new Date() })
+          .where(and(eq(logisticsJobs.shipmentId, input.shipmentId), eq(logisticsJobs.kind, 'export')));
+      }
       return row.id;
     });
 

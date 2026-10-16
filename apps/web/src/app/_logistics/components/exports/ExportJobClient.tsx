@@ -6,6 +6,7 @@ import {
   IconChevronRight,
   IconExternalLink,
   IconFileText,
+  IconPlus,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
@@ -291,13 +292,14 @@ const JobView = ({ job }: { job: Job }) => {
 
           {/* Invoice */}
           <section className={`${card} space-y-4 p-5`}>
-            <p className={sectionHeading}>Invoice</p>
+            <p className={sectionHeading}>Invoices</p>
             <div>
               <label htmlFor="export-invoice" className={label}>
-                C&C export invoice
+                C&C export invoice (customs paperwork)
               </label>
               <ExportInvoiceSelect
                 id="export-invoice"
+                zohoCustomerId={client.zohoCustomerId}
                 value={exportInvoiceId}
                 onChange={(invoice) => {
                   setExportInvoiceId(invoice?.id ?? null);
@@ -307,21 +309,46 @@ const JobView = ({ job }: { job: Job }) => {
                   setInvoiceCurrency(invoice.currency);
                 }}
               />
-              {job.linkedInvoice?.pdfUrl ? (
-                <a
-                  href={job.linkedInvoice.pdfUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1.5 inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
-                >
-                  <IconExternalLink size={12} /> Open {job.linkedInvoice.number ?? 'invoice'} PDF
-                </a>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {exportInvoiceId ? (
+                  <Link
+                    href={`/platform/admin/logistics/export-invoices/${exportInvoiceId}`}
+                    className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+                  >
+                    <IconArrowRight size={12} /> Open in Export Invoices
+                  </Link>
+                ) : null}
+                {job.linkedInvoice?.pdfUrl && job.linkedInvoice.id === exportInvoiceId ? (
+                  <a
+                    href={job.linkedInvoice.pdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+                  >
+                    <IconExternalLink size={12} /> Open {job.linkedInvoice.number ?? 'invoice'} PDF
+                  </a>
+                ) : null}
+              </div>
+              {!exportInvoiceId && !job.linkedInvoice ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/platform/admin/logistics/export-invoices/new?shipmentId=${job.shipmentId}`}
+                    className={secondaryButton}
+                  >
+                    <IconPlus size={14} /> Create export invoice
+                  </Link>
+                  <span className="text-xs text-text-muted">
+                    {client.zohoCustomerId !== job.zohoCustomerId || (invoiceNumber.trim() || null) !== job.invoiceNumber
+                      ? 'Save the job first so the client and Zoho invoice carry across.'
+                      : 'Opens with this client and Zoho invoice chosen, and links back here.'}
+                  </span>
+                </div>
               ) : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_6rem]">
               <div>
                 <label htmlFor="invoice-number" className={label}>
-                  Invoice number (Zoho)
+                  Zoho invoice number
                 </label>
                 <ZohoInvoiceInput
                   id="invoice-number"
@@ -392,7 +419,9 @@ const JobView = ({ job }: { job: Job }) => {
               </div>
             </div>
             {job.documents.length === 0 ? (
-              <p className="py-4 text-center text-sm text-text-muted">No documents yet. Upload the invoice here.</p>
+              <p className="py-4 text-center text-sm text-text-muted">
+                No documents yet. Issue the linked export invoice, or upload documents here.
+              </p>
             ) : (
               <ul className="divide-y divide-border-muted">
                 {job.documents.map((d) => (
@@ -402,18 +431,21 @@ const JobView = ({ job }: { job: Job }) => {
                       <span className="truncate">{d.fileName}</span>
                     </a>
                     <div className="flex shrink-0 items-center gap-2">
+                      {d.fromExportInvoice ? <span className={pillClass('slate')}>From export invoice</span> : null}
                       <span className="text-xs text-text-muted">
                         {DOC_LABEL[d.documentType] ?? d.documentType} · {dayLabel(new Date(d.uploadedAt).toISOString())}
                       </span>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${d.fileName}`}
-                        onClick={() => deleteDoc.mutate({ documentId: d.id })}
-                        disabled={deleteDoc.isPending}
-                        className="rounded p-1 text-text-muted hover:bg-surface-secondary hover:text-red-600"
-                      >
-                        <IconTrash size={14} />
-                      </button>
+                      {d.fromExportInvoice ? null : (
+                        <button
+                          type="button"
+                          aria-label={`Remove ${d.fileName}`}
+                          onClick={() => deleteDoc.mutate({ documentId: d.id })}
+                          disabled={deleteDoc.isPending}
+                          className="rounded p-1 text-text-muted hover:bg-surface-secondary hover:text-red-600"
+                        >
+                          <IconTrash size={14} />
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}

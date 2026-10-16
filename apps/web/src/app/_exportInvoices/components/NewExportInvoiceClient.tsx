@@ -1,8 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -19,14 +20,26 @@ const money = (n: number) =>
  * Each invoice opens to show its lines, read live from Zoho. Invoices already
  * on an issued export invoice are marked and left out of "select all";
  * re-exporting one is nearly always a mistake.
+ *
+ * Started from an export job, the job's client is chosen and its Zoho invoice
+ * ticked once they load, and the draft is linked to the job when built.
+ *
+ * @param shipmentId - The export job's shipment, when opened from a job
  */
-const NewExportInvoiceClient = () => {
+const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
   const api = useTRPC();
   const router = useRouter();
   const [customerId, setCustomerId] = useState('');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string[]>([]);
+  // Each pre-fill from the job happens once, so the operator can change it after
+  const [seeded, setSeeded] = useState({ customer: false, invoice: false });
+
+  const job = useQuery({
+    ...api.logistics.admin.exports.getOne.queryOptions({ shipmentId: shipmentId ?? '' }),
+    enabled: Boolean(shipmentId),
+  });
 
   const consignees = useQuery(api.exportInvoices.admin.consignees.queryOptions());
   const invoices = useQuery({
@@ -61,6 +74,23 @@ const NewExportInvoiceClient = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const jobData = job.data;
+  useEffect(() => {
+    if (seeded.customer || !jobData) return;
+    setSeeded((s) => ({ ...s, customer: true }));
+    if (jobData.zohoCustomerId) setCustomerId(jobData.zohoCustomerId);
+  }, [jobData, seeded.customer]);
+
+  const jobInvoiceNumber = jobData?.invoiceNumber?.trim().toLowerCase();
+  useEffect(() => {
+    if (seeded.invoice || !seeded.customer || !invoices.data || customerId !== jobData?.zohoCustomerId) return;
+    setSeeded((s) => ({ ...s, invoice: true }));
+    const match = jobInvoiceNumber
+      ? invoices.data.find((i) => i.invoiceNumber.trim().toLowerCase() === jobInvoiceNumber)
+      : undefined;
+    if (match) setSelected([match.zohoInvoiceId]);
+  }, [invoices.data, seeded, customerId, jobData?.zohoCustomerId, jobInvoiceNumber]);
+
   const consignee = consignees.data?.find((c) => c.zohoCustomerId === customerId);
   const filtered = (consignees.data ?? []).filter((c) => c.displayName.toLowerCase().includes(search.trim().toLowerCase()));
   const rows = invoices.data ?? [];
@@ -76,6 +106,19 @@ const NewExportInvoiceClient = () => {
   };
 
   return (
+    <div className="space-y-4">
+      {jobData && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-muted bg-fill-muted/30 px-4 py-2.5 text-sm">
+          <span>
+            For export job <span className="font-mono font-medium">{jobData.jobNumber}</span> · {jobData.clientName}
+            {jobData.invoiceNumber ? ` · Zoho invoice ${jobData.invoiceNumber}` : ''}. The draft is linked to the job when built.
+            {!jobData.zohoCustomerId && ' The job has no Zoho client, so choose the consignee below.'}
+          </span>
+          <Link href={`/platform/admin/logistics/exports/${jobData.shipmentId}`} className="text-xs text-text-muted hover:underline">
+            Back to job
+          </Link>
+        </div>
+      )}
     <div className="grid gap-6 pb-24 lg:grid-cols-[300px_minmax(0,1fr)]">
       {/* Step 1 */}
       <section className="space-y-3">
@@ -233,10 +276,11 @@ const NewExportInvoiceClient = () => {
               onClick={() =>
                 create.mutate({
                   zohoCustomerId: customerId,
-                  consigneeName: consignee?.displayName ?? '',
+                  consigneeName: consignee?.displayName ?? jobData?.clientName ?? '',
                   zohoInvoiceIds: [...chosen]
                     .sort((a, b) => a.invoiceNumber.localeCompare(b.invoiceNumber))
                     .map((i) => i.zohoInvoiceId),
+                  shipmentId: jobData ? shipmentId : undefined,
                 })
               }
             >
@@ -245,6 +289,7 @@ const NewExportInvoiceClient = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };
