@@ -1232,9 +1232,7 @@ const UserManagementPage = () => {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete User</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete {user.name}? This action
-                                    cannot be undone and will permanently delete their account and
-                                    all associated data.
+                                    Are you sure you want to delete {user.name}? This cannot be undone. Records they created are kept and reassigned to you.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -1372,9 +1370,7 @@ const UserManagementPage = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete User</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete {user.name}? This action cannot
-                                be undone and will permanently delete their account and all
-                                associated data.
+                                Are you sure you want to delete {user.name}? This cannot be undone. Records they created are kept and reassigned to you.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

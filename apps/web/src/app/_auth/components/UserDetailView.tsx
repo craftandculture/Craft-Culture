@@ -365,7 +365,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete User</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete {user.name}? This action cannot be undone.
+                  Are you sure you want to delete {user.name}? This action cannot be undone. Records they created are kept and reassigned to you.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
