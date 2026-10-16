@@ -1,3 +1,9 @@
+## [2.0.382](https://github.com/craftandculture/Craft-Culture/compare/v2.0.381...v2.0.382) (2026-10-16)
+
+### Features
+
+* **cellar:** lighter verification step ([e36a55a](https://github.com/craftandculture/Craft-Culture/commit/e36a55a2733a1fb53388a666415b28eb516bee28))
+
 ## [2.0.381](https://github.com/craftandculture/Craft-Culture/compare/v2.0.380...v2.0.381) (2026-10-16)
 
 ### Bug Fixes
