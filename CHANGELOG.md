@@ -1,3 +1,9 @@
+## [2.0.358](https://github.com/craftandculture/Craft-Culture/compare/v2.0.357...v2.0.358) (2026-10-16)
+
+### Bug Fixes
+
+* pay the owner at landed cost, from their own shipment ([4377118](https://github.com/craftandculture/Craft-Culture/commit/437711815bcf48a4fac8933d32b6e0490f9bd6a1))
+
 ## [2.0.357](https://github.com/craftandculture/Craft-Culture/compare/v2.0.356...v2.0.357) (2026-10-16)
 
 ### Bug Fixes
