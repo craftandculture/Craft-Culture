@@ -1,3 +1,9 @@
+## [2.0.347](https://github.com/craftandculture/Craft-Culture/compare/v2.0.346...v2.0.347) (2026-10-16)
+
+### Features
+
+* **cellar:** transfers follow their shipment; cellar overview redesign ([2b88cf9](https://github.com/craftandculture/Craft-Culture/commit/2b88cf90a9417044c700c203aa087cdf70414203))
+
 ## [2.0.346](https://github.com/craftandculture/Craft-Culture/compare/v2.0.345...v2.0.346) (2026-10-15)
 
 ### Bug Fixes
