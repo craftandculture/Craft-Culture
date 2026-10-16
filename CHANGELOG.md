@@ -1,3 +1,9 @@
+## [2.0.355](https://github.com/craftandculture/Craft-Culture/compare/v2.0.354...v2.0.355) (2026-10-16)
+
+### Features
+
+* **cellar:** wine-first purchases that scale; account summary in place of the bill ([9b12cef](https://github.com/craftandculture/Craft-Culture/commit/9b12ceff9a0acde18cfde6dab95d04aa4352ee23))
+
 ## [2.0.354](https://github.com/craftandculture/Craft-Culture/compare/v2.0.353...v2.0.354) (2026-10-16)
 
 ### Features
