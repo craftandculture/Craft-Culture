@@ -1,3 +1,9 @@
+## [2.0.353](https://github.com/craftandculture/Craft-Culture/compare/v2.0.352...v2.0.353) (2026-10-16)
+
+### Features
+
+* **cellar:** plain-English member copy and responsive pass ([bdbb9f9](https://github.com/craftandculture/Craft-Culture/commit/bdbb9f9c874e1fc26141eb96becd9d0759d69c61))
+
 ## [2.0.352](https://github.com/craftandculture/Craft-Culture/compare/v2.0.351...v2.0.352) (2026-10-16)
 
 ### Features
