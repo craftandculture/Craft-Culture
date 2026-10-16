@@ -1,3 +1,9 @@
+## [2.0.375](https://github.com/craftandculture/Craft-Culture/compare/v2.0.374...v2.0.375) (2026-10-16)
+
+### Features
+
+* shipment rows name who they are for, with the partner's logo, and the list searches by client ([322a0cc](https://github.com/craftandculture/Craft-Culture/commit/322a0cce609dc0b14f4747595262e1c34767e0ff))
+
 ## [2.0.374](https://github.com/craftandculture/Craft-Culture/compare/v2.0.373...v2.0.374) (2026-10-16)
 
 ### Features
