@@ -1,3 +1,10 @@
+## [2.0.369](https://github.com/craftandculture/Craft-Culture/compare/v2.0.368...v2.0.369) (2026-10-16)
+
+### Features
+
+* freight quotes and requests are one page, and accepting a quote creates or links its shipment ([cecbf73](https://github.com/craftandculture/Craft-Culture/commit/cecbf73f3489bfc536c30cf9530809488d21d035))
+* logistics tabs are Dashboard, Shipments, Exports, Freight quotes, Freight bills and Reports ([fb9b460](https://github.com/craftandculture/Craft-Culture/commit/fb9b460f2ce543de6562b51afd079cbb9f4315ec))
+
 ## [2.0.368](https://github.com/craftandculture/Craft-Culture/compare/v2.0.367...v2.0.368) (2026-10-16)
 
 ### Features
