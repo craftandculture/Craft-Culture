@@ -3,7 +3,7 @@ const wineSources = [
   {
     value: 'lcb',
     label: 'Wine held at LCB (UK bond)',
-    hint: 'We can arrange a transfer into your C&C account at LCB Burton.',
+    hint: 'We can arrange a bonded transfer into your C&C-managed storage at LCB Burton.',
     isTransfer: true,
   },
   {
@@ -14,8 +14,14 @@ const wineSources = [
   },
   {
     value: 'investment_company',
-    label: 'Wine held with a wine investment company',
-    hint: 'We can coordinate the transfer from your investment portfolio into your private cellar.',
+    label: 'Wine held with a wine investment platform',
+    hint: 'We can coordinate the transfer of your holdings into your private cellar.',
+    isTransfer: true,
+  },
+  {
+    value: 'multiple_locations',
+    label: 'Wine held across multiple locations',
+    hint: 'We can help consolidate your holdings and bring your collection together under C&C.',
     isTransfer: true,
   },
   {
@@ -27,7 +33,7 @@ const wineSources = [
   {
     value: 'uae_in_bond',
     label: 'I would like to buy wine in the UAE',
-    hint: 'Browse wines already held in bond with C&C and add them directly to your cellar.',
+    hint: 'Browse wines already held in bond with C&C and add them directly to your private cellar, with no international shipping required.',
     isTransfer: false,
   },
   {

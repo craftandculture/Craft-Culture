@@ -70,8 +70,10 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
                 : item.value === 'lcb'
                   ? 'From LCB'
                   : item.value === 'investment_company'
-                    ? 'From an investment company'
-                    : 'From another cellar'}
+                    ? 'From an investment platform'
+                    : item.value === 'multiple_locations'
+                      ? 'From several places'
+                      : 'From another cellar'}
           </button>
         ))}
       </div>
@@ -94,7 +96,7 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
               <input
                 className={`${fieldClass} h-10 text-sm`}
                 list={`bring-holders-${source}`}
-                placeholder={source === 'investment_company' ? 'Which company?' : 'Where is it held?'}
+                placeholder={source === 'investment_company' ? 'Which platform?' : 'Where is it held?'}
                 value={details.holderName}
                 onChange={(event) => setDetails((current) => ({ ...current, holderName: event.target.value }))}
               />
@@ -105,7 +107,10 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
               </datalist>
             </>
           )}
-          {(source === 'lcb' || source === 'uk_eu_cellar' || source === 'investment_company') && (
+          {(source === 'lcb' ||
+            source === 'uk_eu_cellar' ||
+            source === 'investment_company' ||
+            source === 'multiple_locations') && (
             <input
               className={`${fieldClass} h-10 text-sm`}
               inputMode="numeric"

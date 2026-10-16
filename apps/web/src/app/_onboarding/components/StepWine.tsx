@@ -136,10 +136,22 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
 
               {chosen &&
                 answer &&
-                (source.value === 'uk_eu_cellar' || source.value === 'investment_company') && (
+                (source.value === 'uk_eu_cellar' ||
+                  source.value === 'investment_company' ||
+                  source.value === 'multiple_locations') && (
                 <div className="space-y-4 px-4 pb-4">
+                  {source.value === 'multiple_locations' ? (
+                    <FieldLabel label="Where is it held?" optional>
+                      <input
+                        className={`${fieldClass} h-11`}
+                        value={answer.note}
+                        onChange={(event) => update(source.value, 'note', event.target.value)}
+                        placeholder="e.g. a UK merchant, a vault in Geneva, an investment platform"
+                      />
+                    </FieldLabel>
+                  ) : (
                   <FieldLabel
-                    label={source.value === 'investment_company' ? 'Which company?' : 'Where is your wine held?'}
+                    label={source.value === 'investment_company' ? 'Which platform?' : 'Where is your wine held?'}
                     optional
                   >
                     <input
@@ -159,6 +171,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
                       ))}
                     </datalist>
                   </FieldLabel>
+                  )}
                   <FieldLabel label="Approximate collection size" optional>
                     <div className="flex flex-wrap gap-2">
                       {collectionSizes.map((size) => {
@@ -204,7 +217,7 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
         })}
       </div>
       <p className="text-text-muted text-xs leading-5">
-        Ticking an option is enough. Every detail is optional and can be added later from your cellar.
+        Select what applies. You can add further details later.
       </p>
     </StepFrame>
   );
