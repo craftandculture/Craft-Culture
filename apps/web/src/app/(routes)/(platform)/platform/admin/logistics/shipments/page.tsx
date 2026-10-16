@@ -179,6 +179,27 @@ const ShipmentsList = () => {
           })}
         </div>
 
+        <div className="-mt-2 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+          <span>Also:</span>
+          {(
+            [
+              ['draft', 'Drafts'],
+              ['cancelled', 'Cancelled'],
+            ] as const
+          ).map(([key, text]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setParam({ stage: stage === key ? null : key })}
+              className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+                stage === key ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
+              }`}
+            >
+              {text} <span className="tabular-nums opacity-70">{counts ? counts[key] : '–'}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Search, type and sort */}
         <div className="space-y-3">
           <div className="relative">
