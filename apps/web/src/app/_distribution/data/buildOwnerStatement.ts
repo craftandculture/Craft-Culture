@@ -4,6 +4,7 @@ import { packAgnostic } from '../utils/codeBridge';
 import valueFifo from '../utils/valueFifo';
 import type { OutLayer } from '../utils/valueFifo';
 import wineKey from '../utils/wineKey';
+import wineLandedReady from '../utils/wineLandedReady';
 
 export interface StatementLine {
   lwin18: string | null;
@@ -126,48 +127,111 @@ const buildOwnerStatement = async (input: {
     /*
       What the wine cost its owner, landed.
 
-      Not the import price: Sophie's instruction is the landed cost from the
-      Pricing Manager, which is freight and transfer inclusive, and
-      `logistics_shipment_items.landed_cost_per_bottle` is where that is
-      decided — `lotShipmentCost` says so in as many words, and the payout
-      needs the same answer as the pricing screen or the two disagree about
-      what a bottle cost.
+      The Pricing Manager is the source: import price plus cost override. Not
+      the shipment line — Cru have no shipment lines at all and every bottle of
+      theirs priced at nothing, which reads as pure margin on a statement they
+      are meant to be paid from.
 
-      The owner's own shipment line wins. One wine can arrive on two owners'
-      shipments at two costs, and taking the latest line anywhere once gave
-      Ihab's two cases Crurated's cost for their thirty.
+      Two things the Pricing Manager cannot say on its own, so they are
+      remembered here instead:
+
+      A wine that sells out drops off it, taking its cost with it. Fillottes,
+      Leflaive Sigma, L'If, Heitz Arvelets, Joaquin and Marsannay 2022 all sold
+      through, and a sale made in September still has to be priced in October.
+      So the last known cost is kept and used when the live one has gone.
+
+      And one wine can belong to two owners at two costs — Montille Bourgogne
+      Blanc and Dancer Hautes-Cotes Blanc are held by both Crurated and Ihab —
+      which a price held per wine cannot express. The remembered cost is per
+      owner, so each is paid its own.
     */
-    const costs = lwins.length
-      ? await client<
-          {
-            key: string;
-            landedPerBottle: number | null;
-            shipmentNumber: string | null;
-            ownLine: boolean;
-          }[]
-        >`
+    const keys = [...new Set(lwins.map((value) => wineKey(value)))];
+    const remembers = await wineLandedReady();
+
+    const live = keys.length
+      ? await client<{ key: string; landedPerBottle: number }[]>`
           SELECT DISTINCT ON (key)
                  ${packAgnostic(
-                   () => client`UPPER(REGEXP_REPLACE(i.lwin, '[^A-Za-z0-9]', '', 'g'))`,
+                   () => client`UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
                  )} AS key,
-                 i.landed_cost_per_bottle AS "landedPerBottle",
-                 sh.shipment_number AS "shipmentNumber",
-                 (sh.partner_id = ow.partner_id) IS TRUE AS "ownLine"
-          FROM logistics_shipment_items i
-          JOIN logistics_shipments sh ON sh.id = i.shipment_id
-          CROSS JOIN (
-            SELECT partner_id FROM cons_owners WHERE id = ${input.ownerId}
-          ) ow
-          WHERE i.lwin IS NOT NULL
-            AND i.landed_cost_per_bottle IS NOT NULL
+                 (
+                   p.import_price_per_bottle
+                   + COALESCE(p.cost_override_per_bottle, 0)
+                 )::float8 AS "landedPerBottle"
+          FROM wms_product_pricing p
+          WHERE p.import_price_per_bottle IS NOT NULL
+            AND p.import_price_per_bottle > 0
             AND ${packAgnostic(
-              () => client`UPPER(REGEXP_REPLACE(i.lwin, '[^A-Za-z0-9]', '', 'g'))`,
-            )} = ANY(${lwins.map((value) => wineKey(value))}::text[])
-          ORDER BY key,
-                   (sh.partner_id = ow.partner_id) IS TRUE DESC,
-                   i.created_at DESC
+              () => client`UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
+            )} = ANY(${keys}::text[])
+          ORDER BY key, p.updated_at DESC NULLS LAST
         `
       : [];
+
+    /*
+      Written down while it is still there to write down. A wine costed today
+      and sold out tomorrow keeps the figure it was costed at, which is the
+      whole of what makes a past month still priceable.
+    */
+    if (remembers && live.length > 0) {
+      const byKey = new Map(sold.map((row) => [wineKey(row.lwin18), row]));
+
+      await client`
+        INSERT INTO cons_wine_landed ${client(
+          live.map((row) => ({
+            owner_id: input.ownerId,
+            wine_key: row.key,
+            lwin18: byKey.get(row.key)?.lwin18 ?? null,
+            product_name: byKey.get(row.key)?.productName ?? null,
+            landed_per_bottle: row.landedPerBottle,
+            source: 'pricing-manager',
+          })),
+        )}
+        ON CONFLICT (owner_id, wine_key) DO UPDATE SET
+          landed_per_bottle = EXCLUDED.landed_per_bottle,
+          lwin18 = COALESCE(EXCLUDED.lwin18, cons_wine_landed.lwin18),
+          product_name = COALESCE(
+            EXCLUDED.product_name, cons_wine_landed.product_name
+          ),
+          source = EXCLUDED.source,
+          updated_at = NOW()
+      `;
+    }
+
+    const remembered = remembers
+      ? await client<{ key: string; landedPerBottle: number; source: string }[]>`
+          SELECT wine_key AS key, landed_per_bottle::float8 AS "landedPerBottle",
+                 source
+          FROM cons_wine_landed
+          WHERE owner_id = ${input.ownerId}
+            AND wine_key = ANY(${keys}::text[])
+        `
+      : [];
+
+    /*
+      An owner's own figure beats the shared one, and a remembered figure beats
+      nothing at all. Set by hand wins outright: somebody has looked.
+    */
+    const costs = keys.map((key) => {
+      const kept = remembered.find((row) => row.key === key);
+      const now = live.find((row) => row.key === key);
+      const chosen =
+        kept?.source === 'by-hand'
+          ? kept
+          : (now ?? kept ?? null);
+
+      return {
+        key,
+        landedPerBottle: chosen?.landedPerBottle ?? null,
+        shipmentNumber:
+          chosen === null
+            ? null
+            : chosen === now
+              ? 'Pricing Manager'
+              : `last known (${kept?.source ?? 'kept'})`,
+        ownLine: true,
+      };
+    });
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
     const consumedByLwin = new Map(

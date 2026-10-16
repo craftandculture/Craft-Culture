@@ -2185,6 +2185,38 @@ const runMigrations = async () => {
     console.log('✅ cons_import_unmatched ready');
 
     /*
+      What a wine cost its owner, remembered.
+
+      Two faults it answers. A wine that sells out drops off the Pricing
+      Manager, taking its landed cost with it — and a sale made last month
+      still has to be priced this month, so the last known cost is kept rather
+      than looked up and found missing. And one wine can belong to two owners
+      at two costs (Montille Bourgogne Blanc, Dancer Hautes-Cotes Blanc, held
+      by both Crurated and Ihab), which a per-wine price cannot express.
+
+      Keyed per owner and pack-agnostically, so a wine invoiced in sixes and in
+      singles is one wine, as it is everywhere else here.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_wine_landed" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "cons_owners"("id") ON DELETE CASCADE,
+        "wine_key" text NOT NULL,
+        "lwin18" text,
+        "product_name" text,
+        "landed_per_bottle" double precision NOT NULL,
+        "source" text NOT NULL DEFAULT 'pricing-manager',
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_wine_landed_unique" ON "cons_wine_landed"("owner_id","wine_key")`,
+    );
+    console.log('✅ cons_wine_landed ready');
+
+    /*
       Export invoices — the combined commercial invoice & packing list.
 
       The document is JSON; versions keep every state with the ops and request

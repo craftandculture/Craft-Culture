@@ -80,6 +80,21 @@ const StatementPanel = ({
     }),
   );
 
+  /* Per owner, because one wine can cost two owners two different amounts */
+  const setLanded = useMutation(
+    api.distribution.admin.setWineLanded.mutationOptions({
+      onSuccess: async (result) => {
+        toast.success(
+          result.landedPerBottle === null
+            ? 'Back to the Pricing Manager price'
+            : 'Landed cost recorded for this owner',
+        );
+        await statement.refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const lines = statement.data?.lines ?? [];
   const summary = statement.data?.summary;
 
@@ -212,12 +227,45 @@ const StatementPanel = ({
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {formatBottles(line.bottlesSold)}
                     </td>
+                    {/*
+                      Editable per owner. One wine held by two owners has one
+                      price in the Pricing Manager and two real costs, and
+                      paying both from one figure overpays one out of the
+                      other's margin.
+                    */}
                     <td className="py-2 pr-3 text-right tabular-nums">
-                      {line.costPerBottle === null ? (
-                        <span className="text-text-warning">no price</span>
-                      ) : (
-                        line.costPerBottle.toFixed(2)
-                      )}
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={line.costPerBottle ?? ''}
+                        placeholder="no cost"
+                        disabled={setLanded.isPending || !line.lwin18}
+                        onBlur={(event) => {
+                          const typed = event.target.value.trim();
+                          const next = typed === '' ? null : Number(typed);
+
+                          if (next !== null && !Number.isFinite(next)) return;
+                          if (next === (line.costPerBottle ?? null)) return;
+
+                          setLanded.mutate({
+                            ownerId,
+                            lwin18: line.lwin18 ?? '',
+                            productName: line.productName,
+                            landedPerBottle: next,
+                          });
+                        }}
+                        className={`border-border-primary w-24 rounded border bg-transparent px-1 py-0.5 text-right tabular-nums ${
+                          line.costPerBottle === null
+                            ? 'border-border-warning placeholder:text-text-warning'
+                            : 'border-transparent hover:border-border-primary'
+                        }`}
+                        title={
+                          line.costFrom
+                            ? `From ${line.costFrom}. Type to set this owner's own cost.`
+                            : "No landed cost. Type this owner's own."
+                        }
+                      />
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {line.dueToOwner === null
