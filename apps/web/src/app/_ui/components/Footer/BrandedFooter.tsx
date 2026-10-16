@@ -105,14 +105,13 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               >
                 About Us
               </Link>
-              <Link
-                href="https://craftculture.xyz/contact"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* The marketing site has no /contact page; the address is the contact */}
+              <a
+                href="mailto:enquiries@craftculture.xyz"
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Contact
-              </Link>
+                enquiries@craftculture.xyz
+              </a>
             </nav>
           </div>
 

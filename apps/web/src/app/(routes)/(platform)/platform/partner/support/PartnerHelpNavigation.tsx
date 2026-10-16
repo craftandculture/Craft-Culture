@@ -6,14 +6,16 @@ import {
   IconPlaneDeparture,
   IconShip,
   IconTruckDelivery,
+  IconUsers,
 } from '@tabler/icons-react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 
 const navItems = [
-  { id: 'storing', label: 'Storing wine', icon: IconBuildingWarehouse },
+  { id: 'storing', label: 'Storing', icon: IconBuildingWarehouse },
+  { id: 'orders', label: 'Client orders', icon: IconUsers },
   { id: 'shipping-in', label: 'Shipping in', icon: IconShip },
-  { id: 'releasing', label: 'Releasing', icon: IconTruckDelivery },
+  { id: 'delivering', label: 'Delivering', icon: IconTruckDelivery },
   { id: 'exporting', label: 'Exporting', icon: IconPlaneDeparture },
   { id: 'faq', label: 'Questions', icon: IconHelp },
 ];
@@ -34,7 +36,7 @@ const PartnerHelpNavigation = () => {
             key={item.id}
             type="button"
             onClick={() => scrollToSection(item.id)}
-            className="text-text-muted hover:bg-fill-secondary hover:text-text-primary flex flex-shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+            className="text-text-muted hover:bg-fill-secondary hover:text-text-primary flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors"
           >
             <Icon icon={item.icon} size="xs" />
             <span className="whitespace-nowrap">{item.label}</span>

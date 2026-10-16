@@ -20,11 +20,11 @@ const HelpSection = ({ id, icon, title, children }: HelpSectionProps) => {
   return (
     <section
       id={id}
-      className="scroll-mt-32 rounded-xl border border-border-primary bg-fill-primary p-5 sm:p-6"
+      className="scroll-mt-32 rounded-xl border border-border-primary bg-fill-primary p-4 shadow-sm sm:p-6"
     >
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10">
-          <Icon icon={icon} size="md" colorRole="brand" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200">
+          <Icon icon={icon} size="md" />
         </div>
         <Typography variant="headingSm">{title}</Typography>
       </div>
