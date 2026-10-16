@@ -34,21 +34,21 @@ const STATES: Record<
     detail: 'We are looking at it. You can still withdraw.',
   },
   listed: {
-    label: 'On the lists',
+    label: 'Listed for sale',
     tone: 'live',
     detail: 'Offered to our trade and private clients. You can still withdraw.',
   },
   placed: {
     label: 'With a distributor',
     tone: 'gone',
-    detail: 'Out of bond and on sale. It can no longer be withdrawn.',
+    detail: 'Delivered to a licensed distributor and on sale. It can no longer be withdrawn.',
   },
   partially_sold: {
     label: 'Part sold',
     tone: 'gone',
     detail: 'Some has sold. The rest is still on offer.',
   },
-  sold: { label: 'Sold', tone: 'gone', detail: 'Settled on the next payment run.' },
+  sold: { label: 'Sold', tone: 'gone', detail: 'Paid to you in the next monthly payment.' },
   withdrawn: { label: 'Withdrawn', tone: 'held', detail: 'Back in your cellar.' },
   expired: { label: 'Expired', tone: 'held', detail: 'Back in your cellar.' },
   draft: {
@@ -59,9 +59,9 @@ const STATES: Record<
 };
 
 const TONES = {
-  held: 'bg-teal-50 text-teal-700',
-  live: 'bg-violet-50 text-violet-700',
-  gone: 'bg-amber-50 text-amber-800',
+  held: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300',
+  live: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
+  gone: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900',
 };
 
 /**
@@ -124,9 +124,9 @@ const SellingPage = () => {
           Selling
         </Typography>
         <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Wine you have asked us to sell on your behalf. You receive your ask in
-          full &mdash; our commission is added on top of it, not taken out of
-          it.
+          Wine you have asked us to sell on your behalf. You receive your asking
+          price in full &mdash; our commission is added on top of it, never
+          taken out of it.
         </Typography>
       </div>
 
@@ -141,10 +141,10 @@ const SellingPage = () => {
             {
               label: 'You receive if it sells',
               value: money(openValue),
-              detail: 'before anything is placed',
+              detail: 'at your asking price',
             },
             {
-              label: 'On the lists',
+              label: 'Listed for sale',
               value: String(live.length),
               detail: live.length === 1 ? 'offer live' : 'offers live',
             },
@@ -158,7 +158,7 @@ const SellingPage = () => {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="border-border-muted rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
+              className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
             >
               <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
                 {stat.label}
@@ -185,22 +185,97 @@ const SellingPage = () => {
             Nothing offered for sale.
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" className="mt-1 block">
-            Choose bottles in your cellar and press Sell to offer them.
+            Choose wines in your cellar and press Sell to offer them.
           </Typography>
         </div>
       )}
 
+      {/* A phone gets one card per offer: a seven-column table cannot be read at that width */}
       {!isLoading && mandates.length > 0 && (
-        <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[68vh] sm:overflow-auto">
+        <ul className="space-y-2 sm:hidden">
+          {mandates.map((mandate) => {
+            const state = STATES[mandate.status] ?? {
+              label: mandate.status,
+              tone: 'held' as const,
+              detail: '',
+            };
+            const canWithdraw = ['offered', 'listed'].includes(mandate.status);
+
+            return (
+              <li
+                key={mandate.id}
+                className="border-border-muted bg-surface-primary rounded-xl border p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-text-primary min-w-0 text-sm font-semibold leading-snug">
+                    {mandate.productName}
+                  </p>
+                  <span
+                    className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONES[state.tone]}`}
+                  >
+                    {state.label}
+                  </span>
+                </div>
+                <p className="text-text-muted mt-0.5 text-xs">
+                  <span className="font-mono">{mandate.mandateNumber}</span>
+                  {mandate.offeredAt
+                    ? ` · offered ${formatDistanceToNowStrict(new Date(mandate.offeredAt), { addSuffix: true })}`
+                    : ''}
+                </p>
+                <dl className="border-border-muted mt-3 grid grid-cols-3 gap-2 border-t pt-3 text-xs">
+                  <div>
+                    <dt className="text-text-muted">Bottles</dt>
+                    <dd className="text-text-primary m-0 font-semibold tabular-nums">
+                      {mandate.bottlesRemaining}
+                      {mandate.bottlesRemaining !== mandate.bottlesOffered &&
+                        ` of ${mandate.bottlesOffered}`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">Your price</dt>
+                    <dd className="text-text-primary m-0 font-semibold tabular-nums">
+                      {money(mandate.askPerBottleUsd)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">You receive</dt>
+                    <dd className="text-text-primary m-0 font-semibold tabular-nums">
+                      {money(mandate.askPerBottleUsd * mandate.bottlesRemaining)}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="text-text-muted mt-2 text-xs leading-5">
+                  {mandate.status === 'draft' && mandate.adminNotes
+                    ? mandate.adminNotes
+                    : state.detail}
+                </p>
+                {canWithdraw && (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => withdraw({ mandateId: mandate.id })}
+                    className="border-border-muted text-text-primary mt-3 h-10 w-full rounded-lg border text-sm font-semibold disabled:opacity-50"
+                  >
+                    Withdraw
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {!isLoading && mandates.length > 0 && (
+        <div className="border-border-muted hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
               <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                 <th className="px-4 py-2 text-left">Wine</th>
                 <th className="px-3 py-2 text-right">Bottles</th>
-                <th className="px-3 py-2 text-right">Your ask</th>
+                <th className="px-3 py-2 text-right">Your price</th>
                 <th className="px-3 py-2 text-right">Buyer pays</th>
                 <th className="px-3 py-2 text-right">You receive</th>
-                <th className="px-3 py-2 text-left">State</th>
+                <th className="px-3 py-2 text-left">Status</th>
                 <th className="px-4 py-2 text-right" />
               </tr>
             </thead>
@@ -275,7 +350,7 @@ const SellingPage = () => {
                               100),
                       )}
                       <span className="text-text-muted block text-[11px]">
-                        listed in bond
+                        listed price
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right font-semibold tabular-nums">

@@ -81,6 +81,10 @@ const sizeMl = (size: string | null) => {
   return size.toLowerCase().includes('cl') ? value * 10 : value;
 };
 
+/* The one primary action style on member screens: near-black, not brand teal */
+const DARK_ACTION =
+  'border-transparent bg-text-primary text-surface-primary fill-surface-primary hover:border-transparent hover:bg-text-primary hover:opacity-90 active:bg-text-primary';
+
 type Currency = 'USD' | 'AED';
 
 /*
@@ -194,7 +198,7 @@ const CellarPage = () => {
     api.cellar.member.submitRelease.mutationOptions({
       onSuccess: (result) => {
         toast.success(
-          `${result.requestNumber} submitted. We will confirm the cost of clearance and delivery.`,
+          `Delivery request ${result.requestNumber} sent. We will confirm the costs for your approval.`,
         );
         setBasket(new Map());
         setAddress('');
@@ -275,7 +279,7 @@ const CellarPage = () => {
   const { mutate: acceptRelease, isPending: isAccepting } = useMutation(
     api.cellar.member.acceptRelease.mutationOptions({
       onSuccess: (result) => {
-        toast.success(`Accepted. Order ${result.orderNumber} has been raised.`);
+        toast.success(`Accepted. We are arranging your delivery (order ${result.orderNumber}).`);
         void refetchReleases();
         void refetch();
       },
@@ -603,7 +607,7 @@ const CellarPage = () => {
 
   return (
     <div className="w-full pb-8">
-      <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {/*
             The same programme the member joined, named the same way. A portal
@@ -612,7 +616,7 @@ const CellarPage = () => {
           */}
           <Typography
             variant="bodyXs"
-            className="text-text-brand mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]"
+            className="text-text-muted mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]"
           >
             C&amp;C Private Cellar
           </Typography>
@@ -626,11 +630,11 @@ const CellarPage = () => {
             {data?.partner?.name ?? '\u00A0'}
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-            Held in bond at Craft &amp; Culture, Ras Al Khaimah. Duty is
-            suspended until you call wines forward.
+            Stored duty-free in our bonded warehouse in Ras Al Khaimah. Duty
+            and VAT are only paid when wine is delivered to you in the UAE.
           </Typography>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -651,9 +655,9 @@ const CellarPage = () => {
                 type="button"
                 onClick={() => setCurrency(option)}
                 aria-pressed={currency === option}
-                className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`min-h-9 px-3 py-1.5 text-xs font-semibold transition-colors ${
                   currency === option
-                    ? 'bg-fill-brand text-text-on-brand'
+                    ? 'bg-text-primary text-surface-primary'
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -733,7 +737,7 @@ const CellarPage = () => {
               className={`mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md ${
                 card.alert
                   ? 'bg-amber-100 text-amber-600'
-                  : 'bg-teal-50 text-teal-600'
+                  : 'bg-emerald-50 text-emerald-600'
               }`}
             >
               <card.icon size={12} />
@@ -782,17 +786,17 @@ const CellarPage = () => {
       )}
 
       {openRequests.length > 0 && (
-        <section className="border-border-brand/40 bg-fill-brand/5 mb-5 overflow-hidden rounded-xl border">
+        <section className="border-border-muted mb-5 overflow-hidden rounded-xl border shadow-sm">
           <div className="flex items-center justify-between px-3 py-2">
             <Typography
               variant="bodyXs"
-              className="text-text-brand flex items-center gap-1.5 font-semibold uppercase tracking-wider"
+              className="text-text-primary flex items-center gap-1.5 font-semibold uppercase tracking-wider"
             >
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              Requests in progress
+              Delivery requests
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
               {openRequests.length}
@@ -826,7 +830,7 @@ const CellarPage = () => {
                 <div
                   className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
                     needsDecision
-                      ? 'bg-teal-50/60'
+                      ? 'bg-emerald-50/60'
                       : needsAction
                         ? 'bg-amber-50/60'
                         : ''
@@ -894,7 +898,8 @@ const CellarPage = () => {
                       */}
                       <Button
                         size="sm"
-                        colorRole="brand"
+                        colorRole="primary"
+                        className={DARK_ACTION}
                         isDisabled={isAccepting}
                         onClick={() => acceptRelease({ requestId: request.id })}
                       >
@@ -1010,7 +1015,7 @@ const CellarPage = () => {
                                 {
                                   label: 'C&C platform fee',
                                   value: request.serviceFeeUsd ?? 0,
-                                  tip: 'Our fee for handling the release — paperwork, customs filing and the distributor.',
+                                  tip: 'Our fee for arranging the delivery: paperwork, customs filing and the distributor.',
                                 },
                               ].map((line) => (
                                 <div
@@ -1057,7 +1062,7 @@ const CellarPage = () => {
                                 <dt className="text-text-primary text-xs font-semibold">
                                   Total to deliver
                                 </dt>
-                                <dd className="text-text-brand m-0 text-base font-semibold tabular-nums">
+                                <dd className="text-text-primary m-0 text-base font-bold tabular-nums">
                                   {money(request.totalCostUsd ?? 0)}
                                 </dd>
                               </div>
@@ -1178,7 +1183,8 @@ const CellarPage = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
-                          colorRole="brand"
+                          colorRole="primary"
+                        className={DARK_ACTION}
                           isDisabled={isAmending || editLines.size === 0}
                           onClick={() => {
                             const lines = request.items
@@ -1249,7 +1255,7 @@ const CellarPage = () => {
             Your cellar is empty for now
           </p>
           <p className="text-text-muted mx-auto mt-1 max-w-md text-sm leading-6">
-            Your wines will appear here as soon as they arrive in bond. In the
+            Your wines will appear here as soon as they arrive in our warehouse. In the
             meantime, you can browse what we hold today, or tell us about wine
             you would like to bring in.
           </p>
@@ -1287,9 +1293,9 @@ const CellarPage = () => {
             key={filter.key}
             type="button"
             onClick={() => setQuickFilter(filter.key)}
-            className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`inline-flex h-9 flex-shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-xs font-semibold transition-colors ${
               quickFilter === filter.key
-                ? 'bg-fill-brand text-text-on-brand'
+                ? 'bg-text-primary text-surface-primary'
                 : 'border-border-muted text-text-muted hover:text-text-primary border'
             }`}
           >
@@ -1348,7 +1354,7 @@ const CellarPage = () => {
                 column header solves both: said once, directly above its own
                 controls.
               */}
-              <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>Drink</th>
+              <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>Deliver</th>
               <th className={`${th} text-right sm:w-[76px] sm:min-w-[76px]`}>Sell</th>
             </tr>
           </thead>
@@ -1387,7 +1393,7 @@ const CellarPage = () => {
                     */
                     className={`group cursor-pointer transition-colors ${
                       basketBottlesOf(wine) > 0
-                        ? 'bg-fill-brand/[0.06] shadow-[inset_2px_0_0_0] shadow-teal-400'
+                        ? 'bg-emerald-50/50 shadow-[inset_2px_0_0_0] shadow-emerald-500 dark:bg-emerald-500/10'
                         : 'hover:bg-fill-muted/40'
                     }`}
                   >
@@ -1476,11 +1482,11 @@ const CellarPage = () => {
                                 type="button"
                                 aria-label={`One fewer bottle of ${wine.productName}`}
                                 onClick={() => addToWine(wine, -1)}
-                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors"
+                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-9 w-9 rounded transition-colors sm:h-6 sm:w-6"
                               >
                                 &minus;
                               </button>
-                              <span className="text-text-brand min-w-[46px] text-center text-xs font-semibold tabular-nums">
+                              <span className="text-text-primary min-w-[46px] text-center text-xs font-semibold tabular-nums">
                                 {chosen} of {held}
                               </span>
                               <button
@@ -1488,7 +1494,7 @@ const CellarPage = () => {
                                 aria-label={`One more bottle of ${wine.productName}`}
                                 disabled={chosen >= held}
                                 onClick={() => addToWine(wine, 1)}
-                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-6 w-6 rounded transition-colors disabled:opacity-30"
+                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-9 w-9 rounded transition-colors disabled:opacity-30 sm:h-6 sm:w-6"
                               >
                                 +
                               </button>
@@ -1496,7 +1502,7 @@ const CellarPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => addToWine(wine, pack)}
-                                  className="text-text-muted hover:bg-fill-brand/10 hover:text-text-brand ml-0.5 rounded px-1.5 py-1 text-[11px] font-medium transition-colors"
+                                  className="text-text-muted hover:bg-fill-muted hover:text-text-primary ml-0.5 rounded px-1.5 py-1 text-[11px] font-medium transition-colors"
                                 >
                                   + Case
                                 </button>
@@ -1532,7 +1538,7 @@ const CellarPage = () => {
                               <button
                                 type="button"
                                 onClick={() => addToWine(wine, pack)}
-                                className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors"
+                                className="hover:bg-fill-muted hover:text-text-primary text-text-muted min-h-9 whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:min-h-0"
                               >
                                 + Case
                               </button>
@@ -1540,7 +1546,7 @@ const CellarPage = () => {
                             <button
                               type="button"
                               onClick={() => addToWine(wine, 1)}
-                              className="hover:bg-fill-brand/10 hover:text-text-brand text-text-muted whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:w-[68px]"
+                              className="hover:bg-fill-muted hover:text-text-primary text-text-muted min-h-9 whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:min-h-0 sm:w-[68px]"
                             >
                               + Bottle
                             </button>
@@ -1582,7 +1588,7 @@ const CellarPage = () => {
                     wine. A border, a ground and an inset say whose they are.
                   */}
                   {isOpen && (
-                    <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-teal-400">
+                    <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-emerald-400">
                       <td colSpan={11} className="px-3 py-3 sm:px-6 sm:py-4">
                         <div className="border-border-muted bg-background-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
                         {/*
@@ -1595,7 +1601,7 @@ const CellarPage = () => {
                           variant="bodyXs"
                           className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
                         >
-                          <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400 align-middle" />
+                          <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" />
                           Cases held
                         </Typography>
 
@@ -1617,10 +1623,10 @@ const CellarPage = () => {
                                 <th className="hidden whitespace-nowrap px-3 py-1.5 text-left sm:table-cell">
                                   Lot
                                 </th>
-                                <th className="whitespace-nowrap px-3 py-1.5 text-left">In bond since</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-left">Stored since</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-left">Status</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-right">
-                                  Release
+                                  Deliver
                                 </th>
                                 <th className="px-4 py-1.5 text-right" />
                               </tr>
@@ -1662,11 +1668,11 @@ const CellarPage = () => {
                                       </span>
                                     ) : (
                                       <span
-                                        title="Held in bond, duty suspended"
-                                        className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700"
+                                        title="Stored duty-free in our bonded warehouse"
+                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"
                                       >
-                                        <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
-                                        In bond
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                        In storage
                                       </span>
                                     )}
                                   </td>
@@ -1695,7 +1701,7 @@ const CellarPage = () => {
                                                   held,
                                                 )
                                               }
-                                              className="border-border-muted hover:bg-fill-brand/10 hover:text-text-brand mr-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40"
+                                              className="border-border-muted hover:bg-fill-muted hover:text-text-primary mr-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40"
                                             >
                                               + Case
                                             </button>
@@ -1785,7 +1791,7 @@ const CellarPage = () => {
                                                 stockId: parcel.stockId,
                                               });
                                             }}
-                                            className="text-text-brand hover:bg-fill-brand/10 -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                                            className="text-text-primary hover:bg-fill-muted -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
                                           >
                                             Request condition report
                                           </button>
@@ -1813,7 +1819,7 @@ const CellarPage = () => {
                                             >
                                               <Typography variant="bodyXs">
                                                 <strong>AED 150</strong> per
-                                                parcel. Each bottle is
+                                                lot. Each bottle is
                                                 inspected &mdash; fill level,
                                                 label, capsule and closure
                                                 &mdash; and reported with
@@ -1844,7 +1850,7 @@ const CellarPage = () => {
                                 variant="bodyXs"
                                 className="text-text-muted text-[10px] font-semibold uppercase tracking-wider"
                               >
-                                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-teal-400/60 align-middle" />
+                                <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-emerald-400/60 align-middle" />
                                 Movement history
                               </Typography>
                             </div>
@@ -1920,9 +1926,9 @@ const CellarPage = () => {
       )}
 
       {basket.size > 0 && (
-        <div className="border-border-brand bg-background-primary sticky bottom-4 z-20 mt-6 overflow-hidden rounded-xl border shadow-lg">
-          <div className="h-1 bg-gradient-to-r from-teal-400 via-teal-300 to-teal-200" />
-          <div className="p-4">
+        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 overflow-hidden rounded-xl border shadow-xl">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
+          <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
             {(() => {
               const bottles = [...basket.values()].reduce(
@@ -1940,7 +1946,7 @@ const CellarPage = () => {
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <Typography
                         variant="bodyXs"
-                        className="text-text-brand font-semibold uppercase tracking-wider"
+                        className="text-text-primary font-semibold uppercase tracking-wider"
                       >
                         Delivery request
                       </Typography>
@@ -1949,10 +1955,10 @@ const CellarPage = () => {
                         {wineCount} {wineCount === 1 ? 'wine' : 'wines'}
                       </Typography>
                       {estimate?.priced && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1">
                           <Typography
                             variant="bodyXs"
-                            className="font-semibold text-teal-800"
+                            className="font-semibold text-emerald-800"
                           >
                             {isEstimating
                               ? 'Estimating…'
@@ -1968,7 +1974,7 @@ const CellarPage = () => {
                               <Icon
                                 icon={IconInfoCircle}
                                 size="xs"
-                                className="text-teal-700"
+                                className="text-emerald-700"
                               />
                             </TooltipTrigger>
                             <TooltipContent
@@ -1987,15 +1993,15 @@ const CellarPage = () => {
                                   className="font-semibold"
                                 >
                                   You already own the wine. This is the cost of
-                                  releasing it.
+                                  delivering it to you.
                                 </Typography>
                                 <Typography variant="bodyXs">
-                                  Duty, VAT, clearance, transfer out of bond,
-                                  licensed delivery, and our handling.
+                                  Duty, VAT, customs clearance, licensed
+                                  delivery to your address, and our handling.
                                 </Typography>
                                 <Typography variant="bodyXs" colorRole="muted">
                                   Duty follows the declared value, so a finer
-                                  case costs more to release. We confirm the
+                                  case costs more to deliver. We confirm the
                                   figure before anything moves.
                                 </Typography>
                               </div>
@@ -2011,10 +2017,11 @@ const CellarPage = () => {
                       choosing from, and looked like an action on whichever
                       wine it happened to be sitting over.
                     */}
-                    <div className="flex flex-shrink-0 items-center gap-2">
+                    <div className="flex w-full flex-shrink-0 items-center gap-2 sm:w-auto">
                       <Button
                         size="sm"
-                        colorRole="brand"
+                        colorRole="primary"
+                        className={`${DARK_ACTION} flex-1 sm:flex-none`}
                         onClick={() => setIsBasketOpen(!isBasketOpen)}
                       >
                         <ButtonContent>
@@ -2135,7 +2142,7 @@ const CellarPage = () => {
                     </div>
                     <button
                       type="button"
-                      className="text-text-brand flex-shrink-0 text-xs font-semibold hover:underline"
+                      className="text-text-primary flex-shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
                       onClick={() => {
                         setAddress(savedAddress);
                         setShouldSaveAddress(false);
@@ -2197,7 +2204,8 @@ const CellarPage = () => {
             >
               <Button
                 size="sm"
-                colorRole="brand"
+                colorRole="primary"
+                        className={DARK_ACTION}
                 isDisabled={isSaving}
                 onClick={() => {
                   /*
@@ -2229,8 +2237,8 @@ const CellarPage = () => {
                 <ButtonContent>Request delivery</ButtonContent>
               </Button>
               <Typography variant="bodyXs" colorRole="muted">
-                You will receive costs for approval before any wine leaves
-                bond.
+                We send you the costs for approval before any wine leaves
+                our warehouse.
               </Typography>
             </div>
           </div>
@@ -2271,7 +2279,7 @@ const CellarPage = () => {
           ) : (
             <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
               No delivery address yet. Add one and it will be filled in
-              whenever you call wines forward.
+              whenever you request a delivery.
             </Typography>
           )}
         </div>
@@ -2300,7 +2308,7 @@ const CellarPage = () => {
           {sellingWine && (
             <>
               <DialogHeader>
-                <DialogTitle>Offer for sale</DialogTitle>
+                <DialogTitle>Sell this wine</DialogTitle>
                 <DialogDescription>
                   {displayName(sellingWine.productName)}
                   {sellingWine.vintage ? ` · ${sellingWine.vintage}` : ''}
@@ -2329,12 +2337,12 @@ const CellarPage = () => {
                 const listedPc = ask > 0 ? ask / (1 - 30 / 100) : 0;
 
                 return (
-                  <div className="flex flex-col gap-4">
+                  <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto px-4 py-4">
                     <div className="border-border-muted overflow-hidden rounded-lg border">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
-                            <th className="px-3 py-1.5 text-left">Parcel</th>
+                            <th className="px-3 py-1.5 text-left">Lot</th>
                             <th className="px-3 py-1.5 text-right">Available</th>
                             <th className="px-3 py-1.5 text-right">Offering</th>
                           </tr>
@@ -2438,9 +2446,9 @@ const CellarPage = () => {
                       >
                         <strong>This cannot always be taken back.</strong> You
                         may withdraw while the wine is still with us. If we
-                        place it with a distributor to sell it — our decision,
-                        not yours — it leaves bond and can no longer be
-                        withdrawn.{' '}
+                        place it with a distributor to sell it (our decision,
+                        not yours), it leaves our warehouse and can no longer
+                        be withdrawn.{' '}
                         <a
                           href="/platform/terms-of-use"
                           target="_blank"
@@ -2454,7 +2462,8 @@ const CellarPage = () => {
 
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
-                        colorRole="brand"
+                        colorRole="primary"
+                        className={DARK_ACTION}
                         isDisabled={isOffering || chosen === 0 || ask <= 0}
                         onClick={() =>
                           offerForSale({

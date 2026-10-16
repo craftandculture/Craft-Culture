@@ -52,7 +52,7 @@ const StepAbout = ({ initial, isBusy, onSave }: StepAboutProps) => {
           placeholder="+971 50 000 0000"
         />
       </FieldLabel>
-      <FieldLabel label="UAE delivery address" hint="Where wine is delivered when you release it." optional>
+      <FieldLabel label="UAE delivery address" hint="Where we deliver your wine when you ask for it." optional>
         <textarea
           className={`${fieldClass} min-h-24 py-3`}
           autoComplete="street-address"

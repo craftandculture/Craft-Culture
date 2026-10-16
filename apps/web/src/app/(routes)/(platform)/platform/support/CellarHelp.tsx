@@ -20,29 +20,29 @@ import HelpSection from './HelpSection';
 
 const faqItems = [
   {
-    question: 'Do I pay duty on wine sitting in my cellar?',
+    question: 'Do I pay duty on wine stored in my cellar?',
     answer:
-      'No. Wine held in bond is duty suspended. Duty, VAT and the cost of delivery become payable only when you call wines forward to the mainland, and are quoted to you for approval before anything moves.',
+      'No. Your wine is stored duty-free in our bonded warehouse in Ras Al Khaimah. Duty, VAT and the cost of delivery are only paid when you ask for wine to be delivered to you in the UAE, and we quote them for your approval before anything moves.',
   },
   {
-    question: 'What is included in the release cost?',
+    question: 'What does it cost to have wine delivered?',
     answer:
-      'Duty and clearance, VAT, transfer out of bond, licensed distribution, delivery to your address, and our handling. The wine itself is not included — you already own it. Duty is assessed on the declared import value, so a more valuable case costs more to release than a less valuable one of the same size. Rates are set by UAE customs and applied as they stand when the release is cleared; your cellar estimates the cost as you build a request and we confirm it before anything moves.',
+      'Duty and customs clearance, VAT, transfer out of the bonded warehouse, the licensed distributor, delivery to your address, and our handling. The wine itself is not charged again, as you already own it. Duty is assessed on the declared import value, so a more valuable case costs more to deliver than a less valuable one of the same size. Rates are set by UAE customs and applied as they stand on the day of clearance; your cellar estimates the cost as you build a delivery request, and we confirm it before anything moves.',
   },
   {
-    question: 'Can I change a request after sending it?',
+    question: 'Can I change a delivery request after sending it?',
     answer:
-      'Yes, until we have priced it. Open the request under "Requests in progress" to adjust quantities, remove a wine, or withdraw it entirely. Once we have issued costs the contents are fixed, because the figure you are holding is calculated against them.',
+      'Yes, until we have priced it. Open the request under "Delivery requests" to adjust quantities, remove a wine, or withdraw it entirely. Once we have issued costs the contents are fixed, because the figure you are holding is calculated against them.',
   },
   {
     question: 'Can I ask for part of a case?',
     answer:
-      'Yes. Quantities are held in bottles, and the warehouse will open a sealed case to make up a part quantity. Where you request a full case it is picked sealed, from the exact parcel you selected.',
+      'Yes. The warehouse will open a sealed case to make up a part quantity. Where you ask for a full case, it is sent to you sealed, exactly as you selected it.',
   },
   {
-    question: 'How quickly can wine be delivered?',
+    question: 'How quickly can my wine be delivered?',
     answer:
-      'Once you accept the quotation the release enters the warehouse queue and is cleared for mainland delivery. Timing depends on customs and the licensed distributor; we will confirm a date with you directly.',
+      'Once you accept the quotation, your delivery is prepared by the warehouse and cleared through customs. Timing depends on customs and the licensed distributor; we will confirm a date with you directly.',
   },
   {
     question: 'Why do you need my Emirates ID?',
@@ -57,17 +57,17 @@ const faqItems = [
   {
     question: 'Who sees that a wine is mine when it is for sale?',
     answer:
-      'Nobody. Wine you have offered appears on our lists as Craft & Culture stock, priced and sold by us. Buyers are not told whose parcel it was, and other members browsing Available now cannot tell your wine from anyone else\u2019s.',
+      'Nobody. Wine you have offered appears on our lists as Craft & Culture stock, priced and sold by us. Buyers are not told whose wine it was, and other members browsing Available now cannot tell your wine from anyone else\u2019s.',
   },
   {
     question: 'When am I paid for wine that sells?',
     answer:
-      'On the monthly payment run, and only for sales the buyer has actually paid. We do not advance money against wine that has sold but not settled. A parcel may also sell in pieces \u2014 you are paid for each part as it goes.',
+      'On the monthly payment run, and only for sales the buyer has actually paid. We do not advance money against wine that has sold but not settled. Wine may also sell a few bottles at a time \u2014 you are paid for each part as it sells.',
   },
   {
     question: 'Can I take my wine back off the market?',
     answer:
-      'While it is still in bond with us, yes \u2014 withdraw it from the Selling tab and it returns to your cellar immediately. Once it has been placed with a distributor it is duty-paid and out of the building, and it can no longer be withdrawn. Placing wine is our decision and does not need your approval, so treat the moment you offer as the point of commitment.',
+      'While it is still in our warehouse, yes \u2014 withdraw it from the Selling tab and it returns to your cellar immediately. Once it has been placed with a distributor, duty has been paid and it has left the warehouse, so it can no longer be withdrawn. Placing wine is our decision and does not need your approval, so treat the moment you offer as the point of commitment.',
   },
   {
     question: 'Can I choose which distributor my wine goes to?',
@@ -77,7 +77,7 @@ const faqItems = [
   {
     question: 'Can I move wine to someone else without selling it?',
     answer:
-      'Yes. Wine in bond can be transferred or shipped onward through the Craft & Culture network without duty being triggered. That is not something the platform does on its own \u2014 write to us and we will set it up.',
+      'Yes. Wine in our warehouse can be transferred to another person or shipped abroad through the Craft & Culture network without paying duty. That is not something the platform does on its own \u2014 write to us and we will set it up.',
   },
 ];
 
@@ -105,7 +105,7 @@ const CellarHelp = () => {
             Help and support
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
-            Your wine, how to call it forward, and what it costs to do so
+            Your wine, how to have it delivered, and what it costs
           </Typography>
         </div>
 
@@ -118,18 +118,18 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              Everything you own with us is held in bond at Craft &amp;
-              Culture, Ras Al Khaimah, at twelve to fourteen degrees with
-              controlled humidity. Because it is in bond, no duty has been paid
-              on it and none becomes payable while it stays there.
+              Everything you own with us is stored duty-free in our bonded
+              warehouse in Ras Al Khaimah, at twelve to fourteen degrees with
+              controlled humidity. No duty or VAT is paid while it stays there;
+              they are only paid when wine is delivered to you in the UAE.
             </Typography>
             <Typography
               variant="bodySm"
               colorRole="muted"
               className="leading-relaxed"
             >
-              Your cellar shows each wine, the parcels it is held in, the lot
-              it arrived on, and what it was declared at on import. That figure
+              Your cellar shows each wine, how many cases and bottles you hold,
+              when it arrived, and what it was declared at on import. That figure
               is the declared import value, not a market valuation &mdash; we
               do not price your collection.
             </Typography>
@@ -140,7 +140,7 @@ const CellarHelp = () => {
             >
               Cold-chain records are held against the wine itself &mdash; the
               conditions it was kept in, and the journey from producer to
-              delivery &mdash; and travel with it on release. There is no
+              delivery &mdash; and travel with it when it is delivered. There is no
               charge for them.
             </Typography>
           </HelpSection>
@@ -148,7 +148,7 @@ const CellarHelp = () => {
           <HelpSection
             id="releasing"
             icon={IconTruckDelivery}
-            title="Calling wines forward"
+            title="Having wine delivered"
           >
             <ol className="space-y-3">
               {[
@@ -170,11 +170,11 @@ const CellarHelp = () => {
                 {
                   title: 'Approve the cost',
                   detail:
-                    'Nothing leaves bond until you accept. On acceptance the release is picked from the exact parcels you chose and cleared for delivery.',
+                    'Nothing leaves the warehouse until you accept. Your wine is then picked exactly as you chose it and cleared for delivery.',
                 },
               ].map((step, index) => (
                 <li key={step.title} className="flex gap-3">
-                  <span className="bg-fill-brand flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white">
+                  <span className="bg-text-primary text-surface-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                     {index + 1}
                   </span>
                   <div>
@@ -235,16 +235,16 @@ const CellarHelp = () => {
                 {
                   title: 'It goes on our lists',
                   detail:
-                    'Offered to our trade clients, our private clients, and other members here — as Craft & Culture stock, with no mention of whose it is.',
+                    'Offered to our trade clients, our private clients and other members here, as Craft & Culture stock, with no mention of whose it is.',
                 },
                 {
                   title: 'You are paid when it sells',
                   detail:
-                    'On the monthly payment run, for sales the buyer has settled. A parcel can sell in pieces and you are paid for each part as it goes.',
+                    'On the monthly payment run, for sales the buyer has paid. Wine can sell a few bottles at a time, and you are paid for each part as it sells.',
                 },
               ].map((step, index) => (
                 <li key={step.title} className="flex gap-3">
-                  <span className="bg-fill-brand flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white">
+                  <span className="bg-text-primary text-surface-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                     {index + 1}
                   </span>
                   <div>
@@ -276,7 +276,7 @@ const CellarHelp = () => {
                 colorRole="muted"
                 className="leading-relaxed"
               >
-                While your wine is in bond with us you can withdraw it at any
+                While your wine is in our warehouse you can withdraw it at any
                 time and it returns to your cellar. To reach some buyers we
                 place wine with a licensed distributor on the mainland, which
                 pays the duty and takes it out of the building &mdash; and from
@@ -313,9 +313,9 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              Releasing wine to the mainland carries duty and clearance, VAT,
-              transfer out of bond, licensed distribution, delivery and our
-              handling. The wine itself is never charged for again &mdash; it
+              Having wine delivered to you in the UAE carries duty and customs
+              clearance, VAT, transfer out of the bonded warehouse, the licensed
+              distributor, delivery and our handling. The wine itself is never charged for again &mdash; it
               is already yours.
             </Typography>
             <Typography
@@ -324,10 +324,10 @@ const CellarHelp = () => {
               className="leading-relaxed"
             >
               Duty and VAT are set by UAE customs, not by us, and are applied
-              at the rate in force on the day a release is cleared. No
+              at the rate in force on the day your delivery is cleared. No
               percentage is quoted here for that reason: a figure written into
               a help page is a figure nobody updates. Your cellar estimates
-              the cost as you build a request, and we confirm it before
+              the cost as you build a delivery request, and we confirm it before
               anything moves.
             </Typography>
             <Typography
@@ -335,7 +335,7 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              A condition report is AED 150 per parcel. Each bottle is
+              A condition report is AED 150 per wine. Each bottle is
               inspected &mdash; fill level, label, capsule and closure &mdash;
               and reported with photographs and written notes.
             </Typography>
@@ -356,7 +356,7 @@ const CellarHelp = () => {
                 {
                   term: 'Status',
                   detail:
-                    'Licensed and bonded by UAE customs. Duty is suspended, not deferred — it is not owed until wine is released.',
+                    'Licensed and bonded by UAE customs. Wine is stored duty-free; duty is only owed when wine is delivered to you in the UAE.',
                 },
                 {
                   term: 'Security',
@@ -386,7 +386,7 @@ const CellarHelp = () => {
             >
               Each case is recorded on arrival against a numbered bay, and
               keeps its own history from that point: what arrived and when,
-              what was released and to whom, and what remains in bond. This is
+              what was delivered and to whom, and what remains in the warehouse. This is
               the record the warehouse itself works from, not a statement
               prepared afterwards, so what you read is what stands on the
               shelf.
@@ -406,7 +406,7 @@ const CellarHelp = () => {
             </Typography>
             <Link
               href="/platform/cellar/profile"
-              className="border-border-primary bg-fill-secondary/30 hover:bg-fill-secondary inline-block rounded-lg border p-4 transition-colors"
+              className="border-border-primary bg-fill-secondary/30 hover:bg-fill-secondary block rounded-lg border p-4 transition-colors sm:inline-block"
             >
               <Typography variant="bodySm" className="font-medium">
                 Your details
@@ -426,7 +426,7 @@ const CellarHelp = () => {
               <Typography variant="bodyXs" colorRole="muted">
                 Write to{' '}
                 <a
-                  className="text-text-brand font-medium"
+                  className="text-text-primary break-all font-semibold underline underline-offset-2"
                   href="mailto:enquiries@craftculture.xyz"
                 >
                   enquiries@craftculture.xyz

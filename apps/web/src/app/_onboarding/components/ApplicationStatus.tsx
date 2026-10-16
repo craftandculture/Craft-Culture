@@ -76,7 +76,7 @@ const ApplicationStatus = () => {
         </h1>
         <p className="text-text-muted text-sm leading-6">
           {isReady
-            ? 'Have a look around — nothing is charged until you first buy, release or bring wine in.'
+            ? 'Please have a look around. Nothing is charged until you first buy, sell, request a delivery or bring wine in.'
             : 'We have your application and will be in touch shortly, usually within one working day. We will email you the moment your cellar is open.'}
         </p>
       </div>

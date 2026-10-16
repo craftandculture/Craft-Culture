@@ -35,17 +35,17 @@ const StepFrame = ({
       event.preventDefault();
       onContinue();
     }}
-    className="bg-fill-primary border-border-muted space-y-6 rounded-2xl border p-6 shadow-sm sm:p-7"
+    className="bg-fill-primary border-border-muted space-y-6 rounded-2xl border p-5 shadow-sm sm:p-7"
   >
     <div className="space-y-2">
-      <h1 className="font-heading text-text-primary text-2xl leading-tight">{title}</h1>
-      {intro && <p className="text-text-muted text-sm leading-6">{intro}</p>}
+      <h1 className="font-heading text-text-primary text-xl leading-tight sm:text-2xl">{title}</h1>
+      {intro && <p className="text-text-muted max-w-prose text-sm leading-6">{intro}</p>}
     </div>
 
     <div className="space-y-5">{children}</div>
 
     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 sm:justify-start">
         {onBack && (
           <Button type="button" variant="ghost" size="md" onClick={onBack}>
             <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
@@ -62,7 +62,7 @@ const StepFrame = ({
         size="lg"
         colorRole="bold"
         isDisabled={isBusy || isContinueDisabled}
-        className="sm:min-w-44"
+        className="w-full sm:w-auto sm:min-w-44"
       >
         <ButtonContent iconRight={IconArrowRight} isLoading={isBusy}>
           {continueLabel}

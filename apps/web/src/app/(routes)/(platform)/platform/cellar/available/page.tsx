@@ -12,6 +12,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -75,6 +76,7 @@ const PAGE = 50;
  */
 const AvailablePage = () => {
   const api = useTRPC();
+  const router = useRouter();
   const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | undefined>('Wine');
@@ -92,7 +94,7 @@ const AvailablePage = () => {
   /* Reserving commits the member to a bank transfer, so it is reviewed first */
   const [isReviewing, setIsReviewing] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
       search: search || undefined,
       category,
@@ -166,12 +168,11 @@ const AvailablePage = () => {
   const { mutate: placeOrder, isPending: isPlacing } = useMutation(
     api.consignment.member.createPurchase.mutationOptions({
       onSuccess: (result) => {
-        toast.success(
-          `${result.purchaseNumber} reserved — pay by bank transfer within 48 hours.`,
-        );
+        toast.success(`${result.purchaseNumber} is reserved for you. Here is how to pay.`);
         setBasket(new Map());
         setIsReviewing(false);
-        void refetch();
+        // Straight to where the bank details and reference are
+        router.push('/platform/cellar/purchases');
       },
       onError: (error) => {
         if (!catchActivation(error, 'purchase')) toast.error(error.message);
@@ -310,8 +311,8 @@ const AvailablePage = () => {
             Available now
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block max-w-2xl">
-            Held in bond with us and ready to add to your cellar. Prices are in bond, duty suspended &mdash; wine you
-            buy here stays where it is.
+            Wines held in our bonded warehouse in Ras Al Khaimah, ready to add to your cellar. Prices are duty-free:
+            duty and VAT are only paid if you have wine delivered to you in the UAE.
           </Typography>
         </div>
         {/*
@@ -708,8 +709,8 @@ const AvailablePage = () => {
                   <span className="ml-2 tabular-nums">{money(basketTotal)}</span>
                 </p>
                 <p className="text-xs opacity-70">
-                  Held in bond, duty suspended. Reserved for 48 hours for your bank transfer; the wine moves once we
-                  confirm it has arrived.
+                  Duty-free. Reserved for you for 48 hours while you pay by bank transfer, and added to your cellar
+                  once your payment arrives.
                 </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
@@ -743,7 +744,8 @@ const AvailablePage = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <ul className="divide-border-muted border-border-muted mt-2 max-h-[40vh] divide-y overflow-y-auto rounded-xl border">
+          <div className="w-full overflow-y-auto px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+          <ul className="divide-border-muted border-border-muted max-h-[40vh] divide-y overflow-y-auto rounded-xl border">
             {basketLines.map((line) => (
               <li key={line.wine.lwin18} className="flex items-start justify-between gap-4 px-3.5 py-3">
                 <div className="min-w-0">
@@ -769,11 +771,13 @@ const AvailablePage = () => {
           </div>
 
           <div className="bg-surface-secondary/60 text-text-muted mt-3 space-y-1.5 rounded-xl p-3.5 text-xs leading-5">
-            <p>Prices are in bond, duty suspended. The wine stays in bond in your cellar until you call it forward.</p>
             <p>
-              We hold it for you for 48 hours and send bank transfer details with your reference. It moves into your
-              cellar once we confirm your payment has arrived.
+              Prices are duty-free. Your wine stays in your cellar at our warehouse until you ask us to deliver it;
+              duty and VAT are only paid then.
             </p>
+            <p>
+              We hold it for you for 48 hours. Pay by bank transfer using the details on your Purchases page, quoting
+              your reservation number. It is added to your cellar once your payment arrives.</p>
           </div>
 
           <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -800,6 +804,7 @@ const AvailablePage = () => {
             >
               {isPlacing ? 'Reserving…' : `Confirm reservation · ${money(basketTotal)}`}
             </button>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

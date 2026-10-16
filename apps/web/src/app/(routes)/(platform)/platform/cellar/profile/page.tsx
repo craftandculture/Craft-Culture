@@ -180,7 +180,7 @@ const CellarProfilePage = () => {
       >
         C&amp;C Private Cellar
       </Typography>
-      <Typography variant="headingLg">Your details</Typography>
+      <Typography variant="headingMd">Your details</Typography>
       <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
         {profile?.name
           ? `Held against ${profile.name}`
@@ -200,8 +200,8 @@ const CellarProfilePage = () => {
               Delivery
             </Typography>
             <Typography variant="bodyXs" colorRole="muted" className="mb-3 block">
-              Where we deliver when you call wines forward. You can still send
-              an individual delivery somewhere else.
+              Where we deliver when you ask for wine to be delivered. You can
+              still choose a different address for any single delivery.
             </Typography>
 
             <div className="flex flex-col gap-3">

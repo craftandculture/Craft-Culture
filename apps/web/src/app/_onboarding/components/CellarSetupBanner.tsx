@@ -26,7 +26,7 @@ const CellarSetupBanner = ({ missing }: CellarSetupBannerProps) => {
           <p className="text-text-primary text-sm font-semibold">Finish setting up</p>
           <p className="text-text-muted text-xs leading-5">
             {needsId
-              ? 'Add your Emirates ID before you buy, release or bring wine in.'
+              ? 'Add your Emirates ID before you buy, sell, request a delivery or bring wine in.'
               : 'A few details so that deliveries go smoothly.'}
           </p>
         </div>

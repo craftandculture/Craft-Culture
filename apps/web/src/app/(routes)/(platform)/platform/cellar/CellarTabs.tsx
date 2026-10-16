@@ -43,7 +43,7 @@ const CellarTabs = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="border-border-muted mb-5 flex gap-1 overflow-x-auto border-b">
+    <nav className="border-border-muted -mx-4 mb-5 flex gap-1 overflow-x-auto border-b px-4 sm:mx-0 sm:px-0">
       {tabs.map((tab) => {
         const isActive =
           tab.href === '/platform/cellar'
@@ -54,9 +54,9 @@ const CellarTabs = () => {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`-mb-px flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`-mb-px flex min-h-11 flex-shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
               isActive
-                ? 'border-teal-500 text-text-primary'
+                ? 'border-text-primary text-text-primary font-semibold'
                 : 'text-text-muted hover:text-text-primary border-transparent'
             }`}
           >

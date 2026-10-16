@@ -63,7 +63,7 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
             }`}
           >
             {item.value === 'uae_in_bond'
-              ? 'Buy in bond'
+              ? 'Buy from our cellar'
               : item.value === 'with_cc'
                 ? 'Already with C&C'
                 : item.value === 'lcb'

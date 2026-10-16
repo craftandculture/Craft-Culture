@@ -32,7 +32,11 @@ const ApplicationProgress = ({ current, onJump }: ApplicationProgressProps) => {
           />
         ))}
       </div>
-      <ol className="flex justify-between text-[11px] font-semibold uppercase tracking-wide">
+      {/* On a phone four labels crowd one line, so it names only the current step */}
+      <p className="text-text-primary text-xs font-semibold sm:hidden">
+        Step {at + 1} of {APPLICATION_STEPS.length} · {APPLICATION_STEPS[at]?.label}
+      </p>
+      <ol className="hidden justify-between text-[11px] font-semibold uppercase tracking-wide sm:flex">
         {APPLICATION_STEPS.map((step, index) => (
           <li key={step.key}>
             <button

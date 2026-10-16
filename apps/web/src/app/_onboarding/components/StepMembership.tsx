@@ -45,7 +45,7 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
   return (
     <StepFrame
       title="Membership"
-      intro="There is no charge to open your account. Membership begins when you first buy, release, sell or transfer wine into your cellar, and we confirm it with you at that point."
+      intro="There is no charge to open your account. Membership begins the first time you buy, sell, request a delivery or bring wine into your cellar, and we confirm it with you at that point."
       onContinue={onSubmit}
       onBack={onBack}
       continueLabel="Submit"
@@ -63,7 +63,7 @@ const StepMembership = ({ terms, hasAccepted, isBusy, onSubmit, onBack }: StepMe
 
       <p className="text-text-muted text-xs leading-5">
         A case is counted as a sealed case, or every six loose bottles (a magnum counts as two).
-        Wine you buy in bond is paid for separately, by bank transfer.
+        Wine you buy from our cellar is paid for separately, by bank transfer.
       </p>
 
       <button

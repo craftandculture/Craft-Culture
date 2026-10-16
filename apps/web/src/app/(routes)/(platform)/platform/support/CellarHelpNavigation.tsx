@@ -14,7 +14,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 
 const navItems = [
   { id: 'your-cellar', label: 'Your cellar', icon: IconBottle },
-  { id: 'releasing', label: 'Calling forward', icon: IconTruckDelivery },
+  { id: 'releasing', label: 'Delivery', icon: IconTruckDelivery },
   { id: 'selling', label: 'Selling', icon: IconTag },
   { id: 'costs', label: 'Costs', icon: IconCoin },
   { id: 'warehouse', label: 'The warehouse', icon: IconBuildingWarehouse },

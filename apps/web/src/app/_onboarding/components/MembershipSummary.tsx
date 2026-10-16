@@ -81,7 +81,7 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
         </div>
       ) : (
         <p className="text-text-muted mt-4 text-xs leading-5">
-          There is nothing to pay until you first buy, release, sell or bring wine in. Storage is counted in 12-bottle
+          There is nothing to pay until you first buy, sell, request a delivery or bring wine in. Storage is counted in 12-bottle
           cases; a 6-bottle case counts as half.
         </p>
       )}

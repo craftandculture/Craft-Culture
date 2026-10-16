@@ -27,7 +27,7 @@ type Side = 'emirates_id_front' | 'emirates_id_back';
 /** What happens once they confirm, in the words of what they were doing */
 const ACTION_OUTCOME: Record<ActivationAction, string> = {
   purchase: 'Your wine is reserved',
-  release: 'Your release request goes ahead',
+  release: 'Your delivery request goes ahead',
   offer_for_sale: 'Your wine is offered for sale',
   transfer_in: 'We start arranging your transfer',
   other: 'Your request goes ahead',
@@ -117,14 +117,14 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">
-              {needsIdentity ? 'Step 1 of 2 · Your Emirates ID' : `Step ${hadIdentityStep ? '2 of 2' : '1 of 1'} · Membership`}
+              {needsIdentity ? 'Step 1 of 2 · Your Emirates ID' : hadIdentityStep ? 'Step 2 of 2 · Membership' : 'Membership'}
             </p>
             <h2 className="text-text-primary mt-1 text-xl font-semibold tracking-tight">
               {needsIdentity ? 'Verify your identity' : 'Start your membership'}
             </h2>
             <p className="text-text-muted mt-1 text-sm leading-6">
               {needsIdentity
-                ? 'We are required to verify every member before wine moves in or out of bond. You only do this once.'
+                ? 'We are required to verify every member before wine moves into or out of our bonded warehouse. You only do this once.'
                 : `${ACTION_OUTCOME[action]} as soon as you confirm.`}
             </p>
           </div>

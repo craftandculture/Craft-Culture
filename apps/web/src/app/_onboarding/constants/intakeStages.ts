@@ -1,7 +1,7 @@
 /** The stages a wine transfer into a member's cellar moves through, in order */
 const intakeStages = [
   { value: 'requested', label: 'Request received' },
-  { value: 'in_progress', label: "We're arranging the transfer" },
+  { value: 'in_progress', label: 'We are arranging the transfer' },
   { value: 'arriving_uk', label: 'Arriving at our UK bond' },
   { value: 'shipping_uae', label: 'Shipping to the UAE' },
   { value: 'in_cellar', label: 'In your cellar' },
