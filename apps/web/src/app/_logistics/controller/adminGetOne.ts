@@ -5,6 +5,7 @@ import db from '@/database/client';
 import {
   logisticsDocuments,
   logisticsGroupDocuments,
+  logisticsJobs,
   logisticsShipmentActivityLogs,
   logisticsShipmentCostLines,
   logisticsShipmentItems,
@@ -50,7 +51,7 @@ const adminGetOne = adminProcedure
     }
 
     // Run all secondary queries in parallel for better performance
-    const [items, documents, activityLogs] = await Promise.all([
+    const [items, documents, activityLogs, [job]] = await Promise.all([
       // Get items
       db
         .select()
@@ -87,6 +88,13 @@ const adminGetOne = adminProcedure
         .leftJoin(users, eq(logisticsShipmentActivityLogs.userId, users.id))
         .where(eq(logisticsShipmentActivityLogs.shipmentId, input.id))
         .orderBy(logisticsShipmentActivityLogs.createdAt),
+
+      // The logistics job (EXP-CNC/26/0001) the team works this shipment by, if any
+      db
+        .select({ jobNumber: logisticsJobs.jobNumber, kind: logisticsJobs.kind })
+        .from(logisticsJobs)
+        .where(eq(logisticsJobs.shipmentId, input.id))
+        .limit(1),
     ]);
 
     // Derive case/bottle totals from line items (authoritative). The
@@ -122,6 +130,8 @@ const adminGetOne = adminProcedure
       partner: result.partner,
       clientContact: result.clientContact,
       createdByUser: result.createdByUser,
+      jobNumber: job?.jobNumber ?? null,
+      jobKind: job?.kind ?? null,
       items,
       documents: documents.map((d) => ({
         ...d.document,

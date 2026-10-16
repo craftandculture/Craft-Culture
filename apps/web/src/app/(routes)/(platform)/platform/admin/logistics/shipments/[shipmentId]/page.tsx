@@ -2,6 +2,7 @@
 
 import {
   IconArrowLeft,
+  IconArrowRight,
   IconCalculator,
   IconCheck,
   IconCloud,
@@ -20,12 +21,14 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
+import EditableField from '@/app/_logistics/components/shipment/EditableField';
+import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
 import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconciliation';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
@@ -33,6 +36,7 @@ import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
 import ShipmentTypeBadge from '@/app/_logistics/components/ShipmentTypeBadge';
 import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
+import { SHIPMENT_STATUSES } from '@/app/_logistics/utils/shipmentStatuses';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -128,22 +132,36 @@ const hsOptionsFor = (current: string | null | undefined) => {
 };
 
 type ShipmentStatus = LogisticsShipment['status'];
+type ShipmentType = LogisticsShipment['type'];
 
-const statusOptions: { value: ShipmentStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'booked', label: 'Booked' },
-  { value: 'picked_up', label: 'Picked Up' },
-  { value: 'in_transit', label: 'In Transit' },
-  { value: 'arrived_port', label: 'Arrived Port' },
-  { value: 'customs_clearance', label: 'Customs Clearance' },
-  { value: 'cleared', label: 'Cleared' },
-  { value: 'at_warehouse', label: 'At Warehouse' },
-  { value: 'partially_received', label: 'Partially Received' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
+const SHIPMENT_TYPE_LABELS: Record<ShipmentType, string> = {
+  inbound: 'Import',
+  outbound: 'Export',
+  re_export: 'Re-Export',
+  mainland_transfer: 'Mainland Transfer',
+};
+
+const TAB_IDS = ['overview', 'tracking', 'items', 'documents', 'costs'] as const;
+type TabType = (typeof TAB_IDS)[number];
+
+/**
+ * Document types the invoice extractor reads for charges
+ *
+ * Mirrors LOGISTICS_TYPES in adminExtractShipmentInvoice: commercial invoices
+ * and packing lists are goods and are deliberately not read for cost, so the
+ * button is offered only when one of these is on file.
+ */
+const COST_DOCUMENT_TYPES = /gac|shipping|freight|customs|clearance|delivery_note|bill_of_lading|airway/i;
+
+/** The documents listed under Vendor Bills on the Costs tab */
+const VENDOR_BILL_TYPES = [
+  'shipping_invoice',
+  'gac_invoice',
+  'commercial_invoice',
+  'customs_declaration',
+  'delivery_note',
+  'other',
 ];
-
-type TabType = 'overview' | 'tracking' | 'items' | 'documents' | 'costs';
 
 const SHIP_COST_CATEGORIES = [
   'freight',
@@ -183,7 +201,26 @@ const ShipmentDetailPage = () => {
   const router = useRouter();
   const _queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const tabParam = searchParams.get('tab');
+  // Kept in the URL so a refresh or a shared link opens the same tab
+  const activeTab: TabType = (TAB_IDS as readonly string[]).includes(tabParam ?? '')
+    ? (tabParam as TabType)
+    : 'overview';
+  const setActiveTab = (tab: TabType) => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (tab === 'overview') next.delete('tab');
+    else next.set('tab', tab);
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+  /** The item row awaiting a delete confirmation */
+  const [pendingRemoveItemId, setPendingRemoveItemId] = useState<string | null>(null);
+  /** The cost line awaiting a delete confirmation */
+  const [pendingDeleteCostLineId, setPendingDeleteCostLineId] = useState<string | null>(null);
+  /** A shipment type chosen but not yet confirmed */
+  const [pendingType, setPendingType] = useState<ShipmentType | null>(null);
   /** Blank means take today's market rate rather than a negotiated one */
   const [agreedRate, setAgreedRate] = useState('');
   /**
@@ -739,7 +776,7 @@ const ShipmentDetailPage = () => {
               {error?.message || 'An unexpected error occurred'}
             </Typography>
             <div className="mt-4">
-              <Link href="/platform/admin/logistics">
+              <Link href="/platform/admin/logistics/shipments">
                 <Button variant="outline" size="sm">
                   <Icon icon={IconArrowLeft} size="sm" className="mr-2" />
                   Back to list
@@ -762,7 +799,7 @@ const ShipmentDetailPage = () => {
               The shipment with ID {shipmentId} does not exist.
             </Typography>
             <div className="mt-4">
-              <Link href="/platform/admin/logistics">
+              <Link href="/platform/admin/logistics/shipments">
                 <Button variant="outline" size="sm">
                   <Icon icon={IconArrowLeft} size="sm" className="mr-2" />
                   Back to list
@@ -774,6 +811,28 @@ const ShipmentDetailPage = () => {
       </div>
     );
   }
+
+  /**
+   * The one thing to do next, derived from where the shipment stands
+   *
+   * An import at the warehouse is waiting to be received; once delivered its
+   * wine is in stock. An export or transfer is worked from its export job.
+   */
+  const nextStep = (() => {
+    if (shipment.type === 'inbound') {
+      if (shipment.status === 'at_warehouse' || shipment.status === 'partially_received') {
+        return { label: 'Receive into warehouse', href: `/platform/admin/wms/receive/${shipmentId}` };
+      }
+      if (shipment.status === 'delivered') {
+        return { label: 'View stock', href: '/platform/admin/stock-explorer' };
+      }
+      return null;
+    }
+    if (shipment.jobNumber && shipment.jobKind === 'export') {
+      return { label: 'Open export job', href: `/platform/admin/logistics/exports/${shipmentId}` };
+    }
+    return null;
+  })();
 
   const tabs: { id: TabType; label: string; icon: typeof IconPackage }[] = [
     { id: 'overview', label: 'Overview', icon: IconFileText },
@@ -789,7 +848,7 @@ const ShipmentDetailPage = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/platform/admin/logistics">
+            <Link href="/platform/admin/logistics/shipments" aria-label="Back to shipments">
               <Button variant="ghost" size="sm">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Button>
@@ -869,13 +928,33 @@ const ShipmentDetailPage = () => {
                 <ShipmentTypeBadge type={shipment.type} />
                 <span>·</span>
                 <span>
-                  {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
-                  {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}
+                  {shipment.originCity || shipment.originCountry || 'Origin'} →{' '}
+                  {shipment.destinationCity || shipment.destinationWarehouse || 'Destination'}
                 </span>
+                {shipment.jobNumber && shipment.jobKind === 'export' && (
+                  <>
+                    <span>·</span>
+                    <Link
+                      href={`/platform/admin/logistics/exports/${shipmentId}`}
+                      className="font-medium text-text-primary hover:underline"
+                    >
+                      Export job <span className="font-mono">{shipment.jobNumber}</span> →
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {nextStep && (
+              <Link
+                href={nextStep.href}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-text-primary px-3 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90"
+              >
+                {nextStep.label}
+                <Icon icon={IconArrowRight} size="sm" />
+              </Link>
+            )}
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               <Icon icon={IconRefresh} size="sm" />
             </Button>
@@ -884,8 +963,8 @@ const ShipmentDetailPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {statusOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
+                {SHIPMENT_STATUSES.map((opt) => (
+                  <SelectItem key={opt.key} value={opt.key}>
                     {opt.label}
                   </SelectItem>
                 ))}
@@ -918,7 +997,9 @@ const ShipmentDetailPage = () => {
           <CardContent className="p-4">
             <ShipmentStatusStepper
               currentStatus={shipment.status}
+              shipmentType={shipment.type}
               onStatusClick={handleStatusChange}
+              isUpdating={isUpdatingStatus}
             />
           </CardContent>
         </Card>
@@ -975,23 +1056,39 @@ const ShipmentDetailPage = () => {
                     <dt className="text-text-muted">Type</dt>
                     <dd>
                       <Select
-                        value={shipment.type}
-                        onValueChange={(value: 'inbound' | 'outbound' | 're_export' | 'mainland_transfer') => {
-                          updateShipment({ id: shipmentId, type: value });
+                        value={pendingType ?? shipment.type}
+                        onValueChange={(value: ShipmentType) => {
+                          setPendingType(value === shipment.type ? null : value);
                         }}
+                        disabled={isUpdatingShipment}
                       >
                         <SelectTrigger className="h-8 w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inbound">Import</SelectItem>
-                          <SelectItem value="outbound">Export</SelectItem>
-                          <SelectItem value="re_export">Re-Export</SelectItem>
-                          <SelectItem value="mainland_transfer">Mainland Transfer</SelectItem>
+                          {(Object.keys(SHIPMENT_TYPE_LABELS) as ShipmentType[]).map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {SHIPMENT_TYPE_LABELS[type]}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </dd>
                   </div>
+                  {pendingType && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-900/10">
+                      <InlineConfirm
+                        message={`Change this shipment from ${SHIPMENT_TYPE_LABELS[shipment.type]} to ${SHIPMENT_TYPE_LABELS[pendingType]}? Its status steps change with it.`}
+                        confirmLabel="Change type"
+                        isPending={isUpdatingShipment}
+                        onConfirm={() => {
+                          updateShipment({ id: shipmentId, type: pendingType });
+                          setPendingType(null);
+                        }}
+                        onCancel={() => setPendingType(null)}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <dt className="text-text-muted">Transport</dt>
                     <dd>
@@ -1015,7 +1112,60 @@ const ShipmentDetailPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">Carrier</dt>
-                    <dd>{shipment.carrierName ?? '-'}</dd>
+                    <dd>
+                      <EditableField
+                        value={shipment.carrierName}
+                        placeholder="Carrier"
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, carrierName: String(v ?? '') })}
+                      />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-text-muted">Origin city</dt>
+                    <dd>
+                      <EditableField
+                        value={shipment.originCity}
+                        placeholder="City"
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, originCity: String(v ?? '') })}
+                      />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-text-muted">Origin country</dt>
+                    <dd>
+                      <EditableField
+                        value={shipment.originCountry}
+                        placeholder="Country"
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, originCountry: String(v ?? '') })}
+                      />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-text-muted">Destination city</dt>
+                    <dd>
+                      <EditableField
+                        value={shipment.destinationCity}
+                        placeholder="City"
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, destinationCity: String(v ?? '') })}
+                      />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-text-muted">Destination warehouse</dt>
+                    <dd>
+                      <EditableField
+                        value={shipment.destinationWarehouse}
+                        placeholder="Warehouse"
+                        disabled={isUpdatingShipment}
+                        onSave={(v) =>
+                          updateShipment({ id: shipmentId, destinationWarehouse: String(v ?? '') })
+                        }
+                      />
+                    </dd>
                   </div>
                   {shipment.transportMode === 'air' ? (
                     <div className="flex justify-between">
@@ -1071,11 +1221,29 @@ const ShipmentDetailPage = () => {
                     <>
                       <div className="flex justify-between">
                         <dt className="text-text-muted">Container #</dt>
-                        <dd className="font-mono">{shipment.containerNumber ?? '-'}</dd>
+                        <dd>
+                          <EditableField
+                            value={shipment.containerNumber}
+                            placeholder="Container number"
+                            mono
+                            disabled={isUpdatingShipment}
+                            onSave={(v) =>
+                              updateShipment({ id: shipmentId, containerNumber: String(v ?? '') })
+                            }
+                          />
+                        </dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-text-muted">BOL #</dt>
-                        <dd className="font-mono">{shipment.blNumber ?? '-'}</dd>
+                        <dd>
+                          <EditableField
+                            value={shipment.blNumber}
+                            placeholder="Bill of lading"
+                            mono
+                            disabled={isUpdatingShipment}
+                            onSave={(v) => updateShipment({ id: shipmentId, blNumber: String(v ?? '') })}
+                          />
+                        </dd>
                       </div>
                     </>
                   )}
@@ -1192,7 +1360,14 @@ const ShipmentDetailPage = () => {
                 <dl className="space-y-3">
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ETD</dt>
-                    <dd>{formatDate(shipment.etd)}</dd>
+                    <dd>
+                      <EditableField
+                        type="date"
+                        value={shipment.etd}
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, etd: v instanceof Date ? v : null })}
+                      />
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ATD</dt>
@@ -1200,7 +1375,14 @@ const ShipmentDetailPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ETA</dt>
-                    <dd>{formatDate(shipment.eta)}</dd>
+                    <dd>
+                      <EditableField
+                        type="date"
+                        value={shipment.eta}
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, eta: v instanceof Date ? v : null })}
+                      />
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ATA</dt>
@@ -1989,6 +2171,14 @@ const ShipmentDetailPage = () => {
                           {isSyncingToZoho ? 'Syncing...' : 'Sync to Zoho'}
                         </ButtonContent>
                       </Button>
+                      <Link
+                        href="/platform/admin/logistics/tools/pdf-extract"
+                        title="Opens the PDF tool. Choose this shipment there to import the lines it reads."
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-primary px-2 text-sm font-medium text-text-primary hover:bg-fill-muted"
+                      >
+                        <Icon icon={IconFileText} size="sm" />
+                        Read items from PDF
+                      </Link>
                       <Button size="sm" onClick={() => setIsAddingItem(true)}>
                         <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
                       </Button>
@@ -2373,12 +2563,27 @@ const ShipmentDetailPage = () => {
 
                                 {/* Delete */}
                                 <td className="py-3 pr-6">
-                                  <button
-                                    onClick={() => removeItem({ itemId: item.id })}
-                                    className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
-                                  >
-                                    <Icon icon={IconTrash} size="sm" />
-                                  </button>
+                                  {pendingRemoveItemId === item.id ? (
+                                    <InlineConfirm
+                                      message="Remove?"
+                                      confirmLabel="Remove"
+                                      danger
+                                      onConfirm={() => {
+                                        removeItem({ itemId: item.id });
+                                        setPendingRemoveItemId(null);
+                                      }}
+                                      onCancel={() => setPendingRemoveItemId(null)}
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPendingRemoveItemId(item.id)}
+                                      aria-label={`Remove ${item.productName}`}
+                                      className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
+                                    >
+                                      <Icon icon={IconTrash} size="sm" />
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -2795,16 +3000,45 @@ const ShipmentDetailPage = () => {
             {/* Vendor Bills */}
             <Card>
               <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Vendor Bills
-                </Typography>
-                <LogisticsDocumentUpload
-                  shipmentId={shipmentId}
-                  documents={(shipment.documents ?? []).filter((d) =>
-                    ['shipping_invoice', 'gac_invoice', 'commercial_invoice', 'customs_declaration', 'delivery_note', 'other'].includes(d.documentType),
-                  )}
-                  onUploadComplete={() => void refetch()}
-                />
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <Typography variant="headingSm">Vendor Bills</Typography>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('documents')}>
+                    <ButtonContent iconLeft={IconUpload}>Upload in Documents</ButtonContent>
+                  </Button>
+                </div>
+                {(() => {
+                  const bills = (shipment.documents ?? []).filter((d) =>
+                    VENDOR_BILL_TYPES.includes(d.documentType),
+                  );
+
+                  if (bills.length === 0) {
+                    return (
+                      <Typography variant="bodySm" colorRole="muted">
+                        No bills on file. Upload invoices on the Documents tab and they will be listed here.
+                      </Typography>
+                    );
+                  }
+
+                  return (
+                    <div className="divide-y divide-border-muted">
+                      {bills.map((d) => (
+                        <div key={d.id} className="flex items-center justify-between gap-3 py-2">
+                          <a
+                            href={d.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="min-w-0 truncate text-sm text-text-primary hover:underline"
+                          >
+                            {d.fileName}
+                          </a>
+                          <span className="shrink-0 rounded-full bg-fill-muted px-2 py-0.5 text-xs capitalize text-text-muted">
+                            {d.documentType === 'other' && d.notes ? d.notes : d.documentType.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -2826,8 +3060,15 @@ const ShipmentDetailPage = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => extractInvoice({ shipmentId })}
-                        disabled={isExtracting || !(shipment.documents ?? []).length}
-                        title="Read the uploaded invoice and fill the cost fields automatically"
+                        disabled={
+                          isExtracting ||
+                          !(shipment.documents ?? []).some((d) => COST_DOCUMENT_TYPES.test(d.documentType))
+                        }
+                        title={
+                          (shipment.documents ?? []).some((d) => COST_DOCUMENT_TYPES.test(d.documentType))
+                            ? 'Read the uploaded invoice and fill the cost fields automatically'
+                            : 'Upload a freight, clearance or delivery invoice in Documents first'
+                        }
                       >
                         <ButtonContent iconLeft={isExtracting ? IconLoader2 : IconWand}>
                           {isExtracting ? 'Reading…' : 'Extract from invoice'}
@@ -2990,12 +3231,27 @@ const ShipmentDetailPage = () => {
                                       <Typography variant="labelSm">
                                         {formatPrice(l.amountUsd, 'USD')}
                                       </Typography>
-                                      <button
-                                        onClick={() => delCostLine({ id: l.id })}
-                                        className="text-text-muted hover:text-red-500"
-                                      >
-                                        <IconTrash className="h-3.5 w-3.5" />
-                                      </button>
+                                      {pendingDeleteCostLineId === l.id ? (
+                                        <InlineConfirm
+                                          message="Delete this line?"
+                                          confirmLabel="Delete"
+                                          danger
+                                          onConfirm={() => {
+                                            delCostLine({ id: l.id });
+                                            setPendingDeleteCostLineId(null);
+                                          }}
+                                          onCancel={() => setPendingDeleteCostLineId(null)}
+                                        />
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => setPendingDeleteCostLineId(l.id)}
+                                          aria-label="Delete cost line"
+                                          className="text-text-muted hover:text-red-500"
+                                        >
+                                          <IconTrash className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 ))}

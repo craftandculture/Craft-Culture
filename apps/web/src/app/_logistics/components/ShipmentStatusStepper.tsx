@@ -1,39 +1,37 @@
 'use client';
 
 import { IconCheck, IconCircle, IconCircleDot } from '@tabler/icons-react';
+import { useState } from 'react';
 
+import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
+import type { ShipmentStatus, ShipmentType } from '@/app/_logistics/utils/shipmentStatuses';
+import { SHIPMENT_STEPS, shipmentStatusLabel } from '@/app/_logistics/utils/shipmentStatuses';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import type { LogisticsShipment } from '@/database/schema';
-
-type ShipmentStatus = LogisticsShipment['status'];
-
-interface StatusStep {
-  status: ShipmentStatus;
-  label: string;
-  shortLabel: string;
-}
-
-const statusSteps: StatusStep[] = [
-  { status: 'draft', label: 'Draft', shortLabel: 'Draft' },
-  { status: 'booked', label: 'Booked', shortLabel: 'Booked' },
-  { status: 'picked_up', label: 'Picked Up', shortLabel: 'Pickup' },
-  { status: 'in_transit', label: 'In Transit', shortLabel: 'Transit' },
-  { status: 'arrived_port', label: 'Arrived Port', shortLabel: 'Port' },
-  { status: 'customs_clearance', label: 'Customs', shortLabel: 'Customs' },
-  { status: 'cleared', label: 'Cleared', shortLabel: 'Cleared' },
-  { status: 'at_warehouse', label: 'At Warehouse', shortLabel: 'Warehouse' },
-];
 
 export interface ShipmentStatusStepperProps {
   currentStatus: ShipmentStatus;
+  shipmentType: ShipmentType;
   onStatusClick?: (status: ShipmentStatus) => void;
+  isUpdating?: boolean;
 }
 
 /**
  * Visual stepper showing shipment status progression
+ *
+ * The steps depend on the kind of shipment (SHIPMENT_STEPS), and a step is
+ * current when the shipment's status is one it covers — so "Receiving" sits on
+ * the warehouse step and "Delivered" completes an import. Clicking a step asks
+ * first, because a status change notifies the partner.
  */
-const ShipmentStatusStepper = ({ currentStatus, onStatusClick }: ShipmentStatusStepperProps) => {
+const ShipmentStatusStepper = ({
+  currentStatus,
+  shipmentType,
+  onStatusClick,
+  isUpdating = false,
+}: ShipmentStatusStepperProps) => {
+  const [pendingStatus, setPendingStatus] = useState<ShipmentStatus | null>(null);
+
   // Handle cancelled status separately
   if (currentStatus === 'cancelled') {
     return (
@@ -45,7 +43,25 @@ const ShipmentStatusStepper = ({ currentStatus, onStatusClick }: ShipmentStatusS
     );
   }
 
-  const currentIndex = statusSteps.findIndex((s) => s.status === currentStatus);
+  const steps = SHIPMENT_STEPS[shipmentType];
+  const currentIndex = steps.findIndex((s) => s.covers.includes(currentStatus));
+  // The last step is the end of the journey, so reaching it counts as done
+  const isFinished = currentIndex === steps.length - 1;
+
+  const handleClick = (status: ShipmentStatus, isCurrent: boolean) => {
+    if (!onStatusClick || isCurrent) return;
+    setPendingStatus(status);
+  };
+
+  const pendingLabel = pendingStatus
+    ? (steps.find((s) => s.status === pendingStatus)?.label ?? shipmentStatusLabel(pendingStatus))
+    : null;
+
+  const stateOf = (index: number) => ({
+    isCompleted: index < currentIndex || (isFinished && index === currentIndex),
+    isCurrent: index === currentIndex && !isFinished,
+    isPending: index > currentIndex,
+  });
 
   return (
     <div className="w-full">
@@ -56,36 +72,36 @@ const ShipmentStatusStepper = ({ currentStatus, onStatusClick }: ShipmentStatusS
           <div className="absolute top-4 left-0 right-0 h-0.5 bg-border-muted" />
           {/* Progress line filled */}
           <div
-            className="absolute top-4 left-0 h-0.5 bg-fill-brand transition-all duration-500"
-            style={{ width: `${(currentIndex / (statusSteps.length - 1)) * 100}%` }}
+            className="absolute top-4 left-0 h-0.5 bg-text-primary transition-all duration-500"
+            style={{ width: `${(Math.max(currentIndex, 0) / (steps.length - 1)) * 100}%` }}
           />
 
-          {statusSteps.map((step, index) => {
-            const isCompleted = index < currentIndex;
-            const isCurrent = index === currentIndex;
-            const isPending = index > currentIndex;
+          {steps.map((step, index) => {
+            const { isCompleted, isCurrent, isPending } = stateOf(index);
+            const isAtStep = index === currentIndex;
 
             return (
               <button
                 key={step.status}
-                onClick={() => onStatusClick?.(step.status)}
-                disabled={!onStatusClick}
-                className={`relative flex flex-col items-center ${onStatusClick ? 'cursor-pointer' : 'cursor-default'}`}
+                type="button"
+                onClick={() => handleClick(step.status, isAtStep)}
+                disabled={!onStatusClick || isUpdating}
+                className={`relative flex flex-col items-center ${onStatusClick && !isAtStep ? 'cursor-pointer' : 'cursor-default'}`}
               >
                 {/* Circle */}
                 <div
                   className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors ${
                     isCompleted
-                      ? 'border-fill-brand bg-fill-brand text-white'
+                      ? 'border-text-primary bg-text-primary text-surface-primary'
                       : isCurrent
-                        ? 'border-fill-brand bg-white dark:bg-surface-primary'
+                        ? 'border-text-primary bg-white dark:bg-surface-primary'
                         : 'border-border-muted bg-white dark:bg-surface-primary'
                   }`}
                 >
                   {isCompleted ? (
                     <Icon icon={IconCheck} size="sm" />
                   ) : isCurrent ? (
-                    <Icon icon={IconCircleDot} size="sm" className="text-fill-brand" />
+                    <Icon icon={IconCircleDot} size="sm" className="text-text-primary" />
                   ) : (
                     <Icon icon={IconCircle} size="sm" className="text-text-muted" />
                   )}
@@ -94,11 +110,17 @@ const ShipmentStatusStepper = ({ currentStatus, onStatusClick }: ShipmentStatusS
                 <Typography
                   variant="bodyXs"
                   className={`mt-2 text-center ${
-                    isCurrent ? 'font-semibold text-text-brand' : isPending ? 'text-text-muted' : ''
+                    isAtStep ? 'font-semibold text-text-primary' : isPending ? 'text-text-muted' : ''
                   }`}
                 >
-                  {step.shortLabel}
+                  {step.label}
                 </Typography>
+                {/* The exact status, where the step stands for several */}
+                {isAtStep && step.status !== currentStatus && (
+                  <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                    {shipmentStatusLabel(currentStatus)}
+                  </Typography>
+                )}
               </button>
             );
           })}
@@ -108,30 +130,45 @@ const ShipmentStatusStepper = ({ currentStatus, onStatusClick }: ShipmentStatusS
       {/* Mobile view - compact */}
       <div className="md:hidden">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {statusSteps.map((step, index) => {
-            const isCompleted = index < currentIndex;
-            const isCurrent = index === currentIndex;
+          {steps.map((step, index) => {
+            const { isCompleted, isCurrent } = stateOf(index);
 
             return (
               <button
                 key={step.status}
-                onClick={() => onStatusClick?.(step.status)}
-                disabled={!onStatusClick}
+                type="button"
+                onClick={() => handleClick(step.status, index === currentIndex)}
+                disabled={!onStatusClick || isUpdating}
                 className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs whitespace-nowrap ${
                   isCompleted
-                    ? 'bg-fill-brand/10 text-text-brand'
+                    ? 'bg-fill-muted text-text-primary'
                     : isCurrent
-                      ? 'bg-fill-brand text-white'
+                      ? 'bg-text-primary text-surface-primary'
                       : 'bg-surface-secondary text-text-muted'
                 }`}
               >
                 {isCompleted && <Icon icon={IconCheck} size="xs" />}
-                {step.shortLabel}
+                {step.label}
               </button>
             );
           })}
         </div>
       </div>
+
+      {pendingStatus && (
+        <div className="mt-4 flex justify-center border-t border-border-muted pt-3">
+          <InlineConfirm
+            message={`Move this shipment to ${pendingLabel}? The partner is notified of the change.`}
+            confirmLabel={`Move to ${pendingLabel}`}
+            isPending={isUpdating}
+            onConfirm={() => {
+              onStatusClick?.(pendingStatus);
+              setPendingStatus(null);
+            }}
+            onCancel={() => setPendingStatus(null)}
+          />
+        </div>
+      )}
     </div>
   );
 };
