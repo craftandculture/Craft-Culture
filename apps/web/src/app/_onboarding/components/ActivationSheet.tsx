@@ -98,7 +98,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
 
   const addCard = async () => {
     try {
-      const result = await start.mutateAsync({ action, returnTo });
+      const result = await start.mutateAsync({ action, returnTo, acceptTerms: data.hasAcceptedTerms || hasAccepted });
       if (result.url) {
         window.location.href = result.url;
         return;

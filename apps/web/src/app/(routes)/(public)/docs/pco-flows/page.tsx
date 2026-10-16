@@ -572,7 +572,7 @@ const PartnerTab = () => (
           <Icon icon={IconTemperature} size="sm" className="mt-0.5 text-cyan-500" />
           <div>
             <Typography variant="bodySm" className="font-medium">
-              12-14°C Cold Storage
+              12–16°C Cold Storage
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
               4-zone sensor monitoring with real-time temperature and humidity tracking
@@ -905,7 +905,7 @@ const DistributorTab = () => {
               Live Cold Room Data
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              The scan page shows real-time 4-zone temperature (12-14°C), humidity (50-75% RH), and
+              The scan page shows real-time 4-zone temperature (12–16°C), humidity (50–80% RH), and
               CO₂ monitoring from C&C&apos;s licensed & bonded warehouse.
             </Typography>
           </div>
@@ -1406,7 +1406,7 @@ const ColdChainTab = () => (
             </Typography>
           </div>
           <Typography variant="bodyXs" colorRole="muted">
-            12-14°C storage in our licensed & bonded warehouse. Every case barcoded and tracked in
+            12–16°C storage in our licensed & bonded warehouse. Every case barcoded and tracked in
             our WMS.
           </Typography>
         </div>
@@ -1543,7 +1543,7 @@ const ColdChainTab = () => (
             </Typography>
           </div>
           <Typography variant="bodyXs" colorRole="muted">
-            50-75% RH and CO₂ monitoring shown live. Proves conditions are right for fine wine
+            50–80% RH and CO₂ monitoring shown live. Proves conditions are right for fine wine
             storage.
           </Typography>
         </div>
@@ -1569,7 +1569,7 @@ const ColdChainTab = () => (
             </Typography>
           </div>
           <Typography variant="bodyXs" colorRole="muted">
-            12-14°C storage, dual compressor redundancy, licensed & bonded warehouse. Full spec
+            12–16°C storage, dual compressor redundancy, licensed & bonded warehouse. Full spec
             transparency.
           </Typography>
         </div>
@@ -1585,11 +1585,11 @@ const ColdChainTab = () => (
       <div className="grid gap-3 sm:grid-cols-2">
         {[
           { icon: IconQrcode, label: 'QR Code', value: 'Per-order scannable, linked to provenance page' },
-          { icon: IconSnowflake, label: 'Cold Room', value: '12-14°C, 24/7 monitored' },
+          { icon: IconSnowflake, label: 'Cold Room', value: '12–16°C, 24/7 monitored' },
           { icon: IconTemperature, label: 'Sensors', value: '4-zone: temp, humidity, CO₂, air quality' },
           { icon: IconClock, label: 'Monitoring', value: 'Real-time alerts on threshold breach' },
           { icon: IconShieldCheck, label: 'Compliance', value: 'Licensed & bonded facility' },
-          { icon: IconDroplet, label: 'Humidity', value: '50-75% RH, actively controlled' },
+          { icon: IconDroplet, label: 'Humidity', value: '50–80% RH, actively controlled' },
           { icon: IconCheck, label: 'Security', value: '24/7 CCTV & access control' },
           { icon: IconArrowRight, label: 'Traceability', value: 'Full chain: winery to delivery' },
         ].map((spec) => (

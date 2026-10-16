@@ -88,9 +88,9 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
   const points = [
     {
       icon: IconTemperature,
-      title: 'Professionally cellared at 12–14°C',
+      title: 'Professionally cellared at 12–16°C',
       detail:
-        'Your wine is stored in our temperature-controlled bonded facility, monitored around the clock. Duty and VAT remain suspended until your wine is released for local delivery.',
+        'Your wine is stored in our temperature-controlled bonded facility, monitored around the clock. Duty and VAT remain suspended until you request a local delivery.',
     },
     {
       icon: IconWorld,

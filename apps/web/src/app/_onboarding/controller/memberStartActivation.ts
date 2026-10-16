@@ -1,15 +1,17 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { cellarMemberships } from '@/database/schema';
+import { cellarApplications, cellarMemberships, users } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import { createSubscriptionHostedPage, findOrCreateBillingCustomer, isBillingConfigured } from '@/lib/zoho/billing';
 import serverConfig from '@/server.config';
 
+import { PRIVATE_CELLAR_TERMS_VERSION } from '../constants/privateCellarTerms';
 import getActivationState from '../data/getActivationState';
 import getMembershipTerms from '../data/getMembershipTerms';
+import getTermsAcceptance from '../data/getTermsAcceptance';
 import openMembershipInvoiceTask from '../data/openMembershipInvoiceTask';
 
 /**
@@ -36,6 +38,8 @@ const memberStartActivation = stockOwnerProcedure
         .max(300)
         .regex(/^\/platform\/cellar[\w\-/?=&%.]*$/)
         .default('/platform/cellar'),
+      /** Ticked on the sheet when the current terms were not accepted at sign-up */
+      acceptTerms: z.boolean().optional(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
@@ -47,6 +51,33 @@ const memberStartActivation = stockOwnerProcedure
     }
     if (!state.missing.includes('payment')) return { url: null, alreadyActive: true };
 
+    /*
+      Billing starts here, so the current terms must be on record — checked on
+      the server, not only by the checkbox. Accepted at sign-up on this version
+      is enough; otherwise the member ticks them now and it is recorded.
+    */
+    const { applicationId, acceptedCurrent } = await getTermsAcceptance(ctx.partner.id);
+
+    if (!acceptedCurrent) {
+      if (!input.acceptTerms) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Please read and accept the Private Cellar terms first.',
+        });
+      }
+
+      const acceptedAt = new Date();
+
+      if (applicationId) {
+        await db
+          .update(cellarApplications)
+          .set({ termsVersion: PRIVATE_CELLAR_TERMS_VERSION, termsAcceptedAt: acceptedAt })
+          .where(eq(cellarApplications.id, applicationId));
+      }
+
+      await db.update(users).set({ termsAcceptedAt: acceptedAt }).where(eq(users.id, ctx.user.id));
+    }
+
     if (serverConfig.cellarBillingMode === 'invoice') {
       /*
         Only a cellar that has never started can start itself. A paused or
@@ -56,16 +87,29 @@ const memberStartActivation = stockOwnerProcedure
       if (state.membership.status === 'past_due' || state.membership.status === 'cancelled') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Your membership is paused. Please contact us and we will sort it out with you.',
+          message: 'Your membership is paused. Please contact us and we will arrange the next step with you.',
         });
       }
 
       const terms = await getMembershipTerms(ctx.partner.id);
 
-      await db
+      /*
+        Only from a state that has never started. A double click finds the
+        membership already active and opens no second invoice job, and a
+        pause the team applied a moment ago is not undone.
+      */
+      const [started] = await db
         .update(cellarMemberships)
         .set({ status: 'active', activatedAt: new Date(), activatedBy: input.action })
-        .where(eq(cellarMemberships.id, state.membership.id));
+        .where(
+          and(
+            eq(cellarMemberships.id, state.membership.id),
+            inArray(cellarMemberships.status, ['not_activated', 'pending_payment']),
+          ),
+        )
+        .returning({ id: cellarMemberships.id });
+
+      if (!started) return { url: null, alreadyActive: true };
 
       await openMembershipInvoiceTask({
         memberName: ctx.partner.businessName,
