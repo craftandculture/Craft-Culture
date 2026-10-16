@@ -1,3 +1,14 @@
+## [2.0.379](https://github.com/craftandculture/Craft-Culture/compare/v2.0.378...v2.0.379) (2026-10-16)
+
+### Features
+
+* **cellar:** restrained footer on the join pages ([0519a2c](https://github.com/craftandculture/Craft-Culture/commit/0519a2cc3b28be10ce4cd26c9238f88936baf2b8))
+
+### Bug Fixes
+
+* **cellar:** collector-led copy on the join page ([8df08b5](https://github.com/craftandculture/Craft-Culture/commit/8df08b52b10f2d3aa28e8a5acd48078ec59b2201))
+* **cellar:** tighter copy on the join page ([ba39a43](https://github.com/craftandculture/Craft-Culture/commit/ba39a4356b9c917517a854047220d3ca18103253))
+
 ## [2.0.378](https://github.com/craftandculture/Craft-Culture/compare/v2.0.377...v2.0.378) (2026-10-16)
 
 ### Bug Fixes
