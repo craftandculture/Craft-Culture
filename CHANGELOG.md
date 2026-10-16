@@ -1,3 +1,9 @@
+## [2.0.370](https://github.com/craftandculture/Craft-Culture/compare/v2.0.369...v2.0.370) (2026-10-16)
+
+### Bug Fixes
+
+* the logistics dashboard loads its figures again, and says so when it cannot ([31f9842](https://github.com/craftandculture/Craft-Culture/commit/31f9842fffd17fdc4e18ee0ee8e6f15333039255))
+
 ## [2.0.369](https://github.com/craftandculture/Craft-Culture/compare/v2.0.368...v2.0.369) (2026-10-16)
 
 ### Features
