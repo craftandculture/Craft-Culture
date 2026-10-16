@@ -1,9 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { cellarApplications, users } from '@/database/schema';
+import { cellarApplications, cellarInvites, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import serverConfig from '@/server.config';
 
@@ -49,17 +49,49 @@ const submitApplication = protectedProcedure
       });
     }
 
-    const isInvited = ctx.user.approvalStatus === 'approved';
+    /*
+      Invited means one of our live invitations names this login — not merely
+      that the login is approved. Approval is also how a trade or staff login
+      gets in, and treating that as an invitation opened a cellar for anyone
+      approved, with no review.
+    */
+    const [invite] = application.inviteId
+      ? await db
+          .select({ id: cellarInvites.id })
+          .from(cellarInvites)
+          .where(
+            and(
+              eq(cellarInvites.id, application.inviteId),
+              /* Sent counts too: they may sign in without opening the link. */
+              inArray(cellarInvites.status, ['sent', 'accepted']),
+              eq(cellarInvites.userId, ctx.user.id),
+            ),
+          )
+          .limit(1)
+      : [];
+
+    const isInvited = Boolean(invite);
+    const isApproved = isInvited || application.status === 'approved';
 
     const partnerId = await ensureApplicantCellar({
       application,
       userId: ctx.user.id,
       email: ctx.user.email,
-      status: isInvited ? 'active' : 'inactive',
+      status: isApproved ? 'active' : 'inactive',
     });
 
     const now = new Date();
     const alreadySubmitted = application.status !== 'draft';
+
+    /*
+      Accepted once. A re-save keeps the original moment of acceptance, and
+      only a new version of the terms records a new one.
+    */
+    const termsAcceptedAt =
+      application.termsAcceptedAt &&
+      application.termsVersion === PRIVATE_CELLAR_TERMS_VERSION
+        ? application.termsAcceptedAt
+        : now;
 
     await db
       .update(users)
@@ -67,7 +99,7 @@ const submitApplication = protectedProcedure
         customerType: 'private_clients',
         name: application.fullName.trim(),
         onboardingCompletedAt: ctx.user.onboardingCompletedAt ?? now,
-        termsAcceptedAt: now,
+        termsAcceptedAt,
       })
       .where(eq(users.id, ctx.user.id));
 
@@ -77,7 +109,7 @@ const submitApplication = protectedProcedure
         partnerId,
         status: isInvited ? 'approved' : alreadySubmitted ? application.status : 'submitted',
         termsVersion: PRIVATE_CELLAR_TERMS_VERSION,
-        termsAcceptedAt: now,
+        termsAcceptedAt,
         submittedAt: application.submittedAt ?? now,
         ...(isInvited && !application.decidedAt && { decidedAt: now }),
         step: 'membership',
@@ -118,7 +150,7 @@ const submitApplication = protectedProcedure
           }));
     }
 
-    return { ...view, isApproved: isInvited };
+    return { ...view, isApproved };
   });
 
 export default submitApplication;

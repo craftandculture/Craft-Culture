@@ -50,6 +50,23 @@ const claimInvite = protectedProcedure
       });
     }
 
+    /*
+      An accepted invite is spent. Its one effect — approving the login and
+      joining it to the cellar — has happened, and replaying it must change
+      nothing: a member the team has since declined, paused or removed would
+      otherwise reopen their old link and be restored in full.
+    */
+    if (invite.status === 'accepted') {
+      if (invite.userId && invite.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'This invitation has already been used.',
+        });
+      }
+
+      return { claimed: true };
+    }
+
     const application = await getOrCreateApplication(ctx.user.id, invite.name);
 
     await db.transaction(async (tx) => {
@@ -115,15 +132,24 @@ const claimInvite = protectedProcedure
         })
         .where(eq(cellarApplications.id, application.id));
 
-      if (invite.status !== 'accepted') {
-        await tx
-          .update(cellarInvites)
-          .set({
-            status: 'accepted',
-            acceptedAt: new Date(),
-            userId: ctx.user.id,
-          })
-          .where(eq(cellarInvites.id, invite.id));
+      /* Only from sent, so two tabs claiming at once accept it once. */
+      const [accepted] = await tx
+        .update(cellarInvites)
+        .set({
+          status: 'accepted',
+          acceptedAt: new Date(),
+          userId: ctx.user.id,
+        })
+        .where(
+          and(eq(cellarInvites.id, invite.id), eq(cellarInvites.status, 'sent')),
+        )
+        .returning({ id: cellarInvites.id });
+
+      if (!accepted) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This invitation has just been used. Please refresh.',
+        });
       }
     });
 
