@@ -1,3 +1,13 @@
+## [2.0.388](https://github.com/craftandculture/Craft-Culture/compare/v2.0.387...v2.0.388) (2026-10-16)
+
+### Bug Fixes
+
+* a delivery quote is accepted once, cannot change underneath a quote, and a paused membership stops deliveries ([4fe49a8](https://github.com/craftandculture/Craft-Culture/commit/4fe49a827b608581ea270b6c282d7579a4002b4b))
+* a membership starts once and only on the current terms, and every page states 12–16°C ([5a65d02](https://github.com/craftandculture/Craft-Culture/commit/5a65d02b9dcd6ab41f7c6f02665010c866c4baed))
+* a used invitation link can no longer restore a declined member, and only a real invitation skips review ([94bf616](https://github.com/craftandculture/Craft-Culture/commit/94bf616b02f4e00eaf5f2ebb416a7a3c51249d3f))
+* cellar purchases hold their wine, sell only the bottles a member offered, and cannot be confirmed twice ([7736ac4](https://github.com/craftandculture/Craft-Culture/commit/7736ac423745ff49d3065b4f0938db577ffd01e4))
+* member IDs, bank details and Private Cellar admin are for C&C staff only, and IDs are never stored unencrypted ([7f67f7f](https://github.com/craftandculture/Craft-Culture/commit/7f67f7fb694a67c0161c310080657c0a3aab1b36))
+
 ## [2.0.387](https://github.com/craftandculture/Craft-Culture/compare/v2.0.386...v2.0.387) (2026-10-16)
 
 ### Documentation
