@@ -36,6 +36,24 @@ const blankAnswer = (source: WineSource): WineSourceAnswer => ({
 });
 
 /**
+ * Collection size as bands, stored as cases on the intake (12 bottles a case)
+ * so no new column is needed; each band keeps its upper bound
+ */
+const collectionSizes = [
+  { label: 'Under 50 bottles', cases: 4 },
+  { label: '50–250 bottles', cases: 21 },
+  { label: '250–1,000 bottles', cases: 84 },
+  { label: '1,000+ bottles', cases: 100 },
+] as const;
+
+/** The band a stored case count falls in, so an earlier answer shows selected */
+const sizeOf = (approxCases: string) => {
+  const cases = Number(approxCases);
+  if (!approxCases || !Number.isFinite(cases)) return null;
+  return collectionSizes.find((size) => cases <= size.cases)?.cases ?? 100;
+};
+
+/**
  * Step three: where their wine is now
  *
  * Any number of sources can be ticked. The details asked for each are all
@@ -62,9 +80,10 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
   return (
     <StepFrame
       title="Your collection"
-      intro="Where is your collection today? Choose any that apply, and we will take care of the rest when you are ready."
+      intro="Tell us where your wine is today. Select all that apply and, when you are ready, we will take care of the rest."
       onContinue={() => onSave(answers)}
       onSkip={onSkip}
+      skipLabel="Skip for now"
       onBack={onBack}
       isBusy={isBusy}
     >
@@ -99,49 +118,55 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
                 </span>
               </button>
 
-              {chosen && answer && source.isTransfer && (
-                <div className="space-y-4 px-4 pb-4">
-                  {source.value === 'uk_eu_cellar' && (
-                    <FieldLabel label="Who holds it?" optional>
-                      <input
-                        className={`${fieldClass} h-11`}
-                        value={answer.holderName}
-                        onChange={(event) => update(source.value, 'holderName', event.target.value)}
-                        placeholder="e.g. Berry Bros. & Rudd"
-                      />
-                    </FieldLabel>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <FieldLabel label="Roughly how many cases?" optional>
-                      <input
-                        className={`${fieldClass} h-11`}
-                        inputMode="numeric"
-                        value={answer.approxCases}
-                        onChange={(event) =>
-                          update(source.value, 'approxCases', event.target.value.replace(/\D/g, ''))
-                        }
-                        placeholder="e.g. 40"
-                      />
-                    </FieldLabel>
-                    <FieldLabel label="Account number" optional>
-                      <input
-                        className={`${fieldClass} h-11`}
-                        value={answer.holderAccountRef}
-                        onChange={(event) => update(source.value, 'holderAccountRef', event.target.value)}
-                      />
-                    </FieldLabel>
-                  </div>
-                  <FieldLabel label="Anything we should know?" optional>
-                    <textarea
-                      className={`${fieldClass} min-h-20 py-3`}
-                      value={answer.note}
-                      onChange={(event) => update(source.value, 'note', event.target.value)}
-                      placeholder="A contact there, part of the cellar only, timing…"
+              {chosen && answer && source.value === 'lcb' && (
+                <div className="space-y-2 px-4 pb-4">
+                  <FieldLabel label="LCB account or cellar reference" optional>
+                    <input
+                      className={`${fieldClass} h-11`}
+                      value={answer.holderAccountRef}
+                      onChange={(event) => update(source.value, 'holderAccountRef', event.target.value)}
                     />
                   </FieldLabel>
                   <p className="text-text-muted text-xs leading-5">
-                    If you do not have these details to hand, we will obtain them on your behalf.
+                    Add it now, or we will contact you to arrange the transfer.
                   </p>
+                </div>
+              )}
+
+              {chosen && answer && source.value === 'uk_eu_cellar' && (
+                <div className="space-y-4 px-4 pb-4">
+                  <FieldLabel label="Where is your wine held?" optional>
+                    <input
+                      className={`${fieldClass} h-11`}
+                      value={answer.holderName}
+                      onChange={(event) => update(source.value, 'holderName', event.target.value)}
+                      placeholder="Merchant or warehouse name"
+                    />
+                  </FieldLabel>
+                  <FieldLabel label="Approximate collection size" optional>
+                    <div className="flex flex-wrap gap-2">
+                      {collectionSizes.map((size) => {
+                        const isOn = sizeOf(answer.approxCases) === size.cases;
+                        return (
+                          <button
+                            key={size.cases}
+                            type="button"
+                            aria-pressed={isOn}
+                            onClick={() =>
+                              update(source.value, 'approxCases', isOn ? '' : String(size.cases))
+                            }
+                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                              isOn
+                                ? 'border-text-primary bg-text-primary text-surface-primary'
+                                : 'border-border-primary text-text-primary'
+                            }`}
+                          >
+                            {size.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FieldLabel>
                 </div>
               )}
 
@@ -158,18 +183,6 @@ const StepWine = ({ initial, isBusy, onSave, onSkip, onBack }: StepWineProps) =>
                 </div>
               )}
 
-              {chosen && answer && source.value === 'with_cc' && (
-                <div className="px-4 pb-4">
-                  <FieldLabel label="Whose name is it under?" optional>
-                    <input
-                      className={`${fieldClass} h-11`}
-                      value={answer.note}
-                      onChange={(event) => update(source.value, 'note', event.target.value)}
-                      placeholder="If not yours — a company, or who bought it for you"
-                    />
-                  </FieldLabel>
-                </div>
-              )}
             </div>
           );
         })}

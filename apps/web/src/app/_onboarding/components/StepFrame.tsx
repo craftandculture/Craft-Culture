@@ -18,6 +18,8 @@ export interface StepFrameProps {
   onBack?: () => void;
   /** Offered on every optional step — nothing here may block joining */
   onSkip?: () => void;
+  /** "Complete later" where something is owed; "Skip for now" for a preference */
+  skipLabel?: string;
 }
 
 /** One step's card: heading, fields, and the buttons that move on */
@@ -31,6 +33,7 @@ const StepFrame = ({
   isContinueDisabled = false,
   onBack,
   onSkip,
+  skipLabel = 'Complete later',
   children,
 }: PropsWithChildren<StepFrameProps>) => (
   <form
@@ -63,7 +66,7 @@ const StepFrame = ({
         )}
         {onSkip && (
           <Button type="button" variant="ghost" size="md" onClick={onSkip} isDisabled={isBusy}>
-            Complete later
+            {skipLabel}
           </Button>
         )}
       </div>
