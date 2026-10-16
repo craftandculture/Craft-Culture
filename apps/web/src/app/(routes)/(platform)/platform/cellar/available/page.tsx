@@ -15,11 +15,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import bottleName from '@/app/_cellar/utils/bottleName';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import bottleName from '@/app/_cellar/utils/bottleName';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -216,6 +216,16 @@ const AvailablePage = () => {
   const origin = (wine: (typeof wines)[number]) =>
     [wine.producer, wine.region ?? wine.country].filter(Boolean).join(' · ');
 
+  /*
+    A private client counts bottles, and cases only as "a case of six". A
+    wine sold by the bottle has a pack of one, which the trade notation
+    rendered as cases of one.
+  */
+  const unitCount = (wine: (typeof wines)[number], count: number) =>
+    wine.caseConfig > 1
+      ? `${count} ${count === 1 ? 'case' : 'cases'} of ${wine.caseConfig}`
+      : `${count} ${count === 1 ? 'bottle' : 'bottles'}`;
+
   /* One stepper for the table and the phone cards, so the two cannot drift. */
   const caseControl = (wine: (typeof wines)[number]) => {
     const chosen = basket.get(wine.lwin18) ?? 0;
@@ -273,16 +283,6 @@ const AvailablePage = () => {
       </span>
     );
   };
-
-  /*
-    A private client counts bottles, and cases only as "a case of six". A
-    wine sold by the bottle has a pack of one, which the trade notation
-    rendered as cases of one.
-  */
-  const unitCount = (wine: (typeof wines)[number], count: number) =>
-    wine.caseConfig > 1
-      ? `${count} ${count === 1 ? 'case' : 'cases'} of ${wine.caseConfig}`
-      : `${count} ${count === 1 ? 'bottle' : 'bottles'}`;
 
   const availability = (wine: (typeof wines)[number]) =>
     wine.caseConfig > 1 && wine.availableCases > 0
