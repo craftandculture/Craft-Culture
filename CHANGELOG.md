@@ -1,3 +1,9 @@
+## [2.0.364](https://github.com/craftandculture/Craft-Culture/compare/v2.0.363...v2.0.364) (2026-10-16)
+
+### Features
+
+* shipments show a coloured Import, Export or Mainland Transfer badge, and the dashboard filters by type ([dc5a8e0](https://github.com/craftandculture/Craft-Culture/commit/dc5a8e0ed7dbe640ee860bc4e3b61e9a52ab5b59))
+
 ## [2.0.363](https://github.com/craftandculture/Craft-Culture/compare/v2.0.362...v2.0.363) (2026-10-16)
 
 ### Features
