@@ -6,6 +6,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { toast } from 'sonner';
 
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
+import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -250,14 +251,26 @@ const SellingPage = () => {
                     : state.detail}
                 </p>
                 {canWithdraw && (
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => withdraw({ mandateId: mandate.id })}
-                    className="border-border-muted text-text-primary mt-3 h-10 w-full rounded-lg border text-sm font-semibold disabled:opacity-50"
+                  <ConfirmAction
+                    title="Withdraw this offer?"
+                    description={
+                    <p>
+                      This wine comes off our lists and stays in your private
+                      cellar. You can offer it again at any time.
+                    </p>
+                  }
+                    confirmLabel="Withdraw offer"
+                    tone="danger"
+                    onConfirm={() => withdraw({ mandateId: mandate.id })}
                   >
-                    Withdraw
-                  </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      className="border-border-muted text-text-primary mt-3 h-10 w-full rounded-lg border text-sm font-semibold disabled:opacity-50"
+                    >
+                      Withdraw
+                    </button>
+                  </ConfirmAction>
                 )}
               </li>
             );
@@ -376,14 +389,22 @@ const SellingPage = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {canWithdraw ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          isDisabled={isPending}
-                          onClick={() => withdraw({ mandateId: mandate.id })}
+                        <ConfirmAction
+                          title="Withdraw this offer?"
+                          description={
+                    <p>
+                      This wine comes off our lists and stays in your private
+                      cellar. You can offer it again at any time.
+                    </p>
+                  }
+                          confirmLabel="Withdraw offer"
+                          tone="danger"
+                          onConfirm={() => withdraw({ mandateId: mandate.id })}
                         >
-                          <ButtonContent>Withdraw</ButtonContent>
-                        </Button>
+                          <Button size="sm" variant="outline" isDisabled={isPending}>
+                            <ButtonContent>Withdraw</ButtonContent>
+                          </Button>
+                        </ConfirmAction>
                       ) : (
                         /*
                           A sentence, not a disabled button. A greyed control

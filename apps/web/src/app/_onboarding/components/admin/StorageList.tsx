@@ -4,6 +4,7 @@ import { IconCloudUpload } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import useTRPC from '@/lib/trpc/browser';
 
 const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -109,19 +110,32 @@ const StorageList = () => {
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {!row.zohoSubscriptionId && (row.status === 'active' || row.status === 'past_due') && (
-                    <button
-                      type="button"
-                      disabled={setStatus.isPending}
-                      onClick={() =>
+                    <ConfirmAction
+                      title={row.status === 'active' ? 'Pause this membership?' : 'Resume this membership?'}
+                      description={
+                        <p>
+                          {row.status === 'active'
+                            ? 'The member can still see their cellar, but buying, deliveries and sales stop until you resume. They are notified.'
+                            : 'Buying, deliveries and sales open again straight away. The member is notified.'}
+                        </p>
+                      }
+                      confirmLabel={row.status === 'active' ? 'Pause membership' : 'Resume membership'}
+                      tone={row.status === 'active' ? 'danger' : 'default'}
+                      onConfirm={() =>
                         setStatus.mutate({
                           membershipId: row.membershipId,
                           status: row.status === 'active' ? 'past_due' : 'active',
                         })
                       }
-                      className="text-text-brand text-xs hover:underline disabled:opacity-50"
                     >
-                      {row.status === 'active' ? 'Pause' : 'Resume'}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={setStatus.isPending}
+                        className="text-text-brand text-xs hover:underline disabled:opacity-50"
+                      >
+                        {row.status === 'active' ? 'Pause' : 'Resume'}
+                      </button>
+                    </ConfirmAction>
                   )}
                 </td>
               </tr>

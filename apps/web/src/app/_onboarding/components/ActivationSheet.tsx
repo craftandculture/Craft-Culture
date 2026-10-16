@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 
+import ContactLinks from './ContactLinks';
 import FieldLabel from './FieldLabel';
 import IdSideCapture from './IdSideCapture';
 import fieldClass from '../constants/fieldClass';
@@ -24,13 +25,18 @@ export interface ActivationSheetProps {
 
 type Side = 'emirates_id_front' | 'emirates_id_back';
 
-/** What happens once they confirm, in the words of what they were doing */
-const ACTION_OUTCOME: Record<ActivationAction, string> = {
-  purchase: 'Your wine is reserved',
-  release: 'Your delivery request goes ahead',
-  offer_for_sale: 'Your wine is offered for sale',
-  transfer_in: 'We start arranging your transfer',
-  other: 'Your request goes ahead',
+/**
+ * What they can carry on with once the membership starts
+ *
+ * The sheet does not repeat the action for them, so it must not promise that
+ * the action has happened — only that they can now do it.
+ */
+const ACTION_NEXT: Record<ActivationAction, string> = {
+  purchase: 'complete your purchase',
+  release: 'send your delivery request',
+  offer_for_sale: 'offer your wine for sale',
+  transfer_in: 'tell us about your transfer',
+  other: 'carry on',
 };
 
 const aed = (value: number) => `AED ${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })}`;
@@ -59,6 +65,40 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
   const start = useMutation(api.onboarding.member.startActivation.mutationOptions());
 
   if (!data) return null;
+
+  /*
+    A paused membership is the team's decision, usually about an invoice. The
+    member cannot restart it here, so showing the price and a button that then
+    refuses would be a dead end that also puts the fee in front of them.
+  */
+  if (data.status === 'past_due' || data.status === 'cancelled') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" role="dialog">
+        <div className="bg-surface-primary w-full max-w-lg space-y-4 rounded-t-2xl p-6 shadow-xl sm:rounded-2xl">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-text-primary text-xl font-semibold tracking-tight">
+              Your private cellar is paused
+            </h2>
+            <button type="button" onClick={onClose} aria-label="Close" className="text-text-muted">
+              <IconX size={20} />
+            </button>
+          </div>
+          <p className="text-text-muted text-sm leading-6">
+            Your wine remains safely stored and you can view your collection at any time. New purchases, deliveries
+            and sales are on hold for now. Please get in touch and we will arrange the next step with you.
+          </p>
+          <ContactLinks />
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-text-primary text-surface-primary h-11 w-full rounded-lg text-sm font-semibold"
+          >
+            Back to my cellar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const needsIdentity = data.missing.includes('identity');
   const uploaded = [
@@ -103,7 +143,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
         window.location.href = result.url;
         return;
       }
-      toast.success('Your cellar is active');
+      toast.success(`Your cellar is active. You can now ${ACTION_NEXT[action]}.`);
       await refresh();
       onClose();
     } catch (error) {
@@ -125,7 +165,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
             <p className="text-text-muted mt-1 text-sm leading-6">
               {needsIdentity
                 ? 'We are required to verify every member before wine moves into or out of our bonded warehouse. You only do this once.'
-                : `${ACTION_OUTCOME[action]} as soon as you confirm.`}
+                : `Once confirmed, you can ${ACTION_NEXT[action]} straight away.`}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="text-text-muted">

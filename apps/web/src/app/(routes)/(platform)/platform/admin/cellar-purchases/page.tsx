@@ -6,6 +6,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -25,7 +26,7 @@ const money = (value: number) =>
 const STATE_STYLES: Record<string, string> = {
   reserved: 'bg-amber-100 text-amber-800',
   payment_claimed: 'bg-violet-100 text-violet-800',
-  completed: 'bg-teal-100 text-teal-800',
+  completed: 'bg-emerald-100 text-emerald-800',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -267,21 +268,41 @@ const CellarPurchasesPage = () => {
                           placeholder="Bank reference"
                           className="max-w-[240px]"
                         />
-                        <Button
-                          size="sm"
-                          colorRole="brand"
-                          isDisabled={isPending}
-                          onClick={() =>
+                        <ConfirmAction
+                          title={`Confirm payment for ${purchase.purchaseNumber}?`}
+                          description={
+                            <>
+                              <p>
+                                Only confirm once the money is in the bank.
+                                The wine moves into {purchase.buyerName}&apos;s
+                                cellar straight away, and any member whose wine
+                                it was is recorded as owed.
+                              </p>
+                              {!claimed && (
+                                <p>
+                                  They have not said they have paid yet.
+                                </p>
+                              )}
+                            </>
+                          }
+                          confirmLabel="Confirm and transfer"
+                          onConfirm={() =>
                             confirm({
                               purchaseId: purchase.id,
                               paymentReference: reference || undefined,
                             })
                           }
                         >
-                          <ButtonContent iconLeft={IconCheck}>
-                            Confirm payment &amp; transfer
-                          </ButtonContent>
-                        </Button>
+                          <Button
+                            size="sm"
+                            colorRole="brand"
+                            isDisabled={isPending}
+                          >
+                            <ButtonContent iconLeft={IconCheck}>
+                              Confirm payment &amp; transfer
+                            </ButtonContent>
+                          </Button>
+                        </ConfirmAction>
                         {!claimed && (
                           <Typography variant="bodyXs" colorRole="muted">
                             They have not said they have paid yet.

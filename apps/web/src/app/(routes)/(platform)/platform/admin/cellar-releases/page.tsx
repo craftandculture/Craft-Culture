@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -601,10 +602,17 @@ const CellarReleasesPage = () => {
                       </label>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          isDisabled={isPending}
-                          onClick={() =>
+                        <ConfirmAction
+                          title={`Send the quote for ${request.requestNumber}?`}
+                          description={
+                            <p>
+                              The member is told it comes to $
+                              {((Number(form.clearance) || 0) + (Number(form.delivery) || 0) + (Number(form.service) || 0) + (Number(form.repack) || 0) + (Number(form.extra) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                              , all in, and can accept it straight away.
+                            </p>
+                          }
+                          confirmLabel="Send quote"
+                          onConfirm={() =>
                             decide({
                               requestId: request.id,
                               outcome: 'quote',
@@ -622,10 +630,12 @@ const CellarReleasesPage = () => {
                             })
                           }
                         >
-                          <ButtonContent iconLeft={IconCheck}>
-                            Send quote
-                          </ButtonContent>
-                        </Button>
+                          <Button size="sm" isDisabled={isPending}>
+                            <ButtonContent iconLeft={IconCheck}>
+                              Send quote
+                            </ButtonContent>
+                          </Button>
+                        </ConfirmAction>
                         {/*
                           Unavailable until the note exists. The note is the
                           entire content of this action — without it the

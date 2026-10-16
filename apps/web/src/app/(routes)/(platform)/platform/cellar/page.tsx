@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
@@ -896,15 +897,34 @@ const CellarPage = () => {
                         it meant two explanations of the same thing, one of
                         them vaguer.
                       */}
-                      <Button
-                        size="sm"
-                        colorRole="primary"
-                        className={DARK_ACTION}
-                        isDisabled={isAccepting}
-                        onClick={() => acceptRelease({ requestId: request.id })}
+                      <ConfirmAction
+                        title="Accept these costs?"
+                        description={
+                          <>
+                            <p>
+                              We will prepare {request.requestNumber} for
+                              delivery and arrange clearance. The quoted costs
+                              are added to your next invoice.
+                            </p>
+                            <p>
+                              Once accepted, changes are made by contacting us.
+                            </p>
+                          </>
+                        }
+                        confirmLabel="Accept and deliver"
+                        onConfirm={() =>
+                          acceptRelease({ requestId: request.id })
+                        }
                       >
-                        <ButtonContent>Accept and deliver</ButtonContent>
-                      </Button>
+                        <Button
+                          size="sm"
+                          colorRole="primary"
+                          className={DARK_ACTION}
+                          isDisabled={isAccepting}
+                        >
+                          <ButtonContent>Accept and deliver</ButtonContent>
+                        </Button>
+                      </ConfirmAction>
                     </div>
                   )}
                 </div>
@@ -1211,16 +1231,29 @@ const CellarPage = () => {
                         >
                           <ButtonContent>Save changes</ButtonContent>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          isDisabled={isWithdrawing}
-                          onClick={() =>
+                        <ConfirmAction
+                          title="Withdraw this delivery request?"
+                          description={
+                            <p>
+                              {request.requestNumber} will be closed and your
+                              wine stays in your private cellar. You can
+                              request a delivery again at any time.
+                            </p>
+                          }
+                          confirmLabel="Withdraw request"
+                          tone="danger"
+                          onConfirm={() =>
                             withdrawRelease({ requestId: request.id })
                           }
                         >
-                          <ButtonContent>Withdraw request</ButtonContent>
-                        </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            isDisabled={isWithdrawing}
+                          >
+                            <ButtonContent>Withdraw request</ButtonContent>
+                          </Button>
+                        </ConfirmAction>
                         <Typography variant="bodyXs" colorRole="muted">
                           Changes can be made until we issue your costs.
                         </Typography>
@@ -1782,19 +1815,37 @@ const CellarPage = () => {
 
                                       return (
                                         <span className="inline-flex items-center gap-0.5">
-                                          <button
-                                            type="button"
-                                            disabled={isRequesting}
-                                            onClick={(event) => {
-                                              event.stopPropagation();
+                                          <ConfirmAction
+                                            title="Request a condition report?"
+                                            description={
+                                              <p>
+                                                Each bottle is inspected
+                                                &mdash; fill level, label,
+                                                capsule and closure &mdash; and
+                                                reported with photographs and
+                                                written notes. AED 150 for this
+                                                wine, added to your next
+                                                invoice.
+                                              </p>
+                                            }
+                                            confirmLabel="Request report"
+                                            onConfirm={() =>
                                               requestReport({
                                                 stockId: parcel.stockId,
-                                              });
-                                            }}
-                                            className="text-text-primary hover:bg-fill-muted -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                                              })
+                                            }
                                           >
-                                            Request condition report
-                                          </button>
+                                            <button
+                                              type="button"
+                                              disabled={isRequesting}
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                              className="text-text-primary hover:bg-fill-muted -my-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                                            >
+                                              Request condition report
+                                            </button>
+                                          </ConfirmAction>
                                           {/*
                                             A chargeable action should say what
                                             it costs before it is clicked, not
@@ -1819,7 +1870,7 @@ const CellarPage = () => {
                                             >
                                               <Typography variant="bodyXs">
                                                 <strong>AED 150</strong> per
-                                                lot. Each bottle is
+                                                wine. Each bottle is
                                                 inspected &mdash; fill level,
                                                 label, capsule and closure
                                                 &mdash; and reported with
@@ -2450,12 +2501,12 @@ const CellarPage = () => {
                         not yours), it leaves our warehouse and can no longer
                         be withdrawn.{' '}
                         <a
-                          href="/platform/terms-of-use"
+                          href="/legal/private-cellar-terms"
                           target="_blank"
                           rel="noreferrer"
                           className="font-semibold underline"
                         >
-                          Consignment terms
+                          Private Cellar terms
                         </a>
                       </Typography>
                     </div>
