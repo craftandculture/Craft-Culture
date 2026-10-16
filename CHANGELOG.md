@@ -1,3 +1,9 @@
+## [2.0.381](https://github.com/craftandculture/Craft-Culture/compare/v2.0.380...v2.0.381) (2026-10-16)
+
+### Bug Fixes
+
+* deleting from the Users list stays on the list ([ff8af3b](https://github.com/craftandculture/Craft-Culture/commit/ff8af3b8641a6ac0377a361f0f07664b4eabcd2f))
+
 ## [2.0.380](https://github.com/craftandculture/Craft-Culture/compare/v2.0.379...v2.0.380) (2026-10-16)
 
 ### Features
