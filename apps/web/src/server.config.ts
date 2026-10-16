@@ -3,7 +3,8 @@ import getAppUrl from './utils/getAppUrl';
 
 const serverConfig = {
   env: serverEnv.NODE_ENV,
-  appUrl: getAppUrl(),
+  // Origin, not the URL object: interpolated, the object kept its trailing slash, so links read ".xyz//join"
+  appUrl: getAppUrl().origin,
   betterAuthSecret: serverEnv.BETTER_AUTH_SECRET,
   dbUrl: serverEnv.DB_URL,
   encryptionKey: serverEnv.ENCRYPTION_KEY,
