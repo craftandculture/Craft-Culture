@@ -22,7 +22,7 @@ const faqItems = [
   {
     question: 'Do I pay duty on wine stored in my cellar?',
     answer:
-      'No. Your wine is stored duty-free in our bonded warehouse in Ras Al Khaimah. Duty, VAT and the cost of delivery are only paid when you ask for wine to be delivered to you in the UAE, and we quote them for your approval before anything moves.',
+      'No. Your wine is stored duty-free in the C&C bonded warehouse. Duty, VAT and the cost of delivery are only paid when you ask for wine to be delivered to you in the UAE, and we quote them for your approval before anything moves.',
   },
   {
     question: 'What does it cost to have wine delivered?',
@@ -118,8 +118,8 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              Everything you own with us is stored duty-free in our bonded
-              warehouse in Ras Al Khaimah, at twelve to fourteen degrees with
+              Everything you own with us is stored duty-free in the C&amp;C
+              bonded warehouse, at twelve to fourteen degrees with
               controlled humidity. No duty or VAT is paid while it stays there;
               they are only paid when wine is delivered to you in the UAE.
             </Typography>

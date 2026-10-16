@@ -42,7 +42,7 @@ const milestoneMessages: Record<ShipmentStatus, string> = {
   arrived_port: 'Shipment has arrived at destination port',
   customs_clearance: 'Shipment is undergoing customs clearance',
   cleared: 'Shipment has cleared customs',
-  at_warehouse: 'Shipment has arrived at RAK Port warehouse',
+  at_warehouse: 'Shipment has arrived at the C&C warehouse',
   dispatched: 'Shipment has been dispatched for final delivery',
   delivered: 'Shipment has been delivered',
   cancelled: 'Shipment has been cancelled',

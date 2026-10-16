@@ -85,7 +85,7 @@ const PrivateCellarTermsDocument = ({
     {
       title: '8. Storage and care',
       paragraphs: [
-        'Wine is stored in a licensed bonded warehouse in Ras Al Khaimah at 12–14°C, humidity controlled and continuously monitored, with duty suspended until release. Temperature records are kept against your wine at no charge. We store your wine with reasonable care and skill.',
+        'Wine is stored in the C&C licensed bonded warehouse in the UAE at 12–14°C, humidity controlled and continuously monitored, with duty suspended until release. Temperature records are kept against your wine at no charge. We store your wine with reasonable care and skill.',
         'We may move wine within or between licensed facilities for operational, safety or regulatory reasons. Its allocation to your account is unaffected.',
       ],
     },

@@ -212,7 +212,7 @@ const PartnerSupportPage = () => {
             How Craft &amp; Culture works for you
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="max-w-2xl leading-relaxed">
-            We store your wine duty-free in our bonded warehouse in Ras Al Khaimah, deliver it to your clients in the
+            We store your wine duty-free in the C&amp;C bonded warehouse, deliver it to your clients in the
             UAE through licensed distributors, and ship it onward when you need. Everything you see here reads from the
             warehouse record itself.
           </Typography>

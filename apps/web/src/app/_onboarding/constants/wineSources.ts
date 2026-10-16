@@ -3,7 +3,7 @@ const wineSources = [
   {
     value: 'uae_in_bond',
     label: 'Interested in wine available here in the UAE',
-    hint: 'Browse wines stored duty-free in our Ras Al Khaimah warehouse, and add any you choose to your cellar.',
+    hint: 'Browse wines stored duty-free in the C&C warehouse, and add any you choose to your cellar.',
     isTransfer: false,
   },
   {

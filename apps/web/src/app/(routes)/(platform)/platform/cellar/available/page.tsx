@@ -311,7 +311,7 @@ const AvailablePage = () => {
             Available now
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block max-w-2xl">
-            Wines held in our bonded warehouse in Ras Al Khaimah, ready to add to your cellar. Prices are duty-free:
+            Wines held in the C&amp;C bonded warehouse, ready to add to your cellar. Prices are duty-free:
             duty and VAT are only paid if you have wine delivered to you in the UAE.
           </Typography>
         </div>
@@ -323,7 +323,7 @@ const AvailablePage = () => {
           href="mailto:enquiries@craftculture.xyz"
           className="border-border-muted text-text-primary hover:bg-fill-muted inline-flex h-9 flex-shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 text-xs font-semibold transition-colors sm:self-auto"
         >
-          <Icon icon={IconMail} size="xs" /> Looking for something else?
+          <Icon icon={IconMail} size="xs" /> Ask us for a wine
         </a>
       </header>
 

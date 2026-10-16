@@ -630,7 +630,7 @@ const CellarPage = () => {
             {data?.partner?.name ?? '\u00A0'}
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-            Stored duty-free in our bonded warehouse in Ras Al Khaimah. Duty
+            Stored duty-free in the C&amp;C bonded warehouse. Duty
             and VAT are only paid when wine is delivered to you in the UAE.
           </Typography>
         </div>
