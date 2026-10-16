@@ -1,3 +1,9 @@
+## [2.0.352](https://github.com/craftandculture/Craft-Culture/compare/v2.0.351...v2.0.352) (2026-10-16)
+
+### Features
+
+* **cellar:** show members where and how to pay ([918deca](https://github.com/craftandculture/Craft-Culture/commit/918deca7a2a46f87c8c7e36b1e8dd75bafeecb24))
+
 ## [2.0.351](https://github.com/craftandculture/Craft-Culture/compare/v2.0.350...v2.0.351) (2026-10-16)
 
 ### Features
