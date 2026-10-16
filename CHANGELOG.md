@@ -1,3 +1,9 @@
+## [2.0.371](https://github.com/craftandculture/Craft-Culture/compare/v2.0.370...v2.0.371) (2026-10-16)
+
+### Bug Fixes
+
+* app links no longer carry a double slash ([40ddce5](https://github.com/craftandculture/Craft-Culture/commit/40ddce57b87e24b84ae864acf42f5735e18ccc38))
+
 ## [2.0.370](https://github.com/craftandculture/Craft-Culture/compare/v2.0.369...v2.0.370) (2026-10-16)
 
 ### Bug Fixes
