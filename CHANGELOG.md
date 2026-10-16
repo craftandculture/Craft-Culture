@@ -1,3 +1,9 @@
+## [2.0.385](https://github.com/craftandculture/Craft-Culture/compare/v2.0.384...v2.0.385) (2026-10-16)
+
+### Features
+
+* **cellar:** membership step ends in Open my private cellar ([1719338](https://github.com/craftandculture/Craft-Culture/commit/17193380fea34aa0d8b74f9f2b4086072986d5ca))
+
 ## [2.0.384](https://github.com/craftandculture/Craft-Culture/compare/v2.0.383...v2.0.384) (2026-10-16)
 
 ### Features
