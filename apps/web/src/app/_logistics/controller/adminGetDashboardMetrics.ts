@@ -3,12 +3,15 @@ import { and, count, desc, eq, gte, isNotNull, lt, sql, sum } from 'drizzle-orm'
 import db from '@/database/client';
 import {
   logisticsDocuments,
+  logisticsJobs,
   logisticsQuoteRequests,
   logisticsQuotes,
   logisticsShipmentItems,
   logisticsShipments,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /**
  * Get dashboard metrics for the logistics overview page
@@ -85,8 +88,12 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
           WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
         ), ${logisticsShipments.totalBottles}, 0)`,
         createdAt: logisticsShipments.createdAt,
+        jobNumber: logisticsJobs.jobNumber,
+        partyName: partyNameSql,
+        partyLogoUrl: partyLogoSql,
       })
       .from(logisticsShipments)
+      .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
       // Finished shipments drop off a week after they finish, so the list is live work
       .where(
         sql`NOT (${logisticsShipments.status} IN ('delivered', 'cancelled')

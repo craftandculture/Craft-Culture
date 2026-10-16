@@ -21,6 +21,7 @@ import { Suspense, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
+import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import type { ShipmentStageGroup } from '@/app/_logistics/schemas/getShipmentsSchema';
@@ -268,15 +269,11 @@ const ShipmentsList = () => {
                 return (
                   <li key={shipment.id}>
                     <Link href={href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary">
-                      <span
-                        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}
-                      >
-                        <Icon icon={ModeIcon} size="sm" />
-                      </span>
+                      <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5">
                           <span className="truncate text-sm font-medium text-text-primary">
-                            {shipment.name ?? `${origin} → ${destination}`}
+                            {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
                           </span>
                           <ShipmentTypeBadge type={shipment.type} />
                           <ShipmentStatusBadge status={shipment.status} />
@@ -287,10 +284,10 @@ const ShipmentsList = () => {
                           <span className="truncate">
                             {origin} → {destination}
                           </span>
-                          {shipment.partner?.businessName ? (
+                          {shipment.name && shipment.partyName ? (
                             <>
                               <span>·</span>
-                              <span className="truncate">{shipment.partner.businessName}</span>
+                              <span className="truncate">{shipment.partyName}</span>
                             </>
                           ) : null}
                           {shipment.carrierName ? (

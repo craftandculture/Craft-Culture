@@ -74,7 +74,9 @@ const NeedsAttentionCard = () => {
                       >
                         <span className="w-32 shrink-0 font-mono text-xs text-text-muted">{s.jobNumber ?? s.shipmentNumber}</span>
                         <span className="min-w-0 flex-1 truncate text-text-primary">
-                          {s.name ?? `${s.originCity ?? 'Origin'} → ${s.destinationCity ?? 'Destination'}`}
+                          {s.name ??
+                            (('clientName' in s && s.clientName) ||
+                              `${s.originCity ?? 'Origin'} → ${s.destinationCity ?? 'Destination'}`)}
                         </span>
                         <ShipmentTypeBadge type={s.type} />
                         {g.key === 'overdue' && s.eta ? (

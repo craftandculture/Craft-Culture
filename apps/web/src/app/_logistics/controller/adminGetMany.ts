@@ -11,6 +11,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getShipmentsSchema, { SHIPMENT_STAGE_GROUPS, type ShipmentStageGroup } from '../schemas/getShipmentsSchema';
+import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /**
  * Get list of shipments with pagination and filters
@@ -57,6 +58,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         ilike(logisticsShipments.destinationCity, `%${search}%`),
         // Partner, the supplier Hillebrand names, and any wine on the shipment
         ilike(partners.businessName, `%${search}%`),
+        ilike(logisticsJobs.clientName, `%${search}%`),
         ilike(logisticsShipments.partnerNotes, `%${search}%`),
         sql`EXISTS (
           SELECT 1 FROM ${logisticsShipmentItems}
@@ -81,6 +83,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .select({ status: logisticsShipments.status, count: sql<number>`count(*)` })
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
+    .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
     .where(baseWhere)
     .groupBy(logisticsShipments.status);
 
@@ -98,6 +101,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .select({ count: sql<number>`count(*)` })
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
+    .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
     .where(whereClause);
 
   const totalCount = Number(countResult?.count ?? 0);
@@ -134,6 +138,8 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         email: users.email,
       },
       jobNumber: logisticsJobs.jobNumber,
+      partyName: partyNameSql,
+      partyLogoUrl: partyLogoSql,
     })
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
@@ -156,6 +162,8 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     partner: row.partner,
     createdByUser: row.createdByUser,
     jobNumber: row.jobNumber,
+    partyName: row.partyName,
+    partyLogoUrl: row.partyLogoUrl,
   }));
 
   const nextCursor = cursor + limit < totalCount ? cursor + limit : null;

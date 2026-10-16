@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import BondsOutstandingCard from '@/app/_logistics/components/exports/BondsOutstandingCard';
 import NeedsAttentionCard from '@/app/_logistics/components/NeedsAttentionCard';
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
+import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -275,27 +276,29 @@ const LogisticsDashboardPage = () => {
                           href={`/platform/admin/logistics/shipments/${shipment.id}`}
                           className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary"
                         >
-                          <span
-                            className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${shipmentTypeConfig[shipment.type]?.tile ?? 'bg-surface-secondary text-text-muted'}`}
-                          >
-                            <Icon icon={ModeIcon} size="sm" />
-                          </span>
+                          <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-1.5">
                               <span className="truncate text-sm font-medium text-text-primary">
-                                {shipment.name ?? `${origin} → ${destination}`}
+                                {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
                               </span>
                               <ShipmentTypeBadge type={shipment.type} />
                               <ShipmentStatusBadge status={shipment.status} />
                             </span>
                             <span className="mt-0.5 flex items-center gap-1.5 text-xs text-text-muted">
                               <span className="font-mono">{shipment.shipmentNumber}</span>
-                              {shipment.name ? (
+                              {shipment.name || shipment.partyName ? (
                                 <>
                                   <span>·</span>
                                   <span className="truncate">
                                     {origin} → {destination}
                                   </span>
+                                </>
+                              ) : null}
+                              {shipment.name && shipment.partyName ? (
+                                <>
+                                  <span>·</span>
+                                  <span className="truncate">{shipment.partyName}</span>
                                 </>
                               ) : null}
                             </span>
