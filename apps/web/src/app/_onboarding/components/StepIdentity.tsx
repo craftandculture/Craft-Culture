@@ -41,15 +41,28 @@ const StepIdentity = ({ initial, uploaded, uploadingSide, isBusy, onUpload, onSa
     if (preview) setPreviews((current) => ({ ...current, [side]: preview }));
   };
 
+  // With nothing entered, "Continue" read as if it would fail validation
+  const hasAnything =
+    values.eidNumber.trim() !== '' ||
+    values.eidExpiry !== '' ||
+    uploaded.length > 0 ||
+    Object.keys(previews).length > 0;
+
   return (
     <StepFrame
       title="Verification"
-      intro="As a licensed bonded warehouse, we are required by UAE regulations to verify the owner of every collection. Your Emirates ID is encrypted and seen only by our team. You can add it now, or later when you first use your cellar."
+      titleNote="Optional for now"
+      intro="To keep your collection in bonded storage, we need to verify the identity of the cellar owner. You can complete this now or when you first use your cellar."
+      continueLabel={hasAnything ? 'Continue' : 'Continue without verification'}
       onContinue={() => onSave(values)}
       onSkip={onSkip}
       onBack={onBack}
       isBusy={isBusy}
     >
+      <p className="text-text-primary text-sm leading-6">
+        Verification is needed before your first purchase, release or transfer of wine into your cellar.
+      </p>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <FieldLabel label="Emirates ID number">
           <input
@@ -89,7 +102,7 @@ const StepIdentity = ({ initial, uploaded, uploadingSide, isBusy, onUpload, onSa
 
       <p className="text-text-muted flex items-start gap-2 text-xs leading-5">
         <IconLock size={14} className="mt-0.5 shrink-0" />
-        Encrypted when stored, and seen only by our team and you.
+        Your documents are encrypted and accessible only to you and authorised C&amp;C personnel.
       </p>
     </StepFrame>
   );

@@ -8,6 +8,8 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 
 export interface StepFrameProps {
   title: string;
+  /** A small pill beside the title, e.g. "Optional for now" */
+  titleNote?: string;
   intro?: string;
   onContinue: () => void;
   continueLabel?: string;
@@ -21,6 +23,7 @@ export interface StepFrameProps {
 /** One step's card: heading, fields, and the buttons that move on */
 const StepFrame = ({
   title,
+  titleNote,
   intro,
   onContinue,
   continueLabel = 'Continue',
@@ -38,7 +41,14 @@ const StepFrame = ({
     className="bg-fill-primary border-border-muted space-y-6 rounded-2xl border p-5 shadow-sm sm:p-7"
   >
     <div className="space-y-2">
-      <h1 className="font-heading text-text-primary text-xl leading-tight sm:text-2xl">{title}</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="font-heading text-text-primary text-xl leading-tight sm:text-2xl">{title}</h1>
+        {titleNote && (
+          <span className="bg-fill-secondary text-text-muted rounded-full px-2.5 py-0.5 text-xs font-medium">
+            {titleNote}
+          </span>
+        )}
+      </div>
       {intro && <p className="text-text-muted max-w-prose text-sm leading-6">{intro}</p>}
     </div>
 
@@ -53,7 +63,7 @@ const StepFrame = ({
         )}
         {onSkip && (
           <Button type="button" variant="ghost" size="md" onClick={onSkip} isDisabled={isBusy}>
-            Skip for now
+            Complete later
           </Button>
         )}
       </div>

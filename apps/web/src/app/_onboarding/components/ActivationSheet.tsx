@@ -166,7 +166,7 @@ const ActivationSheet = ({ action, returnTo, onClose }: ActivationSheetProps) =>
               ))}
             </div>
             <p className="text-text-muted flex items-center gap-2 text-xs">
-              <IconLock size={14} /> Encrypted when stored, and seen only by our team and you.
+              <IconLock size={14} /> Your documents are encrypted and accessible only to you and authorised C&amp;C personnel.
             </p>
             <button
               type="button"

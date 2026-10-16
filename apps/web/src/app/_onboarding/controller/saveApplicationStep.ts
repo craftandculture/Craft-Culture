@@ -64,7 +64,7 @@ const stepSchema = z.discriminatedUnion('step', [
 /**
  * Save one step of the application and say where to resume
  *
- * Every step but the name is optional — "Skip for now" saves nothing and
+ * Every step but the name is optional — "Complete later" saves nothing and
  * moves on. A submitted application can still have its details filled in from
  * here, which is how the profile card finishes what was skipped.
  */

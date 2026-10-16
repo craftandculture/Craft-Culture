@@ -7,7 +7,7 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 
 **Joining from the website**
 1. `/join` — email → sign-in link (magic link; existing email signs that account in).
-2. `/join/application` — About you (name required) · Identity · Your wine · Membership (accept terms). Every step but the name has *Skip for now*; answers save as they go.
+2. `/join/application` — About you (name required) · Identity · Your wine · Membership (accept terms). Every step but the name has *Complete later*; answers save as they go.
 3. Submit → `/join/status` (open sign-up) while Kevin and Laraine review.
 4. Admin approves on **Cellar members → Applications** → cellar opens, cellar-ready email, a Team Tasks job per wine source.
 
