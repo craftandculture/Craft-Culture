@@ -54,6 +54,7 @@ const CellarPurchasesPage = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [reference, setReference] = useState('');
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.consignment.admin.getPurchases.queryOptions({ status }),
@@ -64,6 +65,20 @@ const CellarPurchasesPage = () => {
       onSuccess: (result) => {
         toast.success(`${result.purchaseNumber} cancelled — the wine is back on the list.`);
         setConfirmCancelId(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: reverse, isPending: isReversing } = useMutation(
+    api.consignment.admin.reversePurchase.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.purchaseNumber} reversed — the wine is back in our stock and on sale.`,
+        );
+        setReverseReason('');
+        setOpenId(null);
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -353,11 +368,56 @@ const CellarPurchasesPage = () => {
                       </div>
                     </>
                   ) : (
-                    <Typography variant="bodyXs" colorRole="muted">
-                      {purchase.status === 'completed'
-                        ? `Transferred${purchase.paymentConfirmedAt ? ` ${formatDistanceToNowStrict(new Date(purchase.paymentConfirmedAt), { addSuffix: true })}` : ''}.`
-                        : `This purchase is ${STATE_LABELS[purchase.status] ?? purchase.status}.`}
-                    </Typography>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {purchase.status === 'completed'
+                          ? `Transferred${purchase.paymentConfirmedAt ? ` ${formatDistanceToNowStrict(new Date(purchase.paymentConfirmedAt), { addSuffix: true })}` : ''}.`
+                          : `This purchase is ${STATE_LABELS[purchase.status] ?? purchase.status}.`}
+                      </Typography>
+                      {/*
+                        A sale made in error, a refund, or a test. The wine goes
+                        back to whoever sold it and back on sale; the reason is
+                        written on the purchase.
+                      */}
+                      {purchase.status === 'completed' && (
+                        <span className="ml-auto flex items-center gap-2">
+                          <Input
+                            value={reverseReason}
+                            onChange={(event) => setReverseReason(event.target.value)}
+                            placeholder="Why it is being reversed"
+                            className="max-w-[240px]"
+                          />
+                          <ConfirmAction
+                            title={`Reverse ${purchase.purchaseNumber}?`}
+                            description={
+                              <p>
+                                The wine moves out of {purchase.buyerName}&apos;s
+                                cellar, back to whoever sold it, and goes back on
+                                sale. {purchase.buyerName} is told it was
+                                cancelled. Any refund is made separately.
+                              </p>
+                            }
+                            confirmLabel="Reverse purchase"
+                            tone="danger"
+                            onConfirm={() =>
+                              reverse({
+                                purchaseId: purchase.id,
+                                reason: reverseReason.trim(),
+                              })
+                            }
+                          >
+                            <button
+                              type="button"
+                              disabled={isReversing || reverseReason.trim().length < 3}
+                              className="text-text-muted inline-flex h-9 items-center gap-1 rounded px-2 text-xs font-medium transition-colors hover:text-red-700 disabled:opacity-40"
+                            >
+                              <Icon icon={IconX} size="xs" />
+                              Reverse purchase
+                            </button>
+                          </ConfirmAction>
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

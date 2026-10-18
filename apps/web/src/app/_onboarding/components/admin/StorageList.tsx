@@ -13,7 +13,7 @@ const statusLabel: Record<string, string> = {
   not_activated: 'Not activated',
   pending_payment: 'Awaiting card',
   active: 'Active',
-  past_due: 'Paused / payment failed',
+  past_due: 'Paused',
   cancelled: 'Cancelled',
 };
 

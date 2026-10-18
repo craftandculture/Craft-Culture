@@ -8,6 +8,7 @@ import adminDecideMandate from './controller/adminDecideMandate';
 import adminGetMandates from './controller/adminGetMandates';
 import adminGetPayoutRuns from './controller/adminGetPayoutRuns';
 import adminGetPurchases from './controller/adminGetPurchases';
+import adminReversePurchase from './controller/adminReversePurchase';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
 import memberCancelPurchase from './controller/memberCancelPurchase';
 import memberCreatePurchase from './controller/memberCreatePurchase';
@@ -36,6 +37,7 @@ const adminRouter = createTRPCRouter({
   getPurchases: adminGetPurchases,
   confirmPurchasePayment: adminConfirmPurchasePayment,
   cancelPurchase: adminCancelPurchase,
+  reversePurchase: adminReversePurchase,
   getPayoutRuns: adminGetPayoutRuns,
   createPayoutRun: adminCreatePayoutRun,
   approvePayoutRun: adminApprovePayoutRun,

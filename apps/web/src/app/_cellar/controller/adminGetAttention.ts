@@ -362,7 +362,7 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
         title: row.name,
         detail:
           row.status === 'past_due'
-            ? 'Membership payment overdue'
+            ? 'Paused by us — resume when it is settled'
             : 'Started opening their cellar and has not finished',
         since: row.since,
       })),
@@ -581,7 +581,7 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     group('allocations', 'Allocations to share out', 'Allocate cases to the members who asked', 'action', '/platform/admin/cellar-members?tab=requests', allocationsToShare),
     group('uk', 'UK rotations to assign', 'Wine at LCB no member can see yet', 'action', '/platform/admin/cellar-members?tab=uk', ukUnassigned),
     group('invoices', 'Invoices to set up', 'Active members not yet billed', 'urgent', '/platform/admin/tasks', invoicesToSetUp),
-    group('memberships', 'Memberships stuck', 'Activation unfinished or payment overdue', 'chase', '/platform/admin/cellar-members?tab=storage', membershipsStuck),
+    group('memberships', 'Memberships stuck', 'Activation unfinished, or paused', 'chase', '/platform/admin/cellar-members?tab=storage', membershipsStuck),
   ];
 
   return {
