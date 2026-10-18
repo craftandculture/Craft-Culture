@@ -1,3 +1,9 @@
+## [2.0.406](https://github.com/craftandculture/Craft-Culture/compare/v2.0.405...v2.0.406) (2026-10-18)
+
+### Features
+
+* each notification says what it is about, its reference, and what to do next ([a49b880](https://github.com/craftandculture/Craft-Culture/commit/a49b880d8383fa28bb857073717a572f0b8dcd6f))
+
 ## [2.0.405](https://github.com/craftandculture/Craft-Culture/compare/v2.0.404...v2.0.405) (2026-10-18)
 
 ### Features
