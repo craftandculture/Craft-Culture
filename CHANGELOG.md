@@ -1,3 +1,9 @@
+## [2.0.400](https://github.com/craftandculture/Craft-Culture/compare/v2.0.399...v2.0.400) (2026-10-18)
+
+### Features
+
+* members can share their private cellar with a spouse or assistant, as view only or to manage, and remove that access at any time ([ef5a1cf](https://github.com/craftandculture/Craft-Culture/commit/ef5a1cf3276962b4736e3430119718286e9ddc13))
+
 ## [2.0.399](https://github.com/craftandculture/Craft-Culture/compare/v2.0.398...v2.0.399) (2026-10-18)
 
 ### Features
