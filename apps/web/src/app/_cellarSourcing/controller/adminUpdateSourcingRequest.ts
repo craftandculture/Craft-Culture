@@ -11,9 +11,9 @@ import notifySourcingUpdate from '../data/notifySourcingUpdate';
 /**
  * The team marks a request as being looked for, or closes it
  *
- * Closing tells the member, with the note if one is given. Only open requests
- * move: an accepted one is being bought and is closed through its Team Tasks
- * job, not here.
+ * Closing tells the member, with the note if one is given. An accepted request
+ * can be closed too, once the wine is bought and with the member or the purchase
+ * has fallen through; it cannot be put back to searching.
  *
  * @example
  *   await trpcClient.cellarSourcing.admin.updateRequest.mutate({ requestId, status: 'searching' });
@@ -37,12 +37,12 @@ const adminUpdateSourcingRequest = staffAdminProcedure
       .where(
         and(
           eq(cellarSourcingRequests.id, input.requestId),
-          inArray(cellarSourcingRequests.status, [
-            'requested',
-            'searching',
-            'offer_sent',
-            'declined',
-          ]),
+          inArray(
+            cellarSourcingRequests.status,
+            input.status === 'closed'
+              ? ['requested', 'searching', 'offer_sent', 'declined', 'accepted']
+              : ['requested', 'searching', 'offer_sent', 'declined'],
+          ),
         ),
       )
       .returning();
@@ -50,7 +50,10 @@ const adminUpdateSourcingRequest = staffAdminProcedure
     if (!row) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'This request has already been accepted, withdrawn or closed.',
+        message:
+          input.status === 'closed'
+            ? 'This request has already been withdrawn or closed.'
+            : 'This request has already been accepted, withdrawn or closed.',
       });
     }
 

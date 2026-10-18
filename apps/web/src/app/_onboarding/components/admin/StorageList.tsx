@@ -44,7 +44,13 @@ const StorageList = () => {
   const setStatus = useMutation(
     api.onboarding.admin.setMembershipStatus.mutationOptions({
       onSuccess: (result) => {
-        toast.success(result.status === 'active' ? 'Membership resumed' : 'Membership paused');
+        toast.success(
+          result.status === 'active'
+            ? 'Membership resumed'
+            : result.status === 'cancelled'
+              ? 'Membership closed'
+              : 'Membership paused',
+        );
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -134,6 +140,36 @@ const StorageList = () => {
                         className="text-text-brand text-xs hover:underline disabled:opacity-50"
                       >
                         {row.status === 'active' ? 'Pause' : 'Resume'}
+                      </button>
+                    </ConfirmAction>
+                  )}
+                  {/*
+                    Closing ends the membership for good: the member keeps seeing
+                    their cellar but can no longer buy, sell or ask for
+                    deliveries, and it drops out of billing. Wine still held is
+                    dealt with under the terms, not by this button.
+                  */}
+                  {row.status !== 'cancelled' && (
+                    <ConfirmAction
+                      title="Close this membership?"
+                      description={
+                        <p>
+                          The membership ends and drops out of billing. Any wine still held stays where it is until it
+                          is delivered, sold or moved out.
+                        </p>
+                      }
+                      confirmLabel="Close membership"
+                      tone="danger"
+                      onConfirm={() =>
+                        setStatus.mutate({ membershipId: row.membershipId, status: 'cancelled' })
+                      }
+                    >
+                      <button
+                        type="button"
+                        disabled={setStatus.isPending}
+                        className="text-text-muted ml-3 text-xs hover:text-red-700 disabled:opacity-50"
+                      >
+                        Close
                       </button>
                     </ConfirmAction>
                   )}

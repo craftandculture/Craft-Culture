@@ -360,6 +360,42 @@ const SourcingAdmin = () => {
                 </div>
               )}
 
+              {request.status === 'accepted' && (
+                <div className="border-border-muted mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+                  <Input
+                    value={closeNote[request.id] ?? ''}
+                    onChange={(event) => setCloseNote((value) => ({ ...value, [request.id]: event.target.value }))}
+                    placeholder="Note to the member (optional)"
+                    className="h-8 min-w-[220px] flex-1 text-xs"
+                  />
+                  <ConfirmAction
+                    title="Close this request?"
+                    description={
+                      <p>
+                        Once the wine is bought and with the member, or the purchase is not going ahead. The member is
+                        told, with your note if you add one.
+                      </p>
+                    }
+                    confirmLabel="Close request"
+                    onConfirm={() =>
+                      updateRequest({
+                        requestId: request.id,
+                        status: 'closed',
+                        staffNote: closeNote[request.id] || undefined,
+                      })
+                    }
+                  >
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      className="text-text-muted h-8 px-2 text-xs font-semibold hover:text-red-700"
+                    >
+                      Close
+                    </button>
+                  </ConfirmAction>
+                </div>
+              )}
+
               {offerFor === request.id && draft && (
                 <div className="border-border-muted mt-3 space-y-3 border-t pt-3">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
