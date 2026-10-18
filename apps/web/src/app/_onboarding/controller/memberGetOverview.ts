@@ -1,7 +1,6 @@
 import { and, eq, ne } from 'drizzle-orm';
 
 import countChargeableCases from '@/app/_cellar/utils/countChargeableCases';
-import monthlyMembershipCharge from '@/app/_cellar/utils/monthlyMembershipCharge';
 import db from '@/database/client';
 import {
   cellarIntakes,
@@ -18,11 +17,12 @@ import laterIntakeStage from '../utils/laterIntakeStage';
 import missingProfileItems from '../utils/missingProfileItems';
 
 /**
- * The top of a member's cellar: what is missing, what this month costs, and
- * what is on its way in
+ * The top of a member's cellar: what is missing, what they hold, and what is
+ * on its way in
  *
- * Cases are counted as held now. The month's charge uses the peak, which the
- * Storage screen works out when extra cases are pushed to billing.
+ * Cases are counted as held now. No fee, rate or monthly total is sent: a
+ * member never sees what they spend, and what is not in the response cannot
+ * leak into a screen later. Only the allowance goes, as room to grow into.
  */
 const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   const partnerId = ctx.partner.id;
@@ -82,11 +82,11 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
     /** Card members fix a failed payment themselves; invoice members are paused by the team */
     billedByCard: Boolean(membership?.zohoSubscriptionId),
     nextBillingAt: membership?.nextBillingAt ?? null,
-    terms,
+    /** Cases included in the membership, and nothing about price */
+    includedCases: terms.includedCases,
     cases,
     bottles,
     wines,
-    thisMonth: monthlyMembershipCharge(cases, terms),
     intakes: shown.map((intake) => {
       const shipment = shipments.get(intake.id);
       return {

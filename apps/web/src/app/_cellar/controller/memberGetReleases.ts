@@ -4,6 +4,7 @@ import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
+  privateClientOrders,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
@@ -70,8 +71,20 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       confirmedAt: cellarReleaseRequests.confirmedAt,
       privateClientOrderId: cellarReleaseRequests.privateClientOrderId,
       createdAt: cellarReleaseRequests.createdAt,
+      /*
+        Where an accepted delivery has got to. Without the order's progress
+        the request vanished from the member's screen the moment they
+        accepted it, and the next they heard was the doorbell.
+      */
+      orderStatus: privateClientOrders.status,
+      scheduledDeliveryAt: privateClientOrders.scheduledDeliveryAt,
+      deliveredAt: privateClientOrders.deliveredAt,
     })
     .from(cellarReleaseRequests)
+    .leftJoin(
+      privateClientOrders,
+      eq(cellarReleaseRequests.privateClientOrderId, privateClientOrders.id),
+    )
     .where(eq(cellarReleaseRequests.partnerId, ctx.partner.id))
     .orderBy(desc(cellarReleaseRequests.createdAt))
     .limit(50);

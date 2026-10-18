@@ -4,7 +4,6 @@ import {
   IconBottle,
   IconBuildingWarehouse,
   IconChevronDown,
-  IconCoin,
   IconDownload,
   IconHistory,
   IconInfoCircle,
@@ -19,6 +18,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
@@ -677,7 +677,14 @@ const CellarPage = () => {
         </div>
       </header>
 
-      <CellarOverviewPanel />
+      {/*
+        Only what needs finishing sits above the wine. Transfers, bringing
+        wine in and the membership follow the collection — the wine is the
+        reason they are here — except for a new member with nothing stored
+        yet, for whom they are the whole story.
+      */}
+      <CellarOverviewPanel section="setup" />
+      {isEmptyCellar && <CellarOverviewPanel section="details" />}
       {activationSheet}
 
       {/*
@@ -690,7 +697,7 @@ const CellarPage = () => {
       {!isEmptyCellar && (
       <div
         className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
-          inbound.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'
+          inbound.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
         }`}
       >
         {[
@@ -706,13 +713,6 @@ const CellarPage = () => {
             value: totals.wines.toLocaleString(),
             label: 'Wines',
             detail: `${totals.producers} producers`,
-            alert: false,
-          },
-          {
-            icon: IconCoin,
-            value: totals.cost > 0 ? money(totals.cost) : '—',
-            label: 'Recorded on import',
-            detail: `${totals.pricedCount}/${totals.wines} wines`,
             alert: false,
           },
           {
@@ -1273,6 +1273,8 @@ const CellarPage = () => {
           </div>
         </section>
       )}
+
+      <DeliveriesPanel requests={releaseData?.requests ?? []} />
 
       {isEmptyCellar ? (
         /*
@@ -1974,6 +1976,12 @@ const CellarPage = () => {
         </table>
       </div>
         </>
+      )}
+
+      {!isEmptyCellar && (
+        <div className="mt-8">
+          <CellarOverviewPanel section="details" />
+        </div>
       )}
 
       {basket.size > 0 && (

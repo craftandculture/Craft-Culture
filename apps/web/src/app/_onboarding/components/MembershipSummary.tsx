@@ -20,7 +20,7 @@ const count = (value: number) =>
   value.toLocaleString('en-GB', { maximumFractionDigits: 1 });
 
 /**
- * The member's account at a glance: what they hold, how much of their storage
+ * The member's private cellar at a glance: what they hold, how much of their storage
  * it uses, and what is on its way
  *
  * Deliberately not a bill. The fee was agreed when they joined and is on every
@@ -30,7 +30,7 @@ const count = (value: number) =>
  */
 const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
   const api = useTRPC();
-  const { membershipStatus, billedByCard, terms, cases, bottles, wines, intakes } = overview;
+  const { membershipStatus, billedByCard, includedCases, cases, bottles, wines, intakes } = overview;
   const isActive = membershipStatus === 'active' || membershipStatus === 'past_due';
   const updateCard = useMutation(
     api.onboarding.member.updateCard.mutationOptions({
@@ -38,11 +38,17 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
     }),
   );
 
+  // Only transfers still on their way; wine already in the cellar is counted above
   const incomingCases = intakes
-    .filter((intake) => wineSources.find((source) => source.value === intake.source)?.isTransfer)
+    .filter(
+      (intake) =>
+        wineSources.find((source) => source.value === intake.source)?.isTransfer &&
+        intake.stage !== 'in_cellar' &&
+        intake.stage !== 'closed',
+    )
     .reduce((sum, intake) => sum + (intake.shipment?.cases || intake.approxCases || 0), 0);
 
-  const used = Math.min(100, terms.includedCases > 0 ? (cases / terms.includedCases) * 100 : 0);
+  const used = Math.min(100, includedCases > 0 ? (cases / includedCases) * 100 : 0);
 
   const status =
     membershipStatus === 'past_due'
@@ -63,7 +69,7 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
   return (
     <section className="border-border-muted bg-surface-primary h-fit rounded-xl border p-4 shadow-sm sm:p-5">
       <header className="flex items-center justify-between gap-2">
-        <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Your account</p>
+        <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Your private cellar</p>
         <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${status.tone}`}>
           {status.label}
         </span>
@@ -86,7 +92,7 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
         <div className="mb-1.5 flex items-baseline justify-between text-xs">
           <span className="text-text-muted">Storage included in your membership</span>
           <span className="text-text-primary font-semibold tabular-nums">
-            {count(Math.min(cases, terms.includedCases))} of {terms.includedCases} cases
+            {count(Math.min(cases, includedCases))} of {includedCases} cases
           </span>
         </div>
         <div className="bg-surface-muted h-2 overflow-hidden rounded-full">
@@ -104,7 +110,7 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
       {!isActive && (
         <p className="text-text-muted mt-4 text-xs leading-5">
           Your membership begins the first time you buy, sell, request a delivery or bring wine in, and includes
-          storage for {terms.includedCases * 12} bottles.
+          storage for {includedCases * 12} bottles.
         </p>
       )}
 
