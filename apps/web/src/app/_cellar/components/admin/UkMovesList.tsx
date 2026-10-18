@@ -220,6 +220,21 @@ const ShipForm = ({ move, shipments, onDone }: ShipFormProps) => {
 
   const select = 'border-border-muted bg-surface-primary h-9 rounded-lg border px-2 text-xs font-semibold';
 
+  /*
+    An accepted move can still be called off before anything ships: the
+    member changed their mind, or LCB cannot release the lines. The member can
+    no longer withdraw at this point, so staff close it.
+  */
+  const close = useMutation(
+    api.cellar.admin.quoteUkMove.mutationOptions({
+      onSuccess: () => {
+        toast.success(`${move.moveNumber} closed. The member has been told.`);
+        onDone();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   return (
     <div className="border-border-muted space-y-2.5 border-t bg-slate-50/50 px-4 py-3 dark:bg-slate-500/5">
       <p className="text-text-muted text-xs leading-5">
@@ -284,6 +299,26 @@ const ShipForm = ({ move, shipments, onDone }: ShipFormProps) => {
             )}
           </>
         )}
+        <ConfirmAction
+          title={`Close ${move.moveNumber}?`}
+          description={
+            <p>
+              Only before the Vision export order is placed. The member is told the request is closed and the wine
+              stays at LCB.
+            </p>
+          }
+          confirmLabel="Close request"
+          tone="danger"
+          onConfirm={() => close.mutate({ moveId: move.id, outcome: 'cancel' })}
+        >
+          <button
+            type="button"
+            disabled={close.isPending}
+            className="text-text-muted ml-auto h-9 px-2 text-xs font-semibold hover:text-red-700"
+          >
+            Close
+          </button>
+        </ConfirmAction>
       </div>
     </div>
   );
