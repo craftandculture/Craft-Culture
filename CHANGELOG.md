@@ -1,3 +1,10 @@
+## [2.0.405](https://github.com/craftandculture/Craft-Culture/compare/v2.0.404...v2.0.405) (2026-10-18)
+
+### Features
+
+* notifications open in a full-height drawer with Needs action first ([71a8663](https://github.com/craftandculture/Craft-Culture/commit/71a866359457d3f553a5a60c95fd01695eba8c6c))
+* the Private Cellar Membership Terms are published, effective 18 October 2026, version 2026-10-v5 ([935cb50](https://github.com/craftandculture/Craft-Culture/commit/935cb50fca0d21efeb5973d5a17f7115efa38913))
+
 ## [2.0.404](https://github.com/craftandculture/Craft-Culture/compare/v2.0.403...v2.0.404) (2026-10-18)
 
 ### Bug Fixes
