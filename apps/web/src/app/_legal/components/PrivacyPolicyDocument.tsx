@@ -32,8 +32,8 @@ interface PolicySection {
   Written to describe what the platform actually does, not what a policy
   usually says. Before changing a statement here, check it against the code:
   identity documents (_cellar/data/storeIdentityDocument.ts, encrypted at
-  rest), cookie categories (_cookies), and error monitoring with masked
-  session replay (instrumentation-client.ts). A promise the system does not
+  rest), cookie categories (_cookies), and error monitoring with no session
+  replay and scrubbed events (lib/sentry/sentryPrivacyOptions.ts). A promise the system does not
   keep is worse than no promise.
 */
 const sections: PolicySection[] = [
@@ -335,7 +335,7 @@ const sections: PolicySection[] = [
         },
         after: [
           'We use optional cookies only with your consent. At the date of this Policy we do not use analytics or marketing cookies on the platform; if we introduce them, they will be used only for people who have accepted that category.',
-          'We also use an error-monitoring service to keep the Services secure and working. It records technical information when an error occurs and, for a small sample of visits, makes a session replay: a recording of how the page behaved during the visit. Session replays are a monitoring activity, not analytics. They are configured to hide the text on the page and anything you type, and to block images and media, but they may still contain technical details of the visit, such as the pages viewed, and are therefore treated as personal data.',
+          'We also use an error-monitoring service to keep the Services secure and working. When an error occurs, it records technical information about the fault, such as the page, browser and device involved. Before this information is sent, we remove sign-in and invitation codes and other values carried in web addresses, the contents of requests and forms, uploaded files, identity numbers and email addresses. We do not record or replay your sessions.',
         ],
       },
     ],

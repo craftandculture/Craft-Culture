@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { logger, tasks } from '@trigger.dev/sdk';
 import { APICallError } from 'ai';
 
+import sentryPrivacyOptions from '@/lib/sentry/sentryPrivacyOptions';
 import tryCatch from '@/utils/tryCatch';
 
 export const sentryOnFailure = tasks.onFailure(
@@ -17,18 +18,19 @@ export const sentryOnFailure = tasks.onFailure(
         message: error.message,
         url: error.url,
         statusCode: error.statusCode,
-        responseHeaders: error.responseHeaders,
-        responseBody: error.responseBody,
         isRetryable: error.isRetryable,
-        data: error.data,
       };
       Sentry.setContext('cause', { ...cause });
       logger.error('APICallError:', { cause });
     }
 
-    if (payload) {
+    /*
+      Only the payload's field names: task payloads carry client names,
+      emails and order contents, which do not belong in error reporting.
+    */
+    if (payload && typeof payload === 'object') {
       await tryCatch(async () => {
-        Sentry.setContext('task_payload', { data: JSON.stringify(payload) });
+        Sentry.setContext('task_payload', { keys: Object.keys(payload) });
       });
     }
 
@@ -51,6 +53,7 @@ export const sentryMiddleware = tasks.middleware(
 
     Sentry.init({
       dsn: sentryDsn,
+      ...sentryPrivacyOptions,
     });
 
     Sentry.setTags({

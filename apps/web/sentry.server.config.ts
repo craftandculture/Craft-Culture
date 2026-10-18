@@ -4,6 +4,8 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+import sentryPrivacyOptions from "./src/lib/sentry/sentryPrivacyOptions";
+
 Sentry.init({
   dsn: "https://55c873ccc3be9ca5a263cfc9c13984f9@o964095.ingest.us.sentry.io/4510169801883648",
 
@@ -15,4 +17,7 @@ Sentry.init({
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
+
+  // Strips tokens, invite codes, bodies, cookies and personal data
+  ...sentryPrivacyOptions,
 });
