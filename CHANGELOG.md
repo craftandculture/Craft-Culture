@@ -1,3 +1,9 @@
+## [2.0.402](https://github.com/craftandculture/Craft-Culture/compare/v2.0.401...v2.0.402) (2026-10-18)
+
+### Bug Fixes
+
+* CI lint passes again so Trigger.dev jobs deploy, members see what they paid for wine bought from us, and the cellar flow-test fixes ([ab367ee](https://github.com/craftandculture/Craft-Culture/commit/ab367eec2805dd90857b1aa0c15c12566cf3cdb4))
+
 ## [2.0.401](https://github.com/craftandculture/Craft-Culture/compare/v2.0.400...v2.0.401) (2026-10-18)
 
 ### Bug Fixes
