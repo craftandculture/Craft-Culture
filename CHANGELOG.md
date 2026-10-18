@@ -1,3 +1,10 @@
+## [2.0.399](https://github.com/craftandculture/Craft-Culture/compare/v2.0.398...v2.0.399) (2026-10-18)
+
+### Features
+
+* members can ask us to find a wine and accept what we offer, and wines can be offered to members first as allocations they request, are given and confirm ([e775c99](https://github.com/craftandculture/Craft-Culture/commit/e775c9995a287d03ea375c2278993ac16e42aade))
+* members can save several delivery addresses, give a preferred day, send wine as a gift, and follow each delivery from preparation to their door ([a24bd25](https://github.com/craftandculture/Craft-Culture/commit/a24bd25c674b02e20034b7a723d96b0c1c65d030))
+
 ## [2.0.398](https://github.com/craftandculture/Craft-Culture/compare/v2.0.397...v2.0.398) (2026-10-18)
 
 ### Features
