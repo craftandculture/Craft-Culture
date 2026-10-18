@@ -2,11 +2,14 @@ import { and, asc, eq, inArray, isNull, lt, notInArray, or, sql } from 'drizzle-
 
 import db from '@/database/client';
 import {
+  cellarAllocationInterests,
+  cellarAllocations,
   cellarApplications,
   cellarIntakes,
   cellarMemberships,
   cellarPurchases,
   cellarReleaseRequests,
+  cellarSourcingRequests,
   cellarUkHoldings,
   cellarUkMoves,
   cellarUkRotations,
@@ -81,6 +84,9 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     invoicesToSetUp,
     ukMovesToQuote,
     ukMovesToArrange,
+    wineRequestsToAnswer,
+    agreedWinesToBuy,
+    allocationsToShare,
   ] = await Promise.all([
     safely('payments', async () =>
       (
@@ -125,10 +131,16 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
       ).map((row) => ({
         id: row.id,
         title: `${row.name} · ${row.number}`,
-        detail: `$${Math.round(row.total).toLocaleString('en-US')} · hold ends in ${
-          row.until
-            ? `${Math.max(0, Math.round((row.until.getTime() - now.getTime()) / (60 * 60 * 1000)))}h`
-            : 'under 12h'
+        /*
+          A hold already past its end is not "ending in 0h": it should have
+          been released, so the queue says so rather than rounding it away.
+        */
+        detail: `$${Math.round(row.total).toLocaleString('en-US')} · ${
+          !row.until
+            ? 'hold ends within 12h'
+            : row.until < now
+              ? `hold ended ${Math.round((now.getTime() - row.until.getTime()) / (60 * 60 * 1000))}h ago, not yet released`
+              : `hold ends in ${Math.round((row.until.getTime() - now.getTime()) / (60 * 60 * 1000))}h`
         }`,
         since: row.since,
       })),
@@ -422,6 +434,117 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
         since: row.since,
       })),
     ),
+    safely('sourcing-new', async () =>
+      (
+        await db
+          .select({
+            id: cellarSourcingRequests.id,
+            number: cellarSourcingRequests.requestNumber,
+            wine: cellarSourcingRequests.wineName,
+            bottles: cellarSourcingRequests.bottles,
+            name: partners.businessName,
+            since: cellarSourcingRequests.createdAt,
+          })
+          .from(cellarSourcingRequests)
+          .innerJoin(partners, eq(partners.id, cellarSourcingRequests.partnerId))
+          .where(eq(cellarSourcingRequests.status, 'requested'))
+          .orderBy(asc(cellarSourcingRequests.createdAt))
+      ).map((row) => ({
+        id: row.id,
+        title: row.name,
+        detail: `${row.number} · ${row.wine} · ${row.bottles} ${row.bottles === 1 ? 'bottle' : 'bottles'}`,
+        since: row.since,
+      })),
+    ),
+    /*
+      Agreed wine that was not in our UAE stock: the member said yes and a
+      Team Tasks job was opened, but nothing is bought until someone does it.
+      Requests and allocation shares both land here.
+    */
+    safely('to-buy', async () => {
+      const [requests, shares] = await Promise.all([
+        db
+          .select({
+            id: cellarSourcingRequests.id,
+            number: cellarSourcingRequests.requestNumber,
+            wine: cellarSourcingRequests.offerWineName,
+            name: partners.businessName,
+            since: cellarSourcingRequests.respondedAt,
+          })
+          .from(cellarSourcingRequests)
+          .innerJoin(partners, eq(partners.id, cellarSourcingRequests.partnerId))
+          .where(
+            and(
+              eq(cellarSourcingRequests.status, 'accepted'),
+              isNull(cellarSourcingRequests.purchaseId),
+            ),
+          ),
+        db
+          .select({
+            id: cellarAllocationInterests.id,
+            wine: cellarAllocations.wineName,
+            cases: cellarAllocationInterests.casesAllocated,
+            name: partners.businessName,
+            since: cellarAllocationInterests.respondedAt,
+          })
+          .from(cellarAllocationInterests)
+          .innerJoin(
+            cellarAllocations,
+            eq(cellarAllocations.id, cellarAllocationInterests.allocationId),
+          )
+          .innerJoin(partners, eq(partners.id, cellarAllocationInterests.partnerId))
+          .where(
+            and(
+              eq(cellarAllocationInterests.status, 'confirmed'),
+              isNull(cellarAllocationInterests.purchaseId),
+            ),
+          ),
+      ]);
+
+      return [
+        ...requests.map((row) => ({
+          id: row.id,
+          title: row.name,
+          detail: `${row.number} · accepted ${row.wine ?? 'our offer'}, to buy and invoice`,
+          since: row.since,
+        })),
+        ...shares.map((row) => ({
+          id: row.id,
+          title: row.name,
+          detail: `Confirmed ${row.cases ?? 0} ${row.cases === 1 ? 'case' : 'cases'} of ${row.wine}, to buy and invoice`,
+          since: row.since,
+        })),
+      ].sort((a, b) => (a.since?.getTime() ?? 0) - (b.since?.getTime() ?? 0));
+    }),
+    /* An open allocation with members waiting to hear what they have been given */
+    safely('allocations', async () =>
+      (
+        await db
+          .select({
+            id: cellarAllocations.id,
+            wine: cellarAllocations.wineName,
+            waiting: sql<number>`count(*)::int`,
+            since: sql<Date | null>`min(${cellarAllocationInterests.createdAt})`,
+          })
+          .from(cellarAllocationInterests)
+          .innerJoin(
+            cellarAllocations,
+            eq(cellarAllocations.id, cellarAllocationInterests.allocationId),
+          )
+          .where(
+            and(
+              eq(cellarAllocations.status, 'open'),
+              eq(cellarAllocationInterests.status, 'interested'),
+            ),
+          )
+          .groupBy(cellarAllocations.id, cellarAllocations.wineName)
+      ).map((row) => ({
+        id: row.id,
+        title: row.wine,
+        detail: `${row.waiting} ${row.waiting === 1 ? 'member has' : 'members have'} asked for a share`,
+        since: row.since ? new Date(row.since) : null,
+      })),
+    ),
   ]);
 
   const group = (
@@ -453,6 +576,9 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     group('intakes-quiet', 'Transfers gone quiet', 'Move the stage on, or find out why not', 'chase', '/platform/admin/cellar-members?tab=intakes', transfersQuiet),
     group('uk-moves-quote', 'UK moves to price', 'Add freight and LCB charges and send the price', 'urgent', '/platform/admin/cellar-members?tab=uk-moves', ukMovesToQuote),
     group('uk-moves-arrange', 'UK moves to arrange', 'Place the Vision export order and link the shipment', 'action', '/platform/admin/cellar-members?tab=uk-moves', ukMovesToArrange),
+    group('sourcing-new', 'Wine requests to answer', 'Find it and send an offer, or say we are looking', 'action', '/platform/admin/cellar-members?tab=requests', wineRequestsToAnswer),
+    group('to-buy', 'Agreed wine to buy', 'The member said yes; buy it and invoice them', 'urgent', '/platform/admin/cellar-members?tab=requests', agreedWinesToBuy),
+    group('allocations', 'Allocations to share out', 'Allocate cases to the members who asked', 'action', '/platform/admin/cellar-members?tab=requests', allocationsToShare),
     group('uk', 'UK rotations to assign', 'Wine at LCB no member can see yet', 'action', '/platform/admin/cellar-members?tab=uk', ukUnassigned),
     group('invoices', 'Invoices to set up', 'Active members not yet billed', 'urgent', '/platform/admin/tasks', invoicesToSetUp),
     group('memberships', 'Memberships stuck', 'Activation unfinished or payment overdue', 'chase', '/platform/admin/cellar-members?tab=storage', membershipsStuck),

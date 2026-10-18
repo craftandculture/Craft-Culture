@@ -24,6 +24,12 @@ const caseLabel = (cases: number, caseConfig: number) =>
 const holdLabel = (holdAt: string) =>
   holdAt === 'uk' ? 'Held in the UK at London City Bond' : 'Held in your cellar in the UAE';
 
+/* Where accepted wine appears, so UK wine is not promised to the UAE cellar */
+const landsIn = (holdAt: string | null | undefined) =>
+  holdAt === 'uk'
+    ? 'it appears under the United Kingdom in your cellar once your payment arrives'
+    : 'it is added to your cellar once your payment arrives';
+
 /* What each request state means to the collector */
 const REQUEST_STATES: Record<string, { label: string; tone: string }> = {
   requested: { label: 'Request received', tone: 'bg-surface-muted text-text-muted ring-border-muted' },
@@ -276,7 +282,7 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
                               {allocation.wineName}
                               {allocation.vintage ? ` ${allocation.vintage}` : ''} at{' '}
                               {money(allocation.pricePerBottleUsd)} a bottle. We will send you the
-                              details to pay, and it is added to your cellar once your payment arrives.
+                              details to pay, and {landsIn(allocation.holdAt)}.
                             </p>
                           }
                           confirmLabel="Confirm allocation"
@@ -405,8 +411,7 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
                             <p>
                               {caseLabel(offer.cases, offer.caseConfig)} of {offer.wineName}
                               {offer.vintage ? ` ${offer.vintage}` : ''} at {money(offer.pricePerBottleUsd)} a
-                              bottle. We will send you the details to pay, and it is added to your cellar once
-                              your payment arrives.
+                              bottle. We will send you the details to pay, and {landsIn(offer.holdAt)}.
                             </p>
                           }
                           confirmLabel="Accept"
@@ -447,8 +452,7 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
 
                   {request.status === 'accepted' && (
                     <p className="text-text-muted mt-2 text-xs">
-                      We will send you the details to pay, and the wine is added to your cellar once your payment
-                      arrives.
+                      We will send you the details to pay, and {landsIn(request.offer?.holdAt ?? request.holdAt)}.
                     </p>
                   )}
 

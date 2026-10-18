@@ -250,7 +250,7 @@ const UkBondList = () => {
                 {item.lines.map((line) => (
                   <li key={line.id} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2 text-sm">
                     <span className="min-w-0">
-                      {line.description ?? line.brand}
+                      {line.name}
                       <span className="text-text-muted"> · {line.vintage ?? 'NV'}</span>
                       <span className="text-text-muted/70 ml-2 font-mono text-[11px]">{line.lwin18}</span>
                     </span>

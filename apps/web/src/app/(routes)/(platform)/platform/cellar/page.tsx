@@ -56,6 +56,8 @@ interface CellarParcel {
     sell dialog caps on this rather than on the total in the bay.
   */
   availableCases: number;
+  /* Bottles already on an open offer or delivery request */
+  claimedBottles: number;
   lotNumber: string | null;
   receivedAt: Date | null;
 }
@@ -2433,7 +2435,12 @@ const CellarPage = () => {
                         </thead>
                         <tbody className="divide-border-muted/60 divide-y">
                           {sellingWine.locations.map((parcel) => {
-                            const available = parcel.availableCases * pack;
+                            /* Less anything already on an open offer or delivery, as the server counts it */
+                            const available = Math.max(
+                              0,
+                              parcel.availableCases * pack -
+                                parcel.claimedBottles,
+                            );
                             const offering = sellLines.get(parcel.stockId) ?? 0;
 
                             return (

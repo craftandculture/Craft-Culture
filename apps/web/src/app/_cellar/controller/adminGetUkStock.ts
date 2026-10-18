@@ -1,10 +1,11 @@
-import { desc, eq, or, sql } from 'drizzle-orm';
+import { desc, eq, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
   cellarMemberships,
   cellarUkHoldings,
   cellarUkRotations,
+  lwinWines,
   partners,
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
@@ -70,8 +71,34 @@ const adminGetUkStock = staffAdminProcedure.query(async () => {
 
     const codes = await getClientCodes(owners.map((owner) => owner.id));
 
+    /*
+      The same wine name the member sees, from the LWIN database. LCB's own
+      text is typed by whoever booked the goods in and often carries the year
+      ("DOMINUS 2014"), which the list then printed a second time.
+    */
+    const lwin7s = [
+      ...new Set(rows.map((row) => row.lwin18.slice(0, 7)).filter((code) => /^\d{7}$/.test(code))),
+    ];
+    const names = lwin7s.length
+      ? await db
+          .select({ lwin: lwinWines.lwin, displayName: lwinWines.displayName })
+          .from(lwinWines)
+          .where(inArray(lwinWines.lwin, lwin7s))
+      : [];
+    const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
+
+    const lcbName = (row: (typeof rows)[number]) => {
+      const typed = (row.brand && row.brand !== 'NA' ? row.brand : row.description) ?? 'Wine';
+      return row.vintage
+        ? typed.replace(new RegExp(`\\s*\\b${row.vintage}\\b\\s*`), ' ').trim() || typed
+        : typed;
+    };
+
     return {
-      rows,
+      rows: rows.map((row) => ({
+        ...row,
+        name: nameByLwin.get(row.lwin18.slice(0, 7)) ?? lcbName(row),
+      })),
       owners: owners
         .filter((owner) => owner.name)
         .map((owner) => ({ ...owner, code: codes.get(owner.id) ?? null })),

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -52,6 +52,19 @@ const memberCancelPurchase = stockOwnerProcedure
       });
     }
 
+    /*
+      Once the member has said they paid, money may already be on its way.
+      Cancelling would release the wine while their transfer lands, so the
+      team settles it instead: confirm, or refund and cancel from admin.
+    */
+    if (purchase.status === 'payment_claimed') {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'You have told us this is paid, so it can no longer be cancelled here. Please contact us and we will sort it out with you.',
+      });
+    }
+
     if (['cancelled', 'expired'].includes(purchase.status)) {
       throw new TRPCError({
         code: 'CONFLICT',
@@ -77,7 +90,7 @@ const memberCancelPurchase = stockOwnerProcedure
         .where(
           and(
             eq(cellarPurchases.id, purchase.id),
-            inArray(cellarPurchases.status, ['reserved', 'payment_claimed']),
+            eq(cellarPurchases.status, 'reserved'),
           ),
         )
         .returning({ id: cellarPurchases.id });

@@ -174,13 +174,33 @@ const SourcingAdmin = () => {
   );
 
   const startOffer = (request: (typeof requests)[number]) => {
+    /*
+      A first offer starts from what the member asked for, so a one-bottle
+      request is not offered as a case of six. A single named year becomes the
+      vintage, and with the member's LWIN it makes the LWIN-18.
+    */
+    const years = request.vintages?.match(/\b(19|20)\d{2}\b/g) ?? [];
+    const askedVintage = years.length === 1 ? years[0] : '';
+    const sizeCode = { '75cl': '00750', Magnum: '01500', 'Half bottle': '00375' }[
+      request.format ?? '75cl'
+    ];
+    const perCase =
+      request.format === 'Magnum'
+        ? request.bottles % 3 === 0 ? 3 : 1
+        : request.bottles % 6 === 0 ? 6 : 1;
+    const lwin7 = request.lwin?.match(/^\d{7}/)?.[0];
+    const askedLwin18 =
+      lwin7 && askedVintage && sizeCode
+        ? `${lwin7}-${askedVintage}-${String(perCase).padStart(2, '0')}-${sizeCode}`
+        : '';
+
     setOfferFor(request.id);
     setDraft({
       wineName: request.offerWineName ?? request.wineName,
-      lwin18: request.offerLwin18 ?? '',
-      vintage: request.offerVintage ? String(request.offerVintage) : '',
-      caseConfig: String(request.offerCaseConfig ?? 6),
-      cases: String(request.offerCases ?? Math.max(1, Math.round(request.bottles / 6))),
+      lwin18: request.offerLwin18 ?? askedLwin18,
+      vintage: request.offerVintage ? String(request.offerVintage) : askedVintage,
+      caseConfig: String(request.offerCaseConfig ?? perCase),
+      cases: String(request.offerCases ?? Math.max(1, request.bottles / perCase)),
       price: request.offerPricePerBottleUsd ? String(request.offerPricePerBottleUsd) : '',
       holdAt: (request.offerHoldAt ?? request.holdAt) === 'uk' ? 'uk' : 'uae',
       validUntil: '',

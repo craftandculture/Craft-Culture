@@ -122,7 +122,7 @@ const CellarPurchasesPage = () => {
             onClick={() => setStatus(filter.id)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               status === filter.id
-                ? 'bg-fill-brand text-text-on-brand'
+                ? 'bg-text-primary text-surface-primary'
                 : 'border-border-muted text-text-muted hover:text-text-primary border'
             }`}
           >
@@ -184,7 +184,9 @@ const CellarPurchasesPage = () => {
                     {purchase.paymentClaimedAt
                       ? ` · claimed ${formatDistanceToNowStrict(new Date(purchase.paymentClaimedAt), { addSuffix: true })}`
                       : purchase.reservedUntil
-                        ? ` · held ${formatDistanceToNowStrict(new Date(purchase.reservedUntil), { addSuffix: true })}`
+                        ? new Date(purchase.reservedUntil) < new Date()
+                          ? ` · hold ended ${formatDistanceToNowStrict(new Date(purchase.reservedUntil), { addSuffix: true })}`
+                          : ` · held for another ${formatDistanceToNowStrict(new Date(purchase.reservedUntil))}`
                         : ''}
                   </Typography>
                 </div>
@@ -293,15 +295,15 @@ const CellarPurchasesPage = () => {
                             })
                           }
                         >
-                          <Button
-                            size="sm"
-                            colorRole="brand"
-                            isDisabled={isPending}
+                          {/* Near-black, the house action colour; teal is not used in Index */}
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            className="bg-text-primary text-surface-primary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
                           >
-                            <ButtonContent iconLeft={IconCheck}>
-                              Confirm payment &amp; transfer
-                            </ButtonContent>
-                          </Button>
+                            <IconCheck size={14} />
+                            Confirm payment &amp; transfer
+                          </button>
                         </ConfirmAction>
                         {!claimed && (
                           <Typography variant="bodyXs" colorRole="muted">

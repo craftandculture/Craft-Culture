@@ -37,7 +37,6 @@ const adminCreateDraft = adminProcedure
     try {
       built = await buildExportDraft({
         zohoCustomerId: input.zohoCustomerId,
-        consigneeName: input.consigneeName,
         zohoInvoiceIds: input.zohoInvoiceIds,
       });
     } catch (error) {

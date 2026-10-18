@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 
-import getCostPerBottle from '@/app/_cellar/data/getCostPerBottle';
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
+import getMemberValuePerBottle from '@/app/_cellar/data/getMemberValuePerBottle';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
@@ -164,9 +165,19 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     mandateLots.map((lot) => [lot.stockId, lot]),
   );
 
+  /*
+    Bottles already promised to an open offer or delivery. The server refuses
+    to commit them twice; sending the figure lets the screen show what is
+    actually free instead of a number the server will then turn down.
+  */
+  const claimedByStock = await getClaimedBottles(
+    stockByLocation.map((stock) => stock.stockId),
+  );
+
   const stockWithSaleState = stockByLocation.map((stock) => ({
     ...stock,
     mandate: mandateByStock.get(stock.stockId) ?? null,
+    claimedBottles: claimedByStock.get(stock.stockId) ?? 0,
   }));
 
   // Group locations by LWIN
@@ -216,7 +227,12 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     the quote did not, so a member's cellar showed a value per bottle while the
     release it priced valued the same wine at nothing.
   */
-  const costByLwin = await getCostPerBottle(
+  /*
+    Wine the member bought from us is valued at what they paid. Its import
+    value is our cost, and sending that to their browser showed our margin.
+  */
+  const costByLwin = await getMemberValuePerBottle(
+    partner.id,
     products.map((product) => product.lwin18),
   );
 

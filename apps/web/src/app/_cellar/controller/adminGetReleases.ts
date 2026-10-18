@@ -11,7 +11,7 @@ import {
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import backfillReleaseItems from '../data/backfillReleaseItems';
-import getCostPerBottle from '../data/getCostPerBottle';
+import getMemberValuePerBottle from '../data/getMemberValuePerBottle';
 import getReleaseDeliveryDetails from '../data/getReleaseDeliveryDetails';
 import computeReleaseQuote from '../utils/computeReleaseQuote';
 
@@ -100,14 +100,10 @@ const adminGetReleases = staffAdminProcedure
     */
     const openByStock = await backfillReleaseItems(items);
 
-    const lwins = [...new Set(items.map((item) => item.lwin18))];
-
     /* Preferred day and gift recipient, read behind a guard */
     const detailsByRequest = await getReleaseDeliveryDetails(
       rows.map((row) => row.request.id),
     );
-
-    const costByLwin = await getCostPerBottle(lwins);
 
     /*
       Each request arrives with the figures its member's own rate card
@@ -117,6 +113,15 @@ const adminGetReleases = staffAdminProcedure
     const requests = await Promise.all(
       rows.map(async (row) => {
         const items = byRequest.get(row.request.id) ?? [];
+
+        /*
+          Valued as the member holds it: wine they bought from us at what they
+          paid, so the goods value they are shown is never our cost.
+        */
+        const costByLwin = await getMemberValuePerBottle(
+          row.request.partnerId,
+          [...new Set(items.map((item) => item.lwin18))],
+        );
 
         const suggested = await computeReleaseQuote(
           row.request.partnerId,

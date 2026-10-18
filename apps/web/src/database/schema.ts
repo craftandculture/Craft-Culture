@@ -3239,6 +3239,12 @@ export const logisticsJobs = pgTable(
     clientName: text('client_name').notNull(),
     /** Set when the client was picked from Zoho rather than typed */
     zohoCustomerId: text('zoho_customer_id'),
+    /*
+      exportInvoices is declared further down. The reference is lazy, so it
+      resolves at runtime; this one error had failed CI's lint step on every
+      push, which skipped the Trigger.dev deploy behind it.
+    */
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     exportInvoiceId: uuid('export_invoice_id').references(() => exportInvoices.id, {
       onDelete: 'set null',
     }),

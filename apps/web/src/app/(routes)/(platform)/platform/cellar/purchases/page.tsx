@@ -311,7 +311,8 @@ const PurchasesPage = () => {
                         {purchase.purchaseNumber}
                       </span>
                       {purchase.status === 'reserved' &&
-                        purchase.reservedUntil && (
+                        purchase.reservedUntil &&
+                        new Date(purchase.reservedUntil) > new Date() && (
                           <span className="text-text-muted text-xs">
                             held for another{' '}
                             {formatDistanceToNowStrict(
@@ -408,6 +409,16 @@ const PurchasesPage = () => {
                               </div>
                             </div>
 
+                            {/*
+                              Once they have said they paid, money may be on its
+                              way, so cancelling is ours to settle with them.
+                            */}
+                            {purchase.status === 'payment_claimed' ? (
+                              <p className="text-text-muted text-right text-xs">
+                                Need to change this order? Please contact us and
+                                we will sort it out with you.
+                              </p>
+                            ) : (
                             <div className="flex flex-wrap items-center justify-end gap-2">
                               {confirmCancelId === purchase.id ? (
                                 <>
@@ -449,6 +460,7 @@ const PurchasesPage = () => {
                                 </button>
                               )}
                             </div>
+                            )}
                           </div>
                         )}
                       </div>

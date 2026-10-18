@@ -8,7 +8,7 @@ import {
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
-import getCostPerBottle from '../data/getCostPerBottle';
+import getMemberValuePerBottle from '../data/getMemberValuePerBottle';
 import computeReleaseQuote from '../utils/computeReleaseQuote';
 
 /**
@@ -67,7 +67,8 @@ const memberEstimateRelease = stockOwnerProcedure
 
     const lwins = [...new Set(owned.map((row) => row.lwin18))];
 
-    const costByLwin = await getCostPerBottle(lwins);
+    /* Same valuation the team's quote uses, so the estimate and quote agree */
+    const costByLwin = await getMemberValuePerBottle(ctx.partner.id, lwins);
 
     const quote = await computeReleaseQuote(
       ctx.partner.id,
