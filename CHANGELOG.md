@@ -1,3 +1,9 @@
+## [2.0.404](https://github.com/craftandculture/Craft-Culture/compare/v2.0.403...v2.0.404) (2026-10-18)
+
+### Bug Fixes
+
+* WMS Transfer Ownership finds stock again and can put returned wine on sale, and editing a shipment's availability no longer relists wine a member has bought ([86cc872](https://github.com/craftandculture/Craft-Culture/commit/86cc8725fa8965b2e2d2a5da57af54e8f1c68997))
+
 ## [2.0.403](https://github.com/craftandculture/Craft-Culture/compare/v2.0.402...v2.0.403) (2026-10-18)
 
 ### Features
