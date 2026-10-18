@@ -8,6 +8,7 @@ import {
   cellarPurchases,
   cellarReleaseRequests,
   cellarUkHoldings,
+  cellarUkMoves,
   cellarUkRotations,
   partners,
   privateClientOrders,
@@ -78,6 +79,8 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     ukUnassigned,
     membershipsStuck,
     invoicesToSetUp,
+    ukMovesToQuote,
+    ukMovesToArrange,
   ] = await Promise.all([
     safely('payments', async () =>
       (
@@ -375,6 +378,50 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
         since: row.since,
       })),
     ),
+    safely('uk-moves-quote', async () =>
+      (
+        await db
+          .select({
+            id: cellarUkMoves.id,
+            moveNumber: cellarUkMoves.moveNumber,
+            name: partners.businessName,
+            since: cellarUkMoves.createdAt,
+          })
+          .from(cellarUkMoves)
+          .innerJoin(partners, eq(partners.id, cellarUkMoves.partnerId))
+          .where(eq(cellarUkMoves.status, 'submitted'))
+          .orderBy(asc(cellarUkMoves.createdAt))
+      ).map((row) => ({
+        id: row.id,
+        title: row.name,
+        detail: `${row.moveNumber} · wants wine brought from LCB Burton`,
+        since: row.since,
+      })),
+    ),
+    /*
+      Accepted means the member has agreed the price and is waiting on us to
+      place the Vision export order and book the shipment.
+    */
+    safely('uk-moves-arrange', async () =>
+      (
+        await db
+          .select({
+            id: cellarUkMoves.id,
+            moveNumber: cellarUkMoves.moveNumber,
+            name: partners.businessName,
+            since: cellarUkMoves.acceptedAt,
+          })
+          .from(cellarUkMoves)
+          .innerJoin(partners, eq(partners.id, cellarUkMoves.partnerId))
+          .where(eq(cellarUkMoves.status, 'accepted'))
+          .orderBy(asc(cellarUkMoves.acceptedAt))
+      ).map((row) => ({
+        id: row.id,
+        title: row.name,
+        detail: `${row.moveNumber} · price accepted, export order and shipment to arrange`,
+        since: row.since,
+      })),
+    ),
   ]);
 
   const group = (
@@ -404,6 +451,8 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     group('applications', 'Applications to decide', 'Approve or decline', 'action', '/platform/admin/cellar-members?tab=applications', applicationsToDecide),
     group('intakes-new', 'Transfers to start', 'A member asked us to bring wine in', 'action', '/platform/admin/cellar-members?tab=intakes', transfersToStart),
     group('intakes-quiet', 'Transfers gone quiet', 'Move the stage on, or find out why not', 'chase', '/platform/admin/cellar-members?tab=intakes', transfersQuiet),
+    group('uk-moves-quote', 'UK moves to price', 'Add freight and LCB charges and send the price', 'urgent', '/platform/admin/cellar-members?tab=uk-moves', ukMovesToQuote),
+    group('uk-moves-arrange', 'UK moves to arrange', 'Place the Vision export order and link the shipment', 'action', '/platform/admin/cellar-members?tab=uk-moves', ukMovesToArrange),
     group('uk', 'UK rotations to assign', 'Wine at LCB no member can see yet', 'action', '/platform/admin/cellar-members?tab=uk', ukUnassigned),
     group('invoices', 'Invoices to set up', 'Active members not yet billed', 'urgent', '/platform/admin/tasks', invoicesToSetUp),
     group('memberships', 'Memberships stuck', 'Activation unfinished or payment overdue', 'chase', '/platform/admin/cellar-members?tab=storage', membershipsStuck),
