@@ -1,3 +1,12 @@
+## [2.0.412](https://github.com/craftandculture/Craft-Culture/compare/v2.0.411...v2.0.412) (2026-10-18)
+
+### Bug Fixes
+
+* a member's wine is valued from their own import before any other owner's cost, UK move prices follow the cellar's currency, and Available now drops its violet tile ([3266ef5](https://github.com/craftandculture/Craft-Culture/commit/3266ef54b5b900ae2484eef24a4f99478066bd56))
+* a UK move added to someone else's shipment is received into the member's cellar, a rotation on an open move cannot be reassigned, and wine resting at LCB no longer shows as a stalled transfer ([c26e627](https://github.com/craftandculture/Craft-Culture/commit/c26e627b2f68dee9ded63928dc72ca340618ab74))
+* confirming a cellar purchase with two settling lines no longer fails on a duplicate settlement number, and partner debts use the same per-owner landed cost as the partner statement ([7eb5563](https://github.com/craftandculture/Craft-Culture/commit/7eb556339d3924a897bf5a583e7c3b54d6bf881a))
+* someone a private cellar is shared with as view only can no longer tick or note the cellar's shared Team Tasks jobs, and revoked access is refused there too ([d814575](https://github.com/craftandculture/Craft-Culture/commit/d814575ce52ec5244a1d57db63fa37bacae9ef7f))
+
 ## [2.0.411](https://github.com/craftandculture/Craft-Culture/compare/v2.0.410...v2.0.411) (2026-10-18)
 
 ### Tests
