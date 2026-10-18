@@ -1,3 +1,9 @@
+## [2.0.414](https://github.com/craftandculture/Craft-Culture/compare/v2.0.413...v2.0.414) (2026-10-18)
+
+### Bug Fixes
+
+* a UK move quote recharges LCB's charges at cost plus 30%, and the invoice job shows both the cost and the charged figure ([e8c1235](https://github.com/craftandculture/Craft-Culture/commit/e8c12359812cd8514a477167757059278adeeb21))
+
 ## [2.0.413](https://github.com/craftandculture/Craft-Culture/compare/v2.0.412...v2.0.413) (2026-10-18)
 
 ### Bug Fixes
