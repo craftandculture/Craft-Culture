@@ -50,4 +50,13 @@ describe('parseLcbStockRow', () => {
     expect(parseLcbStockRow({ Rotation: '', Code: 'X', Cases: '1', Singles: '0' })).toBeNull();
     expect(parseLcbStockRow({ Rotation: 'R1', Code: '1-2-3-4', Cases: '0', Singles: '0' })).toBeNull();
   });
+
+  it('reads a reference column when the report has one, under any of its names', () => {
+    const line = { Rotation: 'R1', Code: '1340521-2022-06-00750', SPC: '6', Cases: '1', Singles: '0' };
+
+    expect(parseLcbStockRow(line)?.reference).toBeNull();
+    expect(parseLcbStockRow({ ...line, 'Your Ref': 'PC-1001-002' })?.reference).toBe('PC-1001-002');
+    expect(parseLcbStockRow({ ...line, 'RESERVE CODE': ' pc1004 ' })?.reference).toBe('pc1004');
+    expect(parseLcbStockRow({ ...line, 'PO Ref': '', Reserve: 'PC-1002' })?.reference).toBe('PC-1002');
+  });
 });

@@ -59,7 +59,7 @@ const IntakesList = () => {
       </label>
       <div className="border-border-muted bg-surface-primary divide-border-muted divide-y rounded-xl border shadow-sm">
         {shown.length === 0 && <p className="text-text-muted px-4 py-10 text-center text-sm">No transfers in progress.</p>}
-        {shown.map(({ intake, memberName, shipment }) => {
+        {shown.map(({ intake, memberName, memberCode, shipment }) => {
           const isTransfer = wineSources.find((source) => source.value === intake.source)?.isTransfer;
           const linkedMissing = shipment && !shipments.some((item) => item.id === shipment.shipmentId);
 
@@ -67,7 +67,8 @@ const IntakesList = () => {
             <div key={intake.id} className="hover:bg-surface-secondary/50 flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center">
               <div className="min-w-0 flex-1">
                 <p className="text-text-primary text-sm font-semibold">
-                  {memberName} · {wineSources.find((source) => source.value === intake.source)?.label ?? intake.source}
+                  {memberName}
+                  {memberCode && <span className="text-text-muted font-mono font-normal"> {memberCode}</span>} · {wineSources.find((source) => source.value === intake.source)?.label ?? intake.source}
                 </p>
                 <p className="text-text-muted text-xs">
                   {[

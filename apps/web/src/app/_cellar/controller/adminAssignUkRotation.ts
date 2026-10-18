@@ -1,14 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { cellarUkHoldings, cellarUkRotations } from '@/database/schema';
+import { cellarUkRotations } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
-import serverConfig from '@/server.config';
-import logger from '@/utils/logger';
 
-import getPartnerUserIds from '../data/getPartnerUserIds';
+import notifyUkRotationAssigned from '../data/notifyUkRotationAssigned';
 
 /**
  * Say whose wine an LCB rotation is
@@ -52,39 +49,10 @@ const adminAssignUkRotation = staffAdminProcedure
       .onConflictDoUpdate({ target: cellarUkRotations.rotation, set: values });
 
     if (input.owner.kind === 'member' && previous?.partnerId !== input.owner.partnerId) {
-      try {
-        const lines = await db
-          .select({
-            brand: cellarUkHoldings.brand,
-            description: cellarUkHoldings.description,
-            vintage: cellarUkHoldings.vintage,
-            totalBottles: cellarUkHoldings.totalBottles,
-          })
-          .from(cellarUkHoldings)
-          .where(eq(cellarUkHoldings.rotation, input.rotation));
-
-        const bottles = lines.reduce((sum, line) => sum + line.totalBottles, 0);
-        const first = lines[0];
-        const wine = first
-          ? [first.brand && first.brand !== 'NA' ? first.brand : first.description, first.vintage]
-              .filter(Boolean)
-              .join(' ')
-          : 'Your wine';
-
-        for (const userId of await getPartnerUserIds(input.owner.partnerId)) {
-          await createNotification({
-            userId,
-            type: 'cellar_wine_received',
-            title: 'Wine received at our UK bond',
-            message: `${wine}${lines.length > 1 ? ` and ${lines.length - 1} more` : ''} (${bottles} ${
-              bottles === 1 ? 'bottle' : 'bottles'
-            }) is now held for you at London City Bond, Burton.`,
-            actionUrl: `${serverConfig.appUrl}/platform/cellar`,
-          });
-        }
-      } catch (error) {
-        logger.error('Could not notify a UK rotation assignment', { rotation: input.rotation, error });
-      }
+      await notifyUkRotationAssigned({
+        rotation: input.rotation,
+        partnerId: input.owner.partnerId,
+      });
     }
 
     return { rotation: input.rotation };

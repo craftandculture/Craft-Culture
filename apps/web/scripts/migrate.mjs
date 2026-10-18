@@ -2938,6 +2938,46 @@ const runMigrations = async () => {
     );
     console.log('✅ LCB UK holdings ready');
 
+    /*
+      A fixed reference per private cellar member, PC-1001 upwards (Oct 2026).
+      Members quote it to the merchant or bond sending their wine to LCB, so a
+      rotation can be traced back to them; the planned label codes use the
+      same one. Its own table rather than a column on partners: every
+      select() on partners would break if this ever failed to run.
+
+      Existing members are numbered in the order they joined. Only active
+      ones: closed and test records get a code the first time they need one.
+    */
+    await client.unsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "partner_client_code_seq" START 1001`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "partner_client_codes" (
+        "partner_id" uuid PRIMARY KEY NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "code" text NOT NULL UNIQUE,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      DO $$
+      DECLARE member record;
+      BEGIN
+        FOR member IN
+          SELECT p.id FROM partners p
+          WHERE p.status = 'active'
+            AND (p.type = 'private_collector'
+              OR EXISTS (SELECT 1 FROM cellar_memberships m WHERE m.partner_id = p.id))
+            AND NOT EXISTS (SELECT 1 FROM partner_client_codes c WHERE c.partner_id = p.id)
+          ORDER BY p.created_at, p.id
+        LOOP
+          INSERT INTO partner_client_codes (partner_id, code)
+          VALUES (member.id, 'PC-' || nextval('partner_client_code_seq'))
+          ON CONFLICT (partner_id) DO NOTHING;
+        END LOOP;
+      END $$;
+    `);
+    console.log('✅ private cellar member references ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

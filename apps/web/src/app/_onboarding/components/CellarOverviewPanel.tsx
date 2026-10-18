@@ -62,9 +62,9 @@ const CellarOverviewPanel = ({ section }: CellarOverviewPanelProps) => {
     <div className="mb-6 grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         {transfers.map((intake) => (
-          <IncomingTransferCard key={intake.id} intake={intake} />
+          <IncomingTransferCard key={intake.id} intake={intake} reference={data.reference} />
         ))}
-        <BringWineIn onAdded={() => void refetch()} />
+        <BringWineIn reference={data.reference} onAdded={() => void refetch()} />
       </div>
       <MembershipSummary overview={data} />
     </div>

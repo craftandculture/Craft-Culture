@@ -7505,6 +7505,22 @@ export const cellarUkHoldings = pgTable(
   (table) => [index('cellar_uk_holdings_rotation_idx').on(table.rotation)],
 );
 
+/**
+ * A private client's fixed reference, PC-1001 upwards
+ *
+ * Quoted to the merchant or bond sending wine to LCB, so the rotation it
+ * arrives as can be traced back to the member. Issued from the
+ * partner_client_code_seq sequence and never changed. Its own table, read
+ * behind a guard, so a migration that has not run cannot break partners.
+ */
+export const partnerClientCodes = pgTable('partner_client_codes', {
+  partnerId: uuid('partner_id')
+    .primaryKey()
+    .references(() => partners.id, { onDelete: 'cascade' }),
+  code: text('code').notNull().unique(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
 export const cellarIntakes = pgTable(
   'cellar_intakes',
   {

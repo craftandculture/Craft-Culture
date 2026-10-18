@@ -6,6 +6,28 @@ export type LcbStockRow = Record<string, string | number | null | undefined>;
 /** The columns an import cannot do without */
 export const LCB_REQUIRED_COLUMNS = ['Rotation', 'Code', 'Cases', 'Singles'] as const;
 
+/**
+ * Columns that may carry the reference the wine was sent in under
+ *
+ * The standard report has none of these. If LCB add the order reference or
+ * reserve to it, the member reference quoted on the paperwork comes through
+ * and the rotation can be placed without anyone matching it by hand.
+ */
+export const LCB_REFERENCE_COLUMNS = [
+  'Your Ref',
+  'PO Ref',
+  'Customer Ref',
+  'Cust Ref',
+  'Order Ref',
+  'Reference',
+  'Reserve',
+  'Reserve Code',
+] as const;
+
+const headerKey = (header: string) => header.toLowerCase().replace(/[^a-z]/g, '');
+
+const REFERENCE_KEYS = new Set(LCB_REFERENCE_COLUMNS.map(headerKey));
+
 const text = (value: unknown) => {
   const trimmed = String(value ?? '').replace(/\s+/g, ' ').trim();
   return trimmed || null;
@@ -54,6 +76,14 @@ const parseLcbStockRow = (row: LcbStockRow) => {
 
   if (totalBottles <= 0) return null;
 
+  /* Every reference column the line has, joined, so a code in any of them is found */
+  const reference =
+    Object.entries(row)
+      .filter(([header]) => REFERENCE_KEYS.has(headerKey(header)))
+      .map(([, value]) => text(value))
+      .filter(Boolean)
+      .join(' ') || null;
+
   const size = Number.parseFloat(String(row.SS ?? ''));
   const year = whole(row.Year);
 
@@ -71,6 +101,7 @@ const parseLcbStockRow = (row: LcbStockRow) => {
     totalBottles,
     packaging: text(row.Packaging),
     receivedAt: ukDate(row.Received),
+    reference,
   };
 };
 

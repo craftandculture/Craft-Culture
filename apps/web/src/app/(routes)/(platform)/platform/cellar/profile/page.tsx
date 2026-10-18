@@ -186,6 +186,15 @@ const CellarProfilePage = () => {
           ? `Held against ${profile.name}`
           : 'Held against your membership'}
       </Typography>
+      {profile?.reference && (
+        <Typography variant="bodySm" colorRole="muted" className="mt-0.5 block">
+          Your cellar reference:{' '}
+          <span className="text-text-primary font-mono font-semibold">
+            {profile.reference}
+          </span>
+          . Quote it to anyone sending wine to us.
+        </Typography>
+      )}
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="mt-6 block">

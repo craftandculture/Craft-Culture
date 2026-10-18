@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import type { AppRouter } from '@/trpc-router';
 
+import TransferInstructions from './TransferInstructions';
 import intakeStages from '../constants/intakeStages';
 import wineSources from '../constants/wineSources';
 
@@ -14,6 +15,8 @@ type Intake = inferRouterOutputs<AppRouter>['onboarding']['member']['overview'][
 
 export interface IncomingTransferCardProps {
   intake: Intake;
+  /** The member's reference, quoted on wine sent to our UK bond */
+  reference: string | null;
 }
 
 const WINES_SHOWN = 4;
@@ -34,8 +37,9 @@ const bottleLabel = (bottleSizeMl: number) =>
  * Once the team links the shipment carrying it, the card shows the member's
  * own wines on board and when they are expected.
  */
-const IncomingTransferCard = ({ intake }: IncomingTransferCardProps) => {
+const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) => {
   const [showAll, setShowAll] = useState(false);
+  const [showHow, setShowHow] = useState(false);
   const at = intakeStages.findIndex((stage) => stage.value === intake.stage);
   const source = wineSources.find((item) => item.value === intake.source);
   const title = intake.holderName && intake.source !== 'lcb' ? intake.holderName : (source?.label ?? 'Your wine');
@@ -147,6 +151,29 @@ const IncomingTransferCard = ({ intake }: IncomingTransferCardProps) => {
             >
               {showAll ? 'Show fewer' : `Show all ${wines.length} wines`}
             </button>
+          )}
+        </div>
+      )}
+
+      {/*
+        Until the wine has arrived, the details to pass on stay a click away:
+        a member chasing a slow merchant wants them again, and the reference
+        is easy to lose.
+      */}
+      {source?.isTransfer && (intake.stage === 'requested' || intake.stage === 'in_progress') && (
+        <div className="border-border-muted mt-4 border-t pt-3">
+          <button
+            type="button"
+            onClick={() => setShowHow(!showHow)}
+            aria-expanded={showHow}
+            className="text-text-primary text-xs font-semibold underline underline-offset-2"
+          >
+            {showHow ? 'Hide the details to pass on' : 'Details to pass on to the merchant'}
+          </button>
+          {showHow && (
+            <div className="mt-3">
+              <TransferInstructions source={intake.source} reference={reference} />
+            </div>
           )}
         </div>
       )}

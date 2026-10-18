@@ -203,6 +203,11 @@ const CellarMembersList = () => {
                     <Typography variant="bodySm" className="font-semibold">
                       {member.name}
                     </Typography>
+                    {member.code && (
+                      <span className="text-text-muted mr-1.5 font-mono text-[11px]">
+                        {member.code}
+                      </span>
+                    )}
                     {member.membershipStatus && (
                       <span
                         className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${

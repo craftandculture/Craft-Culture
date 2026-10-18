@@ -4,6 +4,8 @@ import db from '@/database/client';
 import { partnerIdentityDocuments, partners } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import ensureClientCode from '../data/ensureClientCode';
+
 /**
  * The member's own account details
  *
@@ -47,6 +49,8 @@ const memberGetProfile = stockOwnerProcedure.query(async ({ ctx }) => {
     eidNumber: partner?.eidNumber ?? null,
     eidExpiry: partner?.eidExpiry ?? null,
     documents,
+    /** The member's cellar reference, quoted on wine sent to our UK bond */
+    reference: await ensureClientCode(ctx.partner.id),
   };
 });
 

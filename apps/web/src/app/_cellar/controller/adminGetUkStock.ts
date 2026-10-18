@@ -10,6 +10,8 @@ import {
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import getClientCodes from '../data/getClientCodes';
+
 /**
  * C&C's LCB Burton account as last imported, and who each rotation is for
  *
@@ -66,9 +68,13 @@ const adminGetUkStock = staffAdminProcedure.query(async () => {
       null,
     );
 
+    const codes = await getClientCodes(owners.map((owner) => owner.id));
+
     return {
       rows,
-      owners: owners.filter((owner) => owner.name),
+      owners: owners
+        .filter((owner) => owner.name)
+        .map((owner) => ({ ...owner, code: codes.get(owner.id) ?? null })),
       importedAt,
       ownerIds: [...new Set(rows.map((row) => row.partnerId).filter(Boolean))] as string[],
     };

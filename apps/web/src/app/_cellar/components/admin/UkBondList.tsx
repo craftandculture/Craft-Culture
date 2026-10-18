@@ -32,8 +32,8 @@ const UkBondList = () => {
       onSuccess: (result) => {
         toast.success(
           `Imported ${result.lines} lines (${result.bottles} bottles) across ${result.rotations} rotations${
-            result.unassigned ? ` — ${result.unassigned} to assign` : ''
-          }`,
+            result.autoAssigned ? ` — ${result.autoAssigned} placed by member reference` : ''
+          }${result.unassigned ? ` — ${result.unassigned} to assign` : ''}`,
         );
         void refetch();
       },
@@ -241,7 +241,7 @@ const UkBondList = () => {
                   <option value="house">C&amp;C stock (not shown to members)</option>
                   {(data?.owners ?? []).map((owner) => (
                     <option key={owner.id} value={owner.id}>
-                      {owner.name}
+                      {owner.code ? `${owner.name} · ${owner.code}` : owner.name}
                     </option>
                   ))}
                 </select>

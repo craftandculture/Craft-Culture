@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 
+import TransferInstructions from './TransferInstructions';
 import fieldClass from '../constants/fieldClass';
 import wineHolders from '../constants/wineHolders';
 import type { WineSource } from '../constants/wineSources';
@@ -13,6 +14,8 @@ import wineSources from '../constants/wineSources';
 import useActivationGate from '../hooks/useActivationGate';
 
 export interface BringWineInProps {
+  /** The member's reference, quoted on wine sent to our UK bond */
+  reference: string | null;
   onAdded: () => void;
 }
 
@@ -24,7 +27,7 @@ const offered = wineSources.filter((source) => source.value !== 'starting_fresh'
  * Every detail is optional — we contact the holder. A transfer is an action,
  * so it opens activation first if the cellar is not active yet.
  */
-const BringWineIn = ({ onAdded }: BringWineInProps) => {
+const BringWineIn = ({ reference, onAdded }: BringWineInProps) => {
   const api = useTRPC();
   const { catchActivation, activationSheet } = useActivationGate();
   const [source, setSource] = useState<WineSource | null>(null);
@@ -128,6 +131,13 @@ const BringWineIn = ({ onAdded }: BringWineInProps) => {
             onChange={(event) => setDetails((current) => ({ ...current, note: event.target.value }))}
           />
           <p className="text-text-muted text-xs">If you do not have these details to hand, we will obtain them on your behalf.</p>
+          {/*
+            Shown before they send it, so a member can pass the details on in
+            the same sitting. Our own contact with the holder still follows.
+          */}
+          {wineSources.find((item) => item.value === source)?.isTransfer && (
+            <TransferInstructions source={source} reference={reference} />
+          )}
           <button
             type="submit"
             disabled={add.isPending}

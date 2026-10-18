@@ -13,6 +13,7 @@ import {
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import getClientCodes from '../data/getClientCodes';
 import countChargeableCases from '../utils/countChargeableCases';
 import monthlyMembershipCharge from '../utils/monthlyMembershipCharge';
 
@@ -185,6 +186,7 @@ const adminGetMembers = staffAdminProcedure.query(async () => {
   }
 
   const movementByOwner = new Map(movements.map((row) => [row.ownerId, row]));
+  const codes = await getClientCodes(ids);
 
   const rows = members.map((member) => {
     const holding = holdings.get(member.id);
@@ -204,6 +206,8 @@ const adminGetMembers = staffAdminProcedure.query(async () => {
     return {
       id: member.id,
       name: member.name,
+      /** The member's reference, quoted on wine sent to LCB for them */
+      code: codes.get(member.id) ?? null,
       type: member.type,
       cases,
       bottles: holding?.bottles ?? 0,

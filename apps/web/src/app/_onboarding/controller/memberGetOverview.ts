@@ -1,5 +1,6 @@
 import { and, eq, ne } from 'drizzle-orm';
 
+import ensureClientCode from '@/app/_cellar/data/ensureClientCode';
 import countChargeableCases from '@/app/_cellar/utils/countChargeableCases';
 import db from '@/database/client';
 import {
@@ -27,7 +28,7 @@ import missingProfileItems from '../utils/missingProfileItems';
 const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   const partnerId = ctx.partner.id;
 
-  const [[partner], documents, stock, intakes, [membership], terms] = await Promise.all([
+  const [[partner], documents, stock, intakes, [membership], terms, reference] = await Promise.all([
     db
       .select({
         phone: partners.businessPhone,
@@ -57,6 +58,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       .where(and(eq(cellarIntakes.partnerId, partnerId), ne(cellarIntakes.stage, 'closed'))),
     db.select().from(cellarMemberships).where(eq(cellarMemberships.partnerId, partnerId)).limit(1),
     getMembershipTerms(partnerId),
+    ensureClientCode(partnerId),
   ]);
 
   const cases = countChargeableCases(stock);
@@ -84,6 +86,8 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
     nextBillingAt: membership?.nextBillingAt ?? null,
     /** Cases included in the membership, and nothing about price */
     includedCases: terms.includedCases,
+    /** Quoted on wine sent to our UK bond, so it is recognised as theirs */
+    reference,
     cases,
     bottles,
     wines,
