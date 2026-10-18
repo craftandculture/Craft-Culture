@@ -3083,6 +3083,103 @@ const runMigrations = async () => {
     `);
     console.log('✅ delivery addresses and delivery preferences ready');
 
+    /*
+      Wines members ask us to find, and allocations offered to members first
+      (Oct 2026). Read behind a guard: a missed migration hides those panels
+      and nothing else.
+    */
+    for (const value of ['cellar_sourcing_update', 'cellar_allocation_update']) {
+      await client.unsafe(
+        `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS '${value}'`,
+      );
+    }
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_sourcing_requests" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "request_number" text NOT NULL UNIQUE,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "lwin" text,
+        "wine_name" text NOT NULL,
+        "vintages" text,
+        "bottles" integer NOT NULL,
+        "format" text,
+        "budget_per_bottle_usd" double precision,
+        "hold_at" text DEFAULT 'uae' NOT NULL,
+        "notes" text,
+        "status" text DEFAULT 'requested' NOT NULL,
+        "staff_note" text,
+        "offer_lwin18" text,
+        "offer_wine_name" text,
+        "offer_vintage" integer,
+        "offer_case_config" integer,
+        "offer_cases" integer,
+        "offer_price_per_bottle_usd" double precision,
+        "offer_hold_at" text,
+        "offer_valid_until" timestamp,
+        "offer_note" text,
+        "offer_from_stock" boolean DEFAULT false NOT NULL,
+        "offered_at" timestamp,
+        "offered_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "responded_at" timestamp,
+        "purchase_id" uuid,
+        "task_id" uuid,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_sourcing_requests_partner_idx" ON "cellar_sourcing_requests" ("partner_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_sourcing_requests_status_idx" ON "cellar_sourcing_requests" ("status")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_allocations" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "lwin18" text,
+        "wine_name" text NOT NULL,
+        "producer" text,
+        "vintage" integer,
+        "format" text,
+        "case_config" integer DEFAULT 6 NOT NULL,
+        "price_per_bottle_usd" double precision NOT NULL,
+        "total_cases" integer NOT NULL,
+        "max_cases_per_member" integer,
+        "closes_at" timestamp,
+        "delivery_note" text,
+        "description" text,
+        "hold_at" text DEFAULT 'uae' NOT NULL,
+        "from_stock" boolean DEFAULT false NOT NULL,
+        "status" text DEFAULT 'open' NOT NULL,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_allocations_status_idx" ON "cellar_allocations" ("status")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_allocation_interests" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "allocation_id" uuid NOT NULL REFERENCES "cellar_allocations"("id") ON DELETE CASCADE,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "cases_requested" integer NOT NULL,
+        "cases_allocated" integer,
+        "status" text DEFAULT 'interested' NOT NULL,
+        "responded_at" timestamp,
+        "purchase_id" uuid,
+        "task_id" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cellar_allocation_interests_member_idx" ON "cellar_allocation_interests" ("allocation_id", "partner_id")`,
+    );
+    console.log('✅ cellar sourcing requests and allocations ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

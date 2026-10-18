@@ -814,6 +814,10 @@ export const notificationType = pgEnum('notification_type', [
   'cellar_purchase_update',
   /* A membership paused or resumed by the team */
   'cellar_membership_update',
+  /* A wine a member asked us to find: offered, accepted or declined */
+  'cellar_sourcing_update',
+  /* An allocation offered to members: interest registered or allocated */
+  'cellar_allocation_update',
 ]);
 
 /**
@@ -7784,3 +7788,128 @@ export type CellarApplication = typeof cellarApplications.$inferSelect;
 export type CellarIntake = typeof cellarIntakes.$inferSelect;
 export type CellarMembership = typeof cellarMemberships.$inferSelect;
 export type CellarInvite = typeof cellarInvites.$inferSelect;
+
+/**
+ * A wine a member has asked us to find
+ *
+ * Collectors ask for things that are not on the list: a missing vintage, a
+ * magnum, a producer we do not carry. The request and our single answer to it
+ * live on one row, because a request gets one offer at a time — a second offer
+ * replaces the first rather than sitting beside it.
+ */
+export const cellarSourcingRequests = pgTable(
+  'cellar_sourcing_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** SRC-2026-0001 */
+    requestNumber: text('request_number').notNull().unique(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** The LWIN the member picked, when they found it in the wine list */
+    lwin: text('lwin'),
+    wineName: text('wine_name').notNull(),
+    /** Free text: "2010 or 2016", "any recent" */
+    vintages: text('vintages'),
+    bottles: integer('bottles').notNull(),
+    /** "75cl", "Magnum" … */
+    format: text('format'),
+    budgetPerBottleUsd: doublePrecision('budget_per_bottle_usd'),
+    /** 'uae' | 'uk' — where the member wants it held */
+    holdAt: text('hold_at').notNull().default('uae'),
+    notes: text('notes'),
+    /**
+     * requested | searching | offer_sent | accepted | declined | withdrawn |
+     * closed
+     */
+    status: text('status').notNull().default('requested'),
+    /** What we tell the member when we close it or while we look */
+    staffNote: text('staff_note'),
+    offerLwin18: text('offer_lwin18'),
+    offerWineName: text('offer_wine_name'),
+    offerVintage: integer('offer_vintage'),
+    offerCaseConfig: integer('offer_case_config'),
+    offerCases: integer('offer_cases'),
+    offerPricePerBottleUsd: doublePrecision('offer_price_per_bottle_usd'),
+    offerHoldAt: text('offer_hold_at'),
+    offerValidUntil: timestamp('offer_valid_until', { mode: 'date' }),
+    offerNote: text('offer_note'),
+    /** Held in our UAE warehouse now, so accepting reserves it at once */
+    offerFromStock: boolean('offer_from_stock').notNull().default(false),
+    offeredAt: timestamp('offered_at', { mode: 'date' }),
+    offeredBy: uuid('offered_by').references(() => users.id, { onDelete: 'set null' }),
+    respondedAt: timestamp('responded_at', { mode: 'date' }),
+    purchaseId: uuid('purchase_id'),
+    taskId: uuid('task_id'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_sourcing_requests_partner_idx').on(table.partnerId),
+    index('cellar_sourcing_requests_status_idx').on(table.status),
+  ],
+);
+
+/**
+ * A wine offered to members before anyone else: allocations, en primeur
+ *
+ * Demand first, then allocation. Members say how much they would like; the
+ * team shares out what there is; each member confirms their share.
+ */
+export const cellarAllocations = pgTable(
+  'cellar_allocations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin18: text('lwin18'),
+    wineName: text('wine_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    /** "75cl", "Magnum" … */
+    format: text('format'),
+    caseConfig: integer('case_config').notNull().default(6),
+    pricePerBottleUsd: doublePrecision('price_per_bottle_usd').notNull(),
+    totalCases: integer('total_cases').notNull(),
+    maxCasesPerMember: integer('max_cases_per_member'),
+    closesAt: timestamp('closes_at', { mode: 'date' }),
+    /** "En primeur, shipping spring 2028" */
+    deliveryNote: text('delivery_note'),
+    description: text('description'),
+    /** 'uae' | 'uk' */
+    holdAt: text('hold_at').notNull().default('uae'),
+    /** Held in our UAE warehouse now, so confirming reserves it at once */
+    fromStock: boolean('from_stock').notNull().default(false),
+    /** open | closed */
+    status: text('status').notNull().default('open'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('cellar_allocations_status_idx').on(table.status)],
+);
+
+/** One member's interest in an allocation, and what they were given */
+export const cellarAllocationInterests = pgTable(
+  'cellar_allocation_interests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    allocationId: uuid('allocation_id')
+      .references(() => cellarAllocations.id, { onDelete: 'cascade' })
+      .notNull(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    casesRequested: integer('cases_requested').notNull(),
+    casesAllocated: integer('cases_allocated'),
+    /** interested | allocated | confirmed | declined | withdrawn */
+    status: text('status').notNull().default('interested'),
+    respondedAt: timestamp('responded_at', { mode: 'date' }),
+    purchaseId: uuid('purchase_id'),
+    taskId: uuid('task_id'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cellar_allocation_interests_member_idx').on(
+      table.allocationId,
+      table.partnerId,
+    ),
+  ],
+);

@@ -2,6 +2,7 @@ import adminRouter from '@/app/_admin/router';
 import agentsRouter from '@/app/_agents/router';
 import usersRouter from '@/app/_auth/router';
 import cellarRouter from '@/app/_cellar/router';
+import cellarSourcingRouter from '@/app/_cellarSourcing/router';
 import commissionsRouter from '@/app/_commissions/router';
 import consignmentRouter from '@/app/_consignment/router';
 import distributionRouter from '@/app/_distribution/router';
@@ -62,6 +63,7 @@ export const appRouter = createTRPCRouter({
   triangulation: triangulationRouter,
   warehouse: warehouseRouter,
   cellar: cellarRouter,
+  cellarSourcing: cellarSourcingRouter,
   consignment: consignmentRouter,
   distribution: distributionRouter,
   wms: wmsRouter,

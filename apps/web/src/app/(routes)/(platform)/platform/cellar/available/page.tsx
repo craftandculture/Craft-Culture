@@ -4,7 +4,6 @@ import {
   IconBottle,
   IconBuildingCastle,
   IconFilter,
-  IconMail,
   IconMinus,
   IconPackages,
   IconPlus,
@@ -17,6 +16,8 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import bottleName from '@/app/_cellar/utils/bottleName';
+import FindWineDialog from '@/app/_cellarSourcing/components/FindWineDialog';
+import MemberSourcingPanel from '@/app/_cellarSourcing/components/MemberSourcingPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
 import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
@@ -316,16 +317,16 @@ const AvailablePage = () => {
           </Typography>
         </div>
         {/*
-          One line, not a link on every row. A per-row mailto navigated the page
-          away from the list somebody was halfway through reading.
+          One action, not a link on every row. It used to be a mailto, which
+          left the request in somebody's inbox; now it is a request the team
+          works and the member can follow.
         */}
-        <a
-          href="mailto:enquiries@craftculture.xyz"
-          className="border-border-muted text-text-primary hover:bg-fill-muted inline-flex h-9 flex-shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 text-xs font-semibold transition-colors sm:self-auto"
-        >
-          <Icon icon={IconMail} size="xs" /> Ask us for a wine
-        </a>
+        <FindWineDialog />
       </header>
+
+      <MemberSourcingPanel
+        onActivationError={(error) => catchActivation(error, 'purchase')}
+      />
 
       {/*
         Search, kind and the narrowing filters live in one panel, so the page
