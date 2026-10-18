@@ -6,7 +6,7 @@ import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 /** The address privacy requests go to, named once so every mention agrees */
-const PRIVACY_CONTACT_EMAIL = 'support@craftculture.xyz';
+const PRIVACY_CONTACT_EMAIL = 'info@craftculture.xyz';
 
 const PRIVACY_POLICY_LAST_UPDATED = 'October 2026';
 
@@ -492,9 +492,11 @@ const PrivacyPolicyDocument = () => {
               <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 Craft &amp; Culture FZE
                 <br />
-                PO Box 50365, Fujairah Free Zone
+                Fujairah Free Zone
                 <br />
-                Fujairah, United Arab Emirates
+                Fujairah, PO Box 50365
+                <br />
+                United Arab Emirates
                 <br />
                 Phone: +971 58 149 8156
               </Typography>
