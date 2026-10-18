@@ -1,3 +1,9 @@
+## [2.0.410](https://github.com/craftandculture/Craft-Culture/compare/v2.0.409...v2.0.410) (2026-10-18)
+
+### Features
+
+* members see an indicative value for their cellar, from C&C's current list prices where we list the wine and otherwise the price they paid ([4738c0c](https://github.com/craftandculture/Craft-Culture/commit/4738c0cca641f6277e70b7b3a4f3281ea8c8ab20))
+
 ## [2.0.409](https://github.com/craftandculture/Craft-Culture/compare/v2.0.408...v2.0.409) (2026-10-18)
 
 ### Bug Fixes
