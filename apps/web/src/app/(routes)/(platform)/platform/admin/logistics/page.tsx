@@ -240,7 +240,7 @@ const LogisticsDashboardPage = () => {
               <div className="-mx-px flex gap-1.5 overflow-x-auto px-4 py-3">
                 {(['all', 'inbound', 'outbound', 'mainland_transfer', 're_export'] as const).map((t) => {
                   const count = recent.filter((s) => t === 'all' || s.type === t).length;
-                  if (t !== 'all' && count === 0) return null;
+                  if (t !== 'all' && t !== 'inbound' && count === 0) return null;
                   const active = typeFilter === t;
                   return (
                     <button
@@ -262,7 +262,9 @@ const LogisticsDashboardPage = () => {
 
               {visible.length === 0 ? (
                 <p className="border-t border-border-muted px-4 py-10 text-center text-sm text-text-muted">
-                  No live shipments. Finished ones are under View all.
+                  {typeFilter === 'inbound'
+                    ? 'No imports in the last 7 days. Older ones are under View all.'
+                    : 'No live shipments. Finished ones are under View all.'}
                 </p>
               ) : (
                 <ul className="divide-y divide-border-muted border-t border-border-muted">
