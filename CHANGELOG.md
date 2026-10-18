@@ -1,3 +1,12 @@
+## [2.0.398](https://github.com/craftandculture/Craft-Culture/compare/v2.0.397...v2.0.398) (2026-10-18)
+
+### Features
+
+* each private cellar member has a reference (PC-1001) to quote on wine sent to our UK bond, sees how to instruct the merchant holding it, and LCB rotations carrying that reference are placed in their cellar on import ([5afc4f7](https://github.com/craftandculture/Craft-Culture/commit/5afc4f7a4abffa653133086050299ef2e0a50c6d))
+* members can ask to bring wine from LCB Burton to their UAE cellar, accept one all-in price, and follow it until it lands ([54a49aa](https://github.com/craftandculture/Craft-Culture/commit/54a49aa6d1c245d5aa11c43d21fa0dc4ad86ee4f))
+* members can see what their sold wine has earned and when it is paid, and download a monthly statement of their cellar ([4a2b24a](https://github.com/craftandculture/Craft-Culture/commit/4a2b24a226a68740a1dcfb7297b98bc66ecf159a))
+* UK moves waiting to be priced or arranged appear in the Needs attention queue ([f1575ef](https://github.com/craftandculture/Craft-Culture/commit/f1575ef9f770282a735cd023b81239b2a77c5356))
+
 ## [2.0.397](https://github.com/craftandculture/Craft-Culture/compare/v2.0.396...v2.0.397) (2026-10-18)
 
 ### Features
