@@ -129,7 +129,7 @@ export const staffAdminProcedure = protectedProcedure.use(
  * so every read and write is limited to that partner's shared jobs.
  */
 export const partnerTaskProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );
@@ -145,6 +145,34 @@ export const partnerTaskProcedure = approvedProcedure.use(
         code: 'FORBIDDEN',
         message: 'You are not linked to an active partner account.',
       });
+    }
+
+    /*
+      Someone a private cellar is shared with resolves to it through the same
+      partner link, so the cellar's role rule applies here too: access that
+      has ended is refused, and a viewer cannot tick or note a job.
+    */
+    if (partner.type === 'private_collector') {
+      const { default: getCellarRole } = await import(
+        '@/app/_cellar/data/getCellarRole'
+      );
+
+      const cellarRole = await getCellarRole(partner.id, ctx.user.id);
+
+      if (cellarRole === 'revoked') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Your access to this private cellar has ended.',
+        });
+      }
+
+      if (type === 'mutation' && cellarRole === 'viewer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'You can view this private cellar, but only its holder or a manager can make changes.',
+        });
+      }
     }
 
     return await next({
