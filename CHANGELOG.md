@@ -1,3 +1,9 @@
+## [2.0.391](https://github.com/craftandculture/Craft-Culture/compare/v2.0.390...v2.0.391) (2026-10-18)
+
+### Bug Fixes
+
+* single bottles in a private cellar are charged as loose bottles, so twelve singles count as one case ([d432ab1](https://github.com/craftandculture/Craft-Culture/commit/d432ab10a85a006a10ca78f2b923a956046c8912))
+
 ## [2.0.390](https://github.com/craftandculture/Craft-Culture/compare/v2.0.389...v2.0.390) (2026-10-16)
 
 ### Features
