@@ -1,3 +1,9 @@
+## [2.0.393](https://github.com/craftandculture/Craft-Culture/compare/v2.0.392...v2.0.393) (2026-10-18)
+
+### Bug Fixes
+
+* private cellar copy speaks of a private cellar rather than an account, the help page no longer quotes fees, and the violet accents are gone ([c81b22a](https://github.com/craftandculture/Craft-Culture/commit/c81b22abc271af2d8ee09d9f20d14fa2398a0763))
+
 ## [2.0.392](https://github.com/craftandculture/Craft-Culture/compare/v2.0.391...v2.0.392) (2026-10-18)
 
 ### Features
