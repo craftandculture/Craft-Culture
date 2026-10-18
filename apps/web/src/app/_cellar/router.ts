@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
+import adminGetAttention from './controller/adminGetAttention';
 import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
 import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
@@ -43,6 +44,7 @@ const memberRouter = createTRPCRouter({
 });
 
 const adminRouter = createTRPCRouter({
+  getAttention: adminGetAttention,
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
   getMembers: adminGetMembers,

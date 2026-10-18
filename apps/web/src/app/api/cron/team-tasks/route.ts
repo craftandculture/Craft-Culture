@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import sendBondReminders from '@/app/_logistics/data/sendBondReminders';
+import openStorageReviewTask from '@/app/_onboarding/data/openStorageReviewTask';
 import sendMorningDigests from '@/app/_teamTasks/data/sendMorningDigests';
 import sendOverdueAlerts from '@/app/_teamTasks/data/sendOverdueAlerts';
 import sendWeeklyRoundUp from '@/app/_teamTasks/data/sendWeeklyRoundUp';
@@ -20,7 +21,8 @@ export const maxDuration = 60;
  *
  * Movement bonds needing attention are turned into jobs first, so they appear
  * in the same morning's lists. A failure there is logged and never stops the
- * digests.
+ * digests. On the 1st, the Private Cellar members over their storage allowance
+ * are listed in one job too; it never throws.
  */
 export const GET = async (request: Request) => {
   if (!isCronAuthorised(request)) {
@@ -32,12 +34,13 @@ export const GET = async (request: Request) => {
       logger.error('Movement bond reminders failed', { error: error instanceof Error ? error.message : String(error) });
       return { opened: 0, failed: true };
     });
+    const storage = await openStorageReviewTask();
     const overdue = await sendOverdueAlerts();
     const digests = await sendMorningDigests();
     const weekday = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', weekday: 'long' }).format(new Date());
     const roundUp = weekday === 'Friday' ? await sendWeeklyRoundUp() : null;
 
-    return NextResponse.json({ bonds, overdue, digests, roundUp });
+    return NextResponse.json({ bonds, storage, overdue, digests, roundUp });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
