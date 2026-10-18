@@ -496,7 +496,7 @@ const PrivacyPolicyDocument = () => {
                 <br />
                 Fujairah, United Arab Emirates
                 <br />
-                Phone: +971 9 228 1170
+                Phone: +971 58 149 8156
               </Typography>
             </section>
           </div>
