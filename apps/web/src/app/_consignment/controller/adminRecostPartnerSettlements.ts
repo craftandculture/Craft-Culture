@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
-import getPricingManagerLanded from '@/app/_distribution/data/getPricingManagerLanded';
+import getOwnerLandedPerBottle from '@/app/_distribution/data/getOwnerLandedPerBottle';
 import wineKey from '@/app/_distribution/utils/wineKey';
 import db from '@/database/client';
 import {
@@ -32,10 +32,12 @@ const adminRecostPartnerSettlements = staffAdminProcedure
       .select({
         id: consignmentSettlements.id,
         orderNumber: consignmentSettlements.orderNumber,
+        ownerId: consignmentSettlements.ownerId,
         saleAmount: consignmentSettlements.saleAmount,
         itemId: consignmentSettlementItems.id,
         lwin18: consignmentSettlementItems.lwin18,
         quantityCases: consignmentSettlementItems.quantityCases,
+        stockId: consignmentSettlementItems.stockId,
       })
       .from(consignmentSettlements)
       .innerJoin(
@@ -52,12 +54,24 @@ const adminRecostPartnerSettlements = staffAdminProcedure
 
     if (held.length === 0) return { priced: 0, stillHeld: 0 };
 
-    const landed = new Map(
-      (
-        await getPricingManagerLanded([
-          ...new Set(held.map((row) => wineKey(row.lwin18))),
-        ])
-      ).map((row) => [row.key, row.landedPerBottle]),
+    /* Each partner's own figure, chosen the way their statement chooses it */
+    const owners = [...new Set(held.map((row) => row.ownerId))];
+    const landedByOwner = new Map(
+      await Promise.all(
+        owners.map(
+          async (ownerId) =>
+            [
+              ownerId,
+              await getOwnerLandedPerBottle(ownerId, [
+                ...new Set(
+                  held
+                    .filter((row) => row.ownerId === ownerId)
+                    .map((row) => wineKey(row.lwin18)),
+                ),
+              ]),
+            ] as const,
+        ),
+      ),
     );
 
     /*
@@ -66,6 +80,7 @@ const adminRecostPartnerSettlements = staffAdminProcedure
     */
     const lines = await db
       .select({
+        stockId: cellarPurchaseItems.stockId,
         lwin18: cellarPurchaseItems.lwin18,
         bottles: cellarPurchaseItems.bottles,
       })
@@ -76,16 +91,24 @@ const adminRecostPartnerSettlements = staffAdminProcedure
     const now = new Date();
 
     for (const row of held) {
-      const perBottle = landed.get(wineKey(row.lwin18));
-      const bottles = lines.find((line) => line.lwin18 === row.lwin18)?.bottles;
+      const perBottle = landedByOwner.get(row.ownerId)?.get(wineKey(row.lwin18));
+      /*
+        Matched on the stock line the debt was written for. Two lines of one
+        wine in a purchase, from different parcels, would otherwise both take
+        the first line's bottle count.
+      */
+      const bottles = (
+        lines.find((line) => row.stockId && line.stockId === row.stockId) ??
+        lines.find((line) => line.lwin18 === row.lwin18)
+      )?.bottles;
 
       if (!perBottle || !bottles) continue;
 
       const owed = Math.round(perBottle * bottles * 100) / 100;
       const commission = Math.round((row.saleAmount - owed) * 100) / 100;
 
-      await db.transaction(async (tx) => {
-        await tx
+      const updated = await db.transaction(async (tx) => {
+        const [settled] = await tx
           .update(consignmentSettlements)
           .set({
             owedToOwner: owed,
@@ -105,15 +128,21 @@ const adminRecostPartnerSettlements = staffAdminProcedure
               eq(consignmentSettlements.status, 'pending'),
               isNull(consignmentSettlements.payoutRunId),
             ),
-          );
+          )
+          .returning({ id: consignmentSettlements.id });
+
+        /* A run took it, or another recheck priced it, while this one ran */
+        if (!settled) return false;
 
         await tx
           .update(consignmentSettlementItems)
           .set({ unitPrice: perBottle, lineTotal: owed, updatedAt: now })
           .where(eq(consignmentSettlementItems.id, row.itemId));
+
+        return true;
       });
 
-      priced += 1;
+      if (updated) priced += 1;
     }
 
     return { priced, stillHeld: held.length - priced };

@@ -50,7 +50,7 @@ const writeConsignmentSettlement = async ({
   sale,
   paidAt = null,
 }: WriteSettlementParams) => {
-  const settlementNumber = await generateSettlementNumber();
+  const settlementNumber = await generateSettlementNumber(tx);
 
   const [settlement] = await tx
     .insert(consignmentSettlements)

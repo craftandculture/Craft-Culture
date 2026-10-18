@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
-import getPricingManagerLanded from '@/app/_distribution/data/getPricingManagerLanded';
+import getOwnerLandedPerBottle from '@/app/_distribution/data/getOwnerLandedPerBottle';
 import wineKey from '@/app/_distribution/utils/wineKey';
 import transferStockOwnership from '@/app/_wms/utils/transferStockOwnership';
 import db from '@/database/client';
@@ -84,15 +84,30 @@ const adminConfirmPurchasePayment = staffAdminProcedure
     */
     const sellers = await describeLineSellers(items);
 
-    const partnerKeys = items
-      .filter((item) => sellers.get(item.id)?.kind === 'partner')
-      .map((item) => wineKey(item.lwin18));
+    /*
+      Priced per owner, the way their statement prices it: a figure set by hand
+      for that partner first, then the Pricing Manager, then the last one
+      remembered. One wine held by two partners can cost each differently.
+    */
+    const partnerKeysByOwner = new Map<string, Set<string>>();
 
-    const landedByKey = new Map(
-      (await getPricingManagerLanded([...new Set(partnerKeys)])).map((row) => [
-        row.key,
-        row.landedPerBottle,
-      ]),
+    for (const item of items) {
+      const seller = sellers.get(item.id);
+
+      if (seller?.kind === 'partner' && seller.ownerId) {
+        const keys = partnerKeysByOwner.get(seller.ownerId) ?? new Set<string>();
+        keys.add(wineKey(item.lwin18));
+        partnerKeysByOwner.set(seller.ownerId, keys);
+      }
+    }
+
+    const landedByOwner = new Map(
+      await Promise.all(
+        [...partnerKeysByOwner].map(
+          async ([ownerId, keys]) =>
+            [ownerId, await getOwnerLandedPerBottle(ownerId, [...keys])] as const,
+        ),
+      ),
     );
 
     const now = new Date();
@@ -171,7 +186,9 @@ const adminConfirmPurchasePayment = staffAdminProcedure
             line: item,
             ownerId: seller.ownerId,
             ownerName: seller.label,
-            landedPerBottle: landedByKey.get(wineKey(item.lwin18)) ?? null,
+            landedPerBottle:
+              landedByOwner.get(seller.ownerId)?.get(wineKey(item.lwin18)) ??
+              null,
           });
         }
 

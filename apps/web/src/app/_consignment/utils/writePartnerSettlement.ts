@@ -67,7 +67,7 @@ const writePartnerSettlement = async ({
 
   const commission = Math.round((line.lineTotalUsd - owed) * 100) / 100;
 
-  const settlementNumber = await generateSettlementNumber();
+  const settlementNumber = await generateSettlementNumber(tx);
 
   const [settlement] = await tx
     .insert(consignmentSettlements)
