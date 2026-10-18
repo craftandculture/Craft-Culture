@@ -1,3 +1,9 @@
+## [2.0.392](https://github.com/craftandculture/Craft-Culture/compare/v2.0.391...v2.0.392) (2026-10-18)
+
+### Features
+
+* the private cellar leads with the wine, shows each accepted delivery through to the door, and no longer sends members their fees ([74b4bf3](https://github.com/craftandculture/Craft-Culture/commit/74b4bf3daedb0e84160483e88b3ce999de968e31))
+
 ## [2.0.391](https://github.com/craftandculture/Craft-Culture/compare/v2.0.390...v2.0.391) (2026-10-18)
 
 ### Bug Fixes
