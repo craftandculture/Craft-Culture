@@ -1,3 +1,17 @@
+## [2.0.394](https://github.com/craftandculture/Craft-Culture/compare/v2.0.393...v2.0.394) (2026-10-18)
+
+### Features
+
+* the privacy policy is now one notice for all of Craft & Culture FZE's services, covering Private Cellar, identity checks, international storage and integrations ([7514df3](https://github.com/craftandculture/Craft-Culture/commit/7514df30651775e0fcccdd756fc2148e5ac07369))
+
+### Bug Fixes
+
+* error reports no longer carry sign-in tokens, invite codes, request bodies or personal details, and session replay is off ([201af31](https://github.com/craftandculture/Craft-Culture/commit/201af31c0d593239fc215cea3337e40d0f308b9a))
+* server performance tracing samples one request in ten instead of every request ([14fcd36](https://github.com/craftandculture/Craft-Culture/commit/14fcd363d8e7d61ac269fc7a04ca73dac11ef6f7))
+* the privacy policy gives a direct contact number ([6bbb969](https://github.com/craftandculture/Craft-Culture/commit/6bbb96988b568d7bb07766cfca067d54932cb494))
+* the privacy policy takes the reviewer's final wording, and the Terms of Use name Craft & Culture FZE like every other document ([6e820d9](https://github.com/craftandculture/Craft-Culture/commit/6e820d9c25392428a583b1454268e5036e6bc9a1))
+* the privacy policy uses the Fujairah address as registered and the info@ inbox ([a69e6c9](https://github.com/craftandculture/Craft-Culture/commit/a69e6c9d335aa485213de4266499a523801155f3))
+
 ## [2.0.393](https://github.com/craftandculture/Craft-Culture/compare/v2.0.392...v2.0.393) (2026-10-18)
 
 ### Bug Fixes
