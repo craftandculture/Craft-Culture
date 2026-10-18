@@ -1,3 +1,9 @@
+## [2.0.397](https://github.com/craftandculture/Craft-Culture/compare/v2.0.396...v2.0.397) (2026-10-18)
+
+### Features
+
+* Cellar members opens on a Needs attention queue of everything in Private Cellar waiting on the team, and on the 1st a job lists members over their storage allowance to invoice ([ec57d8b](https://github.com/craftandculture/Craft-Culture/commit/ec57d8b67a2553b2e0344bae23c262dd1df7c2a1))
+
 ## [2.0.396](https://github.com/craftandculture/Craft-Culture/compare/v2.0.395...v2.0.396) (2026-10-18)
 
 ### Bug Fixes
