@@ -1,7 +1,8 @@
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
 
-import inOurWarehouse from '@/app/_wms/utils/inOurWarehouse';
+import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import lwinPakKey from '@/app/_wms/utils/lwinPakKey';
+import onPriceListConditions from '@/app/_wms/utils/onPriceListConditions';
 import db from '@/database/client';
 import {
   cellarMemberships,
@@ -47,9 +48,17 @@ export interface AllocatedParcel {
  * 1. **Never the buyer's own stock.** Buying wine you already own is a no-op
  *    that `transferStockOwnership` would refuse anyway, but refusing it here
  *    means the quantity a buyer sees is the quantity they can actually buy.
- * 2. **C&C's own stock before a member's.** We are not obliged to sell a
- *    member's wine ahead of our own, and settling a consignment is work.
+ * 2. **C&C's own stock, then a partner's, then a member's offer.** We are not
+ *    obliged to sell anyone's wine ahead of our own, and each later step is a
+ *    settlement to write.
  * 3. **Oldest mandate first**, so a member who has waited longest sells first.
+ *
+ * Any row on the price lists can fill an order, whoever owns it — the rule
+ * Kevin set on 18 October 2026, so Available now and the trade and
+ * private-client lists are one list — except a member's own wine, which only
+ * ever sells through their offer. Who it settles to is decided when the
+ * payment is confirmed: C&C's own owes nobody, a member's offer settles at
+ * their ask, and anyone else's is owed at its landed cost.
  *
  * Allocation happens when the order is placed, not when it is paid, because
  * that is what the reservation is taken against.
@@ -62,9 +71,9 @@ export interface AllocatedParcel {
  * - **The offer, not the row.** Listing a mandate opens the whole stock row,
  *   but only the bottles still on the lot are for sale. A member who offers 2
  *   of 10 cases sells 2.
- * - **A collector's wine is never house supply.** A collector row with no live
- *   lot — wine they bought, or what is left after their offer sold — would
- *   otherwise be sold as C&C's own and settle to nobody.
+ * - **A member's wine sells only through their offer.** A collector row with no
+ *   live lot — wine they bought, or what is left after their offer sold — is
+ *   theirs, not a partner's consignment, and is never allocated.
  *
  * Pass the purchase's transaction so the rows are locked until the holds are
  * written; two buyers then queue rather than both seeing the same case free.
@@ -109,9 +118,8 @@ const allocateParcels = async (
     .where(
       and(
         sql`${lwinPakKey(wmsStock.lwin18)} = ${lwinPakKey(sql`${lwin18}`)}`,
-        gt(wmsStock.availableCases, 0),
-        eq(wmsStock.notForSale, false),
-        inOurWarehouse(),
+        /* Exactly the rows the price lists count, so what is listed can be filled */
+        ...onPriceListConditions(),
       ),
     )
     .orderBy(asc(wmsStock.createdAt))
@@ -170,13 +178,18 @@ const allocateParcels = async (
     holds.map((hold) => [hold.stockId, Number(hold.cases) || 0]),
   );
 
+  /*
+    C&C's own stock first, because it settles to nobody. Then a partner's
+    consignment, settled at its landed cost. Members' offers last, oldest first.
+  */
+  const rank = (row: (typeof sellable)[number]) =>
+    lotByStock.has(row.id) ? 2 : isCraftCultureOwner(row.ownerName) ? 0 : 1;
+
   const ordered = [...sellable].sort((a, b) => {
     const aLot = lotByStock.get(a.id);
     const bLot = lotByStock.get(b.id);
 
-    // C&C's own stock first: no mandate means nothing to settle.
-    if (!aLot && bLot) return -1;
-    if (aLot && !bLot) return 1;
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
 
     if (aLot && bLot) {
       const aTime = aLot.offeredAt?.getTime() ?? 0;
@@ -196,6 +209,11 @@ const allocateParcels = async (
 
     const lot = lotByStock.get(row.id);
 
+    /*
+      A member's wine sells only through an offer. Their row can still read as
+      for sale once an offer has sold through, and selling the remainder as if
+      it were a partner's consignment would sell wine they never offered.
+    */
     if (!lot && row.isCollector) continue;
 
     const held = heldByStock.get(row.id) ?? 0;

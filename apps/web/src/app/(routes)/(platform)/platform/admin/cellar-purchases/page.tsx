@@ -85,6 +85,24 @@ const CellarPurchasesPage = () => {
     }),
   );
 
+  const { mutate: recost, isPending: isRecosting } = useMutation(
+    api.consignment.admin.recostPartnerSettlements.mutationOptions({
+      onSuccess: (result) => {
+        if (result.priced > 0) {
+          toast.success(
+            `Priced at landed cost and released to the next payout run${result.stillHeld > 0 ? `; ${result.stillHeld} still has no cost` : ''}.`,
+          );
+        } else {
+          toast.error(
+            'Still no import price in the Pricing Manager for this wine. Set it there, then check again.',
+          );
+        }
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const { mutate: confirm, isPending } = useMutation(
     api.consignment.admin.confirmPurchasePayment.mutationOptions({
       onSuccess: (result) => {
@@ -196,6 +214,7 @@ const CellarPurchasesPage = () => {
                     {purchase.items.length}{' '}
                     {purchase.items.length === 1 ? 'wine' : 'wines'}
                     {purchase.settlesToMembers && ' · settles to a member'}
+                    {purchase.settlesToPartners && ' · settles to a partner'}
                     {purchase.paymentClaimedAt
                       ? ` · claimed ${formatDistanceToNowStrict(new Date(purchase.paymentClaimedAt), { addSuffix: true })}`
                       : purchase.reservedUntil
@@ -249,7 +268,14 @@ const CellarPurchasesPage = () => {
                               {money(item.lineTotalUsd)}
                             </td>
                             <td className="text-text-muted px-3 py-2 text-xs">
-                              {item.mandateId ? 'A member' : 'C&C'}
+                              {item.settlesTo}
+                              {item.owedToPartnerUsd !== null &&
+                                ` · owed ${money(item.owedToPartnerUsd)}`}
+                              {item.costToConfirm && (
+                                <span className="ml-1.5 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                                  Cost to confirm
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -272,8 +298,8 @@ const CellarPurchasesPage = () => {
                       >
                         Confirm only once the money is visible in the bank.
                         Ownership moves immediately
-                        {purchase.settlesToMembers
-                          ? ', and the members whose parcels these were become owed for them on the next payout run.'
+                        {purchase.settlesToMembers || purchase.settlesToPartners
+                          ? ', and whoever these parcels belonged to — a member at their asking price, a partner at landed cost — is owed for them on the next payout run.'
                           : '.'}{' '}
                         There is no undo.
                       </Typography>
@@ -381,6 +407,17 @@ const CellarPurchasesPage = () => {
                       */}
                       {purchase.status === 'completed' && (
                         <span className="ml-auto flex items-center gap-2">
+                          {/* A partner owed nothing yet because their wine had no cost set */}
+                          {purchase.items.some((item) => item.costToConfirm) && (
+                            <button
+                              type="button"
+                              disabled={isRecosting}
+                              onClick={() => recost({ purchaseId: purchase.id })}
+                              className="bg-text-primary text-surface-primary inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold disabled:opacity-50"
+                            >
+                              Recheck cost
+                            </button>
+                          )}
                           <Input
                             value={reverseReason}
                             onChange={(event) => setReverseReason(event.target.value)}

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
@@ -13,8 +13,9 @@ import {
   wmsStock,
 } from '@/database/schema';
 
-import inOurWarehouse from '../utils/inOurWarehouse';
+import isCraftCultureOwner from '../utils/isCraftCultureOwner';
 import lwinPakKey from '../utils/lwinPakKey';
+import onPriceListConditions from '../utils/onPriceListConditions';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueRow {
@@ -45,8 +46,6 @@ export interface CatalogueFilters {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const isCraftCulture = (owner: string | null) =>
-  !!owner && /craft.*culture/i.test(owner);
 const isZeroTransferOwner = (owner: string | null) =>
   !!owner && /(cru wine|crurated)/i.test(owner);
 
@@ -72,16 +71,12 @@ const getCatalogueRows = async (
     apart — which is why a client's cellar in storage used to appear here
     with an in-bond and a private-client price computed for it.
   */
-  const where = [
-    gt(wmsStock.availableCases, 0),
-    eq(wmsStock.notForSale, false),
-    /*
-      Wine placed with a distributor is theirs to sell. Leaving it here would
-      offer the same bottles twice, by us and by them, and one of those sales
-      could not be honoured.
-    */
-    inOurWarehouse(),
-  ];
+  /*
+    Wine placed with a distributor is theirs to sell, and leaving it here would
+    offer the same bottles twice. The rules live in onPriceListConditions so the
+    parcels a cellar order is filled from are exactly the rows counted here.
+  */
+  const where = onPriceListConditions();
   if (filters.category) {
     where.push(
       filters.category === 'Wine'
@@ -270,7 +265,7 @@ const getCatalogueRows = async (
       r.logistics ??
       (systemLogistics > 0
         ? systemLogistics
-        : isCraftCulture(r.owner) &&
+        : isCraftCultureOwner(r.owner) &&
             (r.category === 'Wine' || r.category == null)
           ? 22.5
           : 0);

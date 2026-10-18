@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
@@ -8,6 +8,8 @@ import db from '@/database/client';
 import {
   cellarPurchaseItems,
   cellarPurchases,
+  consignmentSettlementItems,
+  consignmentSettlements,
   saleMandateLots,
   saleMandates,
   wmsStock,
@@ -25,9 +27,10 @@ import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
  * it, the wine goes back on the list it was bought from, and the purchase is
  * closed with the reason written on it.
  *
- * Only C&C's own wine can be reversed here. A member's parcel sold on their
- * behalf has a settlement and a payout behind it, and unpicking those is a
- * finance decision, not a button.
+ * C&C's own wine and a partner's consignment can be reversed here; the debt
+ * written to the partner is removed with the sale, as long as no payout run has
+ * taken it. A member's parcel sold on their behalf has a pool sale and a payout
+ * behind it, and unpicking those is a finance decision, not a button.
  *
  * Refused while anything still claims the bottles in the buyer's cellar — a
  * delivery requested or an offer to sell — so a reversal can never pull wine
@@ -72,6 +75,32 @@ const adminReversePurchase = staffAdminProcedure
       });
     }
 
+    /*
+      A partner's consignment sold here left a debt to them. It goes with the
+      sale — unless it has already been put on a payout run or paid, when the
+      partner has been told they are owed and unwinding it is finance's call.
+    */
+    const partnerDebts = await db
+      .select({
+        id: consignmentSettlements.id,
+        status: consignmentSettlements.status,
+        payoutRunId: consignmentSettlements.payoutRunId,
+      })
+      .from(consignmentSettlements)
+      .where(eq(consignmentSettlements.orderId, purchase.id));
+
+    if (
+      partnerDebts.some(
+        (debt) => debt.payoutRunId !== null || debt.status === 'settled',
+      )
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'What is owed to the partner for this purchase is already on a payout run, so it has to be unwound by finance before the purchase can be reversed.',
+      });
+    }
+
     const now = new Date();
 
     await db.transaction(async (tx) => {
@@ -97,6 +126,33 @@ const adminReversePurchase = staffAdminProcedure
           message:
             'This purchase changed while you were reversing it. Refresh to see where it stands.',
         });
+      }
+
+      if (partnerDebts.length > 0) {
+        const ids = partnerDebts.map((debt) => debt.id);
+
+        await tx
+          .delete(consignmentSettlementItems)
+          .where(inArray(consignmentSettlementItems.settlementId, ids));
+
+        /* Only while still unclaimed, so a run opened meanwhile keeps its line */
+        const removed = await tx
+          .delete(consignmentSettlements)
+          .where(
+            and(
+              inArray(consignmentSettlements.id, ids),
+              isNull(consignmentSettlements.payoutRunId),
+            ),
+          )
+          .returning({ id: consignmentSettlements.id });
+
+        if (removed.length !== ids.length) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'A payout run took what is owed to the partner while you were reversing. Refresh and ask finance to unwind it.',
+          });
+        }
       }
 
       for (const item of items) {

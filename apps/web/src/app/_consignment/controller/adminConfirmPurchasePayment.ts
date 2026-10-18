@@ -2,6 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getPricingManagerLanded from '@/app/_distribution/data/getPricingManagerLanded';
+import wineKey from '@/app/_distribution/utils/wineKey';
 import transferStockOwnership from '@/app/_wms/utils/transferStockOwnership';
 import db from '@/database/client';
 import {
@@ -11,8 +13,10 @@ import {
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import describeLineSellers from '../data/describeLineSellers';
 import notifyPurchaseUpdate from '../utils/notifyPurchaseUpdate';
 import recordPoolSale from '../utils/recordPoolSale';
+import writePartnerSettlement from '../utils/writePartnerSettlement';
 
 /**
  * Confirm the money landed, and move the wine
@@ -73,6 +77,23 @@ const adminConfirmPurchasePayment = staffAdminProcedure
         message: 'This purchase has no lines.',
       });
     }
+
+    /*
+      Who each line settles to, read before ownership moves: once the wine is
+      the buyer's, the row no longer says whose it was.
+    */
+    const sellers = await describeLineSellers(items);
+
+    const partnerKeys = items
+      .filter((item) => sellers.get(item.id)?.kind === 'partner')
+      .map((item) => wineKey(item.lwin18));
+
+    const landedByKey = new Map(
+      (await getPricingManagerLanded([...new Set(partnerKeys)])).map((row) => [
+        row.key,
+        row.landedPerBottle,
+      ]),
+    );
 
     const now = new Date();
 
@@ -137,10 +158,23 @@ const adminConfirmPurchasePayment = staffAdminProcedure
         });
 
         /*
-          Only a member's parcel settles. C&C's own stock sold from the pool
-          owes nobody, and writing a settlement for it would put a debt to
-          ourselves on the payout run.
+          A member's parcel settles at their ask, a partner's consignment at
+          its landed cost. C&C's own stock owes nobody, and writing a
+          settlement for it would put a debt to ourselves on the payout run.
         */
+        const seller = sellers.get(item.id);
+
+        if (seller?.kind === 'partner' && seller.ownerId) {
+          await writePartnerSettlement({
+            tx,
+            purchase,
+            line: item,
+            ownerId: seller.ownerId,
+            ownerName: seller.label,
+            landedPerBottle: landedByKey.get(wineKey(item.lwin18)) ?? null,
+          });
+        }
+
         if (item.mandateId) {
           await recordPoolSale({
             tx,

@@ -2,8 +2,15 @@ import { desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { cellarPurchaseItems, cellarPurchases } from '@/database/schema';
+import {
+  cellarPurchaseItems,
+  cellarPurchases,
+  consignmentSettlementItems,
+  consignmentSettlements,
+} from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
+
+import describeLineSellers from '../data/describeLineSellers';
 
 /**
  * Purchases waiting on us
@@ -49,12 +56,59 @@ const adminGetPurchases = staffAdminProcedure
         ),
       );
 
-    const byPurchase = new Map<string, typeof items>();
+    const sellers = await describeLineSellers(items);
+
+    /*
+      Partner debts written when a purchase was confirmed. One without a landed
+      cost is held at nothing until somebody sets it, so it is flagged on the
+      line rather than left to look settled.
+    */
+    const debts = await db
+      .select({
+        orderId: consignmentSettlements.orderId,
+        stockId: consignmentSettlementItems.stockId,
+        status: consignmentSettlements.status,
+        owedToOwner: consignmentSettlements.owedToOwner,
+      })
+      .from(consignmentSettlements)
+      .innerJoin(
+        consignmentSettlementItems,
+        eq(consignmentSettlementItems.settlementId, consignmentSettlements.id),
+      )
+      .where(
+        inArray(
+          consignmentSettlements.orderId,
+          purchases.map((purchase) => purchase.id),
+        ),
+      );
+
+    const debtOf = (purchaseId: string, stockId: string) =>
+      debts.find((debt) => debt.orderId === purchaseId && debt.stockId === stockId);
+
+    const byPurchase = new Map<
+      string,
+      ((typeof items)[number] & {
+        settlesTo: string;
+        settlesToPartner: boolean;
+        owedToPartnerUsd: number | null;
+        costToConfirm: boolean;
+      })[]
+    >();
 
     for (const item of items) {
+      const seller = sellers.get(item.id);
+      const debt = debtOf(item.purchaseId, item.stockId);
+
       byPurchase.set(item.purchaseId, [
         ...(byPurchase.get(item.purchaseId) ?? []),
-        item,
+        {
+          ...item,
+          settlesTo: seller?.label ?? 'C&C',
+          settlesToPartner: seller?.kind === 'partner',
+          owedToPartnerUsd:
+            debt && debt.status !== 'pending' ? debt.owedToOwner : null,
+          costToConfirm: !!debt && debt.status === 'pending',
+        },
       ]);
     }
 
@@ -68,6 +122,10 @@ const adminGetPurchases = staffAdminProcedure
         */
         settlesToMembers: (byPurchase.get(purchase.id) ?? []).some(
           (item) => item.mandateId,
+        ),
+        /* Confirming this writes a debt to a partner at landed cost */
+        settlesToPartners: (byPurchase.get(purchase.id) ?? []).some(
+          (item) => item.settlesToPartner,
         ),
       })),
     };

@@ -1,6 +1,6 @@
 import { client } from '@/database/client';
 
-import { packAgnostic } from '../utils/codeBridge';
+import getPricingManagerLanded from './getPricingManagerLanded';
 import valueFifo from '../utils/valueFifo';
 import type { OutLayer } from '../utils/valueFifo';
 import wineKey from '../utils/wineKey';
@@ -148,25 +148,8 @@ const buildOwnerStatement = async (input: {
     const keys = [...new Set(lwins.map((value) => wineKey(value)))];
     const remembers = await wineLandedReady();
 
-    const live = keys.length
-      ? await client<{ key: string; landedPerBottle: number }[]>`
-          SELECT DISTINCT ON (key)
-                 ${packAgnostic(
-                   () => client`UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
-                 )} AS key,
-                 (
-                   p.import_price_per_bottle
-                   + COALESCE(p.cost_override_per_bottle, 0)
-                 )::float8 AS "landedPerBottle"
-          FROM wms_product_pricing p
-          WHERE p.import_price_per_bottle IS NOT NULL
-            AND p.import_price_per_bottle > 0
-            AND ${packAgnostic(
-              () => client`UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g'))`,
-            )} = ANY(${keys}::text[])
-          ORDER BY key, p.updated_at DESC NULLS LAST
-        `
-      : [];
+    /* Shared with cellar sales of partner wine, so both owe the same figure */
+    const live = await getPricingManagerLanded(keys);
 
     /*
       Written down while it is still there to write down. A wine costed today
