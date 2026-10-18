@@ -192,7 +192,7 @@ const UkHoldingsPanel = ({ data }: UkHoldingsPanelProps) => {
           <div>
             <p className="text-text-primary text-sm font-semibold">United Kingdom · London City Bond, Burton</p>
             <p className="text-text-muted text-xs">
-              Held in bond for you in C&amp;C&apos;s account · {holdings.length}{' '}
+              Held in bond for you by C&amp;C · {holdings.length}{' '}
               {holdings.length === 1 ? 'wine' : 'wines'}, {bottles} {bottles === 1 ? 'bottle' : 'bottles'}
               {data.reportedAt ? ` · updated ${format(new Date(data.reportedAt), 'd MMM yyyy')}` : ''}
             </p>

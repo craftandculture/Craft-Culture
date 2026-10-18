@@ -54,7 +54,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               The warehouse
             </span>
             <span className="text-text-muted text-xs">
-              C&amp;C bonded warehouse &middot; 12&ndash;14&deg;C continuously logged
+              C&amp;C bonded warehouse &middot; 12&ndash;16&deg;C continuously logged
               &middot; UAE licensed bonded, duty suspended &middot; CCTV and
               humidity control &middot; handled in house
             </span>
@@ -135,7 +135,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                   href="mailto:enquiries@craftculture.xyz"
                   className="text-text-muted hover:text-text-primary text-xs transition-colors"
                 >
-                  Email your account team
+                  Email the cellar team
                 </a>
               )}
               {access.kind !== 'collector' && (

@@ -119,7 +119,7 @@ const CellarHelp = () => {
               className="leading-relaxed"
             >
               Everything you own with us is stored duty-free in the C&amp;C
-              bonded warehouse, at twelve to fourteen degrees with
+              bonded warehouse, at twelve to sixteen degrees with
               controlled humidity. No duty or VAT is paid while it stays there;
               they are only paid when wine is delivered to you in the UAE.
             </Typography>
@@ -351,7 +351,7 @@ const CellarHelp = () => {
                 {
                   term: 'Temperature',
                   detail:
-                    'Twelve to fourteen degrees, continuously logged rather than spot-checked.',
+                    'Twelve to sixteen degrees, continuously logged rather than spot-checked.',
                 },
                 {
                   term: 'Status',
