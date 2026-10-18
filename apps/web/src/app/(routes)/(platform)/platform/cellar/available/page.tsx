@@ -532,8 +532,8 @@ const AvailablePage = () => {
                 label: 'Producers',
                 value: String(shownProducers.size),
                 icon: IconBuildingCastle,
-                tone: 'border-violet-100 from-violet-50/50 dark:border-violet-900/50 dark:from-violet-500/10',
-                iconTone: 'bg-violet-100/70 text-violet-600 dark:bg-violet-500/20',
+                tone: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
+                iconTone: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300',
               },
             ].map((stat) => (
               <div

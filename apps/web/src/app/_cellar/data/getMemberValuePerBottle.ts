@@ -2,7 +2,12 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import lwinPakKey, { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
-import { cellarPurchaseItems, cellarPurchases } from '@/database/schema';
+import {
+  cellarPurchaseItems,
+  cellarPurchases,
+  logisticsShipmentItems,
+  logisticsShipments,
+} from '@/database/schema';
 
 import getCostPerBottle from './getCostPerBottle';
 
@@ -14,6 +19,12 @@ import getCostPerBottle from './getCostPerBottle';
  * cost, so showing it put our margin on the member's screen (Cervaro 2019
  * bought at $113.16 showed as about $90 a bottle) and into the goods value of
  * their delivery quote.
+ *
+ * Wine the member imported is valued from their own shipment lines first. The
+ * shared lookup takes the highest cost for a wine across every owner's
+ * shipments and the pricing record, so a member holding a wine C&C or a
+ * partner also holds could be shown that owner's cost. The shared figure stays
+ * only as the fallback for wine with no shipment of the member's own.
  *
  * Several purchases of one wine average by bottles. Keyed by `lwinPakKeyOf`,
  * like `getCostPerBottle`.
@@ -32,6 +43,25 @@ const getMemberValuePerBottle = async (partnerId: string, lwins: string[]) => {
   if (lwins.length === 0) return values;
 
   const keys = [...new Set(lwins.map((lwin) => lwinPakKeyOf(lwin)))];
+
+  const ownShipped = await db
+    .select({
+      key: sql<string>`${lwinPakKey(logisticsShipmentItems.lwin)}`,
+      cost: sql<number | null>`NULLIF(MAX(${logisticsShipmentItems.productCostPerBottle}), 0)`,
+    })
+    .from(logisticsShipmentItems)
+    .innerJoin(logisticsShipments, eq(logisticsShipments.id, logisticsShipmentItems.shipmentId))
+    .where(
+      and(
+        sql`COALESCE(${logisticsShipmentItems.overrideOwnerId}, ${logisticsShipments.partnerId}) = ${partnerId}`,
+        inArray(sql`${lwinPakKey(logisticsShipmentItems.lwin)}`, keys),
+      ),
+    )
+    .groupBy(sql`${lwinPakKey(logisticsShipmentItems.lwin)}`);
+
+  for (const row of ownShipped) {
+    if (row.cost) values.set(row.key, Number(row.cost));
+  }
 
   const paid = await db
     .select({

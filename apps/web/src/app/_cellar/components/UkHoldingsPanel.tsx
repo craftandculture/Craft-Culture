@@ -113,6 +113,8 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
   const [isChoosing, setIsChoosing] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState('');
+  /* Prices follow the currency the cellar is being read in, like the rest of the page */
+  const price = formatValue ?? money;
 
   const { data: moveData } = useQuery(api.cellar.member.getUkMoves.queryOptions());
   const moves = moveData?.moves ?? [];
@@ -243,7 +245,7 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
                 </div>
 
                 {move.status === 'quoted' && typeof move.totalUsd === 'number' && (
-                  <p className="text-text-primary mt-2 text-lg font-bold tabular-nums">{money(move.totalUsd)}</p>
+                  <p className="text-text-primary mt-2 text-lg font-bold tabular-nums">{price(move.totalUsd)}</p>
                 )}
                 <p className="text-text-muted mt-1 max-w-[70ch] text-xs leading-5">{detailOf(move)}</p>
 
@@ -255,7 +257,7 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
                         description={
                           <p>
                             We will collect your wine from London City Bond and bring it to our bonded warehouse in the
-                            UAE for {money(move.totalUsd)}, all in. It stays under bond throughout, so no duty or VAT
+                            UAE for {price(move.totalUsd)}, all in. It stays under bond throughout, so no duty or VAT
                             is due until you ask for a delivery.
                           </p>
                         }
@@ -296,7 +298,7 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
 
       {isChoosing && (
         <p className="border-border-muted text-text-muted border-b bg-emerald-50/40 px-4 py-2 text-xs dark:bg-emerald-500/5">
-          Choose the wines to bring to your cellar in the UAE. Each is moved as LCB holds it.
+          Choose the wines to bring to your cellar in the UAE. Each wine moves in full, as London City Bond holds it.
         </p>
       )}
 
