@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import SaleProceedsPanel from '@/app/_cellar/components/SaleProceedsPanel';
+import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -77,6 +78,7 @@ const TONES = {
  */
 const SellingPage = () => {
   const api = useTRPC();
+  const isViewer = useIsCellarViewer();
   const [showPast, setShowPast] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
@@ -128,7 +130,8 @@ const SellingPage = () => {
               tone: 'held' as const,
               detail: '',
             };
-            const canWithdraw = ['offered', 'listed'].includes(mandate.status);
+            const canWithdraw =
+              !isViewer && ['offered', 'listed'].includes(mandate.status);
 
             return (
               <li
@@ -226,7 +229,7 @@ const SellingPage = () => {
                   detail: '',
                 };
 
-                const canWithdraw = ['offered', 'listed'].includes(
+                const canWithdraw = !isViewer && ['offered', 'listed'].includes(
                   mandate.status,
                 );
 

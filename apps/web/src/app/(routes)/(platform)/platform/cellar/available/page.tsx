@@ -15,6 +15,8 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
+import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
 import FindWineDialog from '@/app/_cellarSourcing/components/FindWineDialog';
 import MemberSourcingPanel from '@/app/_cellarSourcing/components/MemberSourcingPanel';
@@ -77,6 +79,7 @@ const PAGE = 50;
  */
 const AvailablePage = () => {
   const api = useTRPC();
+  const isViewer = useIsCellarViewer();
   const router = useRouter();
   const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
@@ -238,6 +241,8 @@ const AvailablePage = () => {
 
   /* One stepper for the table and the phone cards, so the two cannot drift. */
   const caseControl = (wine: (typeof wines)[number]) => {
+    if (isViewer) return null;
+
     const chosen = basket.get(wine.lwin18) ?? 0;
 
     /*
@@ -321,12 +326,17 @@ const AvailablePage = () => {
           left the request in somebody's inbox; now it is a request the team
           works and the member can follow.
         */}
-        <FindWineDialog />
+        {!isViewer && <FindWineDialog />}
       </header>
 
-      <MemberSourcingPanel
-        onActivationError={(error) => catchActivation(error, 'purchase')}
-      />
+      {isViewer && <ViewOnlyNotice />}
+
+      {/* A guest sees the requests and offers; every control in them is off */}
+      <fieldset disabled={isViewer} className="m-0 min-w-0 border-0 p-0">
+        <MemberSourcingPanel
+          onActivationError={(error) => catchActivation(error, 'purchase')}
+        />
+      </fieldset>
 
       {/*
         Search, kind and the narrowing filters live in one panel, so the page

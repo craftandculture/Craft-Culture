@@ -26,6 +26,7 @@ import DeliveryOptionsForm, {
 } from '@/app/_cellar/components/DeliveryOptionsForm';
 import type { DeliveryChoice } from '@/app/_cellar/components/DeliveryOptionsForm';
 import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
+import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
@@ -186,6 +187,9 @@ const CellarPage = () => {
   const { data: profile, refetch: refetchProfile } = useQuery({
     ...api.cellar.member.getProfile.queryOptions(),
   });
+
+  /* A view-only guest is refused every change on the server; offer none */
+  const isViewer = profile?.cellarRole === 'viewer';
 
   const { data: addressData, refetch: refetchAddresses } = useQuery({
     ...api.cellar.member.getAddresses.queryOptions(),
@@ -734,8 +738,9 @@ const CellarPage = () => {
         reason they are here — except for a new member with nothing stored
         yet, for whom they are the whole story.
       */}
-      <CellarOverviewPanel section="setup" />
-      {isEmptyCellar && <CellarOverviewPanel section="details" />}
+      {isViewer && <ViewOnlyNotice />}
+      <CellarOverviewPanel section="setup" readOnly={isViewer} />
+      {isEmptyCellar && <CellarOverviewPanel section="details" readOnly={isViewer} />}
       {activationSheet}
 
       {/*
@@ -886,11 +891,11 @@ const CellarPage = () => {
               /* Sent back to them: nothing happens until they act on it. */
               const needsAction = request.status === 'revision_requested';
 
-              const isEditable = [
-                'draft',
-                'submitted',
-                'revision_requested',
-              ].includes(request.status);
+              const isEditable =
+                !isViewer &&
+                ['draft', 'submitted', 'revision_requested'].includes(
+                  request.status,
+                );
 
               const isOpen = openRequestId === request.id;
 
@@ -965,7 +970,7 @@ const CellarPage = () => {
                     )}
                   </button>
 
-                  {needsDecision && (
+                  {needsDecision && !isViewer && (
                     <div className="flex flex-shrink-0 items-center gap-1.5">
                       {/*
                         The ⓘ that used to stand in for the whole quote is
@@ -1602,6 +1607,8 @@ const CellarPage = () => {
                       onClick={(event) => event.stopPropagation()}
                     >
                       {(() => {
+                        if (isViewer) return null;
+
                         const chosen = basketBottlesOf(wine);
                         const held = bottlesOf(wine);
                         const pack = wine.caseConfig ?? 1;
@@ -1702,6 +1709,7 @@ const CellarPage = () => {
                       className={`${td} text-right`}
                       onClick={(event) => event.stopPropagation()}
                     >
+                      {!isViewer && (
                       <button
                         type="button"
                         onClick={() => {
@@ -1713,6 +1721,7 @@ const CellarPage = () => {
                       >
                         Sell
                       </button>
+                      )}
                     </td>
                   </tr>
 
@@ -1818,6 +1827,8 @@ const CellarPage = () => {
                                       const pack = wine.caseConfig ?? 1;
                                       const held = parcel.quantityCases * pack;
 
+                                      if (isViewer) return null;
+
                                       return (
                                         <span
                                           className="inline-flex items-center gap-1"
@@ -1898,6 +1909,8 @@ const CellarPage = () => {
                                   <td className="whitespace-nowrap px-3 py-1.5 text-right">
                                     {(() => {
                                       const open = requestByStock.get(parcel.stockId);
+
+                                      if (isViewer && !open) return null;
 
                                       /*
                                         A control that always offers the action
@@ -2080,14 +2093,18 @@ const CellarPage = () => {
       )}
 
       {ukData && (
-        <UkHoldingsPanel data={ukData} formatValue={(usd) => money(usd, true)} />
+        <UkHoldingsPanel
+          data={ukData}
+          formatValue={(usd) => money(usd, true)}
+          readOnly={isViewer}
+        />
       )}
 
       <DeliveriesPanel requests={releaseData?.requests ?? []} section="past" />
 
       {!isEmptyCellar && (
         <div className="mt-8">
-          <CellarOverviewPanel section="details" />
+          <CellarOverviewPanel section="details" readOnly={isViewer} />
         </div>
       )}
 

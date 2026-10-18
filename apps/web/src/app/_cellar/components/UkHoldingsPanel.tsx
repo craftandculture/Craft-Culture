@@ -22,6 +22,8 @@ export interface UkHoldingsPanelProps {
   data: UkHoldings;
   /** Formats a USD amount in the currency the cellar is being read in */
   formatValue?: (usd: number) => string;
+  /** View-only access: show the wine and its moves, offer no actions */
+  readOnly?: boolean;
 }
 
 interface QuantityLine {
@@ -106,7 +108,7 @@ const isRecent = (move: UkMove) => {
  * member chooses wine to bring to the UAE, we send one all-in price, and it
  * moves only once they accept it.
  */
-const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
+const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPanelProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { catchActivation, activationSheet } = useActivationGate();
@@ -202,7 +204,7 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
             </p>
           </div>
         </div>
-        {movable.length > 0 && (
+        {movable.length > 0 && !readOnly && (
           <button
             type="button"
             onClick={() => {
@@ -249,7 +251,7 @@ const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
                 )}
                 <p className="text-text-muted mt-1 max-w-[70ch] text-xs leading-5">{detailOf(move)}</p>
 
-                {(move.status === 'quoted' || move.status === 'submitted') && (
+                {!readOnly && (move.status === 'quoted' || move.status === 'submitted') && (
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     {move.status === 'quoted' && typeof move.totalUsd === 'number' && (
                       <ConfirmAction

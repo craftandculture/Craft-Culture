@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  cellarPurchases,
   cellarReleaseRequestItems,
   cellarReleaseRequests,
   cellarUkHoldings,
@@ -125,6 +126,7 @@ const memberGetStatement = stockOwnerProcedure
             quantityCases: wmsStockMovements.quantityCases,
             quantityBottles: wmsStockMovements.quantityBottles,
             reasonCode: wmsStockMovements.reasonCode,
+            orderId: wmsStockMovements.orderId,
             at: wmsStockMovements.performedAt,
           })
           .from(wmsStockMovements)
@@ -306,6 +308,36 @@ const memberGetStatement = stockOwnerProcedure
       (row) => row.receivedAt && row.receivedAt >= from && row.receivedAt < to,
     );
 
+    /*
+      A purchase reversed after the wine changed hands still has its transfer
+      in on record, followed by the transfer back out. Listing it as bought
+      showed wine the member never kept, so purchases that did not stand are
+      left out.
+    */
+    const purchaseIds = [
+      ...new Set(
+        transfersIn
+          .filter((row) => row.reasonCode === 'pool_sale' && row.orderId)
+          .map((row) => row.orderId as string),
+      ),
+    ];
+
+    const reversedPurchaseIds = new Set(
+      purchaseIds.length
+        ? (
+            await db
+              .select({ id: cellarPurchases.id })
+              .from(cellarPurchases)
+              .where(
+                and(
+                  inArray(cellarPurchases.id, purchaseIds),
+                  eq(cellarPurchases.status, 'cancelled'),
+                ),
+              )
+          ).map((row) => row.id)
+        : [],
+    );
+
     return {
       month: input.month,
       periodStart: from,
@@ -322,7 +354,9 @@ const memberGetStatement = stockOwnerProcedure
           bottles: bottlesOf(row),
           where: 'uae' as const,
         })),
-        ...transfersIn.map((row) => ({
+        ...transfersIn
+          .filter((row) => !(row.orderId && reversedPurchaseIds.has(row.orderId)))
+          .map((row) => ({
           id: row.id,
           kind: row.reasonCode === 'pool_sale' ? ('bought' as const) : ('added' as const),
           at: row.at,

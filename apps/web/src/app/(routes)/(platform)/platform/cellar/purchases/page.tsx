@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import HowToPayPanel from '@/app/_cellar/components/HowToPayPanel';
+import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -91,6 +92,7 @@ const TONES = {
  */
 const PurchasesPage = () => {
   const api = useTRPC();
+  const isViewer = useIsCellarViewer();
   const [openId, setOpenId] = useState<string | null>(null);
   const [reference, setReference] = useState('');
   /*
@@ -229,9 +231,9 @@ const PurchasesPage = () => {
                   detail: '',
                 };
 
-                const canPay = ['reserved', 'payment_claimed'].includes(
-                  purchase.status,
-                );
+                const canPay =
+                  !isViewer &&
+                  ['reserved', 'payment_claimed'].includes(purchase.status);
 
                 const isOpen = openId === purchase.id;
 

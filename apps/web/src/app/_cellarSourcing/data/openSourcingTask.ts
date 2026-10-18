@@ -15,6 +15,8 @@ export interface OpenSourcingTaskParams {
   what: string;
   memberName: string;
   linkUrl: string;
+  /** The line written to the job's history; defaults to the sourcing wording */
+  openedNote?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ const openSourcingTask = async ({
   what,
   memberName,
   linkUrl,
+  openedNote,
 }: OpenSourcingTaskParams) => {
   try {
     const people = await db
@@ -72,7 +75,7 @@ const openSourcingTask = async ({
     await logTaskEvent(
       taskId,
       null,
-      `Opened when ${memberName} agreed to a wine we offered`,
+      openedNote ?? `Opened when ${memberName} agreed to a wine we offered`,
     );
     await announceTask(taskId, 'opened');
     return taskId;

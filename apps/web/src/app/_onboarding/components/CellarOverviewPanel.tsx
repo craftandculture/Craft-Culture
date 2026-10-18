@@ -17,6 +17,8 @@ export interface CellarOverviewPanelProps {
    * it. The page decides the order — the wine is the hero.
    */
   section: 'setup' | 'details';
+  /** View-only access: no setup prompts and no way to bring wine in */
+  readOnly?: boolean;
 }
 
 /** How long a finished transfer stays on screen before it folds away */
@@ -30,14 +32,15 @@ const ARRIVED_SHOWN_DAYS = 14;
  * phone everything stacks. Nothing here blocks looking around; the ID is
  * asked for again when they first act.
  */
-const CellarOverviewPanel = ({ section }: CellarOverviewPanelProps) => {
+const CellarOverviewPanel = ({ section, readOnly = false }: CellarOverviewPanelProps) => {
   const api = useTRPC();
   const { data, refetch } = useQuery(api.onboarding.member.overview.queryOptions());
 
   if (!data) return null;
 
   if (section === 'setup') {
-    return data.missing.length > 0 ? (
+    /* The setup steps are the holder's to finish, not a guest's */
+    return data.missing.length > 0 && !readOnly ? (
       <div className="mb-6">
         <CellarSetupBanner missing={data.missing} />
       </div>
@@ -64,7 +67,7 @@ const CellarOverviewPanel = ({ section }: CellarOverviewPanelProps) => {
         {transfers.map((intake) => (
           <IncomingTransferCard key={intake.id} intake={intake} reference={data.reference} />
         ))}
-        <BringWineIn reference={data.reference} onAdded={() => void refetch()} />
+        {!readOnly && <BringWineIn reference={data.reference} onAdded={() => void refetch()} />}
       </div>
       <MembershipSummary overview={data} />
     </div>
