@@ -11,6 +11,7 @@ import {
   logisticsShipmentActivityLogs,
   logisticsShipmentItems,
   logisticsShipments,
+  partners,
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
@@ -25,8 +26,10 @@ import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
  * shipment: receiving it puts the wine into the member's UAE cellar, and the
  * move reads as arrived.
  *
- * Lines are added only when the shipment is created here. A linked shipment
- * is the team's to fill, since it may already carry the same wine.
+ * The move's lines are added either way. On a shipment that belongs to
+ * someone else (C&C, or another member travelling in the same container) each
+ * line names the member as its owner, so receiving books the wine to the
+ * member's cellar rather than to whoever owns the shipment.
  *
  * @example
  *   await trpcClient.cellar.admin.shipUkMove.mutate({
@@ -66,12 +69,28 @@ const adminShipUkMove = staffAdminProcedure
       });
     }
 
+    const [member] = await db
+      .select({ name: partners.businessName })
+      .from(partners)
+      .where(eq(partners.id, move.partnerId))
+      .limit(1);
+
     const shipmentId = await db.transaction(async (tx) => {
       let id: string;
+      let shipmentOwnerId: string | null = move.partnerId;
+
+      const items = await tx
+        .select()
+        .from(cellarUkMoveItems)
+        .where(eq(cellarUkMoveItems.moveId, move.id));
 
       if (input.mode === 'link') {
         const [existing] = await tx
-          .select({ id: logisticsShipments.id, type: logisticsShipments.type })
+          .select({
+            id: logisticsShipments.id,
+            type: logisticsShipments.type,
+            partnerId: logisticsShipments.partnerId,
+          })
           .from(logisticsShipments)
           .where(eq(logisticsShipments.id, input.shipmentId))
           .limit(1);
@@ -84,12 +103,8 @@ const adminShipUkMove = staffAdminProcedure
         }
 
         id = existing.id;
+        shipmentOwnerId = existing.partnerId;
       } else {
-        const items = await tx
-          .select()
-          .from(cellarUkMoveItems)
-          .where(eq(cellarUkMoveItems.moveId, move.id));
-
         const shipmentNumber = await generateShipmentNumber();
 
         const [shipment] = await tx
@@ -121,45 +136,6 @@ const adminShipUkMove = staffAdminProcedure
 
         id = shipment.id;
 
-        const bottleSizeMl = (litres: number | null) =>
-          litres ? Math.round(litres * 1000) : 750;
-
-        const lines = items.flatMap((item) => {
-          const base = {
-            shipmentId: id,
-            productName: item.name,
-            lwin: item.lwin18,
-            vintage: item.vintage,
-            bottleSizeMl: bottleSizeMl(item.bottleSizeLitres),
-            notForSale: true,
-          };
-
-          const caseLine =
-            item.cases > 0 && item.bottlesPerCase
-              ? [
-                  {
-                    ...base,
-                    cases: item.cases,
-                    bottlesPerCase: item.bottlesPerCase,
-                    totalBottles: item.cases * item.bottlesPerCase,
-                  },
-                ]
-              : [];
-
-          const looseBottles = item.totalBottles - caseLine.reduce((sum, line) => sum + line.totalBottles, 0);
-
-          const looseLine =
-            looseBottles > 0
-              ? [{ ...base, cases: looseBottles, bottlesPerCase: 1, totalBottles: looseBottles }]
-              : [];
-
-          return [...caseLine, ...looseLine];
-        });
-
-        if (lines.length > 0) {
-          await tx.insert(logisticsShipmentItems).values(lines);
-        }
-
         await tx.insert(logisticsShipmentActivityLogs).values({
           shipmentId: id,
           userId: ctx.user.id,
@@ -167,6 +143,57 @@ const adminShipUkMove = staffAdminProcedure
           newStatus: 'draft',
           notes: `Shipment ${shipmentNumber} created for member move ${move.moveNumber}`,
         });
+      }
+
+      const bottleSizeMl = (litres: number | null) =>
+        litres ? Math.round(litres * 1000) : 750;
+
+      /*
+        On a shipment that belongs to someone else, each line names the member
+        as its owner: receiving books a line to the shipment's owner unless the
+        line says otherwise, and the member's wine would land in the wrong
+        cellar without anyone noticing.
+      */
+      const ownerOverride =
+        shipmentOwnerId === move.partnerId
+          ? {}
+          : { overrideOwnerId: move.partnerId, overrideOwnerName: member?.name ?? null };
+
+      const lines = items.flatMap((item) => {
+        const base = {
+          shipmentId: id,
+          productName: item.name,
+          lwin: item.lwin18,
+          vintage: item.vintage,
+          bottleSizeMl: bottleSizeMl(item.bottleSizeLitres),
+          notForSale: true,
+          ...ownerOverride,
+        };
+
+        const caseLine =
+          item.cases > 0 && item.bottlesPerCase
+            ? [
+                {
+                  ...base,
+                  cases: item.cases,
+                  bottlesPerCase: item.bottlesPerCase,
+                  totalBottles: item.cases * item.bottlesPerCase,
+                },
+              ]
+            : [];
+
+        const looseBottles = item.totalBottles - caseLine.reduce((sum, line) => sum + line.totalBottles, 0);
+
+        const looseLine =
+          looseBottles > 0
+            ? [{ ...base, cases: looseBottles, bottlesPerCase: 1, totalBottles: looseBottles }]
+            : [];
+
+        return [...caseLine, ...looseLine];
+      });
+
+      if (lines.length > 0) {
+        await tx.insert(logisticsShipmentItems).values(lines);
       }
 
       const [claimed] = await tx
@@ -191,9 +218,7 @@ const adminShipUkMove = staffAdminProcedure
       return id;
     });
 
-    if (input.mode === 'create') {
-      await recalcShipmentTotals(shipmentId);
-    }
+    await recalcShipmentTotals(shipmentId);
 
     await notifyUkMoveUpdate({
       event: 'shipping',

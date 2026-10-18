@@ -306,7 +306,11 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
           .innerJoin(partners, eq(partners.id, cellarIntakes.partnerId))
           .where(
             and(
-              inArray(cellarIntakes.stage, ['in_progress', 'arriving_uk', 'shipping_uae']),
+              /*
+                Not "arrived at our UK bond": wine can rest at LCB for as long
+                as the member likes, so time spent there is not a stall.
+              */
+              inArray(cellarIntakes.stage, ['in_progress', 'shipping_uae']),
               lt(cellarIntakes.updatedAt, new Date(now.getTime() - 21 * DAY)),
             ),
           )

@@ -1,10 +1,12 @@
-import { eq } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { cellarUkRotations } from '@/database/schema';
+import { cellarUkMoveItems, cellarUkMoves, cellarUkRotations } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import { OPEN_UK_MOVE_STATUSES } from '../constants/ukMoveStatuses';
 import notifyUkRotationAssigned from '../data/notifyUkRotationAssigned';
 
 /**
@@ -34,6 +36,37 @@ const adminAssignUkRotation = staffAdminProcedure
       .from(cellarUkRotations)
       .where(eq(cellarUkRotations.rotation, input.rotation))
       .limit(1);
+
+    /*
+      A rotation on a member's open move is spoken for: giving it to someone
+      else would let the move ship wine that is no longer theirs. Read guarded,
+      because the moves tables are newer than this screen.
+    */
+    const leavesMember =
+      !!previous?.partnerId &&
+      !(input.owner.kind === 'member' && input.owner.partnerId === previous.partnerId);
+
+    if (leavesMember) {
+      const onMove = await db
+        .select({ moveNumber: cellarUkMoves.moveNumber })
+        .from(cellarUkMoveItems)
+        .innerJoin(cellarUkMoves, eq(cellarUkMoves.id, cellarUkMoveItems.moveId))
+        .where(
+          and(
+            eq(cellarUkMoveItems.rotation, input.rotation),
+            inArray(cellarUkMoves.status, OPEN_UK_MOVE_STATUSES),
+          ),
+        )
+        .limit(1)
+        .catch(() => []);
+
+      if (onMove[0]) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `This rotation is on ${onMove[0].moveNumber}, which is still open. Close that move before reassigning the wine.`,
+        });
+      }
+    }
 
     const values = {
       partnerId: input.owner.kind === 'member' ? input.owner.partnerId : null,

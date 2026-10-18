@@ -91,7 +91,8 @@ const downloadVisionLines = (move: Move) => {
   link.href = url;
   link.download = `${move.moveNumber}-lcb-export-order.csv`;
   link.click();
-  URL.revokeObjectURL(url);
+  /* Revoked on the next tick: revoking straight after click can cancel the download in Safari */
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 interface QuoteFormProps {
@@ -288,7 +289,12 @@ const ShipForm = ({ move, shipments, onDone }: ShipFormProps) => {
             {linkTo && (
               <ConfirmAction
                 title="Add this move to that shipment?"
-                description={<p>The shipment&apos;s lines are not changed. Add the wine to it yourself if it is not there.</p>}
+                description={
+                  <p>
+                    The move&apos;s lines are added to that shipment in the member&apos;s name, so receiving puts the
+                    wine in their cellar. Do not add the same wine to it by hand.
+                  </p>
+                }
                 confirmLabel="Add to shipment"
                 onConfirm={() => ship.mutate({ mode: 'link', moveId: move.id, shipmentId: linkTo })}
               >

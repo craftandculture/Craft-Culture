@@ -137,7 +137,7 @@ const StorageList = () => {
                       <button
                         type="button"
                         disabled={setStatus.isPending}
-                        className="text-text-brand text-xs hover:underline disabled:opacity-50"
+                        className="text-text-primary text-xs font-semibold hover:underline disabled:opacity-50"
                       >
                         {row.status === 'active' ? 'Pause' : 'Resume'}
                       </button>
