@@ -1,3 +1,9 @@
+## [2.0.408](https://github.com/craftandculture/Craft-Culture/compare/v2.0.407...v2.0.408) (2026-10-18)
+
+### Features
+
+* staff can close an accepted wine request once it is bought or abandoned, and close a membership from the Storage tab ([7c56266](https://github.com/craftandculture/Craft-Culture/commit/7c5626664542694cf78ab7d6143e964defdde278))
+
 ## [2.0.407](https://github.com/craftandculture/Craft-Culture/compare/v2.0.406...v2.0.407) (2026-10-18)
 
 ### Features
