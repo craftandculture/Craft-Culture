@@ -54,6 +54,15 @@ describe('countChargeableCases', () => {
     expect(countChargeableCases([row(0, 1, '150cl', 4)])).toBe(1);
   });
 
+  it('pools single bottles with the loose bottles', () => {
+    // Twelve singles, recorded as twelve rows of one, fill one case
+    expect(countChargeableCases(Array.from({ length: 12 }, () => row(1, 1)))).toBe(1);
+    // A row of 12 singles, plus 3 loose bottles from an opened case
+    expect(countChargeableCases([row(12, 1), row(0, 12, '75cl', 3)])).toBe(1.5);
+    // Seven singles round up to a full unit, as seven loose bottles would
+    expect(countChargeableCases([row(7, 1)])).toBe(1);
+  });
+
   it('treats an unknown pack as twelve', () => {
     expect(countChargeableCases([row(1, null)])).toBe(1);
   });

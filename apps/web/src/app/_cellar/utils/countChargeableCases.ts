@@ -24,6 +24,9 @@ const STANDARD_ML = 750;
  * - Each sealed case is rounded up on its own: up to 6 bottles is half a unit,
  *   7 to 12 is one, 13 to 18 one and a half, and so on.
  * - Loose bottles are pooled and rounded up the same way.
+ * - Single bottles count as loose. Stock records a single bottle as a "case
+ *   of 1", and rounding each of those up to half a unit charged twelve
+ *   singles as six cases when they fill one.
  *
  * A 12-bottle case is therefore one case of the allowance and one extra-case
  * charge; a 6-bottle case is half of each.
@@ -43,7 +46,9 @@ const countChargeableCases = (rows: ChargeableStockRow[]) => {
     const bottlesPerBottle = bottleMillilitres(row.bottleSize) / STANDARD_ML;
     const sealed = Math.max(0, row.quantityCases);
 
-    if (sealed > 0) {
+    if (row.caseConfig === 1) {
+      looseBottles += sealed * bottlesPerBottle;
+    } else if (sealed > 0) {
       // Rounded so 0.9333… x 6 is not read as just over 6
       const perCase = Math.round(Math.max(1, row.caseConfig ?? 12) * bottlesPerBottle * 1000) / 1000;
       units += sealed * Math.ceil(perCase / 6) * 0.5;
