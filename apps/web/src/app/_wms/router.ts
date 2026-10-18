@@ -100,6 +100,7 @@ import adminReverseRepack from './controller/adminReverseRepack';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
+import adminSearchStockRows from './controller/adminSearchStockRows';
 import adminSetCostOverride from './controller/adminSetCostOverride';
 import adminSetImportPrice from './controller/adminSetImportPrice';
 import adminSetInboundAvailability from './controller/adminSetInboundAvailability';
@@ -207,6 +208,7 @@ const stockRouter = createTRPCRouter({
   getMovements: adminGetMovementHistory,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
+  searchRows: adminSearchStockRows,
   lookalikes: adminGetStockLookalikes,
   deduplicate: adminDeduplicateStock,
   getAll: adminGetAllStockRecords,

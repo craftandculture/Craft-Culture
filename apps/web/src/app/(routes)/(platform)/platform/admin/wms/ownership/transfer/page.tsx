@@ -37,6 +37,7 @@ interface StockItem {
   availableCases: number;
   locationCode: string;
   salesArrangement?: string | null;
+  notForSale?: boolean | null;
 }
 
 interface Partner {
@@ -59,6 +60,7 @@ const WMSOwnershipTransferPage = () => {
   const [salesArrangement, setSalesArrangement] = useState<'consignment' | 'purchased'>('consignment');
   const [commissionPercent, setCommissionPercent] = useState(15);
   const [notes, setNotes] = useState('');
+  const [putOnSale, setPutOnSale] = useState(false);
   const [error, setError] = useState<string>('');
   const [lastSuccess, setLastSuccess] = useState<{
     productName: string;
@@ -69,11 +71,11 @@ const WMSOwnershipTransferPage = () => {
 
   // Search stock
   const { data: stockData, isLoading: stockLoading } = useQuery({
-    ...api.wms.admin.stock.search.queryOptions({
-      search: searchQuery,
+    ...api.wms.admin.stock.searchRows.queryOptions({
+      query: searchQuery.trim(),
       limit: 20,
     }),
-    enabled: step === 'select-stock' && searchQuery.length > 1,
+    enabled: step === 'select-stock' && searchQuery.trim().length > 1,
   });
 
   // Get partners for new owner selection
@@ -126,6 +128,7 @@ const WMSOwnershipTransferPage = () => {
       salesArrangement,
       consignmentCommissionPercent: salesArrangement === 'consignment' ? commissionPercent : undefined,
       notes: notes || undefined,
+      putOnSale: putOnSale || undefined,
     });
   };
 
@@ -138,6 +141,7 @@ const WMSOwnershipTransferPage = () => {
     setSalesArrangement('consignment');
     setCommissionPercent(15);
     setNotes('');
+    setPutOnSale(false);
     setError('');
     setLastSuccess(null);
   };
@@ -215,12 +219,14 @@ const WMSOwnershipTransferPage = () => {
                           availableCases: stock.availableCases,
                           locationCode: stock.locationCode,
                           salesArrangement: stock.salesArrangement,
+                          notForSale: stock.notForSale,
                         })
                       }
                       className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-left transition-colors hover:border-border-brand"
                     >
                       <Typography variant="bodySm" className="font-medium">
                         {stock.productName}
+                        {stock.vintage ? ` · ${stock.vintage}` : ''}
                       </Typography>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <OwnerBadge ownerName={stock.ownerName} size="sm" />
@@ -228,6 +234,11 @@ const WMSOwnershipTransferPage = () => {
                         <Typography variant="bodyXs" className="text-blue-600">
                           {stock.availableCases} available
                         </Typography>
+                        {stock.notForSale && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Not for sale
+                          </Typography>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -416,6 +427,32 @@ const WMSOwnershipTransferPage = () => {
               </CardContent>
             </Card>
 
+            {/*
+              Moving wine never lists it by itself. When it comes back into our
+              hands — a reversed sale, a correction — someone has to say it is
+              for sale again, or it sits in our name off every price list.
+            */}
+            <Card>
+              <CardContent className="p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={putOnSale}
+                    onChange={(e) => setPutOnSale(e.target.checked)}
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">Put it on sale</span>
+                    <span className="text-text-muted block text-xs">
+                      Lists the transferred cases on the price lists and Available now. Leave
+                      off for a client&apos;s own wine.
+                      {selectedStock.notForSale ? ' It is currently marked not for sale.' : ''}
+                    </span>
+                  </span>
+                </label>
+              </CardContent>
+            </Card>
+
             {/* Notes */}
             <Card>
               <CardContent className="p-4">
@@ -484,6 +521,12 @@ const WMSOwnershipTransferPage = () => {
                         : 'Purchased (full ownership)'}
                     </Typography>
                   </div>
+
+                  {putOnSale && (
+                    <Typography variant="bodyXs" className="text-center font-medium">
+                      Will be put on sale
+                    </Typography>
+                  )}
 
                   {notes && (
                     <Typography variant="bodyXs" colorRole="muted" className="italic">

@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
+
 import db from '@/database/client';
+import { wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { transferOwnershipSchema } from '../schemas/ownershipSchema';
@@ -23,8 +26,8 @@ import transferStockOwnership from '../utils/transferStockOwnership';
 const adminTransferOwnership = wmsOperatorProcedure
   .input(transferOwnershipSchema)
   .mutation(async ({ input, ctx }) => {
-    const result = await db.transaction(async (tx) =>
-      transferStockOwnership({
+    const result = await db.transaction(async (tx) => {
+      const moved = await transferStockOwnership({
         tx,
         stockId: input.stockId,
         newOwnerId: input.newOwnerId,
@@ -34,8 +37,17 @@ const adminTransferOwnership = wmsOperatorProcedure
         notes: input.notes,
         allowReservedTransfer: input.allowReservedTransfer,
         performedBy: ctx.user.id,
-      }),
-    );
+      });
+
+      if (input.putOnSale) {
+        await tx
+          .update(wmsStock)
+          .set({ notForSale: false, updatedAt: new Date() })
+          .where(eq(wmsStock.id, moved.destinationStockId));
+      }
+
+      return moved;
+    });
 
     return {
       success: true,

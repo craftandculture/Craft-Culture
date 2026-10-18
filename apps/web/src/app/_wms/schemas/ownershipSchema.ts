@@ -22,6 +22,11 @@ export const transferOwnershipSchema = z.object({
     longer owns.
   */
   allowReservedTransfer: z.boolean().optional(),
+  /*
+    List the wine once it has moved. Ownership changing never decides this by
+    itself (see transferStockOwnership); an admin says so here, out loud.
+  */
+  putOnSale: z.boolean().optional(),
 });
 
 /**
