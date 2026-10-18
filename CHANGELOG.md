@@ -1,3 +1,9 @@
+## [2.0.403](https://github.com/craftandculture/Craft-Culture/compare/v2.0.402...v2.0.403) (2026-10-18)
+
+### Features
+
+* staff can reverse a transferred cellar purchase, returning the wine to its seller and back on sale, and a paused membership reads as paused ([6193194](https://github.com/craftandculture/Craft-Culture/commit/6193194a70401ce7bcca7464808251b9835ce8ff))
+
 ## [2.0.402](https://github.com/craftandculture/Craft-Culture/compare/v2.0.401...v2.0.402) (2026-10-18)
 
 ### Bug Fixes
