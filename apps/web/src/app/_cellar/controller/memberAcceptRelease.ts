@@ -2,9 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import generateOrderNumber from '@/app/_privateClientOrders/utils/generateOrderNumber';
-import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,

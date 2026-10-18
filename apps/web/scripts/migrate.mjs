@@ -2896,6 +2896,48 @@ const runMigrations = async () => {
     }
     console.log('✅ cellar purchase and membership notifications ready');
 
+    /*
+      Wine in C&C's LCB Burton account, shown in members' cellars (Oct 2026).
+      Separate tables, read behind a guard: a missed migration hides the UK
+      section and nothing else.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_uk_rotations" (
+        "rotation" text PRIMARY KEY NOT NULL,
+        "partner_id" uuid REFERENCES "partners"("id") ON DELETE SET NULL,
+        "is_house" boolean DEFAULT false NOT NULL,
+        "assigned_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "assigned_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_uk_holdings" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "rotation" text NOT NULL,
+        "line" integer DEFAULT 0 NOT NULL,
+        "lwin18" text NOT NULL,
+        "brand" text,
+        "description" text,
+        "vintage" integer,
+        "bottles_per_case" integer,
+        "bottle_size_litres" double precision,
+        "cases" integer DEFAULT 0 NOT NULL,
+        "singles" integer DEFAULT 0 NOT NULL,
+        "total_bottles" integer DEFAULT 0 NOT NULL,
+        "packaging" text,
+        "received_at" timestamp,
+        "imported_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_uk_holdings_rotation_idx" ON "cellar_uk_holdings" ("rotation")`,
+    );
+    console.log('✅ LCB UK holdings ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

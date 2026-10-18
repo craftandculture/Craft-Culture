@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
+import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import Button from '@/app/_ui/components/Button/Button';
@@ -440,8 +441,13 @@ const CellarPage = () => {
 
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
-  const isEmptyCellar =
+  /* Wine at C&C's UK bond, from LCB's own report: part of the same collection */
+  const { data: ukData } = useQuery(api.cellar.member.getUkHoldings.queryOptions());
+  const hasUk = (ukData?.holdings.length ?? 0) > 0;
+
+  const isUaeEmpty =
     !isLoading && wines.length === 0 && inbound.length === 0;
+  const isEmptyCellar = isUaeEmpty && !hasUk;
 
   const requestByStock = useMemo(() => {
     const map = new Map<string, { requestNumber: string }>();
@@ -694,7 +700,7 @@ const CellarPage = () => {
         the only card that colours itself is wine in transit, which colours
         itself only when there is some.
       */}
-      {!isEmptyCellar && (
+      {!isUaeEmpty && (
       <div
         className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
           inbound.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
@@ -1301,8 +1307,13 @@ const CellarPage = () => {
             Browse Available now
           </Link>
         </div>
-      ) : (
+      ) : isUaeEmpty ? null : (
         <>
+      {hasUk && (
+        <p className="text-text-primary mb-2 text-sm font-semibold">
+          United Arab Emirates · C&amp;C bonded warehouse
+        </p>
+      )}
       {/*
         Search and filters on one line above small screens. Stacked, they cost
         three bands of vertical space before a member sees a single wine.
@@ -1977,6 +1988,8 @@ const CellarPage = () => {
       </div>
         </>
       )}
+
+      {ukData && <UkHoldingsPanel data={ukData} />}
 
       {!isEmptyCellar && (
         <div className="mt-8">

@@ -7454,6 +7454,57 @@ export const cellarPaymentSettings = pgTable('cellar_payment_settings', {
   ...timestamps,
 });
 
+/**
+ * Whose wine each LCB rotation is
+ *
+ * LCB's stock report lists rotations — one per receipt into C&C's account —
+ * and says nothing about which client they belong to. That is recorded here,
+ * once per rotation, and applies to every report imported afterwards. A
+ * rotation with no partner and not marked as house stock is unassigned and
+ * waits for the team.
+ */
+export const cellarUkRotations = pgTable('cellar_uk_rotations', {
+  rotation: text('rotation').primaryKey(),
+  partnerId: uuid('partner_id').references(() => partners.id, { onDelete: 'set null' }),
+  /** C&C's own trading stock, which no member sees */
+  isHouse: boolean('is_house').notNull().default(false),
+  assignedBy: uuid('assigned_by').references(() => users.id, { onDelete: 'set null' }),
+  assignedAt: timestamp('assigned_at', { mode: 'date' }),
+  ...timestamps,
+});
+
+/**
+ * What C&C's LCB Burton account holds, as LCB last reported it
+ *
+ * A snapshot, replaced in full by each import of LCB's Rotation Stock report:
+ * LCB runs the bond, so its report is the record and this mirrors it. Kept
+ * apart from wms_stock, which is the UAE warehouse — picking, the catalogue
+ * and storage billing never see these rows.
+ */
+export const cellarUkHoldings = pgTable(
+  'cellar_uk_holdings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rotation: text('rotation').notNull(),
+    line: integer('line').notNull().default(0),
+    /** LCB's product code, which C&C sets as the dashed LWIN18 */
+    lwin18: text('lwin18').notNull(),
+    brand: text('brand'),
+    description: text('description'),
+    vintage: integer('vintage'),
+    bottlesPerCase: integer('bottles_per_case'),
+    bottleSizeLitres: doublePrecision('bottle_size_litres'),
+    cases: integer('cases').notNull().default(0),
+    singles: integer('singles').notNull().default(0),
+    totalBottles: integer('total_bottles').notNull().default(0),
+    packaging: text('packaging'),
+    receivedAt: timestamp('received_at', { mode: 'date' }),
+    importedBy: uuid('imported_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('cellar_uk_holdings_rotation_idx').on(table.rotation)],
+);
+
 export const cellarIntakes = pgTable(
   'cellar_intakes',
   {
