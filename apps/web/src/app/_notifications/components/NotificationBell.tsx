@@ -1,19 +1,25 @@
 'use client';
 
-import { IconBell, IconCheck, IconChecks } from '@tabler/icons-react';
+import {
+  IconArrowUpRight,
+  IconBell,
+  IconSettings,
+  IconX,
+} from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Popover from '@/app/_ui/components/Popover/Popover';
-import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
-import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
-import Typography from '@/app/_ui/components/Typography/Typography';
-import type { Notification } from '@/database/schema';
+import Sheet from '@/app/_ui/components/Sheet/Sheet';
+import SheetClose from '@/app/_ui/components/Sheet/SheetClose';
+import SheetContent from '@/app/_ui/components/Sheet/SheetContent';
+import SheetDescription from '@/app/_ui/components/Sheet/SheetDescription';
+import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
+import SheetTrigger from '@/app/_ui/components/Sheet/SheetTrigger';
 import { useTRPCClient } from '@/lib/trpc/browser';
+
+import NotificationFeed from './NotificationFeed';
 
 // Global flag to track if user has interacted with the page
 // Persists across component remounts
@@ -104,10 +110,13 @@ const playNotificationSound = async () => {
 };
 
 /**
- * Notification bell with dropdown showing recent notifications
+ * Notification bell that opens a full-height drawer of notifications
+ *
+ * The bell keeps the badge, the chime and the background refresh of other
+ * screens. The drawer holds the filterable list, shared with the
+ * Notifications page.
  */
 const NotificationBell = () => {
-  const router = useRouter();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -115,111 +124,62 @@ const NotificationBell = () => {
   const previousCountRef = useRef<number | null>(null);
 
   // Play sound and refresh relevant data when new notifications arrive
-  const handleNewNotifications = useCallback((newCount: number) => {
-    const prevCount = previousCountRef.current;
+  const handleNewNotifications = useCallback(
+    (newCount: number) => {
+      const prevCount = previousCountRef.current;
 
-    // Only trigger if count increased
-    if (prevCount !== null && newCount > prevCount) {
-      // Play sound (function checks for user interaction internally)
-      void playNotificationSound();
+      if (prevCount !== null && newCount > prevCount) {
+        void playNotificationSound();
 
-      // Trigger pulse animation
-      setShowPulse(true);
-      setTimeout(() => setShowPulse(false), 2000);
+        setShowPulse(true);
+        setTimeout(() => setShowPulse(false), 2000);
 
-      // Invalidate notifications list to show new notifications immediately
-      void queryClient.invalidateQueries({ queryKey: ['notifications-list'] });
+        void queryClient.invalidateQueries({
+          queryKey: ['notifications-list'],
+        });
 
-      // Invalidate queries to refresh data across both B2C and admin views
-      // B2C: User's quotes list (uses 'quotes.getMany' key pattern)
-      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
-      // B2C: Individual quote details
-      void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
-      // Admin: Quote approvals table and user management
-      void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
-      void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      // Private client orders - partner and admin views
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
-      // Dashboards
-      void queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
-      void queryClient.invalidateQueries({ queryKey: ['partner-dashboard'] });
-      void queryClient.invalidateQueries({ queryKey: ['distributor-dashboard'] });
-    }
+        // Refresh the screens the new notification is likely about
+        void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
+        void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
+        void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+        void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+        void queryClient.invalidateQueries({
+          queryKey: ['privateClientOrders'],
+        });
+        void queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+        void queryClient.invalidateQueries({
+          queryKey: ['partner-dashboard'],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ['distributor-dashboard'],
+        });
+      }
 
-    previousCountRef.current = newCount;
-  }, [queryClient]);
+      previousCountRef.current = newCount;
+    },
+    [queryClient],
+  );
 
-  // Fetch unread count - poll every 10 seconds (responsive for demos, lighter than 5s)
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 10000, // Poll every 10 seconds
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
-  // Play sound when unread count changes
   useEffect(() => {
     if (unreadData?.count !== undefined) {
       handleNewNotifications(unreadData.count);
     }
   }, [unreadData?.count, handleNewNotifications]);
 
-  // Fetch recent notifications - always enabled for background updates
-  const { data: notificationsData, isLoading } = useQuery({
-    queryKey: ['notifications-list'],
-    queryFn: () => trpcClient.notifications.getMany.query({ limit: 10 }),
-    refetchInterval: isOpen ? 5000 : 30000, // Poll faster when open, slower in background
-    refetchOnWindowFocus: true,
-    staleTime: 3000,
-  });
-
   const unreadCount = unreadData?.count ?? 0;
-  const notifications: Notification[] = notificationsData?.data ?? [];
-
-  const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if not already
-    if (!notification.isRead) {
-      await trpcClient.notifications.markAsRead.mutate({
-        notificationId: notification.id,
-      });
-      // Invalidate notification queries
-      void queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
-      void queryClient.invalidateQueries({ queryKey: ['notifications-list'] });
-    }
-
-    // If this is a quote-related notification, invalidate quotes to ensure fresh data
-    if (notification.entityType === 'quote') {
-      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
-      void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
-    }
-
-    // If this is a private client order notification, invalidate order queries
-    if (notification.entityType === 'private_client_order') {
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
-    }
-
-    // Navigate to action URL if present
-    if (notification.actionUrl) {
-      setIsOpen(false);
-      router.push(notification.actionUrl);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    await trpcClient.notifications.markAllAsRead.mutate();
-    void queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
-    void queryClient.invalidateQueries({ queryKey: ['notifications-list'] });
-  };
-
-  const getNotificationIcon = (_type: Notification['type']) => {
-    // All notifications use the same icon for simplicity
-    return IconBell;
-  };
+  const actionCount = unreadData?.actionCount ?? 0;
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <button
           className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-fill-muted"
           aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
@@ -230,103 +190,65 @@ const NotificationBell = () => {
               {showPulse && (
                 <span className="absolute -right-0.5 -top-0.5 h-5 min-w-5 animate-ping rounded-full bg-fill-danger opacity-75" />
               )}
-              <span className={`absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-danger px-1 text-[10px] font-bold text-white ${showPulse ? 'animate-pulse' : ''}`}>
+              <span
+                className={`absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-danger px-1 text-[10px] font-bold text-white ${showPulse ? 'animate-pulse' : ''}`}
+              >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             </>
           )}
         </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border-muted px-4 py-3">
-          <Typography variant="bodySm" className="font-semibold">
-            Notifications
-          </Typography>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
-              <Icon icon={IconChecks} size="sm" />
-              <span className="ml-1 text-xs">Mark all read</span>
-            </Button>
-          )}
+      </SheetTrigger>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-[460px]"
+      >
+        <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
+          <div className="flex flex-col gap-0.5">
+            <SheetTitle className="text-lg font-semibold text-text-primary">
+              Notifications
+            </SheetTitle>
+            <SheetDescription className="text-xs text-text-muted">
+              {actionCount > 0
+                ? `${actionCount} waiting on you`
+                : unreadCount > 0
+                  ? `${unreadCount} unread`
+                  : 'You are all caught up'}
+            </SheetDescription>
+          </div>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/platform/settings"
+              onClick={() => setIsOpen(false)}
+              aria-label="Notification settings"
+              title="Notification settings"
+              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-fill-muted hover:text-text-primary"
+            >
+              <Icon icon={IconSettings} size="sm" />
+            </Link>
+            <SheetClose
+              aria-label="Close"
+              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-fill-muted hover:text-text-primary"
+            >
+              <Icon icon={IconX} size="sm" />
+            </SheetClose>
+          </div>
         </div>
 
-        {/* Notifications List */}
-        <div className="max-h-96 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Typography variant="bodySm" colorRole="muted">
-                Loading...
-              </Typography>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Icon icon={IconBell} size="xl" colorRole="muted" className="mb-2" />
-              <Typography variant="bodySm" colorRole="muted">
-                No notifications yet
-              </Typography>
-            </div>
-          ) : (
-            <div className="divide-y divide-border-muted">
-              {notifications.map((notification) => (
-                <button
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-fill-muted/50 ${
-                    !notification.isRead ? 'bg-fill-brand/5' : ''
-                  }`}
-                >
-                  <div
-                    className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      !notification.isRead
-                        ? 'bg-fill-brand/10 text-text-brand'
-                        : 'bg-fill-muted text-text-muted'
-                    }`}
-                  >
-                    <Icon icon={getNotificationIcon(notification.type)} size="sm" />
-                  </div>
-                  <div className="flex-1 space-y-0.5 overflow-hidden">
-                    <div className="flex items-center gap-2">
-                      <Typography
-                        variant="bodySm"
-                        className={`truncate font-medium ${
-                          !notification.isRead ? 'text-text-primary' : 'text-text-muted'
-                        }`}
-                      >
-                        {notification.title}
-                      </Typography>
-                      {!notification.isRead && (
-                        <span className="h-2 w-2 flex-shrink-0 rounded-full bg-fill-brand" />
-                      )}
-                    </div>
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="line-clamp-2"
-                    >
-                      {notification.message}
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="text-[10px]">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </Typography>
-                  </div>
-                  {notification.isRead && (
-                    <Icon
-                      icon={IconCheck}
-                      size="xs"
-                      colorRole="muted"
-                      className="mt-1 flex-shrink-0"
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+        <NotificationFeed variant="drawer" onNavigate={() => setIsOpen(false)} />
+
+        <div className="border-t border-border-muted px-5 py-3">
+          <Link
+            href="/platform/notifications"
+            onClick={() => setIsOpen(false)}
+            className="inline-flex items-center gap-1 text-xs font-medium text-text-primary hover:underline"
+          >
+            View all notifications
+            <Icon icon={IconArrowUpRight} size="xs" />
+          </Link>
         </div>
-      </PopoverContent>
-    </Popover>
+      </SheetContent>
+    </Sheet>
   );
 };
 

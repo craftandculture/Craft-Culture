@@ -1,13 +1,18 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { notifications } from '@/database/schema';
+import { notificationType, notifications } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
+import notificationActionTypes from '../constants/notificationActionTypes';
 import getNotificationsSchema from '../schemas/getNotificationsSchema';
+import getNotificationArea from '../utils/getNotificationArea';
 
 /**
  * Get paginated notifications for the current user
+ *
+ * Filters combine: "Needs action" is unread and an action type, and an area
+ * narrows either view to the types filed under it.
  *
  * TODO: Re-enable partnerId filtering once migration is applied
  * The partner_id column needs to be added to the notifications table first.
@@ -15,16 +20,24 @@ import getNotificationsSchema from '../schemas/getNotificationsSchema';
 const notificationsGetMany = protectedProcedure
   .input(getNotificationsSchema)
   .query(async ({ ctx, input }) => {
-    const { limit, cursor, unreadOnly } = input;
+    const { limit, cursor, unreadOnly, actionOnly, area } = input;
     const userId = ctx.user.id;
 
-    // Build conditions:
-    // - Must be for this user
-    // - Optionally filter to unread only
     const conditions = [eq(notifications.userId, userId)];
 
-    if (unreadOnly) {
+    if (unreadOnly || actionOnly) {
       conditions.push(eq(notifications.isRead, false));
+    }
+
+    if (actionOnly) {
+      conditions.push(inArray(notifications.type, [...notificationActionTypes]));
+    }
+
+    if (area) {
+      const types = notificationType.enumValues.filter(
+        (type) => getNotificationArea(type) === area,
+      );
+      conditions.push(inArray(notifications.type, types));
     }
 
     const data = await db
