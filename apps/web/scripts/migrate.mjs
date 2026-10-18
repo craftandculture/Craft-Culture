@@ -3032,6 +3032,57 @@ const runMigrations = async () => {
     );
     console.log('✅ UK to UAE moves ready');
 
+    /*
+      Delivery improvements (Oct 2026): a member's saved addresses, and how
+      they would like each delivery made — a preferred day, a gift recipient.
+      Both read behind a guard.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_delivery_addresses" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "label" text NOT NULL,
+        "address" text NOT NULL,
+        "instructions" text,
+        "is_default" boolean DEFAULT false NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_delivery_addresses_partner_idx" ON "cellar_delivery_addresses" ("partner_id")`,
+    );
+    // The address a member already saved becomes their default. Idempotent:
+    // only members with no saved addresses yet.
+    await client.unsafe(`
+      INSERT INTO "cellar_delivery_addresses" ("partner_id", "label", "address", "instructions", "is_default")
+      SELECT p."id", 'Home', btrim(p."delivery_address"), p."delivery_instructions", true
+      FROM "partners" p
+      WHERE p."type" = 'private_collector'
+        AND p."delivery_address" IS NOT NULL
+        AND btrim(p."delivery_address") <> ''
+        AND NOT EXISTS (
+          SELECT 1 FROM "cellar_delivery_addresses" a WHERE a."partner_id" = p."id"
+        )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_release_delivery_details" (
+        "request_id" uuid PRIMARY KEY NOT NULL REFERENCES "cellar_release_requests"("id") ON DELETE CASCADE,
+        "address_id" uuid REFERENCES "cellar_delivery_addresses"("id") ON DELETE SET NULL,
+        "address_label" text,
+        "delivery_instructions" text,
+        "preferred_date" date,
+        "preferred_window" text,
+        "is_gift" boolean DEFAULT false NOT NULL,
+        "recipient_name" text,
+        "recipient_phone" text,
+        "gift_message" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ delivery addresses and delivery preferences ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

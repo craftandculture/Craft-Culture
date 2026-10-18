@@ -19,14 +19,17 @@ import adminShipUkMove from './controller/adminShipUkMove';
 import memberAcceptRelease from './controller/memberAcceptRelease';
 import memberAcceptUkMove from './controller/memberAcceptUkMove';
 import memberAmendRelease from './controller/memberAmendRelease';
+import memberDeleteAddress from './controller/memberDeleteAddress';
 import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocument';
 import memberEstimateRelease from './controller/memberEstimateRelease';
+import memberGetAddresses from './controller/memberGetAddresses';
 import memberGetProfile from './controller/memberGetProfile';
 import memberGetReleases from './controller/memberGetReleases';
 import memberGetStatement from './controller/memberGetStatement';
 import memberGetUkHoldings from './controller/memberGetUkHoldings';
 import memberGetUkMoves from './controller/memberGetUkMoves';
 import memberRequestUkMove from './controller/memberRequestUkMove';
+import memberSaveAddress from './controller/memberSaveAddress';
 import memberSaveDeliveryAddress from './controller/memberSaveDeliveryAddress';
 import memberSaveProfile from './controller/memberSaveProfile';
 import memberSaveRelease from './controller/memberSaveRelease';
@@ -40,6 +43,9 @@ const memberRouter = createTRPCRouter({
   estimateRelease: memberEstimateRelease,
   saveProfile: memberSaveProfile,
   saveDeliveryAddress: memberSaveDeliveryAddress,
+  getAddresses: memberGetAddresses,
+  saveAddress: memberSaveAddress,
+  deleteAddress: memberDeleteAddress,
   uploadIdentityDocument: memberUploadIdentityDocument,
   deleteIdentityDocument: memberDeleteIdentityDocument,
   getReleases: memberGetReleases,

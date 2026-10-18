@@ -5,6 +5,7 @@ import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
+import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
 import type { AppRouter } from '@/trpc-router';
 
 type Request =
@@ -43,6 +44,55 @@ const stageOf = (request: Request) => {
       };
   }
 };
+
+/*
+  The four steps a member recognises, in order. The order's own statuses are
+  finer than this — approvals, invoicing, stock moving to the distributor — and
+  none of that is the member's concern.
+*/
+const STEPS = ['Being prepared', 'Delivery arranged', 'On its way', 'Delivered'];
+
+const stepOf = (request: Request) => {
+  switch (request.orderStatus) {
+    case 'delivered':
+      return 3;
+    case 'stock_in_transit':
+    case 'with_distributor':
+    case 'out_for_delivery':
+      return 2;
+    case 'delivery_scheduled':
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+/** Four segments, filled to where the delivery has got */
+const ProgressStrip = ({ step }: { step: number }) => (
+  <ol className="mt-2.5 grid grid-cols-4 gap-1" aria-label="Delivery progress">
+    {STEPS.map((label, index) => (
+      <li key={label} className="min-w-0">
+        <span
+          className={`block h-1 rounded-full ${
+            index <= step
+              ? 'bg-emerald-600 dark:bg-emerald-400'
+              : 'bg-fill-muted'
+          }`}
+        />
+        <span
+          className={`mt-1 block truncate text-[10px] ${
+            index === step
+              ? 'text-text-primary font-semibold'
+              : 'text-text-muted'
+          }`}
+          aria-current={index === step ? 'step' : undefined}
+        >
+          {label}
+        </span>
+      </li>
+    ))}
+  </ol>
+);
 
 const isFinished = (request: Request) =>
   request.orderStatus === 'delivered' || request.orderStatus === 'cancelled';
@@ -95,23 +145,43 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
     const when =
       request.orderStatus === 'delivered' && request.deliveredAt
         ? `Delivered ${format(new Date(request.deliveredAt), 'd MMM yyyy')}`
-        : request.scheduledDeliveryAt && !isFinished(request)
-          ? `Arranged for ${format(new Date(request.scheduledDeliveryAt), 'EEE d MMM')}`
+        : request.scheduledDeliveryDate && !isFinished(request)
+          ? `Arranged for ${format(new Date(request.scheduledDeliveryDate), 'EEE d MMM')}`
           : null;
 
+    /* Until a day is arranged, the member's own preference is the best guide */
+    const preferred =
+      !request.scheduledDeliveryDate && !isFinished(request)
+        ? describePreferredDelivery(
+            request.delivery?.preferredDate,
+            request.delivery?.preferredWindow,
+          )
+        : null;
+
+    const recipient = request.delivery?.isGift
+      ? `A gift for ${request.delivery.recipientName ?? 'someone else'}`
+      : request.delivery?.addressLabel
+        ? `To ${request.delivery.addressLabel}`
+        : null;
+
     return (
-      <li key={request.id} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{winesOf(request)}</p>
-          <p className="text-text-muted mt-0.5 text-xs">
-            {bottlesOf(request)}
-            {when ? ` · ${when}` : ''}
-            <span className="text-text-muted/70"> · {request.requestNumber}</span>
-          </p>
+      <li key={request.id} className="px-4 py-3">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{winesOf(request)}</p>
+            <p className="text-text-muted mt-0.5 text-xs">
+              {bottlesOf(request)}
+              {recipient ? ` · ${recipient}` : ''}
+              {when ? ` · ${when}` : ''}
+              {preferred ? ` · You asked for ${preferred}` : ''}
+              <span className="text-text-muted/70"> · {request.requestNumber}</span>
+            </p>
+          </div>
+          <span className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${stage.tone}`}>
+            {stage.label}
+          </span>
         </div>
-        <span className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${stage.tone}`}>
-          {stage.label}
-        </span>
+        {section === 'live' && <ProgressStrip step={stepOf(request)} />}
       </li>
     );
   };

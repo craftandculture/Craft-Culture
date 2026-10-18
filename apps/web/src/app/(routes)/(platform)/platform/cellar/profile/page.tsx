@@ -7,12 +7,13 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import DeliveryAddressBook from '@/app/_cellar/components/DeliveryAddressBook';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -43,6 +44,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
  */
 const CellarProfilePage = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploading, setUploading] = useState<string | null>(null);
 
@@ -89,6 +91,10 @@ const CellarProfilePage = () => {
         toast.success('Saved');
         setIsDirty(false);
         void refetch();
+        /* The main address in the saved list follows what was just saved */
+        void queryClient.invalidateQueries({
+          queryKey: api.cellar.member.getAddresses.queryKey(),
+        });
       },
       onError: (error) => toast.error(error.message),
     }),
@@ -209,14 +215,14 @@ const CellarProfilePage = () => {
               Delivery
             </Typography>
             <Typography variant="bodyXs" colorRole="muted" className="mb-3 block">
-              Where we deliver when you ask for wine to be delivered. You can
-              still choose a different address for any single delivery.
+              Your main address is used unless you choose another when you
+              request a delivery.
             </Typography>
 
             <div className="flex flex-col gap-3">
               <label className="block">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                  Delivery address
+                  Main delivery address
                 </span>
                 <Input
                   value={form.deliveryAddress}
@@ -252,6 +258,22 @@ const CellarProfilePage = () => {
                 </label>
               </div>
             </div>
+
+            <DeliveryAddressBook
+              onMainChanged={(main) => {
+                /*
+                  The form above shows the main address. Moved straight to the
+                  new one, without touching anything else the member may be
+                  part-way through typing.
+                */
+                setForm((current) => ({
+                  ...current,
+                  deliveryAddress: main.address,
+                  deliveryInstructions: main.instructions ?? '',
+                }));
+                void refetch();
+              }}
+            />
           </section>
 
           <section className="border-border-muted rounded-xl border px-4 py-4">

@@ -5210,6 +5210,73 @@ export const cellarReleaseRequestItems = pgTable(
 export type CellarReleaseRequestItem =
   typeof cellarReleaseRequestItems.$inferSelect;
 
+/**
+ * The places a member has wine delivered — home, the office, a friend's villa
+ *
+ * The default row is mirrored onto `partners.deliveryAddress`, which the
+ * profile, admin screens and older code still read. That column stays the
+ * truth for the default: a read that finds the two disagreeing (an admin edited
+ * the partner record) takes the partner's version.
+ */
+export const cellarDeliveryAddresses = pgTable(
+  'cellar_delivery_addresses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** What the member calls it: Home, Office, Mum's */
+    label: text('label').notNull(),
+    address: text('address').notNull(),
+    /** Gate code, who to ask for */
+    instructions: text('instructions'),
+    isDefault: boolean('is_default').notNull().default(false),
+    ...timestamps,
+  },
+  (table) => [
+    index('cellar_delivery_addresses_partner_idx').on(table.partnerId),
+  ],
+);
+
+export type CellarDeliveryAddress = typeof cellarDeliveryAddresses.$inferSelect;
+
+/**
+ * How a member would like one delivery made
+ *
+ * A separate table rather than columns on the request, so the request's many
+ * existing whole-row reads cannot fail on a migration that has not run. Read
+ * behind a guard; a missing table hides these details and nothing else.
+ *
+ * The preferred date is a wish, not a booking. The date actually arranged is
+ * the order's `scheduledDeliveryDate`, set by whoever schedules the delivery.
+ */
+export const cellarReleaseDeliveryDetails = pgTable(
+  'cellar_release_delivery_details',
+  {
+    requestId: uuid('request_id')
+      .primaryKey()
+      .references(() => cellarReleaseRequests.id, { onDelete: 'cascade' }),
+    /** The saved address chosen, if one was */
+    addressId: uuid('address_id').references(() => cellarDeliveryAddresses.id, {
+      onDelete: 'set null',
+    }),
+    addressLabel: text('address_label'),
+    deliveryInstructions: text('delivery_instructions'),
+    /** YYYY-MM-DD */
+    preferredDate: date('preferred_date', { mode: 'string' }),
+    /** morning | afternoon | any */
+    preferredWindow: text('preferred_window'),
+    isGift: boolean('is_gift').notNull().default(false),
+    recipientName: text('recipient_name'),
+    recipientPhone: text('recipient_phone'),
+    giftMessage: text('gift_message'),
+    ...timestamps,
+  },
+);
+
+export type CellarReleaseDeliveryDetails =
+  typeof cellarReleaseDeliveryDetails.$inferSelect;
+
 /* -------------------------------------------------------------------------- */
 /*                          SELLING FROM THE POOL                             */
 /* -------------------------------------------------------------------------- */

@@ -12,6 +12,7 @@ import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import backfillReleaseItems from '../data/backfillReleaseItems';
 import getCostPerBottle from '../data/getCostPerBottle';
+import getReleaseDeliveryDetails from '../data/getReleaseDeliveryDetails';
 import computeReleaseQuote from '../utils/computeReleaseQuote';
 
 /**
@@ -101,6 +102,11 @@ const adminGetReleases = staffAdminProcedure
 
     const lwins = [...new Set(items.map((item) => item.lwin18))];
 
+    /* Preferred day and gift recipient, read behind a guard */
+    const detailsByRequest = await getReleaseDeliveryDetails(
+      rows.map((row) => row.request.id),
+    );
+
     const costByLwin = await getCostPerBottle(lwins);
 
     /*
@@ -131,6 +137,7 @@ const adminGetReleases = staffAdminProcedure
           partnerType: row.partnerType,
           items,
           suggested,
+          delivery: detailsByRequest.get(row.request.id) ?? null,
         };
       }),
     );

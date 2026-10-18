@@ -20,6 +20,10 @@ import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
+import DeliveryOptionsForm, {
+  EMPTY_DELIVERY_CHOICE,
+} from '@/app/_cellar/components/DeliveryOptionsForm';
+import type { DeliveryChoice } from '@/app/_cellar/components/DeliveryOptionsForm';
 import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
@@ -159,7 +163,9 @@ const CellarPage = () => {
 
       return next;
     });
-  const [address, setAddress] = useState('');
+  const [deliveryChoice, setDeliveryChoice] = useState<DeliveryChoice>(
+    EMPTY_DELIVERY_CHOICE,
+  );
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
   const [isBasketOpen, setIsBasketOpen] = useState(false);
@@ -170,26 +176,23 @@ const CellarPage = () => {
   /* Which submitted request is open, and the edits made to it so far. */
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
   const [editLines, setEditLines] = useState<Map<string, number>>(new Map());
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
-  const [shouldSaveAddress, setShouldSaveAddress] = useState(true);
 
   const { data: profile, refetch: refetchProfile } = useQuery({
     ...api.cellar.member.getProfile.queryOptions(),
   });
 
-  const savedAddress = profile?.deliveryAddress ?? null;
+  const { data: addressData, refetch: refetchAddresses } = useQuery({
+    ...api.cellar.member.getAddresses.queryOptions(),
+  });
 
-  /*
-    The address the request will actually carry. A member who has not opened
-    the editor is delivering to their account address, so that is what gets
-    sent — not the empty box behind it.
-  */
-  const effectiveAddress = isEditingAddress ? address.trim() : (savedAddress ?? '');
+  const savedAddresses = addressData?.addresses ?? [];
 
-  const { mutate: saveAddress } = useMutation(
-    api.cellar.member.saveDeliveryAddress.mutationOptions({
-      onSuccess: () => void refetchProfile(),
-      onError: (error) => toast.error(error.message),
+  const { mutateAsync: saveAddress, isPending: isSavingAddress } = useMutation(
+    api.cellar.member.saveAddress.mutationOptions({
+      onSuccess: () => {
+        void refetchAddresses();
+        void refetchProfile();
+      },
     }),
   );
 
@@ -204,9 +207,8 @@ const CellarPage = () => {
           `Delivery request ${result.requestNumber} sent. We will confirm the costs for your approval.`,
         );
         setBasket(new Map());
-        setAddress('');
+        setDeliveryChoice(EMPTY_DELIVERY_CHOICE);
         setMemberNotes('');
-        setIsEditingAddress(false);
         void refetchReleases();
       },
       onError: (error) => toast.error(error.message),
@@ -227,6 +229,7 @@ const CellarPage = () => {
           );
           setBasket(new Map());
           setMemberNotes('');
+          setDeliveryChoice(EMPTY_DELIVERY_CHOICE);
           setIsBasketOpen(false);
           void refetchReleases();
           return;
@@ -882,6 +885,12 @@ const CellarPage = () => {
                       <Typography variant="bodyXs" colorRole="muted">
                         &middot; Under review
                       </Typography>
+                    )}
+
+                    {request.delivery?.isGift && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+                        Gift for {request.delivery.recipientName}
+                      </span>
                     )}
 
                     {needsAction && (
@@ -2200,85 +2209,21 @@ const CellarPage = () => {
             <div
               className={`grid gap-3 sm:grid-cols-2 ${isBasketOpen ? '' : 'hidden'}`}
             >
-              {/*
-                 The address lives on the account. Retyped into every request
-                 it becomes four spellings of the same villa, and the team
-                 cannot tell which one is current.
-               */}
-              <div className="block">
-                <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                  Delivery address
-                </span>
-                {savedAddress && !isEditingAddress ? (
-                  <div className="border-border-muted bg-fill-muted/40 flex items-start justify-between gap-3 rounded-lg border px-3 py-2">
-                    <div className="min-w-0">
-                      <Typography variant="bodySm">{savedAddress}</Typography>
-                      {profile?.deliveryInstructions && (
-                        <Typography
-                          variant="bodyXs"
-                          colorRole="muted"
-                          className="mt-0.5 block"
-                        >
-                          {profile.deliveryInstructions}
-                        </Typography>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="text-text-primary flex-shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
-                      onClick={() => {
-                        setAddress(savedAddress);
-                        setShouldSaveAddress(false);
-                        setIsEditingAddress(true);
-                      }}
-                    >
-                      Change
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <Input
-                      value={address}
-                      onChange={(event) => setAddress(event.target.value)}
-                      placeholder="Villa or office, area, emirate"
-                    />
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <label className="text-text-muted flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={shouldSaveAddress}
-                          onChange={(event) =>
-                            setShouldSaveAddress(event.target.checked)
-                          }
-                        />
-                        {savedAddress
-                          ? 'Make this my address from now on'
-                          : 'Save this as my delivery address'}
-                      </label>
-                      {savedAddress && (
-                        <button
-                          type="button"
-                          className="text-text-muted text-xs hover:underline"
-                          onClick={() => {
-                            setIsEditingAddress(false);
-                            setAddress('');
-                          }}
-                        >
-                          Use my saved address
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
+              <div className="sm:col-span-2">
+                <DeliveryOptionsForm
+                  addresses={savedAddresses}
+                  value={deliveryChoice}
+                  onChange={setDeliveryChoice}
+                />
               </div>
-              <label className="block">
+              <label className="block sm:col-span-2">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
                   Notes for our team &mdash; optional
                 </span>
                 <Input
                   value={memberNotes}
                   onChange={(event) => setMemberNotes(event.target.value)}
-                  placeholder="Preferred timing, access, anything else"
+                  placeholder="Anything else we should know"
                 />
               </label>
             </div>
@@ -2289,27 +2234,83 @@ const CellarPage = () => {
                 size="sm"
                 colorRole="primary"
                         className={DARK_ACTION}
-                isDisabled={isSaving}
-                onClick={() => {
-                  /*
-                    Saved before the request is raised, not after: the request
-                    stores its own copy of the address, so an account updated
-                    afterwards would leave this one pointing at the old place.
-                  */
+                isDisabled={isSaving || isSavingAddress}
+                onClick={async () => {
+                  const choice = deliveryChoice;
+                  const isTyping =
+                    choice.isNew || savedAddresses.length === 0;
+                  const chosen = isTyping
+                    ? undefined
+                    : (savedAddresses.find(
+                        (saved) => saved.id === choice.addressId,
+                      ) ??
+                      savedAddresses.find((saved) => saved.isDefault) ??
+                      savedAddresses[0]);
+
+                  if (isTyping && choice.newAddress.trim().length < 5) {
+                    toast.error('Enter the address for this delivery.');
+                    return;
+                  }
+
                   if (
-                    isEditingAddress &&
-                    shouldSaveAddress &&
-                    effectiveAddress &&
-                    effectiveAddress !== savedAddress
+                    choice.isGift &&
+                    (choice.recipientName.trim().length < 2 ||
+                      choice.recipientPhone.trim().length < 7)
                   ) {
-                    saveAddress({
-                      deliveryAddress: effectiveAddress,
-                    });
+                    toast.error(
+                      'Add the name and mobile of the person receiving the wine.',
+                    );
+                    return;
+                  }
+
+                  /*
+                    A new address is saved first, so the request can point at
+                    it. If saving fails the delivery still goes ahead with the
+                    address as typed — losing the request over the address book
+                    would be the wrong way round.
+                  */
+                  let addressId = chosen?.id ?? null;
+
+                  if (isTyping && choice.saveNew) {
+                    try {
+                      const saved = await saveAddress({
+                        label:
+                          choice.newLabel.trim() ||
+                          (choice.isGift
+                            ? choice.recipientName.trim() || 'Gift'
+                            : savedAddresses.length === 0
+                              ? 'Home'
+                              : 'Other'),
+                        address: choice.newAddress.trim(),
+                        instructions: choice.newInstructions.trim() || null,
+                      });
+
+                      addressId = saved.id;
+                    } catch {
+                      addressId = null;
+                    }
                   }
 
                   saveRelease({
-                    deliveryAddress: effectiveAddress || undefined,
+                    deliveryAddress: isTyping
+                      ? choice.newAddress.trim()
+                      : chosen?.address || undefined,
                     memberNotes: memberNotes || undefined,
+                    delivery: {
+                      addressId,
+                      deliveryInstructions: isTyping
+                        ? choice.newInstructions.trim() || null
+                        : (chosen?.instructions ?? null),
+                      preferredDate: choice.preferredDate || null,
+                      preferredWindow: choice.preferredWindow,
+                      gift: choice.isGift
+                        ? {
+                            recipientName: choice.recipientName.trim(),
+                            recipientPhone: choice.recipientPhone.trim(),
+                            message: choice.giftMessage.trim() || null,
+                          }
+                        : null,
+                    },
                     lines: [...basket.entries()].map(([stockId, bottles]) => ({
                       stockId,
                       bottles,

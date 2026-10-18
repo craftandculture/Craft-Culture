@@ -9,6 +9,7 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import backfillReleaseItems from '../data/backfillReleaseItems';
+import getReleaseDeliveryDetails from '../data/getReleaseDeliveryDetails';
 
 /**
  * A member's release requests, newest first
@@ -77,7 +78,12 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
         accepted it, and the next they heard was the doorbell.
       */
       orderStatus: privateClientOrders.status,
-      scheduledDeliveryAt: privateClientOrders.scheduledDeliveryAt,
+      /*
+        The day the delivery is arranged for. scheduledDeliveryAt is when
+        somebody arranged it, which is not the same thing, and showing it as
+        "Arranged for" gave the member the wrong day.
+      */
+      scheduledDeliveryDate: privateClientOrders.scheduledDeliveryDate,
       deliveredAt: privateClientOrders.deliveredAt,
     })
     .from(cellarReleaseRequests)
@@ -126,6 +132,11 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
   */
   await backfillReleaseItems(items);
 
+  /* Their own choices: preferred day, gift recipient, which saved address */
+  const detailsByRequest = await getReleaseDeliveryDetails(
+    requests.map((request) => request.id),
+  );
+
   const byRequest = new Map<string, typeof items>();
 
   for (const item of items) {
@@ -136,6 +147,22 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
     requests: requests.map((request) => ({
       ...request,
       items: byRequest.get(request.id) ?? [],
+      delivery: (() => {
+        const details = detailsByRequest.get(request.id);
+
+        return details
+          ? {
+              addressLabel: details.addressLabel,
+              deliveryInstructions: details.deliveryInstructions,
+              preferredDate: details.preferredDate,
+              preferredWindow: details.preferredWindow,
+              isGift: details.isGift,
+              recipientName: details.recipientName,
+              recipientPhone: details.recipientPhone,
+              giftMessage: details.giftMessage,
+            }
+          : null;
+      })(),
     })),
   };
 });

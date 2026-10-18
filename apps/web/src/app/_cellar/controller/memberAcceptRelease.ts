@@ -16,6 +16,8 @@ import {
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import getReleaseDeliveryDetails from '../data/getReleaseDeliveryDetails';
+import buildReleaseDeliveryNotes from '../utils/buildReleaseDeliveryNotes';
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 
 /**
@@ -138,10 +140,25 @@ const memberAcceptRelease = stockOwnerProcedure
     }
 
     const [owner] = await db
-      .select({ businessName: partners.businessName })
+      .select({
+        businessName: partners.businessName,
+        businessPhone: partners.businessPhone,
+      })
       .from(partners)
       .where(eq(partners.id, ctx.partner.id))
       .limit(1);
+
+    const memberName = owner?.businessName ?? 'Private Cellar member';
+
+    /*
+      The person at the door. For a gift that is the recipient, and the
+      distributor checks their age and ID, so the order names them — with the
+      member alongside, so nobody mistakes whose wine it is.
+    */
+    const details = (await getReleaseDeliveryDetails([request.id])).get(
+      request.id,
+    );
+    const isGift = details?.isGift === true && Boolean(details.recipientName);
 
     const bottles = lines.reduce((sum, line) => sum + line.bottles, 0);
 
@@ -197,9 +214,18 @@ const memberAcceptRelease = stockOwnerProcedure
         .values({
           orderNumber: generateOrderNumber(nextSequence),
           partnerId: ctx.partner.id,
-          clientName: owner?.businessName ?? 'Private Cellar member',
+          clientName: isGift
+            ? `${details?.recipientName} (gift from ${memberName})`
+            : memberName,
+          clientPhone: isGift
+            ? (details?.recipientPhone ?? null)
+            : (owner?.businessPhone ?? null),
           clientAddress: request.deliveryAddress ?? null,
-          deliveryNotes: request.memberNotes ?? null,
+          deliveryNotes: buildReleaseDeliveryNotes({
+            memberNotes: request.memberNotes,
+            details,
+            memberName,
+          }),
           status: 'cc_approved',
           /*
             The goods are already the member's, so nothing is being sold. What

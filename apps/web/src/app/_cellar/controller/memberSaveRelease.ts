@@ -6,12 +6,14 @@ import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import {
+  cellarDeliveryAddresses,
   cellarReleaseRequestItems,
   cellarReleaseRequests,
   wmsStock,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import saveReleaseDeliveryDetails from '../data/saveReleaseDeliveryDetails';
 import EDITABLE_STATUSES from '../utils/editableStatuses';
 import generateReleaseNumber from '../utils/generateReleaseNumber';
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
@@ -42,6 +44,42 @@ const memberSaveRelease = stockOwnerProcedure
       requestId: z.string().uuid().optional(),
       deliveryAddress: z.string().max(500).optional(),
       memberNotes: z.string().max(1000).optional(),
+      /*
+        How the member would like it delivered. Optional so an older screen
+        still open in a browser keeps working.
+      */
+      delivery: z
+        .object({
+          /** A saved address; its text replaces deliveryAddress above */
+          addressId: z.string().uuid().nullable().optional(),
+          deliveryInstructions: z.string().max(500).nullable().optional(),
+          preferredDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .nullable()
+            .optional(),
+          preferredWindow: z
+            .enum(['morning', 'afternoon', 'any'])
+            .nullable()
+            .optional(),
+          gift: z
+            .object({
+              recipientName: z
+                .string()
+                .trim()
+                .min(2, 'Add the name of the person receiving the wine')
+                .max(120),
+              recipientPhone: z
+                .string()
+                .trim()
+                .min(7, 'Add a mobile number for the person receiving the wine')
+                .max(30),
+              message: z.string().trim().max(300).nullable().optional(),
+            })
+            .nullable()
+            .optional(),
+        })
+        .optional(),
       lines: z
         .array(
           z.object({
@@ -59,6 +97,60 @@ const memberSaveRelease = stockOwnerProcedure
   )
   .mutation(async ({ ctx, input }) => {
     await assertActivated(ctx.partner.id);
+
+    /*
+      A preferred day in the past is a slip, not a wish, and it would sit on
+      the request looking like a missed promise. Today counts as past: nothing
+      is delivered the same day it is asked for.
+    */
+    if (input.delivery?.preferredDate) {
+      /* The UAE's date, not the server's: Dubai is UTC+4 all year */
+      const today = new Date(Date.now() + 4 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+
+      if (input.delivery.preferredDate <= today) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Choose a preferred day from tomorrow onwards.',
+        });
+      }
+    }
+
+    /*
+      A saved address is read from the member's own list, never trusted from
+      the request, so the text on the delivery is what they actually saved.
+    */
+    let chosenAddress:
+      | { id: string; label: string; address: string; instructions: string | null }
+      | undefined;
+
+    if (input.delivery?.addressId) {
+      [chosenAddress] = await db
+        .select({
+          id: cellarDeliveryAddresses.id,
+          label: cellarDeliveryAddresses.label,
+          address: cellarDeliveryAddresses.address,
+          instructions: cellarDeliveryAddresses.instructions,
+        })
+        .from(cellarDeliveryAddresses)
+        .where(
+          and(
+            eq(cellarDeliveryAddresses.id, input.delivery.addressId),
+            eq(cellarDeliveryAddresses.partnerId, ctx.partner.id),
+          ),
+        )
+        .limit(1);
+
+      if (!chosenAddress) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'That address is not one of yours.',
+        });
+      }
+
+      input.deliveryAddress = chosenAddress.address;
+    }
 
     const stockIds = input.lines.map((line) => line.stockId);
 
@@ -351,6 +443,25 @@ const memberSaveRelease = stockOwnerProcedure
         };
       }),
     );
+
+    if (input.delivery) {
+      const gift = input.delivery.gift;
+
+      await saveReleaseDeliveryDetails(requestId, {
+        addressId: chosenAddress?.id ?? null,
+        addressLabel: chosenAddress?.label ?? null,
+        deliveryInstructions:
+          input.delivery.deliveryInstructions ??
+          chosenAddress?.instructions ??
+          null,
+        preferredDate: input.delivery.preferredDate ?? null,
+        preferredWindow: input.delivery.preferredWindow ?? null,
+        isGift: Boolean(gift),
+        recipientName: gift?.recipientName ?? null,
+        recipientPhone: gift?.recipientPhone ?? null,
+        giftMessage: gift?.message ?? null,
+      });
+    }
 
     /*
       An admin may already have this request open. Telling them it changed is

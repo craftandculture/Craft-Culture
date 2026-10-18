@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -227,6 +228,31 @@ const CellarReleasesPage = () => {
                       ? ` · submitted ${format(new Date(request.submittedAt), 'd MMM yyyy')}`
                       : ''}
                   </Typography>
+                  {(request.delivery?.isGift ||
+                    describePreferredDelivery(
+                      request.delivery?.preferredDate,
+                      request.delivery?.preferredWindow,
+                    )) && (
+                    <span className="mt-1 flex flex-wrap gap-1.5">
+                      {request.delivery?.isGift && (
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                          Gift · ID check on delivery
+                        </span>
+                      )}
+                      {describePreferredDelivery(
+                        request.delivery?.preferredDate,
+                        request.delivery?.preferredWindow,
+                      ) && (
+                        <span className="bg-fill-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                          Prefers{' '}
+                          {describePreferredDelivery(
+                            request.delivery?.preferredDate,
+                            request.delivery?.preferredWindow,
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
                 <span
                   className={`flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
@@ -312,9 +338,66 @@ const CellarReleasesPage = () => {
                     <div className="mb-3">
                       <Typography variant="bodyXs" colorRole="muted">
                         Deliver to
+                        {request.delivery?.addressLabel
+                          ? ` · ${request.delivery.addressLabel}`
+                          : ''}
                       </Typography>
                       <Typography variant="bodySm">
                         {request.deliveryAddress}
+                      </Typography>
+                      {request.delivery?.deliveryInstructions && (
+                        <Typography
+                          variant="bodyXs"
+                          colorRole="muted"
+                          className="block"
+                        >
+                          Access: {request.delivery.deliveryInstructions}
+                        </Typography>
+                      )}
+                    </div>
+                  )}
+
+                  {/*
+                    A gift goes to someone we have never met, so the age and ID
+                    check is spelled out here as well as on the order.
+                  */}
+                  {request.delivery?.isGift && (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 dark:border-amber-900 dark:bg-amber-500/10">
+                      <Typography variant="bodyXs" className="font-semibold">
+                        Gift for {request.delivery.recipientName ?? '—'}
+                        {request.delivery.recipientPhone
+                          ? ` · ${request.delivery.recipientPhone}`
+                          : ''}
+                      </Typography>
+                      {request.delivery.giftMessage && (
+                        <Typography variant="bodyXs" className="mt-0.5 block">
+                          Message: &ldquo;{request.delivery.giftMessage}&rdquo;
+                        </Typography>
+                      )}
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="mt-0.5 block"
+                      >
+                        Recipient must be 21 or over; check ID on delivery.
+                        The order carries their name and mobile.
+                      </Typography>
+                    </div>
+                  )}
+
+                  {describePreferredDelivery(
+                    request.delivery?.preferredDate,
+                    request.delivery?.preferredWindow,
+                  ) && (
+                    <div className="mb-3">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Preferred delivery (not yet confirmed)
+                      </Typography>
+                      <Typography variant="bodySm">
+                        {describePreferredDelivery(
+                          request.delivery?.preferredDate,
+                          request.delivery?.preferredWindow,
+                        )}
                       </Typography>
                     </div>
                   )}
