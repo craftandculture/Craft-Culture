@@ -1,3 +1,4 @@
+import { PRIVATE_CELLAR_TERMS_VERSION } from '@/app/_onboarding/constants/privateCellarTerms';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardDescription from '@/app/_ui/components/Card/CardDescription';
@@ -179,7 +180,9 @@ const PrivateCellarTermsDocument = ({
         <CardContent className="p-4 sm:p-6 md:p-8">
           <CardProse>
             <CardTitle>C&amp;C Private Cellar Membership Terms</CardTitle>
-            <CardDescription colorRole="muted">Draft for legal review</CardDescription>
+            <CardDescription colorRole="muted">
+              Effective 18 October 2026 · version {PRIVATE_CELLAR_TERMS_VERSION}
+            </CardDescription>
           </CardProse>
 
           <div className="mt-6 space-y-7 sm:mt-8">

@@ -98,4 +98,4 @@ to merge.
 
 - Storage counts cases **as held when pushed**, not the peak in the month — push near month end.
 - Zoho is sent 6-bottle units (two per 12-bottle case); the add-on's price must stay at half the Release Rates extra-case price.
-- The terms at `/legal/private-cellar-terms` are a draft for legal review.
+- The terms at `/legal/private-cellar-terms` are published (effective 18 October 2026, v5). UAE counsel review is still outstanding; a revised version needs a new PRIVATE_CELLAR_TERMS_VERSION.
