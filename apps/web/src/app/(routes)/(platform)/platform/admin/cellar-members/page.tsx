@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import AttentionQueue from '@/app/_cellar/components/admin/AttentionQueue';
+import SharedAccessList from '@/app/_cellar/components/admin/SharedAccessList';
 import UkBondList from '@/app/_cellar/components/admin/UkBondList';
 import UkMovesList from '@/app/_cellar/components/admin/UkMovesList';
 import CellarMembersList from '@/app/_cellar/components/CellarMembersList';
@@ -23,6 +24,7 @@ const tabs = [
   { id: 'uk', label: 'UK bond' },
   { id: 'uk-moves', label: 'UK moves' },
   { id: 'requests', label: 'Requests' },
+  { id: 'access', label: 'Shared access' },
 ] as const;
 
 /**
@@ -63,6 +65,7 @@ const CellarMembersPage = () => {
       {tab === 'uk' && <UkBondList />}
       {tab === 'uk-moves' && <UkMovesList />}
       {tab === 'requests' && <SourcingAdmin />}
+      {tab === 'access' && <SharedAccessList />}
       {tab === 'members' && <CellarMembersList />}
       {tab === 'attention' && <AttentionQueue />}
     </div>

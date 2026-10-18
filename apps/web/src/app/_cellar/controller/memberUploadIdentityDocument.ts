@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 
 import storeIdentityDocument from '../data/storeIdentityDocument';
 
@@ -10,7 +10,7 @@ import storeIdentityDocument from '../data/storeIdentityDocument';
  * The checks and storage live in `storeIdentityDocument`, shared with the
  * onboarding application.
  */
-const memberUploadIdentityDocument = stockOwnerProcedure
+const memberUploadIdentityDocument = cellarHolderProcedure
   .input(
     z.object({
       documentType: z.enum([

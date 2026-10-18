@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 import { getSubscription } from '@/lib/zoho/billing';
 import logger from '@/utils/logger';
 
@@ -14,7 +14,7 @@ import applyZohoSubscription from '../data/applyZohoSubscription';
  * The webhook normally keeps status current; this is the fallback when the
  * member comes back from updating a card, so nothing waits on a job.
  */
-const memberRefreshMembership = stockOwnerProcedure.mutation(async ({ ctx }) => {
+const memberRefreshMembership = cellarHolderProcedure.mutation(async ({ ctx }) => {
   const [membership] = await db
     .select()
     .from(cellarMemberships)

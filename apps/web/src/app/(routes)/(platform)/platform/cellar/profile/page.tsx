@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarAccessPanel from '@/app/_cellar/components/CellarAccessPanel';
 import DeliveryAddressBook from '@/app/_cellar/components/DeliveryAddressBook';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -151,6 +152,8 @@ const CellarProfilePage = () => {
     reader.readAsDataURL(file);
   };
 
+  const isDelegate = Boolean(profile && profile.cellarRole !== 'holder');
+
   const documentFor = (type: string) =>
     profile?.documents.find((document) => document.documentType === type);
 
@@ -186,11 +189,12 @@ const CellarProfilePage = () => {
       >
         C&amp;C Private Cellar
       </Typography>
-      <Typography variant="headingMd">Your details</Typography>
-      <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-        {profile?.name
-          ? `Held against ${profile.name}`
-          : 'Held against your membership'}
+      <Typography variant="headingMd">
+        {isDelegate
+          ? profile?.name
+            ? `${profile.name}’s private cellar`
+            : 'Shared private cellar'
+          : 'Your details'}
       </Typography>
       {profile?.reference && (
         <Typography variant="bodySm" colorRole="muted" className="mt-0.5 block">
@@ -208,7 +212,29 @@ const CellarProfilePage = () => {
         </Typography>
       )}
 
-      {!isLoading && (
+      {/*
+        Someone the cellar is shared with sees where wine goes and their own
+        access, and nothing of the holder's identity or contact details to
+        edit — the server refuses those changes to anyone but the holder.
+      */}
+      {!isLoading && isDelegate && (
+        <div className="mt-6 flex flex-col gap-5">
+          <section className="border-border-muted rounded-xl border px-4 py-4">
+            <Typography variant="bodySm" className="font-semibold">
+              Delivery
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted" className="block">
+              {profile?.deliveryAddress ?? 'No delivery address saved yet.'}
+              {profile?.deliveryInstructions
+                ? ` · ${profile.deliveryInstructions}`
+                : ''}
+            </Typography>
+          </section>
+          <CellarAccessPanel />
+        </div>
+      )}
+
+      {!isLoading && !isDelegate && (
         <div className="mt-6 flex flex-col gap-5">
           <section className="border-border-muted rounded-xl border px-4 py-4">
             <Typography variant="bodySm" className="font-semibold">
@@ -440,6 +466,8 @@ const CellarProfilePage = () => {
               </Typography>
             )}
           </div>
+
+          <CellarAccessPanel />
         </div>
       )}
     </div>

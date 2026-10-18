@@ -22,6 +22,8 @@ const loopsTemplates = {
   transferUpdate: '',
   /** name, missing, cellarUrl */
   finishSettingUp: '',
+  /** name, holderName, accessLevel, acceptUrl, expiresOn */
+  cellarAccessInvite: '',
 } as const;
 
 export type OnboardingEmail = keyof typeof loopsTemplates;

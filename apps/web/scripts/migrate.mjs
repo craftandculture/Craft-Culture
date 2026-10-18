@@ -3180,6 +3180,45 @@ const runMigrations = async () => {
     );
     console.log('✅ cellar sourcing requests and allocations ready');
 
+    /*
+      Shared access to a cellar (Oct 2026): a spouse or PA, as viewer or
+      manager. Read behind a guard that treats a missing table as "nobody
+      shares a cellar", which is exactly true until this has run.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_access_grants" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "email" text NOT NULL,
+        "name" text NOT NULL,
+        "role" text NOT NULL,
+        "status" text DEFAULT 'invited' NOT NULL,
+        "token_hash" text NOT NULL,
+        "user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "invited_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "expires_at" timestamp NOT NULL,
+        "accepted_at" timestamp,
+        "approved_on_accept" boolean DEFAULT false NOT NULL,
+        "revoked_at" timestamp,
+        "revoked_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cellar_access_grants_token_idx" ON "cellar_access_grants" ("token_hash")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_access_grants_partner_idx" ON "cellar_access_grants" ("partner_id")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_access_grants_user_idx" ON "cellar_access_grants" ("user_id")`,
+    );
+    await client.unsafe(
+      `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'cellar_access_update'`,
+    );
+    console.log('✅ shared cellar access ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

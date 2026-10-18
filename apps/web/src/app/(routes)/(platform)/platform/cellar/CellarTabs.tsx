@@ -6,10 +6,13 @@ import {
   IconSparkles,
   IconTag,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import accessLevels from '@/app/_cellar/constants/accessLevels';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import useTRPC from '@/lib/trpc/browser';
 
 const tabs = [
   { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
@@ -41,8 +44,39 @@ const tabs = [
  */
 const CellarTabs = () => {
   const pathname = usePathname();
+  const api = useTRPC();
+
+  /*
+    Someone the cellar is shared with is told so on every page, so a spouse
+    or PA never mistakes it for their own, and a viewer knows before pressing
+    anything that changes are not theirs to make.
+  */
+  const { data: access } = useQuery({
+    ...api.cellar.access.get.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const shared =
+    access && access.myRole !== 'holder'
+      ? {
+          holder: access.holderName,
+          level:
+            accessLevels[access.myRole === 'manager' ? 'manager' : 'viewer']
+              .label,
+        }
+      : null;
 
   return (
+    <>
+      {shared && (
+        <p className="text-text-muted mb-3 rounded-lg bg-emerald-50/60 px-3 py-2 text-xs dark:bg-emerald-500/10">
+          You are in{' '}
+          <span className="text-text-primary font-semibold">
+            {shared.holder}&rsquo;s private cellar
+          </span>{' '}
+          · {shared.level}
+        </p>
+      )}
     <nav className="border-border-muted -mx-3 mb-5 flex gap-1 overflow-x-auto border-b px-3 sm:mx-0 sm:px-0">
       {tabs.map((tab) => {
         const isActive =
@@ -66,6 +100,7 @@ const CellarTabs = () => {
         );
       })}
     </nav>
+    </>
   );
 };
 

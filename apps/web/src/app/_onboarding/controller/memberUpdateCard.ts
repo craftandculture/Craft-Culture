@@ -3,12 +3,12 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 import { createUpdateCardHostedPage } from '@/lib/zoho/billing';
 import serverConfig from '@/server.config';
 
 /** Zoho's page to replace the card on file, after a payment fails */
-const memberUpdateCard = stockOwnerProcedure.mutation(async ({ ctx }) => {
+const memberUpdateCard = cellarHolderProcedure.mutation(async ({ ctx }) => {
   const [membership] = await db
     .select()
     .from(cellarMemberships)

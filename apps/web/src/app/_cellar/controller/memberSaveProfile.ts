@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { partners } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 
 const clean = (value: string | null | undefined) => value?.trim() || null;
 
@@ -18,7 +18,7 @@ const clean = (value: string | null | undefined) => value?.trim() || null;
  * in the cellar can save an address without blanking the phone number it never
  * showed.
  */
-const memberSaveProfile = stockOwnerProcedure
+const memberSaveProfile = cellarHolderProcedure
   .input(
     z.object({
       phone: z.string().max(60).nullable().optional(),

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { partnerIdentityDocuments } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 /**
@@ -14,7 +14,7 @@ import logger from '@/utils/logger';
  * is delete something the caller already owns. The stored file is deleted
  * from Blob as well, since a public blob stays reachable by URL until it is.
  */
-const memberDeleteIdentityDocument = stockOwnerProcedure
+const memberDeleteIdentityDocument = cellarHolderProcedure
   .input(z.object({ documentType: z.string().max(60) }))
   .mutation(async ({ ctx, input }) => {
     const removed = await db

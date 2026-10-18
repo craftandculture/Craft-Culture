@@ -249,7 +249,7 @@ export const distributorProcedure = approvedProcedure.use(
  * orders, they do not own stock, so nothing here would be theirs to see.
  */
 export const stockOwnerProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type, path }) => {
     /*
       An account awaiting approval holds nothing yet. Only the page redirect
       stopped a pending user who was already linked to a partner from calling
@@ -287,9 +287,84 @@ export const stockOwnerProcedure = approvedProcedure.use(
       });
     }
 
-    return await next({
-      ctx: { ...ctx, partner, partnerId: partner.id },
+    /*
+      A private cellar can be shared with a spouse or PA. Who they are to it
+      is decided here, once, for every stock-owner call, so a mutation added
+      later is covered without anyone remembering to gate it: a viewer can
+      never commit to anything, and access that has been revoked ends on the
+      very next request. Holder-only actions additionally use
+      cellarHolderProcedure. Other stock owners (wine partners) cannot share
+      access, so they are always the holder.
+    */
+    const { default: getCellarRole } = await import(
+      '@/app/_cellar/data/getCellarRole'
+    );
+
+    const cellarRole =
+      partner.type === 'private_collector'
+        ? await getCellarRole(partner.id, ctx.user.id)
+        : ('holder' as const);
+
+    if (cellarRole === 'revoked') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your access to this private cellar has ended.',
+      });
+    }
+
+    if (type === 'mutation' && cellarRole === 'viewer') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You can view this private cellar, but only its holder or a manager can make changes.',
+      });
+    }
+
+    const result = await next({
+      ctx: { ...ctx, partner, partnerId: partner.id, cellarRole },
     });
+
+    /*
+      The holder hears about anything a manager commits them to. Their own
+      actions, and anything that failed, say nothing.
+    */
+    if (type === 'mutation' && cellarRole === 'manager' && result.ok) {
+      const [{ default: notifyCellarHolder }, { default: describeDelegateAction }] =
+        await Promise.all([
+          import('@/app/_cellar/data/notifyCellarHolder'),
+          import('@/app/_cellar/utils/describeDelegateAction'),
+        ]);
+
+      const who = ctx.user.name || ctx.user.email;
+
+      await notifyCellarHolder({
+        partnerId: partner.id,
+        title: `${who} ${describeDelegateAction(path)}`,
+        message: `${who} has access to your private cellar as a manager and ${describeDelegateAction(path)} on your behalf.`,
+      });
+    }
+
+    return result;
+  },
+);
+
+/**
+ * Cellar-holder procedure
+ *
+ * For a private cellar holder's own affairs: identity documents, contact
+ * details, the membership and who else has access. Someone the cellar is
+ * shared with — even a manager — is refused.
+ */
+export const cellarHolderProcedure = stockOwnerProcedure.use(
+  async ({ ctx, next }) => {
+    if (ctx.cellarRole !== 'holder') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only the holder of this private cellar can do this.',
+      });
+    }
+
+    return await next();
   },
 );
 

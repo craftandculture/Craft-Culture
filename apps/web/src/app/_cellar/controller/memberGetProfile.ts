@@ -30,7 +30,16 @@ const memberGetProfile = stockOwnerProcedure.query(async ({ ctx }) => {
     .where(eq(partners.id, ctx.partner.id))
     .limit(1);
 
-  const documents = await db
+  /*
+    Someone the cellar is shared with sees the contact and delivery details
+    they need to act on the holder's behalf, and nothing about the holder's
+    identity documents — not even that they exist.
+  */
+  const isHolder = ctx.cellarRole === 'holder';
+
+  const documents = !isHolder
+    ? []
+    : await db
     .select({
       documentType: partnerIdentityDocuments.documentType,
       fileName: partnerIdentityDocuments.fileName,
@@ -46,11 +55,12 @@ const memberGetProfile = stockOwnerProcedure.query(async ({ ctx }) => {
     phone: partner?.phone ?? null,
     deliveryAddress: partner?.deliveryAddress ?? null,
     deliveryInstructions: partner?.deliveryInstructions ?? null,
-    eidNumber: partner?.eidNumber ?? null,
-    eidExpiry: partner?.eidExpiry ?? null,
+    eidNumber: isHolder ? (partner?.eidNumber ?? null) : null,
+    eidExpiry: isHolder ? (partner?.eidExpiry ?? null) : null,
     documents,
     /** The member's cellar reference, quoted on wine sent to our UK bond */
     reference: await ensureClientCode(ctx.partner.id),
+    cellarRole: ctx.cellarRole,
   };
 });
 

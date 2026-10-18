@@ -5,9 +5,10 @@ import {
   STOCK_OWNER_PARTNER_TYPES,
 } from '@/app/_auth/constants/accessProfiles';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
-import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
+import getCellarRole from '@/app/_cellar/data/getCellarRole';
 import decryptIdentityFile from '@/app/_cellar/utils/decryptIdentityFile';
 import resolvePartnerForUser from '@/app/_partners/data/resolvePartnerForUser';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partnerIdentityDocuments } from '@/database/schema';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
@@ -62,6 +63,19 @@ export const GET = async (request: Request) => {
   const partnerId = isAdmin ? requestedPartnerId : (ownPartner?.id ?? null);
 
   if (!partnerId) {
+    return NextResponse.json({ error: 'Not permitted' }, { status: 403 });
+  }
+
+  /*
+    The holder's own documents only. Someone the cellar is shared with
+    resolves to the same partner, and without this a spouse or PA could
+    stream the holder's Emirates ID or passport.
+  */
+  if (
+    !isAdmin &&
+    ownPartner?.type === 'private_collector' &&
+    (await getCellarRole(partnerId, user.id)) !== 'holder'
+  ) {
     return NextResponse.json({ error: 'Not permitted' }, { status: 403 });
   }
 

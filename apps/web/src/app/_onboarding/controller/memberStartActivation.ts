@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarApplications, cellarMemberships, users } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 import { createSubscriptionHostedPage, findOrCreateBillingCustomer, isBillingConfigured } from '@/lib/zoho/billing';
 import serverConfig from '@/server.config';
 
@@ -27,7 +27,7 @@ import openMembershipInvoiceTask from '../data/openMembershipInvoiceTask';
  * which confirms the subscription and sends the member back to what they
  * were doing.
  */
-const memberStartActivation = stockOwnerProcedure
+const memberStartActivation = cellarHolderProcedure
   .input(
     z.object({
       /** The action that prompted activation, kept for the record */

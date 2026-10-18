@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarMemberships } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { cellarHolderProcedure } from '@/lib/trpc/procedures';
 import { getHostedPage } from '@/lib/zoho/billing';
 
 import applyZohoSubscription from '../data/applyZohoSubscription';
@@ -16,7 +16,7 @@ import applyZohoSubscription from '../data/applyZohoSubscription';
  * the one this member's activation opened, and Zoho is asked what it
  * produced. A page that has not completed leaves the status as it was.
  */
-const memberCompleteActivation = stockOwnerProcedure
+const memberCompleteActivation = cellarHolderProcedure
   .input(z.object({ hostedPageId: z.string().max(100) }))
   .mutation(async ({ ctx, input }) => {
     const [membership] = await db

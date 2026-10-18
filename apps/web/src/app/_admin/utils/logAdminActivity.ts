@@ -9,6 +9,7 @@ export type AdminAction =
   | 'cellar_application.merged'
   | 'cellar_invite.sent'
   | 'cellar_invite.revoked'
+  | 'cellar_access.revoked'
   | 'user.created'
   | 'user.updated'
   | 'user.deleted'

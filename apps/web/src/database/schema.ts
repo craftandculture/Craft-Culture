@@ -818,6 +818,8 @@ export const notificationType = pgEnum('notification_type', [
   'cellar_sourcing_update',
   /* An allocation offered to members: interest registered or allocated */
   'cellar_allocation_update',
+  /* Someone given access to a cellar, removed from it, or acting in it */
+  'cellar_access_update',
 ]);
 
 /**
@@ -7913,3 +7915,60 @@ export const cellarAllocationInterests = pgTable(
     ),
   ],
 );
+
+/**
+ * People a member has given access to their private cellar
+ *
+ * A spouse or a PA. The holder invites them by email with a role: a viewer
+ * sees the cellar and can commit to nothing; a manager can also request
+ * deliveries, buy and offer wine for sale, but never invite others, touch the
+ * holder's identity documents or their membership.
+ *
+ * The role lives here and not on partner_members.role, because that column
+ * already defaults to 'member' for holders the team linked by hand: reading
+ * it as a delegate role would demote every one of them. A user is a delegate
+ * if and only if they have a row here. Acceptance also adds a partner_members
+ * row, so the existing resolution finds the cellar; revoking removes it.
+ */
+export const cellarAccessGrants = pgTable(
+  'cellar_access_grants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    /** viewer | manager */
+    role: text('role').notNull(),
+    /** invited | active | revoked */
+    status: text('status').notNull().default('invited'),
+    tokenHash: text('token_hash').notNull(),
+    userId: uuid('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    invitedBy: uuid('invited_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    /*
+      Whether accepting is what approved this login. If so, revoking access
+      puts the login back to pending, so a former delegate does not keep an
+      approved private-client account they were only given for this cellar.
+    */
+    approvedOnAccept: boolean('approved_on_accept').notNull().default(false),
+    revokedAt: timestamp('revoked_at', { mode: 'date' }),
+    revokedBy: uuid('revoked_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('cellar_access_grants_token_idx').on(table.tokenHash),
+    index('cellar_access_grants_partner_idx').on(table.partnerId),
+    index('cellar_access_grants_user_idx').on(table.userId),
+  ],
+);
+
+export type CellarAccessGrant = typeof cellarAccessGrants.$inferSelect;
