@@ -1,3 +1,9 @@
+## [2.0.407](https://github.com/craftandculture/Craft-Culture/compare/v2.0.406...v2.0.407) (2026-10-18)
+
+### Features
+
+* staff can close a UK move after the member has accepted it, until it is on a shipment ([92bf423](https://github.com/craftandculture/Craft-Culture/commit/92bf42382c8ca7a118bb21b83dcffc25c0961c93))
+
 ## [2.0.406](https://github.com/craftandculture/Craft-Culture/compare/v2.0.405...v2.0.406) (2026-10-18)
 
 ### Features
