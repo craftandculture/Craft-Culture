@@ -100,7 +100,7 @@ const HowToPayPanel = ({ details, amountUsd, reference }: HowToPayPanelProps) =>
 
       {!details && (
         <p className="text-text-muted mt-2 text-xs leading-5">
-          We will email you our bank details shortly. If you need them sooner, please contact your account team.
+          We will email you our bank details shortly. If you need them sooner, please contact us and we will send them straight away.
         </p>
       )}
       {details?.note && <p className="text-text-muted mt-2 text-xs leading-5">{details.note}</p>}

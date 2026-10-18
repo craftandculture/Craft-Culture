@@ -60,7 +60,7 @@ const StepIdentity = ({ initial, uploaded, uploadingSide, isBusy, onUpload, onSa
       isBusy={isBusy}
     >
       <p className="text-text-primary text-sm leading-6">
-        Verification is needed before your first purchase, release or transfer of wine into your cellar.
+        Verification is needed before your first purchase, delivery or transfer of wine into your cellar.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">

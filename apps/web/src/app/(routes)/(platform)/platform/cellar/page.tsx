@@ -1608,7 +1608,7 @@ const CellarPage = () => {
                           setSellLines(new Map());
                           setSellAsk('');
                         }}
-                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-violet-600 opacity-100 transition-all hover:bg-violet-50 sm:opacity-60 sm:group-hover:opacity-100"
+                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-emerald-700 opacity-100 transition-all hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10 sm:opacity-60 sm:group-hover:opacity-100"
                       >
                         Sell
                       </button>
@@ -2229,7 +2229,7 @@ const CellarPage = () => {
                         />
                         {savedAddress
                           ? 'Make this my address from now on'
-                          : 'Save this to my account'}
+                          : 'Save this as my delivery address'}
                       </label>
                       {savedAddress && (
                         <button

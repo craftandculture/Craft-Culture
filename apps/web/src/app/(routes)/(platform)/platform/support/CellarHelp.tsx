@@ -47,12 +47,12 @@ const faqItems = [
   {
     question: 'Why do you need my Emirates ID?',
     answer:
-      'The licensed partner delivering on the mainland has to establish who is receiving the wine. We hold it once, against your account, so it is not asked for on every delivery. It is visible only to you and the Craft & Culture team.',
+      'The licensed partner delivering on the mainland has to establish who is receiving the wine. We hold it once, securely, so it is not asked for on every delivery. It is visible only to you and the Craft & Culture team.',
   },
   {
     question: 'What happens if I go over my storage allowance?',
     answer:
-      'Membership includes twenty 12-bottle cases (a 6-bottle case counts as half). Beyond that, each 12-bottle case is AED 8 a month and each 6-bottle case AED 4, counted at month end and added to your next invoice. Nothing is refused or moved on your behalf.',
+      'Your membership includes storage for twenty 12-bottle cases (a 6-bottle case counts as half). Storage beyond that is added to your regular invoice at the rate in your membership terms. Nothing is refused or moved on your behalf.',
   },
   {
     question: 'Who sees that a wine is mine when it is for sale?',
@@ -304,9 +304,9 @@ const CellarHelp = () => {
               className="leading-relaxed"
             >
               Storage is covered by your membership, which includes twenty
-              12-bottle cases (a 6-bottle case counts as half). Beyond that,
-              each 12-bottle case is AED 8 a month and each 6-bottle case AED 4,
-              counted at month end and added to your regular invoice.
+              12-bottle cases (a 6-bottle case counts as half). Storage beyond
+              that is added to your regular invoice at the rate set out in your
+              membership terms.
             </Typography>
             <Typography
               variant="bodySm"
@@ -400,7 +400,7 @@ const CellarHelp = () => {
               className="leading-relaxed"
             >
               Your delivery address, access instructions and identification are
-              held on your account, so they are not asked for on every request.
+              held securely once, so they are not asked for on every request.
               You can change them at any time, and send an individual delivery
               elsewhere without altering your default address.
             </Typography>

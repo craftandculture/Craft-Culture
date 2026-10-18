@@ -102,7 +102,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
       icon: IconListDetails,
       title: 'Your collection, all in one place',
       detail:
-        'View and manage your holdings through your private cellar. Add wines from abroad, buy from our in-bond collection, sell, or arrange delivery when you’re ready to enjoy them.',
+        'View and manage your holdings through your private cellar. Add wines from abroad, buy from our in-bond collection, sell, or arrange delivery when you are ready to enjoy them.',
     },
   ];
 
@@ -120,7 +120,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
           </span>
         )}
         <h1 className="font-heading text-text-primary text-4xl leading-tight tracking-tight sm:text-5xl">
-          {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your Private Cellar account'}
+          {greeting ? `Welcome, ${greeting.name.split(' ')[0]}.` : 'Open your private cellar'}
         </h1>
         <p className="text-text-primary max-w-xl text-xl font-medium leading-snug sm:text-2xl">
           Your private cellar with Craft &amp; Culture.
