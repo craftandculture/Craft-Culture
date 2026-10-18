@@ -1,3 +1,9 @@
+## [2.0.395](https://github.com/craftandculture/Craft-Culture/compare/v2.0.394...v2.0.395) (2026-10-18)
+
+### Features
+
+* wine in C&C's LCB Burton account shows in members' private cellars, from LCB's own stock report, once the team says whose each rotation is ([5a2bbbc](https://github.com/craftandculture/Craft-Culture/commit/5a2bbbcfa3ac402d658acd9ff743a358458b8b94))
+
 ## [2.0.394](https://github.com/craftandculture/Craft-Culture/compare/v2.0.393...v2.0.394) (2026-10-18)
 
 ### Features
