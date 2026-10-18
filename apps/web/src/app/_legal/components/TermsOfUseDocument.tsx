@@ -36,7 +36,7 @@ const TermsOfUseDocument = () => {
                 1. Introduction
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                Welcome to Craft &amp; Culture, a service operated by Craft & Culture FZ-LLC (&quot;we,&quot;
+                Welcome to Craft &amp; Culture, a service operated by Craft & Culture FZE (&quot;we,&quot;
                 &quot;our,&quot; or &quot;us&quot;). These Terms of Use (&quot;Terms&quot;) govern your
                 access to and use of the Craft &amp; Culture platform (the &quot;Platform&quot; or
                 &quot;Service&quot;), including any content, features, and services offered through
@@ -248,7 +248,7 @@ const TermsOfUseDocument = () => {
                 sections above, this section governs the wine you hold with us.
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                <strong>Title and beneficial interest:</strong> Craft &amp; Culture FZ-LLC holds the
+                <strong>Title and beneficial interest:</strong> Craft &amp; Culture FZE holds the
                 licence under which alcohol is imported into and stored in the United Arab Emirates.
                 Legal title to wine imported under that licence rests with us and does not pass to
                 you. What you acquire and hold is a beneficial interest in an identified parcel: the
@@ -512,7 +512,7 @@ const TermsOfUseDocument = () => {
               </Typography>
               <div className="rounded-lg border border-border-primary bg-fill-secondary/30 p-4">
                 <Typography variant="bodySm" colorRole="muted" className="mb-1">
-                  <strong>Craft & Culture FZ-LLC</strong>
+                  <strong>Craft & Culture FZE</strong>
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted" className="mb-1">
                   Email:{' '}

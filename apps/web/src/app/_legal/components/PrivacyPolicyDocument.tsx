@@ -6,7 +6,7 @@ import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 /** The address privacy requests go to, named once so every mention agrees */
-const PRIVACY_CONTACT_EMAIL = 'info@craftculture.xyz';
+const PRIVACY_CONTACT_EMAIL = 'support@craftculture.xyz';
 
 const PRIVACY_POLICY_LAST_UPDATED = 'October 2026';
 
@@ -158,7 +158,7 @@ const sections: PolicySection[] = [
           'information about the source of funds used to acquire wine, where the value or nature of a transaction makes this appropriate.',
         ],
         after: [
-          'Some of these checks are required by law, for example customs, tax and licensing obligations, and any anti-money-laundering or sanctions requirements that apply to a particular transaction. Others are risk-management procedures that we apply under our agreement with you to protect our clients and their wine. Where we decline or suspend an account or an instruction because checks cannot be completed, we will tell you unless the law prevents us from doing so.',
+          'We may carry out identity verification, ownership checks, sanctions screening and other due-diligence procedures where required by applicable law or reasonably necessary to protect our business, customers and assets. Where we decline or suspend an account or an instruction because checks cannot be completed, we will tell you unless the law prevents us from doing so.',
           'Identity documents are encrypted when stored and are accessible only to authorised staff who need them to complete or review verification.',
         ],
       },
@@ -244,7 +244,7 @@ const sections: PolicySection[] = [
     blocks: [
       {
         paragraphs: [
-          'Some of our technology providers store or process data outside the UAE, including in the European Union, the United Kingdom and the United States, and our international storage partners are located in the countries where your wine is held.',
+          'Our technology providers and international storage partners may process personal data in countries outside the United Arab Emirates, including the United Kingdom, European Union and United States. The countries involved depend on the providers and services used. We take appropriate steps to ensure international transfers comply with applicable data protection requirements.',
           'We transfer personal data outside the UAE only where UAE law permits it. Depending on the destination and the circumstances, that may be because the destination provides adequate protection, because suitable safeguards are in place with the recipient, or because the transfer is necessary to perform our agreement with you, such as storing your wine in a warehouse abroad at your request. We assess each type of transfer against the conditions the law sets, rather than relying on one mechanism for all of them.',
         ],
       },
@@ -335,7 +335,7 @@ const sections: PolicySection[] = [
         },
         after: [
           'We use optional cookies only with your consent. At the date of this Policy we do not use analytics or marketing cookies on the platform; if we introduce them, they will be used only for people who have accepted that category.',
-          'To diagnose faults, our error-monitoring provider records technical information when an error occurs and, for a small sample of visits, a recording of how the page behaved. These recordings are configured to hide the text on the page and anything you type, and to block images and media.',
+          'We also use an error-monitoring service to keep the Services secure and working. It records technical information when an error occurs and, for a small sample of visits, makes a session replay: a recording of how the page behaved during the visit. Session replays are a monitoring activity, not analytics. They are configured to hide the text on the page and anything you type, and to block images and media, but they may still contain technical details of the visit, such as the pages viewed, and are therefore treated as personal data.',
         ],
       },
     ],
@@ -355,7 +355,7 @@ const sections: PolicySection[] = [
     blocks: [
       {
         paragraphs: [
-          'Our Services are intended only for people aged 21 or over, or the legal drinking age where they live if that is higher, and we verify age as part of identity checks for private clients. We do not knowingly collect personal data from anyone under that age. If we learn that we have, we will delete it, and we ask anyone who believes this has happened to contact us.',
+          'Our Services are intended only for people aged 21 or over, or the legal drinking age where they live if that is higher, and we verify age as part of identity checks for private clients. We do not knowingly collect personal data from anyone under that age. If we learn that we have, we will delete it unless retention is required or permitted by applicable law, and we ask anyone who believes this has happened to contact us.',
         ],
       },
     ],
