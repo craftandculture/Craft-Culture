@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
+import ukMoveTotal, { LCB_RECHARGE_MARKUP } from '../../utils/ukMoveTotal';
 import ConfirmAction from '../ConfirmAction';
 
 type Move = inferRouterOutputs<AppRouter>['cellar']['admin']['getUkMoves']['moves'][number];
@@ -122,7 +123,11 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
   );
 
   const amount = (value: string) => (value.trim() === '' ? undefined : Number(value));
-  const total = (amount(freight) ?? 0) + (amount(lcb) ?? 0) + (amount(other) ?? 0);
+  const { lcbChargedUsd, totalUsd: total } = ukMoveTotal({
+    freightUsd: amount(freight) ?? 0,
+    lcbChargesUsd: amount(lcb) ?? 0,
+    otherUsd: amount(other) ?? 0,
+  });
   const isValid = amount(freight) !== undefined && !Number.isNaN(total) && (!amount(other) || otherLabel.trim());
 
   const field = 'border-border-muted bg-surface-primary h-9 w-full rounded-lg border px-2.5 text-sm tabular-nums';
@@ -135,8 +140,13 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
           <input className={field} inputMode="decimal" value={freight} onChange={(event) => setFreight(event.target.value)} />
         </label>
         <label className="text-text-muted text-[11px] font-semibold">
-          LCB charges (USD)
+          LCB charges at cost (USD)
           <input className={field} inputMode="decimal" value={lcb} onChange={(event) => setLcb(event.target.value)} />
+          {lcbChargedUsd > 0 && (
+            <span className="text-text-muted mt-0.5 block font-normal">
+              {money(lcbChargedUsd)} charged, at cost + {LCB_RECHARGE_MARKUP * 100}%
+            </span>
+          )}
         </label>
         <label className="text-text-muted text-[11px] font-semibold">
           Other (USD)

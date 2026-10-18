@@ -9,6 +9,7 @@ import { cellarUkMoves } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
+import ukMoveTotal from '../utils/ukMoveTotal';
 
 /**
  * A member accepts the quote to bring UK wine to the UAE
@@ -67,6 +68,11 @@ const memberAcceptUkMove = stockOwnerProcedure
       above succeeds, which can happen once per move, so a retry never opens a
       second job. Payment is due on receipt.
     */
+    const { lcbChargedUsd } = ukMoveTotal({
+      freightUsd: move.freightUsd ?? 0,
+      lcbChargesUsd: move.lcbChargesUsd ?? 0,
+      otherUsd: move.otherUsd ?? 0,
+    });
     const usd = (value: number | null) =>
       `$${(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -74,7 +80,7 @@ const memberAcceptUkMove = stockOwnerProcedure
       title: `${ctx.partner.businessName} — invoice ${move.moveNumber} (${usd(move.totalUsd)}, move from LCB Burton to the UAE)`,
       what: [
         `Invoice ${ctx.partner.businessName} ${usd(move.totalUsd)} for ${move.moveNumber}, due on receipt.`,
-        `Freight ${usd(move.freightUsd)}; LCB charges ${usd(move.lcbChargesUsd)}`,
+        `Freight ${usd(move.freightUsd)}; LCB charges ${usd(move.lcbChargesUsd)} at cost, ${usd(lcbChargedUsd)} charged (cost + 30%)`,
         move.otherUsd ? `; ${move.otherLabel || 'other'} ${usd(move.otherUsd)}` : '',
         '.',
       ].join(''),

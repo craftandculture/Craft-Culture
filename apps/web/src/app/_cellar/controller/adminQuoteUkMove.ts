@@ -7,6 +7,7 @@ import { cellarUkMoves } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
+import ukMoveTotal from '../utils/ukMoveTotal';
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
@@ -14,7 +15,8 @@ const round = (value: number) => Math.round(value * 100) / 100;
  * Price a member's UK move, or close it
  *
  * The parts are kept for the team — freight, LCB's charges and anything else
- * — and the member is shown their sum. A quote can be revised until the
+ * — and the member is shown their sum. LCB's charges are entered and stored at
+ * cost; the total recharges them at cost plus 30% (ukMoveTotal). A quote can be revised until the
  * member accepts it; after that the figure is fixed.
  *
  * @example
@@ -84,9 +86,11 @@ const adminQuoteUkMove = staffAdminProcedure
       });
     }
 
-    const totalUsd = round(
-      input.freightUsd + (input.lcbChargesUsd ?? 0) + (input.otherUsd ?? 0),
-    );
+    const { totalUsd } = ukMoveTotal({
+      freightUsd: input.freightUsd,
+      lcbChargesUsd: input.lcbChargesUsd ?? 0,
+      otherUsd: input.otherUsd ?? 0,
+    });
 
     const [move] = await db
       .update(cellarUkMoves)
