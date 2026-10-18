@@ -1,3 +1,9 @@
+## [2.0.401](https://github.com/craftandculture/Craft-Culture/compare/v2.0.400...v2.0.401) (2026-10-18)
+
+### Bug Fixes
+
+* the member footer and cellar help state the 12–16°C cold room, and member copy no longer says "account" ([0afa16b](https://github.com/craftandculture/Craft-Culture/commit/0afa16bb5fe6f85072143709f8dec89d09eb67c3))
+
 ## [2.0.400](https://github.com/craftandculture/Craft-Culture/compare/v2.0.399...v2.0.400) (2026-10-18)
 
 ### Features
