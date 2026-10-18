@@ -1,3 +1,9 @@
+## [2.0.396](https://github.com/craftandculture/Craft-Culture/compare/v2.0.395...v2.0.396) (2026-10-18)
+
+### Bug Fixes
+
+* a withdrawn delivery no longer shows as a past delivery in a member's cellar, and past deliveries, offers and purchases fold below what is still in progress ([a26b99c](https://github.com/craftandculture/Craft-Culture/commit/a26b99c6284e414c3f1f1dc7258e921131ed5a6e))
+
 ## [2.0.395](https://github.com/craftandculture/Craft-Culture/compare/v2.0.394...v2.0.395) (2026-10-18)
 
 ### Features
