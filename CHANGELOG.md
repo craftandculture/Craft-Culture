@@ -1,3 +1,9 @@
+## [2.0.413](https://github.com/craftandculture/Craft-Culture/compare/v2.0.412...v2.0.413) (2026-10-18)
+
+### Bug Fixes
+
+* an accepted UK move opens a Team Tasks job to invoice it, view-only guests are no longer offered actions they cannot take, and statements leave out reversed purchases ([f689a72](https://github.com/craftandculture/Craft-Culture/commit/f689a72403957f958d1bc0f724ab35b9da36d926))
+
 ## [2.0.412](https://github.com/craftandculture/Craft-Culture/compare/v2.0.411...v2.0.412) (2026-10-18)
 
 ### Bug Fixes
