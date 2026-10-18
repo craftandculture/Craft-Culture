@@ -2978,6 +2978,60 @@ const runMigrations = async () => {
     `);
     console.log('✅ private cellar member references ready');
 
+    /*
+      Members moving wine from LCB Burton to the UAE (Oct 2026). Read behind a
+      guard, so a missed migration hides the move option and nothing else.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_uk_moves" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "move_number" text NOT NULL UNIQUE,
+        "partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "status" text DEFAULT 'submitted' NOT NULL,
+        "member_notes" text,
+        "admin_notes" text,
+        "freight_usd" double precision,
+        "lcb_charges_usd" double precision,
+        "other_usd" double precision,
+        "other_label" text,
+        "total_usd" double precision,
+        "quoted_at" timestamp,
+        "quoted_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "accepted_at" timestamp,
+        "shipment_id" uuid REFERENCES "logistics_shipments"("id") ON DELETE SET NULL,
+        "shipped_at" timestamp,
+        "closed_at" timestamp,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_uk_moves_partner_idx" ON "cellar_uk_moves" ("partner_id")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_uk_move_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "move_id" uuid NOT NULL REFERENCES "cellar_uk_moves"("id") ON DELETE CASCADE,
+        "rotation" text NOT NULL,
+        "line" integer DEFAULT 0 NOT NULL,
+        "lwin18" text NOT NULL,
+        "name" text NOT NULL,
+        "vintage" integer,
+        "bottles_per_case" integer,
+        "bottle_size_litres" double precision,
+        "cases" integer DEFAULT 0 NOT NULL,
+        "singles" integer DEFAULT 0 NOT NULL,
+        "total_bottles" integer DEFAULT 0 NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cellar_uk_move_items_move_idx" ON "cellar_uk_move_items" ("move_id")`,
+    );
+    console.log('✅ UK to UAE moves ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

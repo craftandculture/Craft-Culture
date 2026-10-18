@@ -7521,6 +7521,77 @@ export const partnerClientCodes = pgTable('partner_client_codes', {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });
 
+/**
+ * A member's request to bring wine from LCB Burton to the UAE warehouse
+ *
+ * Status is text, like intake stages, so a new step never waits on an enum
+ * migration: submitted → quoted → accepted → shipping, or withdrawn /
+ * cancelled. "Arrived" is not stored; it is read from the linked shipment,
+ * which receiving marks delivered when the wine is in the member's cellar.
+ *
+ * The quote is kept itemised for the team and shown to the member as one
+ * total, the same rule as deliveries.
+ */
+export const cellarUkMoves = pgTable(
+  'cellar_uk_moves',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    moveNumber: text('move_number').notNull().unique(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: text('status').notNull().default('submitted'),
+    memberNotes: text('member_notes'),
+    /** Written for the member to read */
+    adminNotes: text('admin_notes'),
+    freightUsd: doublePrecision('freight_usd'),
+    lcbChargesUsd: doublePrecision('lcb_charges_usd'),
+    otherUsd: doublePrecision('other_usd'),
+    otherLabel: text('other_label'),
+    totalUsd: doublePrecision('total_usd'),
+    quotedAt: timestamp('quoted_at', { mode: 'date' }),
+    quotedBy: uuid('quoted_by').references(() => users.id, { onDelete: 'set null' }),
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, {
+      onDelete: 'set null',
+    }),
+    shippedAt: timestamp('shipped_at', { mode: 'date' }),
+    closedAt: timestamp('closed_at', { mode: 'date' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('cellar_uk_moves_partner_idx').on(table.partnerId)],
+);
+
+/**
+ * The LCB lines on a move, copied at request time
+ *
+ * Keyed by rotation and line, which survive each LCB import; the holdings
+ * snapshot's own ids do not. A move takes whole lines, which is how Vision
+ * picks an export order.
+ */
+export const cellarUkMoveItems = pgTable(
+  'cellar_uk_move_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    moveId: uuid('move_id')
+      .references(() => cellarUkMoves.id, { onDelete: 'cascade' })
+      .notNull(),
+    rotation: text('rotation').notNull(),
+    line: integer('line').notNull().default(0),
+    lwin18: text('lwin18').notNull(),
+    name: text('name').notNull(),
+    vintage: integer('vintage'),
+    bottlesPerCase: integer('bottles_per_case'),
+    bottleSizeLitres: doublePrecision('bottle_size_litres'),
+    cases: integer('cases').notNull().default(0),
+    singles: integer('singles').notNull().default(0),
+    totalBottles: integer('total_bottles').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [index('cellar_uk_move_items_move_idx').on(table.moveId)],
+);
+
 export const cellarIntakes = pgTable(
   'cellar_intakes',
   {

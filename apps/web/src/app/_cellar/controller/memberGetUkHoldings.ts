@@ -21,6 +21,9 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
     const rows = await db
       .select({
         id: cellarUkHoldings.id,
+        /* Stable across LCB imports, so a move can be matched to its line */
+        rotation: cellarUkHoldings.rotation,
+        line: cellarUkHoldings.line,
         lwin18: cellarUkHoldings.lwin18,
         brand: cellarUkHoldings.brand,
         description: cellarUkHoldings.description,
