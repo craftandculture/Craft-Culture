@@ -24,6 +24,8 @@ export interface NotificationFeedProps {
   variant: 'drawer' | 'page';
   /** Called after following a notification's link, e.g. to close the drawer */
   onNavigate?: () => void;
+  /** Shown in the footer beside "Mark all read", e.g. a link to the full page */
+  footer?: React.ReactNode;
 }
 
 const dayLabel = (date: Date) => {
@@ -45,7 +47,11 @@ const EMPTY: Record<View, string> = {
  * can never disagree. Opens on "Needs action" when anything does, otherwise on
  * everything.
  */
-const NotificationFeed = ({ variant, onNavigate }: NotificationFeedProps) => {
+const NotificationFeed = ({
+  variant,
+  onNavigate,
+  footer,
+}: NotificationFeedProps) => {
   const router = useRouter();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
@@ -138,7 +144,7 @@ const NotificationFeed = ({ variant, onNavigate }: NotificationFeedProps) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Filters */}
-      <div className="flex flex-col gap-3 border-b border-border-muted px-5 pb-3">
+      <div className="flex items-center justify-between gap-2 border-b border-border-muted px-5 pb-3">
         <div className="flex flex-wrap items-center gap-1.5" role="tablist">
           {tabs.map((tab) => {
             const active = view === tab.id;
@@ -173,34 +179,26 @@ const NotificationFeed = ({ variant, onNavigate }: NotificationFeedProps) => {
             );
           })}
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <label className="sr-only" htmlFor={`notification-area-${variant}`}>
-            Area
-          </label>
-          <select
-            id={`notification-area-${variant}`}
-            value={area}
-            onChange={(e) => setArea(e.target.value)}
-            className="h-8 rounded-md border border-border-muted bg-surface-primary px-2 text-xs text-text-primary"
-          >
-            <option value="">All areas</option>
-            {notificationAreas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-          {(counts?.count ?? 0) > 0 && (
-            <button
-              type="button"
-              onClick={markAllRead}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-text-muted hover:bg-fill-muted hover:text-text-primary"
-            >
-              <Icon icon={IconChecks} size="xs" />
-              Mark all read
-            </button>
-          )}
-        </div>
+        <label className="sr-only" htmlFor={`notification-area-${variant}`}>
+          Area
+        </label>
+        <select
+          id={`notification-area-${variant}`}
+          value={area}
+          onChange={(e) => setArea(e.target.value)}
+          className={`h-7 flex-shrink-0 rounded-full border px-2.5 text-xs ${
+            area
+              ? 'border-text-primary bg-surface-primary font-medium text-text-primary'
+              : 'border-border-muted bg-surface-primary text-text-muted'
+          }`}
+        >
+          <option value="">All areas</option>
+          {notificationAreas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* List */}
@@ -243,6 +241,7 @@ const NotificationFeed = ({ variant, onNavigate }: NotificationFeedProps) => {
                     <NotificationItem
                       key={n.id}
                       notification={n}
+                      showActionPill={view !== 'action'}
                       onOpen={open}
                       onMarkRead={markRead}
                     />
@@ -265,6 +264,23 @@ const NotificationFeed = ({ variant, onNavigate }: NotificationFeedProps) => {
           </>
         )}
       </div>
+
+      {/* Footer */}
+      {(footer || (counts?.count ?? 0) > 0) && (
+        <div className="flex items-center justify-between gap-3 border-t border-border-muted px-5 py-3">
+          {footer ?? <span />}
+          {(counts?.count ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-text-muted hover:bg-fill-muted hover:text-text-primary"
+            >
+              <Icon icon={IconChecks} size="xs" />
+              Mark all read
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

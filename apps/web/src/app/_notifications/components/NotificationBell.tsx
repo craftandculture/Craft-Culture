@@ -235,18 +235,20 @@ const NotificationBell = () => {
           </div>
         </div>
 
-        <NotificationFeed variant="drawer" onNavigate={() => setIsOpen(false)} />
-
-        <div className="border-t border-border-muted px-5 py-3">
-          <Link
-            href="/platform/notifications"
-            onClick={() => setIsOpen(false)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-text-primary hover:underline"
-          >
-            View all notifications
-            <Icon icon={IconArrowUpRight} size="xs" />
-          </Link>
-        </div>
+        <NotificationFeed
+          variant="drawer"
+          onNavigate={() => setIsOpen(false)}
+          footer={
+            <Link
+              href="/platform/notifications"
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-text-primary hover:underline"
+            >
+              View all notifications
+              <Icon icon={IconArrowUpRight} size="xs" />
+            </Link>
+          }
+        />
       </SheetContent>
     </Sheet>
   );
