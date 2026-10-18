@@ -81,7 +81,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
               href={access.home}
-              className="transition-opacity duration-200 hover:opacity-80"
+              // The logo artwork is a padded square taller than the bar; clip it so the link stops at the bar's edge
+              className="flex h-14 items-center overflow-hidden transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
