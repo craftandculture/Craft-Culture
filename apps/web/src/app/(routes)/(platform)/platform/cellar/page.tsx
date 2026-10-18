@@ -1280,7 +1280,7 @@ const CellarPage = () => {
         </section>
       )}
 
-      <DeliveriesPanel requests={releaseData?.requests ?? []} />
+      <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" />
 
       {isEmptyCellar ? (
         /*
@@ -1990,6 +1990,8 @@ const CellarPage = () => {
       )}
 
       {ukData && <UkHoldingsPanel data={ukData} />}
+
+      <DeliveriesPanel requests={releaseData?.requests ?? []} section="past" />
 
       {!isEmptyCellar && (
         <div className="mt-8">

@@ -1,12 +1,13 @@
 'use client';
 
-import { IconTag } from '@tabler/icons-react';
+import { IconChevronDown, IconTag } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -75,6 +76,7 @@ const TONES = {
  */
 const SellingPage = () => {
   const api = useTRPC();
+  const [showPast, setShowPast] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.consignment.member.getMandates.queryOptions(),
@@ -92,6 +94,11 @@ const SellingPage = () => {
 
   const mandates = data?.mandates ?? [];
 
+  const isPast = (status: string) =>
+    ['sold', 'withdrawn', 'expired'].includes(status);
+  const current = mandates.filter((mandate) => !isPast(mandate.status));
+  const past = mandates.filter((mandate) => isPast(mandate.status));
+
   /*
     The questions a member actually arrives with: how much have I got out
     there, what is it worth to me if it sells, and has any of it gone live yet.
@@ -102,99 +109,19 @@ const SellingPage = () => {
     ['listed', 'placed', 'partially_sold'].includes(mandate.status),
   );
 
-  const openBottles = mandates
-    .filter((mandate) => !['withdrawn', 'sold', 'expired'].includes(mandate.status))
-    .reduce((sum, mandate) => sum + mandate.bottlesRemaining, 0);
+  const openBottles = current.reduce((sum, mandate) => sum + mandate.bottlesRemaining, 0);
 
-  const openValue = mandates
-    .filter((mandate) => !['withdrawn', 'sold', 'expired'].includes(mandate.status))
-    .reduce(
+  const openValue = current.reduce(
       (sum, mandate) => sum + mandate.askPerBottleUsd * mandate.bottlesRemaining,
       0,
     );
 
-  return (
-    <div className="w-full pb-8">
-      {/*
-        headingMd, like the cellar and Available now. Three tabs had three
-        different heading sizes, so moving between them made the page look like
-        it was jumping.
-      */}
-      <div className="mb-4">
-        <Typography variant="headingMd" className="block">
-          Selling
-        </Typography>
-        <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Wine you have asked us to sell on your behalf. You receive your asking
-          price in full &mdash; our commission is added on top of it, never
-          taken out of it.
-        </Typography>
-      </div>
-
-      {!isLoading && mandates.length > 0 && (
-        <dl className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-          {[
-            {
-              label: 'Bottles offered',
-              value: String(openBottles),
-              detail: `across ${mandates.length} ${mandates.length === 1 ? 'offer' : 'offers'}`,
-            },
-            {
-              label: 'You receive if it sells',
-              value: money(openValue),
-              detail: 'at your asking price',
-            },
-            {
-              label: 'Listed for sale',
-              value: String(live.length),
-              detail: live.length === 1 ? 'offer live' : 'offers live',
-            },
-            {
-              label: 'Awaiting review',
-              value: String(
-                mandates.filter((mandate) => mandate.status === 'offered').length,
-              ),
-              detail: 'with us now',
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
-            >
-              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                {stat.label}
-              </dt>
-              <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
-                {stat.value}
-              </dd>
-              <dd className="text-text-muted m-0 text-[11px]">{stat.detail}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {isLoading && (
-        <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
-          Loading&hellip;
-        </Typography>
-      )}
-
-      {!isLoading && mandates.length === 0 && (
-        <div className="border-border-muted mt-6 rounded-xl border px-6 py-14 text-center">
-          <Icon icon={IconTag} size="lg" className="text-text-muted mx-auto mb-3" />
-          <Typography variant="bodyMd" colorRole="muted" className="block">
-            Nothing offered for sale.
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted" className="mt-1 block">
-            Choose wines in your cellar and press Sell to offer them.
-          </Typography>
-        </div>
-      )}
-
+  /** One offer per card on a phone, one per row on a wider screen */
+  const renderOffers = (rows: typeof mandates) => (
+    <>
       {/* A phone gets one card per offer: a seven-column table cannot be read at that width */}
-      {!isLoading && mandates.length > 0 && (
         <ul className="space-y-2 sm:hidden">
-          {mandates.map((mandate) => {
+          {rows.map((mandate) => {
             const state = STATES[mandate.status] ?? {
               label: mandate.status,
               tone: 'held' as const,
@@ -276,9 +203,7 @@ const SellingPage = () => {
             );
           })}
         </ul>
-      )}
 
-      {!isLoading && mandates.length > 0 && (
         <div className="border-border-muted hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
@@ -293,7 +218,7 @@ const SellingPage = () => {
               </tr>
             </thead>
             <tbody className="divide-border-muted divide-y">
-              {mandates.map((mandate) => {
+              {rows.map((mandate) => {
                 const state = STATES[mandate.status] ?? {
                   label: mandate.status,
                   tone: 'held' as const,
@@ -424,6 +349,112 @@ const SellingPage = () => {
             </tbody>
           </table>
         </div>
+    </>
+  );
+
+  return (
+    <div className="w-full pb-8">
+      {/*
+        headingMd, like the cellar and Available now. Three tabs had three
+        different heading sizes, so moving between them made the page look like
+        it was jumping.
+      */}
+      <div className="mb-4">
+        <Typography variant="headingMd" className="block">
+          Selling
+        </Typography>
+        <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
+          Wine you have asked us to sell on your behalf. You receive your asking
+          price in full &mdash; our commission is added on top of it, never
+          taken out of it.
+        </Typography>
+      </div>
+
+      {!isLoading && current.length > 0 && (
+        <dl className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          {[
+            {
+              label: 'Bottles offered',
+              value: String(openBottles),
+              detail: `across ${current.length} ${current.length === 1 ? 'offer' : 'offers'}`,
+            },
+            {
+              label: 'You receive if it sells',
+              value: money(openValue),
+              detail: 'at your asking price',
+            },
+            {
+              label: 'Listed for sale',
+              value: String(live.length),
+              detail: live.length === 1 ? 'offer live' : 'offers live',
+            },
+            {
+              label: 'Awaiting review',
+              value: String(
+                mandates.filter((mandate) => mandate.status === 'offered').length,
+              ),
+              detail: 'with us now',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
+            >
+              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
+                {stat.label}
+              </dt>
+              <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
+                {stat.value}
+              </dd>
+              <dd className="text-text-muted m-0 text-[11px]">{stat.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {isLoading && (
+        <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
+          Loading&hellip;
+        </Typography>
+      )}
+
+      {!isLoading && mandates.length === 0 && (
+        <div className="border-border-muted mt-6 rounded-xl border px-6 py-14 text-center">
+          <Icon icon={IconTag} size="lg" className="text-text-muted mx-auto mb-3" />
+          <Typography variant="bodyMd" colorRole="muted" className="block">
+            Nothing offered for sale.
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted" className="mt-1 block">
+            Choose wines in your cellar and press Sell to offer them.
+          </Typography>
+        </div>
+      )}
+
+      {!isLoading && current.length > 0 && renderOffers(current)}
+
+      {/*
+        Sold, withdrawn and expired offers are a record, not something to act
+        on. They fold away so a long selling history does not push the offers
+        still in play out of sight.
+      */}
+      {!isLoading && past.length > 0 && (
+        <section className={current.length > 0 ? 'mt-8' : ''}>
+          <button
+            type="button"
+            onClick={() => setShowPast((value) => !value)}
+            aria-expanded={showPast || current.length === 0}
+            className="text-text-muted hover:text-text-primary mb-2.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider"
+          >
+            Past offers · {past.length}
+            <Icon
+              icon={IconChevronDown}
+              size="xs"
+              className={`transition-transform ${showPast || current.length === 0 ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {/* With nothing current, the history is all there is, so it shows */}
+          {(showPast || current.length === 0) && renderOffers(past)}
+        </section>
       )}
     </div>
   );

@@ -25,6 +25,9 @@ import useTRPC from '@/lib/trpc/browser';
 /** Wines shown before a purchase's list folds */
 const WINES_SHOWN = 3;
 
+/** Past purchases shown before the history folds */
+const PAST_SHOWN = 3;
+
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -96,6 +99,7 @@ const PurchasesPage = () => {
   */
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [showAllIds, setShowAllIds] = useState<Set<string>>(new Set());
+  const [showAllPast, setShowAllPast] = useState(false);
   const toggleShowAll = (id: string) =>
     setShowAllIds((current) => {
       const next = new Set(current);
@@ -189,12 +193,14 @@ const PurchasesPage = () => {
       {[
         {
           title: 'In progress',
+          isPast: false,
           rows: purchases.filter((purchase) =>
             ['reserved', 'payment_claimed'].includes(purchase.status),
           ),
         },
         {
           title: 'Past purchases',
+          isPast: true,
           rows: purchases.filter(
             (purchase) =>
               !['reserved', 'payment_claimed'].includes(purchase.status),
@@ -208,7 +214,15 @@ const PurchasesPage = () => {
               {group.title} · {group.rows.length}
             </h2>
             <div className="flex flex-col gap-4">
-              {group.rows.map((purchase) => {
+              {/*
+                The history folds after a few. Every completed purchase is
+                already in the cellar, so these are a record, and a long one
+                should not bury the purchases still waiting on payment.
+              */}
+              {(group.isPast && !showAllPast
+                ? group.rows.slice(0, PAST_SHOWN)
+                : group.rows
+              ).map((purchase) => {
                 const state = STATES[purchase.status] ?? {
                   label: purchase.status,
                   tone: 'gone' as const,
@@ -449,6 +463,22 @@ const PurchasesPage = () => {
                 );
               })}
             </div>
+            {group.isPast && group.rows.length > PAST_SHOWN && (
+              <button
+                type="button"
+                onClick={() => setShowAllPast((value) => !value)}
+                className="text-text-muted hover:text-text-primary mt-3 flex items-center gap-1 text-xs font-semibold"
+              >
+                {showAllPast
+                  ? 'Show fewer'
+                  : `Show all ${group.rows.length} past purchases`}
+                <Icon
+                  icon={IconChevronDown}
+                  size="xs"
+                  className={showAllPast ? 'rotate-180' : ''}
+                />
+              </button>
+            )}
           </section>
         ))}
     </div>

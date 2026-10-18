@@ -12,22 +12,18 @@ type Request =
 
 export interface DeliveriesPanelProps {
   requests: Request[];
+  /** Deliveries under way sit above the wine; ones already made sit below it */
+  section: 'live' | 'past';
 }
 
 /** Where an accepted delivery has got to, in the member's words */
 const stageOf = (request: Request) => {
-  if (request.status === 'cancelled') {
-    return { label: 'Withdrawn', tone: 'bg-surface-muted text-text-muted ring-border-muted' };
-  }
-
   switch (request.orderStatus) {
     case 'delivered':
       return {
         label: 'Delivered',
         tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
       };
-    case 'cancelled':
-      return { label: 'Cancelled', tone: 'bg-surface-muted text-text-muted ring-border-muted' };
     case 'stock_in_transit':
     case 'with_distributor':
     case 'out_for_delivery':
@@ -49,9 +45,7 @@ const stageOf = (request: Request) => {
 };
 
 const isFinished = (request: Request) =>
-  request.status === 'cancelled' ||
-  request.orderStatus === 'delivered' ||
-  request.orderStatus === 'cancelled';
+  request.orderStatus === 'delivered' || request.orderStatus === 'cancelled';
 
 /** The wines on a delivery, the first two by name */
 const winesOf = (request: Request) => {
@@ -75,18 +69,24 @@ const PAST_SHOWN = 5;
  * Deliveries the member has accepted, from preparation to their door
  *
  * Requests still being priced live in the panel above; this is what happens
- * after they say yes. In progress leads, and past deliveries fold away under
- * one line so a member with years of history still sees the live ones first.
+ * after they say yes. Live deliveries sit above the wine. Past ones are history,
+ * so they fold away below it.
+ *
+ * Past means delivered. A withdrawn request, or an order we cancelled, never
+ * left the cellar, and listing it under "Past deliveries" told a member wine
+ * had gone that was still on the shelf.
  */
-const DeliveriesPanel = ({ requests }: DeliveriesPanelProps) => {
+const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
   const [showPast, setShowPast] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
 
-  const accepted = requests.filter(
-    (request) => request.status === 'confirmed' || request.status === 'cancelled',
-  );
-  const live = accepted.filter((request) => request.status === 'confirmed' && !isFinished(request));
-  const past = accepted.filter(isFinished);
+  const accepted = requests.filter((request) => request.status === 'confirmed');
+  const live =
+    section === 'live' ? accepted.filter((request) => !isFinished(request)) : [];
+  const past =
+    section === 'past'
+      ? accepted.filter((request) => request.orderStatus === 'delivered')
+      : [];
 
   if (live.length === 0 && past.length === 0) return null;
 
@@ -117,7 +117,9 @@ const DeliveriesPanel = ({ requests }: DeliveriesPanelProps) => {
   };
 
   return (
-    <section className="border-border-muted bg-surface-primary mb-5 overflow-hidden rounded-xl border shadow-sm">
+    <section
+      className={`border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm ${section === 'live' ? 'mb-5' : 'mt-6'}`}
+    >
       {live.length > 0 && (
         <>
           <header className="border-border-muted flex items-center gap-2 border-b px-4 py-2.5">

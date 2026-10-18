@@ -59,43 +59,46 @@ const CellarMembersList = () => {
     A member whose wine has sat untouched for a year is not dormant — that is
     what bonded storage is for.
   */
-  const shown = members.filter((member) => {
-    if (filter === 'waiting') return member.waitingOnUs > 0;
-    if (filter === 'overage') return member.overageCases > 0;
-    if (filter === 'dormant')
+  /*
+    One test per filter, used for both the list and the count on its chip. The
+    counts were worked out separately and drifted: Waiting on us added up
+    requests while the list showed members, so the chip said 5 above 2 rows.
+  */
+  const matches = (member: (typeof members)[number], id: Filter) => {
+    if (id === 'waiting') return member.waitingOnUs > 0;
+    if (id === 'overage') return member.overageCases > 0;
+    if (id === 'dormant')
       return (
         member.bottles === 0 &&
         member.waitingOnUs === 0 &&
         member.waitingOnThem === 0
       );
     return true;
-  });
+  };
+
+  const shown = members.filter((member) => matches(member, filter));
 
   const totals = members.reduce(
     (sum, member) => ({
       bottles: sum.bottles + member.bottles,
       cases: sum.cases + member.cases,
       value: sum.value + member.valueUsd,
-      waiting: sum.waiting + member.waitingOnUs,
       overage: sum.overage + member.overageCases,
     }),
-    { bottles: 0, cases: 0, value: 0, waiting: 0, overage: 0 },
+    { bottles: 0, cases: 0, value: 0, overage: 0 },
   );
 
-  const filters: { id: Filter; label: string; count: number }[] = [
-    { id: 'all', label: 'All members', count: members.length },
-    { id: 'waiting', label: 'Waiting on us', count: totals.waiting },
-    {
-      id: 'overage',
-      label: 'Over allowance',
-      count: members.filter((member) => member.overageCases > 0).length,
-    },
-    {
-      id: 'dormant',
-      label: 'Nothing held',
-      count: members.filter((member) => member.bottles === 0).length,
-    },
-  ];
+  const filters = (
+    [
+      { id: 'all', label: 'All members' },
+      { id: 'waiting', label: 'Waiting on us' },
+      { id: 'overage', label: 'Over allowance' },
+      { id: 'dormant', label: 'Nothing held' },
+    ] satisfies { id: Filter; label: string }[]
+  ).map((item) => ({
+    ...item,
+    count: members.filter((member) => matches(member, item.id)).length,
+  }));
 
   return (
     <div>
