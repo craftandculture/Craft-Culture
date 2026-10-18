@@ -1,3 +1,9 @@
+## [2.0.409](https://github.com/craftandculture/Craft-Culture/compare/v2.0.408...v2.0.409) (2026-10-18)
+
+### Bug Fixes
+
+* a cellar member buying a partner's consigned wine now records what C&C owes that partner at landed cost, and Available now fills orders from exactly the stock on the price lists ([6e594db](https://github.com/craftandculture/Craft-Culture/commit/6e594db141eb11cbb1c1da10a836c7aed37c80cb))
+
 ## [2.0.408](https://github.com/craftandculture/Craft-Culture/compare/v2.0.407...v2.0.408) (2026-10-18)
 
 ### Features
