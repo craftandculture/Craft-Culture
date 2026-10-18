@@ -5,6 +5,7 @@ import {
   IconBuildingWarehouse,
   IconChevronDown,
   IconDownload,
+  IconFileText,
   IconHistory,
   IconInfoCircle,
   IconRefresh,
@@ -680,6 +681,14 @@ const CellarPage = () => {
           >
             <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
           </Button>
+          {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
+          <Link
+            href="/platform/cellar/statement"
+            className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
+          >
+            <IconFileText size={14} />
+            Statements
+          </Link>
         </div>
       </header>
 

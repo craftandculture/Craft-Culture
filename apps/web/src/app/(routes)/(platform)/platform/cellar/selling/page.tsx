@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import SaleProceedsPanel from '@/app/_cellar/components/SaleProceedsPanel';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -411,6 +412,8 @@ const SellingPage = () => {
           ))}
         </dl>
       )}
+
+      <SaleProceedsPanel />
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted" className="mt-6 block">

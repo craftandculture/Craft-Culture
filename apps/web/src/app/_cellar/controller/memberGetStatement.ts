@@ -1,0 +1,362 @@
+import { and, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { z } from 'zod';
+
+import db from '@/database/client';
+import {
+  cellarReleaseRequestItems,
+  cellarReleaseRequests,
+  cellarUkHoldings,
+  cellarUkRotations,
+  consignmentSettlements,
+  lwinWines,
+  poolSales,
+  privateClientOrders,
+  wmsStock,
+  wmsStockMovements,
+} from '@/database/schema';
+import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
+
+/** The UAE is four hours ahead of UTC all year, so a month starts at 20:00 UTC the day before */
+const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000;
+
+/** Bottles per case from a dashed LWIN18 (`1010279-2015-06-00750` → 6) */
+const packOf = (lwin18: string) => {
+  const pack = Number(lwin18.split('-')[2]);
+
+  return Number.isFinite(pack) && pack > 0 ? pack : 1;
+};
+
+/**
+ * A member's statement for one calendar month
+ *
+ * What came into the cellar, what left it, what sold and what was paid, plus
+ * the wine held. Built from the records each event already writes, so it needs
+ * no table of its own:
+ *
+ * - **Arrived**: WMS receive movements. Recorded against the owner from
+ *   2026-10-18; earlier ones are matched through the shipment they came in on.
+ * - **Bought / added**: WMS ownership transfers into the member.
+ * - **Delivered**: delivery requests whose order was delivered in the month.
+ * - **Sold**: pool sales, at the member's asking price.
+ * - **Paid to you**: settlements a monthly payment was issued for in the month.
+ * - **UK arrivals**: LCB rotations placed with the member, by LCB's received date.
+ *
+ * Holdings are as they stand today, not at month end. Picks and dispatches do
+ * not record whose wine they were, so a past month's closing position cannot
+ * be rebuilt honestly from the movements, and the screen says so.
+ *
+ * No fees, rates or values: an active member is never shown what we charge.
+ *
+ * @example
+ *   const statement = await trpcClient.cellar.member.getStatement.query({
+ *     month: '2026-09',
+ *   });
+ */
+const memberGetStatement = stockOwnerProcedure
+  .input(
+    z.object({
+      /** Calendar month, `YYYY-MM` */
+      month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    }),
+  )
+  .query(async ({ ctx, input }) => {
+    const partnerId = ctx.partner.id;
+    const [year, month] = input.month.split('-').map(Number) as [number, number];
+
+    const from = new Date(Date.UTC(year, month - 1, 1) - DUBAI_OFFSET_MS);
+    const to = new Date(Date.UTC(year, month, 1) - DUBAI_OFFSET_MS);
+
+    const inMonth = (column: Parameters<typeof gte>[0]) =>
+      and(gte(column, from), lt(column, to));
+
+    const [arrivals, transfersIn, delivered, sold, paid, holdings] =
+      await Promise.all([
+        /*
+          Receipts into the C&C warehouse. A movement written before the owner
+          was recorded on it is attributed through its shipment: the line's
+          own owner where one was set, otherwise the shipment's.
+        */
+        db
+          .select({
+            id: wmsStockMovements.id,
+            lwin18: wmsStockMovements.lwin18,
+            productName: wmsStockMovements.productName,
+            quantityCases: wmsStockMovements.quantityCases,
+            quantityBottles: wmsStockMovements.quantityBottles,
+            at: wmsStockMovements.performedAt,
+          })
+          .from(wmsStockMovements)
+          .where(
+            and(
+              eq(wmsStockMovements.movementType, 'receive'),
+              inMonth(wmsStockMovements.performedAt),
+              sql`(
+                ${wmsStockMovements.toOwnerId} = ${partnerId}
+                OR (
+                  ${wmsStockMovements.toOwnerId} IS NULL
+                  AND ${wmsStockMovements.shipmentId} IS NOT NULL
+                  AND EXISTS (
+                    SELECT 1
+                    FROM logistics_shipment_items i
+                    JOIN logistics_shipments s ON s.id = i.shipment_id
+                    WHERE i.shipment_id = ${wmsStockMovements.shipmentId}
+                      AND COALESCE(i.override_owner_id, s.partner_id) = ${partnerId}
+                      AND (
+                        i.product_name = ${wmsStockMovements.productName}
+                        OR (
+                          length(replace(coalesce(i.lwin, ''), '-', '')) >= 7
+                          AND replace(${wmsStockMovements.lwin18}, '-', '')
+                            LIKE replace(i.lwin, '-', '') || '%'
+                        )
+                      )
+                  )
+                )
+              )`,
+            ),
+          )
+          .orderBy(wmsStockMovements.performedAt),
+
+        db
+          .select({
+            id: wmsStockMovements.id,
+            lwin18: wmsStockMovements.lwin18,
+            productName: wmsStockMovements.productName,
+            quantityCases: wmsStockMovements.quantityCases,
+            quantityBottles: wmsStockMovements.quantityBottles,
+            reasonCode: wmsStockMovements.reasonCode,
+            at: wmsStockMovements.performedAt,
+          })
+          .from(wmsStockMovements)
+          .where(
+            and(
+              eq(wmsStockMovements.movementType, 'ownership_transfer'),
+              eq(wmsStockMovements.toOwnerId, partnerId),
+              inMonth(wmsStockMovements.performedAt),
+            ),
+          )
+          .orderBy(wmsStockMovements.performedAt),
+
+        db
+          .select({
+            requestId: cellarReleaseRequests.id,
+            deliveredAt: privateClientOrders.deliveredAt,
+            productName: cellarReleaseRequestItems.productName,
+            vintage: cellarReleaseRequestItems.vintage,
+            bottles: cellarReleaseRequestItems.bottles,
+          })
+          .from(cellarReleaseRequests)
+          .innerJoin(
+            privateClientOrders,
+            eq(cellarReleaseRequests.privateClientOrderId, privateClientOrders.id),
+          )
+          .innerJoin(
+            cellarReleaseRequestItems,
+            eq(cellarReleaseRequestItems.requestId, cellarReleaseRequests.id),
+          )
+          .where(
+            and(
+              eq(cellarReleaseRequests.partnerId, partnerId),
+              eq(privateClientOrders.status, 'delivered'),
+              inMonth(privateClientOrders.deliveredAt),
+            ),
+          )
+          .orderBy(privateClientOrders.deliveredAt),
+
+        db
+          .select({
+            id: poolSales.id,
+            productName: poolSales.productName,
+            bottles: poolSales.bottles,
+            amountUsd: poolSales.owedToOwnerUsd,
+            at: poolSales.soldAt,
+          })
+          .from(poolSales)
+          .where(and(eq(poolSales.ownerId, partnerId), inMonth(poolSales.soldAt)))
+          .orderBy(poolSales.soldAt),
+
+        db
+          .select({
+            amountUsd: consignmentSettlements.owedToOwner,
+            at: consignmentSettlements.settledAt,
+          })
+          .from(consignmentSettlements)
+          .where(
+            and(
+              eq(consignmentSettlements.ownerId, partnerId),
+              eq(consignmentSettlements.status, 'settled'),
+              inMonth(consignmentSettlements.settledAt),
+            ),
+          ),
+
+        db
+          .select({
+            lwin18: wmsStock.lwin18,
+            productName: wmsStock.productName,
+            producer: wmsStock.producer,
+            vintage: wmsStock.vintage,
+            bottleSize: wmsStock.bottleSize,
+            caseConfig: wmsStock.caseConfig,
+            cases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
+          })
+          .from(wmsStock)
+          .where(and(eq(wmsStock.ownerId, partnerId), gt(wmsStock.quantityCases, 0)))
+          .groupBy(
+            wmsStock.lwin18,
+            wmsStock.productName,
+            wmsStock.producer,
+            wmsStock.vintage,
+            wmsStock.bottleSize,
+            wmsStock.caseConfig,
+          )
+          .orderBy(wmsStock.productName),
+      ]);
+
+    /*
+      UK wine, guarded: the tables are new, and a missed migration should cost
+      the statement its UK lines rather than the whole page.
+    */
+    let ukHoldings: {
+      name: string;
+      vintage: number | null;
+      bottlesPerCase: number | null;
+      totalBottles: number;
+      receivedAt: Date | null;
+    }[] = [];
+    let ukReportedAt: Date | null = null;
+
+    try {
+      const rows = await db
+        .select({
+          lwin18: cellarUkHoldings.lwin18,
+          brand: cellarUkHoldings.brand,
+          description: cellarUkHoldings.description,
+          vintage: cellarUkHoldings.vintage,
+          bottlesPerCase: cellarUkHoldings.bottlesPerCase,
+          totalBottles: cellarUkHoldings.totalBottles,
+          receivedAt: cellarUkHoldings.receivedAt,
+          reportedAt: cellarUkHoldings.createdAt,
+        })
+        .from(cellarUkHoldings)
+        .innerJoin(
+          cellarUkRotations,
+          eq(cellarUkHoldings.rotation, cellarUkRotations.rotation),
+        )
+        .where(eq(cellarUkRotations.partnerId, partnerId))
+        .orderBy(desc(cellarUkHoldings.receivedAt));
+
+      const lwin7s = [
+        ...new Set(
+          rows
+            .map((row) => row.lwin18.slice(0, 7))
+            .filter((code) => /^\d{7}$/.test(code)),
+        ),
+      ];
+
+      const names = lwin7s.length
+        ? await db
+            .select({ lwin: lwinWines.lwin, displayName: lwinWines.displayName })
+            .from(lwinWines)
+            .where(inArray(lwinWines.lwin, lwin7s))
+        : [];
+
+      const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
+
+      ukHoldings = rows.map((row) => ({
+        name:
+          nameByLwin.get(row.lwin18.slice(0, 7)) ??
+          (row.brand && row.brand !== 'NA' ? row.brand : row.description) ??
+          'Wine',
+        vintage: row.vintage,
+        bottlesPerCase: row.bottlesPerCase,
+        totalBottles: row.totalBottles,
+        receivedAt: row.receivedAt,
+      }));
+      ukReportedAt = rows[0]?.reportedAt ?? null;
+    } catch (error) {
+      logger.error('Could not read UK wine for a statement', { partnerId, error });
+    }
+
+    const bottlesOf = (row: {
+      lwin18: string;
+      quantityCases: number;
+      quantityBottles: number | null;
+    }) => row.quantityBottles ?? row.quantityCases * packOf(row.lwin18);
+
+    const deliveries = new Map<
+      string,
+      { deliveredAt: Date | null; wines: { name: string; bottles: number }[] }
+    >();
+
+    for (const row of delivered) {
+      const entry = deliveries.get(row.requestId) ?? {
+        deliveredAt: row.deliveredAt,
+        wines: [],
+      };
+      entry.wines.push({
+        name: row.vintage ? `${row.productName} ${row.vintage}` : row.productName,
+        bottles: row.bottles,
+      });
+      deliveries.set(row.requestId, entry);
+    }
+
+    const round = (value: number) => Math.round(value * 100) / 100;
+
+    const ukArrived = ukHoldings.filter(
+      (row) => row.receivedAt && row.receivedAt >= from && row.receivedAt < to,
+    );
+
+    return {
+      month: input.month,
+      periodStart: from,
+      periodEnd: to,
+      generatedAt: new Date(),
+      memberName: ctx.partner.businessName,
+
+      added: [
+        ...arrivals.map((row) => ({
+          id: row.id,
+          kind: 'arrived' as const,
+          at: row.at,
+          name: row.productName,
+          bottles: bottlesOf(row),
+          where: 'uae' as const,
+        })),
+        ...transfersIn.map((row) => ({
+          id: row.id,
+          kind: row.reasonCode === 'pool_sale' ? ('bought' as const) : ('added' as const),
+          at: row.at,
+          name: row.productName,
+          bottles: bottlesOf(row),
+          where: 'uae' as const,
+        })),
+        ...ukArrived.map((row, index) => ({
+          id: `uk-${index}`,
+          kind: 'arrived' as const,
+          at: row.receivedAt,
+          name: row.vintage ? `${row.name} ${row.vintage}` : row.name,
+          bottles: row.totalBottles,
+          where: 'uk' as const,
+        })),
+      ].sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0)),
+
+      deliveries: [...deliveries.entries()].map(([id, entry]) => ({
+        id,
+        ...entry,
+        bottles: entry.wines.reduce((sum, wine) => sum + wine.bottles, 0),
+      })),
+
+      sold: sold.map((row) => ({ ...row, amountUsd: round(row.amountUsd) })),
+      soldUsd: round(sold.reduce((sum, row) => sum + row.amountUsd, 0)),
+      paidUsd: round(paid.reduce((sum, row) => sum + row.amountUsd, 0)),
+
+      holdings: holdings.map((row) => ({
+        ...row,
+        bottles: row.cases * (row.caseConfig ?? 1),
+      })),
+      ukHoldings,
+      ukReportedAt,
+    };
+  });
+
+export default memberGetStatement;

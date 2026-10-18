@@ -12,6 +12,7 @@ import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
 import memberCancelPurchase from './controller/memberCancelPurchase';
 import memberCreatePurchase from './controller/memberCreatePurchase';
 import memberGetMandates from './controller/memberGetMandates';
+import memberGetProceeds from './controller/memberGetProceeds';
 import memberGetPurchases from './controller/memberGetPurchases';
 import memberMarkPurchasePaid from './controller/memberMarkPurchasePaid';
 import memberOfferForSale from './controller/memberOfferForSale';
@@ -26,6 +27,7 @@ const memberRouter = createTRPCRouter({
   markPurchasePaid: memberMarkPurchasePaid,
   getPurchases: memberGetPurchases,
   cancelPurchase: memberCancelPurchase,
+  getProceeds: memberGetProceeds,
 });
 
 const adminRouter = createTRPCRouter({

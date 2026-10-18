@@ -327,6 +327,8 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
           productName,
           quantityCases: assignmentCases,
           toLocationId: itemLocationId,
+          /* Whose wine arrived, so a member's statement can list it */
+          toOwnerId: receivedOwnerId,
           lotNumber,
           shipmentId,
           scannedBarcodes: caseLabels.map((l) => l.barcode),
