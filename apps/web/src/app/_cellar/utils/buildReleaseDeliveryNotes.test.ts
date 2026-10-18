@@ -26,12 +26,12 @@ const details = (
 describe('describePreferredDelivery', () => {
   it('names the day and the window', () => {
     expect(describePreferredDelivery('2026-10-21', 'morning')).toBe(
-      'Tue 21 Oct, morning',
+      'Wed 21 Oct, morning',
     );
   });
 
   it('treats any time as no window', () => {
-    expect(describePreferredDelivery('2026-10-21', 'any')).toBe('Tue 21 Oct');
+    expect(describePreferredDelivery('2026-10-21', 'any')).toBe('Wed 21 Oct');
   });
 
   it('says any day when only a window is given', () => {
@@ -74,7 +74,7 @@ describe('buildReleaseDeliveryNotes', () => {
       memberName: 'A Member',
     });
 
-    expect(notes).toContain('Tue 21 Oct, morning (to be confirmed)');
+    expect(notes).toContain('Wed 21 Oct, morning (to be confirmed)');
   });
 
   it('flags a gift with the recipient, the ID check and the message', () => {
