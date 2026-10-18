@@ -1,3 +1,9 @@
+## [2.0.411](https://github.com/craftandculture/Craft-Culture/compare/v2.0.410...v2.0.411) (2026-10-18)
+
+### Tests
+
+* the delivery-preference test expects Wednesday for 21 October 2026, so CI passes and Trigger.dev jobs deploy again ([bd5fbee](https://github.com/craftandculture/Craft-Culture/commit/bd5fbeed75b09449d85fb78e2136d870d0139bec))
+
 ## [2.0.410](https://github.com/craftandculture/Craft-Culture/compare/v2.0.409...v2.0.410) (2026-10-18)
 
 ### Features
