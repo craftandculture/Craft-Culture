@@ -4,6 +4,7 @@ import {
   IconBottle,
   IconBuildingWarehouse,
   IconChevronDown,
+  IconCoin,
   IconDownload,
   IconFileText,
   IconHistory,
@@ -72,6 +73,9 @@ interface CellarWine {
   totalCases: number;
   reservedCases: number;
   costPerBottle: number | null;
+  /** Members only: our in-bond list price where we list the wine, else costPerBottle */
+  indicativePerBottle?: number | null;
+  indicativeFromList?: boolean;
   locations: CellarParcel[];
 }
 
@@ -521,12 +525,28 @@ const CellarPage = () => {
         0,
       ),
       pricedCount: priced.length,
+      /*
+        The indicative value: our list price where we list the wine, otherwise
+        the price paid or recorded. UK wine counts only where we list it, since
+        there is no paid figure to fall back on there.
+      */
+      indicative:
+        wines.reduce(
+          (sum, wine) => sum + bottlesOf(wine) * (wine.indicativePerBottle ?? 0),
+          0,
+        ) +
+        (ukData?.holdings ?? []).reduce(
+          (sum, holding) =>
+            sum + (holding.totalBottles ?? 0) * (holding.indicativePerBottle ?? 0),
+          0,
+        ),
+      isMemberValuation: wines.some((wine) => wine.indicativePerBottle !== undefined),
       inboundBottles: inbound.reduce(
         (sum, line) => sum + (line.totalBottles ?? 0),
         0,
       ),
     };
-  }, [wines, inbound]);
+  }, [wines, inbound, ukData]);
 
   const handleExport = () => {
     const csvRows = [
@@ -536,7 +556,9 @@ const CellarPage = () => {
         somebody flicked before downloading it is a spreadsheet nobody can
         trust a month later.
       */
-      ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Import USD/btl'],
+      totals.isMemberValuation
+        ? ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Indicative USD/btl', 'Basis']
+        : ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Import USD/btl'],
       ...wines.map((wine) => [
         wine.producer ?? '',
         wine.productName,
@@ -545,7 +567,16 @@ const CellarPage = () => {
         wine.caseConfig ?? '',
         wine.totalCases,
         bottlesOf(wine),
-        wine.costPerBottle ?? '',
+        ...(totals.isMemberValuation
+          ? [
+              wine.indicativePerBottle ?? '',
+              wine.indicativePerBottle
+                ? wine.indicativeFromList
+                  ? 'C&C list price'
+                  : 'Price paid or recorded value'
+                : '',
+            ]
+          : [wine.costPerBottle ?? '']),
       ]),
     ];
 
@@ -717,7 +748,11 @@ const CellarPage = () => {
       {!isUaeEmpty && (
       <div
         className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
-          inbound.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+          (inbound.length > 0 ? 1 : 0) + (totals.indicative > 0 ? 1 : 0) === 2
+            ? 'sm:grid-cols-4'
+            : (inbound.length > 0 ? 1 : 0) + (totals.indicative > 0 ? 1 : 0) === 1
+              ? 'sm:grid-cols-3'
+              : 'sm:grid-cols-2'
         }`}
       >
         {[
@@ -736,6 +771,13 @@ const CellarPage = () => {
             alert: false,
           },
           {
+            icon: IconCoin,
+            value: money(totals.indicative),
+            label: 'Indicative value',
+            detail: 'a guide, not a valuation',
+            alert: false,
+          },
+          {
             icon: IconShip,
             value: totals.inboundBottles.toLocaleString(),
             label: 'In transit',
@@ -745,6 +787,7 @@ const CellarPage = () => {
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
           .filter((card) => card.label !== 'In transit' || inbound.length > 0)
+          .filter((card) => card.label !== 'Indicative value' || totals.indicative > 0)
           .map((card) => (
           <div
             key={card.label}
@@ -771,6 +814,14 @@ const CellarPage = () => {
           </div>
         ))}
       </div>
+      )}
+
+      {!isUaeEmpty && totals.indicative > 0 && (
+        <p className="text-text-muted -mt-2 mb-4 text-[11px] leading-4">
+          Indicative value is based on Craft &amp; Culture&apos;s current list
+          prices where we list the wine; otherwise the price you paid. A guide,
+          not a valuation or an offer to buy.
+        </p>
       )}
 
       {inbound.length > 0 && (
@@ -1407,8 +1458,9 @@ const CellarPage = () => {
                     className="max-w-[220px] text-left lg:max-w-[220px]"
                   >
                     <Typography variant="bodyXs">
-                      The value declared when the wine was brought into bond.
-                      Not a market valuation.
+                      {totals.isMemberValuation
+                        ? 'Indicative value: Craft & Culture’s current list price where we list the wine; otherwise the price you paid (marked *). A guide, not a valuation or an offer to buy.'
+                        : 'The value declared when the wine was brought into bond. Not a market valuation.'}
                     </Typography>
                   </TooltipContent>
                 </Tooltip>
@@ -1517,9 +1569,27 @@ const CellarPage = () => {
                     <td
                       className={`${tdMuted} hidden text-right tabular-nums lg:table-cell`}
                     >
-                      {wine.costPerBottle
-                        ? money(wine.costPerBottle, true)
-                        : '—'}
+                      {wine.indicativePerBottle !== undefined ? (
+                        wine.indicativePerBottle ? (
+                          <>
+                            {money(wine.indicativePerBottle, true)}
+                            {!wine.indicativeFromList && (
+                              <span
+                                className="text-text-muted ml-0.5"
+                                title="Not on our list: the price you paid, or the value recorded"
+                              >
+                                *
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          '—'
+                        )
+                      ) : wine.costPerBottle ? (
+                        money(wine.costPerBottle, true)
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     {/*
                       Adding a wine should not require opening it. Selecting
@@ -2009,7 +2079,9 @@ const CellarPage = () => {
         </>
       )}
 
-      {ukData && <UkHoldingsPanel data={ukData} />}
+      {ukData && (
+        <UkHoldingsPanel data={ukData} formatValue={(usd) => money(usd, true)} />
+      )}
 
       <DeliveriesPanel requests={releaseData?.requests ?? []} section="past" />
 

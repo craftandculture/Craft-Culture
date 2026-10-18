@@ -20,6 +20,8 @@ type UkMove = inferRouterOutputs<AppRouter>['cellar']['member']['getUkMoves']['m
 
 export interface UkHoldingsPanelProps {
   data: UkHoldings;
+  /** Formats a USD amount in the currency the cellar is being read in */
+  formatValue?: (usd: number) => string;
 }
 
 interface QuantityLine {
@@ -104,7 +106,7 @@ const isRecent = (move: UkMove) => {
  * member chooses wine to bring to the UAE, we send one all-in price, and it
  * moves only once they accept it.
  */
-const UkHoldingsPanel = ({ data }: UkHoldingsPanelProps) => {
+const UkHoldingsPanel = ({ data, formatValue }: UkHoldingsPanelProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { catchActivation, activationSheet } = useActivationGate();
@@ -324,6 +326,10 @@ const UkHoldingsPanel = ({ data }: UkHoldingsPanelProps) => {
               <span className="text-text-muted flex flex-shrink-0 flex-wrap items-center gap-2 text-xs tabular-nums">
                 {quantityOf(holding)}
                 {holding.receivedAt ? ` · since ${format(new Date(holding.receivedAt), 'MMM yyyy')}` : ''}
+                {/* Our list price where we list the same wine: a guide, as on the cellar above */}
+                {formatValue && holding.indicativePerBottle
+                  ? ` · about ${formatValue(holding.indicativePerBottle)} a bottle`
+                  : ''}
                 {move && (
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
                     {move.status === 'shipping' ? 'On its way to the UAE' : 'Moving to the UAE'}

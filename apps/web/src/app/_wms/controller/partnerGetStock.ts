@@ -1,10 +1,12 @@
 import { and, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 
 import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
+import getListPricePerBottle from '@/app/_cellar/data/getListPricePerBottle';
 import getMemberValuePerBottle from '@/app/_cellar/data/getMemberValuePerBottle';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
+  cellarMemberships,
   logisticsShipmentItems,
   logisticsShipments,
   saleMandateLots,
@@ -237,6 +239,25 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   );
 
   /*
+    An indicative value for private cellar members: our own in-bond list price
+    where we list the wine today, otherwise the value above. Computed here on the
+    server, and only for members — a wine partner looking at its own stock is
+    not shown what we sell it for.
+  */
+  const [membership] = await db
+    .select({ id: cellarMemberships.id })
+    .from(cellarMemberships)
+    .where(eq(cellarMemberships.partnerId, partner.id))
+    .limit(1);
+
+  const isCellarMember =
+    partner.type === 'private_collector' || membership !== undefined;
+
+  const listByLwin = isCellarMember
+    ? await getListPricePerBottle(products.map((product) => product.lwin18))
+    : new Map<string, number>();
+
+  /*
     Wine bought and shipped but not yet received owns no warehouse row, so it
     was invisible here — a collector who has just bought sees nothing at all
     until it lands, which is exactly when they most want to look.
@@ -338,6 +359,13 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       locations: locationsByLwin.get(product.lwin18) ?? [],
       costPerBottle:
         costByLwin.get(lwinPakKeyOf(product.lwin18)) ?? null,
+      ...(isCellarMember && {
+        indicativePerBottle:
+          listByLwin.get(lwinPakKeyOf(product.lwin18)) ??
+          costByLwin.get(lwinPakKeyOf(product.lwin18)) ??
+          null,
+        indicativeFromList: listByLwin.has(lwinPakKeyOf(product.lwin18)),
+      }),
     })),
     inbound,
     openRequests,

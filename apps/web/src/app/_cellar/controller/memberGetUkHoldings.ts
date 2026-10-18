@@ -1,9 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
 
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import { cellarUkHoldings, cellarUkRotations, lwinWines } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
+
+import getListPricePerBottle from '../data/getListPricePerBottle';
 
 /**
  * The member's wine at C&C's UK bond, LCB Burton
@@ -11,8 +14,9 @@ import logger from '@/utils/logger';
  * Only rotations the team has placed with this member, as LCB last reported
  * them. The wine is named from the LWIN record where there is one: LCB's
  * descriptions are typed by whoever booked the goods in ("2014 75CL Lynch
- * Bages", "Gloria\t 2018") and are not fit to show a collector. No values or
- * rates are sent.
+ * Bages", "Gloria\t 2018") and are not fit to show a collector. LCB's values
+ * and rates are never sent; the only figure is an indicative value from our
+ * own in-bond list price, where we list the same wine.
  *
  * Never throws: if the tables are missing the cellar simply shows no UK wine.
  */
@@ -54,6 +58,12 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
 
     const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
 
+    /* A guide only. If the list cannot be read, the wine still shows, without it. */
+    const listed = await getListPricePerBottle(rows.map((row) => row.lwin18)).catch((error: unknown) => {
+      logger.error('Could not read list prices for UK holdings', { partnerId: ctx.partner.id, error });
+      return new Map<string, number>();
+    });
+
     return {
       holdings: rows.map(({ reportedAt: _reportedAt, ...row }) => ({
         ...row,
@@ -61,6 +71,7 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
           nameByLwin.get(row.lwin18.slice(0, 7)) ??
           (row.brand && row.brand !== 'NA' ? row.brand : row.description) ??
           'Wine',
+        indicativePerBottle: listed.get(lwinPakKeyOf(row.lwin18)) ?? null,
       })),
       reportedAt: rows[0]?.reportedAt ?? null,
     };
