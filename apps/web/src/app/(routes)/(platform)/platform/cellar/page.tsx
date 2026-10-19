@@ -39,6 +39,9 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import Sheet from '@/app/_ui/components/Sheet/Sheet';
+import SheetContent from '@/app/_ui/components/Sheet/SheetContent';
+import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
@@ -178,6 +181,7 @@ const CellarPage = () => {
   const [memberNotes, setMemberNotes] = useState('');
   /* Set only when the member chooses to send this one somewhere else. */
   const [isBasketOpen, setIsBasketOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
   /* The wine being offered for sale, and the terms while they are being set. */
   const [sellingWine, setSellingWine] = useState<CellarWine | null>(null);
   const [sellLines, setSellLines] = useState<Map<string, number>>(new Map());
@@ -224,6 +228,8 @@ const CellarPage = () => {
           `Delivery request ${result.requestNumber} sent. We will confirm the costs for your approval.`,
         );
         setBasket(new Map());
+        setIsBasketOpen(false);
+        setIsNoteOpen(false);
         setDeliveryChoice(EMPTY_DELIVERY_CHOICE);
         setMemberNotes('');
         void refetchReleases();
@@ -459,6 +465,8 @@ const CellarPage = () => {
       wine: parcelIndex.get(stockId),
     }))
     .filter((line) => line.wine);
+  const basketBottles = [...basket.values()].reduce((sum, count) => sum + count, 0);
+  const basketWines = new Set(basketLines.map((line) => line.wine?.lwin18)).size;
 
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
@@ -821,6 +829,7 @@ const CellarPage = () => {
             value: money(totals.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
+            note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
             alert: false,
           },
           {
@@ -855,20 +864,25 @@ const CellarPage = () => {
             <div className="text-lg font-bold leading-tight tabular-nums">
               {card.value}
             </div>
-            <div className="text-text-muted text-[11px]">{card.label}</div>
+            <div className="text-text-muted inline-flex items-center gap-1 text-[11px]">
+              {card.label}
+              {'note' in card && card.note && (
+                <Tooltip>
+                  <TooltipTrigger aria-label={`About ${card.label.toLowerCase()}`}>
+                    <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[240px] text-left lg:max-w-[240px]">
+                    <Typography variant="bodyXs">{card.note}</Typography>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <div className="text-text-muted text-[10px]">{card.detail}</div>
           </div>
         ))}
       </div>
       )}
 
-      {!isUaeEmpty && totals.indicative > 0 && (
-        <p className="text-text-muted -mt-2 mb-4 text-[11px] leading-4">
-          Indicative value is based on Craft &amp; Culture&apos;s current list
-          prices where we list the wine; otherwise the price you paid. A guide,
-          not a valuation or an offer to buy.
-        </p>
-      )}
 
       {inbound.length > 0 && (
         <section className="border-border-muted mb-5 rounded-xl border">
@@ -2160,11 +2174,7 @@ const CellarPage = () => {
       )}
 
       {basket.size > 0 && (
-        <div
-          className={`border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 rounded-xl border shadow-xl ${
-            isBasketOpen ? 'max-h-[85vh] overflow-y-auto' : 'overflow-hidden'
-          }`}
-        >
+        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 overflow-hidden rounded-xl border shadow-xl">
           <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
@@ -2260,16 +2270,19 @@ const CellarPage = () => {
                         size="sm"
                         colorRole="primary"
                         className={`${DARK_ACTION} flex-1 sm:flex-none`}
-                        onClick={() => setIsBasketOpen(!isBasketOpen)}
+                        onClick={() => setIsBasketOpen(true)}
                       >
                         <ButtonContent>
-                          {isBasketOpen ? 'Add more bottles' : 'Review and send'}
+                          Review and send
                         </ButtonContent>
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setBasket(new Map())}
+                        onClick={() => {
+                          setBasket(new Map());
+                          setIsBasketOpen(false);
+                        }}
                       >
                         <ButtonContent>Clear</ButtonContent>
                       </Button>
@@ -2294,8 +2307,34 @@ const CellarPage = () => {
                       , so everything travels as a single delivery.
                     </Typography>
                   )}
-                  {isBasketOpen && (
-                    <div className="border-border-muted mt-2 max-h-[30vh] overflow-y-auto rounded-lg border">
+                </div>
+              );
+            })()}
+          </div>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Reviewing and sending happens in a panel of its own. Opened inside the
+        bar at the foot of the page, the form sat on top of the wine the member
+        was still choosing from and ran off a laptop screen. The bar stays as
+        the running total; the panel is the one place the request is finished.
+      */}
+      <Sheet open={isBasketOpen && basket.size > 0} onOpenChange={setIsBasketOpen}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+          <div className="border-border-muted border-b px-5 py-4">
+            <SheetTitle className="text-base font-semibold">Delivery request</SheetTitle>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
+              {basketBottles} {basketBottles === 1 ? 'bottle' : 'bottles'} from {basketWines}{' '}
+              {basketWines === 1 ? 'wine' : 'wines'}
+              {estimate?.priced && !isEstimating
+                ? ` · estimated ${money(estimate.totalUsd)} to deliver`
+                : ''}
+            </Typography>
+          </div>
+          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+                    <div className="border-border-muted rounded-lg border">
                       <table className="w-full text-xs">
                         <tbody className="divide-border-muted/60 divide-y">
                           {basketLines.map((line) => {
@@ -2353,16 +2392,12 @@ const CellarPage = () => {
                         </tbody>
                       </table>
                     </div>
-                  )}
-                </div>
-              );
-            })()}
             {/*
                Labelled, not placeholder-led. A placeholder vanishes the moment
                someone types, taking the only explanation of the field with it.
              */}
             <div
-              className={`grid gap-3 sm:grid-cols-2 ${isBasketOpen ? '' : 'hidden'}`}
+              className="grid gap-3 sm:grid-cols-2"
             >
               <div className="sm:col-span-2">
                 <DeliveryOptionsForm
@@ -2371,24 +2406,37 @@ const CellarPage = () => {
                   onChange={setDeliveryChoice}
                 />
               </div>
-              <label className="block sm:col-span-2">
-                <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                  Notes for our team (optional)
-                </span>
-                <Input
-                  value={memberNotes}
-                  onChange={(event) => setMemberNotes(event.target.value)}
-                  placeholder="Anything else we should know"
-                />
-              </label>
+              {isNoteOpen || memberNotes ? (
+                <label className="block sm:col-span-2">
+                  <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
+                    Note for our team
+                  </span>
+                  <Input
+                    value={memberNotes}
+                    onChange={(event) => setMemberNotes(event.target.value)}
+                    placeholder="Anything we should know"
+                    autoFocus={!memberNotes}
+                  />
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsNoteOpen(true)}
+                  className="text-text-muted hover:text-text-primary justify-self-start text-xs font-semibold"
+                >
+                  + Add a note for our team
+                </button>
+              )}
             </div>
+          </div>
+          <div className="border-border-muted border-t px-5 py-4">
             <div
-              className={`flex flex-wrap items-center gap-2 ${isBasketOpen ? '' : 'hidden'}`}
+              className="flex flex-col gap-2"
             >
               <Button
                 size="sm"
                 colorRole="primary"
-                        className={DARK_ACTION}
+                className={`${DARK_ACTION} w-full`}
                 isDisabled={isSaving || isSavingAddress}
                 onClick={async () => {
                   const choice = deliveryChoice;
@@ -2475,15 +2523,13 @@ const CellarPage = () => {
               >
                 <ButtonContent>Request delivery</ButtonContent>
               </Button>
-              <Typography variant="bodyXs" colorRole="muted">
-                We send you the costs for approval before any wine leaves
-                our warehouse.
+              <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                You approve the final cost before any wine leaves our warehouse.
               </Typography>
             </div>
           </div>
-          </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
 
       {/*
         One place to edit an account detail, and this is not it. The panel

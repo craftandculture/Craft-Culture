@@ -1,10 +1,13 @@
 'use client';
 
 import { IconGift, IconPlus } from '@tabler/icons-react';
+import { useState } from 'react';
 
 import Input from '@/app/_ui/components/Input/Input';
 
-import earliestDeliveryDate, { DELIVERY_LEAD_WORKING_DAYS } from '../utils/earliestDeliveryDate';
+import earliestDeliveryDate, {
+  DELIVERY_LEAD_WORKING_DAYS,
+} from '../utils/earliestDeliveryDate';
 
 export interface SavedAddress {
   id: string | null;
@@ -97,6 +100,17 @@ const DeliveryOptionsForm = ({
   /* With nothing saved there is nothing to choose, so the form opens on a new address */
   const isTyping = value.isNew || addresses.length === 0;
   const earliest = earliestDeliveryDate();
+  const earliestLabel = new Date(`${earliest}T12:00:00`).toLocaleDateString(
+    'en-GB',
+    {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    },
+  );
+  const [isChoosingDay, setIsChoosingDay] = useState(
+    Boolean(value.preferredDate),
+  );
 
   return (
     <div className="space-y-4">
@@ -252,46 +266,70 @@ const DeliveryOptionsForm = ({
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className={LABEL}>Preferred day (optional)</span>
+      {/*
+        "As soon as possible" is the default, and a day is something to opt
+        into. A bare date field showed today's date in Safari, which looked
+        chosen and was the one day that cannot be delivered.
+      */}
+      <div>
+        <span className={LABEL}>When</span>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: 'soonest', label: 'Earliest available' },
+            { id: 'day', label: 'Choose a day' },
+          ].map((option) => {
+            const isOn = option.id === 'day' ? isChoosingDay : !isChoosingDay;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isOn}
+                onClick={() => {
+                  setIsChoosingDay(option.id === 'day');
+                  if (option.id === 'soonest') set({ preferredDate: '' });
+                }}
+                className={`h-9 rounded-full px-3 text-xs font-semibold transition-colors ${
+                  isOn
+                    ? 'bg-text-primary text-surface-primary'
+                    : 'border-border-muted text-text-muted hover:text-text-primary border'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {isChoosingDay && (
           <Input
             type="date"
             min={earliest}
             value={value.preferredDate}
             onChange={(event) => set({ preferredDate: event.target.value })}
+            className="mt-2 sm:max-w-xs"
+            aria-label="Preferred day"
           />
-        </label>
-        <div>
-          <span className={LABEL}>Preferred time</span>
-          <div className="flex flex-wrap gap-1.5">
-            {WINDOWS.map((window) => (
-              <button
-                key={window.id}
-                type="button"
-                onClick={() => set({ preferredWindow: window.id })}
-                aria-pressed={value.preferredWindow === window.id}
-                className={`h-9 rounded-full px-3 text-xs font-semibold transition-colors ${
-                  value.preferredWindow === window.id
-                    ? 'bg-text-primary text-surface-primary'
-                    : 'border-border-muted text-text-muted hover:text-text-primary border'
-                }`}
-              >
-                {window.label}
-              </button>
-            ))}
-          </div>
+        )}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {WINDOWS.map((window) => (
+            <button
+              key={window.id}
+              type="button"
+              onClick={() => set({ preferredWindow: window.id })}
+              aria-pressed={value.preferredWindow === window.id}
+              className={`h-8 rounded-full px-3 text-xs font-medium transition-colors ${
+                value.preferredWindow === window.id
+                  ? 'bg-fill-muted text-text-primary'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {window.label}
+            </button>
+          ))}
         </div>
-        <p className="text-text-muted text-xs sm:col-span-2">
-          A preference, not a booking. Clearing wine from bond for delivery
-          takes about {DELIVERY_LEAD_WORKING_DAYS} working days, so the earliest
-          day you can choose is{' '}
-          {new Date(`${earliest}T12:00:00`).toLocaleDateString('en-GB', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-          . We confirm the day with you once the delivery is arranged.
+        <p className="text-text-muted mt-2 text-xs leading-5">
+          Wine is released from bond within {DELIVERY_LEAD_WORKING_DAYS} working
+          days of your request; the earliest available date is {earliestLabel}.
+          We will confirm the delivery date with you.
         </p>
       </div>
     </div>
