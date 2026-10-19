@@ -16,7 +16,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { upload } from '@vercel/blob/client';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
@@ -186,6 +186,19 @@ const LogisticsDocumentUpload = ({
   const [extractingDocId, setExtractingDocId] = useState<string | null>(null);
   const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  /*
+    One import per press, and one per document.
+
+    Pressing the extractor twice put SHP-2026-0030's 18-case invoice on the
+    shipment twice, then three times (19 October 2026). The busy flag is
+    state, so a second press before the screen redraws still got through; the
+    ref closes that gap. A document imported here is then marked, and its
+    extractor stays off until the page is reloaded. The server refuses a
+    repeat as well, for the case this page cannot see.
+  */
+  const importLock = useRef(false);
+  const [extractedDocId, setExtractedDocId] = useState<string | null>(null);
+  const [importedDocIds, setImportedDocIds] = useState<Set<string>>(new Set());
   /**
    * The currency to import in, once a person has settled it.
    *
@@ -236,8 +249,11 @@ const LogisticsDocumentUpload = ({
   // Extract items from document
   const handleExtract = useCallback(
     async (doc: LogisticsDocument) => {
+      if (isExtracting || importedDocIds.has(doc.id)) return;
+
       setIsExtracting(true);
       setExtractingDocId(doc.id);
+      setExtractedDocId(doc.id);
       setExtractionResult(null);
 
       try {
@@ -369,7 +385,7 @@ const LogisticsDocumentUpload = ({
         setExtractingDocId(null);
       }
     },
-    [trpcClient],
+    [trpcClient, isExtracting, importedDocIds],
   );
 
   // Import extracted items to shipment
@@ -395,6 +411,8 @@ const LogisticsDocumentUpload = ({
       return;
     }
 
+    if (importLock.current) return;
+    importLock.current = true;
     setIsImporting(true);
 
     try {
@@ -458,6 +476,9 @@ const LogisticsDocumentUpload = ({
         );
       }
 
+      if (extractedDocId) {
+        setImportedDocIds((current) => new Set(current).add(extractedDocId));
+      }
       setExtractionResult(null);
       setImportCurrency(null);
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
@@ -466,10 +487,12 @@ const LogisticsDocumentUpload = ({
       console.error('Import error:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to import items');
     } finally {
+      importLock.current = false;
       setIsImporting(false);
     }
   }, [
     extractionResult,
+    extractedDocId,
     importCurrency,
     shipmentId,
     trpcClient,
@@ -671,8 +694,12 @@ const LogisticsDocumentUpload = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleExtract(doc)}
-                      isDisabled={isExtracting}
-                      title="Extract items with AI"
+                      isDisabled={isExtracting || importedDocIds.has(doc.id)}
+                      title={
+                        importedDocIds.has(doc.id)
+                          ? 'Already imported to this shipment'
+                          : 'Extract items with AI'
+                      }
                     >
                       <Icon
                         icon={extractingDocId === doc.id ? IconLoader2 : IconSparkles}
