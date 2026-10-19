@@ -1,3 +1,9 @@
+## [2.0.423](https://github.com/craftandculture/Craft-Culture/compare/v2.0.422...v2.0.423) (2026-10-19)
+
+### Features
+
+* a delivery request is reviewed and sent in a side panel, with Earliest available as the default day, the note tucked behind a link and the value footnote moved into a tooltip ([cbfae07](https://github.com/craftandculture/Craft-Culture/commit/cbfae0735640281133d17dd4fe4a5cdaf3e59c41))
+
 ## [2.0.422](https://github.com/craftandculture/Craft-Culture/compare/v2.0.421...v2.0.422) (2026-10-19)
 
 ### Features
