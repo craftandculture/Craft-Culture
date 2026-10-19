@@ -1,9 +1,10 @@
 'use client';
 
 import { IconGift, IconPlus } from '@tabler/icons-react';
-import { addDays, format } from 'date-fns';
 
 import Input from '@/app/_ui/components/Input/Input';
+
+import earliestDeliveryDate, { DELIVERY_LEAD_WORKING_DAYS } from '../utils/earliestDeliveryDate';
 
 export interface SavedAddress {
   id: string | null;
@@ -52,6 +53,14 @@ export interface DeliveryOptionsFormProps {
   onChange: (value: DeliveryChoice) => void;
 }
 
+/**
+ * Gift deliveries, switched off for launch (Kevin, 19 October 2026): a
+ * recipient, their mobile and a message made the first delivery request harder
+ * than it needs to be. The fields stay in the request so turning this back on
+ * is this one line.
+ */
+const GIFTS_ENABLED = false;
+
 const LABEL =
   'text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider';
 
@@ -62,7 +71,8 @@ const WINDOWS = [
 ] as const;
 
 /**
- * Where a delivery goes, when the member would like it, and whether it is a gift
+ * Where a delivery goes, when the member would like it, and whether it is a
+ * gift
  *
  * Controlled: the cellar page owns the choice and sends it with the request.
  * Saved addresses are chosen, not retyped — four spellings of one villa leave
@@ -86,7 +96,7 @@ const DeliveryOptionsForm = ({
     : (value.addressId ?? fallbackAddress?.id ?? 'default');
   /* With nothing saved there is nothing to choose, so the form opens on a new address */
   const isTyping = value.isNew || addresses.length === 0;
-  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+  const earliest = earliestDeliveryDate();
 
   return (
     <div className="space-y-4">
@@ -94,25 +104,30 @@ const DeliveryOptionsForm = ({
         Asked first, because it changes the question that follows: "your
         address" becomes "their address".
       */}
-      <label className="flex cursor-pointer items-start gap-2.5">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={value.isGift}
-          onChange={(event) => set({ isGift: event.target.checked })}
-        />
-        <span>
-          <span className="text-text-primary flex items-center gap-1.5 text-sm font-semibold">
-            <IconGift size={15} className="text-emerald-700 dark:text-emerald-400" />
-            Send this as a gift
+      {GIFTS_ENABLED && (
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={value.isGift}
+            onChange={(event) => set({ isGift: event.target.checked })}
+          />
+          <span>
+            <span className="text-text-primary flex items-center gap-1.5 text-sm font-semibold">
+              <IconGift
+                size={15}
+                className="text-emerald-700 dark:text-emerald-400"
+              />
+              Send this as a gift
+            </span>
+            <span className="text-text-muted block text-xs">
+              Delivered to someone else, with a message from you if you wish.
+            </span>
           </span>
-          <span className="text-text-muted block text-xs">
-            Delivered to someone else, with a message from you if you wish.
-          </span>
-        </span>
-      </label>
+        </label>
+      )}
 
-      {value.isGift && (
+      {GIFTS_ENABLED && value.isGift && (
         <div className="grid gap-3 rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 sm:grid-cols-2 dark:border-emerald-900/50 dark:bg-emerald-500/5">
           <label className="block">
             <span className={LABEL}>Their name</span>
@@ -132,7 +147,7 @@ const DeliveryOptionsForm = ({
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className={LABEL}>Gift message &mdash; optional</span>
+            <span className={LABEL}>Gift message (optional)</span>
             <Input
               value={value.giftMessage}
               onChange={(event) => set({ giftMessage: event.target.value })}
@@ -145,9 +160,9 @@ const DeliveryOptionsForm = ({
             surprise someone, not when the driver turns away.
           */}
           <p className="text-text-muted text-xs leading-5 sm:col-span-2">
-            Whoever receives the wine must be 21 or over, and our driver may
-            ask to see their Emirates ID or passport. We will call them to
-            arrange a convenient time.
+            Whoever receives the wine must be 21 or over, and our driver may ask
+            to see their Emirates ID or passport. We will call them to arrange a
+            convenient time.
           </p>
         </div>
       )}
@@ -166,9 +181,7 @@ const DeliveryOptionsForm = ({
                 <button
                   key={id}
                   type="button"
-                  onClick={() =>
-                    set({ addressId: address.id, isNew: false })
-                  }
+                  onClick={() => set({ addressId: address.id, isNew: false })}
                   aria-pressed={isSelected}
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                     isSelected
@@ -200,8 +213,7 @@ const DeliveryOptionsForm = ({
                   : 'border-border-muted text-text-muted hover:text-text-primary'
               }`}
             >
-              <IconPlus size={14} />
-              A new address
+              <IconPlus size={14} />A new address
             </button>
           </div>
         )}
@@ -217,7 +229,7 @@ const DeliveryOptionsForm = ({
             <Input
               value={value.newInstructions}
               onChange={(event) => set({ newInstructions: event.target.value })}
-              placeholder="Access notes — gate code, who to ask for (optional)"
+              placeholder="Access notes such as a gate code or who to ask for (optional)"
               className="sm:col-span-2"
             />
             <label className="text-text-muted flex items-center gap-1.5 text-xs">
@@ -242,10 +254,10 @@ const DeliveryOptionsForm = ({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className={LABEL}>Preferred day &mdash; optional</span>
+          <span className={LABEL}>Preferred day (optional)</span>
           <Input
             type="date"
-            min={tomorrow}
+            min={earliest}
             value={value.preferredDate}
             onChange={(event) => set({ preferredDate: event.target.value })}
           />
@@ -271,8 +283,15 @@ const DeliveryOptionsForm = ({
           </div>
         </div>
         <p className="text-text-muted text-xs sm:col-span-2">
-          A preference, not a booking. We confirm the day with you once the
-          delivery is arranged.
+          A preference, not a booking. Clearing wine from bond for delivery
+          takes about {DELIVERY_LEAD_WORKING_DAYS} working days, so the earliest
+          day you can choose is{' '}
+          {new Date(`${earliest}T12:00:00`).toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          })}
+          . We confirm the day with you once the delivery is arranged.
         </p>
       </div>
     </div>

@@ -30,7 +30,7 @@ const count = (value: number) =>
  */
 const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
   const api = useTRPC();
-  const { membershipStatus, billedByCard, includedCases, cases, bottles, wines, intakes } = overview;
+  const { membershipStatus, billedByCard, includedCases, cases, intakes } = overview;
   const isActive = membershipStatus === 'active' || membershipStatus === 'past_due';
   const updateCard = useMutation(
     api.onboarding.member.updateCard.mutationOptions({
@@ -58,13 +58,9 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
             label: 'Membership active',
             tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
           }
-        : { label: 'Not started', tone: 'bg-surface-muted text-text-muted ring-border-muted' };
+        : { label: 'Not yet active', tone: 'bg-surface-muted text-text-muted ring-border-muted' };
 
-  const tiles = [
-    { value: count(wines), label: wines === 1 ? 'wine' : 'wines' },
-    { value: count(bottles), label: bottles === 1 ? 'bottle' : 'bottles' },
-    { value: count(cases), label: cases === 1 ? 'case stored' : 'cases stored' },
-  ];
+  const beyond = Math.max(0, cases - includedCases);
 
   return (
     <section className="border-border-muted bg-surface-primary h-fit rounded-xl border p-4 shadow-sm sm:p-5">
@@ -75,29 +71,31 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
         </span>
       </header>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {tiles.map((tile) => (
-          <div
-            key={tile.label}
-            className="rounded-lg border border-emerald-100 bg-gradient-to-b from-emerald-50/60 to-transparent px-2 py-2.5 text-center dark:border-emerald-900/50 dark:from-emerald-500/10"
-          >
-            <span className="text-text-primary block text-lg font-bold tabular-nums">{tile.value}</span>
-            <span className="text-text-muted block text-[10px] leading-tight sm:text-[11px]">{tile.label}</span>
-          </div>
-        ))}
-      </div>
+      {/*
+        Bottles and wines are already the first thing on the page, so this
+        card does not repeat them. It answers the membership question: how
+        much storage is held against what is included.
+      */}
+      <p className="mt-3">
+        <span className="text-text-primary text-2xl font-bold tabular-nums">{count(cases)}</span>{' '}
+        <span className="text-text-muted text-sm">{cases === 1 ? 'case stored' : 'cases stored'}</span>
+      </p>
 
       {/* The allowance as room to grow into, not as a meter running towards a charge */}
-      <div className="mt-4">
-        <div className="mb-1.5 flex items-baseline justify-between text-xs">
-          <span className="text-text-muted">Storage included in your membership</span>
-          <span className="text-text-primary font-semibold tabular-nums">
-            {count(Math.min(cases, includedCases))} of {includedCases} cases
-          </span>
+      <div className="mt-3">
+        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
+          <span className="text-text-muted">Included in your membership</span>
+          <span className="text-text-primary font-semibold tabular-nums">{includedCases} cases</span>
         </div>
         <div className="bg-surface-muted h-2 overflow-hidden rounded-full">
           <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${used}%` }} />
         </div>
+        {beyond > 0 && (
+          <p className="text-text-muted mt-1.5 text-xs">
+            {count(beyond)} {beyond === 1 ? 'case is' : 'cases are'} stored beyond those included.
+          </p>
+        )}
+        <p className="text-text-muted mt-1.5 text-[11px]">A case is twelve 75cl bottles; a case of six counts as half.</p>
       </div>
 
       {incomingCases > 0 && (
@@ -109,8 +107,8 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
 
       {!isActive && (
         <p className="text-text-muted mt-4 text-xs leading-5">
-          Your membership begins the first time you buy, sell, request a delivery or bring wine in, and includes
-          storage for {includedCases * 12} bottles.
+          Your membership begins the first time you buy, sell, request a delivery or bring wine in. It includes
+          storage for {includedCases} cases.
         </p>
       )}
 

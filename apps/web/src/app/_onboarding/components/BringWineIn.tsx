@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -19,7 +20,22 @@ export interface BringWineInProps {
   onAdded: () => void;
 }
 
-const offered = wineSources.filter((source) => source.value !== 'starting_fresh');
+/*
+  Buying is not bringing wine in, and it has its own tab in The Cellar List,
+  so it is offered here as a link beneath the choices rather than as one of
+  them.
+*/
+const offered = wineSources.filter(
+  (source) => source.value !== 'starting_fresh' && source.value !== 'uae_in_bond',
+);
+
+const SOURCE_LABEL: Partial<Record<WineSource, string>> = {
+  lcb: 'From LCB in the UK',
+  uk_eu_cellar: 'From another cellar or merchant',
+  investment_company: 'From an investment platform',
+  multiple_locations: 'From several places',
+  with_cc: 'Wine we already hold for you',
+};
 
 /**
  * Ask us to bring wine in: from LCB, another cellar, or what we already hold
@@ -51,9 +67,7 @@ const BringWineIn = ({ reference, onAdded }: BringWineInProps) => {
     <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm sm:p-5">
       {activationSheet}
       <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Bring your wine in</p>
-      <p className="text-text-muted mt-1 text-xs leading-5">
-        Should you wish us to bring wine in, tell us where it is held and we will take care of the rest.
-      </p>
+      <p className="text-text-primary mt-1 text-sm">Tell us where your wine is held and we will arrange the rest.</p>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {offered.map((item) => (
           <button
@@ -66,20 +80,19 @@ const BringWineIn = ({ reference, onAdded }: BringWineInProps) => {
                 : 'border-border-muted bg-surface-primary text-text-muted hover:text-text-primary'
             }`}
           >
-            {item.value === 'uae_in_bond'
-              ? 'Buy from our cellar'
-              : item.value === 'with_cc'
-                ? 'Already with C&C'
-                : item.value === 'lcb'
-                  ? 'From LCB'
-                  : item.value === 'investment_company'
-                    ? 'From an investment platform'
-                    : item.value === 'multiple_locations'
-                      ? 'From several places'
-                      : 'From another cellar'}
+            {SOURCE_LABEL[item.value] ?? item.label}
           </button>
         ))}
       </div>
+
+      {!source && (
+        <p className="text-text-muted mt-3 text-xs">
+          Looking to add something new?{' '}
+          <Link href="/platform/cellar/available" className="text-text-primary font-semibold underline underline-offset-2">
+            Browse The Cellar List
+          </Link>
+        </p>
+      )}
 
       {source && (
         <form

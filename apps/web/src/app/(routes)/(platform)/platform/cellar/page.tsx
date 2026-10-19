@@ -2160,7 +2160,11 @@ const CellarPage = () => {
       )}
 
       {basket.size > 0 && (
-        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 overflow-hidden rounded-xl border shadow-xl">
+        <div
+          className={`border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 rounded-xl border shadow-xl ${
+            isBasketOpen ? 'max-h-[85vh] overflow-y-auto' : 'overflow-hidden'
+          }`}
+        >
           <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
@@ -2310,11 +2314,20 @@ const CellarPage = () => {
                                       line.wine.caseConfig,
                                     )
                                   : ''}
-                                {parcel?.lotNumber && (
-                                  <span className="text-text-muted ml-2 font-mono text-[11px]">
-                                    lot {parcel.lotNumber}
-                                  </span>
-                                )}
+                                {/*
+                                  A lot number only tells two parcels of
+                                  the same wine apart; on its own it is
+                                  warehouse noise.
+                                */}
+                                {parcel?.lotNumber &&
+                                  basketLines.filter(
+                                    (other) =>
+                                      other.wine?.lwin18 === line.wine?.lwin18,
+                                  ).length > 1 && (
+                                    <span className="text-text-muted ml-2 font-mono text-[11px]">
+                                      lot {parcel.lotNumber}
+                                    </span>
+                                  )}
                               </td>
                               <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
                                 {describeQuantity(
@@ -2360,7 +2373,7 @@ const CellarPage = () => {
               </div>
               <label className="block sm:col-span-2">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                  Notes for our team &mdash; optional
+                  Notes for our team (optional)
                 </span>
                 <Input
                   value={memberNotes}

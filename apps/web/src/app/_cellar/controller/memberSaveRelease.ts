@@ -14,6 +14,9 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import saveReleaseDeliveryDetails from '../data/saveReleaseDeliveryDetails';
+import earliestDeliveryDate, {
+  DELIVERY_LEAD_WORKING_DAYS,
+} from '../utils/earliestDeliveryDate';
 import EDITABLE_STATUSES from '../utils/editableStatuses';
 import generateReleaseNumber from '../utils/generateReleaseNumber';
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
@@ -99,20 +102,17 @@ const memberSaveRelease = stockOwnerProcedure
     await assertActivated(ctx.partner.id);
 
     /*
-      A preferred day in the past is a slip, not a wish, and it would sit on
-      the request looking like a missed promise. Today counts as past: nothing
-      is delivered the same day it is asked for.
+      A preferred day sooner than the wine can be cleared from bond is a
+      promise the team cannot keep, and it would sit on the request looking
+      like a missed one. The same rule as the date picker.
     */
     if (input.delivery?.preferredDate) {
-      /* The UAE's date, not the server's: Dubai is UTC+4 all year */
-      const today = new Date(Date.now() + 4 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const earliest = earliestDeliveryDate();
 
-      if (input.delivery.preferredDate <= today) {
+      if (input.delivery.preferredDate < earliest) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Choose a preferred day from tomorrow onwards.',
+          message: `Clearing wine from bond takes about ${DELIVERY_LEAD_WORKING_DAYS} working days. Choose a preferred day from ${new Date(`${earliest}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })} onwards.`,
         });
       }
     }
