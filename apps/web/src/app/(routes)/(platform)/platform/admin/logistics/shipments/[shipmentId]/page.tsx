@@ -115,6 +115,59 @@ const isCompleteLwin = (value: string | null | undefined) =>
  * @param productName - The name as billed
  * @returns Whether the absence of a vintage is intentional
  */
+type ItemSortKey = 'document' | 'product' | 'producer' | 'vintage' | 'lwin' | 'cases' | 'bottles' | 'cost';
+
+const ITEM_SORTS: { key: ItemSortKey; label: string }[] = [
+  { key: 'document', label: 'Document order' },
+  { key: 'product', label: 'Wine' },
+  { key: 'producer', label: 'Producer' },
+  { key: 'vintage', label: 'Vintage' },
+  { key: 'lwin', label: 'LWIN' },
+  { key: 'cases', label: 'Cases' },
+  { key: 'bottles', label: 'Bottles' },
+  { key: 'cost', label: 'Cost per bottle' },
+];
+
+/** One comparison for every sort, so a header and the menu cannot disagree */
+const compareItems = (
+  key: ItemSortKey,
+  a: {
+    sortOrder?: number | null;
+    productName: string;
+    producer?: string | null;
+    vintage?: number | null;
+    lwin?: string | null;
+    cases?: number | null;
+    totalBottles?: number | null;
+    productCostPerBottle?: number | null;
+  },
+  b: typeof a,
+) => {
+  const text = (x?: string | null, y?: string | null) =>
+    (x ?? '').localeCompare(y ?? '', 'en', { sensitivity: 'base' });
+  const num = (x?: number | null, y?: number | null) => (x ?? -Infinity) - (y ?? -Infinity);
+
+  switch (key) {
+    case 'product':
+      // Name, then vintage, so the same wine's years sit together in order
+      return text(a.productName, b.productName) || num(a.vintage, b.vintage);
+    case 'producer':
+      return text(a.producer, b.producer) || text(a.productName, b.productName) || num(a.vintage, b.vintage);
+    case 'vintage':
+      return num(a.vintage, b.vintage) || text(a.productName, b.productName);
+    case 'lwin':
+      return text(a.lwin, b.lwin);
+    case 'cases':
+      return num(a.cases, b.cases);
+    case 'bottles':
+      return num(a.totalBottles, b.totalBottles);
+    case 'cost':
+      return num(a.productCostPerBottle, b.productCostPerBottle);
+    default:
+      return num(a.sortOrder, b.sortOrder);
+  }
+};
+
 const isNonVintage = (lwin: string | null, productName: string) =>
   /^\d{7}-0000-/.test(lwin ?? '') ||
   /\b(nv|non[-\s]?vintage|mv|multi[-\s]?vintage)\b/i.test(productName);
@@ -274,6 +327,16 @@ const ShipmentDetailPage = () => {
    * it. The count is the handle — clicking it shows exactly those lines.
    */
   const [detailGap, setDetailGap] = useState<string | null>(null);
+  /*
+    How the lines are ordered and narrowed. Document order is the default, so
+    the table reads against the invoice; sorting by wine lines up three
+    vintages of one Meursault that the supplier listed apart.
+  */
+  const [itemSort, setItemSort] = useState<{ key: ItemSortKey; dir: 'asc' | 'desc' }>({
+    key: 'document',
+    dir: 'asc',
+  });
+  const [itemFilter, setItemFilter] = useState('');
   const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
   const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
   const [sheetForm, setSheetForm] = useState({
@@ -1630,9 +1693,33 @@ const ShipmentDetailPage = () => {
           const detailedCount = items.filter((i) => missingFor(i).length === 0).length;
 
           /** Narrowed to one gap when its count is clicked, else everything */
-          const shownItems = detailGap
+          const needle = itemFilter.trim().toLowerCase();
+          const shownItems = (detailGap
             ? items.filter((i) => missingFor(i).includes(detailGap))
-            : items;
+            : items
+          )
+            .filter(
+              (i) =>
+                !needle ||
+                [i.productName, i.producer, i.lwin, i.supplierSku, i.vintage ? String(i.vintage) : null]
+                  .filter(Boolean)
+                  .some((field) => String(field).toLowerCase().includes(needle)),
+            )
+            .slice()
+            .sort((a, b) => {
+              const order = compareItems(itemSort.key, a, b);
+              return itemSort.dir === 'asc' ? order : -order;
+            });
+
+          /** A header sorts by its column; pressing it again turns the order round */
+          const sortBy = (key: ItemSortKey) =>
+            setItemSort((current) => ({
+              key,
+              dir: current.key === key && current.dir === 'asc' ? 'desc' : 'asc',
+            }));
+          const arrow = (key: ItemSortKey) =>
+            itemSort.key === key ? (itemSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+          const headerButton = 'uppercase tracking-wide hover:text-text-primary';
 
           /** Named per field, so it is obvious which repair is wanted */
           const missingByField = DETAIL_FIELDS.map((field) => ({
@@ -2279,17 +2366,83 @@ const ShipmentDetailPage = () => {
                       </Button>
                     </div>
                   ) : (
+                    <>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <input
+                        value={itemFilter}
+                        onChange={(e) => setItemFilter(e.target.value)}
+                        placeholder="Filter by wine, producer, vintage or LWIN"
+                        className="h-9 w-full rounded-lg border border-border-muted bg-surface-primary px-3 text-sm sm:w-80"
+                      />
+                      <select
+                        value={itemSort.key}
+                        onChange={(e) => setItemSort({ key: e.target.value as ItemSortKey, dir: 'asc' })}
+                        aria-label="Sort lines"
+                        className="h-9 rounded-lg border border-border-muted bg-surface-primary px-2 text-sm"
+                      >
+                        {ITEM_SORTS.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            Sort: {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {itemSort.key !== 'document' && (
+                        <button
+                          type="button"
+                          onClick={() => setItemSort((c) => ({ ...c, dir: c.dir === 'asc' ? 'desc' : 'asc' }))}
+                          className="h-9 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-muted hover:text-text-primary"
+                        >
+                          {itemSort.dir === 'asc' ? 'A → Z / low → high' : 'Z → A / high → low'}
+                        </button>
+                      )}
+                      {(needle || itemSort.key !== 'document') && (
+                        <span className="text-xs text-text-muted">
+                          {shownItems.length} of {items.length} lines
+                          {' · '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setItemFilter('');
+                              setItemSort({ key: 'document', dir: 'asc' });
+                            }}
+                            className="underline underline-offset-2"
+                          >
+                            Reset
+                          </button>
+                        </span>
+                      )}
+                    </div>
                     <div className="overflow-x-auto -mx-6">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
-                            <th className="pb-3 pl-6 pr-4">Product</th>
-                            <th className="pb-3 pr-4">LWIN / SKU</th>
+                            <th className="pb-3 pl-6 pr-4">
+                              <button type="button" onClick={() => sortBy('product')} className={headerButton}>
+                                Product{arrow('product')}
+                              </button>
+                            </th>
+                            <th className="pb-3 pr-4">
+                              <button type="button" onClick={() => sortBy('lwin')} className={headerButton}>
+                                LWIN / SKU{arrow('lwin')}
+                              </button>
+                            </th>
                             <th className="pb-3 pr-4">HS</th>
                             <th className="pb-3 pr-4 text-center">Pack</th>
-                            <th className="pb-3 pr-4 text-right">Cases</th>
-                            <th className="pb-3 pr-4 text-right">Bottles</th>
-                            <th className="pb-3 pr-4 text-right">Cost/Btl</th>
+                            <th className="pb-3 pr-4 text-right">
+                              <button type="button" onClick={() => sortBy('cases')} className={headerButton}>
+                                Cases{arrow('cases')}
+                              </button>
+                            </th>
+                            <th className="pb-3 pr-4 text-right">
+                              <button type="button" onClick={() => sortBy('bottles')} className={headerButton}>
+                                Bottles{arrow('bottles')}
+                              </button>
+                            </th>
+                            <th className="pb-3 pr-4 text-right">
+                              <button type="button" onClick={() => sortBy('cost')} className={headerButton}>
+                                Cost/Btl{arrow('cost')}
+                              </button>
+                            </th>
                             <th className="pb-3 pr-4 text-right">Landed/Btl</th>
                             <th className="pb-3 pr-4 text-right">Margin</th>
                             <th className="pb-3 pr-6"></th>
@@ -2640,6 +2793,7 @@ const ShipmentDetailPage = () => {
                         </tfoot>
                       </table>
                     </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
