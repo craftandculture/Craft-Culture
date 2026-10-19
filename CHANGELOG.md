@@ -1,3 +1,9 @@
+## [2.0.435](https://github.com/craftandculture/Craft-Culture/compare/v2.0.434...v2.0.435) (2026-10-19)
+
+### Features
+
+* a whole LCB delivery can be assigned to a member in one step on the UK bond tab, grouped by the day LCB received it, with one notice to the member ([a372e74](https://github.com/craftandculture/Craft-Culture/commit/a372e741aee5bda68a9016c3929b6332a95feda4))
+
 ## [2.0.434](https://github.com/craftandculture/Craft-Culture/compare/v2.0.433...v2.0.434) (2026-10-19)
 
 ### Bug Fixes
