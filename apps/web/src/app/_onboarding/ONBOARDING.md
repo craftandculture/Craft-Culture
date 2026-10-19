@@ -17,6 +17,7 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 
 **Billing mode** — `CELLAR_BILLING_MODE` (Vercel env): `invoice` (default) or `card`.
 - `invoice`: membership billed through **Zoho Books**. The first action (after the Emirates ID) activates the cellar at once and opens a Team Tasks job, *"<member> — set up monthly membership invoice"*, to create the recurring invoice (AED 600/month; VAT as confirmed by our tax adviser). Extra storage is read off **Cellar members → Storage** and added to that month's invoice. Non-payment: **Pause** on the Storage tab (status `past_due`) stops buy/release/sell until **Resume**; a paused member cannot re-activate themselves.
+- **Invoices page** (Your cellar → Invoices): the member's Zoho Books invoices, read live, with what is owed, how to pay (invoice number as reference) and the PDF. It shows only the Zoho customer linked on **Cellar members → Members → Zoho**; never matched by name. Hidden from view-only guests.
 - `card`: Zoho Billing **Premium** (subscriptions, hosted card pages, dunning) — the flow below. Set only once Billing, the gateway, plan and add-on exist.
 
 **Activation (first action)** — card mode

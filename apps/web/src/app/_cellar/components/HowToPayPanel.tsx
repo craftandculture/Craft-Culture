@@ -13,8 +13,13 @@ export interface HowToPayPanelProps {
     currency?: string;
     note?: string;
   } | null;
-  amountUsd: number;
+  /** The amount in USD, with an AED guide beside it */
+  amountUsd?: number;
+  /** An amount billed in AED, shown as it stands */
+  amountAed?: number;
   reference: string;
+  /** Purchases have an "I have paid" button to point at; invoices do not */
+  confirmHint?: boolean;
 }
 
 const AED_PER_USD = 3.6725;
@@ -27,12 +32,16 @@ const AED_PER_USD = 3.6725;
  * are set in Index, the member is told they will follow by email rather than
  * shown an empty box.
  */
-const HowToPayPanel = ({ details, amountUsd, reference }: HowToPayPanelProps) => {
-  const amount = `USD ${amountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const amountAed = `AED ${(amountUsd * AED_PER_USD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const HowToPayPanel = ({ details, amountUsd, amountAed, reference, confirmHint = true }: HowToPayPanelProps) => {
+  const figure = (currency: string, value: number) =>
+    `${currency} ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const amount =
+    amountAed !== undefined
+      ? { value: figure('AED', amountAed) }
+      : { value: figure('USD', amountUsd ?? 0), hint: `about ${figure('AED', (amountUsd ?? 0) * AED_PER_USD)}` };
 
   const rows: { label: string; value: string | undefined; hint?: string; strong?: boolean }[] = [
-    { label: 'Amount', value: amount, hint: `about ${amountAed}`, strong: true },
+    { label: 'Amount', ...amount, strong: true },
     { label: 'Reference', value: reference, hint: 'please include this exactly', strong: true },
     ...(details
       ? [
@@ -64,8 +73,10 @@ const HowToPayPanel = ({ details, amountUsd, reference }: HowToPayPanelProps) =>
         <div>
           <p className="text-text-primary text-sm font-semibold">How to pay</p>
           <p className="text-text-muted text-xs leading-5">
-            By bank transfer to Craft &amp; Culture{details?.currency ? `, in ${details.currency}` : ''}. Once it is
-            sent, press &ldquo;I have paid&rdquo; so that we can confirm it.
+            By bank transfer to Craft &amp; Culture{details?.currency ? `, in ${details.currency}` : ''}.
+            {confirmHint
+              ? <> Once it is sent, press &ldquo;I have paid&rdquo; so that we can confirm it.</>
+              : ' Payment is due on receipt of the invoice.'}
           </p>
         </div>
       </div>

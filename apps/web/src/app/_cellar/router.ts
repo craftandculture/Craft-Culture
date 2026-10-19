@@ -29,6 +29,8 @@ import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocum
 import memberEstimateRelease from './controller/memberEstimateRelease';
 import memberGetAccess from './controller/memberGetAccess';
 import memberGetAddresses from './controller/memberGetAddresses';
+import memberGetInvoicePdf from './controller/memberGetInvoicePdf';
+import memberGetInvoices from './controller/memberGetInvoices';
 import memberGetProfile from './controller/memberGetProfile';
 import memberGetReleases from './controller/memberGetReleases';
 import memberGetStatement from './controller/memberGetStatement';
@@ -59,6 +61,8 @@ const memberRouter = createTRPCRouter({
   getReleases: memberGetReleases,
   getUkHoldings: memberGetUkHoldings,
   getStatement: memberGetStatement,
+  getInvoices: memberGetInvoices,
+  getInvoicePdf: memberGetInvoicePdf,
   getUkMoves: memberGetUkMoves,
   requestUkMove: memberRequestUkMove,
   withdrawUkMove: memberWithdrawUkMove,

@@ -9,6 +9,7 @@ import {
   IconFileText,
   IconHistory,
   IconInfoCircle,
+  IconReceipt,
   IconRefresh,
   IconSearch,
   IconShip,
@@ -191,6 +192,11 @@ const CellarPage = () => {
 
   /* A view-only guest is refused every change on the server; offer none */
   const isViewer = profile?.cellarRole === 'viewer';
+  const { data: invoices } = useQuery({
+    ...api.cellar.member.getInvoices.queryOptions(),
+    enabled: Boolean(profile) && !isViewer,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: addressData, refetch: refetchAddresses } = useQuery({
     ...api.cellar.member.getAddresses.queryOptions(),
@@ -730,6 +736,15 @@ const CellarPage = () => {
             <IconFileText size={14} />
             Statements
           </Link>
+          {!isViewer && (
+            <Link
+              href="/platform/cellar/invoices"
+              className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
+            >
+              <IconReceipt size={14} />
+              Invoices
+            </Link>
+          )}
         </div>
       </header>
 
@@ -740,6 +755,31 @@ const CellarPage = () => {
         yet, for whom they are the whole story.
       */}
       {isViewer && <ViewOnlyNotice />}
+      {/*
+        Payment is due on receipt, so an unpaid invoice is the one figure
+        about money the cellar shows. Nothing appears while the member is up
+        to date: membership costs are not a running total to watch.
+      */}
+      {!isViewer && invoices?.state === 'ok' && invoices.due.length > 0 && (
+        <Link
+          href="/platform/cellar/invoices"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-gradient-to-b from-amber-50/70 to-transparent px-4 py-3 dark:border-amber-900/50 dark:from-amber-500/10"
+        >
+          <span className="flex items-center gap-2.5">
+            <IconReceipt size={16} className="text-amber-700 dark:text-amber-300" />
+            <span className="text-text-primary text-sm font-semibold">
+              {invoices.due
+                .map(
+                  (due) =>
+                    `${due.currency} ${due.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                )
+                .join(' + ')}{' '}
+              to pay
+            </span>
+          </span>
+          <span className="text-text-primary text-xs font-semibold">View invoices &rarr;</span>
+        </Link>
+      )}
       <CellarOverviewPanel section="setup" readOnly={isViewer} />
       {isEmptyCellar && <CellarOverviewPanel section="details" readOnly={isViewer} />}
       {activationSheet}

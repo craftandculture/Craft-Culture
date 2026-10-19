@@ -11,6 +11,8 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import ZohoCustomerLink from './admin/ZohoCustomerLink';
+
 type Filter = 'all' | 'waiting' | 'overage' | 'dormant';
 
 const money = (value: number) =>
@@ -190,7 +192,8 @@ const CellarMembersList = () => {
                 <th className="px-3 py-2 text-right">Value</th>
                 <th className="px-3 py-2 text-right">Over {includedCases}</th>
                 <th className="px-3 py-2 text-left">Waiting</th>
-                <th className="px-4 py-2 text-right">Last movement</th>
+                <th className="px-3 py-2 text-right">Last movement</th>
+                <th className="px-4 py-2 text-right">Zoho</th>
               </tr>
             </thead>
             <tbody>
@@ -260,8 +263,16 @@ const CellarMembersList = () => {
                       <span className="text-text-muted text-xs">—</span>
                     )}
                   </td>
-                  <td className="text-text-muted px-4 py-2.5 text-right text-xs">
+                  <td className="text-text-muted px-3 py-2.5 text-right text-xs">
                     {since(member.lastMovementAt)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <ZohoCustomerLink
+                      partnerId={member.id}
+                      memberName={member.name}
+                      zohoContactId={member.zohoContactId}
+                      onLinked={() => void refetch()}
+                    />
                   </td>
                 </tr>
               ))}

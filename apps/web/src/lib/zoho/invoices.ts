@@ -5,7 +5,9 @@
  * Used to create invoices when orders are confirmed and track payment status.
  */
 
-import { zohoFetch } from './client';
+import serverConfig from '@/server.config';
+
+import { getAccessToken, getZohoUrls, isZohoConfigured, zohoFetch } from './client';
 import type {
   ZohoCreateInvoiceRequest,
   ZohoInvoice,
@@ -158,9 +160,42 @@ const getInvoiceStatuses = async (invoiceIds: string[]) => {
   return statuses;
 };
 
+/**
+ * An invoice as Zoho prints it, as a PDF
+ *
+ * zohoFetch reads JSON, and Zoho answers `accept=pdf` with the file itself,
+ * so this makes the one raw request. The document is Zoho's own, so what a
+ * member downloads is exactly what our accounts hold.
+ *
+ * @param invoiceId - Zoho invoice ID
+ * @returns The PDF bytes
+ */
+const getInvoicePdf = async (invoiceId: string) => {
+  if (!isZohoConfigured()) {
+    throw new Error('Zoho integration not configured');
+  }
+
+  const token = await getAccessToken();
+  const url = new URL(`${getZohoUrls().api}/invoices/${encodeURIComponent(invoiceId)}`);
+  url.searchParams.set('organization_id', serverConfig.zohoOrganizationId!.replace(/\s/g, ''));
+  url.searchParams.set('accept', 'pdf');
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Zoho-oauthtoken ${token}` },
+    signal: AbortSignal.timeout(60000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Zoho API error: ${response.status} - ${await response.text()}`);
+  }
+
+  return Buffer.from(await response.arrayBuffer());
+};
+
 export {
   createInvoice,
   getInvoice,
+  getInvoicePdf,
   getInvoiceStatuses,
   listInvoices,
   markInvoiceAsSent,

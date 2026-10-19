@@ -42,6 +42,7 @@ const adminGetMembers = staffAdminProcedure.query(async () => {
       id: partners.id,
       name: partners.businessName,
       type: partners.type,
+      zohoContactId: partners.zohoContactId,
     })
     .from(partners)
     .where(
@@ -209,6 +210,7 @@ const adminGetMembers = staffAdminProcedure.query(async () => {
       /** The member's reference, quoted on wine sent to LCB for them */
       code: codes.get(member.id) ?? null,
       type: member.type,
+      zohoContactId: member.zohoContactId,
       cases,
       bottles: holding?.bottles ?? 0,
       wines: holding?.wines ?? 0,
