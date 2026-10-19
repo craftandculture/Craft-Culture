@@ -1,3 +1,9 @@
+## [2.0.443](https://github.com/craftandculture/Craft-Culture/compare/v2.0.442...v2.0.443) (2026-10-19)
+
+### Features
+
+* the cellar sorts by wine, producer, vintage, size or bottles from its column headings, location pills show only when wine is held in more than one place, and the action column reads Move for UK wine ([2931cc7](https://github.com/craftandculture/Craft-Culture/commit/2931cc7f5ebcf024d2e5dc0de7a38f2b392a7423))
+
 ## [2.0.442](https://github.com/craftandculture/Craft-Culture/compare/v2.0.441...v2.0.442) (2026-10-19)
 
 ### Features
