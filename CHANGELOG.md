@@ -1,3 +1,9 @@
+## [2.0.422](https://github.com/craftandculture/Craft-Culture/compare/v2.0.421...v2.0.422) (2026-10-19)
+
+### Features
+
+* Order Check compares a client's LPO with our sales order and invoices, names every difference by document and line, keeps the LPO with the order, and lets a person mark the order checked or export it to Excel ([ac1d459](https://github.com/craftandculture/Craft-Culture/commit/ac1d4596bf1da02bd634a9e44d4abc6fe49c9ee6))
+
 ## [2.0.421](https://github.com/craftandculture/Craft-Culture/compare/v2.0.420...v2.0.421) (2026-10-19)
 
 ### Bug Fixes
