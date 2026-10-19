@@ -115,6 +115,13 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     );
   }
 
+  if (day.withdrawals.length > 0) {
+    const bottles = day.withdrawals.reduce((sum, w) => sum + w.bottles, 0);
+    notes.push(
+      `${bottles} bottle${bottles === 1 ? '' : 's'} of ${day.withdrawals.length} wine${day.withdrawals.length === 1 ? '' : 's'} left their stock with no sale on their own figures (photography, samples or a correction) — not counted as sales.`,
+    );
+  }
+
   if (day.restocks.length > 0) {
     notes.push(
       `${day.restocks.length} wine${day.restocks.length === 1 ? '' : 's'} rose by more than we delivered (restock not on our invoices).`,

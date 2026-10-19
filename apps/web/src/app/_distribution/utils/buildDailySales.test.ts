@@ -16,6 +16,7 @@ const row = (over: Partial<PairRow>): PairRow => ({
   heldFrom: 12,
   heldTo: 12,
   soldLast30d: 4,
+  soldLast30dFrom: null,
   delivered: 0,
   bottlePrice: 100,
   currency: 'USD',
@@ -45,6 +46,37 @@ describe('buildDailySales', () => {
     expect(days[0]?.consigned.bottles).toBe(0);
     expect(days[0]?.lines).toEqual([]);
     expect(days[0]?.restocks).toEqual([{ productName: 'Tignanello 2019', bottles: 6 }]);
+  });
+
+  it('counts a fall as sold only as far as their own 30-day figure rose', () => {
+    // Down 3, but their sales figure rose by 1: one sale, two withdrawn
+    const { days } = buildDailySales([
+      row({ heldFrom: 12, heldTo: 9, soldLast30dFrom: 4, soldLast30d: 5 }),
+    ]);
+
+    expect(days[0]?.consigned).toEqual({ bottles: 1, value: 100 });
+    expect(days[0]?.withdrawals).toEqual([
+      { productName: 'Tignanello 2019', ownerName: 'Crurated', bottles: 2 },
+    ]);
+  });
+
+  it('lists a bottle taken for photography as withdrawn, not sold', () => {
+    const { days } = buildDailySales([
+      row({ heldFrom: 6, heldTo: 5, soldLast30dFrom: 0, soldLast30d: 0 }),
+    ]);
+
+    expect(days[0]?.consigned.bottles).toBe(0);
+    expect(days[0]?.lines).toEqual([]);
+    expect(days[0]?.withdrawals).toHaveLength(1);
+  });
+
+  it('falls back to the count when their figure fell, as a sale left the window', () => {
+    const { days } = buildDailySales([
+      row({ heldFrom: 6, heldTo: 5, soldLast30dFrom: 3, soldLast30d: 2 }),
+    ]);
+
+    expect(days[0]?.consigned.bottles).toBe(1);
+    expect(days[0]?.withdrawals).toEqual([]);
   });
 
   it('keeps consigned and bought apart, consigned first', () => {

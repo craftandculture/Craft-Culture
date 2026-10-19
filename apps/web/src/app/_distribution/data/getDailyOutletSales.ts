@@ -183,6 +183,7 @@ const getDailyOutletSales = async (
            COALESCE(o.held, 0) AS "heldFrom",
            COALESCE(c.held, 0) AS "heldTo",
            c.sold_last_30d AS "soldLast30d",
+           o.sold_last_30d AS "soldLast30dFrom",
            COALESCE(d.bottles, 0) AS delivered,
            pr.bottle_price AS "bottlePrice",
            pr.currency,

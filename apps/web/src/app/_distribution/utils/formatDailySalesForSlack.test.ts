@@ -21,6 +21,7 @@ const sales = (lines: number): DailyOutletSales => ({
       consigned: { bottles: lines, value: lines * 100 },
       bought: { bottles: 0, value: 0 },
       restocks: [],
+      withdrawals: [],
       stock: [
         { ownerName: 'Crurated', regime: 'consigned' as const, category: 'wine' as const, bottles: 40, value: 4000, unvalued: 0 },
       ],

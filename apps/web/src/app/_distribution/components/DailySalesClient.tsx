@@ -972,6 +972,15 @@ const DailySalesClient = () => {
             </div>
           )}
 
+          {day.withdrawals.length > 0 ? (
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p>
+                Left their stock with no sale on their own figures (photography, samples or a correction):{' '}
+                {day.withdrawals.map((w) => `${w.productName} (−${w.bottles})`).join(', ')}. Not counted as sales.
+              </p>
+            </Typography>
+          ) : null}
+
           {day.restocks.length > 0 ? (
             <Typography variant="bodyXs" colorRole="muted" asChild>
               <p>

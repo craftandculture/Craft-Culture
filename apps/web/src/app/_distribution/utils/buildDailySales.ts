@@ -21,7 +21,10 @@ export interface PairRow {
   lwin: string | null;
   heldFrom: number;
   heldTo: number;
+  /** The outlet's own rolling 30-day sales, at the closing count */
   soldLast30d: number | null;
+  /** The same figure at the opening count, so the day's rise can be read */
+  soldLast30dFrom: number | null;
   delivered: number;
   bottlePrice: number | null;
   currency: string | null;
@@ -54,6 +57,11 @@ export interface DailySalesDay {
   lines: DailySaleLine[];
   /** Counts that rose by more than we delivered — a restock, not a sale */
   restocks: { productName: string; bottles: number }[];
+  /**
+   * Bottles that left the count without the outlet recording a sale —
+   * photography, samples, breakage or a stock correction. Not counted as sold.
+   */
+  withdrawals: { productName: string; ownerName: string | null; bottles: number }[];
   /** What the outlet held at the close of the window, grouped for the filters */
   stock: StockGroup[];
 }
@@ -124,7 +132,8 @@ export interface DailyOutletSales {
  *     sold = held at the start + delivered since − held at the end
  *
  * A negative result is a restock we did not invoice and is listed as one,
- * never counted as a negative sale. Totals are kept in the dominant currency
+ * never counted as a negative sale. A fall the outlet's own sales figure does
+ * not account for is listed as a withdrawal, never counted as a sale. Totals are kept in the dominant currency
  * only, so a line invoiced in another currency cannot be added to them.
  *
  * @example
@@ -159,6 +168,7 @@ const buildDailySales = (rows: PairRow[]) => {
         bought: { bottles: 0, value: 0 },
         lines: [],
         restocks: [],
+        withdrawals: [],
         stock: [],
       };
       byDay.set(key, day);
@@ -173,10 +183,33 @@ const buildDailySales = (rows: PairRow[]) => {
 
     if (movement === 0) continue;
 
-    const regime = row.regime === 'consigned' ? 'consigned' : 'bought';
-    const value = row.bottlePrice !== null ? movement * row.bottlePrice : null;
+    /*
+      A falling count is not proof of a sale: a bottle taken for photography or
+      a sample leaves it too. The outlet's own rolling 30-day figure rises only
+      for a sale, so a bottle is counted sold only as far as that figure rose.
+      When it fell, a sale from 30 days ago dropped out of the window and the
+      day's rise cannot be read, so the count alone decides, as before.
+    */
+    const rose =
+      row.soldLast30d !== null && row.soldLast30dFrom !== null
+        ? row.soldLast30d - row.soldLast30dFrom
+        : null;
+    const sold = rose === null || rose < 0 ? movement : Math.min(movement, rose);
 
-    day[regime].bottles += movement;
+    if (movement > sold) {
+      day.withdrawals.push({
+        productName: row.productName,
+        ownerName: ownerOf(row),
+        bottles: movement - sold,
+      });
+    }
+
+    if (sold === 0) continue;
+
+    const regime = row.regime === 'consigned' ? 'consigned' : 'bought';
+    const value = row.bottlePrice !== null ? sold * row.bottlePrice : null;
+
+    day[regime].bottles += sold;
 
     if (value !== null) {
       day[regime].value += value;
@@ -193,7 +226,7 @@ const buildDailySales = (rows: PairRow[]) => {
       category: classifyDrink(row.productName),
       ownerName: ownerOf(row),
       regime,
-      sold: movement,
+      sold,
       heldAfter: row.heldTo,
       value,
       currency: row.currency,
@@ -208,6 +241,7 @@ const buildDailySales = (rows: PairRow[]) => {
         (a.regime === b.regime ? 0 : a.regime === 'consigned' ? -1 : 1) || b.sold - a.sold,
     );
     day.restocks.sort((a, b) => b.bottles - a.bottles);
+    day.withdrawals.sort((a, b) => b.bottles - a.bottles);
   }
 
   /*
