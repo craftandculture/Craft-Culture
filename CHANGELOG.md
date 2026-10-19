@@ -1,3 +1,9 @@
+## [2.0.442](https://github.com/craftandculture/Craft-Culture/compare/v2.0.441...v2.0.442) (2026-10-19)
+
+### Features
+
+* UK wine can be selected for a move to the UAE all at once, or everything a search or filter shows, then trimmed per wine ([a0841f0](https://github.com/craftandculture/Craft-Culture/commit/a0841f01b6ceb1035dda273413d1414d702f30cc))
+
 ## [2.0.441](https://github.com/craftandculture/Craft-Culture/compare/v2.0.440...v2.0.441) (2026-10-19)
 
 ### Features
