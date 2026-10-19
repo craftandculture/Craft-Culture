@@ -1,3 +1,9 @@
+## [2.0.416](https://github.com/craftandculture/Craft-Culture/compare/v2.0.415...v2.0.416) (2026-10-19)
+
+### Features
+
+* Available now is renamed The Cellar List across the member portal ([dffd2df](https://github.com/craftandculture/Craft-Culture/commit/dffd2df34d43f7bd8f3cfd57107f936ef9f5e7e0))
+
 ## [2.0.415](https://github.com/craftandculture/Craft-Culture/compare/v2.0.414...v2.0.415) (2026-10-19)
 
 ### Bug Fixes
