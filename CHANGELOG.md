@@ -1,3 +1,9 @@
+## [2.0.440](https://github.com/craftandculture/Craft-Culture/compare/v2.0.439...v2.0.440) (2026-10-19)
+
+### Features
+
+* LCB imports keep each case's condition note and declared value, UK wine is valued at our list price or what it was declared at, and a move to the UAE can take part of a line by the case ([a4bacea](https://github.com/craftandculture/Craft-Culture/commit/a4baceafc394c537f753afbb8675082369001143))
+
 ## [2.0.439](https://github.com/craftandculture/Craft-Culture/compare/v2.0.438...v2.0.439) (2026-10-19)
 
 ### Features
