@@ -13,6 +13,7 @@ import {
   IconRefresh,
   IconSearch,
   IconShip,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -26,6 +27,7 @@ import DeliveryOptionsForm, {
   EMPTY_DELIVERY_CHOICE,
 } from '@/app/_cellar/components/DeliveryOptionsForm';
 import type { DeliveryChoice } from '@/app/_cellar/components/DeliveryOptionsForm';
+import QuantityStepper from '@/app/_cellar/components/QuantityStepper';
 import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
@@ -1675,32 +1677,18 @@ const CellarPage = () => {
                         */
                         if (chosen > 0) {
                           return (
-                            <span className="inline-flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                aria-label={`One fewer bottle of ${wine.productName}`}
-                                onClick={() => addToWine(wine, -1)}
-                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-9 w-9 rounded transition-colors sm:h-6 sm:w-6"
-                              >
-                                &minus;
-                              </button>
-                              <span className="text-text-primary min-w-[46px] text-center text-xs font-semibold tabular-nums">
-                                {chosen} of {held}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label={`One more bottle of ${wine.productName}`}
-                                disabled={chosen >= held}
-                                onClick={() => addToWine(wine, 1)}
-                                className="text-text-muted hover:bg-fill-muted hover:text-text-primary h-9 w-9 rounded transition-colors disabled:opacity-30 sm:h-6 sm:w-6"
-                              >
-                                +
-                              </button>
+                            <span className="inline-flex items-center gap-1.5">
+                              <QuantityStepper
+                                value={chosen}
+                                max={held}
+                                label={`bottle of ${wine.productName}`}
+                                onChange={(next) => addToWine(wine, next - chosen)}
+                              />
                               {pack > 1 && chosen + pack <= held && (
                                 <button
                                   type="button"
                                   onClick={() => addToWine(wine, pack)}
-                                  className="text-text-muted hover:bg-fill-muted hover:text-text-primary ml-0.5 rounded px-1.5 py-1 text-[11px] font-medium transition-colors"
+                                  className="border-border-muted text-text-primary hover:bg-fill-muted h-9 rounded-full border px-3 text-xs font-semibold transition-colors"
                                 >
                                   + Case
                                 </button>
@@ -1709,9 +1697,9 @@ const CellarPage = () => {
                                 type="button"
                                 aria-label={`Remove ${wine.productName} from the request`}
                                 onClick={() => clearWine(wine)}
-                                className="text-text-muted hover:text-text-primary rounded px-1 text-xs transition-colors"
+                                className="text-text-muted hover:text-text-primary hover:bg-fill-muted flex size-9 items-center justify-center rounded-full transition-colors"
                               >
-                                &times;
+                                <IconX size={15} />
                               </button>
                             </span>
                           );
@@ -1903,60 +1891,19 @@ const CellarPage = () => {
                                                   held,
                                                 )
                                               }
-                                              className="border-border-muted hover:bg-fill-muted hover:text-text-primary mr-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40"
+                                              className="border-border-muted text-text-primary hover:bg-fill-muted mr-1.5 h-9 rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-40"
                                             >
                                               + Case
                                             </button>
                                           )}
-                                          <button
-                                            type="button"
-                                            aria-label={`One fewer bottle of ${wine.productName}`}
-                                            disabled={inBasket === 0}
-                                            onClick={() =>
-                                              setParcelBottles(
-                                                parcel.stockId,
-                                                inBasket - 1,
-                                                held,
-                                              )
-                                            }
-                                            className="border-border-muted hover:bg-fill-muted h-7 w-7 rounded-md border text-xs transition-colors disabled:opacity-40"
-                                          >
-                                            &minus;
-                                          </button>
-                                          <input
-                                            type="number"
-                                            min={0}
+                                          <QuantityStepper
+                                            value={inBasket}
                                             max={held}
-                                            value={inBasket || ''}
-                                            placeholder="0"
-                                            aria-label={`Bottles of ${wine.productName} to request`}
-                                            onChange={(event) =>
-                                              setParcelBottles(
-                                                parcel.stockId,
-                                                Number(event.target.value) || 0,
-                                                held,
-                                              )
+                                            label={`bottle of ${wine.productName}`}
+                                            onChange={(next) =>
+                                              setParcelBottles(parcel.stockId, next, held)
                                             }
-                                            className="border-border-muted bg-background-primary h-7 w-12 rounded-md border px-1 text-center text-xs tabular-nums"
                                           />
-                                          <button
-                                            type="button"
-                                            aria-label={`One more bottle of ${wine.productName}`}
-                                            disabled={inBasket >= held}
-                                            onClick={() =>
-                                              setParcelBottles(
-                                                parcel.stockId,
-                                                inBasket + 1,
-                                                held,
-                                              )
-                                            }
-                                            className="border-border-muted hover:bg-fill-muted h-7 w-7 rounded-md border text-xs transition-colors disabled:opacity-40"
-                                          >
-                                            +
-                                          </button>
-                                          <span className="text-text-muted text-[11px]">
-                                            / {held}
-                                          </span>
                                         </span>
                                       );
                                     })()}
@@ -2322,84 +2269,87 @@ const CellarPage = () => {
         the running total; the panel is the one place the request is finished.
       */}
       <Sheet open={isBasketOpen && basket.size > 0} onOpenChange={setIsBasketOpen}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
-          <div className="border-border-muted border-b px-5 py-4">
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <div className="border-border-muted flex items-start justify-between gap-3 border-b px-5 py-4">
+            <div>
             <SheetTitle className="text-base font-semibold">Delivery request</SheetTitle>
             <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
               {basketBottles} {basketBottles === 1 ? 'bottle' : 'bottles'} from {basketWines}{' '}
               {basketWines === 1 ? 'wine' : 'wines'}
-              {estimate?.priced && !isEstimating
-                ? ` · estimated ${money(estimate.totalUsd)} to deliver`
-                : ''}
             </Typography>
+            </div>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setIsBasketOpen(false)}
+              className="text-text-muted hover:text-text-primary hover:bg-fill-muted -mr-2 flex size-9 items-center justify-center rounded-full transition-colors"
+            >
+              <IconX size={18} />
+            </button>
           </div>
           <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
-                    <div className="border-border-muted rounded-lg border">
-                      <table className="w-full text-xs">
-                        <tbody className="divide-border-muted/60 divide-y">
-                          {basketLines.map((line) => {
-                            const parcel = line.wine?.locations.find(
-                              (location) => location.stockId === line.stockId,
-                            );
+            <section>
+              <p className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">Wines</p>
+              <ul className="border-border-muted divide-border-muted divide-y rounded-xl border">
+                {basketLines.map((line) => {
+                  const wine = line.wine;
+                  const parcel = wine?.locations.find((location) => location.stockId === line.stockId);
+                  const held = (parcel?.quantityCases ?? 0) * (wine?.caseConfig ?? 1);
+                  /* A lot number only tells two parcels of the same wine apart; on its own it is warehouse noise */
+                  const showLot =
+                    parcel?.lotNumber &&
+                    basketLines.filter((other) => other.wine?.lwin18 === wine?.lwin18).length > 1;
+                  const detail = [
+                    wine?.vintage ?? 'NV',
+                    wine?.bottleSize
+                      ? `${(wine.caseConfig ?? 1) > 1 ? `${wine.caseConfig}×` : ''}${wine.bottleSize}`
+                      : null,
+                    showLot ? `lot ${parcel?.lotNumber}` : null,
+                    /* A whole case is picked sealed, so it is named as one */
+                    (wine?.caseConfig ?? 1) > 1 && line.bottles % (wine?.caseConfig ?? 1) === 0
+                      ? describeQuantity(line.bottles, wine?.caseConfig ?? null).split(' · ')[0]
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
 
-                            return (
-                            <tr key={line.stockId}>
-                              <td className="px-3 py-1.5">
-                                {line.wine
-                                  ? lineLabel(
-                                      line.wine.productName,
-                                      line.wine.vintage,
-                                      line.wine.bottleSize,
-                                      line.wine.caseConfig,
-                                    )
-                                  : ''}
-                                {/*
-                                  A lot number only tells two parcels of
-                                  the same wine apart; on its own it is
-                                  warehouse noise.
-                                */}
-                                {parcel?.lotNumber &&
-                                  basketLines.filter(
-                                    (other) =>
-                                      other.wine?.lwin18 === line.wine?.lwin18,
-                                  ).length > 1 && (
-                                    <span className="text-text-muted ml-2 font-mono text-[11px]">
-                                      lot {parcel.lotNumber}
-                                    </span>
-                                  )}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                                {describeQuantity(
-                                  line.bottles,
-                                  line.wine?.caseConfig ?? null,
-                                )}
-                              </td>
-                              <td className="w-8 px-2 py-1.5 text-right">
-                                <button
-                                  type="button"
-                                  aria-label={`Remove ${line.wine?.productName}`}
-                                  onClick={() =>
-                                    setParcelBottles(line.stockId, 0, 0)
-                                  }
-                                  className="text-text-muted hover:text-text-primary px-1 transition-colors"
-                                >
-                                  &times;
-                                </button>
-                              </td>
-                            </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                  return (
+                    <li key={line.stockId} className="flex items-center gap-3 px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-text-primary truncate text-sm font-medium">
+                          {wine ? displayName(wine.productName) : ''}
+                        </p>
+                        <p className="text-text-muted text-xs">{detail}</p>
+                      </div>
+                      <QuantityStepper
+                        value={line.bottles}
+                        max={Math.max(held, line.bottles)}
+                        label={`bottle of ${wine?.productName ?? 'this wine'}`}
+                        onChange={(next) => setParcelBottles(line.stockId, next, held)}
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${wine?.productName}`}
+                        onClick={() => setParcelBottles(line.stockId, 0, 0)}
+                        className="text-text-muted hover:text-text-primary hover:bg-fill-muted flex size-8 flex-shrink-0 items-center justify-center rounded-full transition-colors"
+                      >
+                        <IconX size={14} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
             {/*
                Labelled, not placeholder-led. A placeholder vanishes the moment
                someone types, taking the only explanation of the field with it.
              */}
-            <div
-              className="grid gap-3 sm:grid-cols-2"
-            >
-              <div className="sm:col-span-2">
+            <div className="grid gap-5">
+              <div>
                 <DeliveryOptionsForm
                   addresses={savedAddresses}
                   value={deliveryChoice}
@@ -2407,7 +2357,7 @@ const CellarPage = () => {
                 />
               </div>
               {isNoteOpen || memberNotes ? (
-                <label className="block sm:col-span-2">
+                <label className="block">
                   <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
                     Note for our team
                   </span>
@@ -2429,7 +2379,18 @@ const CellarPage = () => {
               )}
             </div>
           </div>
-          <div className="border-border-muted border-t px-5 py-4">
+          <div className="border-border-muted space-y-3 border-t px-5 py-4">
+            {estimate?.priced && (
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-text-muted text-xs">
+                  Estimated delivery cost
+                  <span className="block text-[11px]">Duty, VAT, clearance and delivery</span>
+                </span>
+                <span className="text-text-primary text-lg font-semibold tabular-nums">
+                  {isEstimating ? '…' : money(estimate.totalUsd)}
+                </span>
+              </div>
+            )}
             <div
               className="flex flex-col gap-2"
             >

@@ -186,7 +186,7 @@ const DeliveryOptionsForm = ({
           {value.isGift ? 'Their address' : 'Delivery address'}
         </span>
         {addresses.length > 0 && (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2">
             {addresses.map((address) => {
               const id = address.id ?? 'default';
               const isSelected = selectedId === id;
@@ -221,13 +221,14 @@ const DeliveryOptionsForm = ({
               type="button"
               onClick={() => set({ isNew: true, addressId: null })}
               aria-pressed={value.isNew}
-              className={`flex items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 justify-self-start rounded-full px-1 py-1 text-xs font-semibold transition-colors ${
                 value.isNew
-                  ? 'border-emerald-600 text-emerald-800 dark:text-emerald-300'
-                  : 'border-border-muted text-text-muted hover:text-text-primary'
+                  ? 'text-emerald-800 dark:text-emerald-300'
+                  : 'text-text-muted hover:text-text-primary'
               }`}
             >
-              <IconPlus size={14} />A new address
+              <IconPlus size={14} />
+              Deliver to a new address
             </button>
           </div>
         )}
@@ -309,28 +310,29 @@ const DeliveryOptionsForm = ({
             aria-label="Preferred day"
           />
         )}
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <p className="text-text-muted mt-2 text-xs leading-5">
+          Wine is released from bond within {DELIVERY_LEAD_WORKING_DAYS} working
+          days of your request; the earliest available date is {earliestLabel}.
+          We will confirm the delivery date with you.
+        </p>
+        <span className={`${LABEL} mt-4`}>Time of day</span>
+        <div className="flex flex-wrap gap-1.5">
           {WINDOWS.map((window) => (
             <button
               key={window.id}
               type="button"
               onClick={() => set({ preferredWindow: window.id })}
               aria-pressed={value.preferredWindow === window.id}
-              className={`h-8 rounded-full px-3 text-xs font-medium transition-colors ${
+              className={`h-9 rounded-full px-3 text-xs font-semibold transition-colors ${
                 value.preferredWindow === window.id
-                  ? 'bg-fill-muted text-text-primary'
-                  : 'text-text-muted hover:text-text-primary'
+                  ? 'bg-text-primary text-surface-primary'
+                  : 'border-border-muted text-text-muted hover:text-text-primary border'
               }`}
             >
               {window.label}
             </button>
           ))}
         </div>
-        <p className="text-text-muted mt-2 text-xs leading-5">
-          Wine is released from bond within {DELIVERY_LEAD_WORKING_DAYS} working
-          days of your request; the earliest available date is {earliestLabel}.
-          We will confirm the delivery date with you.
-        </p>
       </div>
     </div>
   );
