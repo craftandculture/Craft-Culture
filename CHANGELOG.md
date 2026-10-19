@@ -1,3 +1,9 @@
+## [2.0.420](https://github.com/craftandculture/Craft-Culture/compare/v2.0.419...v2.0.420) (2026-10-19)
+
+### Features
+
+* members see their Zoho Books invoices on a new Invoices page, with what is owed, how to pay and the PDF, and staff link each member to their Zoho customer from Cellar members ([b9969ad](https://github.com/craftandculture/Craft-Culture/commit/b9969ad3480b4aa6d603db1b846b1d236d20c003))
+
 ## [2.0.419](https://github.com/craftandculture/Craft-Culture/compare/v2.0.418...v2.0.419) (2026-10-19)
 
 ### Features
