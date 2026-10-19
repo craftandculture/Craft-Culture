@@ -1,3 +1,9 @@
+## [2.0.432](https://github.com/craftandculture/Craft-Culture/compare/v2.0.431...v2.0.432) (2026-10-19)
+
+### Features
+
+* shipment lines can be filtered and sorted by wine, producer, vintage, LWIN, cases, bottles or cost, with clickable column headers ([bbdb972](https://github.com/craftandculture/Craft-Culture/commit/bbdb972da9f7b8c7e0584312b65b22d4e7a59863))
+
 ## [2.0.431](https://github.com/craftandculture/Craft-Culture/compare/v2.0.430...v2.0.431) (2026-10-19)
 
 ### Bug Fixes
