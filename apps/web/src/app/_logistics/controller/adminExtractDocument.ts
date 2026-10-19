@@ -135,6 +135,13 @@ const extractedLogisticsDataSchema = z.object({
   specialInstructions: z.string().optional().describe('Special handling instructions'),
 });
 
+/*
+  The schema has far more optional fields than Anthropic's strict structured
+  output allows (24), so it is sent as a plain JSON tool, as it was before the
+  SDK upgrade of 15 Oct made strict output the default.
+*/
+const jsonToolOutput = { anthropic: { structuredOutputMode: 'jsonTool' as const } };
+
 /**
  * Get the appropriate system prompt based on document type
  */
@@ -396,6 +403,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       const result = await generateObject({
         model: anthropic('claude-sonnet-4-6'),
         schema: extractedLogisticsDataSchema,
+        providerOptions: jsonToolOutput,
         system: systemPrompt,
         maxOutputTokens: 64000,
         messages,
@@ -427,6 +435,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
+          providerOptions: jsonToolOutput,
           system: systemPrompt,
           maxOutputTokens: 64000,
           prompt: `${extractionPrompt}
@@ -464,6 +473,7 @@ ${pdfText}
         const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
           schema: extractedLogisticsDataSchema,
+          providerOptions: jsonToolOutput,
           system: systemPrompt,
           maxOutputTokens: 64000,
           messages,
