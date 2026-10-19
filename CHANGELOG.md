@@ -1,3 +1,9 @@
+## [2.0.419](https://github.com/craftandculture/Craft-Culture/compare/v2.0.418...v2.0.419) (2026-10-19)
+
+### Features
+
+* private clients' warehouse labels show their reference (PC-1001), never their name ([032b1d9](https://github.com/craftandculture/Craft-Culture/commit/032b1d9a48dfb8f055e596295609c133ee633241))
+
 ## [2.0.418](https://github.com/craftandculture/Craft-Culture/compare/v2.0.417...v2.0.418) (2026-10-19)
 
 ### Bug Fixes
