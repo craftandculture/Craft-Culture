@@ -1,3 +1,9 @@
+## [2.0.417](https://github.com/craftandculture/Craft-Culture/compare/v2.0.416...v2.0.417) (2026-10-19)
+
+### Bug Fixes
+
+* City Drinks daily sales no longer count a bottle as sold unless City Drinks' own sales figure rose; bottles taken for photography or samples are listed separately ([a4d12d5](https://github.com/craftandculture/Craft-Culture/commit/a4d12d58f6966f656c83f393796a287af514bfd8))
+
 ## [2.0.416](https://github.com/craftandculture/Craft-Culture/compare/v2.0.415...v2.0.416) (2026-10-19)
 
 ### Features
