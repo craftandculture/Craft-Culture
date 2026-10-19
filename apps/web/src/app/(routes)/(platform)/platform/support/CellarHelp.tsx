@@ -335,9 +335,9 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              A condition report is AED 150 per wine. Each bottle is
-              inspected &mdash; fill level, label, capsule and closure &mdash;
-              and reported with photographs and written notes.
+              A condition report is AED 150 per case. We inspect every bottle
+              for fill level, label, capsule and closure, and report with
+              photographs and written notes.
             </Typography>
           </HelpSection>
 

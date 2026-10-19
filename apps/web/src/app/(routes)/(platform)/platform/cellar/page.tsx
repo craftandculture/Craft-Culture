@@ -44,6 +44,7 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
+import CONDITION_REPORT_FEE_AED from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -308,9 +309,9 @@ const CellarPage = () => {
       onSuccess: (result) => {
         void refetch();
         toast.success(
-          `Condition report ${result.requestNumber} requested — ${result.cases} ${
+          `Condition report ${result.requestNumber} requested for ${result.cases} ${
             result.cases === 1 ? 'case' : 'cases'
-          }, AED ${result.feeAed.toLocaleString()}.`,
+          }: AED ${result.feeAed.toLocaleString('en-US')}.`,
         );
       },
       onError: (error) => toast.error(error.message),
@@ -1935,13 +1936,21 @@ const CellarPage = () => {
                                             title="Request a condition report?"
                                             description={
                                               <p>
-                                                Each bottle is inspected
-                                                &mdash; fill level, label,
-                                                capsule and closure &mdash; and
-                                                reported with photographs and
-                                                written notes. AED 150 for this
-                                                wine, added to your next
-                                                invoice.
+                                                We inspect every bottle for fill
+                                                level, label, capsule and
+                                                closure, and report with
+                                                photographs and written notes.
+                                                AED {CONDITION_REPORT_FEE_AED}{' '}
+                                                per case, so AED{' '}
+                                                {(
+                                                  CONDITION_REPORT_FEE_AED *
+                                                  parcel.quantityCases
+                                                ).toLocaleString('en-US')}{' '}
+                                                for{' '}
+                                                {parcel.quantityCases === 1
+                                                  ? 'this case'
+                                                  : `these ${parcel.quantityCases} cases`}
+                                                , added to your next invoice.
                                               </p>
                                             }
                                             confirmLabel="Request report"
@@ -1985,11 +1994,13 @@ const CellarPage = () => {
                                               className="max-w-[240px] text-left lg:max-w-[240px]"
                                             >
                                               <Typography variant="bodyXs">
-                                                <strong>AED 150</strong> per
-                                                wine. Each bottle is
-                                                inspected &mdash; fill level,
-                                                label, capsule and closure
-                                                &mdash; and reported with
+                                                <strong>
+                                                  AED {CONDITION_REPORT_FEE_AED}{' '}
+                                                  per case
+                                                </strong>
+                                                . We inspect every bottle for
+                                                fill level, label, capsule and
+                                                closure, and report with
                                                 photographs and written notes.
                                                 Charged on your next invoice.
                                               </Typography>
