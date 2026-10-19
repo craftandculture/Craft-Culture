@@ -444,7 +444,7 @@ const WMSOwnershipTransferPage = () => {
                   <span>
                     <span className="block text-sm font-medium">Put it on sale</span>
                     <span className="text-text-muted block text-xs">
-                      Lists the transferred cases on the price lists and Available now. Leave
+                      Lists the transferred cases on the price lists and The Cellar List. Leave
                       off for a client&apos;s own wine.
                       {selectedStock.notForSale ? ' It is currently marked not for sale.' : ''}
                     </span>

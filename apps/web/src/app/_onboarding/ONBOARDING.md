@@ -20,7 +20,7 @@ sign-up (`/sign-in` → `/welcome`, unchanged apart from one link).
 - `card`: Zoho Billing **Premium** (subscriptions, hosted card pages, dunning) — the flow below. Set only once Billing, the gateway, plan and add-on exist.
 
 **Activation (first action)** — card mode
-1. Viewing the cellar and *Available now* is free.
+1. Viewing the cellar and *The Cellar List* is free.
 2. Buy, release, offer for sale or a transfer in → `NOT_ACTIVATED` → *Activate your cellar* sheet: Emirates ID if missing, then Zoho Billing's hosted card page.
 3. Zoho returns to `/platform/cellar/activated` → subscription confirmed → membership `active` (billing starts) → back to where they were.
 4. Failed payment → `past_due` → actions paused → *Update your card*.

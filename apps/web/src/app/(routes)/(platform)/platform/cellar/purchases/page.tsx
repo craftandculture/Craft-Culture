@@ -180,14 +180,14 @@ const PurchasesPage = () => {
             No purchases yet
           </p>
           <p className="text-text-muted mx-auto mt-1 max-w-sm text-sm leading-6">
-            Wines you reserve from Available now will appear here, with how to
+            Wines you reserve from The Cellar List will appear here, with how to
             pay for them.
           </p>
           <Link
             href="/platform/cellar/available"
             className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
           >
-            Browse Available now
+            Browse The Cellar List
           </Link>
         </div>
       )}

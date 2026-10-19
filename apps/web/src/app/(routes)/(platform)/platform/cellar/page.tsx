@@ -1380,7 +1380,7 @@ const CellarPage = () => {
             href="/platform/cellar/available"
             className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
           >
-            Browse Available now
+            Browse The Cellar List
           </Link>
         </div>
       ) : isUaeEmpty ? null : (

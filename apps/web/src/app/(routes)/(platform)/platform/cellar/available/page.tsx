@@ -334,7 +334,7 @@ const AvailablePage = () => {
       <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Typography variant="headingMd" className="block">
-            Available now
+            The Cellar List
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mt-1 block max-w-2xl">
             Wines held in the C&amp;C bonded warehouse, ready to add to your cellar. Prices are duty-free:

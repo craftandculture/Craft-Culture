@@ -57,7 +57,7 @@ const faqItems = [
   {
     question: 'Who sees that a wine is mine when it is for sale?',
     answer:
-      'Nobody. Wine you have offered appears on our lists as Craft & Culture stock, priced and sold by us. Buyers are not told whose wine it was, and other members browsing Available now cannot tell your wine from anyone else\u2019s.',
+      'Nobody. Wine you have offered appears on our lists as Craft & Culture stock, priced and sold by us. Buyers are not told whose wine it was, and other members browsing The Cellar List cannot tell your wine from anyone else\u2019s.',
   },
   {
     question: 'When am I paid for wine that sells?',

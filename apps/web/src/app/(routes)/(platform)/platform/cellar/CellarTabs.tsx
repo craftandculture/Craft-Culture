@@ -22,7 +22,7 @@ const tabs = [
     what they can add to their cellar today, so the tab says that. It lives
     under the cellar rather than at its own root so it keeps this navigation.
   */
-  { href: '/platform/cellar/available', label: 'Available now', icon: IconSparkles },
+  { href: '/platform/cellar/available', label: 'The Cellar List', icon: IconSparkles },
   /*
     Buying is not finished when the order is placed — there is a transfer to
     send and a confirmation to wait for — so it needs somewhere to live that is
