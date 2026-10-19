@@ -33,6 +33,7 @@ import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
@@ -148,6 +149,7 @@ const WMSReceiveShipmentPage = () => {
   const scanInputRef = useRef<ScanInputHandle>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
 
   // Get shipment details
   const { data: shipment, isLoading: shipmentLoading } = useQuery({
@@ -569,7 +571,10 @@ const WMSReceiveShipmentPage = () => {
           packSize,
           vintage: currentItem.vintage ?? undefined,
           lotNumber: currentLotNumber,
-          owner: shipment?.partnerName ?? undefined,
+          owner: await labelOwner({
+            id: shipment?.partnerId,
+            name: shipment?.partnerName,
+          }),
           labelType: 'pallet',
           palletCaseCount: casesForThisBay,
         });
@@ -815,7 +820,11 @@ const WMSReceiveShipmentPage = () => {
           lwin18,
           packSize,
           vintage: item.vintage ?? undefined,
-          ownerName: shipment?.partnerName ?? 'C&C',
+          ownerName:
+            (await labelOwner({
+              id: shipment?.partnerId,
+              name: shipment?.partnerName ?? 'C&C',
+            })) ?? 'C&C',
           quantityCases: assignment.cases,
           lotNumber: currentLotNumber,
         });

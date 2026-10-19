@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
 
+import findPartnerByClientCode from '@/app/_cellar/data/findPartnerByClientCode';
+import getClientCodes from '@/app/_cellar/data/getClientCodes';
 import db from '@/database/client';
 import {
   lwinWines,
@@ -65,7 +67,11 @@ const adminGetStockByProduct = wmsOperatorProcedure
       const normalized = normalizeLwin18(trimmed);
       const packPattern = lwinPackAgnosticPattern(normalized);
 
+      // A member's reference (PC-1001), as printed on their cases
+      const codeOwnerId = await findPartnerByClientCode(trimmed);
+
       const searchMatch = or(
+        ...(codeOwnerId ? [eq(wmsStock.ownerId, codeOwnerId)] : []),
         ilike(wmsStock.productName, `%${search}%`),
         ilike(wmsStock.producer, `%${search}%`),
         ilike(wmsStock.lwin18, `%${search}%`),
@@ -221,6 +227,10 @@ const adminGetStockByProduct = wmsOperatorProcedure
     }
 
     // For each product, get location breakdown
+
+    // Member references, shown beside the owner so staff learn to match them
+    const clientCodes = await getClientCodes();
+
     const productsWithLocations = await Promise.all(
       products.map(async (product) => {
         const locationConditions = includeZeroQty
@@ -279,7 +289,10 @@ const adminGetStockByProduct = wmsOperatorProcedure
 
         return {
           ...product,
-          locations,
+          locations: locations.map((location) => ({
+            ...location,
+            ownerCode: clientCodes.get(location.ownerId) ?? null,
+          })),
           expiryStatus,
           // Cases in bottles PLUS the loose bottles left by cracked cases —
           // counting only cases reported 0 bottles for a bay holding five.

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 
@@ -46,6 +47,7 @@ export interface PcoCaseLabel {
  */
 const usePrintPcoLabels = () => {
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
   const [isPrinting, setIsPrinting] = useState(false);
 
   /**
@@ -143,7 +145,11 @@ const usePrintPcoLabels = () => {
         return false;
       }
 
-      const zpl = generateBatchLabelsZpl(labels.map((label) => label.data));
+      // The order's owner as the label may show it: a private client's code
+      const owner = await labelOwner({ name: order.partner?.businessName });
+      const zpl = generateBatchLabelsZpl(
+        labels.map((label) => ({ ...label.data, owner })),
+      );
       const success = await print(zpl, '4x2');
       if (success) {
         toast.success(`Printed ${labels.length} label${labels.length === 1 ? '' : 's'}`);

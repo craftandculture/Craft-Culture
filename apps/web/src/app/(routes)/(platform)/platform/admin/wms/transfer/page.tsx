@@ -25,6 +25,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
@@ -60,6 +61,7 @@ const WMSTransferPage = () => {
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
@@ -116,6 +118,7 @@ const WMSTransferPage = () => {
       const bottleSize = selectedStock.bottleSize ?? '75cl';
       const caseConfig = selectedStock.caseConfig ?? 6;
       const packSize = `${caseConfig}x${bottleSize}`;
+      const ownerText = await labelOwner({ name: selectedStock.ownerName });
       const singleLabel = generateLabelZpl({
         barcode: selectedStock.lwin18,
         productName: selectedStock.productName,
@@ -124,7 +127,7 @@ const WMSTransferPage = () => {
         vintage: selectedStock.vintage ?? undefined,
         lotNumber: selectedStock.lotNumber ?? undefined,
         locationCode,
-        owner: selectedStock.ownerName,
+        owner: ownerText,
         showBarcode: true,
       });
       const zpl = Array.from({ length: copies }, () => singleLabel).join('\n');

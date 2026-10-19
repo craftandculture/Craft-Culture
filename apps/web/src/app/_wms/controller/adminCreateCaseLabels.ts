@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { wmsCaseLabels } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import resolveLabelOwner from '../data/resolveLabelOwner';
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLabelZpl, { type LabelData } from '../utils/generateLabelZpl';
 
@@ -41,6 +42,9 @@ const adminCreateCaseLabels = wmsOperatorProcedure
   )
   .mutation(async ({ input }) => {
     const { shipmentId, productName, lwin18, packSize, vintage, lotNumber, locationId, owner, quantity } = input;
+
+    // The label never carries a private client's name, whatever the screen sent
+    const ownerText = await resolveLabelOwner({ name: owner });
 
     console.log('[createCaseLabels] Starting label creation', { lwin18, quantity, shipmentId });
 
@@ -143,7 +147,7 @@ const adminCreateCaseLabels = wmsOperatorProcedure
           packSize: packSize ?? '',
           vintage,
           lotNumber,
-          owner,
+          owner: ownerText,
         });
       }
 

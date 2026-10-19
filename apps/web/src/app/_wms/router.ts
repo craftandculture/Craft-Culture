@@ -43,6 +43,7 @@ import adminGetCycleCounts from './controller/adminGetCycleCounts';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
 import adminGetDispatchBatches from './controller/adminGetDispatchBatches';
 import adminGetExpiringStock from './controller/adminGetExpiringStock';
+import adminGetHiddenLabelOwners from './controller/adminGetHiddenLabelOwners';
 import adminGetInboundStock from './controller/adminGetInboundStock';
 import adminGetLocation from './controller/adminGetLocation';
 import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
@@ -158,6 +159,7 @@ const receivingRouter = createTRPCRouter({
 });
 
 const labelsRouter = createTRPCRouter({
+  getHiddenOwners: adminGetHiddenLabelOwners,
   createCaseLabels: adminCreateCaseLabels,
   getCaseLabels: adminGetCaseLabels,
   reprintCaseLabels: adminReprintCaseLabels,

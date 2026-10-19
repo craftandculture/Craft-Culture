@@ -28,6 +28,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
@@ -140,6 +141,7 @@ const WMSRepackPage = () => {
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source-bay');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
@@ -360,6 +362,11 @@ const WMSRepackPage = () => {
   const handlePrintLabels = async () => {
     if (!repackResult) return;
 
+    const ownerText = await labelOwner({ name: repackResult.target.owner });
+    const owner2Text = repackResult.target2
+      ? await labelOwner({ name: repackResult.target2.owner })
+      : undefined;
+
     const labelData = repackResult.target.newCaseLabels.map((label) => ({
       barcode: label.barcode,
       productName: repackResult.target.productName,
@@ -367,7 +374,7 @@ const WMSRepackPage = () => {
       packSize: repackResult.target.packSize,
       vintage: repackResult.target.vintage ?? undefined,
       lotNumber: repackResult.target.lotNumber ?? undefined,
-      owner: repackResult.target.owner ?? undefined,
+      owner: ownerText,
     }));
 
     if (repackResult.target2) {
@@ -379,7 +386,7 @@ const WMSRepackPage = () => {
           packSize: repackResult.target2.packSize,
           vintage: repackResult.target2.vintage ?? undefined,
           lotNumber: repackResult.target2.lotNumber ?? undefined,
-          owner: repackResult.target2.owner ?? undefined,
+          owner: owner2Text,
         });
       }
     }

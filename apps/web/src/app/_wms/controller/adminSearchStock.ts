@@ -1,5 +1,6 @@
-import { and, gt, ilike, or, sql } from 'drizzle-orm';
+import { and, eq, gt, ilike, or, sql } from 'drizzle-orm';
 
+import findPartnerByClientCode from '@/app/_cellar/data/findPartnerByClientCode';
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -21,6 +22,9 @@ const adminSearchStock = wmsOperatorProcedure
   .query(async ({ input }) => {
     const { query, limit } = input;
 
+    // A member's reference (PC-1001), as printed on their cases
+    const codeOwnerId = await findPartnerByClientCode(query);
+
     // Search products in stock
     const products = await db
       .select({
@@ -40,6 +44,7 @@ const adminSearchStock = wmsOperatorProcedure
             ilike(wmsStock.producer, `%${query}%`),
             ilike(wmsStock.lwin18, `%${query}%`),
             ilike(wmsStock.ownerName, `%${query}%`),
+            ...(codeOwnerId ? [eq(wmsStock.ownerId, codeOwnerId)] : []),
           ),
         ),
       )
@@ -81,7 +86,15 @@ const adminSearchStock = wmsOperatorProcedure
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
       })
       .from(wmsStock)
-      .where(and(gt(wmsStock.quantityCases, 0), ilike(wmsStock.ownerName, `%${query}%`)))
+      .where(
+        and(
+          gt(wmsStock.quantityCases, 0),
+          or(
+            ilike(wmsStock.ownerName, `%${query}%`),
+            ...(codeOwnerId ? [eq(wmsStock.ownerId, codeOwnerId)] : []),
+          ),
+        ),
+      )
       .groupBy(wmsStock.ownerId, wmsStock.ownerName)
       .orderBy(sql`SUM(${wmsStock.quantityCases}) DESC`)
       .limit(limit);

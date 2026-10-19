@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { wmsLocations, wmsPalletCases, wmsPallets } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import resolveLabelOwner from '../data/resolveLabelOwner';
 import { getPalletSchema } from '../schemas/palletSchema';
 import generatePalletLabelZpl from '../utils/generatePalletLabelZpl';
 
@@ -25,6 +26,7 @@ const adminGetPalletLabel = wmsOperatorProcedure.input(getPalletSchema).query(as
       id: wmsPallets.id,
       palletCode: wmsPallets.palletCode,
       barcode: wmsPallets.barcode,
+      ownerId: wmsPallets.ownerId,
       ownerName: wmsPallets.ownerName,
       totalCases: wmsPallets.totalCases,
       status: wmsPallets.status,
@@ -73,7 +75,11 @@ const adminGetPalletLabel = wmsOperatorProcedure.input(getPalletSchema).query(as
   const zpl = generatePalletLabelZpl({
     barcode: pallet.barcode,
     palletCode: pallet.palletCode,
-    ownerName: pallet.ownerName,
+    ownerName:
+      (await resolveLabelOwner({
+        id: pallet.ownerId,
+        name: pallet.ownerName,
+      })) ?? '-',
     totalCases: pallet.totalCases,
     status: pallet.status as 'active' | 'sealed' | 'retrieved' | 'archived',
     sealedAt: pallet.sealedAt,
