@@ -7,6 +7,7 @@ import { cellarUkHoldings, cellarUkRotations } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import getClientCodes from '../data/getClientCodes';
+import hasUkSupplierColumn from '../data/hasUkSupplierColumn';
 import notifyUkRotationAssigned from '../data/notifyUkRotationAssigned';
 import findClientCode from '../utils/findClientCode';
 import parseLcbStockRow, { LCB_REQUIRED_COLUMNS, hasLcbColumn } from '../utils/parseLcbStockRow';
@@ -63,13 +64,15 @@ const adminImportUkStock = staffAdminProcedure
     }
 
     const rotations = [...new Set(holdings.map((holding) => holding.rotation))];
+    const withSupplier = await hasUkSupplierColumn();
 
     await db.transaction(async (tx) => {
       await tx.delete(cellarUkHoldings);
 
       await tx.insert(cellarUkHoldings).values(
-        holdings.map(({ reference: _reference, ...holding }) => ({
+        holdings.map(({ reference: _reference, supplierName, ...holding }) => ({
           ...holding,
+          ...(withSupplier ? { supplierName } : {}),
           importedBy: ctx.user.id,
         })),
       );

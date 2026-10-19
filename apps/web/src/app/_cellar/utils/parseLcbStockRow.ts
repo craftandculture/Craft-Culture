@@ -141,6 +141,7 @@ const parseLcbStockRow = (row: LcbStockRow) => {
     singles,
     totalBottles,
     packaging: text(field(row, 'Packaging')),
+    supplierName: text(field(row, 'Supplier Name')),
     receivedAt: ukDate(field(row, 'Received')),
     reference,
   };

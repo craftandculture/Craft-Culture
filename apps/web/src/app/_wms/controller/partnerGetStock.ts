@@ -129,9 +129,17 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
         between the two.
       */
       notForSale: wmsStock.notForSale,
+      /*
+        Where the parcel came from: the city and country the shipment that
+        brought it left from. Members asked to see where each wine came from
+        and when; the date is receivedAt above.
+      */
+      originCity: logisticsShipments.originCity,
+      originCountry: logisticsShipments.originCountry,
     })
     .from(wmsStock)
     .innerJoin(wmsLocations, eq(wmsStock.locationId, wmsLocations.id))
+    .leftJoin(logisticsShipments, eq(wmsStock.shipmentId, logisticsShipments.id))
     .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
     .orderBy(wmsStock.lwin18, wmsLocations.locationCode);
 

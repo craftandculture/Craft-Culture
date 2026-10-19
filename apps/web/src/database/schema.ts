@@ -7588,6 +7588,8 @@ export const cellarUkHoldings = pgTable(
     totalBottles: integer('total_bottles').notNull().default(0),
     packaging: text('packaging'),
     receivedAt: timestamp('received_at', { mode: 'date' }),
+    /** Who sent it in, from the by-supplier report: where the member's wine came from */
+    supplierName: text('supplier_name'),
     importedBy: uuid('imported_by').references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },

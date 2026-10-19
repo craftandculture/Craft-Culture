@@ -192,7 +192,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
 
     for (const holding of holdings) {
       const move = moveByLine.get(lineKey(holding));
-      const key = `${holding.lwin18}|${holding.name}|${move?.id ?? ''}`;
+      const key = `${holding.lwin18}|${holding.name}|${holding.supplierName ?? ''}|${move?.id ?? ''}`;
       const group = byWine.get(key) ?? {
         key,
         first: holding,
@@ -266,7 +266,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
             }`}
           >
             {!isChoosing && <IconPlaneDeparture size={14} />}
-            {isChoosing ? 'Cancel' : 'Bring to the UAE'}
+            {isChoosing ? 'Cancel' : 'Move to the UAE'}
           </button>
         )}
       </header>
@@ -352,63 +352,89 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
         </p>
       )}
 
-      <ul className="divide-border-muted divide-y">
-        {groups.map((group) => {
-          const holding = group.first;
-          const move = group.move;
-          const canChoose = isChoosing && !move;
-          const isSelected = group.ids.every((id) => selected.has(id));
+      {/*
+        The same columns as the wine held in the UAE, so a collection in two
+        places reads as one. Where it came from and when it arrived are on
+        every line: a member asked to know both.
+      */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-fill-muted/60 border-border-muted border-b">
+            <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
+              {isChoosing && <th className="w-10 px-3 py-2" />}
+              <th className="px-4 py-2 text-left">Wine</th>
+              <th className="px-3 py-2 text-left">Vintage</th>
+              <th className="px-3 py-2 text-left">Size</th>
+              <th className="px-3 py-2 text-right">Quantity</th>
+              <th className="px-3 py-2 text-right">Bottles</th>
+              {formatValue && <th className="px-3 py-2 text-right">Guide / btl</th>}
+              <th className="px-3 py-2 text-left">From</th>
+              <th className="px-4 py-2 text-left">Arrived</th>
+            </tr>
+          </thead>
+          <tbody className="divide-border-muted divide-y">
+            {groups.map((group) => {
+              const holding = group.first;
+              const move = group.move;
+              const canChoose = isChoosing && !move;
+              const isSelected = group.ids.every((id) => selected.has(id));
+              const size = holding.bottleSizeLitres
+                ? bottleName(`${Math.round(holding.bottleSizeLitres * 100)}cl`)
+                : '75cl';
 
-          const body = (
-            <>
-              <span className="flex min-w-0 items-start gap-2.5">
-                {canChoose && (
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggle(group.ids)}
-                    className="mt-0.5 size-4 flex-shrink-0 accent-emerald-700"
-                    aria-label={`Bring ${holding.name} to the UAE`}
-                  />
-                )}
-                <span className="min-w-0 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                  {holding.name}
-                  <span className="text-text-muted font-normal"> · {holding.vintage ?? 'NV'}</span>
-                </span>
-              </span>
-              <span className="text-text-muted flex flex-shrink-0 flex-wrap items-center gap-2 text-xs tabular-nums">
-                {quantityOf(group)}
-                {holding.receivedAt ? ` · since ${format(new Date(holding.receivedAt), 'MMM yyyy')}` : ''}
-                {/* Our list price where we list the same wine: a guide, as on the cellar above */}
-                {formatValue && holding.indicativePerBottle
-                  ? ` · about ${formatValue(holding.indicativePerBottle)} a bottle`
-                  : ''}
-                {move && (
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-                    {move.status === 'shipping' ? 'On its way to the UAE' : 'Moving to the UAE'}
-                  </span>
-                )}
-              </span>
-            </>
-          );
-
-          return canChoose ? (
-            <li key={group.key}>
-              <label
-                className={`flex cursor-pointer flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 ${
-                  isSelected ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'hover:bg-fill-muted/40'
-                }`}
-              >
-                {body}
-              </label>
-            </li>
-          ) : (
-            <li key={group.key} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-              {body}
-            </li>
-          );
-        })}
-      </ul>
+              return (
+                <tr
+                  key={group.key}
+                  onClick={canChoose ? () => toggle(group.ids) : undefined}
+                  className={`align-top ${canChoose ? 'cursor-pointer' : ''} ${
+                    isSelected ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : canChoose ? 'hover:bg-fill-muted/40' : ''
+                  }`}
+                >
+                  {isChoosing && (
+                    <td className="px-3 py-2.5">
+                      {canChoose && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggle(group.ids)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="size-4 accent-emerald-700"
+                          aria-label={`Move ${holding.name} to the UAE`}
+                        />
+                      )}
+                    </td>
+                  )}
+                  <td className="px-4 py-2.5">
+                    <span className="text-text-primary block font-medium">{holding.name}</span>
+                    {move && (
+                      <span className="mt-1 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                        {move.status === 'shipping' ? 'On its way to the UAE' : 'Moving to the UAE'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-text-muted whitespace-nowrap px-3 py-2.5 tabular-nums">{holding.vintage ?? 'NV'}</td>
+                  <td className="text-text-muted whitespace-nowrap px-3 py-2.5">{size}</td>
+                  <td className="text-text-muted whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
+                    {quantityOf(group)}
+                  </td>
+                  <td className="text-text-primary whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums">
+                    {group.totalBottles}
+                  </td>
+                  {formatValue && (
+                    <td className="text-text-muted whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
+                      {holding.indicativePerBottle ? formatValue(holding.indicativePerBottle) : '—'}
+                    </td>
+                  )}
+                  <td className="text-text-muted px-3 py-2.5 text-xs">{holding.supplierName ?? '—'}</td>
+                  <td className="text-text-muted whitespace-nowrap px-4 py-2.5 text-xs">
+                    {holding.receivedAt ? format(new Date(holding.receivedAt), 'd MMM yyyy') : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {isChoosing && (
         <div className="border-border-muted flex flex-col gap-2 border-t bg-emerald-50/40 px-4 py-3 sm:flex-row sm:items-center dark:bg-emerald-500/5">
@@ -450,7 +476,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
       <footer className="border-border-muted bg-surface-muted/40 space-y-2 border-t px-4 py-3">
         <p className="text-text-muted text-xs leading-5">
           Your UK wine stays under bond, duty and VAT suspended. To bring any of it to your cellar in the UAE, choose
-          Bring to the UAE and we will send you the price first.
+          Move to the UAE and we will send you the price first.
         </p>
         <ContactLinks />
       </footer>

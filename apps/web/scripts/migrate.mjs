@@ -2939,6 +2939,10 @@ const runMigrations = async () => {
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "cellar_uk_holdings_rotation_idx" ON "cellar_uk_holdings" ("rotation")`,
     );
+    // Where the wine came from (Oct 2026): LCB's by-supplier report names the sender
+    await client.unsafe(
+      `ALTER TABLE "cellar_uk_holdings" ADD COLUMN IF NOT EXISTS "supplier_name" text`,
+    );
     console.log('✅ LCB UK holdings ready');
 
     /*

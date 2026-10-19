@@ -21,6 +21,8 @@ import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarLocationStrip from '@/app/_cellar/components/CellarLocationStrip';
+import type { CellarLocation } from '@/app/_cellar/components/CellarLocationStrip';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
 import DeliveryOptionsForm, {
@@ -69,7 +71,17 @@ interface CellarParcel {
   claimedBottles: number;
   lotNumber: string | null;
   receivedAt: Date | null;
+  /** Where the shipment that brought it left from */
+  originCity?: string | null;
+  originCountry?: string | null;
 }
+
+/** "Beaune, France", or whichever half is known */
+const originOf = (parcel: { originCity?: string | null; originCountry?: string | null }) =>
+  [parcel.originCity, parcel.originCountry]
+    .map((part) => part?.trim())
+    .filter((part, index, all): part is string => Boolean(part) && all.indexOf(part) === index)
+    .join(', ') || null;
 
 interface CellarWine {
   lwin18: string;
@@ -479,6 +491,15 @@ const CellarPage = () => {
   const isUaeEmpty =
     !isLoading && wines.length === 0 && inbound.length === 0;
   const isEmptyCellar = isUaeEmpty && !hasUk;
+  /*
+    One collection, filtered by where it is held. The strip only appears when
+    wine is held in more than one place; All is the default, because the
+    collection is what the member owns.
+  */
+  const [location, setLocation] = useState<CellarLocation>('all');
+  const showLocations = hasUk && !isUaeEmpty;
+  const showUae = !showLocations || location !== 'uk';
+  const showUk = !showLocations || location !== 'uae';
 
   const requestByStock = useMemo(() => {
     const map = new Map<string, { requestNumber: string }>();
@@ -808,7 +829,39 @@ const CellarPage = () => {
         the only card that colours itself is wine in transit, which colours
         itself only when there is some.
       */}
-      {!isUaeEmpty && (
+      {showLocations && (
+        <CellarLocationStrip
+          value={location}
+          onChange={setLocation}
+          formatValue={(usd) => money(usd, true)}
+          locations={[
+            {
+              key: 'uae',
+              country: 'United Arab Emirates',
+              place: 'C&C bonded warehouse',
+              bottles: totals.bottles,
+              wines: totals.wines,
+              valueUsd: wines.reduce(
+                (sum, wine) => sum + bottlesOf(wine) * (wine.indicativePerBottle ?? 0),
+                0,
+              ),
+            },
+            {
+              key: 'uk',
+              country: 'United Kingdom',
+              place: 'London City Bond, Burton',
+              bottles: (ukData?.holdings ?? []).reduce((sum, holding) => sum + holding.totalBottles, 0),
+              wines: new Set((ukData?.holdings ?? []).map((holding) => `${holding.lwin18}|${holding.name}`)).size,
+              valueUsd: (ukData?.holdings ?? []).reduce(
+                (sum, holding) => sum + holding.totalBottles * (holding.indicativePerBottle ?? 0),
+                0,
+              ),
+              updatedAt: ukData?.reportedAt ?? null,
+            },
+          ]}
+        />
+      )}
+      {!isUaeEmpty && (!showLocations || location === 'uae') && (
       <div
         className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
           (inbound.length > 0 ? 1 : 0) + (totals.indicative > 0 ? 1 : 0) === 2
@@ -1447,7 +1500,7 @@ const CellarPage = () => {
             Browse The Cellar List
           </Link>
         </div>
-      ) : isUaeEmpty ? null : (
+      ) : isUaeEmpty || !showUae ? null : (
         <>
       {hasUk && (
         <p className="text-text-primary mb-2 text-sm font-semibold">
@@ -1818,7 +1871,8 @@ const CellarPage = () => {
                                 <th className="hidden whitespace-nowrap px-3 py-1.5 text-left sm:table-cell">
                                   Lot
                                 </th>
-                                <th className="whitespace-nowrap px-3 py-1.5 text-left">Stored since</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-left">From</th>
+                                <th className="whitespace-nowrap px-3 py-1.5 text-left">Arrived</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-left">Status</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-right">
                                   Deliver
@@ -1845,10 +1899,13 @@ const CellarPage = () => {
                                     {parcel.lotNumber ?? '—'}
                                   </td>
                                   <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
+                                    {originOf(parcel) ?? '—'}
+                                  </td>
+                                  <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
                                     {parcel.receivedAt
                                       ? format(
                                           new Date(parcel.receivedAt),
-                                          'MMM yyyy',
+                                          'd MMM yyyy',
                                         )
                                       : '—'}
                                   </td>
@@ -2111,7 +2168,7 @@ const CellarPage = () => {
         </>
       )}
 
-      {ukData && (
+      {ukData && showUk && (
         <UkHoldingsPanel
           data={ukData}
           formatValue={(usd) => money(usd, true)}

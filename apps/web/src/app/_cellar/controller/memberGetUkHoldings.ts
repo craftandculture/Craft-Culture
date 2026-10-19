@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
@@ -7,6 +7,7 @@ import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import getListPricePerBottle from '../data/getListPricePerBottle';
+import hasUkSupplierColumn from '../data/hasUkSupplierColumn';
 
 /**
  * The member's wine at C&C's UK bond, LCB Burton
@@ -22,8 +23,11 @@ import getListPricePerBottle from '../data/getListPricePerBottle';
  */
 const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
   try {
+    const withSupplier = await hasUkSupplierColumn();
     const rows = await db
       .select({
+        /* Who sent it in, where the report says; read only once the column is there */
+        supplierName: withSupplier ? cellarUkHoldings.supplierName : sql<string | null>`NULL`,
         id: cellarUkHoldings.id,
         /* Stable across LCB imports, so a move can be matched to its line */
         rotation: cellarUkHoldings.rotation,
