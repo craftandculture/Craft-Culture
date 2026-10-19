@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import UkRatesCard from '@/app/_cellar/components/admin/UkRatesCard';
 import PaymentDetailsCard from '@/app/_cellar/components/PaymentDetailsCard';
 import type { MembershipTermsCard } from '@/app/_cellar/utils/monthlyMembershipCharge';
 import priceFromRateCard, {
@@ -383,6 +384,7 @@ const CellarRatesPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
+      <UkRatesCard />
       <PaymentDetailsCard />
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>

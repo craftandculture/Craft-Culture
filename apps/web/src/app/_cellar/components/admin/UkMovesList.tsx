@@ -106,6 +106,24 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
   const api = useTRPC();
   const [freight, setFreight] = useState(move.freightUsd?.toString() ?? '');
   const [lcb, setLcb] = useState(move.lcbChargesUsd?.toString() ?? '');
+
+  /*
+    LCB's own charges for this move, from the UK rate card at cost: handling
+    each case out, and the export paperwork. Offered, not forced: an invoice
+    from LCB that says otherwise wins.
+  */
+  const { data: ukRates } = useQuery(api.cellar.admin.getUkRates.queryOptions());
+  const moveCases = move.items.reduce((sum, item) => sum + (item.cases ?? 0), 0);
+  const fromCard =
+    ukRates?.current && ukRates.gbpToUsd
+      ? {
+          gbp:
+            Math.round(
+              (moveCases * ukRates.current.handlingOutPerCaseGbp + ukRates.current.exportDocsPerMoveGbp) * 100,
+            ) / 100,
+          rate: ukRates.gbpToUsd,
+        }
+      : null;
   const [other, setOther] = useState(move.otherUsd?.toString() ?? '');
   const [otherLabel, setOtherLabel] = useState(move.otherLabel ?? '');
   const [notes, setNotes] = useState(move.adminNotes ?? '');
@@ -142,6 +160,16 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
         <label className="text-text-muted text-[11px] font-semibold">
           LCB charges at cost (USD)
           <input className={field} inputMode="decimal" value={lcb} onChange={(event) => setLcb(event.target.value)} />
+          {fromCard && fromCard.gbp > 0 && (
+            <button
+              type="button"
+              onClick={() => setLcb((fromCard.gbp * fromCard.rate).toFixed(2))}
+              className="text-text-brand mt-0.5 block text-left font-normal hover:underline"
+            >
+              From UK rates: {moveCases} cases out + paperwork = £{fromCard.gbp.toFixed(2)} ≈ $
+              {(fromCard.gbp * fromCard.rate).toFixed(2)}. Use it
+            </button>
+          )}
           {lcbChargedUsd > 0 && (
             <span className="text-text-muted mt-0.5 block font-normal">
               {money(lcbChargedUsd)} charged, at cost + {LCB_RECHARGE_MARKUP * 100}%

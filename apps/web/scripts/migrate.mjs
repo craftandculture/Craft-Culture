@@ -2888,6 +2888,27 @@ const runMigrations = async () => {
     console.log('✅ cellar payment settings ready');
 
     /*
+      LCB's prices at cost, by the date they took effect (Oct 2026): wine at
+      our UK bond is charged under a UK rate card, separate from the UAE
+      membership. Read behind a guard, so a missed run only blanks UK figures.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cellar_uk_rates" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "effective_from" timestamp NOT NULL,
+        "storage_per_unit_month_gbp" double precision DEFAULT 0 NOT NULL,
+        "receive_per_case_gbp" double precision DEFAULT 0 NOT NULL,
+        "handling_out_per_case_gbp" double precision DEFAULT 0 NOT NULL,
+        "export_docs_per_move_gbp" double precision DEFAULT 0 NOT NULL,
+        "notes" text,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ UK rate card ready');
+
+    /*
       Purchases and memberships tell people when they move (Oct 2026). A
       value missing here only drops the notice — createNotification is always
       called inside a catch — never the purchase.

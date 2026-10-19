@@ -7544,6 +7544,35 @@ export const cellarPaymentSettings = pgTable('cellar_payment_settings', {
 });
 
 /**
+ * What our UK bond costs us, by the date LCB's prices took effect
+ *
+ * Wine is charged by where it is held (Kevin, 19 October 2026): at LCB, under
+ * these UK rates; in the UAE, under the membership. Each row is LCB's own
+ * price at cost, in GBP; members pay cost plus LCB_RECHARGE_MARKUP. When LCB
+ * raises a price a new row is added from the date it applies, so a charge
+ * for an earlier month is always worked out at the price of that month.
+ *
+ * Its own table, read behind a guard, so a missed migration only leaves the
+ * UK figures blank.
+ */
+export const cellarUkRates = pgTable('cellar_uk_rates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** The first day these prices apply */
+  effectiveFrom: timestamp('effective_from', { mode: 'date' }).notNull(),
+  /** Storage per case unit per month (a 12 × 75cl case; a case of six is half) */
+  storagePerUnitMonthGbp: doublePrecision('storage_per_unit_month_gbp').notNull().default(0),
+  /** Receiving a case into our account */
+  receivePerCaseGbp: doublePrecision('receive_per_case_gbp').notNull().default(0),
+  /** Picking a case out for dispatch */
+  handlingOutPerCaseGbp: doublePrecision('handling_out_per_case_gbp').notNull().default(0),
+  /** Export paperwork for one consignment leaving bond */
+  exportDocsPerMoveGbp: doublePrecision('export_docs_per_move_gbp').notNull().default(0),
+  notes: text('notes'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+});
+
+/**
  * Whose wine each LCB rotation is
  *
  * LCB's stock report lists rotations — one per receipt into C&C's account —

@@ -7,6 +7,7 @@ import AttentionQueue from '@/app/_cellar/components/admin/AttentionQueue';
 import SharedAccessList from '@/app/_cellar/components/admin/SharedAccessList';
 import UkBondList from '@/app/_cellar/components/admin/UkBondList';
 import UkMovesList from '@/app/_cellar/components/admin/UkMovesList';
+import UkStorageList from '@/app/_cellar/components/admin/UkStorageList';
 import CellarMembersList from '@/app/_cellar/components/CellarMembersList';
 import SourcingAdmin from '@/app/_cellarSourcing/components/admin/SourcingAdmin';
 import ApplicationsList from '@/app/_onboarding/components/admin/ApplicationsList';
@@ -61,7 +62,12 @@ const CellarMembersPage = () => {
       {tab === 'applications' && <ApplicationsList />}
       {tab === 'invites' && <InvitesList />}
       {tab === 'intakes' && <IntakesList />}
-      {tab === 'storage' && <StorageList />}
+      {tab === 'storage' && (
+        <div className="space-y-8">
+          <StorageList />
+          <UkStorageList />
+        </div>
+      )}
       {tab === 'uk' && <UkBondList />}
       {tab === 'uk-moves' && <UkMovesList />}
       {tab === 'requests' && <SourcingAdmin />}

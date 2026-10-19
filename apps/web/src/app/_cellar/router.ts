@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddUkRates from './controller/adminAddUkRates';
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
 import adminAssignUkRotations from './controller/adminAssignUkRotations';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
@@ -11,7 +12,9 @@ import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
 import adminGetUkMoves from './controller/adminGetUkMoves';
+import adminGetUkRates from './controller/adminGetUkRates';
 import adminGetUkStock from './controller/adminGetUkStock';
+import adminGetUkStorage from './controller/adminGetUkStorage';
 import adminImportUkStock from './controller/adminImportUkStock';
 import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminQuoteUkMove from './controller/adminQuoteUkMove';
@@ -83,6 +86,9 @@ const adminRouter = createTRPCRouter({
   getUkStock: adminGetUkStock,
   importUkStock: adminImportUkStock,
   assignUkRotation: adminAssignUkRotation,
+  getUkRates: adminGetUkRates,
+  addUkRates: adminAddUkRates,
+  getUkStorage: adminGetUkStorage,
   assignUkRotations: adminAssignUkRotations,
   getUkMoves: adminGetUkMoves,
   quoteUkMove: adminQuoteUkMove,
