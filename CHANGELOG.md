@@ -1,3 +1,9 @@
+## [2.0.441](https://github.com/craftandculture/Craft-Culture/compare/v2.0.440...v2.0.441) (2026-10-19)
+
+### Features
+
+* the cellar is one table across locations, with UK wine beside the same wine in the UAE, its cases, condition, sender and arrival in the details, a case stepper to move it to the UAE, and summary tiles for the whole collection ([0022c01](https://github.com/craftandculture/Craft-Culture/commit/0022c01fe86bdd2a2162bad1f89c4de1b3cfabb1))
+
 ## [2.0.440](https://github.com/craftandculture/Craft-Culture/compare/v2.0.439...v2.0.440) (2026-10-19)
 
 ### Features
