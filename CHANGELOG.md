@@ -1,3 +1,9 @@
+## [2.0.429](https://github.com/craftandculture/Craft-Culture/compare/v2.0.428...v2.0.429) (2026-10-19)
+
+### Features
+
+* an end-of-day report posts to [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) at 6pm on weekdays: what closed, decisions needed, blockers, overdue and tomorrow's work ([8aab4fe](https://github.com/craftandculture/Craft-Culture/commit/8aab4fe378454fa49251271dcd04a68a5fd07af3))
+
 ## [2.0.428](https://github.com/craftandculture/Craft-Culture/compare/v2.0.427...v2.0.428) (2026-10-19)
 
 ### Bug Fixes
