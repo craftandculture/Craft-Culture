@@ -24,6 +24,32 @@ const CURRENT_MAX_AGE_MINUTES = 120;
 
 const PERIOD_DAYS = 30;
 
+const HISTORY_DAYS = 7;
+
+/** The three positions in the room; middle has no humidity probe */
+const ZONES = [
+  {
+    zone: 'Front',
+    temperature: 'cold_room_front_temperature',
+    humidity: 'cold_room_front_humidity',
+  },
+  {
+    zone: 'Middle',
+    temperature: 'cold_room_middle_temperature',
+    humidity: null,
+  },
+  {
+    zone: 'Rear',
+    temperature: 'cold_room_rear_temperature',
+    humidity: 'cold_room_rear_humidity',
+  },
+];
+
+const round1 = (value: unknown) =>
+  value === null || value === undefined
+    ? null
+    : Math.round(Number(value) * 10) / 10;
+
 const average = (values: number[]) =>
   values.length === 0
     ? null
@@ -33,9 +59,9 @@ const average = (values: number[]) =>
  * GET /api/warehouse/sensors/public
  *
  * A public summary of cold room conditions for the website and the QR code on
- * business cards: the current average temperature and humidity, and the share
- * of readings inside the published range over the last 30 days. No sensor
- * names, locations or raw history.
+ * business cards: current readings by zone, the last 24 hours' range, hourly
+ * room averages for the last week, and the share of readings inside the
+ * published range over the last 30 days. No sensor ids, site or raw readings.
  */
 export const GET = async () => {
   try {
@@ -100,13 +126,82 @@ export const GET = async () => {
         ),
       );
 
+    const byId = new Map(fresh.map((r) => [r.sensorId, r.value]));
+    const zones = ZONES.map((z) => ({
+      zone: z.zone,
+      temperature: round1(byId.get(z.temperature)),
+      humidity: z.humidity ? round1(byId.get(z.humidity)) : null,
+    }));
+
+    const isTemperature = inArray(
+      warehouseSensorReadings.sensorId,
+      TEMPERATURE_SENSORS,
+    );
+    const isHumidity = inArray(
+      warehouseSensorReadings.sensorId,
+      HUMIDITY_SENSORS,
+    );
+
+    const since24h = new Date(Date.now() - 24 * 60 * 60_000);
+    const [day] = await db
+      .select({
+        temperatureMin: sql`min(${warehouseSensorReadings.value}) filter (where ${isTemperature})`,
+        temperatureMax: sql`max(${warehouseSensorReadings.value}) filter (where ${isTemperature})`,
+        humidityMin: sql`min(${warehouseSensorReadings.value}) filter (where ${isHumidity})`,
+        humidityMax: sql`max(${warehouseSensorReadings.value}) filter (where ${isHumidity})`,
+      })
+      .from(warehouseSensorReadings)
+      .where(
+        and(
+          inArray(warehouseSensorReadings.sensorId, ids),
+          gte(warehouseSensorReadings.timestamp, since24h),
+        ),
+      );
+
+    // Hourly room averages, enough for a week-long line without raw readings
+    const hour = sql`date_trunc('hour', ${warehouseSensorReadings.timestamp})`;
+    const sinceHistory = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60_000);
+    const hourly = await db
+      .select({
+        hour: sql<string>`to_char(${hour}, 'YYYY-MM-DD"T"HH24:00:00"Z"')`,
+        temperature: sql`avg(${warehouseSensorReadings.value}) filter (where ${isTemperature})`,
+        humidity: sql`avg(${warehouseSensorReadings.value}) filter (where ${isHumidity})`,
+      })
+      .from(warehouseSensorReadings)
+      .where(
+        and(
+          inArray(warehouseSensorReadings.sensorId, ids),
+          gte(warehouseSensorReadings.timestamp, sinceHistory),
+        ),
+      )
+      .groupBy(hour)
+      .orderBy(hour);
+
     const share = (inRange: number, total: number) =>
       total === 0 ? null : Math.round((inRange / total) * 1000) / 10;
 
     return NextResponse.json(
       {
-        current: { temperature, humidity, updatedAt },
+        current: { temperature, humidity, updatedAt, zones },
         range: RANGE,
+        last24h: {
+          temperature: {
+            min: round1(day?.temperatureMin),
+            max: round1(day?.temperatureMax),
+          },
+          humidity: {
+            min: round1(day?.humidityMin),
+            max: round1(day?.humidityMax),
+          },
+        },
+        history: {
+          days: HISTORY_DAYS,
+          points: hourly.map((h) => ({
+            hour: h.hour,
+            temperature: round1(h.temperature),
+            humidity: round1(h.humidity),
+          })),
+        },
         period: {
           days: PERIOD_DAYS,
           temperatureInRangePct: share(
