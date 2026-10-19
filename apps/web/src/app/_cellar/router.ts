@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
+import adminAssignUkRotations from './controller/adminAssignUkRotations';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
 import adminGetAttention from './controller/adminGetAttention';
 import adminGetCellarAccess from './controller/adminGetCellarAccess';
@@ -82,6 +83,7 @@ const adminRouter = createTRPCRouter({
   getUkStock: adminGetUkStock,
   importUkStock: adminImportUkStock,
   assignUkRotation: adminAssignUkRotation,
+  assignUkRotations: adminAssignUkRotations,
   getUkMoves: adminGetUkMoves,
   quoteUkMove: adminQuoteUkMove,
   shipUkMove: adminShipUkMove,

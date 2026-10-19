@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
@@ -17,15 +17,24 @@ import getPartnerUserIds from './getPartnerUserIds';
  * for moves on to "Arrived at our UK bond" at the same time. Never throws:
  * the assignment stands whether or not the notice goes.
  *
- * @param params - The rotation and the member it now belongs to
+ * Takes several rotations for one delivery and sends one notice for them all:
+ * LCB books each case as its own rotation, and a 193-case delivery assigned
+ * together should be one message, not 193.
+ *
+ * @param params - The rotation (or rotations) and the member it now belongs to
  */
 const notifyUkRotationAssigned = async ({
   rotation,
+  rotations,
   partnerId,
 }: {
-  rotation: string;
+  rotation?: string;
+  rotations?: string[];
   partnerId: string;
 }) => {
+  const placed = rotations ?? (rotation ? [rotation] : []);
+  if (placed.length === 0) return;
+
   try {
     await advanceUkIntake(partnerId);
 
@@ -37,7 +46,7 @@ const notifyUkRotationAssigned = async ({
         totalBottles: cellarUkHoldings.totalBottles,
       })
       .from(cellarUkHoldings)
-      .where(eq(cellarUkHoldings.rotation, rotation));
+      .where(inArray(cellarUkHoldings.rotation, placed));
 
     const bottles = lines.reduce((sum, line) => sum + line.totalBottles, 0);
     const first = lines[0];
@@ -59,7 +68,7 @@ const notifyUkRotationAssigned = async ({
       });
     }
   } catch (error) {
-    logger.error('Could not notify a UK rotation assignment', { rotation, error });
+    logger.error('Could not notify a UK rotation assignment', { rotations: placed, error });
   }
 };
 

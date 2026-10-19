@@ -41,6 +41,17 @@ const UkBondList = () => {
     }),
   );
 
+  const [deliveryOwner, setDeliveryOwner] = useState<Record<string, string>>({});
+  const assignMany = useMutation(
+    api.cellar.admin.assignUkRotations.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`${result.assigned} rotations assigned`);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const assign = useMutation(
     api.cellar.admin.assignUkRotation.mutationOptions({
       onSuccess: () => void refetch(),
@@ -97,6 +108,29 @@ const UkBondList = () => {
 
   const active: Filter = filter ?? (counts.unassigned > 0 ? 'unassigned' : 'all');
   const shown = rotations.filter((item) => active === 'all' || item.state === active);
+
+  /*
+    Unassigned rotations by the day LCB received them. LCB books every case as
+    its own rotation, so one member's delivery is many rotations on one day;
+    Jon De Jager's 19 October delivery was 193. A delivery is assigned as one.
+  */
+  const deliveries = useMemo(() => {
+    const byDay = new Map<string, { key: string; label: string; rotations: string[]; bottles: number }>();
+    for (const item of rotations) {
+      if (item.state !== 'unassigned') continue;
+      const key = item.receivedAt ? format(new Date(item.receivedAt), 'yyyy-MM-dd') : 'unknown';
+      const entry = byDay.get(key) ?? {
+        key,
+        label: item.receivedAt ? format(new Date(item.receivedAt), 'd MMM yyyy') : 'No received date',
+        rotations: [],
+        bottles: 0,
+      };
+      entry.rotations.push(item.rotation);
+      entry.bottles += item.bottles;
+      byDay.set(key, entry);
+    }
+    return [...byDay.values()].sort((a, b) => b.key.localeCompare(a.key));
+  }, [rotations]);
   const bottles = rotations.reduce((sum, item) => sum + item.bottles, 0);
 
   const tiles = [
@@ -203,6 +237,59 @@ const UkBondList = () => {
           </button>
         ))}
       </div>
+
+      {active === 'unassigned' && deliveries.length > 0 && (
+        <div className="border-border-muted bg-surface-primary divide-border-muted divide-y rounded-xl border shadow-sm">
+          <p className="text-text-muted px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider">
+            Assign a whole delivery
+          </p>
+          {deliveries.map((delivery) => (
+            <div key={delivery.key} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+              <p className="text-text-primary text-sm">
+                Received <span className="font-semibold">{delivery.label}</span>
+                <span className="text-text-muted">
+                  {' '}
+                  · {delivery.rotations.length} {delivery.rotations.length === 1 ? 'rotation' : 'rotations'} ·{' '}
+                  {delivery.bottles} {delivery.bottles === 1 ? 'bottle' : 'bottles'}
+                </span>
+              </p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={deliveryOwner[delivery.key] ?? ''}
+                  onChange={(event) =>
+                    setDeliveryOwner((current) => ({ ...current, [delivery.key]: event.target.value }))
+                  }
+                  aria-label={`Whose wine is the delivery received ${delivery.label}`}
+                  className="border-border-muted bg-surface-primary h-8 max-w-[240px] rounded-lg border px-2 text-xs font-semibold"
+                >
+                  <option value="">Whose wine is it…</option>
+                  <option value="house">C&amp;C stock (not shown to members)</option>
+                  {(data?.owners ?? []).map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.code ? `${owner.name} · ${owner.code}` : owner.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!deliveryOwner[delivery.key] || assignMany.isPending}
+                  onClick={() => {
+                    const value = deliveryOwner[delivery.key];
+                    if (!value) return;
+                    assignMany.mutate({
+                      rotations: delivery.rotations,
+                      owner: value === 'house' ? { kind: 'house' } : { kind: 'member', partnerId: value },
+                    });
+                  }}
+                  className="bg-text-primary text-surface-primary h-8 rounded-lg px-3 text-xs font-semibold disabled:opacity-40"
+                >
+                  {assignMany.isPending ? 'Assigning…' : `Assign all ${delivery.rotations.length}`}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {shown.length === 0 ? (
         <p className="border-border-muted text-text-muted rounded-xl border px-4 py-8 text-center text-sm">
