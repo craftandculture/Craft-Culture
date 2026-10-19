@@ -1711,6 +1711,63 @@ const CellarPage = () => {
       </div>
 
 
+      {/*
+        Moving a whole UK cellar was one click per wine: 73 of them for Jon De
+        Jager's delivery. Selecting is by what is on screen, so search and the
+        filters narrow it ("all the Champagne", "everything but the magnums"),
+        and each row keeps its stepper to trim before asking for a price.
+      */}
+      {!isViewer && location !== 'uae' && (() => {
+        const shownMovable = rows.flatMap((wine) =>
+          (wine.uk ?? []).filter((line) => !line.moveStatus && line.cases > 0),
+        );
+        if (shownMovable.length === 0) return null;
+        const shownWines = rows.filter((wine) =>
+          (wine.uk ?? []).some((line) => !line.moveStatus && line.cases > 0),
+        ).length;
+        const shownCases = shownMovable.reduce((sum, line) => sum + line.cases, 0);
+        const isFiltered = search.trim() !== '' || quickFilter !== 'all';
+        const allChosen = shownMovable.every((line) => (moveBasket.get(line.key) ?? 0) >= line.cases);
+
+        return (
+          <div className="border-border-muted mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-slate-50/60 px-4 py-2.5 dark:bg-slate-500/5">
+            <p className="text-text-primary text-sm">
+              <span className="font-semibold">Move wine to the UAE.</span>{' '}
+              <span className="text-text-muted">
+                Choose the wines below, or select {isFiltered ? 'everything shown' : 'everything'} at once.
+              </span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={allChosen}
+                onClick={() =>
+                  setMoveBasket((current) => {
+                    const map = new Map(current);
+                    for (const line of shownMovable) map.set(line.key, line.cases);
+                    return map;
+                  })
+                }
+                className="bg-text-primary text-surface-primary h-9 rounded-lg px-3 text-xs font-semibold disabled:opacity-40"
+              >
+                {allChosen
+                  ? 'All selected'
+                  : `Select ${isFiltered ? `all ${shownWines} shown` : `all ${shownWines} wines`} · ${shownCases} ${shownCases === 1 ? 'case' : 'cases'}`}
+              </button>
+              {moveBasket.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMoveBasket(new Map())}
+                  className="border-border-muted text-text-muted hover:text-text-primary h-9 rounded-lg border px-3 text-xs font-semibold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
@@ -1791,7 +1848,8 @@ const CellarPage = () => {
                       without reading a single number.
                     */
                     className={`group cursor-pointer transition-colors ${
-                      basketBottlesOf(wine) > 0
+                      basketBottlesOf(wine) > 0 ||
+                      (wine.uk ?? []).some((line) => (moveBasket.get(line.key) ?? 0) > 0)
                         ? 'bg-emerald-50/50 shadow-[inset_2px_0_0_0] shadow-emerald-500 dark:bg-emerald-500/10'
                         : 'hover:bg-fill-muted/40'
                     }`}

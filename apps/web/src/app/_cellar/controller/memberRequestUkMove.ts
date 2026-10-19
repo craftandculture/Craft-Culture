@@ -52,7 +52,8 @@ const memberRequestUkMove = stockOwnerProcedure
       holdingIds: z
         .array(z.string().uuid())
         .min(1)
-        .max(100)
+        // A whole UK cellar in one request: LCB books each case as its own rotation
+        .max(1000)
         .refine((ids) => new Set(ids).size === ids.length, {
           message: 'A wine was chosen twice',
         }),
