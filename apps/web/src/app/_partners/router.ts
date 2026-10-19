@@ -17,6 +17,7 @@ import partnersGetOne from './controllers/partnersGetOne';
 import partnersGetPublicInfo from './controllers/partnersGetPublicInfo';
 import partnersListSimple from './controllers/partnersListSimple';
 import partnersMerge from './controllers/partnersMerge';
+import partnersSetHideNameOnLabels from './controllers/partnersSetHideNameOnLabels';
 import partnersUpdate from './controllers/partnersUpdate';
 import zohoContactLink from './controllers/zohoContactLink';
 import zohoContactsFind from './controllers/zohoContactsFind';
@@ -46,6 +47,7 @@ const partnersRouter = createTRPCRouter({
   getPublicInfo: partnersGetPublicInfo,
   list: partnersListSimple,
   update: partnersUpdate,
+  setHideNameOnLabels: partnersSetHideNameOnLabels,
   // A partner's own feed: stock, their orders and the RFQs they were invited to
   getActivity: partnerGetActivity,
   /*

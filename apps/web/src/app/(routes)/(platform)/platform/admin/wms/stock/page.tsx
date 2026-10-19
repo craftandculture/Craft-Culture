@@ -31,6 +31,7 @@ import CapacityBar from '@/app/_wms/components/CapacityBar';
 import ExpiryBadge from '@/app/_wms/components/ExpiryBadge';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
@@ -45,6 +46,7 @@ type TabView = 'product' | 'location' | 'owner';
 const WMSStockPage = () => {
   const api = useTRPC();
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
   const [activeTab, setActiveTab] = useState<TabView>('product');
   const [searchQuery, setSearchQuery] = useState('');
   const [printingLoc, setPrintingLoc] = useState<string | null>(null);
@@ -290,6 +292,10 @@ const WMSStockPage = () => {
                                       className="flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white active:bg-blue-700"
                                       onClick={async () => {
                                         const packSize = `${product.caseConfig}x${product.bottleSize}`;
+                                        const ownerText = await labelOwner({
+                                          id: loc.ownerId,
+                                          name: loc.ownerName,
+                                        });
                                         const labels: LabelData[] = Array.from(
                                           { length: printQty },
                                           () => ({
@@ -300,7 +306,7 @@ const WMSStockPage = () => {
                                             packSize,
                                             vintage: product.vintage ?? undefined,
                                             locationCode: loc.locationCode,
-                                            owner: loc.ownerName,
+                                            owner: ownerText,
                                             lotNumber: loc.lotNumber ?? undefined,
                                             showBarcode: true,
                                           }),

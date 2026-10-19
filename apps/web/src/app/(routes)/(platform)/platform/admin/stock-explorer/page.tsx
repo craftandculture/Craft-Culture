@@ -59,6 +59,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
+import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import exportStockToExcel from '@/app/_wms/utils/exportStockToExcel';
@@ -674,6 +675,7 @@ interface ProductRowProps {
       openBottles: number | null;
       ownerId: string;
       ownerName: string;
+      ownerCode?: string | null;
       lotNumber: string | null;
       expiryDate: Date | null;
       reExportBoeNumber: string | null;
@@ -1244,6 +1246,14 @@ const ProductRow = ({
                             <td className="px-3 py-2">
                               <div className="group/owner flex items-center gap-1">
                                 <OwnerBadge name={loc.ownerName} />
+                                {loc.ownerCode && (
+                                  <span
+                                    className="shrink-0 rounded bg-fill-muted px-1.5 py-px font-mono text-[11px] text-text-muted"
+                                    title="Printed on this owner's labels instead of their name"
+                                  >
+                                    {loc.ownerCode}
+                                  </span>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -2029,6 +2039,7 @@ const StockExplorerPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { print } = usePrint();
+  const labelOwner = useLabelOwner();
 
   // Update RE BOE on a stock record
   const { mutate: updateBoe } = useMutation({
@@ -2542,6 +2553,10 @@ const StockExplorerPage = () => {
       qty: number,
     ) => {
       const packSize = `${product.caseConfig ?? 12}x${product.bottleSize ?? '75cl'}`;
+      const ownerText = await labelOwner({
+        id: loc.ownerId,
+        name: loc.ownerName,
+      });
 
       if (loc.storageMethod === 'pallet') {
         const zpl = Array.from({ length: qty }, () =>
@@ -2551,7 +2566,7 @@ const StockExplorerPage = () => {
             lwin18: product.lwin18,
             packSize,
             vintage: product.vintage ?? undefined,
-            ownerName: loc.ownerName,
+            ownerName: ownerText ?? '-',
             quantityCases: loc.quantityCases,
             lotNumber: loc.lotNumber ?? undefined,
           }),
@@ -2573,7 +2588,7 @@ const StockExplorerPage = () => {
           packSize,
           vintage: product.vintage ?? undefined,
           locationCode: loc.locationCode,
-          owner: loc.ownerName,
+          owner: ownerText,
           lotNumber: loc.lotNumber ?? undefined,
           showBarcode: true,
         }));
@@ -2588,7 +2603,7 @@ const StockExplorerPage = () => {
         }
       }
     },
-    [print],
+    [print, labelOwner],
   );
 
   const hasActiveFilters =

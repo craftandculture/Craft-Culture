@@ -20,6 +20,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import HideNameOnLabelsToggle from '@/app/_partners/components/HideNameOnLabelsToggle';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
 import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
@@ -706,6 +707,9 @@ const WinePartnersPage = () => {
                     />
                   </div>
                 </div>
+
+                {/* Warehouse labels */}
+                <HideNameOnLabelsToggle partnerId={editingPartner.id} />
 
                 {/* Contacts Section */}
                 <PartnerContactsSection partnerId={editingPartner.id} />

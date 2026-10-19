@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { wmsCaseLabels, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import resolveLabelOwner from '../data/resolveLabelOwner';
 import generateLabelZpl, { type LabelData } from '../utils/generateLabelZpl';
 
 /**
@@ -36,6 +37,7 @@ const adminReprintCaseLabels = wmsOperatorProcedure
         caseConfig: wmsStock.caseConfig,
         bottleSize: wmsStock.bottleSize,
         vintage: wmsStock.vintage,
+        ownerId: wmsStock.ownerId,
         ownerName: wmsStock.ownerName,
         lotNumber: wmsStock.lotNumber,
         quantityCases: wmsStock.quantityCases,
@@ -52,6 +54,11 @@ const adminReprintCaseLabels = wmsOperatorProcedure
         zpl: '',
       };
     }
+
+    const ownerText = await resolveLabelOwner({
+      id: stock.ownerId,
+      name: stock.ownerName,
+    });
 
     // Find existing case labels for this product at this location
     const existingLabels = await db
@@ -94,7 +101,7 @@ const adminReprintCaseLabels = wmsOperatorProcedure
       packSize,
       vintage: stock.vintage ?? undefined,
       lotNumber: label.lotNumber ?? undefined,
-      owner: stock.ownerName,
+      owner: ownerText,
     }));
 
     const zplCommands = labelDataForZpl.map((data) => generateLabelZpl(data));

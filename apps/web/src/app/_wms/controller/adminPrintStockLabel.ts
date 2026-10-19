@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import resolveLabelOwner from '../data/resolveLabelOwner';
 import generateLabelZpl from '../utils/generateLabelZpl';
 
 /**
@@ -38,6 +39,7 @@ const adminPrintStockLabel = wmsOperatorProcedure
         caseConfig: wmsStock.caseConfig,
         bottleSize: wmsStock.bottleSize,
         vintage: wmsStock.vintage,
+        ownerId: wmsStock.ownerId,
         ownerName: wmsStock.ownerName,
         lotNumber: wmsStock.lotNumber,
         quantityCases: wmsStock.quantityCases,
@@ -88,7 +90,10 @@ const adminPrintStockLabel = wmsOperatorProcedure
       vintage: stock.vintage ?? undefined,
       lotNumber: stock.lotNumber ?? undefined,
       locationCode: location?.locationCode ?? undefined,
-      owner: stock.ownerName ?? undefined,
+      owner: await resolveLabelOwner({
+        id: stock.ownerId,
+        name: stock.ownerName,
+      }),
     });
 
     // Repeat label for requested copies
