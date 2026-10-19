@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 
+import AddIntakeForm from './AddIntakeForm';
 import intakeStages from '../../constants/intakeStages';
 import wineSources from '../../constants/wineSources';
 
@@ -53,6 +54,7 @@ const IntakesList = () => {
 
   return (
     <div className="space-y-3">
+      <AddIntakeForm onAdded={() => void refetch()} />
       <label className="text-text-muted flex items-center gap-2 text-xs">
         <input type="checkbox" checked={showClosed} onChange={(event) => setShowClosed(event.target.checked)} />
         Show finished and closed

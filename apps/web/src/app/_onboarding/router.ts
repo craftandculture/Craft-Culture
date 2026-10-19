@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddIntake from './controller/adminAddIntake';
 import adminApproveApplication from './controller/adminApproveApplication';
 import adminDeclineApplication from './controller/adminDeclineApplication';
 import adminGetStorage from './controller/adminGetStorage';
@@ -62,6 +63,7 @@ const onboardingRouter = createTRPCRouter({
     resendInvite: adminResendInvite,
     revokeInvite: adminRevokeInvite,
     listIntakes: adminListIntakes,
+    addIntake: adminAddIntake,
     setIntakeStage: adminSetIntakeStage,
     linkIntakeShipment: adminLinkIntakeShipment,
     listLinkableShipments: adminListLinkableShipments,
