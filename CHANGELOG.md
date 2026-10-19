@@ -1,3 +1,9 @@
+## [2.0.425](https://github.com/craftandculture/Craft-Culture/compare/v2.0.424...v2.0.425) (2026-10-19)
+
+### Features
+
+* a public cold room summary (current reading and 30-day share in range) for the website and business-card QR code ([de219d8](https://github.com/craftandculture/Craft-Culture/commit/de219d83b88b0c5c9f752aa49e4984eacf8052d6))
+
 ## [2.0.424](https://github.com/craftandculture/Craft-Culture/compare/v2.0.423...v2.0.424) (2026-10-19)
 
 ### Features
