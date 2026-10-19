@@ -60,6 +60,10 @@ const adminUpdateExportJob = adminProcedure
           ...(input.invoiceValue !== undefined && { invoiceValue: input.invoiceValue }),
           ...(input.invoiceCurrency !== undefined && { invoiceCurrency: input.invoiceCurrency }),
           ...(input.exportInvoiceId !== undefined && { exportInvoiceId: input.exportInvoiceId }),
+          ...(input.additionalInvoices !== undefined && { additionalInvoices: input.additionalInvoices }),
+          ...(input.additionalExportInvoiceIds !== undefined && {
+            additionalExportInvoiceIds: input.additionalExportInvoiceIds,
+          }),
           ...(mode && { bondedTransfer: mode.bonded }),
           ...(stage && { stage: stage.key }),
         })

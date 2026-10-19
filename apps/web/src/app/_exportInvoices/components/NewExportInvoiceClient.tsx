@@ -81,15 +81,18 @@ const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
     if (jobData.zohoCustomerId) setCustomerId(jobData.zohoCustomerId);
   }, [jobData, seeded.customer]);
 
-  const jobInvoiceNumber = jobData?.invoiceNumber?.trim().toLowerCase();
+  // Every Zoho invoice on the job, so a combined export invoice starts with all of them ticked
+  const jobInvoiceNumbers = [jobData?.invoiceNumber, ...(jobData?.additionalInvoices ?? []).map((i) => i.number)]
+    .map((n) => n?.trim().toLowerCase())
+    .filter(Boolean)
+    .join('|');
   useEffect(() => {
     if (seeded.invoice || !seeded.customer || !invoices.data || customerId !== jobData?.zohoCustomerId) return;
     setSeeded((s) => ({ ...s, invoice: true }));
-    const match = jobInvoiceNumber
-      ? invoices.data.find((i) => i.invoiceNumber.trim().toLowerCase() === jobInvoiceNumber)
-      : undefined;
-    if (match) setSelected([match.zohoInvoiceId]);
-  }, [invoices.data, seeded, customerId, jobData?.zohoCustomerId, jobInvoiceNumber]);
+    const wanted = jobInvoiceNumbers ? jobInvoiceNumbers.split('|') : [];
+    const matches = invoices.data.filter((i) => wanted.includes(i.invoiceNumber.trim().toLowerCase()));
+    if (matches.length > 0) setSelected(matches.map((m) => m.zohoInvoiceId));
+  }, [invoices.data, seeded, customerId, jobData?.zohoCustomerId, jobInvoiceNumbers]);
 
   const consignee = consignees.data?.find((c) => c.zohoCustomerId === customerId);
   const filtered = (consignees.data ?? []).filter((c) => c.displayName.toLowerCase().includes(search.trim().toLowerCase()));

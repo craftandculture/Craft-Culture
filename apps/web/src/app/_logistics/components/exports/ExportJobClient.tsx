@@ -64,6 +64,28 @@ const UPLOAD_KINDS: { key: ExportDocumentKind; label: string }[] = [
 
 type Job = inferRouterOutputs<AppRouter>['logistics']['admin']['exports']['getOne'];
 
+/** One Zoho invoice row on the job, as typed */
+interface ZohoRow {
+  number: string;
+  value: string;
+  currency: string;
+}
+
+const blankZohoRow = (currency: string): ZohoRow => ({ number: '', value: '', currency });
+
+/** The value as a number, null when blank, NaN when it is not a number */
+const parseValue = (v: string) => (v.trim() === '' ? null : Number(v));
+
+/** Totals of the Zoho invoices, one per currency, e.g. "AED 11,364.42 + EUR 900.00" */
+const invoiceTotals = (rows: { value: number | null; currency: string }[]) => {
+  const byCurrency = new Map<string, number>();
+  for (const r of rows) {
+    if (r.value == null || !Number.isFinite(r.value)) continue;
+    byCurrency.set(r.currency, (byCurrency.get(r.currency) ?? 0) + r.value);
+  }
+  return [...byCurrency].map(([currency, total]) => money(total, currency)).join(' + ');
+};
+
 const JobView = ({ job }: { job: Job }) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -83,10 +105,18 @@ const JobView = ({ job }: { job: Job }) => {
   const [carrierName, setCarrierName] = useState(job.carrierName ?? '');
   const [awbNumber, setAwbNumber] = useState(job.awbNumber ?? '');
   const [blNumber, setBlNumber] = useState(job.blNumber ?? '');
-  const [exportInvoiceId, setExportInvoiceId] = useState<string | null>(job.linkedInvoice?.id ?? null);
-  const [invoiceNumber, setInvoiceNumber] = useState(job.invoiceNumber ?? '');
-  const [invoiceValue, setInvoiceValue] = useState(job.invoiceValue?.toString() ?? '');
-  const [invoiceCurrency, setInvoiceCurrency] = useState(job.invoiceCurrency);
+  // The first of each list is the job's main invoice; the rest are added after it
+  const [exportInvoiceIds, setExportInvoiceIds] = useState<(string | null)[]>(
+    job.linkedInvoices.length > 0 ? job.linkedInvoices.map((i) => i.id) : [null],
+  );
+  const [zohoRows, setZohoRows] = useState<ZohoRow[]>([
+    { number: job.invoiceNumber ?? '', value: job.invoiceValue?.toString() ?? '', currency: job.invoiceCurrency },
+    ...job.additionalInvoices.map((i) => ({ number: i.number, value: i.value?.toString() ?? '', currency: i.currency })),
+  ]);
+  const setZohoRow = (index: number, patch: Partial<ZohoRow>) =>
+    setZohoRows((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  const setExportInvoiceAt = (index: number, id: string | null) =>
+    setExportInvoiceIds((ids) => ids.map((x, i) => (i === index ? id : x)));
   const [notes, setNotes] = useState(job.notes ?? '');
   const [cases, setCases] = useState(job.totalCases ? String(job.totalCases) : '');
   const [bottles, setBottles] = useState(job.totalBottles ? String(job.totalBottles) : '');
@@ -121,11 +151,20 @@ const JobView = ({ job }: { job: Job }) => {
       toast.error('Client, origin and destination are required');
       return;
     }
-    const value = invoiceValue.trim() === '' ? null : Number(invoiceValue);
-    if (value !== null && (!Number.isFinite(value) || value < 0)) {
-      toast.error('Enter the invoice value as a number');
+    // Blank rows after the first are dropped; the first is the job's main invoice even when empty
+    const [first = blankZohoRow(job.invoiceCurrency), ...rest] = zohoRows;
+    const extra = rest.filter((r) => r.number.trim() || r.value.trim());
+    const firstValue = parseValue(first.value);
+    const extraValues = extra.map((r) => parseValue(r.value));
+    if ([firstValue, ...extraValues].some((v) => v !== null && (!Number.isFinite(v) || v < 0))) {
+      toast.error('Enter each invoice value as a number');
       return;
     }
+    if (extra.some((r) => !r.number.trim())) {
+      toast.error('Enter the Zoho invoice number for each added invoice');
+      return;
+    }
+    const linkedIds = [...new Set(exportInvoiceIds.filter((id): id is string => !!id))];
     const count = (v: string) => (v.trim() === '' ? 0 : Number(v));
     const totalCases = count(cases);
     const totalBottles = count(bottles);
@@ -147,10 +186,12 @@ const JobView = ({ job }: { job: Job }) => {
         carrierName: carrierName.trim() || null,
         awbNumber: awbNumber.trim() || null,
         blNumber: blNumber.trim() || null,
-        exportInvoiceId,
-        invoiceNumber: invoiceNumber.trim() || null,
-        invoiceValue: value,
-        invoiceCurrency,
+        exportInvoiceId: linkedIds[0] ?? null,
+        additionalExportInvoiceIds: linkedIds.slice(1),
+        invoiceNumber: first.number.trim() || null,
+        invoiceValue: firstValue,
+        invoiceCurrency: first.currency,
+        additionalInvoices: extra.map((r, i) => ({ number: r.number.trim(), value: extraValues[i] ?? null, currency: r.currency })),
         totalCases,
         totalBottles,
         notes: notes.trim() || null,
@@ -290,81 +331,160 @@ const JobView = ({ job }: { job: Job }) => {
             </div>
           </section>
 
-          {/* Invoice */}
-          <section className={`${card} space-y-4 p-5`}>
+          {/* Invoices — a shipment can carry several of each */}
+          <section className={`${card} space-y-5 p-5`}>
             <p className={sectionHeading}>Invoices</p>
-            <div>
-              <label htmlFor="export-invoice" className={label}>
-                C&C export invoice (customs paperwork)
-              </label>
-              <ExportInvoiceSelect
-                id="export-invoice"
-                zohoCustomerId={client.zohoCustomerId}
-                value={exportInvoiceId}
-                onChange={(invoice) => {
-                  setExportInvoiceId(invoice?.id ?? null);
-                  if (!invoice) return;
-                  if (invoice.number) setInvoiceNumber(invoice.number);
-                  if (invoice.total != null) setInvoiceValue(String(Math.round(invoice.total * 100) / 100));
-                  setInvoiceCurrency(invoice.currency);
-                }}
-              />
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {exportInvoiceId ? (
-                  <Link
-                    href={`/platform/admin/logistics/export-invoices/${exportInvoiceId}`}
-                    className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
-                  >
-                    <IconArrowRight size={12} /> Open in Export Invoices
-                  </Link>
+            <div className="space-y-2">
+              <p className={label}>C&C export invoices (customs paperwork)</p>
+              {exportInvoiceIds.map((linkedId, index) => {
+                const linked = job.linkedInvoices.find((i) => i.id === linkedId);
+                return (
+                  <div key={index}>
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <ExportInvoiceSelect
+                          id={`export-invoice-${index}`}
+                          zohoCustomerId={client.zohoCustomerId}
+                          value={linkedId}
+                          onChange={(invoice) => {
+                            setExportInvoiceAt(index, invoice?.id ?? null);
+                            // Only the first export invoice fills the Zoho fields, as before
+                            if (!invoice || index !== 0) return;
+                            setZohoRow(0, {
+                              ...(invoice.number && { number: invoice.number }),
+                              ...(invoice.total != null && { value: String(Math.round(invoice.total * 100) / 100) }),
+                              currency: invoice.currency,
+                            });
+                          }}
+                        />
+                      </div>
+                      {exportInvoiceIds.length > 1 ? (
+                        <button
+                          type="button"
+                          aria-label="Remove this export invoice"
+                          onClick={() => setExportInvoiceIds((ids) => ids.filter((_, i) => i !== index))}
+                          className="shrink-0 rounded-lg p-2 text-text-muted hover:bg-surface-secondary hover:text-text-primary"
+                        >
+                          <IconTrash size={16} />
+                        </button>
+                      ) : null}
+                    </div>
+                    {linkedId ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <Link
+                          href={`/platform/admin/logistics/export-invoices/${linkedId}`}
+                          className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+                        >
+                          <IconArrowRight size={12} /> Open in Export Invoices
+                        </Link>
+                        {linked?.pdfUrl ? (
+                          <a
+                            href={linked.pdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+                          >
+                            <IconExternalLink size={12} /> Open {linked.number ?? 'invoice'} PDF
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {exportInvoiceIds.every(Boolean) ? (
+                  <button type="button" onClick={() => setExportInvoiceIds((ids) => [...ids, null])} className={secondaryButton}>
+                    <IconPlus size={14} /> Add another export invoice
+                  </button>
                 ) : null}
-                {job.linkedInvoice?.pdfUrl && job.linkedInvoice.id === exportInvoiceId ? (
-                  <a
-                    href={job.linkedInvoice.pdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
-                  >
-                    <IconExternalLink size={12} /> Open {job.linkedInvoice.number ?? 'invoice'} PDF
-                  </a>
-                ) : null}
+                <Link href={`/platform/admin/logistics/export-invoices/new?shipmentId=${job.shipmentId}`} className={secondaryButton}>
+                  <IconPlus size={14} /> Create export invoice
+                </Link>
+                <span className="text-xs text-text-muted">
+                  {client.zohoCustomerId !== job.zohoCustomerId || (zohoRows[0]?.number.trim() || null) !== job.invoiceNumber
+                    ? 'Save the job first so the client and Zoho invoices carry across.'
+                    : 'Opens with this client and the Zoho invoices chosen, and links back here.'}
+                </span>
               </div>
-              {!exportInvoiceId && !job.linkedInvoice ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/platform/admin/logistics/export-invoices/new?shipmentId=${job.shipmentId}`}
-                    className={secondaryButton}
-                  >
-                    <IconPlus size={14} /> Create export invoice
-                  </Link>
-                  <span className="text-xs text-text-muted">
-                    {client.zohoCustomerId !== job.zohoCustomerId || (invoiceNumber.trim() || null) !== job.invoiceNumber
-                      ? 'Save the job first so the client and Zoho invoice carry across.'
-                      : 'Opens with this client and Zoho invoice chosen, and links back here.'}
-                  </span>
-                </div>
-              ) : null}
             </div>
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_6rem]">
-              <div>
-                <label htmlFor="invoice-number" className={label}>
-                  Zoho invoice number
-                </label>
-                <ZohoInvoiceInput
-                  id="invoice-number"
-                  value={invoiceNumber}
-                  onChange={setInvoiceNumber}
-                  zohoCustomerId={client.zohoCustomerId}
-                  onPick={(inv) => {
-                    setInvoiceNumber(inv.invoiceNumber);
-                    setInvoiceValue(String(Math.round(inv.total * 100) / 100));
-                    setInvoiceCurrency(inv.currency);
-                    if (!client.zohoCustomerId) setClient({ clientName: inv.customerName, zohoCustomerId: inv.zohoCustomerId });
-                  }}
-                />
+
+            <div className="space-y-2">
+              {zohoRows.map((row, index) => (
+                <div key={index} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_6rem_2.25rem]">
+                  <div>
+                    <label htmlFor={`invoice-number-${index}`} className={index === 0 ? label : 'sr-only'}>
+                      Zoho invoice number
+                    </label>
+                    <ZohoInvoiceInput
+                      id={`invoice-number-${index}`}
+                      value={row.number}
+                      onChange={(v) => setZohoRow(index, { number: v })}
+                      zohoCustomerId={client.zohoCustomerId}
+                      onPick={(inv) => {
+                        setZohoRow(index, {
+                          number: inv.invoiceNumber,
+                          value: String(Math.round(inv.total * 100) / 100),
+                          currency: inv.currency,
+                        });
+                        if (!client.zohoCustomerId) setClient({ clientName: inv.customerName, zohoCustomerId: inv.zohoCustomerId });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`invoice-value-${index}`} className={index === 0 ? label : 'sr-only'}>
+                      Final invoice value
+                    </label>
+                    <input
+                      id={`invoice-value-${index}`}
+                      value={row.value}
+                      onChange={(e) => setZohoRow(index, { value: e.target.value })}
+                      className={input}
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`invoice-currency-${index}`} className={index === 0 ? label : 'sr-only'}>
+                      Currency
+                    </label>
+                    <input
+                      id={`invoice-currency-${index}`}
+                      value={row.currency}
+                      onChange={(e) => setZohoRow(index, { currency: e.target.value.toUpperCase().slice(0, 3) })}
+                      className={input}
+                    />
+                  </div>
+                  {index > 0 ? (
+                    <button
+                      type="button"
+                      aria-label="Remove this Zoho invoice"
+                      onClick={() => setZohoRows((rows) => rows.filter((_, i) => i !== index))}
+                      className="rounded-lg p-2 text-text-muted hover:bg-surface-secondary hover:text-text-primary"
+                    >
+                      <IconTrash size={16} />
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ))}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setZohoRows((rows) => [...rows, blankZohoRow(rows[0]?.currency ?? job.invoiceCurrency)])}
+                  className={secondaryButton}
+                >
+                  <IconPlus size={14} /> Add another Zoho invoice
+                </button>
+                {zohoRows.length > 1 ? (
+                  <span className="text-sm text-text-muted">
+                    Total{' '}
+                    <span className="font-medium text-text-primary">
+                      {invoiceTotals(zohoRows.map((r) => ({ value: parseValue(r.value), currency: r.currency }))) || '—'}
+                    </span>
+                  </span>
+                ) : null}
               </div>
-              {field('invoice-value', 'Final invoice value', invoiceValue, setInvoiceValue, { inputMode: 'decimal' })}
-              {field('invoice-currency', 'Currency', invoiceCurrency, (v) => setInvoiceCurrency(v.toUpperCase().slice(0, 3)))}
             </div>
           </section>
 
@@ -464,8 +584,10 @@ const JobView = ({ job }: { job: Job }) => {
                 </li>
               ))}
             </ul>
-            {job.invoiceValue != null ? (
-              <p className="pt-1 text-xs text-text-muted">Invoice value {money(job.invoiceValue, job.invoiceCurrency)}</p>
+            {invoiceTotals([{ value: job.invoiceValue, currency: job.invoiceCurrency }, ...job.additionalInvoices]) ? (
+              <p className="pt-1 text-xs text-text-muted">
+                Invoice value {invoiceTotals([{ value: job.invoiceValue, currency: job.invoiceCurrency }, ...job.additionalInvoices])}
+              </p>
             ) : null}
           </section>
         </div>

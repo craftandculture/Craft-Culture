@@ -2611,6 +2611,9 @@ const runMigrations = async () => {
       )
     `);
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "logistics_jobs_kind_idx" ON "logistics_jobs"("kind")`);
+    // One shipment can carry several Zoho invoices and several export invoices
+    await client.unsafe(`ALTER TABLE "logistics_jobs" ADD COLUMN IF NOT EXISTS "additional_invoices" jsonb NOT NULL DEFAULT '[]'::jsonb`);
+    await client.unsafe(`ALTER TABLE "logistics_jobs" ADD COLUMN IF NOT EXISTS "additional_export_invoice_ids" uuid[] NOT NULL DEFAULT '{}'::uuid[]`);
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS "logistics_movement_bonds" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

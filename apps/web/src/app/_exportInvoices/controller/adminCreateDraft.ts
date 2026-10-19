@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -78,7 +78,12 @@ const adminCreateDraft = adminProcedure
       if (input.shipmentId) {
         await tx
           .update(logisticsJobs)
-          .set({ exportInvoiceId: row.id, updatedAt: new Date() })
+          // A job that already has an export invoice keeps it; this one is added after it
+          .set({
+            exportInvoiceId: sql`coalesce(${logisticsJobs.exportInvoiceId}, ${row.id}::uuid)`,
+            additionalExportInvoiceIds: sql`case when ${logisticsJobs.exportInvoiceId} is null then ${logisticsJobs.additionalExportInvoiceIds} else array_append(${logisticsJobs.additionalExportInvoiceIds}, ${row.id}::uuid) end`,
+            updatedAt: new Date(),
+          })
           .where(and(eq(logisticsJobs.shipmentId, input.shipmentId), eq(logisticsJobs.kind, 'export')));
       }
       return row.id;

@@ -56,7 +56,7 @@ const adminGetExportJobs = adminProcedure.query(async () => {
       destination: [shipment.destinationCity, shipment.destinationCountry].filter(Boolean).join(', '),
       carrierName: shipment.carrierName,
       reference: shipment.awbNumber ?? shipment.blNumber ?? null,
-      invoiceNumber: job.invoiceNumber,
+      invoiceNumber: [job.invoiceNumber, ...job.additionalInvoices.map((i) => i.number)].filter(Boolean).join(', ') || null,
       invoiceValue: job.invoiceValue,
       invoiceCurrency: job.invoiceCurrency,
       createdAt: job.createdAt,

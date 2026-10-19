@@ -3251,6 +3251,16 @@ export const logisticsJobs = pgTable(
     invoiceNumber: text('invoice_number'),
     invoiceValue: doublePrecision('invoice_value'),
     invoiceCurrency: text('invoice_currency').notNull().default('AED'),
+    /** Zoho invoices beyond the first, when one shipment carries several */
+    additionalInvoices: jsonb('additional_invoices')
+      .$type<{ number: string; value: number | null; currency: string }[]>()
+      .notNull()
+      .default([]),
+    /** Export invoices beyond the first; the first stays in exportInvoiceId */
+    additionalExportInvoiceIds: uuid('additional_export_invoice_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },

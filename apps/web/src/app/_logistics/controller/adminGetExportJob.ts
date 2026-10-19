@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import dubaiToday from '@/app/_teamTasks/utils/dubaiToday';
@@ -20,7 +20,7 @@ import { exportModeOf } from '../utils/exportStages';
 /**
  * One export job: its details, documents, bond and history
  *
- * An issued export invoice linked to the job is listed among its documents
+ * Every issued export invoice linked to the job is listed among its documents
  * even before its PDF has been filed as a document row, marked as coming from
  * the export invoice so it cannot be removed from here.
  *
@@ -42,7 +42,10 @@ const adminGetExportJob = adminProcedure
     const { job, shipment, bond } = row;
     const today = dubaiToday();
 
-    const [documentRows, history, linkedInvoice] = await Promise.all([
+    // The first export invoice, then any added after it, in that order
+    const linkedIds = [...new Set([job.exportInvoiceId, ...job.additionalExportInvoiceIds].filter((id): id is string => !!id))];
+
+    const [documentRows, history, linkedRows] = await Promise.all([
       db
         .select({
           id: logisticsDocuments.id,
@@ -65,7 +68,7 @@ const adminGetExportJob = adminProcedure
         .where(eq(logisticsShipmentActivityLogs.shipmentId, shipmentId))
         .orderBy(desc(logisticsShipmentActivityLogs.createdAt))
         .limit(30),
-      job.exportInvoiceId
+      linkedIds.length > 0
         ? db
             .select({
               id: exportInvoices.id,
@@ -75,23 +78,21 @@ const adminGetExportJob = adminProcedure
               issuedAt: exportInvoices.issuedAt,
             })
             .from(exportInvoices)
-            .where(eq(exportInvoices.id, job.exportInvoiceId))
-            .then((r) => r[0] ?? null)
-        : Promise.resolve(null),
+            .where(inArray(exportInvoices.id, linkedIds))
+        : Promise.resolve([]),
     ]);
 
+    const linkedInvoices = linkedIds.flatMap((id) => linkedRows.filter((r) => r.id === id));
+
     const documents = documentRows.map((d) => ({ ...d, fromExportInvoice: false }));
-    if (
-      linkedInvoice?.status === 'issued' &&
-      linkedInvoice.pdfUrl &&
-      !documents.some((d) => d.fileUrl === linkedInvoice.pdfUrl)
-    ) {
+    for (const linked of [...linkedInvoices].reverse()) {
+      if (linked.status !== 'issued' || !linked.pdfUrl || documents.some((d) => d.fileUrl === linked.pdfUrl)) continue;
       documents.unshift({
-        id: `export-invoice-${linkedInvoice.id}`,
+        id: `export-invoice-${linked.id}`,
         documentType: 'commercial_invoice',
-        fileName: `${linkedInvoice.number ?? 'Export invoice'}.pdf`,
-        fileUrl: linkedInvoice.pdfUrl,
-        uploadedAt: linkedInvoice.issuedAt ?? job.updatedAt,
+        fileName: `${linked.number ?? 'Export invoice'}.pdf`,
+        fileUrl: linked.pdfUrl,
+        uploadedAt: linked.issuedAt ?? job.updatedAt,
         fromExportInvoice: true,
       });
     }
@@ -119,7 +120,8 @@ const adminGetExportJob = adminProcedure
       invoiceNumber: job.invoiceNumber,
       invoiceValue: job.invoiceValue,
       invoiceCurrency: job.invoiceCurrency,
-      linkedInvoice,
+      additionalInvoices: job.additionalInvoices,
+      linkedInvoices,
       createdAt: job.createdAt,
       documents,
       history,

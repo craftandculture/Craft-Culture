@@ -6,6 +6,13 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a YYYY-MM-DD date')
 const text = (max: number) => z.string().trim().max(max);
 const optionalText = (max: number) => text(max).nullable().optional();
 
+/** A Zoho invoice beyond the job's first */
+const additionalInvoice = z.object({
+  number: text(80).min(1),
+  value: z.number().min(0).nullable(),
+  currency: text(3).min(3),
+});
+
 /** Create an export job. Client, origin, destination and mode are required. */
 export const createExportJobSchema = z.object({
   clientName: text(200).min(1, 'Enter the client'),
@@ -46,6 +53,8 @@ export const updateExportJobSchema = z.object({
   invoiceValue: z.number().min(0).nullable().optional(),
   invoiceCurrency: text(3).min(3).optional(),
   exportInvoiceId: z.string().uuid().nullable().optional(),
+  additionalInvoices: z.array(additionalInvoice).max(20).optional(),
+  additionalExportInvoiceIds: z.array(z.string().uuid()).max(20).optional(),
   totalCases: z.number().int().min(0).nullable().optional(),
   totalBottles: z.number().int().min(0).nullable().optional(),
   notes: optionalText(2000),
