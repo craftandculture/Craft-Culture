@@ -1,3 +1,9 @@
+## [2.0.415](https://github.com/craftandculture/Craft-Culture/compare/v2.0.414...v2.0.415) (2026-10-19)
+
+### Bug Fixes
+
+* the cellar statement reads as a ledger with clean wine names and prints without the app footer, Available now loads more wines as you scroll, and the selling and warehouse lines are rewritten ([dbcbf5a](https://github.com/craftandculture/Craft-Culture/commit/dbcbf5a49cf61f3b962c9c2dc5209c311b1dd9a3))
+
 ## [2.0.414](https://github.com/craftandculture/Craft-Culture/compare/v2.0.413...v2.0.414) (2026-10-18)
 
 ### Bug Fixes
