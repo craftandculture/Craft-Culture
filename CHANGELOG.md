@@ -1,3 +1,9 @@
+## [2.0.434](https://github.com/craftandculture/Craft-Culture/compare/v2.0.433...v2.0.434) (2026-10-19)
+
+### Bug Fixes
+
+* an invited member's sign-in card reads Access your private cellar ([c3238c7](https://github.com/craftandculture/Craft-Culture/commit/c3238c7b05280ea68bf84db707715dee50b10e12))
+
 ## [2.0.433](https://github.com/craftandculture/Craft-Culture/compare/v2.0.432...v2.0.433) (2026-10-19)
 
 ### Features
