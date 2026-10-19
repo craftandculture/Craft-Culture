@@ -1,3 +1,9 @@
+## [2.0.427](https://github.com/craftandculture/Craft-Culture/compare/v2.0.426...v2.0.427) (2026-10-19)
+
+### Features
+
+* an export job can carry several Zoho invoices and several export invoices, each added with Add another ([27adc63](https://github.com/craftandculture/Craft-Culture/commit/27adc63c76686d5b7cd5209cc9061272ad1a1ca8))
+
 ## [2.0.426](https://github.com/craftandculture/Craft-Culture/compare/v2.0.425...v2.0.426) (2026-10-19)
 
 ### Features
