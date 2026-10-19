@@ -2943,6 +2943,13 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cellar_uk_holdings" ADD COLUMN IF NOT EXISTS "supplier_name" text`,
     );
+    // The case's condition and its declared value, from the same report
+    await client.unsafe(
+      `ALTER TABLE "cellar_uk_holdings" ADD COLUMN IF NOT EXISTS "rotation_notes" text`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cellar_uk_holdings" ADD COLUMN IF NOT EXISTS "gbp_value" double precision`,
+    );
     console.log('✅ LCB UK holdings ready');
 
     /*

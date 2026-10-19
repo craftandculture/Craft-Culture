@@ -7590,6 +7590,10 @@ export const cellarUkHoldings = pgTable(
     receivedAt: timestamp('received_at', { mode: 'date' }),
     /** Who sent it in, from the by-supplier report: where the member's wine came from */
     supplierName: text('supplier_name'),
+    /** LCB's note on the rotation: "Damaged case, crushed on left side" */
+    rotationNotes: text('rotation_notes'),
+    /** The value LCB holds the line at, in GBP: what the sender declared, usually what was paid */
+    gbpValue: doublePrecision('gbp_value'),
     importedBy: uuid('imported_by').references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },

@@ -70,9 +70,9 @@ const adminImportUkStock = staffAdminProcedure
       await tx.delete(cellarUkHoldings);
 
       await tx.insert(cellarUkHoldings).values(
-        holdings.map(({ reference: _reference, supplierName, ...holding }) => ({
+        holdings.map(({ reference: _reference, supplierName, rotationNotes, gbpValue, ...holding }) => ({
           ...holding,
-          ...(withSupplier ? { supplierName } : {}),
+          ...(withSupplier ? { supplierName, rotationNotes, gbpValue } : {}),
           importedBy: ctx.user.id,
         })),
       );

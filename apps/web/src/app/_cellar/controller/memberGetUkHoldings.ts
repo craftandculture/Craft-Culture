@@ -1,10 +1,12 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 
+import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import { cellarUkHoldings, cellarUkRotations, lwinWines } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
+
 
 import getListPricePerBottle from '../data/getListPricePerBottle';
 import hasUkSupplierColumn from '../data/hasUkSupplierColumn';
@@ -15,9 +17,11 @@ import hasUkSupplierColumn from '../data/hasUkSupplierColumn';
  * Only rotations the team has placed with this member, as LCB last reported
  * them. The wine is named from the LWIN record where there is one: LCB's
  * descriptions are typed by whoever booked the goods in ("2014 75CL Lynch
- * Bages", "Gloria\t 2018") and are not fit to show a collector. LCB's values
- * and rates are never sent; the only figure is an indicative value from our
- * own in-bond list price, where we list the same wine.
+ * Bages", "Gloria\t 2018") and are not fit to show a collector. LCB's rates
+ * are never sent. The indicative value follows the cellar's rule: our in-bond
+ * list price where we list the wine, otherwise what it was declared at when
+ * it came in (the sender's value on LCB's report, converted from GBP), which
+ * is usually what the member paid.
  *
  * Never throws: if the tables are missing the cellar simply shows no UK wine.
  */
@@ -28,6 +32,9 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
       .select({
         /* Who sent it in, where the report says; read only once the column is there */
         supplierName: withSupplier ? cellarUkHoldings.supplierName : sql<string | null>`NULL`,
+        rotationNotes: withSupplier ? cellarUkHoldings.rotationNotes : sql<string | null>`NULL`,
+        gbpValue: withSupplier ? cellarUkHoldings.gbpValue : sql<number | null>`NULL`,
+        packaging: cellarUkHoldings.packaging,
         id: cellarUkHoldings.id,
         /* Stable across LCB imports, so a move can be matched to its line */
         rotation: cellarUkHoldings.rotation,
@@ -55,12 +62,23 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
 
     const names = lwin7s.length
       ? await db
-          .select({ lwin: lwinWines.lwin, displayName: lwinWines.displayName })
+          .select({
+            lwin: lwinWines.lwin,
+            displayName: lwinWines.displayName,
+            producerTitle: lwinWines.producerTitle,
+            producerName: lwinWines.producerName,
+            wine: lwinWines.wine,
+          })
           .from(lwinWines)
           .where(inArray(lwinWines.lwin, lwin7s))
       : [];
 
     const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
+    const recordByLwin = new Map(names.map((row) => [row.lwin, row]));
+    const gbp = rows.some((row) => row.gbpValue)
+      ? await resolveFxToUsd('GBP').catch(() => ({ rate: 1, source: 'unresolved' as const }))
+      : null;
+    const gbpToUsd = gbp && gbp.source !== 'unresolved' ? gbp.rate : null;
 
     /* A guide only. If the list cannot be read, the wine still shows, without it. */
     const listed = await getListPricePerBottle(rows.map((row) => row.lwin18)).catch((error: unknown) => {
@@ -75,7 +93,27 @@ const memberGetUkHoldings = stockOwnerProcedure.query(async ({ ctx }) => {
           nameByLwin.get(row.lwin18.slice(0, 7)) ??
           (row.brand && row.brand !== 'NA' ? row.brand : row.description) ??
           'Wine',
-        indicativePerBottle: listed.get(lwinPakKeyOf(row.lwin18)) ?? null,
+        /* The wine and its producer apart, as the UAE cellar shows them */
+        wineName: recordByLwin.get(row.lwin18.slice(0, 7))?.wine ?? null,
+        producer:
+          [
+            recordByLwin.get(row.lwin18.slice(0, 7))?.producerTitle,
+            recordByLwin.get(row.lwin18.slice(0, 7))?.producerName,
+          ]
+            .filter(Boolean)
+            .join(' ') || (row.brand && row.brand !== 'NA' ? row.brand : null),
+        ...(() => {
+          const list = listed.get(lwinPakKeyOf(row.lwin18)) ?? null;
+          const paid =
+            row.gbpValue && gbpToUsd && row.totalBottles > 0
+              ? Math.round(((row.gbpValue * gbpToUsd) / row.totalBottles) * 100) / 100
+              : null;
+          return {
+            indicativePerBottle: list ?? paid,
+            valueSource: list ? ('list' as const) : paid ? ('declared' as const) : null,
+          };
+        })(),
+        gbpValue: undefined,
       })),
       reportedAt: rows[0]?.reportedAt ?? null,
     };

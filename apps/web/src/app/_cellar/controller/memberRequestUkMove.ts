@@ -57,6 +57,13 @@ const memberRequestUkMove = stockOwnerProcedure
           message: 'A wine was chosen twice',
         }),
       memberNotes: z.string().trim().max(1000).optional(),
+      /**
+       * Fewer cases than the line holds, by holding id. LCB books most cases as
+       * a rotation of their own, but one rotation can hold several; a member
+       * moving two of four takes two, and the rest stays at Burton. Whole
+       * cases only: a case opened at LCB is handling we quote separately.
+       */
+      casesByHolding: z.record(z.string().uuid(), z.number().int().min(1)).optional(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
@@ -72,6 +79,7 @@ const memberRequestUkMove = stockOwnerProcedure
 
         const lines = await tx
           .select({
+            id: cellarUkHoldings.id,
             rotation: cellarUkHoldings.rotation,
             line: cellarUkHoldings.line,
             lwin18: cellarUkHoldings.lwin18,
@@ -131,6 +139,17 @@ const memberRequestUkMove = stockOwnerProcedure
           });
         }
 
+        const partial = input.casesByHolding ?? {};
+        for (const line of lines) {
+          const wanted = partial[line.id];
+          if (wanted !== undefined && (wanted > line.cases || !line.bottlesPerCase)) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'More cases were chosen than are held. Refresh the page and choose again.',
+            });
+          }
+        }
+
         const lwin7s = [
           ...new Set(
             lines
@@ -181,9 +200,13 @@ const memberRequestUkMove = stockOwnerProcedure
             vintage: line.vintage,
             bottlesPerCase: line.bottlesPerCase,
             bottleSizeLitres: line.bottleSizeLitres,
-            cases: line.cases,
-            singles: line.singles,
-            totalBottles: line.totalBottles,
+            ...(partial[line.id] !== undefined && partial[line.id]! < line.cases
+              ? {
+                  cases: partial[line.id]!,
+                  singles: 0,
+                  totalBottles: partial[line.id]! * (line.bottlesPerCase ?? 1),
+                }
+              : { cases: line.cases, singles: line.singles, totalBottles: line.totalBottles }),
           })),
         );
 

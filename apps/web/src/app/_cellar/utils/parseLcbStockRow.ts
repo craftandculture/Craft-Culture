@@ -142,6 +142,11 @@ const parseLcbStockRow = (row: LcbStockRow) => {
     totalBottles,
     packaging: text(field(row, 'Packaging')),
     supplierName: text(field(row, 'Supplier Name')),
+    rotationNotes: text(field(row, 'Rotation Notes')),
+    gbpValue: (() => {
+      const value = Number.parseFloat(String(field(row, 'GBP Value') ?? '').replace(/,/g, ''));
+      return Number.isFinite(value) && value > 0 ? value : null;
+    })(),
     receivedAt: ukDate(field(row, 'Received')),
     reference,
   };
