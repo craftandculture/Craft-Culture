@@ -1,3 +1,9 @@
+## [2.0.444](https://github.com/craftandculture/Craft-Culture/compare/v2.0.443...v2.0.444) (2026-10-19)
+
+### Features
+
+* a UK rate card on Cellar rates holds LCB's prices at cost by the date they apply, the Storage tab shows each member's UK storage at cost plus recharge, and UK move quotes can take LCB's charges from it ([3a70f45](https://github.com/craftandculture/Craft-Culture/commit/3a70f45ba242a5472f3418ea16a1960c6f2460cb))
+
 ## [2.0.443](https://github.com/craftandculture/Craft-Culture/compare/v2.0.442...v2.0.443) (2026-10-19)
 
 ### Features
