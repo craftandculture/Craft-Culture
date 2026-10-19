@@ -1,3 +1,9 @@
+## [2.0.437](https://github.com/craftandculture/Craft-Culture/compare/v2.0.436...v2.0.437) (2026-10-19)
+
+### Bug Fixes
+
+* LCB report received dates are read from the spreadsheet's raw day number, so deliveries group by the day they arrived ([1a6b4e2](https://github.com/craftandculture/Craft-Culture/commit/1a6b4e2ac21db5c569dbdc12d8f521154202b62e))
+
 ## [2.0.436](https://github.com/craftandculture/Craft-Culture/compare/v2.0.435...v2.0.436) (2026-10-19)
 
 ### Bug Fixes
