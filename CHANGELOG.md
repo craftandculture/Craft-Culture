@@ -1,3 +1,9 @@
+## [2.0.424](https://github.com/craftandculture/Craft-Culture/compare/v2.0.423...v2.0.424) (2026-10-19)
+
+### Features
+
+* bottle steppers are larger and easier to press, and the delivery request panel gains a close button, an editable wine list, one address per row and the estimate beside the send button ([b9d715f](https://github.com/craftandculture/Craft-Culture/commit/b9d715f0493b505b5e9c899a78e45bd287ce55aa))
+
 ## [2.0.423](https://github.com/craftandculture/Craft-Culture/compare/v2.0.422...v2.0.423) (2026-10-19)
 
 ### Features
