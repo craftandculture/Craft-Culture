@@ -284,16 +284,34 @@ const memberGetStatement = stockOwnerProcedure
 
       const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
 
-      ukHoldings = rows.map((row) => ({
-        name:
+      /*
+        One line per wine: LCB books every case as its own rotation, and a
+        statement listing the same Cervaro five times reads as five wines.
+      */
+      const byWine = new Map<string, (typeof ukHoldings)[number]>();
+      for (const row of rows) {
+        const name =
           nameByLwin.get(row.lwin18.slice(0, 7)) ??
           (row.brand && row.brand !== 'NA' ? row.brand : row.description) ??
-          'Wine',
-        vintage: row.vintage,
-        bottlesPerCase: row.bottlesPerCase,
-        totalBottles: row.totalBottles,
-        receivedAt: row.receivedAt,
-      }));
+          'Wine';
+        const key = `${row.lwin18}|${name}`;
+        const existing = byWine.get(key);
+        if (existing) {
+          existing.totalBottles += row.totalBottles;
+          if (row.receivedAt && (!existing.receivedAt || row.receivedAt < existing.receivedAt)) {
+            existing.receivedAt = row.receivedAt;
+          }
+        } else {
+          byWine.set(key, {
+            name,
+            vintage: row.vintage,
+            bottlesPerCase: row.bottlesPerCase,
+            totalBottles: row.totalBottles,
+            receivedAt: row.receivedAt,
+          });
+        }
+      }
+      ukHoldings = [...byWine.values()];
       ukReportedAt = rows[0]?.reportedAt ?? null;
     } catch (error) {
       logger.error('Could not read UK wine for a statement', { partnerId, error });

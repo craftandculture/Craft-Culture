@@ -176,14 +176,62 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
 
   const bottles = holdings.reduce((sum, holding) => sum + holding.totalBottles, 0);
   const movable = holdings.filter((holding) => !moveByLine.has(lineKey(holding)));
+
+  /*
+    One line per wine, not per rotation. LCB books every case as its own
+    rotation, so Jon De Jager's 993 bottles arrived as 193 "wines" with the
+    same Cervaro 2018 listed five times. Cases of the same wine, vintage,
+    pack and size are added together; a case already on a move to the UAE
+    stays apart, because it is going somewhere the rest is not.
+  */
+  const groups = (() => {
+    const byWine = new Map<
+      string,
+      { key: string; first: (typeof holdings)[number]; ids: string[]; move: UkMove | undefined } & QuantityLine
+    >();
+
+    for (const holding of holdings) {
+      const move = moveByLine.get(lineKey(holding));
+      const key = `${holding.lwin18}|${holding.name}|${move?.id ?? ''}`;
+      const group = byWine.get(key) ?? {
+        key,
+        first: holding,
+        ids: [],
+        move,
+        bottleSizeLitres: holding.bottleSizeLitres,
+        bottlesPerCase: holding.bottlesPerCase,
+        cases: 0,
+        singles: 0,
+        totalBottles: 0,
+      };
+      group.ids.push(holding.id);
+      group.cases += holding.cases;
+      group.singles += holding.singles;
+      group.totalBottles += holding.totalBottles;
+      if (holding.receivedAt && (!group.first.receivedAt || holding.receivedAt < group.first.receivedAt)) {
+        group.first = { ...group.first, receivedAt: holding.receivedAt };
+      }
+      byWine.set(key, group);
+    }
+
+    return [...byWine.values()].sort(
+      (a, b) => a.first.name.localeCompare(b.first.name) || (a.first.vintage ?? 0) - (b.first.vintage ?? 0),
+    );
+  })();
+
+  const wineCount = groups.length;
+  const chosenGroups = groups.filter((group) => group.ids.every((id) => selected.has(id)));
   const chosen = holdings.filter((holding) => selected.has(holding.id));
   const chosenBottles = chosen.reduce((sum, holding) => sum + holding.totalBottles, 0);
 
-  const toggle = (id: string) =>
+  const toggle = (ids: string[]) =>
     setSelected((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const isOn = ids.every((id) => next.has(id));
+      for (const id of ids) {
+        if (isOn) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
 
@@ -198,8 +246,8 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
           <div>
             <p className="text-text-primary text-sm font-semibold">United Kingdom · London City Bond, Burton</p>
             <p className="text-text-muted text-xs">
-              Held in bond for you by C&amp;C · {holdings.length}{' '}
-              {holdings.length === 1 ? 'wine' : 'wines'}, {bottles} {bottles === 1 ? 'bottle' : 'bottles'}
+              Held in bond for you by C&amp;C · {wineCount}{' '}
+              {wineCount === 1 ? 'wine' : 'wines'}, {bottles} {bottles === 1 ? 'bottle' : 'bottles'}
               {data.reportedAt ? ` · updated ${format(new Date(data.reportedAt), 'd MMM yyyy')}` : ''}
             </p>
           </div>
@@ -300,15 +348,16 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
 
       {isChoosing && (
         <p className="border-border-muted text-text-muted border-b bg-emerald-50/40 px-4 py-2 text-xs dark:bg-emerald-500/5">
-          Choose the wines to bring to your cellar in the UAE. Each wine moves in full, as London City Bond holds it.
+          Choose the wines to bring to your cellar in the UAE. Each wine moves in full, every case of it.
         </p>
       )}
 
       <ul className="divide-border-muted divide-y">
-        {holdings.map((holding) => {
-          const move = moveByLine.get(lineKey(holding));
+        {groups.map((group) => {
+          const holding = group.first;
+          const move = group.move;
           const canChoose = isChoosing && !move;
-          const isSelected = selected.has(holding.id);
+          const isSelected = group.ids.every((id) => selected.has(id));
 
           const body = (
             <>
@@ -317,7 +366,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => toggle(holding.id)}
+                    onChange={() => toggle(group.ids)}
                     className="mt-0.5 size-4 flex-shrink-0 accent-emerald-700"
                     aria-label={`Bring ${holding.name} to the UAE`}
                   />
@@ -328,7 +377,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
                 </span>
               </span>
               <span className="text-text-muted flex flex-shrink-0 flex-wrap items-center gap-2 text-xs tabular-nums">
-                {quantityOf(holding)}
+                {quantityOf(group)}
                 {holding.receivedAt ? ` · since ${format(new Date(holding.receivedAt), 'MMM yyyy')}` : ''}
                 {/* Our list price where we list the same wine: a guide, as on the cellar above */}
                 {formatValue && holding.indicativePerBottle
@@ -344,7 +393,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
           );
 
           return canChoose ? (
-            <li key={holding.id}>
+            <li key={group.key}>
               <label
                 className={`flex cursor-pointer flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 ${
                   isSelected ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'hover:bg-fill-muted/40'
@@ -354,7 +403,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
               </label>
             </li>
           ) : (
-            <li key={holding.id} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+            <li key={group.key} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
               {body}
             </li>
           );
@@ -374,7 +423,8 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
             title="Ask us to bring this wine to the UAE?"
             description={
               <p>
-                We will price the collection and freight for {chosen.length} {chosen.length === 1 ? 'wine' : 'wines'} (
+                We will price the collection and freight for {chosenGroups.length}{' '}
+                {chosenGroups.length === 1 ? 'wine' : 'wines'} (
                 {chosenBottles} {chosenBottles === 1 ? 'bottle' : 'bottles'}) and send you one all-in figure. Nothing
                 moves until you accept it.
               </p>
@@ -391,7 +441,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
             >
               {chosen.length === 0
                 ? 'Choose wines above'
-                : `Request a price for ${chosen.length} ${chosen.length === 1 ? 'wine' : 'wines'}`}
+                : `Request a price for ${chosenGroups.length} ${chosenGroups.length === 1 ? 'wine' : 'wines'}`}
             </button>
           </ConfirmAction>
         </div>

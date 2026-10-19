@@ -694,9 +694,16 @@ const CellarPage = () => {
           <Typography variant="headingMd" className="block">
             {data?.partner?.name ?? '\u00A0'}
           </Typography>
+          {/*
+            Says where this member's wine actually is. A member whose wine is
+            all at our UK bond was told it was stored in the UAE warehouse.
+          */}
           <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-            Stored duty-free in the C&amp;C bonded warehouse. Duty
-            and VAT are only paid when wine is delivered to you in the UAE.
+            {isUaeEmpty && hasUk
+              ? 'Held in bond for you at London City Bond, Burton. Duty and VAT stay suspended while your wine is in bond.'
+              : hasUk
+                ? 'Held in bond for you in the UAE and at London City Bond in the UK. Duty and VAT are only paid when wine is delivered to you.'
+                : 'Stored duty-free in the C&C bonded warehouse. Duty and VAT are only paid when wine is delivered to you in the UAE.'}
           </Typography>
         </div>
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
