@@ -1,3 +1,9 @@
+## [2.0.431](https://github.com/craftandculture/Craft-Culture/compare/v2.0.430...v2.0.431) (2026-10-19)
+
+### Bug Fixes
+
+* the document extractor and Import to Shipment ignore a second press, and a document already imported cannot be extracted again on the page ([79c2f72](https://github.com/craftandculture/Craft-Culture/commit/79c2f7296477d1eab3aa7aa9e66bb7e21607b3d1))
+
 ## [2.0.430](https://github.com/craftandculture/Craft-Culture/compare/v2.0.429...v2.0.430) (2026-10-19)
 
 ### Bug Fixes
