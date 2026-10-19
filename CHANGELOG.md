@@ -1,3 +1,9 @@
+## [2.0.436](https://github.com/craftandculture/Craft-Culture/compare/v2.0.435...v2.0.436) (2026-10-19)
+
+### Bug Fixes
+
+* the UK bond import reads LCB's Rotation Stock by Supplier report as well as Rotation Stock, finding the heading row and its capitalised column names ([1d38c6b](https://github.com/craftandculture/Craft-Culture/commit/1d38c6b3e2a194a0e80e936df675aaf6b837de2e))
+
 ## [2.0.435](https://github.com/craftandculture/Craft-Culture/compare/v2.0.434...v2.0.435) (2026-10-19)
 
 ### Features
