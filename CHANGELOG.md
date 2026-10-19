@@ -1,3 +1,9 @@
+## [2.0.433](https://github.com/craftandculture/Craft-Culture/compare/v2.0.432...v2.0.433) (2026-10-19)
+
+### Features
+
+* staff can record a transfer for a cellar member on the Intakes tab and link it to the shipment carrying it, so the member sees their wine on its way from their first visit ([96e532e](https://github.com/craftandculture/Craft-Culture/commit/96e532ed7f5541bab0291350e43f9e1df8716e4a))
+
 ## [2.0.432](https://github.com/craftandculture/Craft-Culture/compare/v2.0.431...v2.0.432) (2026-10-19)
 
 ### Features
