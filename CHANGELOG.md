@@ -1,3 +1,9 @@
+## [2.0.426](https://github.com/craftandculture/Craft-Culture/compare/v2.0.425...v2.0.426) (2026-10-19)
+
+### Features
+
+* the public cold room summary adds readings by zone, the last 24 hours' high and low, and a week of hourly averages ([790cd53](https://github.com/craftandculture/Craft-Culture/commit/790cd5391298ef257af2b6a33841ee9ae99f1a9a))
+
 ## [2.0.425](https://github.com/craftandculture/Craft-Culture/compare/v2.0.424...v2.0.425) (2026-10-19)
 
 ### Features
