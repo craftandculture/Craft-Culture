@@ -1,3 +1,9 @@
+## [2.0.439](https://github.com/craftandculture/Craft-Culture/compare/v2.0.438...v2.0.439) (2026-10-19)
+
+### Features
+
+* a member with wine in more than one place sees it as one collection with a location strip to filter by, UK wine shows in a table like the UAE cellar, and every wine says where it came from and when it arrived ([c5831e2](https://github.com/craftandculture/Craft-Culture/commit/c5831e2327219e1a11a39de130b9fa78889525df))
+
 ## [2.0.438](https://github.com/craftandculture/Craft-Culture/compare/v2.0.437...v2.0.438) (2026-10-19)
 
 ### Bug Fixes
