@@ -60,3 +60,29 @@ describe('parseLcbStockRow', () => {
     expect(parseLcbStockRow({ ...line, 'PO Ref': '', Reserve: 'PC-1002' })?.reference).toBe('PC-1002');
   });
 });
+
+describe('parseLcbStockRow — Rotation Stock by Supplier', () => {
+  it('reads capitalised headings, PRODUCT as the code and a spreadsheet day number', () => {
+    const holding = parseLcbStockRow({
+      SUPPLIER: 'BGERKD',
+      ROTATION: '26/0015470',
+      LN: '0',
+      PRODUCT: '1095362-2010-06-00750',
+      BRAND: 'Marchesi Antinori',
+      DESCRIPTION: 'Guado Al Tasso, Bolgheri',
+      YEAR: '2010',
+      SPC: '6',
+      SS: '0.75000',
+      CASES: '1',
+      SINGLES: '0',
+      TSINGLES: '6',
+      RECEIVED: '46314',
+    });
+
+    expect(holding?.rotation).toBe('26/0015470');
+    expect(holding?.lwin18).toBe('1095362-2010-06-00750');
+    expect(holding?.totalBottles).toBe(6);
+    expect(holding?.vintage).toBe(2010);
+    expect(holding?.receivedAt?.toISOString().slice(0, 10)).toBe('2026-10-19');
+  });
+});

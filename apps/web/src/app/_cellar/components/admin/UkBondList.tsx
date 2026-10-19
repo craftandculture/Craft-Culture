@@ -66,10 +66,31 @@ const UkBondList = () => {
 
       if (!sheet) throw new Error('The file has no sheets');
 
-      const rows = XLSX.utils.sheet_to_json<Record<string, string | number | null>>(sheet, {
+      /*
+        The headings are found, not assumed to be the first line. "Rotation
+        Stock by Supplier" puts its title above them, which made every column
+        name the title and the report unreadable.
+      */
+      const grid = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
+        header: 1,
         defval: null,
         raw: false,
       });
+      const headerAt = grid.findIndex((cells) =>
+        cells.some((cell) => String(cell ?? '').toLowerCase().replace(/[^a-z]/g, '') === 'rotation'),
+      );
+
+      if (headerAt < 0) throw new Error('No Rotation column was found in that file');
+
+      const headings = (grid[headerAt] ?? []).map((cell) => String(cell ?? '').trim());
+      const rows = grid
+        .slice(headerAt + 1)
+        .filter((cells) => cells.some((cell) => cell !== null && String(cell).trim() !== ''))
+        .map((cells) =>
+          Object.fromEntries(
+            headings.flatMap((heading, index) => (heading ? [[heading, cells[index] ?? null]] : [])),
+          ) as Record<string, string | number | null>,
+        );
 
       importStock.mutate({ rows });
     } catch (error) {

@@ -9,7 +9,7 @@ import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import getClientCodes from '../data/getClientCodes';
 import notifyUkRotationAssigned from '../data/notifyUkRotationAssigned';
 import findClientCode from '../utils/findClientCode';
-import parseLcbStockRow, { LCB_REQUIRED_COLUMNS } from '../utils/parseLcbStockRow';
+import parseLcbStockRow, { LCB_REQUIRED_COLUMNS, hasLcbColumn } from '../utils/parseLcbStockRow';
 
 /**
  * Import LCB's Rotation Stock report for C&C's Burton account
@@ -42,7 +42,7 @@ const adminImportUkStock = staffAdminProcedure
   )
   .mutation(async ({ ctx, input }) => {
     const headers = new Set(input.rows.flatMap((row) => Object.keys(row)));
-    const missing = LCB_REQUIRED_COLUMNS.filter((column) => !headers.has(column));
+    const missing = LCB_REQUIRED_COLUMNS.filter((column) => !hasLcbColumn(headers, column));
 
     if (missing.length > 0) {
       throw new TRPCError({
