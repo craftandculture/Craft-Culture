@@ -1,3 +1,9 @@
+## [2.0.428](https://github.com/craftandculture/Craft-Culture/compare/v2.0.427...v2.0.428) (2026-10-19)
+
+### Bug Fixes
+
+* reading a shipment document with AI works again; the last package upgrade had made it fail on every document ([0af53ce](https://github.com/craftandculture/Craft-Culture/commit/0af53cec2ad99b25435a783aeb59634afe3cfbe3))
+
 ## [2.0.427](https://github.com/craftandculture/Craft-Culture/compare/v2.0.426...v2.0.427) (2026-10-19)
 
 ### Features
