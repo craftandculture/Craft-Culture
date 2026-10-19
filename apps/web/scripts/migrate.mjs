@@ -3219,6 +3219,39 @@ const runMigrations = async () => {
     );
     console.log('✅ shared cellar access ready');
 
+    /*
+      An order's paperwork, checked as a set.
+
+      The client's LPO is kept with the sales order it led to, so the order can
+      be checked again whenever Zoho changes, and who signed the check off is
+      recorded. The LPO is stored as read (header and lines), not as the file.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "order_check_files" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "so_number" text NOT NULL,
+        "customer_name" text,
+        "lpo_number" text,
+        "lpo" jsonb,
+        "lpo_read_by" text,
+        "lpo_file_name" text,
+        "attached_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "attached_at" timestamp,
+        "last_status" text,
+        "last_counts" jsonb,
+        "last_checked_at" timestamp,
+        "signed_off_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "signed_off_at" timestamp,
+        "signed_off_status" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "order_check_files_so_idx" ON "order_check_files" ("so_number")`,
+    );
+    console.log('✅ order_check_files ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

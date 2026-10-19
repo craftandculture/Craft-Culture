@@ -17,6 +17,8 @@ import { useState } from 'react';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
+import OrderMatchPanel from './OrderMatchPanel';
+
 type Checked = inferRouterOutputs<AppRouter>['orderChecks']['check'];
 type Counts = Checked['counts'];
 type Level = 'error' | 'warning' | 'info';
@@ -188,7 +190,7 @@ const OrderCheckClient = () => {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Order &amp; invoice check</h1>
           <p className="mt-0.5 text-sm text-text-muted">
-            Codes, packs, vintages, prices and currency — checked before a document goes to the client
+            The client&apos;s LPO against our sales order and invoice, and each document against our rules, before it goes to the client
           </p>
         </div>
         <button
@@ -199,6 +201,12 @@ const OrderCheckClient = () => {
         >
           <IconListCheck size={16} /> {drafts.isFetching ? 'Checking drafts…' : 'Check all Zoho drafts'}
         </button>
+      </div>
+
+      <OrderMatchPanel />
+
+      <div className="flex items-center gap-2 pt-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Check one document</span>
       </div>
 
       <form
