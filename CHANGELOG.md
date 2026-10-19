@@ -1,3 +1,9 @@
+## [2.0.418](https://github.com/craftandculture/Craft-Culture/compare/v2.0.417...v2.0.418) (2026-10-19)
+
+### Bug Fixes
+
+* condition reports are shown at AED 150 per case, as on the rate card and as charged, with the total for the case before the member confirms ([bacc147](https://github.com/craftandculture/Craft-Culture/commit/bacc147653c0544ee3bfcdf10a3d9ae422536327))
+
 ## [2.0.417](https://github.com/craftandculture/Craft-Culture/compare/v2.0.416...v2.0.417) (2026-10-19)
 
 ### Bug Fixes
