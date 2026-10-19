@@ -1,3 +1,9 @@
+## [2.0.438](https://github.com/craftandculture/Craft-Culture/compare/v2.0.437...v2.0.438) (2026-10-19)
+
+### Bug Fixes
+
+* a member's UK wine shows one line per wine with the cases added together, on the cellar and the statement, and the cellar heading says where their wine is held ([d460e83](https://github.com/craftandculture/Craft-Culture/commit/d460e83f3049ad6ce3b7eb7553369191ae0fc884))
+
 ## [2.0.437](https://github.com/craftandculture/Craft-Culture/compare/v2.0.436...v2.0.437) (2026-10-19)
 
 ### Bug Fixes
