@@ -133,6 +133,8 @@ const packagingCode = (packaging: string | null) =>
 
 type QuickFilter = 'all' | 'largeFormat' | 'magnumPlus' | 'reserved';
 
+type CellarSortKey = 'wine' | 'producer' | 'vintage' | 'size' | 'bottles' | 'value';
+
 const bottlesOf = (wine: { totalCases: number; caseConfig: number | null }) =>
   wine.totalCases * (wine.caseConfig ?? 1);
 
@@ -185,6 +187,15 @@ const CellarPage = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  /*
+    Headings sort the table; pressing one again turns the order round. The
+    default stays producer, newest vintage first, which is how a cellar book
+    reads.
+  */
+  const [sort, setSort] = useState<{ key: CellarSortKey; dir: 'asc' | 'desc' }>({
+    key: 'producer',
+    dir: 'asc',
+  });
   const [openWine, setOpenWine] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -689,13 +700,27 @@ const CellarPage = () => {
 
         return true;
       })
-      .sort(
-        (a, b) =>
-          (a.producer ?? '').localeCompare(b.producer ?? '') ||
-          (b.vintage ?? 0) - (a.vintage ?? 0) ||
-          a.productName.localeCompare(b.productName),
-      );
-  }, [placedWines, search, quickFilter]);
+      .sort((a, b) => {
+        const text = (x: string | null | undefined, y: string | null | undefined) =>
+          (x ?? '').localeCompare(y ?? '', 'en', { sensitivity: 'base' });
+        const byName = text(displayWineName(a.productName), displayWineName(b.productName));
+        const value = (wine: CellarWine) =>
+          wine.indicativePerBottle ?? wine.uk?.[0]?.indicativePerBottle ?? wine.costPerBottle ?? 0;
+        const order =
+          sort.key === 'wine'
+            ? byName || (a.vintage ?? 0) - (b.vintage ?? 0)
+            : sort.key === 'vintage'
+              ? (a.vintage ?? 0) - (b.vintage ?? 0) || byName
+              : sort.key === 'size'
+                ? sizeMl(a.bottleSize) - sizeMl(b.bottleSize) || byName
+                : sort.key === 'bottles'
+                  ? bottlesOf(a) + ukBottlesOf(a) - (bottlesOf(b) + ukBottlesOf(b)) || byName
+                  : sort.key === 'value'
+                    ? value(a) - value(b) || byName
+                    : text(a.producer, b.producer) || (b.vintage ?? 0) - (a.vintage ?? 0) || byName;
+        return sort.dir === 'asc' ? order : -order;
+      });
+  }, [placedWines, search, quickFilter, sort]);
 
   const totals = useMemo(() => {
     const priced = wines.filter((wine) => (wine.costPerBottle ?? 0) > 0);
@@ -808,6 +833,25 @@ const CellarPage = () => {
 
   const th =
     'text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted px-3 py-2';
+
+  /** A heading that sorts by its column, with an arrow on the one in use */
+  const sortHeading = (key: CellarSortKey, label: React.ReactNode) => (
+    <button
+      type="button"
+      onClick={() =>
+        setSort((current) => ({
+          key,
+          dir: current.key === key && current.dir === 'asc' ? 'desc' : 'asc',
+        }))
+      }
+      className={`inline-flex items-center gap-0.5 uppercase tracking-[0.08em] hover:text-text-primary ${
+        sort.key === key ? 'text-text-primary' : ''
+      }`}
+    >
+      {label}
+      {sort.key === key && <span aria-hidden>{sort.dir === 'asc' ? '↑' : '↓'}</span>}
+    </button>
+  );
   /*
     Everything on a row was the same weight, so nothing was findable: the wine
     name competed with its own producer, with six numbers and with two
@@ -1773,13 +1817,13 @@ const CellarPage = () => {
           <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
             <tr>
               <th className="w-8 px-2 py-2.5" />
-              <th className={`${th} min-w-[220px] text-left`}>Wine</th>
-              <th className={`${th} hidden text-left md:table-cell`}>Producer</th>
-              <th className={`${th} hidden text-center sm:table-cell`}>Vintage</th>
-              <th className={`${th} hidden text-center sm:table-cell`}>Size</th>
+              <th className={`${th} min-w-[220px] text-left`}>{sortHeading('wine', 'Wine')}</th>
+              <th className={`${th} hidden text-left md:table-cell`}>{sortHeading('producer', 'Producer')}</th>
+              <th className={`${th} hidden text-center sm:table-cell`}>{sortHeading('vintage', 'Vintage')}</th>
+              <th className={`${th} hidden text-center sm:table-cell`}>{sortHeading('size', 'Size')}</th>
               <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
               <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
-              <th className={`${th} text-right`}>Bottles</th>
+              <th className={`${th} text-right`}>{sortHeading('bottles', 'Bottles')}</th>
               {/*
                 The definition sits on the thing it defines. As a glossary at
                 the foot of the page it was three sentences nobody reached,
@@ -1810,8 +1854,12 @@ const CellarPage = () => {
                 column header solves both: said once, directly above its own
                 controls.
               */}
-              <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>Deliver</th>
-              <th className={`${th} text-right sm:w-[76px] sm:min-w-[76px]`}>Sell</th>
+              <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>
+                {rows.some((wine) => wine.locations.length > 0) && location !== 'uk' ? 'Deliver' : 'Move'}
+              </th>
+              <th className={`${th} text-right sm:w-[76px] sm:min-w-[76px]`}>
+                {rows.some((wine) => wine.locations.length > 0) && location !== 'uk' ? 'Sell' : ''}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-border-muted divide-y">
@@ -1866,16 +1914,16 @@ const CellarPage = () => {
                     <td className={`${td} text-text-primary font-medium`}>
                       {displayName(wine.productName)}
                       {/* Where the bottles are, when the member holds wine in more than one place */}
-                      {hasUk && location === 'all' && (
+                      {showLocations && location === 'all' && (
                         <span className="mt-0.5 flex flex-wrap gap-1">
                           {bottlesOf(wine) > 0 && (
                             <span className="rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
-                              UAE {bottlesOf(wine)}
+                              UAE · {bottlesOf(wine)} btl
                             </span>
                           )}
                           {ukBottlesOf(wine) > 0 && (
                             <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-semibold text-slate-700 dark:bg-slate-500/20 dark:text-slate-200">
-                              UK {ukBottlesOf(wine)}
+                              UK · {ukBottlesOf(wine)} btl
                             </span>
                           )}
                         </span>
