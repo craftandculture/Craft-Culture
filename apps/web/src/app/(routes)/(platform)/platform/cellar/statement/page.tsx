@@ -17,10 +17,17 @@ const money = (value: number) =>
 
 const bottles = (count: number) => `${count} ${count === 1 ? 'bottle' : 'bottles'}`;
 
+/** How wine came in; the CSV needs a word for each, the page only where it adds something */
 const KIND_LABEL = {
   arrived: 'Arrived',
   bought: 'Bought',
-  added: 'Added to your cellar',
+  added: 'Added',
+} as const;
+
+const KIND_NOTE = {
+  arrived: 'Arrived at the warehouse',
+  bought: 'Bought from Craft & Culture',
+  added: 'Transferred to your cellar',
 } as const;
 
 /** The last twelve months, most recent complete month first */
@@ -81,7 +88,7 @@ const StatementPage = () => {
       ...data.added.map((row) => [
         `${KIND_LABEL[row.kind]}${row.where === 'uk' ? ' (UK)' : ''}`,
         row.at ? format(new Date(row.at), 'yyyy-MM-dd') : '',
-        row.name,
+        [row.name, row.detail].filter(Boolean).join(' '),
         row.bottles,
         '',
       ]),
@@ -91,7 +98,7 @@ const StatementPage = () => {
           delivery.deliveredAt
             ? format(new Date(delivery.deliveredAt), 'yyyy-MM-dd')
             : '',
-          wine.name,
+          [wine.name, wine.detail].filter(Boolean).join(' '),
           wine.bottles,
           '',
         ]),
@@ -134,17 +141,34 @@ const StatementPage = () => {
   return (
     <div className="statement w-full pb-8">
       {/*
-        Printing drops the app around the statement. Chrome's own margins
-        override @page, so the content is kept inside a 180mm column rather
-        than relying on the page size.
+        Printing drops the app around the statement, footer included: its
+        warehouse feed and links filled a third page on their own. Chrome's own
+        margins override @page, so the content is kept inside a 180mm column
+        rather than relying on the page size. Rows, not whole sections, are
+        kept from splitting, so a long month runs on instead of leaving half a
+        page blank.
       */}
       <style>
         {`@media print {
-          header, nav, .statement-controls { display: none !important; }
-          .statement { max-width: 180mm; margin: 0 auto; font-size: 11px; }
-          .statement section { break-inside: avoid-page; }
+          header, nav, footer, .statement-controls { display: none !important; }
+          body { background: #fff !important; }
+          .statement { max-width: 180mm; margin: 0 auto; font-size: 11px; padding: 0; }
+          .statement tr, .statement dl { break-inside: avoid; }
+          .statement h2 { break-after: avoid; }
+          .statement .shadow-sm { box-shadow: none !important; }
+          .statement-letterhead { display: flex !important; }
         }`}
       </style>
+
+      <div className="statement-letterhead border-text-primary mb-5 hidden items-end justify-between border-b pb-3">
+        <div>
+          <p className="text-text-primary text-base font-semibold tracking-wide">Craft &amp; Culture</p>
+          <p className="text-text-muted text-[10px] uppercase tracking-[0.18em]">Private Cellar</p>
+        </div>
+        <p className="text-text-muted text-right text-[10px] leading-4">
+          craftculture.xyz
+        </p>
+      </div>
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -227,8 +251,14 @@ const StatementPage = () => {
               key: row.id,
               date: row.at,
               name: row.name,
-              note: `${KIND_LABEL[row.kind]}${row.where === 'uk' ? ' at London City Bond' : ''}`,
-              value: bottles(row.bottles),
+              detail: row.detail,
+              note:
+                row.where === 'uk'
+                  ? 'Arrived in the UK'
+                  : row.kind === 'added'
+                    ? undefined
+                    : KIND_NOTE[row.kind],
+              value: String(row.bottles),
             }))}
           />
 
@@ -240,8 +270,8 @@ const StatementPage = () => {
                 key: `${delivery.id}-${index}`,
                 date: delivery.deliveredAt,
                 name: wine.name,
-                note: 'Delivered',
-                value: bottles(wine.bottles),
+                detail: wine.detail,
+                value: String(wine.bottles),
               })),
             )}
           />
@@ -256,6 +286,7 @@ const StatementPage = () => {
               note: bottles(row.bottles),
               value: money(row.amountUsd),
             }))}
+            valueLabel="Amount"
             footer={
               data.paidUsd > 0
                 ? `Paid to you this month: ${money(data.paidUsd)}`
@@ -287,7 +318,7 @@ const StatementPage = () => {
                   {data.holdings.map((row) => (
                     <tr key={`${row.lwin18}-${row.caseConfig}`}>
                       <td className="px-3 py-2">
-                        <span className="block font-medium text-emerald-800 dark:text-emerald-300">
+                        <span className="text-text-primary block font-medium">
                           {row.productName}
                         </span>
                         <span className="text-text-muted block text-xs">
@@ -303,7 +334,7 @@ const StatementPage = () => {
                   {data.ukHoldings.map((row, index) => (
                     <tr key={`uk-${index}`}>
                       <td className="px-3 py-2">
-                        <span className="block font-medium text-emerald-800 dark:text-emerald-300">
+                        <span className="text-text-primary block font-medium">
                           {row.name}
                         </span>
                         <span className="text-text-muted block text-xs">
@@ -327,9 +358,10 @@ const StatementPage = () => {
           </section>
 
           <p className="text-text-muted text-xs leading-5">
-            Wine is held in bond under C&amp;C&rsquo;s licence on your behalf.
-            Sale amounts are your asking price for the bottles sold. If anything
-            here does not match your own records, please contact us.
+            Wine in the UAE is held in bond, duty suspended, under Craft &amp;
+            Culture&rsquo;s licence on your behalf. Sale amounts are your asking
+            price for the bottles sold. If anything here differs from your own
+            records, please contact the cellar team.
           </p>
         </>
       )}

@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import db from '@/database/client';
 import {
   cellarPurchases,
@@ -18,6 +19,8 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import bottleName from '../utils/bottleName';
+
 /** The UAE is four hours ahead of UTC all year, so a month starts at 20:00 UTC the day before */
 const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000;
 
@@ -26,6 +29,23 @@ const packOf = (lwin18: string) => {
   const pack = Number(lwin18.split('-')[2]);
 
   return Number.isFinite(pack) && pack > 0 ? pack : 1;
+};
+
+/**
+ * A movement's wine as a collector reads it: the name alone, then vintage and
+ * bottle from the code. Movement names are the receiving clerk's string —
+ * "Domaine Anne Gros Vosne-Romanee 2023 0.75L 13.5%abv" — and printed as they
+ * stand they made the statement look like a stock report.
+ */
+const wineLine = (productName: string, lwin18: string) => {
+  const [, year, , size] = lwin18.split('-');
+  const ml = Number(size) * 10;
+  const detail = [
+    year && /^(19|20)\d{2}$/.test(year) ? year : null,
+    ml > 0 ? bottleName(`${ml / 10}cl`) : null,
+  ].filter(Boolean);
+
+  return { name: displayWineName(productName), detail: detail.join(' · ') };
 };
 
 /**
@@ -287,7 +307,10 @@ const memberGetStatement = stockOwnerProcedure
 
     const deliveries = new Map<
       string,
-      { deliveredAt: Date | null; wines: { name: string; bottles: number }[] }
+      {
+        deliveredAt: Date | null;
+        wines: { name: string; detail: string; bottles: number }[];
+      }
     >();
 
     for (const row of delivered) {
@@ -296,7 +319,8 @@ const memberGetStatement = stockOwnerProcedure
         wines: [],
       };
       entry.wines.push({
-        name: row.vintage ? `${row.productName} ${row.vintage}` : row.productName,
+        name: displayWineName(row.productName),
+        detail: row.vintage ? String(row.vintage) : '',
         bottles: row.bottles,
       });
       deliveries.set(row.requestId, entry);
@@ -350,7 +374,7 @@ const memberGetStatement = stockOwnerProcedure
           id: row.id,
           kind: 'arrived' as const,
           at: row.at,
-          name: row.productName,
+          ...wineLine(row.productName, row.lwin18),
           bottles: bottlesOf(row),
           where: 'uae' as const,
         })),
@@ -360,7 +384,7 @@ const memberGetStatement = stockOwnerProcedure
           id: row.id,
           kind: row.reasonCode === 'pool_sale' ? ('bought' as const) : ('added' as const),
           at: row.at,
-          name: row.productName,
+          ...wineLine(row.productName, row.lwin18),
           bottles: bottlesOf(row),
           where: 'uae' as const,
         })),
@@ -368,7 +392,8 @@ const memberGetStatement = stockOwnerProcedure
           id: `uk-${index}`,
           kind: 'arrived' as const,
           at: row.receivedAt,
-          name: row.vintage ? `${row.name} ${row.vintage}` : row.name,
+          name: row.name,
+          detail: row.vintage ? String(row.vintage) : '',
           bottles: row.totalBottles,
           where: 'uk' as const,
         })),
@@ -380,12 +405,17 @@ const memberGetStatement = stockOwnerProcedure
         bottles: entry.wines.reduce((sum, wine) => sum + wine.bottles, 0),
       })),
 
-      sold: sold.map((row) => ({ ...row, amountUsd: round(row.amountUsd) })),
+      sold: sold.map((row) => ({
+        ...row,
+        productName: displayWineName(row.productName),
+        amountUsd: round(row.amountUsd),
+      })),
       soldUsd: round(sold.reduce((sum, row) => sum + row.amountUsd, 0)),
       paidUsd: round(paid.reduce((sum, row) => sum + row.amountUsd, 0)),
 
       holdings: holdings.map((row) => ({
         ...row,
+        productName: displayWineName(row.productName),
         bottles: row.cases * (row.caseConfig ?? 1),
       })),
       ukHoldings,

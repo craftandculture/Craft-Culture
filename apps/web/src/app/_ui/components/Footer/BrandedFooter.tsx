@@ -54,9 +54,10 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
               The warehouse
             </span>
             <span className="text-text-muted text-xs">
-              C&amp;C bonded warehouse &middot; 12&ndash;16&deg;C continuously logged
-              &middot; UAE licensed bonded, duty suspended &middot; CCTV and
-              humidity control &middot; handled in house
+              Your wine rests in our licensed bonded warehouse in the UAE, duty
+              suspended, held at 12&ndash;16&deg;C with controlled humidity.
+              Conditions are logged around the clock, the building is under
+              CCTV, and every bottle is handled by our own team.
             </span>
           </div>
         </div>

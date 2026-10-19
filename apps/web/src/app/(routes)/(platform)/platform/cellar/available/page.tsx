@@ -12,7 +12,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
@@ -155,6 +155,26 @@ const AvailablePage = () => {
   }, [wines, country, producer, vintage, sort]);
 
   const shown = filtered.slice(0, limit);
+
+  const moreRef = useRef<HTMLDivElement>(null);
+  const hasMore = filtered.length > limit;
+
+  useEffect(() => {
+    const marker = moreRef.current;
+    if (!marker || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setLimit((current) => current + PAGE);
+        }
+      },
+      { rootMargin: '800px 0px' },
+    );
+    observer.observe(marker);
+
+    return () => observer.disconnect();
+  }, [hasMore, limit]);
   const totalBottles = filtered.reduce(
     (sum, wine) => sum + wine.availableBottles,
     0,
@@ -565,9 +585,6 @@ const AvailablePage = () => {
             ))}
           </dl>
 
-          <Typography variant="bodyXs" colorRole="muted" className="mb-2 block">
-            Showing {shown.length.toLocaleString('en-US')} of {filtered.length.toLocaleString('en-US')}
-          </Typography>
 
           {/* A phone gets cards: a seven-column table cannot be read at that width */}
           <ul className="space-y-2 sm:hidden">
@@ -690,19 +707,14 @@ const AvailablePage = () => {
           </div>
 
           {/*
-            A page at a time, on request. A hard cut with no control reads as
-            "that is all there is", which for a catalogue of four hundred is the
-            one thing it must not say.
+            The next wines load as the collector nears the end of the list, so
+            browsing never stops at a button, while the first paint stays at
+            fifty rows. The marker stays in the page while more remain, so the
+            list never reads as finished when it is not.
           */}
           {filtered.length > shown.length && (
-            <div className="mt-4 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setLimit((current) => current + PAGE)}
-                className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted h-10 rounded-lg border px-5 text-xs font-semibold shadow-sm transition-colors"
-              >
-                Show {Math.min(PAGE, filtered.length - shown.length)} more
-              </button>
+            <div ref={moreRef} className="text-text-muted mt-4 py-4 text-center text-xs">
+              Loading more wines&hellip;
             </div>
           )}
 

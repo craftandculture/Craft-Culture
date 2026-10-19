@@ -368,9 +368,9 @@ const SellingPage = () => {
           Selling
         </Typography>
         <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Wine you have asked us to sell on your behalf. You receive your asking
-          price in full &mdash; our commission is added on top of it, never
-          taken out of it.
+          Wine you have asked us to sell on your behalf. You receive your
+          asking price in full. Our commission is added on top and never
+          deducted from it.
         </Typography>
       </div>
 
