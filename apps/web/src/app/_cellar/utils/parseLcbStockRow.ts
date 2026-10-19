@@ -75,6 +75,7 @@ const whole = (value: unknown) => {
  * 19 October 2026), which is read from Excel's epoch.
  */
 const ukDate = (value: unknown) => {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   const raw = String(value ?? '').trim();
   if (/^\d{5}(\.\d+)?$/.test(raw)) {
     const date = new Date(Date.UTC(1899, 11, 30) + Math.floor(Number(raw)) * 86_400_000);

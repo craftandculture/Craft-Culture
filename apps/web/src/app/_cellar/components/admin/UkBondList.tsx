@@ -71,10 +71,15 @@ const UkBondList = () => {
         Stock by Supplier" puts its title above them, which made every column
         name the title and the report unreadable.
       */
+      /*
+        Raw values, not the spreadsheet's display text: a date cell otherwise
+        arrives formatted for a US locale ("10/19/26"), which reads as no date
+        at all. Raw, it is the day number, which the parser reads directly.
+      */
       const grid = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
         header: 1,
         defval: null,
-        raw: false,
+        raw: true,
       });
       const headerAt = grid.findIndex((cells) =>
         cells.some((cell) => String(cell ?? '').toLowerCase().replace(/[^a-z]/g, '') === 'rotation'),
