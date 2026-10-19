@@ -718,6 +718,11 @@ const ShipmentDetailPage = () => {
     setSheetForm((f) => ({
       ...f,
       lwin: result.lwin18,
+      // The chosen record names the wine, so the line takes its name
+      productName:
+        result.displayName && result.displayName !== 'Custom Product'
+          ? result.displayName
+          : f.productName,
       producer: result.producer || f.producer,
       vintage: result.vintage ? String(result.vintage) : f.vintage,
       region: result.region || f.region,

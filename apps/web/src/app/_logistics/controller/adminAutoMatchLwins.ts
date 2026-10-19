@@ -101,8 +101,8 @@ const adminAutoMatchLwins = adminProcedure
         bottleSizeMl: logisticsShipmentItems.bottleSizeMl,
         bottlesPerCase: logisticsShipmentItems.bottlesPerCase,
         totalBottles: logisticsShipmentItems.totalBottles,
-        // Read so they are only filled where they are empty — a matcher
-        // should not overwrite what a person has typed
+        // The producer is searched with the name; the rest is read so the
+        // shape of the line is in hand
         producer: logisticsShipmentItems.producer,
         region: logisticsShipmentItems.region,
         countryOfOrigin: logisticsShipmentItems.countryOfOrigin,
@@ -123,6 +123,20 @@ const adminAutoMatchLwins = adminProcedure
 
     for (const item of items) {
       const parsed = parseWineName(item.productName);
+
+      /*
+        The producer is part of the wine's name, even when the invoice puts it
+        on a line of its own. Read from the name alone, "Meursault" from
+        Domaine Antoine Jobard scored every Meursault in the database the same
+        and came back "too close to choose" between three Chateau de Meursault
+        records. With the producer in front, "Domaine Antoine Jobard
+        Meursault" has one clear match.
+      */
+      const producer = item.producer?.trim() ?? '';
+      const withProducer =
+        producer && !parsed.searchName.toLowerCase().includes(producer.toLowerCase())
+          ? `${producer} ${parsed.searchName}`
+          : parsed.searchName;
 
       if (parsed.searchName.length < 3) {
         rows.push({
@@ -151,11 +165,12 @@ const adminAutoMatchLwins = adminProcedure
           country: lwinWines.country,
           classification: lwinWines.classification,
           score: sql<number>`GREATEST(
-            similarity(${lwinWines.displayName}, ${parsed.searchName}),
+            similarity(${lwinWines.displayName}, ${withProducer}),
             similarity(
-              (COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, '')),
-              ${parsed.searchName}
-            )
+              (COALESCE(${lwinWines.producerTitle}, '') || ' ' || COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, '')),
+              ${withProducer}
+            ),
+            similarity(${lwinWines.displayName}, ${parsed.searchName}) * ${producer ? 0.85 : 1}
           )`.as('score'),
         })
         .from(lwinWines)
@@ -175,7 +190,7 @@ const adminAutoMatchLwins = adminProcedure
               Producer and wine are still scored, above; they just no longer
               decide which rows are looked at.
             */
-            sql`${lwinWines.displayName} % ${parsed.searchName}`,
+            sql`(${lwinWines.displayName} % ${withProducer} OR ${lwinWines.displayName} % ${parsed.searchName})`,
           ),
         )
         .orderBy(sql`score DESC`)
@@ -293,10 +308,12 @@ const adminAutoMatchLwins = adminProcedure
           cleanly and still arrived as a name and a number.
 
           Filling it here costs nothing: these columns were fetched to score
-          the candidates. Only blanks are written, because a matcher has no
-          business correcting a person.
+          the candidates. Only unmapped lines are matched, and a clear match
+          is the line being identified, so the name, producer, region and
+          country all take the record's (Kevin, 19 October 2026): a supplier's
+          "Meursault" beside a LWIN for a named domaine said two things.
         */
-        const producer = [best.producerTitle, best.producerName]
+        const matchedProducer = [best.producerTitle, best.producerName]
           .filter(Boolean)
           .join(' ');
         const region = best.subRegion ?? best.region;
@@ -307,11 +324,12 @@ const adminAutoMatchLwins = adminProcedure
             lwin: lwin18,
             vintage: vintage ?? undefined,
             bottleSizeMl: sizeMl,
-            ...(producer && !item.producer?.trim() ? { producer } : {}),
-            ...(region && !item.region?.trim() ? { region } : {}),
-            ...(best.country && !item.countryOfOrigin?.trim()
-              ? { countryOfOrigin: best.country }
-              : {}),
+            // The line becomes the record it matched, name and all, so the
+            // code and the words beside it describe the same wine
+            productName: best.displayName,
+            ...(matchedProducer ? { producer: matchedProducer } : {}),
+            ...(region ? { region } : {}),
+            ...(best.country ? { countryOfOrigin: best.country } : {}),
           })
           .where(eq(logisticsShipmentItems.id, item.id));
 

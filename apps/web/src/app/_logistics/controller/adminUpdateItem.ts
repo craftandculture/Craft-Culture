@@ -130,23 +130,28 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
     }
 
     /*
-      A LWIN carries the wine's identity, so latching one fills it in.
+      A LWIN carries the wine's identity, so choosing one takes it.
 
-      Only the sheet's own search did this, because it had the record in hand
-      and passed the producer and region along with the code. Every other way
-      of setting a LWIN — the matcher's shortlist, "same wine as the 2003" —
-      sends the code alone, so lines mapped that way sat with the right LWIN
-      and no producer, region or country, and looked less mapped than their
-      neighbours.
+      Choosing a different LWIN is a person saying "this line is that wine",
+      so the name, producer, region and country follow the record (Kevin, 19
+      October 2026). Before, only blanks were filled: a line read off an
+      invoice as "Meursault · Domaine Antoine Jobard" and mapped to a
+      different Meursault kept the supplier's name and producer beside the
+      new code, and the line said one wine while the LWIN said another.
 
-      Only blanks are filled. A person who has typed a producer is not
-      corrected by a lookup.
+      Anything sent in the same request wins, so the sheet, which shows the
+      name for review, still has the last word. Re-saving the same LWIN
+      changes nothing, so a typed correction is never undone by its own code.
     */
     const wineLwin = updateData.lwin?.slice(0, 7);
+    const isNewLwin =
+      Boolean(updateData.lwin) &&
+      normalizeLwin18(existingItem.lwin ?? '') !== updateData.lwin;
 
     if (wineLwin && /^\d{7}$/.test(wineLwin)) {
       const [record] = await db
         .select({
+          displayName: lwinWines.displayName,
           producerTitle: lwinWines.producerTitle,
           producerName: lwinWines.producerName,
           region: lwinWines.region,
@@ -161,22 +166,25 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
         const producer = [record.producerTitle, record.producerName]
           .filter(Boolean)
           .join(' ');
+        const region = record.subRegion ?? record.region;
 
-        if (producer && !existingItem.producer && updateFields.producer === undefined) {
+        /* A new LWIN replaces; the same LWIN only fills what is blank */
+        const take = (current: string | null | undefined, sent: unknown) =>
+          sent === undefined && (isNewLwin || !current);
+
+        if (record.displayName && take(existingItem.productName, updateFields.productName)) {
+          updateData.productName = record.displayName;
+        }
+
+        if (producer && take(existingItem.producer, updateFields.producer)) {
           updateData.producer = producer;
         }
 
-        const region = record.subRegion ?? record.region;
-
-        if (region && !existingItem.region && updateFields.region === undefined) {
+        if (region && take(existingItem.region, updateFields.region)) {
           updateData.region = region;
         }
 
-        if (
-          record.country &&
-          !existingItem.countryOfOrigin &&
-          updateFields.countryOfOrigin === undefined
-        ) {
+        if (record.country && take(existingItem.countryOfOrigin, updateFields.countryOfOrigin)) {
           updateData.countryOfOrigin = record.country;
         }
       }

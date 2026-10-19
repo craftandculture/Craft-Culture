@@ -44,6 +44,56 @@ const adminImportExtractedItems = adminProcedure
     }
 
     /*
+      The same document imported twice is refused.
+
+      Each import only ever added lines, so reading a commercial invoice a
+      second time doubled the shipment: SHP-2026-0030 arrived at 36 lines for
+      an 18-case invoice, then 54, with the cost and the bottles doubled each
+      time and nothing to say it had happened. A line is recognised by its
+      vintage and its billed total, which survive the LWIN matcher renaming
+      it; lines with no total (a zero-priced order confirmation) say too
+      little to compare and are left out of the check.
+    */
+    {
+      const signature = (vintage: number | null | undefined, total: number | null | undefined) =>
+        total ? `${vintage ?? 0}|${Math.round(total * 100)}` : null;
+
+      const existing = await db
+        .select({
+          vintage: logisticsShipmentItems.vintage,
+          sourceTotal: logisticsShipmentItems.sourceTotal,
+        })
+        .from(logisticsShipmentItems)
+        .where(eq(logisticsShipmentItems.shipmentId, shipmentId));
+
+      const onShipment = new Map<string, number>();
+      for (const row of existing) {
+        const key = signature(row.vintage, row.sourceTotal);
+        if (key) onShipment.set(key, (onShipment.get(key) ?? 0) + 1);
+      }
+
+      let comparable = 0;
+      let alreadyThere = 0;
+      for (const item of items) {
+        const key = signature(item.vintage, item.total);
+        if (!key) continue;
+        comparable += 1;
+        const left = onShipment.get(key) ?? 0;
+        if (left > 0) {
+          alreadyThere += 1;
+          onShipment.set(key, left - 1);
+        }
+      }
+
+      if (comparable >= 3 && alreadyThere / comparable >= 0.8) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `${alreadyThere} of these ${comparable} lines are already on this shipment, so this document looks imported already. Nothing was added. To import it again, delete the existing lines first.`,
+        });
+      }
+    }
+
+    /*
       The document's own totals, recorded whether or not they agree with ours.
 
       Written before the items so they survive an import that half-succeeds —
