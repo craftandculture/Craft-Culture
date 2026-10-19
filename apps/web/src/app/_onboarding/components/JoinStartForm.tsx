@@ -141,7 +141,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
       >
         <div>
           <p className="text-text-primary text-lg font-semibold">
-            {greeting ? 'Join your private cellar' : 'Begin your application'}
+            {greeting ? 'Access your private cellar' : 'Begin your application'}
           </p>
           <p className="text-text-muted mt-0.5 text-sm">
             Set up your access in just a few minutes. You can complete the rest later.
