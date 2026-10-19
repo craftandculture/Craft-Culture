@@ -1,3 +1,9 @@
+## [2.0.430](https://github.com/craftandculture/Craft-Culture/compare/v2.0.429...v2.0.430) (2026-10-19)
+
+### Bug Fixes
+
+* the LWIN matcher reads the producer with the wine name, choosing a LWIN renames the line and sets its producer, region and country to match, and importing the same document twice is refused ([329852b](https://github.com/craftandculture/Craft-Culture/commit/329852b4b5ad83c9dad98b729f0383d0f4a95662))
+
 ## [2.0.429](https://github.com/craftandculture/Craft-Culture/compare/v2.0.428...v2.0.429) (2026-10-19)
 
 ### Features
