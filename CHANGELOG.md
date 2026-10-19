@@ -1,3 +1,9 @@
+## [2.0.421](https://github.com/craftandculture/Craft-Culture/compare/v2.0.420...v2.0.421) (2026-10-19)
+
+### Bug Fixes
+
+* delivery requests drop the gift option and allow a preferred day no sooner than five working days, Bring your wine in loses the buying chip, and the membership card shows storage against what is included ([0c5331f](https://github.com/craftandculture/Craft-Culture/commit/0c5331fde5a4b2e976ad23c9d2bb22c6b2915b46))
+
 ## [2.0.420](https://github.com/craftandculture/Craft-Culture/compare/v2.0.419...v2.0.420) (2026-10-19)
 
 ### Features
