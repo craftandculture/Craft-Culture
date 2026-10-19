@@ -24,6 +24,12 @@ export interface UkHoldingsPanelProps {
   formatValue?: (usd: number) => string;
   /** View-only access: show the wine and its moves, offer no actions */
   readOnly?: boolean;
+  /**
+   * Only the moves under way. The cellar's main table now lists the UK wine
+   * itself, by the case, beside the same wine in the UAE; this panel is left
+   * with what the member is waiting on or has to decide.
+   */
+  movesOnly?: boolean;
 }
 
 interface QuantityLine {
@@ -108,7 +114,7 @@ const isRecent = (move: UkMove) => {
  * member chooses wine to bring to the UAE, we send one all-in price, and it
  * moves only once they accept it.
  */
-const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPanelProps) => {
+const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = false }: UkHoldingsPanelProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { catchActivation, activationSheet } = useActivationGate();
@@ -173,6 +179,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
   const shownMoves = moves.filter(isRecent);
 
   if (holdings.length === 0 && shownMoves.length === 0) return null;
+  if (movesOnly && shownMoves.length === 0) return null;
 
   const bottles = holdings.reduce((sum, holding) => sum + holding.totalBottles, 0);
   const movable = holdings.filter((holding) => !moveByLine.has(lineKey(holding)));
@@ -244,15 +251,19 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
             <IconBuildingWarehouse size={15} />
           </span>
           <div>
-            <p className="text-text-primary text-sm font-semibold">United Kingdom · London City Bond, Burton</p>
-            <p className="text-text-muted text-xs">
-              Held in bond for you by C&amp;C · {wineCount}{' '}
-              {wineCount === 1 ? 'wine' : 'wines'}, {bottles} {bottles === 1 ? 'bottle' : 'bottles'}
-              {data.reportedAt ? ` · updated ${format(new Date(data.reportedAt), 'd MMM yyyy')}` : ''}
+            <p className="text-text-primary text-sm font-semibold">
+              {movesOnly ? 'Moving to the UAE from London City Bond' : 'United Kingdom · London City Bond, Burton'}
             </p>
+            {!movesOnly && (
+              <p className="text-text-muted text-xs">
+                Held in bond for you by C&amp;C · {wineCount}{' '}
+                {wineCount === 1 ? 'wine' : 'wines'}, {bottles} {bottles === 1 ? 'bottle' : 'bottles'}
+                {data.reportedAt ? ` · updated ${format(new Date(data.reportedAt), 'd MMM yyyy')}` : ''}
+              </p>
+            )}
           </div>
         </div>
-        {movable.length > 0 && !readOnly && (
+        {movable.length > 0 && !readOnly && !movesOnly && (
           <button
             type="button"
             onClick={() => {
@@ -346,7 +357,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
         </ul>
       )}
 
-      {isChoosing && (
+      {!movesOnly && isChoosing && (
         <p className="border-border-muted text-text-muted border-b bg-emerald-50/40 px-4 py-2 text-xs dark:bg-emerald-500/5">
           Choose the wines to bring to your cellar in the UAE. Each wine moves in full, every case of it.
         </p>
@@ -357,6 +368,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
         places reads as one. Where it came from and when it arrived are on
         every line: a member asked to know both.
       */}
+      {!movesOnly && (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted/60 border-border-muted border-b">
@@ -435,8 +447,9 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
           </tbody>
         </table>
       </div>
+      )}
 
-      {isChoosing && (
+      {!movesOnly && isChoosing && (
         <div className="border-border-muted flex flex-col gap-2 border-t bg-emerald-50/40 px-4 py-3 sm:flex-row sm:items-center dark:bg-emerald-500/5">
           <input
             value={note}
@@ -473,7 +486,7 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false }: UkHoldingsPane
         </div>
       )}
 
-      <footer className="border-border-muted bg-surface-muted/40 space-y-2 border-t px-4 py-3">
+      <footer className={`border-border-muted bg-surface-muted/40 space-y-2 border-t px-4 py-3 ${movesOnly ? 'hidden' : ''}`}>
         <p className="text-text-muted text-xs leading-5">
           Your UK wine stays under bond, duty and VAT suspended. To bring any of it to your cellar in the UAE, choose
           Move to the UAE and we will send you the price first.

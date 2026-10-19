@@ -15,7 +15,7 @@ import {
   IconShip,
   IconX,
 } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
@@ -97,7 +97,39 @@ interface CellarWine {
   indicativePerBottle?: number | null;
   indicativeFromList?: boolean;
   locations: CellarParcel[];
+  /** The same wine held for the member at our UK bond, one entry per kind of case */
+  uk?: UkLine[];
 }
+
+/**
+ * Cases of one wine at London City Bond that travel together
+ *
+ * LCB books most cases as a rotation of their own, so one line here can stand
+ * for several rotations. They are kept apart from other cases of the wine
+ * when they came from a different sender or are already on a move.
+ */
+interface UkLine {
+  key: string;
+  holdings: { id: string; cases: number; totalBottles: number }[];
+  cases: number;
+  singles: number;
+  bottles: number;
+  bottlesPerCase: number | null;
+  packaging: string | null;
+  supplierName: string | null;
+  receivedAt: Date | string | null;
+  notes: string[];
+  /** Already asked to move, or on its way */
+  moveStatus: string | null;
+  indicativePerBottle: number | null;
+}
+
+const ukBottlesOf = (wine: { uk?: UkLine[] }) =>
+  (wine.uk ?? []).reduce((sum, line) => sum + line.bottles, 0);
+
+/** "OWC" from "(OWC) Original Wooden Case", as the trade writes it */
+const packagingCode = (packaging: string | null) =>
+  /\(([A-Z]{2,4})\)/.exec(packaging ?? '')?.[1] ?? null;
 
 type QuickFilter = 'all' | 'largeFormat' | 'magnumPlus' | 'reserved';
 
@@ -150,6 +182,7 @@ const formatMoney = (
 const CellarPage = () => {
   const api = useTRPC();
   const { catchActivation, activationSheet } = useActivationGate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [openWine, setOpenWine] = useState<string | null>(null);
@@ -160,6 +193,9 @@ const CellarPage = () => {
 
   /* What the member has picked, in bottles, keyed by the parcel it comes from. */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
+  /** Cases chosen to move from the UK bond to the UAE, by UK line */
+  const [moveBasket, setMoveBasket] = useState<Map<string, number>>(new Map());
+  const [moveNote, setMoveNote] = useState('');
 
   /*
     A collector is billed and thinks in dirhams; a trade owner prices in
@@ -327,6 +363,21 @@ const CellarPage = () => {
         void refetch();
       },
       onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const requestMove = useMutation(
+    api.cellar.member.requestUkMove.mutationOptions({
+      onSuccess: (move) => {
+        toast.success(`${move.moveNumber} is with us. We will send you the price shortly.`);
+        setMoveBasket(new Map());
+        setMoveNote('');
+        void queryClient.invalidateQueries({ queryKey: api.cellar.member.getUkMoves.queryKey() });
+        void queryClient.invalidateQueries({ queryKey: api.cellar.member.getUkHoldings.queryKey() });
+      },
+      onError: (error) => {
+        if (!catchActivation(error, 'other')) toast.error(error.message);
+      },
     }),
   );
 
@@ -498,8 +549,101 @@ const CellarPage = () => {
   */
   const [location, setLocation] = useState<CellarLocation>('all');
   const showLocations = hasUk && !isUaeEmpty;
-  const showUae = !showLocations || location !== 'uk';
   const showUk = !showLocations || location !== 'uae';
+
+  const { data: ukMoveData } = useQuery(api.cellar.member.getUkMoves.queryOptions());
+
+  /*
+    One collection: each wine once, with whatever is held for it in the UAE
+    and at our UK bond. A wine held only in the UK becomes a row of its own,
+    so a member whose wine is all at Burton reads the same table as everyone
+    else, with the same search and filters.
+  */
+  const cellarWines = useMemo(() => {
+    const moveByLine = new Map<string, string>();
+    for (const move of ukMoveData?.moves ?? []) {
+      if (!['submitted', 'quoted', 'accepted', 'shipping', 'arrived'].includes(move.status)) continue;
+      for (const item of move.items) moveByLine.set(`${item.rotation}:${item.line}`, move.status);
+    }
+
+    const ukByWine = new Map<string, { wine: CellarWine; lines: Map<string, UkLine> }>();
+
+    for (const holding of ukData?.holdings ?? []) {
+      const moveStatus = moveByLine.get(`${holding.rotation}:${holding.line}`) ?? null;
+      if (moveStatus === 'arrived') continue;
+
+      const sizeCl = holding.bottleSizeLitres ? Math.round(holding.bottleSizeLitres * 100) : 75;
+      const entry = ukByWine.get(holding.lwin18) ?? {
+        wine: {
+          lwin18: holding.lwin18,
+          productName: holding.wineName ?? holding.name,
+          producer: holding.producer ?? null,
+          vintage: holding.vintage,
+          bottleSize: `${sizeCl}cl`,
+          caseConfig: holding.bottlesPerCase,
+          totalCases: 0,
+          reservedCases: 0,
+          costPerBottle: null,
+          indicativePerBottle: holding.indicativePerBottle,
+          indicativeFromList: holding.valueSource === 'list',
+          locations: [],
+        } satisfies CellarWine,
+        lines: new Map<string, UkLine>(),
+      };
+
+      const lineKey = [holding.packaging ?? '', holding.supplierName ?? '', moveStatus ?? ''].join('|');
+      const line = entry.lines.get(lineKey) ?? {
+        key: `${holding.lwin18}|${lineKey}`,
+        holdings: [],
+        cases: 0,
+        singles: 0,
+        bottles: 0,
+        bottlesPerCase: holding.bottlesPerCase,
+        packaging: holding.packaging ?? null,
+        supplierName: holding.supplierName ?? null,
+        receivedAt: holding.receivedAt,
+        notes: [],
+        moveStatus,
+        indicativePerBottle: holding.indicativePerBottle,
+      };
+      line.holdings.push({ id: holding.id, cases: holding.cases, totalBottles: holding.totalBottles });
+      line.cases += holding.cases;
+      line.singles += holding.singles;
+      line.bottles += holding.totalBottles;
+      if (holding.rotationNotes && !line.notes.includes(holding.rotationNotes)) line.notes.push(holding.rotationNotes);
+      if (holding.receivedAt && (!line.receivedAt || new Date(holding.receivedAt) < new Date(line.receivedAt))) {
+        line.receivedAt = holding.receivedAt;
+      }
+      entry.lines.set(lineKey, line);
+      ukByWine.set(holding.lwin18, entry);
+    }
+
+    const merged = wines.map((wine) => {
+      const uk = ukByWine.get(wine.lwin18);
+      if (!uk) return wine;
+      ukByWine.delete(wine.lwin18);
+      return { ...wine, uk: [...uk.lines.values()] };
+    });
+
+    for (const { wine, lines } of ukByWine.values()) {
+      merged.push({ ...wine, uk: [...lines.values()] });
+    }
+
+    return merged;
+  }, [wines, ukData, ukMoveData]);
+
+  /* What the strip has narrowed the collection to */
+  const placedWines = useMemo(
+    () =>
+      cellarWines.filter((wine) =>
+        location === 'uae' ? wine.locations.length > 0 : location === 'uk' ? ukBottlesOf(wine) > 0 : true,
+      ),
+    [cellarWines, location],
+  );
+
+  /** Bottles of a wine in the place being looked at */
+  const shownBottlesOf = (wine: CellarWine) =>
+    (location === 'uk' ? 0 : bottlesOf(wine)) + (location === 'uae' ? 0 : ukBottlesOf(wine));
 
   const requestByStock = useMemo(() => {
     const map = new Map<string, { requestNumber: string }>();
@@ -527,7 +671,7 @@ const CellarPage = () => {
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    return wines
+    return placedWines
       .filter((wine) => {
         if (
           term &&
@@ -551,7 +695,7 @@ const CellarPage = () => {
           (b.vintage ?? 0) - (a.vintage ?? 0) ||
           a.productName.localeCompare(b.productName),
       );
-  }, [wines, search, quickFilter]);
+  }, [placedWines, search, quickFilter]);
 
   const totals = useMemo(() => {
     const priced = wines.filter((wine) => (wine.costPerBottle ?? 0) > 0);
@@ -589,6 +733,26 @@ const CellarPage = () => {
       ),
     };
   }, [wines, inbound, ukData]);
+
+  /*
+    The tiles count the whole collection, UAE and UK together, so a member
+    whose wine is all at our UK bond has the same summary as everyone else.
+  */
+  const collection = useMemo(() => {
+    const ukLines = cellarWines.flatMap((wine) => wine.uk ?? []);
+    return {
+      bottles: cellarWines.reduce((sum, wine) => sum + bottlesOf(wine) + ukBottlesOf(wine), 0),
+      cases: cellarWines.reduce(
+        (sum, wine) => sum + wine.totalCases + (wine.uk ?? []).reduce((total, line) => total + line.cases, 0),
+        0,
+      ),
+      wines: cellarWines.length,
+      producers: new Set(cellarWines.map((wine) => wine.producer?.trim() || 'Other')).size,
+      indicative:
+        cellarWines.reduce((sum, wine) => sum + bottlesOf(wine) * (wine.indicativePerBottle ?? 0), 0) +
+        ukLines.reduce((sum, line) => sum + line.bottles * (line.indicativePerBottle ?? 0), 0),
+    };
+  }, [cellarWines]);
 
   const handleExport = () => {
     const csvRows = [
@@ -861,12 +1025,12 @@ const CellarPage = () => {
           ]}
         />
       )}
-      {!isUaeEmpty && (!showLocations || location === 'uae') && (
+      {!isEmptyCellar && !showLocations && (
       <div
         className={`mb-4 grid grid-cols-2 gap-2 sm:gap-2.5 ${
-          (inbound.length > 0 ? 1 : 0) + (totals.indicative > 0 ? 1 : 0) === 2
+          (inbound.length > 0 ? 1 : 0) + (collection.indicative > 0 ? 1 : 0) === 2
             ? 'sm:grid-cols-4'
-            : (inbound.length > 0 ? 1 : 0) + (totals.indicative > 0 ? 1 : 0) === 1
+            : (inbound.length > 0 ? 1 : 0) + (collection.indicative > 0 ? 1 : 0) === 1
               ? 'sm:grid-cols-3'
               : 'sm:grid-cols-2'
         }`}
@@ -874,21 +1038,21 @@ const CellarPage = () => {
         {[
           {
             icon: IconBottle,
-            value: totals.bottles.toLocaleString(),
+            value: collection.bottles.toLocaleString(),
             label: 'Bottles',
-            detail: `${totals.cases.toLocaleString()} cases`,
+            detail: `${collection.cases.toLocaleString()} cases`,
             alert: false,
           },
           {
             icon: IconBuildingWarehouse,
-            value: totals.wines.toLocaleString(),
+            value: collection.wines.toLocaleString(),
             label: 'Wines',
-            detail: `${totals.producers} producers`,
+            detail: `${collection.producers} producers`,
             alert: false,
           },
           {
             icon: IconCoin,
-            value: money(totals.indicative),
+            value: money(collection.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
             note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
@@ -904,7 +1068,7 @@ const CellarPage = () => {
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
           .filter((card) => card.label !== 'In transit' || inbound.length > 0)
-          .filter((card) => card.label !== 'Indicative value' || totals.indicative > 0)
+          .filter((card) => card.label !== 'Indicative value' || collection.indicative > 0)
           .map((card) => (
           <div
             key={card.label}
@@ -1500,13 +1664,8 @@ const CellarPage = () => {
             Browse The Cellar List
           </Link>
         </div>
-      ) : isUaeEmpty || !showUae ? null : (
+      ) : (
         <>
-      {hasUk && (
-        <p className="text-text-primary mb-2 text-sm font-semibold">
-          United Arab Emirates · C&amp;C bonded warehouse
-        </p>
-      )}
       {/*
         Search and filters on one line above small screens. Stacked, they cost
         three bands of vertical space before a member sees a single wine.
@@ -1648,6 +1807,21 @@ const CellarPage = () => {
                     </td>
                     <td className={`${td} text-text-primary font-medium`}>
                       {displayName(wine.productName)}
+                      {/* Where the bottles are, when the member holds wine in more than one place */}
+                      {hasUk && location === 'all' && (
+                        <span className="mt-0.5 flex flex-wrap gap-1">
+                          {bottlesOf(wine) > 0 && (
+                            <span className="rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+                              UAE {bottlesOf(wine)}
+                            </span>
+                          )}
+                          {ukBottlesOf(wine) > 0 && (
+                            <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-semibold text-slate-700 dark:bg-slate-500/20 dark:text-slate-200">
+                              UK {ukBottlesOf(wine)}
+                            </span>
+                          )}
+                        </span>
+                      )}
                       <span className="text-text-muted block text-xs sm:hidden">
                         {wine.producer}
                         {wine.vintage ? ` · ${wine.vintage}` : ''}
@@ -1681,12 +1855,13 @@ const CellarPage = () => {
                     <td
                       className={`${tdMuted} hidden text-right tabular-nums sm:table-cell`}
                     >
-                      {wine.totalCases}
+                      {(location === 'uk' ? 0 : wine.totalCases) +
+                        (location === 'uae' ? 0 : (wine.uk ?? []).reduce((sum, line) => sum + line.cases, 0))}
                     </td>
                     <td
                       className={`${td} text-text-primary text-right font-semibold tabular-nums`}
                     >
-                      {bottlesOf(wine)}
+                      {shownBottlesOf(wine)}
                     </td>
                     <td
                       className={`${tdMuted} hidden text-right tabular-nums lg:table-cell`}
@@ -1725,6 +1900,53 @@ const CellarPage = () => {
                     >
                       {(() => {
                         if (isViewer) return null;
+
+                        /*
+                          Wine at our UK bond cannot be delivered from here;
+                          its action is moving it to the UAE, by the case.
+                        */
+                        if (wine.locations.length === 0 || location === 'uk') {
+                          const movable = (wine.uk ?? []).filter((line) => !line.moveStatus && line.cases > 0);
+                          if (movable.length === 0) {
+                            return (wine.uk ?? []).some((line) => line.moveStatus) ? (
+                              <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">Moving to the UAE</span>
+                            ) : null;
+                          }
+                          const chosenCases = movable.reduce((sum, line) => sum + (moveBasket.get(line.key) ?? 0), 0);
+                          const heldCases = movable.reduce((sum, line) => sum + line.cases, 0);
+                          const setCases = (next: number) =>
+                            setMoveBasket((current) => {
+                              const map = new Map(current);
+                              let remaining = next;
+                              for (const line of movable) {
+                                const take = Math.min(line.cases, remaining);
+                                if (take > 0) map.set(line.key, take);
+                                else map.delete(line.key);
+                                remaining -= take;
+                              }
+                              return map;
+                            });
+
+                          return chosenCases > 0 ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <QuantityStepper
+                                value={chosenCases}
+                                max={heldCases}
+                                label={`case of ${wine.productName} to move`}
+                                onChange={setCases}
+                              />
+                              <span className="text-text-muted text-[11px]">cases</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setCases(heldCases)}
+                              className="hover:bg-fill-muted hover:text-text-primary text-text-muted min-h-9 whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:min-h-0"
+                            >
+                              Move to UAE
+                            </button>
+                          );
+                        }
 
                         const chosen = basketBottlesOf(wine);
                         const held = bottlesOf(wine);
@@ -1812,7 +2034,7 @@ const CellarPage = () => {
                       className={`${td} text-right`}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {!isViewer && (
+                      {!isViewer && wine.locations.length > 0 && location !== 'uk' && (
                       <button
                         type="button"
                         onClick={() => {
@@ -1839,6 +2061,8 @@ const CellarPage = () => {
                     <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-emerald-400">
                       <td colSpan={11} className="px-3 py-3 sm:px-6 sm:py-4">
                         <div className="border-border-muted bg-background-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
+                        {wine.locations.length > 0 && location !== 'uk' && (
+                        <>
                         {/*
                           One line per parcel actually held. A wine received on
                           two occasions is two holdings with two histories, and
@@ -2080,6 +2304,87 @@ const CellarPage = () => {
                             </tbody>
                           </table>
                         </div>
+                        </>
+                        )}
+
+                        {/*
+                          The same wine at our UK bond, under its own heading
+                          in the same panel: where it is, what case it is in,
+                          who sent it and when, and anything LCB noted about
+                          the case when it came in.
+                        */}
+                        {(wine.uk ?? []).length > 0 && location !== 'uae' && (
+                          <div className={wine.locations.length > 0 && location !== 'uk' ? 'border-border-muted mt-4 border-t pt-3.5' : ''}>
+                            <Typography
+                              variant="bodyXs"
+                              className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
+                            >
+                              <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-slate-400 align-middle" />
+                              Held in the United Kingdom · London City Bond, Burton
+                            </Typography>
+                            <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
+                              <table className="w-auto text-xs">
+                                <thead>
+                                  <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-right">Cases</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-center">Pack</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-right">Bottles</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">Case</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">From</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">Arrived</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-border-muted/60 divide-y">
+                                  {(wine.uk ?? []).map((line) => (
+                                    <tr key={line.key} className="align-top">
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums">
+                                        {line.cases}
+                                        {line.singles > 0 ? ` + ${line.singles}` : ''}
+                                      </td>
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5 text-center tabular-nums">
+                                        {line.bottlesPerCase ?? 1} &times; {wine.bottleSize ?? '75cl'}
+                                      </td>
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">{line.bottles}</td>
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5" title={line.packaging ?? undefined}>
+                                        {packagingCode(line.packaging) ?? line.packaging ?? '—'}
+                                      </td>
+                                      <td className="text-text-muted px-3 py-1.5">{line.supplierName ?? '—'}</td>
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
+                                        {line.receivedAt ? format(new Date(line.receivedAt), 'd MMM yyyy') : '—'}
+                                      </td>
+                                      <td className="px-3 py-1.5">
+                                        {line.moveStatus ? (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                                            {line.moveStatus === 'shipping' ? 'On its way to the UAE' : 'Moving to the UAE'}
+                                          </span>
+                                        ) : line.notes.length > 0 ? (
+                                          <span
+                                            title={line.notes.join(' · ')}
+                                            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                                          >
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                                            Case condition noted
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-500/20 dark:text-slate-200">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                            In bond, UK
+                                          </span>
+                                        )}
+                                        {line.notes.length > 0 && (
+                                          <span className="text-text-muted mt-0.5 block max-w-[260px] text-[11px] normal-case">
+                                            {line.notes.join(' · ').toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+                                          </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
 
                         {history.length > 0 && (
                           <div className="border-border-muted mt-4 border-t pt-3.5">
@@ -2173,6 +2478,7 @@ const CellarPage = () => {
           data={ukData}
           formatValue={(usd) => money(usd, true)}
           readOnly={isViewer}
+          movesOnly
         />
       )}
 
@@ -2325,6 +2631,81 @@ const CellarPage = () => {
           </div>
         </div>
       )}
+
+      {/*
+        Wine chosen at our UK bond, asked for as one move. Its own bar beside
+        the delivery request: moving wine to the UAE and delivering wine from
+        it are different things with different prices.
+      */}
+      {moveBasket.size > 0 && (() => {
+        const lines = cellarWines.flatMap((wine) =>
+          (wine.uk ?? [])
+            .filter((line) => (moveBasket.get(line.key) ?? 0) > 0)
+            .map((line) => ({ wine, line, cases: moveBasket.get(line.key)! })),
+        );
+        const cases = lines.reduce((sum, item) => sum + item.cases, 0);
+        const wineCount = new Set(lines.map((item) => item.wine.lwin18)).size;
+
+        /* Whole holdings first, then part of the next, so as few rotations as possible are split */
+        const holdingIds: string[] = [];
+        const casesByHolding: Record<string, number> = {};
+        for (const item of lines) {
+          let remaining = item.cases;
+          for (const holding of [...item.line.holdings].sort((a, b) => a.cases - b.cases)) {
+            if (remaining <= 0) break;
+            if (holding.cases === 0) continue;
+            holdingIds.push(holding.id);
+            if (holding.cases > remaining) casesByHolding[holding.id] = remaining;
+            remaining -= Math.min(holding.cases, remaining);
+          }
+        }
+
+        return (
+          <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-3 overflow-hidden rounded-xl border shadow-xl">
+            <div className="h-1 bg-gradient-to-r from-slate-500 via-slate-400 to-slate-200" />
+            <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+              <div className="min-w-0">
+                <Typography variant="bodyXs" className="text-text-primary font-semibold uppercase tracking-wider">
+                  Move to the UAE
+                </Typography>
+                <Typography variant="bodySm" className="block font-semibold">
+                  {cases} {cases === 1 ? 'case' : 'cases'} of {wineCount} {wineCount === 1 ? 'wine' : 'wines'} from London City Bond
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="block">
+                  We send you one all-in price first. Nothing moves until you accept it.
+                </Typography>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={moveNote}
+                  onChange={(event) => setMoveNote(event.target.value)}
+                  placeholder="Anything we should know (optional)"
+                  className="sm:w-64"
+                />
+                <ConfirmAction
+                  title="Ask us to bring this wine to the UAE?"
+                  description={
+                    <p>
+                      We will price the collection from London City Bond and the freight for {cases}{' '}
+                      {cases === 1 ? 'case' : 'cases'} and send you one all-in figure. Your wine stays in bond
+                      throughout, and nothing moves until you accept the price.
+                    </p>
+                  }
+                  confirmLabel="Request a price"
+                  onConfirm={() => requestMove.mutate({ holdingIds, casesByHolding, memberNotes: moveNote.trim() || undefined })}
+                >
+                  <Button size="sm" colorRole="primary" className={DARK_ACTION} isDisabled={requestMove.isPending}>
+                    <ButtonContent>{requestMove.isPending ? 'Sending…' : 'Request a price'}</ButtonContent>
+                  </Button>
+                </ConfirmAction>
+                <Button size="sm" variant="outline" onClick={() => setMoveBasket(new Map())}>
+                  <ButtonContent>Clear</ButtonContent>
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/*
         Reviewing and sending happens in a panel of its own. Opened inside the
