@@ -1,3 +1,9 @@
+## [2.0.459](https://github.com/craftandculture/Craft-Culture/compare/v2.0.458...v2.0.459) (2026-10-20)
+
+### Bug Fixes
+
+* sign-in rate limits are counted once across all servers instead of separately on each; the sign-in page says new accounts are reviewed and approved, and describes our storage as temperature-controlled bonded storage ([9c408c9](https://github.com/craftandculture/Craft-Culture/commit/9c408c98bb8821cd7c261e5a0575e6337b099415))
+
 ## [2.0.458](https://github.com/craftandculture/Craft-Culture/compare/v2.0.457...v2.0.458) (2026-10-20)
 
 ### Features
