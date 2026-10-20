@@ -19,6 +19,8 @@ export interface CellarOverviewPanelProps {
   section: 'setup' | 'details';
   /** View-only access: no setup prompts and no way to bring wine in */
   readOnly?: boolean;
+  /** The member already holds wine, so bringing more in folds to one line */
+  holdsWine?: boolean;
 }
 
 /** How long a finished transfer stays on screen before it folds away */
@@ -32,7 +34,7 @@ const ARRIVED_SHOWN_DAYS = 14;
  * phone everything stacks. Nothing here blocks looking around; the ID is
  * asked for again when they first act.
  */
-const CellarOverviewPanel = ({ section, readOnly = false }: CellarOverviewPanelProps) => {
+const CellarOverviewPanel = ({ section, readOnly = false, holdsWine = false }: CellarOverviewPanelProps) => {
   const api = useTRPC();
   const { data, refetch } = useQuery(api.onboarding.member.overview.queryOptions());
 
@@ -67,7 +69,7 @@ const CellarOverviewPanel = ({ section, readOnly = false }: CellarOverviewPanelP
         {transfers.map((intake) => (
           <IncomingTransferCard key={intake.id} intake={intake} reference={data.reference} />
         ))}
-        {!readOnly && <BringWineIn reference={data.reference} onAdded={() => void refetch()} />}
+        {!readOnly && <BringWineIn reference={data.reference} folded={holdsWine} onAdded={() => void refetch()} />}
       </div>
       <MembershipSummary overview={data} />
     </div>

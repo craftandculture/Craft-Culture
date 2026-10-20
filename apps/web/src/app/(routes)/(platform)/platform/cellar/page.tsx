@@ -2615,12 +2615,12 @@ const CellarPage = () => {
 
       {!isEmptyCellar && (
         <div className="mt-8">
-          <CellarOverviewPanel section="details" readOnly={isViewer} />
+          <CellarOverviewPanel section="details" readOnly={isViewer} holdsWine />
         </div>
       )}
 
       {basket.size > 0 && (
-        <div className="border-border-muted bg-background-primary sticky bottom-24 z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
+        <div className="border-border-muted bg-background-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
           <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
@@ -2790,7 +2790,7 @@ const CellarPage = () => {
         }
 
         return (
-          <div className="border-border-muted bg-background-primary sticky bottom-24 z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
+          <div className="border-border-muted bg-background-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
             <div className="h-1 bg-gradient-to-r from-slate-500 via-slate-400 to-slate-200" />
             <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <div className="min-w-0">

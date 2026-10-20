@@ -96,7 +96,7 @@ const CellarPhoneTabs = () => {
         aria-label="Your cellar"
         className="border-border-muted bg-background-primary/95 fixed inset-x-0 bottom-0 z-50 border-t backdrop-blur-xl md:hidden"
       >
-        <div className="mx-auto flex max-w-md px-2 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+6px)]">
+        <div className="mx-auto flex max-w-md px-2 pt-1 pb-[calc(env(safe-area-inset-bottom,0px)+2px)]">
           {main.map((item) => {
             const active = isOn(pathname, item.href);
             return (
@@ -104,11 +104,11 @@ const CellarPhoneTabs = () => {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
+                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-px text-[10px] ${
                   active ? 'text-text-primary font-semibold' : 'text-text-muted'
                 }`}
               >
-                <item.icon size={23} stroke={active ? 2.2 : 1.7} />
+                <item.icon size={20} stroke={active ? 2.1 : 1.6} />
                 {item.label}
               </Link>
             );
@@ -116,11 +116,11 @@ const CellarPhoneTabs = () => {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
+            className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-px text-[10px] ${
               moreActive ? 'text-text-primary font-semibold' : 'text-text-muted'
             }`}
           >
-            <IconDots size={23} stroke={moreActive ? 2.2 : 1.7} />
+            <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
             More
           </button>
         </div>

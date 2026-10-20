@@ -1,5 +1,6 @@
 'use client';
 
+import { IconChevronDown } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -17,6 +18,8 @@ import useActivationGate from '../hooks/useActivationGate';
 export interface BringWineInProps {
   /** The member's reference, quoted on wine sent to our UK bond */
   reference: string | null;
+  /** Start as a single line, for a member who already has a collection */
+  folded?: boolean;
   onAdded: () => void;
 }
 
@@ -44,10 +47,11 @@ const SOURCE_LABEL: Partial<Record<WineSource, string>> = {
  * Every detail is optional — we contact the holder. A transfer is an action,
  * so it opens activation first if the cellar is not active yet.
  */
-const BringWineIn = ({ reference, onAdded }: BringWineInProps) => {
+const BringWineIn = ({ reference, folded = false, onAdded }: BringWineInProps) => {
   const api = useTRPC();
   const { catchActivation, activationSheet } = useActivationGate();
   const [source, setSource] = useState<WineSource | null>(null);
+  const [open, setOpen] = useState(!folded);
   const [details, setDetails] = useState({ holderName: '', approxCases: '', note: '' });
 
   const add = useMutation(
@@ -63,6 +67,26 @@ const BringWineIn = ({ reference, onAdded }: BringWineInProps) => {
       },
     }),
   );
+
+  /*
+    A member with a collection already knows the way in; the choices wait
+    behind one line rather than taking the screen every visit.
+  */
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="border-border-muted bg-surface-primary flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left shadow-sm"
+      >
+        <span>
+          <span className="text-text-primary block text-sm font-semibold">Bring more wine in</span>
+          <span className="text-text-muted block text-xs">From LCB, another cellar or an investment platform</span>
+        </span>
+        <IconChevronDown size={18} className="text-text-muted shrink-0" />
+      </button>
+    );
+  }
 
   return (
     <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm sm:p-5">

@@ -724,7 +724,7 @@ const AvailablePage = () => {
             screen to find the total is how a half-built order gets abandoned.
           */}
           {basketLines.length > 0 && (
-            <div className="bg-text-primary text-surface-primary sticky bottom-3 z-20 mt-4 flex flex-col gap-3 rounded-xl px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
+            <div className="bg-text-primary text-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 mt-4 md:bottom-3 flex flex-col gap-3 rounded-xl px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">
                   {basketLines.length} {basketLines.length === 1 ? 'wine' : 'wines'} &middot; {basketBottles}{' '}
