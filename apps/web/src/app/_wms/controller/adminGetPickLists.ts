@@ -46,6 +46,19 @@ const adminGetPickLists = wmsOperatorProcedure
         orderDate: zohoSalesOrders.orderDate,
         // Linked order edited in Zoho after release — drives the list badge.
         soModifiedAfterRelease: zohoSalesOrders.soModifiedAfterRelease,
+        // Who the order is for, so a pick is recognised without opening it
+        customerName: zohoSalesOrders.customerName,
+        // A private client order's PCO number lives here
+        referenceNumber: zohoSalesOrders.referenceNumber,
+        // The partner's logo: matched on the Zoho contact, else on the business name
+        customerLogoUrl: sql<string | null>`(
+          SELECT p.logo_url FROM partners p
+          WHERE p.logo_url IS NOT NULL
+            AND (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}
+              OR lower(p.business_name) = lower(${zohoSalesOrders.customerName}))
+          ORDER BY (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}) DESC NULLS LAST
+          LIMIT 1
+        )`,
       })
       .from(wmsPickLists)
       .leftJoin(users, eq(wmsPickLists.assignedTo, users.id))

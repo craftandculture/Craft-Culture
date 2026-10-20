@@ -8,6 +8,7 @@ import {
   IconLoader2,
   IconPlus,
   IconRefresh,
+  IconSearch,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -24,12 +25,39 @@ import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
+/** Two letters for a client with no logo, e.g. "JMK Trading LLC" → "JT" */
+const initials = (name: string) =>
+  name
+    .replace(/\b(llc|l\.l\.c|fze|fz-llc|ltd|co)\b\.?/gi, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+/**
+ * The square at the start of a pick card: the partner's logo when there is
+ * one, otherwise the client's initials, so each order is told apart at a glance
+ */
+const ClientMark = ({ logoUrl, name }: { logoUrl: string | null; name: string | null }) =>
+  logoUrl ? (
+    <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted">
+      {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
+      <img src={logoUrl} alt={name ?? ''} className="max-h-full max-w-full object-contain" />
+    </span>
+  ) : (
+    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-fill-secondary text-sm font-semibold text-text-muted">
+      {name ? initials(name) || '?' : <IconClipboardList className="h-5 w-5" />}
+    </span>
+  );
+
 /**
  * WMS Pick Lists - List and manage order pick lists
  */
 const WMSPickListsPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [search, setSearch] = useState('');
 
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.admin.picking.getMany.queryOptions({
@@ -38,6 +66,15 @@ const WMSPickListsPage = () => {
       offset: 0,
     }),
   });
+
+  const term = search.trim().toLowerCase();
+  const shown = (data?.pickLists ?? []).filter(
+    (pl) =>
+      !term ||
+      [pl.customerName, pl.pickListNumber, pl.invoiceNumber, pl.orderNumber, pl.referenceNumber].some((v) =>
+        v?.toLowerCase().includes(term),
+      ),
+  );
 
   const statusFilters: { id: StatusFilter; label: string }[] = [
     { id: 'pending', label: 'Pending' },
@@ -157,6 +194,18 @@ const WMSPickListsPage = () => {
           ))}
         </div>
 
+        {/* Search: client, pick list, invoice, order or PCO number */}
+        <div className="relative">
+          <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search client or number"
+            className="h-12 w-full rounded-xl border border-border-muted bg-fill-primary pl-12 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+          />
+        </div>
+
         {/* Loading */}
         {isLoading && (
           <div className="flex items-center justify-center p-12">
@@ -167,7 +216,7 @@ const WMSPickListsPage = () => {
         {/* Pick Lists */}
         {!isLoading && data && (
           <div className="grid gap-3 md:grid-cols-2">
-            {data.pickLists.length === 0 ? (
+            {shown.length === 0 ? (
               <Card className="md:col-span-2">
                 <CardContent className="p-8 text-center">
                   <Icon icon={IconClipboardList} size="xl" colorRole="muted" className="mx-auto mb-4" />
@@ -175,92 +224,86 @@ const WMSPickListsPage = () => {
                     No Pick Lists
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    {statusFilter === 'pending'
-                      ? 'No pending pick lists to process'
-                      : 'No pick lists match this filter'}
+                    {term
+                      ? `Nothing matches “${search.trim()}”`
+                      : statusFilter === 'pending'
+                        ? 'No pending pick lists to process'
+                        : 'No pick lists match this filter'}
                   </Typography>
                 </CardContent>
               </Card>
             ) : (
-              data.pickLists.map((pickList) => (
-                <Link key={pickList.id} href={`/platform/admin/wms/pick/${pickList.id}`}>
-                  <Card
-                    className={`transition-shadow hover:shadow-md hover:border-border-brand ${
-                      pickList.soModifiedAfterRelease
-                        ? 'border-amber-400 ring-1 ring-amber-300'
-                        : ''
-                    }`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <Typography variant="bodySm" className="font-semibold">
-                              {pickList.pickListNumber}
-                            </Typography>
-                            {getStatusBadge(pickList.status ?? 'pending')}
-                            {pickList.soModifiedAfterRelease && (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                <IconAlertTriangle className="h-3 w-3" />
-                                Changed
-                              </span>
-                            )}
-                          </div>
-                          {/* Invoice and SO side by side — the office quotes
-                              the invoice, warehouse paperwork quotes the SO. */}
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {pickList.invoiceNumber ?? pickList.orderNumber}
-                            {pickList.invoiceNumber && pickList.orderNumber && (
-                              <span className="opacity-60">
-                                {' '}
-                                &middot; {pickList.orderNumber}
-                              </span>
-                            )}
-                          </Typography>
-                          <div className="mt-2 flex items-center gap-4">
-                            <Typography variant="bodyXs">
-                              {pickList.pickedItems}/{pickList.totalItems} items picked
-                            </Typography>
-                            {pickList.assignedToName && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                Assigned to: {pickList.assignedToName}
+              shown.map((pickList) => {
+                const percent = pickList.totalItems > 0 ? (pickList.pickedItems / pickList.totalItems) * 100 : 0;
+                const reference =
+                  pickList.referenceNumber && pickList.referenceNumber !== pickList.orderNumber ? pickList.referenceNumber : null;
+                return (
+                  <Link key={pickList.id} href={`/platform/admin/wms/pick/${pickList.id}`}>
+                    <Card
+                      className={`h-full transition-shadow hover:border-border-brand hover:shadow-md ${
+                        pickList.soModifiedAfterRelease ? 'border-amber-400 ring-1 ring-amber-300' : ''
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <ClientMark logoUrl={pickList.customerLogoUrl} name={pickList.customerName} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <Typography variant="bodyMd" className="truncate font-semibold">
+                                {pickList.customerName ?? 'No client on the order'}
                               </Typography>
+                              <span className="shrink-0">{getStatusBadge(pickList.status ?? 'pending')}</span>
+                            </div>
+                            {/* The pick list, then the numbers the office and paperwork quote */}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-text-muted">
+                              <span className="font-mono font-medium text-text-primary">{pickList.pickListNumber}</span>
+                              {pickList.invoiceNumber && <span>· {pickList.invoiceNumber}</span>}
+                              {pickList.orderNumber && <span>· {pickList.orderNumber}</span>}
+                              {reference && <span className="font-medium text-text-primary">· {reference}</span>}
+                            </div>
+                            {pickList.soModifiedAfterRelease && (
+                              <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                <IconAlertTriangle className="h-3 w-3" />
+                                Order changed in Zoho after release
+                              </span>
                             )}
                           </div>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-text-muted">
-                            {pickList.orderDate && (
-                              <span>Ordered {format(new Date(pickList.orderDate), 'dd MMM yyyy')}</span>
-                            )}
-                            <span>Created {formatDistanceToNow(new Date(pickList.createdAt), { addSuffix: true })}</span>
-                            {pickList.completedAt && (
-                              <span>Completed {format(new Date(pickList.completedAt), 'dd MMM yyyy')}</span>
-                            )}
-                            {!pickList.completedAt && pickList.status === 'in_progress' && pickList.startedAt && (
-                              <span className="text-amber-600">Started {formatDistanceToNow(new Date(pickList.startedAt), { addSuffix: true })}</span>
-                            )}
-                          </div>
-                          {/* Progress bar */}
-                          <div className="mt-2 h-1.5 w-full rounded-full bg-fill-secondary">
-                            <div
-                              className="h-1.5 rounded-full bg-brand-600"
-                              style={{
-                                width: `${pickList.totalItems > 0 ? (pickList.pickedItems / pickList.totalItems) * 100 : 0}%`,
-                              }}
-                            />
-                          </div>
+                          <Icon icon={IconChevronRight} size="sm" colorRole="muted" className="mt-3 shrink-0" />
                         </div>
-                        <Icon icon={IconChevronRight} size="sm" colorRole="muted" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
+
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="h-2 flex-1 rounded-full bg-fill-secondary">
+                            <div className="h-2 rounded-full bg-brand-600" style={{ width: `${percent}%` }} />
+                          </div>
+                          <Typography variant="bodyXs" className="shrink-0 font-medium tabular-nums">
+                            {pickList.pickedItems}/{pickList.totalItems} picked
+                          </Typography>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-text-muted">
+                          {pickList.orderDate && <span>Ordered {format(new Date(pickList.orderDate), 'dd MMM')}</span>}
+                          {pickList.completedAt ? (
+                            <span>Completed {format(new Date(pickList.completedAt), 'dd MMM')}</span>
+                          ) : pickList.status === 'in_progress' && pickList.startedAt ? (
+                            <span className="text-amber-600">
+                              Started {formatDistanceToNow(new Date(pickList.startedAt), { addSuffix: true })}
+                            </span>
+                          ) : (
+                            <span>Released {formatDistanceToNow(new Date(pickList.createdAt), { addSuffix: true })}</span>
+                          )}
+                          {pickList.assignedToName && <span>· {pickList.assignedToName}</span>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })
             )}
 
             {/* Pagination */}
             {data.pagination.total > 0 && (
               <Typography variant="bodyXs" colorRole="muted" className="text-center md:col-span-2">
-                Showing {data.pickLists.length} of {data.pagination.total} pick lists
+                Showing {shown.length} of {data.pagination.total} pick lists
               </Typography>
             )}
           </div>
