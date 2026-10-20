@@ -59,6 +59,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
+import StockForSaleToggle from '@/app/_wms/components/StockForSaleToggle';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
@@ -67,6 +68,7 @@ import type { StockExportProduct } from '@/app/_wms/utils/exportStockToExcel';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
+import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
@@ -676,6 +678,7 @@ interface ProductRowProps {
       ownerId: string;
       ownerName: string;
       ownerCode?: string | null;
+      notForSale?: boolean;
       lotNumber: string | null;
       expiryDate: Date | null;
       reExportBoeNumber: string | null;
@@ -715,6 +718,7 @@ interface ProductRowProps {
     newOwnerId: string,
     qty: number,
     notes?: string,
+    putOnSale?: boolean,
   ) => void;
   isTransferring: boolean;
   partners: { id: string; name: string; type: string }[];
@@ -770,6 +774,7 @@ const ProductRow = ({
   const [transferOwnerId, setTransferOwnerId] = useState('');
   const [transferQty, setTransferQty] = useState(0);
   const [transferNotes, setTransferNotes] = useState('');
+  const [transferPutOnSale, setTransferPutOnSale] = useState(false);
   const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -1254,6 +1259,10 @@ const ProductRow = ({
                                     {loc.ownerCode}
                                   </span>
                                 )}
+                                <StockForSaleToggle
+                                  stockId={loc.stockId}
+                                  notForSale={loc.notForSale ?? false}
+                                />
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1261,6 +1270,7 @@ const ProductRow = ({
                                     setTransferOwnerId('');
                                     setTransferQty(loc.quantityCases);
                                     setTransferNotes('');
+                                    setTransferPutOnSale(false);
                                     setAdjustingStockId(null);
                                   }}
                                   className="text-text-muted/40 hover:bg-surface-muted hover:text-text-brand hidden shrink-0 rounded p-0.5 transition-colors group-hover/owner:inline-flex"
@@ -1505,9 +1515,17 @@ const ProductRow = ({
                                   </span>
                                   <select
                                     value={transferOwnerId}
-                                    onChange={(e) =>
-                                      setTransferOwnerId(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                      const next = e.target.value;
+                                      setTransferOwnerId(next);
+                                      setTransferPutOnSale(
+                                        !!loc.notForSale &&
+                                          isCraftCultureOwner(
+                                            partners.find((p) => p.id === next)
+                                              ?.name,
+                                          ),
+                                      );
+                                    }}
                                     onClick={(e) => e.stopPropagation()}
                                     className="border-border-primary bg-background-primary focus:border-border-brand h-8 rounded border px-2 text-sm focus:outline-none"
                                   >
@@ -1582,6 +1600,21 @@ const ProductRow = ({
                                     placeholder="Notes (optional)"
                                     className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[160px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
+                                  {loc.notForSale && (
+                                    <label
+                                      className="text-text-primary flex items-center gap-1.5 text-xs font-medium"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={transferPutOnSale}
+                                        onChange={(e) =>
+                                          setTransferPutOnSale(e.target.checked)
+                                        }
+                                      />
+                                      Put on sale
+                                    </label>
+                                  )}
                                   <button
                                     type="button"
                                     disabled={
@@ -1594,6 +1627,7 @@ const ProductRow = ({
                                         transferOwnerId,
                                         transferQty,
                                         transferNotes.trim() || undefined,
+                                        transferPutOnSale || undefined,
                                       );
                                       setTransferringStockId(null);
                                     }}
@@ -2405,8 +2439,15 @@ const StockExplorerPage = () => {
       newOwnerId: string,
       quantityCases: number,
       notes?: string,
+      putOnSale?: boolean,
     ) => {
-      transferOwnership({ stockId, newOwnerId, quantityCases, notes });
+      transferOwnership({
+        stockId,
+        newOwnerId,
+        quantityCases,
+        notes,
+        putOnSale,
+      });
     },
     [transferOwnership],
   );

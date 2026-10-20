@@ -113,6 +113,7 @@ import adminSetPricingBands from './controller/adminSetPricingBands';
 import adminSetPricingRelease from './controller/adminSetPricingRelease';
 import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
+import adminSetStockForSale from './controller/adminSetStockForSale';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
@@ -236,6 +237,8 @@ const ownershipRouter = createTRPCRouter({
   transfer: adminTransferOwnership,
   reserve: adminReserveStock,
   release: adminReleaseReservation,
+  // Put a received line on sale, or hold it for its owner
+  setForSale: adminSetStockForSale,
   getReservations: adminGetOrderReservations,
   getStockReservations: adminGetStockReservations,
   // On hand, held by order, promised on PCOs, and free — shown at order entry

@@ -255,6 +255,7 @@ const adminGetStockByProduct = wmsOperatorProcedure
             openBottles: wmsStock.openBottles,
             ownerId: wmsStock.ownerId,
             ownerName: wmsStock.ownerName,
+            notForSale: wmsStock.notForSale,
             lotNumber: wmsStock.lotNumber,
             expiryDate: wmsStock.expiryDate,
             reExportBoeNumber: wmsStock.reExportBoeNumber,
