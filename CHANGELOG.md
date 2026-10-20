@@ -1,3 +1,9 @@
+## [2.0.452](https://github.com/craftandculture/Craft-Culture/compare/v2.0.451...v2.0.452) (2026-10-20)
+
+### Features
+
+* payments received from clients post to [#payments](https://github.com/craftandculture/Craft-Culture/issues/payments)-received within about half an hour, so no one chases an invoice that is paid ([899087f](https://github.com/craftandculture/Craft-Culture/commit/899087f3d70f1999050420a8774cc74a9ab95676))
+
 ## [2.0.451](https://github.com/craftandculture/Craft-Culture/compare/v2.0.450...v2.0.451) (2026-10-20)
 
 ### Features
