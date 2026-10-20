@@ -15,7 +15,7 @@ const AuthLayout = async ({ children }: PropsWithChildren) => {
   return (
     <div className="bg-background-muted flex min-h-screen">
       <aside className="hidden w-[40%] max-w-xl shrink-0 flex-col justify-between bg-neutral-950 bg-[radial-gradient(120%_80%_at_0%_100%,#161a19,#0a0a0a)] p-10 text-neutral-50 lg:flex">
-        <Logo className="h-14 w-auto invert" />
+        <Logo className="h-14 w-auto self-start invert" />
         <div className="flex flex-col gap-5">
           <h2 className="max-w-[16ch] text-3xl font-semibold leading-tight tracking-tight text-balance">
             Your fine-wine account with Craft &amp; Culture.

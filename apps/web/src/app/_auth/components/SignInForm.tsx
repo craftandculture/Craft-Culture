@@ -213,7 +213,13 @@ const SignInForm = () => {
                 {errors.email && <FormFieldError>{errors.email.message}</FormFieldError>}
               </FormFieldContent>
             </FormField>
-            <Button type="submit" size="lg" colorRole="bold" isDisabled={isSubmitting}>
+            <Button
+              type="submit"
+              size="lg"
+              colorRole="bold"
+              className="border-text-primary bg-text-primary text-surface-primary hover:bg-text-primary/90"
+              isDisabled={isSubmitting}
+            >
               <ButtonContent iconRight={IconArrowRight} isLoading={isSubmitting}>
                 Email me a sign-in link
               </ButtonContent>
