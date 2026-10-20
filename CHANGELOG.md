@@ -1,3 +1,9 @@
+## [2.0.455](https://github.com/craftandculture/Craft-Culture/compare/v2.0.454...v2.0.455) (2026-10-20)
+
+### Bug Fixes
+
+* the sign-in logo keeps its shape on the dark panel, and the sign-in button is solid near-black ([64388e2](https://github.com/craftandculture/Craft-Culture/commit/64388e2e7b723a20859dff84bc59dc3f8d0f351f))
+
 ## [2.0.454](https://github.com/craftandculture/Craft-Culture/compare/v2.0.453...v2.0.454) (2026-10-20)
 
 ### Features
