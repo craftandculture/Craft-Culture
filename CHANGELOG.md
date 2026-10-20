@@ -1,3 +1,9 @@
+## [2.0.454](https://github.com/craftandculture/Craft-Culture/compare/v2.0.453...v2.0.454) (2026-10-20)
+
+### Features
+
+* the sign-in page leads with the emailed link, says how sign-in works, offers a passkey beneath it, and after sending says where the link went, how long it lasts, what to do if it has not arrived, with a resend button; wide screens show a Craft & Culture panel beside it ([588f6c4](https://github.com/craftandculture/Craft-Culture/commit/588f6c4f83b3902f5869dafac745176631a03126))
+
 ## [2.0.453](https://github.com/craftandculture/Craft-Culture/compare/v2.0.452...v2.0.453) (2026-10-20)
 
 ### Features
