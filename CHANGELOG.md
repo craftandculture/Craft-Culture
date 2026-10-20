@@ -1,3 +1,9 @@
+## [2.0.447](https://github.com/craftandculture/Craft-Culture/compare/v2.0.446...v2.0.447) (2026-10-20)
+
+### Features
+
+* Members see one clear panel on where their wine is kept and its live conditions, and the cellar card shows UK storage separately ([ac310c6](https://github.com/craftandculture/Craft-Culture/commit/ac310c6800798ead89a42257751ee5b747d770b7))
+
 ## [2.0.446](https://github.com/craftandculture/Craft-Culture/compare/v2.0.445...v2.0.446) (2026-10-20)
 
 ### Bug Fixes
