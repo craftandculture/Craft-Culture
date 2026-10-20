@@ -2635,6 +2635,16 @@ const runMigrations = async () => {
     `);
     console.log('✅ logistics jobs + movement bonds ready');
 
+    // The balance each invoice had when #payments-received last posted
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_payment_alerts" (
+        "zoho_invoice_id" text PRIMARY KEY,
+        "announced_balance" double precision NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+
     /*
       Purchasing: a distributor's replenishment sheet and our answer to each
       line. Kept whole — header and every original cell — because the answer

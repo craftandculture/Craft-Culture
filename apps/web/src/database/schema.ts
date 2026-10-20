@@ -6040,6 +6040,18 @@ export const zohoInvoices = pgTable(
   ],
 );
 
+/**
+ * The balance each Zoho invoice had when #payments-received last looked
+ *
+ * A drop since then is a payment, posted once so no one chases a client who
+ * has paid. Kept apart from zoho_invoices so the sync never touches it.
+ */
+export const zohoPaymentAlerts = pgTable('zoho_payment_alerts', {
+  zohoInvoiceId: text('zoho_invoice_id').primaryKey(),
+  announcedBalance: doublePrecision('announced_balance').notNull(),
+  ...timestamps,
+});
+
 export type ZohoInvoice = typeof zohoInvoices.$inferSelect;
 
 // ---------------------------------------------------------------------------
