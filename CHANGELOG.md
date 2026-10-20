@@ -1,3 +1,10 @@
+## [2.0.446](https://github.com/craftandculture/Craft-Culture/compare/v2.0.445...v2.0.446) (2026-10-20)
+
+### Bug Fixes
+
+* earlier UK rate versions can be removed too, so a mistaken entry on the same day can be cleared ([f94140e](https://github.com/craftandculture/Craft-Culture/commit/f94140ed70772c572c65e83d455581714553a623))
+* the UK rate card says plainly to enter what LCB charges us, and a version entered in error can be removed ([7f0b56a](https://github.com/craftandculture/Craft-Culture/commit/7f0b56a4e7a58d5fccc3dfff4c62378cc78636da))
+
 ## [2.0.445](https://github.com/craftandculture/Craft-Culture/compare/v2.0.444...v2.0.445) (2026-10-20)
 
 ### Features
