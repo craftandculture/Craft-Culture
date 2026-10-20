@@ -1,3 +1,9 @@
+## [2.0.458](https://github.com/craftandculture/Craft-Culture/compare/v2.0.457...v2.0.458) (2026-10-20)
+
+### Features
+
+* the sign-in page is larger, sets its panel over a photo of our cold room with the 12–16°C bonded cellar line, tells first-time users how their account is set up, links Privacy and Terms, and the link-sent screen no longer runs off the right edge ([96a70ba](https://github.com/craftandculture/Craft-Culture/commit/96a70baf97009c3fc56c5d5af7269c50de91a2aa))
+
 ## [2.0.457](https://github.com/craftandculture/Craft-Culture/compare/v2.0.456...v2.0.457) (2026-10-20)
 
 ### Bug Fixes
