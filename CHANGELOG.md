@@ -1,3 +1,9 @@
+## [2.0.460](https://github.com/craftandculture/Craft-Culture/compare/v2.0.459...v2.0.460) (2026-10-20)
+
+### Features
+
+* a shared Private Cellar invite link previews with the member's first name, who invited them and a cold-room image; wine names drop a trailing pack note like (1x) and a strength written without abv ([16d8c14](https://github.com/craftandculture/Craft-Culture/commit/16d8c141ddcceea5b748aeb542854f2040c214f4))
+
 ## [2.0.459](https://github.com/craftandculture/Craft-Culture/compare/v2.0.458...v2.0.459) (2026-10-20)
 
 ### Bug Fixes
