@@ -1,3 +1,9 @@
+## [2.0.450](https://github.com/craftandculture/Craft-Culture/compare/v2.0.449...v2.0.450) (2026-10-20)
+
+### Bug Fixes
+
+* the pick progress bar shows its track, and the client's reference sits on its own line ([39867ec](https://github.com/craftandculture/Craft-Culture/commit/39867ec98e20e5142dc6a7dd29d0a56432e4c96c))
+
 ## [2.0.449](https://github.com/craftandculture/Craft-Culture/compare/v2.0.448...v2.0.449) (2026-10-20)
 
 ### Features
