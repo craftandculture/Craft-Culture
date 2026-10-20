@@ -220,13 +220,26 @@ const UkRatesCard = () => {
         <details className="mt-3">
           <summary className="text-text-muted cursor-pointer text-xs">Earlier prices</summary>
           <ul className="text-text-muted mt-2 space-y-1 text-xs">
-            {data!.history.slice(1).map((row) => (
-              <li key={row.id}>
-                From {format(new Date(row.effectiveFrom), 'd MMM yyyy')}: storage {gbp(row.storagePerUnitMonthGbp)},
-                receiving {gbp(row.receivePerCaseGbp)}, handling out {gbp(row.handlingOutPerCaseGbp)}, export paperwork{' '}
-                {gbp(row.exportDocsPerMoveGbp)}
-              </li>
-            ))}
+            {data!.history
+              .filter((row) => row.id !== current?.id)
+              .map((row) => (
+                <li key={row.id} className="flex flex-wrap items-baseline gap-x-2">
+                  <span>
+                    From {format(new Date(row.effectiveFrom), 'd MMM yyyy')}: storage {gbp(row.storagePerUnitMonthGbp)},
+                    receiving {gbp(row.receivePerCaseGbp)}, handling out {gbp(row.handlingOutPerCaseGbp)}, export
+                    paperwork {gbp(row.exportDocsPerMoveGbp)}
+                    {row.notes ? ` · ${row.notes}` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate({ id: row.id })}
+                    className="hover:text-red-700 underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
           </ul>
         </details>
       )}
