@@ -3297,6 +3297,22 @@ const runMigrations = async () => {
     );
     console.log('✅ order_check_files ready');
 
+    /*
+      Sign-in rate limits, shared by every server. Kept per server in memory
+      they multiplied by the number of servers Vercel happened to be running.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "auth_rate_limits" (
+        "key" text PRIMARY KEY,
+        "count" integer NOT NULL,
+        "last_request" bigint NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "auth_rate_limits_last_request_idx" ON "auth_rate_limits" ("last_request")`,
+    );
+    console.log('✅ auth_rate_limits ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

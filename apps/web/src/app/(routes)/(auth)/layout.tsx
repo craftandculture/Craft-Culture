@@ -37,7 +37,7 @@ const AuthLayout = async ({ children }: PropsWithChildren) => {
             </ul>
             <p className="inline-flex items-center gap-2 self-start rounded-full bg-white/10 px-3.5 py-1.5 text-sm text-neutral-100 ring-1 ring-white/15 backdrop-blur-sm">
               <IconTemperature size={16} />
-              Bonded cellars held at 12–16°C
+              Temperature-controlled bonded storage, 12–16°C
             </p>
           </div>
           <p className="text-xs text-neutral-400">Craft and Culture FZE · craftculture.xyz</p>

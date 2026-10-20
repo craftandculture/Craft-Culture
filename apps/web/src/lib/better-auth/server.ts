@@ -19,6 +19,7 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
+import rateLimitStore from './rateLimitStore';
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
 
@@ -58,6 +59,8 @@ const authServerClient = betterAuth({
     customRules: {
       '/sign-in/magic-link': { window: 300, max: 10 },
     },
+    // Counts shared by every server, not kept per server in memory
+    customStorage: rateLimitStore,
   },
   plugins: [
     admin({
