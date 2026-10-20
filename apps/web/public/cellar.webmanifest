@@ -1,0 +1,16 @@
+{
+  "name": "C&C Cellar",
+  "short_name": "C&C Cellar",
+  "description": "Your private cellar with Craft & Culture.",
+  "id": "/platform/cellar",
+  "start_url": "/platform/cellar",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F7F5",
+  "theme_color": "#0B0B0B",
+  "icons": [
+    { "src": "/images/cellar-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/cellar-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/cellar-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

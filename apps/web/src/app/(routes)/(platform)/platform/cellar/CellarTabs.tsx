@@ -14,6 +14,8 @@ import accessLevels from '@/app/_cellar/constants/accessLevels';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import useTRPC from '@/lib/trpc/browser';
 
+import CellarPhoneTabs from './CellarPhoneTabs';
+
 const tabs = [
   { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
   { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
@@ -77,7 +79,7 @@ const CellarTabs = () => {
           · {shared.level}
         </p>
       )}
-    <nav className="border-border-muted -mx-3 mb-5 flex gap-1 overflow-x-auto border-b px-3 sm:mx-0 sm:px-0">
+    <nav className="border-border-muted -mx-3 mb-5 hidden gap-1 overflow-x-auto border-b px-3 sm:mx-0 sm:px-0 md:flex">
       {tabs.map((tab) => {
         const isActive =
           tab.href === '/platform/cellar'
@@ -100,6 +102,7 @@ const CellarTabs = () => {
         );
       })}
     </nav>
+    <CellarPhoneTabs />
     </>
   );
 };

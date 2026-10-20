@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
 
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
@@ -6,12 +6,26 @@ import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
+import CellarInstallCard from './CellarInstallCard';
 import CellarTabs from './CellarTabs';
 
 export const metadata: Metadata = {
   title: 'Your Cellar',
   /* Behind a login, and about a named individual's holdings either way. */
   robots: { index: false, follow: false },
+  /*
+    Members can add the cellar to their home screen and open it like an app.
+    The manifest is set here rather than site-wide, so staff screens never
+    offer to install themselves as "C&C Cellar".
+  */
+  manifest: '/cellar.webmanifest',
+  appleWebApp: { capable: true, title: 'C&C Cellar', statusBarStyle: 'default' },
+  icons: { apple: '/images/cellar-apple-touch-icon.png' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#F6F7F5',
+  viewportFit: 'cover',
 };
 
 /**
@@ -46,8 +60,9 @@ const CellarLayout = async ({ children }: React.PropsWithChildren) => {
     somewhere that has lost its own navigation.
   */
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 sm:px-6 sm:pt-8">
+    <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 pb-28 sm:px-6 sm:pt-8 md:pb-0">
       <CellarTabs />
+      <CellarInstallCard />
       {children}
     </div>
   );
