@@ -1,3 +1,9 @@
+## [2.0.456](https://github.com/craftandculture/Craft-Culture/compare/v2.0.455...v2.0.456) (2026-10-20)
+
+### Bug Fixes
+
+* the sign-in logo on the dark panel is shown at its full size ([7da91f2](https://github.com/craftandculture/Craft-Culture/commit/7da91f228f8dc038320484f9d88e3417896ca5b2))
+
 ## [2.0.455](https://github.com/craftandculture/Craft-Culture/compare/v2.0.454...v2.0.455) (2026-10-20)
 
 ### Bug Fixes
