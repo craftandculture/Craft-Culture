@@ -1,3 +1,9 @@
+## [2.0.463](https://github.com/craftandculture/Craft-Culture/compare/v2.0.462...v2.0.463) (2026-10-20)
+
+### Bug Fixes
+
+* the cellar's phone tab bar is slimmer, order bars and notifications sit above it, and bringing more wine in folds to one line for members who already hold wine ([637d4d5](https://github.com/craftandculture/Craft-Culture/commit/637d4d54076fb9bbcfc8b56c0f2177e2d70361b2))
+
 ## [2.0.462](https://github.com/craftandculture/Craft-Culture/compare/v2.0.461...v2.0.462) (2026-10-20)
 
 ### Features
