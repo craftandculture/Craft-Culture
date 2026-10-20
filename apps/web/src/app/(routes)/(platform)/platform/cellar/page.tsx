@@ -3069,21 +3069,21 @@ const CellarPage = () => {
               {profile.documents.length === 0 && (
                 <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  No ID on file &mdash; needed before we can deliver
+                  Identification is required before we can deliver
                 </span>
               )}
             </>
           ) : (
             <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-              No delivery address yet. Add one and it will be filled in
-              whenever you request a delivery.
+              Save a delivery address and it will be used each time you
+              request a delivery.
             </Typography>
           )}
         </div>
         <Link href="/platform/cellar/profile">
           <Button variant="outline" size="sm">
             <ButtonContent>
-              {profile?.deliveryAddress ? 'Your details' : 'Add your details'}
+              {profile?.deliveryAddress ? 'Edit details' : 'Add address'}
             </ButtonContent>
           </Button>
         </Link>

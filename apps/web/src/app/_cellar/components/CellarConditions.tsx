@@ -67,13 +67,13 @@ const CellarConditions = () => {
   const promises = [
     { icon: IconShieldCheck, text: 'Licensed bonded warehouse' },
     { icon: IconLock, text: 'Duty and VAT suspended' },
-    { icon: IconCamera, text: 'CCTV around the clock' },
-    { icon: IconUsers, text: 'Handled only by our team' },
+    { icon: IconCamera, text: '24-hour CCTV' },
+    { icon: IconUsers, text: 'Handled only by our staff' },
   ];
 
   return (
     <section className="container py-6">
-      <p className="text-text-muted mb-3 text-[11px] font-semibold uppercase tracking-wider">Where your wine is kept</p>
+      <p className="text-text-muted mb-3 text-[11px] font-semibold uppercase tracking-wider">Storage and conditions</p>
       <div className={`grid gap-3 ${hasUk ? 'lg:grid-cols-3' : ''}`}>
         <div className={`border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm sm:p-5 ${hasUk ? 'lg:col-span-2' : ''}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -82,14 +82,14 @@ const CellarConditions = () => {
                 <IconBuildingWarehouse size={16} />
               </span>
               <div>
-                <p className="text-text-primary text-sm font-semibold">C&amp;C bonded warehouse · United Arab Emirates</p>
-                <p className="text-text-muted text-xs">Our own cold rooms, temperature and humidity controlled</p>
+                <p className="text-text-primary text-sm font-semibold">Craft &amp; Culture bonded warehouse</p>
+                <p className="text-text-muted text-xs">United Arab Emirates · dedicated temperature and humidity controlled cold rooms</p>
               </div>
             </div>
             {lastRead && (
               <span className="text-text-muted inline-flex items-center gap-1.5 text-[11px]">
                 <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
-                Live · read {formatDistanceToNowStrict(lastRead, { addSuffix: true })}
+                Live · updated {formatDistanceToNowStrict(lastRead, { addSuffix: true })}
               </span>
             )}
           </div>
@@ -120,9 +120,11 @@ const CellarConditions = () => {
                   {tile.value ?? '—'}
                 </span>
                 <span className="text-text-muted text-[11px]">
-                  Kept at {tile.target}
+                  Target {tile.target}
                   {tile.value && tile.ok && (
-                    <span className="ml-1.5 font-semibold text-emerald-700 dark:text-emerald-400">· within range</span>
+                    <span className="ml-2 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                      Within range
+                    </span>
                   )}
                 </span>
               </div>
@@ -146,14 +148,13 @@ const CellarConditions = () => {
                 <IconBuildingWarehouse size={16} />
               </span>
               <div>
-                <p className="text-text-primary text-sm font-semibold">London City Bond · Burton, UK</p>
-                <p className="text-text-muted text-xs">Held in bond for you by C&amp;C</p>
+                <p className="text-text-primary text-sm font-semibold">London City Bond</p>
+                <p className="text-text-muted text-xs">Burton upon Trent · United Kingdom</p>
               </div>
             </div>
             <p className="text-text-muted mt-4 text-xs leading-5">
-              A bonded warehouse run by London City Bond, where we hold an account in our name for members&rsquo; wine
-              in the UK. Duty and VAT stay suspended while your wine is there, and any of it can be brought to the UAE
-              when you choose.
+              Your wine is held under bond on the Craft &amp; Culture account, with duty and VAT suspended. Any of it can
+              be moved to the UAE whenever you wish.
             </p>
           </div>
         )}
