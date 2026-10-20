@@ -1,3 +1,10 @@
+## [2.0.461](https://github.com/craftandculture/Craft-Culture/compare/v2.0.460...v2.0.461) (2026-10-20)
+
+### Features
+
+* members can add their cellar to the home screen as C&C Cellar, phones get a bottom tab bar (Cellar, Cellar List, Deliveries, Invoices, More) and a Deliveries page, and a one-time card shows how to install it ([000bfee](https://github.com/craftandculture/Craft-Culture/commit/000bfeedfeaa80b7c6927c170219ee6ca8688506))
+* Private Cellar members can bring in wine already held in bond elsewhere in the UAE ([525951b](https://github.com/craftandculture/Craft-Culture/commit/525951bdc15b0a6d00412591e996f5da7665f557))
+
 ## [2.0.460](https://github.com/craftandculture/Craft-Culture/compare/v2.0.459...v2.0.460) (2026-10-20)
 
 ### Features
