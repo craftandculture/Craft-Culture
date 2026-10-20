@@ -586,7 +586,14 @@ const adminPickItem = wmsOperatorProcedure
         Null on an ordinary pick. Present when a case was cracked, and then the
         shelf is carrying a box whose printed pack is now wrong.
       */
-      remainder: remainder ?? null,
+      remainder: remainder
+        ? {
+            ...remainder,
+            // The bottles leaving in the outbound box, which gets a label of its own
+            pickedBottles: recordedPickedQuantity,
+            pickListNumber: pickList.pickListNumber,
+          }
+        : null,
     };
   });
 

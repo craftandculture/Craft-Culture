@@ -18,6 +18,9 @@ export interface RemainderToRelabel {
   /** Bottles now on the shelf under this code */
   bottles: number;
   locationCode: string | null;
+  /** Bottles leaving in the outbound box; present on a pick */
+  pickedBottles?: number;
+  pickListNumber?: string;
 }
 
 export interface RelabelRemainderPromptProps {
@@ -38,6 +41,9 @@ export interface RelabelRemainderPromptProps {
  * person reads — they scan a case marked as three, the system says one, and the
  * pick either stops or takes the wrong thing.
  *
+ * The bottles picked leave in a box of their own, which needs a label too, so
+ * on a pick both are printed together: one for the shelf, one for outbound.
+ *
  * So this stands in the way at the only moment the box is in someone's hands
  * and the discrepancy is a fact rather than a mystery. It can be dismissed —
  * a printer is not always reachable and picking must not stop — but it has to
@@ -49,6 +55,10 @@ const RelabelRemainderPrompt = ({
 }: RelabelRemainderPromptProps) => {
   const api = useTRPC();
   const { print } = usePrint();
+  const outbound =
+    remainder.pickedBottles && remainder.pickListNumber
+      ? { bottles: remainder.pickedBottles, pickListNumber: remainder.pickListNumber }
+      : undefined;
 
   const { mutate: makeLabel, isPending } = useMutation({
     ...api.wms.admin.labels.printStockLabel.mutationOptions(),
@@ -62,7 +72,11 @@ const RelabelRemainderPrompt = ({
       const printed = await print(result.zpl, '4x2');
 
       if (printed) {
-        toast.success('Label printed — stick it on before the case goes back');
+        toast.success(
+          outbound
+            ? '2 labels printed — one on the case going back, one on the outbound box'
+            : 'Label printed — stick it on before the case goes back',
+        );
         onDone();
 
         return;
@@ -84,9 +98,13 @@ const RelabelRemainderPrompt = ({
           className="mt-0.5 shrink-0 text-fill-warning"
         />
         <div>
-          <Typography variant="headingSm">Relabel the case</Typography>
+          <Typography variant="headingSm">
+            {outbound ? 'Label both boxes' : 'Relabel the case'}
+          </Typography>
           <Typography variant="bodySm" className="text-text-muted">
-            The box going back is no longer the pack printed on it.
+            {outbound
+              ? 'The case going back and the box going out each need a new label.'
+              : 'The box going back is no longer the pack printed on it.'}
           </Typography>
         </div>
       </div>
@@ -102,6 +120,12 @@ const RelabelRemainderPrompt = ({
           {remainder.bottles} bottle{remainder.bottles === 1 ? '' : 's'} now at{' '}
           {remainder.locationCode ?? 'this bay'}
         </Typography>
+        {outbound && (
+          <Typography variant="bodySm" className="text-text-muted">
+            {outbound.bottles} bottle{outbound.bottles === 1 ? '' : 's'} going out on{' '}
+            {outbound.pickListNumber}
+          </Typography>
+        )}
       </div>
 
       {/*
@@ -110,11 +134,11 @@ const RelabelRemainderPrompt = ({
       */}
       <Button
         className="h-14 w-full"
-        onClick={() => makeLabel({ stockId: remainder.stockId })}
+        onClick={() => makeLabel({ stockId: remainder.stockId, outbound })}
         disabled={isPending}
       >
         <Icon icon={IconPrinter} size="md" />
-        {isPending ? 'Printing...' : 'Print new label'}
+        {isPending ? 'Printing...' : outbound ? 'Print 2 labels' : 'Print new label'}
       </Button>
 
       <Button variant="ghost" className="h-11 w-full" onClick={onDone}>
