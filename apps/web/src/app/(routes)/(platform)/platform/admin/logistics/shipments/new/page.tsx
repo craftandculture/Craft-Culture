@@ -12,7 +12,8 @@ import useTRPC from '@/lib/trpc/browser';
 
 type TransportMode = 'sea_fcl' | 'sea_lcl' | 'air' | 'road';
 
-const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer', 're_export'];
+// Re-export is no longer offered: mainland transfers took its place
+const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer'];
 
 const MODES: { key: TransportMode; label: string }[] = [
   { key: 'air', label: 'Air' },

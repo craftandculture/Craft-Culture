@@ -16,7 +16,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -50,7 +50,8 @@ const STAGE_TILES: { key: ShipmentStageGroup; label: string; tone: string }[] = 
   { key: 'done', label: 'Delivered', tone: 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-300' },
 ];
 
-const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer', 're_export'];
+// Re-export is no longer offered: mainland transfers took its place. Old ones still show under All types.
+const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer'];
 
 const formatDate = (date: Date | null | undefined) =>
   date ? new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
@@ -66,7 +67,6 @@ const formatDate = (date: Date | null | undefined) =>
 const ShipmentsList = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -86,7 +86,12 @@ const ShipmentsList = () => {
     }
     if (!('page' in changes)) next.delete('page');
     const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    /*
+      The browser's own history, not router.replace: Next keeps useSearchParams
+      in step with it, and it skips the server round trip that made each chip
+      take a moment to light up.
+    */
+    window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
   };
 
   // Search runs once typing pauses, not on every key
@@ -258,7 +263,7 @@ const ShipmentsList = () => {
               {search || stage || type ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (
-            <ul className="divide-y divide-border-muted">
+            <ul className={`divide-y divide-border-muted transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
               {shipments.map((shipment) => {
                 const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                 const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
