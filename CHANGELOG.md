@@ -1,3 +1,13 @@
+## [2.0.453](https://github.com/craftandculture/Craft-Culture/compare/v2.0.452...v2.0.453) (2026-10-20)
+
+### Features
+
+* admins can send a test message to [#payments](https://github.com/craftandculture/Craft-Culture/issues/payments)-received to check it is connected ([db57177](https://github.com/craftandculture/Craft-Culture/commit/db57177ba15e4e24302b4beffc32051226835d71))
+
+### Bug Fixes
+
+* shipment filters respond instantly, and Re-Export is no longer offered now that mainland transfers replace it ([5d97f1c](https://github.com/craftandculture/Craft-Culture/commit/5d97f1cebbfd2b280cfd57ecc70c2ce441b26a49))
+
 ## [2.0.452](https://github.com/craftandculture/Craft-Culture/compare/v2.0.451...v2.0.452) (2026-10-20)
 
 ### Features
