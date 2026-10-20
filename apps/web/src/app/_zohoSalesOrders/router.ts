@@ -19,6 +19,7 @@ import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminReleaseToPick from './controller/adminReleaseToPick';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
 import adminSyncZohoInvoices from './controller/adminSyncZohoInvoices';
+import adminTestPaymentAlerts from './controller/adminTestPaymentAlerts';
 import adminWhereIsOrder from './controller/adminWhereIsOrder';
 
 const zohoSalesOrdersRouter = createTRPCRouter({
@@ -35,6 +36,8 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   dismissDeleted: adminDismissDeletedSalesOrder,
   sync: adminSyncSalesOrders,
   syncInvoices: adminSyncZohoInvoices,
+  // Send a test message to #payments-received
+  testPaymentAlerts: adminTestPaymentAlerts,
   getPickedForDispatch: adminGetPickedOrdersForDispatch,
   // Orders picked, then amended in Zoho — what is still owed
   outstanding: adminGetOutstandingOrders,
