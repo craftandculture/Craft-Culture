@@ -56,6 +56,8 @@ import CONDITION_REPORT_FEE_AED from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
+import CellarPhoneCollection from './CellarPhoneCollection';
+
 interface CellarParcel {
   stockId: string;
   locationId: string;
@@ -93,6 +95,9 @@ interface CellarWine {
   totalCases: number;
   reservedCases: number;
   costPerBottle: number | null;
+  /** From the LWIN reference, for grouping a collection on a phone */
+  region?: string | null;
+  country?: string | null;
   /** Members only: our in-bond list price where we list the wine, else costPerBottle */
   indicativePerBottle?: number | null;
   indicativeFromList?: boolean;
@@ -1812,7 +1817,25 @@ const CellarPage = () => {
         );
       })()}
 
-      <div className="border-border-muted overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto">
+      {/*
+        On a phone the table becomes the grouped, one-line-per-wine list; it
+        reads the same filtered wines and adds to the same delivery basket.
+      */}
+      <CellarPhoneCollection
+        wines={rows}
+        isSearching={search.trim() !== ''}
+        isViewer={isViewer}
+        isUkOnly={location === 'uk'}
+        bottlesInBasket={basketBottlesOf}
+        addToDelivery={addToWine}
+        onSell={(wine) => {
+          setSellingWine(wine);
+          setSellLines(new Map());
+          setSellAsk('');
+        }}
+      />
+
+      <div className="border-border-muted hidden overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto md:block">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
             <tr>
@@ -2597,7 +2620,7 @@ const CellarPage = () => {
       )}
 
       {basket.size > 0 && (
-        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 overflow-hidden rounded-xl border shadow-xl">
+        <div className="border-border-muted bg-background-primary sticky bottom-24 z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
           <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
@@ -2767,7 +2790,7 @@ const CellarPage = () => {
         }
 
         return (
-          <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-3 overflow-hidden rounded-xl border shadow-xl">
+          <div className="border-border-muted bg-background-primary sticky bottom-24 z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
             <div className="h-1 bg-gradient-to-r from-slate-500 via-slate-400 to-slate-200" />
             <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <div className="min-w-0">

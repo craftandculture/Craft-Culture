@@ -9,6 +9,7 @@ import {
   cellarMemberships,
   logisticsShipmentItems,
   logisticsShipments,
+  lwinWines,
   saleMandateLots,
   saleMandates,
   wmsLocations,
@@ -266,6 +267,22 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     : new Map<string, number>();
 
   /*
+    Region and country from the LWIN reference, keyed on the wine's first
+    seven digits, so a member's phone can group the collection by region.
+  */
+  const lwin7Of = (lwin18: string) => lwin18.replace(/\D/g, '').slice(0, 7);
+  const lwin7s = [...new Set(products.map((product) => lwin7Of(product.lwin18)).filter((code) => code.length === 7))];
+  const placeByLwin7 = new Map(
+    (lwin7s.length
+      ? await db
+          .select({ lwin: lwinWines.lwin, region: lwinWines.region, country: lwinWines.country })
+          .from(lwinWines)
+          .where(inArray(lwinWines.lwin, lwin7s))
+      : []
+    ).map((row) => [row.lwin, row]),
+  );
+
+  /*
     Wine bought and shipped but not yet received owns no warehouse row, so it
     was invisible here — a collector who has just bought sees nothing at all
     until it lands, which is exactly when they most want to look.
@@ -364,6 +381,8 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     },
     products: products.map((product) => ({
       ...product,
+      region: placeByLwin7.get(lwin7Of(product.lwin18))?.region ?? null,
+      country: placeByLwin7.get(lwin7Of(product.lwin18))?.country ?? null,
       locations: locationsByLwin.get(product.lwin18) ?? [],
       costPerBottle:
         costByLwin.get(lwinPakKeyOf(product.lwin18)) ?? null,

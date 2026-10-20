@@ -7,6 +7,7 @@ import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
 import CellarInstallCard from './CellarInstallCard';
+import CellarPasskeyCard from './CellarPasskeyCard';
 import CellarTabs from './CellarTabs';
 
 export const metadata: Metadata = {
@@ -63,6 +64,7 @@ const CellarLayout = async ({ children }: React.PropsWithChildren) => {
     <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 pb-28 sm:px-6 sm:pt-8 md:pb-0">
       <CellarTabs />
       <CellarInstallCard />
+      <CellarPasskeyCard />
       {children}
     </div>
   );
