@@ -1,3 +1,9 @@
+## [2.0.451](https://github.com/craftandculture/Craft-Culture/compare/v2.0.450...v2.0.451) (2026-10-20)
+
+### Features
+
+* cracking a case on a pick prints two labels at once, one for the case going back on the shelf and one for the outbound box ([85bd4ea](https://github.com/craftandculture/Craft-Culture/commit/85bd4ea3a9590e7d66ca881a39bcb796a5620866))
+
 ## [2.0.450](https://github.com/craftandculture/Craft-Culture/compare/v2.0.449...v2.0.450) (2026-10-20)
 
 ### Bug Fixes
