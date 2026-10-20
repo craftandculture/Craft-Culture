@@ -32,6 +32,17 @@ const adminSetPaymentDetails = staffAdminProcedure
         accountNumber: field,
         currency: field,
         note: field,
+        /** The dirham account, optional; members paying in AED see it */
+        aed: z
+          .object({
+            accountName: field,
+            bankName: field,
+            iban: field,
+            swiftBic: field,
+            accountNumber: field,
+          })
+          .optional()
+          .transform((value) => (value && (value.iban || value.accountNumber) ? value : undefined)),
       })
       .refine((value) => Boolean(value.iban || value.accountNumber), {
         message: 'Add an IBAN or an account number',

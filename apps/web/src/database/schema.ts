@@ -7537,6 +7537,17 @@ export const cellarPaymentSettings = pgTable('cellar_payment_settings', {
       accountNumber?: string;
       currency?: string;
       note?: string;
+      /**
+       * A second account in dirhams (Oct 2026). The fields above are the
+       * dollar account; members paying an AED invoice are shown this one.
+       */
+      aed?: {
+        accountName?: string;
+        bankName?: string;
+        iban?: string;
+        swiftBic?: string;
+        accountNumber?: string;
+      };
     }>()
     .notNull(),
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),

@@ -17,6 +17,11 @@ const FIELDS = [
 
 type Form = Record<(typeof FIELDS)[number]['key'] | 'note', string>;
 
+/** The dirham account: the same fields, without a currency (it is AED) */
+const AED_FIELDS = FIELDS.filter((field) => field.key !== 'currency');
+type AedForm = Record<(typeof AED_FIELDS)[number]['key'], string>;
+const EMPTY_AED: AedForm = { accountName: '', bankName: '', iban: '', swiftBic: '', accountNumber: '' };
+
 const EMPTY: Form = {
   accountName: '',
   bankName: '',
@@ -37,9 +42,14 @@ const PaymentDetailsCard = () => {
   const api = useTRPC();
   const { data, refetch } = useQuery(api.cellar.admin.getPaymentDetails.queryOptions());
   const [form, setForm] = useState<Form>(EMPTY);
+  const [aedForm, setAedForm] = useState<AedForm>(EMPTY_AED);
 
   useEffect(() => {
-    if (data?.details) setForm({ ...EMPTY, ...data.details } as Form);
+    if (data?.details) {
+      const { aed, ...usd } = data.details;
+      setForm({ ...EMPTY, ...usd } as Form);
+      setAedForm({ ...EMPTY_AED, ...(aed ?? {}) } as AedForm);
+    }
   }, [data]);
 
   const save = useMutation(
@@ -61,8 +71,8 @@ const PaymentDetailsCard = () => {
         <div>
           <h2 className="text-text-primary text-sm font-semibold">Member payments</h2>
           <p className="text-text-muted text-xs">
-            The account members pay into for wine bought in bond. Shown on every reserved purchase, with the purchase
-            number as the reference.
+            Where members pay, with the purchase or invoice number as the reference. Payments in dollars show the USD
+            account; invoices in dirhams show the AED account. If only one is set, members see that one.
           </p>
         </div>
         {!data?.details && (
@@ -71,6 +81,7 @@ const PaymentDetailsCard = () => {
           </span>
         )}
       </div>
+      <p className="text-text-primary mb-1.5 text-xs font-semibold">USD account</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {FIELDS.map((field) => (
           <label key={field.key} className="flex flex-col gap-1">
@@ -83,8 +94,24 @@ const PaymentDetailsCard = () => {
             />
           </label>
         ))}
-        <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
-          <span className="text-text-muted text-[11px]">Note for members (optional)</span>
+      </div>
+      <p className="text-text-primary mb-1.5 mt-4 text-xs font-semibold">AED account</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {AED_FIELDS.map((field) => (
+          <label key={`aed-${field.key}`} className="flex flex-col gap-1">
+            <span className="text-text-muted text-[11px]">{field.label}</span>
+            <input
+              className={inputClass}
+              value={aedForm[field.key]}
+              placeholder={field.key === 'accountNumber' ? 'If not paying by IBAN' : field.placeholder}
+              onChange={(event) => setAedForm((current) => ({ ...current, [field.key]: event.target.value }))}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-text-muted text-[11px]">Note for members, on both accounts (optional)</span>
           <input
             className={inputClass}
             value={form.note}
@@ -97,7 +124,7 @@ const PaymentDetailsCard = () => {
         <button
           type="button"
           disabled={save.isPending}
-          onClick={() => save.mutate(form)}
+          onClick={() => save.mutate({ ...form, aed: aedForm })}
           className="bg-text-primary text-surface-primary h-9 rounded-lg px-4 text-xs font-semibold disabled:opacity-50"
         >
           {save.isPending ? 'Saving…' : 'Save payment details'}

@@ -52,6 +52,7 @@ const memberGetInvoices = stockOwnerProcedure.query(async ({ ctx }) => {
       invoices: [],
       due: [],
       paymentDetails: null,
+      paymentDetailsAed: null,
     };
   }
 
@@ -105,7 +106,9 @@ const memberGetInvoices = stockOwnerProcedure.query(async ({ ctx }) => {
         currency,
         amount: Math.round(amount * 100) / 100,
       })),
-      paymentDetails: owed.size > 0 ? await getMemberPaymentDetails() : null,
+      paymentDetails: owed.has('USD') || owed.size > 0 ? await getMemberPaymentDetails('USD') : null,
+      /* Shown against an invoice billed in dirhams */
+      paymentDetailsAed: owed.has('AED') ? await getMemberPaymentDetails('AED') : null,
     };
   } catch (error) {
     logger.error('Could not read a member’s invoices from Zoho', {
@@ -118,6 +121,7 @@ const memberGetInvoices = stockOwnerProcedure.query(async ({ ctx }) => {
       invoices: [],
       due: [],
       paymentDetails: null,
+      paymentDetailsAed: null,
     };
   }
 });

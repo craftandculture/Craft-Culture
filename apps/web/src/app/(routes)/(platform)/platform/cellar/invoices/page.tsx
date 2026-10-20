@@ -171,7 +171,11 @@ const InvoicesPage = () => {
                     {payingId === invoice.id && (
                       <div className="border-border-muted border-t p-3">
                         <HowToPayPanel
-                          details={data.paymentDetails}
+                          details={
+                            invoice.currency === 'AED'
+                              ? (data.paymentDetailsAed ?? data.paymentDetails)
+                              : data.paymentDetails
+                          }
                           {...(invoice.currency === 'USD'
                             ? { amountUsd: invoice.balance }
                             : { amountAed: invoice.balance })}
