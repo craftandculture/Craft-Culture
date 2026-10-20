@@ -1,3 +1,9 @@
+## [2.0.445](https://github.com/craftandculture/Craft-Culture/compare/v2.0.444...v2.0.445) (2026-10-20)
+
+### Features
+
+* member payments hold a USD and an AED account, and members paying an AED invoice are shown the AED one ([d94f728](https://github.com/craftandculture/Craft-Culture/commit/d94f728f33260849b64a5d11e417c3253ca40ce0))
+
 ## [2.0.444](https://github.com/craftandculture/Craft-Culture/compare/v2.0.443...v2.0.444) (2026-10-19)
 
 ### Features
