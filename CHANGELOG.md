@@ -1,3 +1,9 @@
+## [2.0.466](https://github.com/craftandculture/Craft-Culture/compare/v2.0.465...v2.0.466) (2026-10-20)
+
+### Bug Fixes
+
+* **wms:** show held stock lines and let staff put them on sale ([07f667f](https://github.com/craftandculture/Craft-Culture/commit/07f667f8b79ed412e426229ac246d28231764d4e))
+
 ## [2.0.465](https://github.com/craftandculture/Craft-Culture/compare/v2.0.464...v2.0.465) (2026-10-20)
 
 ### Bug Fixes
