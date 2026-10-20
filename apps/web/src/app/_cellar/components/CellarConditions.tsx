@@ -67,7 +67,7 @@ const CellarConditions = () => {
   const promises = [
     { icon: IconShieldCheck, text: 'Licensed bonded warehouse' },
     { icon: IconLock, text: 'Duty and VAT suspended' },
-    { icon: IconCamera, text: '24-hour CCTV' },
+    { icon: IconCamera, text: '24-hour monitoring' },
     { icon: IconUsers, text: 'Handled only by our staff' },
   ];
 
