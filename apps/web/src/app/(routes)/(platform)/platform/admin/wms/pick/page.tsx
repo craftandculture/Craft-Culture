@@ -259,8 +259,13 @@ const WMSPickListsPage = () => {
                               <span className="font-mono font-medium text-text-primary">{pickList.pickListNumber}</span>
                               {pickList.invoiceNumber && <span>· {pickList.invoiceNumber}</span>}
                               {pickList.orderNumber && <span>· {pickList.orderNumber}</span>}
-                              {reference && <span className="font-medium text-text-primary">· {reference}</span>}
                             </div>
+                            {/* The client's own reference: their PO, or the PCO number */}
+                            {reference && (
+                              <p className="mt-0.5 truncate text-xs text-text-muted" title={reference}>
+                                Ref {reference}
+                              </p>
+                            )}
                             {pickList.soModifiedAfterRelease && (
                               <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                                 <IconAlertTriangle className="h-3 w-3" />
@@ -272,7 +277,7 @@ const WMSPickListsPage = () => {
                         </div>
 
                         <div className="mt-3 flex items-center gap-3">
-                          <div className="h-2 flex-1 rounded-full bg-fill-secondary">
+                          <div className="h-2 flex-1 rounded-full bg-border-muted">
                             <div className="h-2 rounded-full bg-brand-600" style={{ width: `${percent}%` }} />
                           </div>
                           <Typography variant="bodyXs" className="shrink-0 font-medium tabular-nums">
