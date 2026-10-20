@@ -139,19 +139,19 @@ const SignInForm = () => {
           transition={transition}
           className="flex w-full flex-col gap-6"
         >
-          <span className="bg-surface-muted grid size-12 place-items-center rounded-xl">
-            <IconMail size={22} className="text-text-primary" />
+          <span className="grid size-14 place-items-center rounded-2xl bg-black/[0.05] dark:bg-white/[0.08]">
+            <IconMail size={26} className="text-text-primary" />
           </span>
 
-          <div className="flex flex-col gap-1.5">
-            <Typography variant="headingMd">Check your inbox</Typography>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-text-primary text-3xl font-semibold tracking-tight">Check your inbox</h1>
             <Typography variant="bodySm" colorRole="muted">
               We sent a sign-in link to <span className="text-text-primary font-semibold">{watch('email')}</span>. It
               works once and expires in {LINK_MINUTES} minutes.
             </Typography>
           </div>
 
-          <div className="bg-surface-muted flex flex-col gap-2 rounded-xl px-4 py-3.5">
+          <div className="flex flex-col gap-2.5 rounded-xl bg-black/[0.04] px-4 py-4 dark:bg-white/[0.06]">
             <Typography variant="bodySm">
               <span className="font-semibold">Not there yet?</span> It can take a minute. Check your junk or spam folder.
             </Typography>
@@ -161,7 +161,7 @@ const SignInForm = () => {
             </Typography>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2.5">
             <Button
               type="button"
               size="lg"
@@ -187,8 +187,8 @@ const SignInForm = () => {
           transition={transition}
           className="flex w-full flex-col gap-6"
         >
-          <div className="flex flex-col gap-1.5">
-            <Typography variant="headingMd">Sign in</Typography>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-text-primary text-3xl font-semibold tracking-tight">Sign in</h1>
             <Typography variant="bodySm" colorRole="muted">
               Enter your email and we will send you a secure sign-in link. There is no password to remember.
             </Typography>
@@ -225,6 +225,10 @@ const SignInForm = () => {
               </ButtonContent>
             </Button>
           </form>
+
+          <Typography variant="bodyXs" colorRole="muted" className="-mt-2">
+            New to Index? Enter your email and you will be guided through setting up your account after you sign in.
+          </Typography>
 
           {supportsPasskey && (
             <>
