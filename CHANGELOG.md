@@ -1,3 +1,10 @@
+## [2.0.448](https://github.com/craftandculture/Craft-Culture/compare/v2.0.447...v2.0.448) (2026-10-20)
+
+### Bug Fixes
+
+* Clearer wording on the cellar storage panel and delivery details ([28c2d48](https://github.com/craftandculture/Craft-Culture/commit/28c2d48b100e7d431dc719e6055066657063189b))
+* The cellar storage panel reads 24-hour monitoring ([b36c92b](https://github.com/craftandculture/Craft-Culture/commit/b36c92b33f3f27354cd7943ba3e28c0927c663c1))
+
 ## [2.0.447](https://github.com/craftandculture/Craft-Culture/compare/v2.0.446...v2.0.447) (2026-10-20)
 
 ### Features
