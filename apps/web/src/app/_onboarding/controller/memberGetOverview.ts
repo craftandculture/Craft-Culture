@@ -6,11 +6,14 @@ import db from '@/database/client';
 import {
   cellarIntakes,
   cellarMemberships,
+  cellarUkHoldings,
+  cellarUkRotations,
   partnerIdentityDocuments,
   partners,
   wmsStock,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import getIntakeShipments from '../data/getIntakeShipments';
 import getMembershipTerms from '../data/getMembershipTerms';
@@ -62,6 +65,35 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   ]);
 
   const cases = countChargeableCases(stock);
+
+  /*
+    Wine at our UK bond, counted by the same rule, so a member whose wine is
+    all in London is not told they store nothing. It is held under the UK
+    rates, not the membership allowance, so it is a figure of its own.
+  */
+  let ukCases = 0;
+  try {
+    const ukLines = await db
+      .select({
+        cases: cellarUkHoldings.cases,
+        singles: cellarUkHoldings.singles,
+        bottlesPerCase: cellarUkHoldings.bottlesPerCase,
+        bottleSizeLitres: cellarUkHoldings.bottleSizeLitres,
+      })
+      .from(cellarUkHoldings)
+      .innerJoin(cellarUkRotations, eq(cellarUkHoldings.rotation, cellarUkRotations.rotation))
+      .where(eq(cellarUkRotations.partnerId, partnerId));
+    ukCases = countChargeableCases(
+      ukLines.map((line) => ({
+        quantityCases: line.cases,
+        openBottles: line.singles,
+        caseConfig: line.bottlesPerCase,
+        bottleSize: line.bottleSizeLitres ? `${Math.round(line.bottleSizeLitres * 100)}cl` : '75cl',
+      })),
+    );
+  } catch (error) {
+    logger.error('Could not count a member’s UK cases', { partnerId, error });
+  }
   // A summary of the cellar for the member: what they hold, not what it costs
   const bottles = stock.reduce(
     (sum, row) => sum + Math.max(0, row.quantityCases) * Math.max(1, row.caseConfig ?? 12) + Math.max(0, row.openBottles),
@@ -89,6 +121,8 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
     /** Quoted on wine sent to our UK bond, so it is recognised as theirs */
     reference,
     cases,
+    /** Case units at our UK bond, outside the allowance */
+    ukCases,
     bottles,
     wines,
     intakes: shown.map((intake) => {

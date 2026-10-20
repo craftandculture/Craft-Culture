@@ -30,7 +30,8 @@ const count = (value: number) =>
  */
 const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
   const api = useTRPC();
-  const { membershipStatus, billedByCard, includedCases, cases, intakes } = overview;
+  const { membershipStatus, billedByCard, includedCases, cases, ukCases, intakes } = overview;
+  const ukOnly = cases === 0 && ukCases > 0;
   const isActive = membershipStatus === 'active' || membershipStatus === 'past_due';
   const updateCard = useMutation(
     api.onboarding.member.updateCard.mutationOptions({
@@ -74,29 +75,47 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
       {/*
         Bottles and wines are already the first thing on the page, so this
         card does not repeat them. It answers the membership question: how
-        much storage is held against what is included.
+        much storage is held, and where. The allowance applies to the UAE
+        only; wine in the UK is held under its own arrangement, so it is
+        shown beside it rather than counted against it.
       */}
-      <p className="mt-3">
-        <span className="text-text-primary text-2xl font-bold tabular-nums">{count(cases)}</span>{' '}
-        <span className="text-text-muted text-sm">{cases === 1 ? 'case stored' : 'cases stored'}</span>
-      </p>
-
-      {/* The allowance as room to grow into, not as a meter running towards a charge */}
-      <div className="mt-3">
-        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
-          <span className="text-text-muted">Included in your membership</span>
-          <span className="text-text-primary font-semibold tabular-nums">{includedCases} cases</span>
-        </div>
-        <div className="bg-surface-muted h-2 overflow-hidden rounded-full">
-          <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${used}%` }} />
-        </div>
-        {beyond > 0 && (
-          <p className="text-text-muted mt-1.5 text-xs">
-            {count(beyond)} {beyond === 1 ? 'case is' : 'cases are'} stored beyond those included.
-          </p>
+      <dl className="border-border-muted mt-3 divide-y divide-border-muted rounded-lg border">
+        {!ukOnly && (
+          <div className="px-3 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <dt className="text-text-muted text-xs">United Arab Emirates</dt>
+              <dd className="text-text-primary text-sm">
+                <span className="text-lg font-bold tabular-nums">{count(cases)}</span>{' '}
+                <span className="text-text-muted text-xs">of {includedCases} included</span>
+              </dd>
+            </div>
+            {/* The allowance as room to grow into, not as a meter running towards a charge */}
+            <div className="bg-surface-muted mt-2 h-1.5 overflow-hidden rounded-full">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${used}%` }} />
+            </div>
+            {beyond > 0 && (
+              <p className="text-text-muted mt-1.5 text-[11px]">
+                {count(beyond)} {beyond === 1 ? 'case is' : 'cases are'} stored beyond those included.
+              </p>
+            )}
+          </div>
         )}
-        <p className="text-text-muted mt-1.5 text-[11px]">A case is twelve 75cl bottles; a case of six counts as half.</p>
-      </div>
+        {ukCases > 0 && (
+          <div className="px-3 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <dt className="text-text-muted text-xs">United Kingdom · in bond</dt>
+              <dd className="text-text-primary text-sm">
+                <span className="text-lg font-bold tabular-nums">{count(ukCases)}</span>{' '}
+                <span className="text-text-muted text-xs">{ukCases === 1 ? 'case' : 'cases'}</span>
+              </dd>
+            </div>
+            <p className="text-text-muted mt-1 text-[11px]">
+              Held under our UK arrangement{ukOnly ? `; your ${includedCases} included cases apply once wine is in the UAE` : ''}.
+            </p>
+          </div>
+        )}
+      </dl>
+      <p className="text-text-muted mt-1.5 text-[11px]">A case is twelve 75cl bottles; a case of six counts as half.</p>
 
       {incomingCases > 0 && (
         <p className="text-text-muted border-border-muted mt-4 border-t pt-3 text-xs">

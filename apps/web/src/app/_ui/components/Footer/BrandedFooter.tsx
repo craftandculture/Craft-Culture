@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
+import CellarConditions from '@/app/_cellar/components/CellarConditions';
 import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
 import parseChangelog from '@/utils/parseChangelog';
 
@@ -40,27 +41,18 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
-      <WarehouseDataFeed />
-
       {/*
-        The four facts the membership was sold on, in the footer of every
-        cellar page. One line: a member wants to know the wine is looked
-        after, not to read a specification each time they open the page.
+        A member gets one panel on where their wine is kept and the conditions
+        it is in now. The raw sensor strip and a paragraph beneath it had run
+        together with the footer into one grey band. Trade accounts keep the
+        live strip, which is what they use.
       */}
-      {access.kind === 'collector' && (
-        <div className="border-border-primary border-b">
-          <div className="container flex flex-wrap items-baseline gap-x-2 gap-y-1 py-3">
-            <span className="text-text-primary text-[11px] font-semibold uppercase tracking-wider">
-              The warehouse
-            </span>
-            <span className="text-text-muted text-xs">
-              Your wine rests in our licensed bonded warehouse in the UAE, duty
-              suspended, held at 12&ndash;16&deg;C with controlled humidity.
-              Conditions are logged around the clock, the building is under
-              CCTV, and every bottle is handled by our own team.
-            </span>
-          </div>
+      {access.kind === 'collector' ? (
+        <div className="border-border-primary bg-surface-secondary/40 border-b">
+          <CellarConditions />
         </div>
+      ) : (
+        <WarehouseDataFeed />
       )}
 
       <div className="container py-6 md:py-8">
