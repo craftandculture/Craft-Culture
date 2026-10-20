@@ -1,3 +1,9 @@
+## [2.0.457](https://github.com/craftandculture/Craft-Culture/compare/v2.0.456...v2.0.457) (2026-10-20)
+
+### Bug Fixes
+
+* the sign-in panel shows a crisp white Index logo at a readable size ([a43e29b](https://github.com/craftandculture/Craft-Culture/commit/a43e29b92716dbc2f6c40b5bd3655700ca762dda))
+
 ## [2.0.456](https://github.com/craftandculture/Craft-Culture/compare/v2.0.455...v2.0.456) (2026-10-20)
 
 ### Bug Fixes
