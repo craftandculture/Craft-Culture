@@ -1,3 +1,9 @@
+## [2.0.462](https://github.com/craftandculture/Craft-Culture/compare/v2.0.461...v2.0.462) (2026-10-20)
+
+### Features
+
+* on a phone, Your cellar shows the collection grouped by region, producer or vintage with one line per wine, each wine opens a sheet to add bottles to a delivery or offer it for sale, and members are offered Face ID sign-in ([83c1cb0](https://github.com/craftandculture/Craft-Culture/commit/83c1cb0088e8f6b0061c5ccde643dd77043e0851))
+
 ## [2.0.461](https://github.com/craftandculture/Craft-Culture/compare/v2.0.460...v2.0.461) (2026-10-20)
 
 ### Features
