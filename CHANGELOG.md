@@ -1,3 +1,9 @@
+## [2.0.464](https://github.com/craftandculture/Craft-Culture/compare/v2.0.463...v2.0.464) (2026-10-20)
+
+### Bug Fixes
+
+* the phone tab bar names the member's own wine My Cellar and our list C&C Cellar ([3604fc9](https://github.com/craftandculture/Craft-Culture/commit/3604fc93633fa9eedf4b5ae16e27b26fef2ebe8d))
+
 ## [2.0.463](https://github.com/craftandculture/Craft-Culture/compare/v2.0.462...v2.0.463) (2026-10-20)
 
 ### Bug Fixes
