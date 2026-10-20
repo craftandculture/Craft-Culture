@@ -1,3 +1,9 @@
+## [2.0.465](https://github.com/craftandculture/Craft-Culture/compare/v2.0.464...v2.0.465) (2026-10-20)
+
+### Bug Fixes
+
+* bringing more wine in can be folded away again after it is opened ([c698c49](https://github.com/craftandculture/Craft-Culture/commit/c698c4992ca883d8f7a1b2cda61d6ae0c6982d3d))
+
 ## [2.0.464](https://github.com/craftandculture/Craft-Culture/compare/v2.0.463...v2.0.464) (2026-10-20)
 
 ### Bug Fixes
