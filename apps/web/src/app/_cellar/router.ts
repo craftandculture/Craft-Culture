@@ -18,6 +18,7 @@ import adminGetUkStorage from './controller/adminGetUkStorage';
 import adminImportUkStock from './controller/adminImportUkStock';
 import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminQuoteUkMove from './controller/adminQuoteUkMove';
+import adminRemoveUkRates from './controller/adminRemoveUkRates';
 import adminRevokeCellarAccess from './controller/adminRevokeCellarAccess';
 import adminSetPaymentDetails from './controller/adminSetPaymentDetails';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
@@ -88,6 +89,7 @@ const adminRouter = createTRPCRouter({
   assignUkRotation: adminAssignUkRotation,
   getUkRates: adminGetUkRates,
   addUkRates: adminAddUkRates,
+  removeUkRates: adminRemoveUkRates,
   getUkStorage: adminGetUkStorage,
   assignUkRotations: adminAssignUkRotations,
   getUkMoves: adminGetUkMoves,

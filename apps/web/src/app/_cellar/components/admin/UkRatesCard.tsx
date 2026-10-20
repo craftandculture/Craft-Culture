@@ -53,6 +53,16 @@ const UkRatesCard = () => {
     }),
   );
 
+  const remove = useMutation(
+    api.cellar.admin.removeUkRates.mutationOptions({
+      onSuccess: () => {
+        toast.success('That version is removed');
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const current = data?.current ?? null;
   const markup = Math.round(LCB_RECHARGE_MARKUP * 100);
 
@@ -75,7 +85,8 @@ const UkRatesCard = () => {
           <h2 className="text-text-primary text-base font-semibold">UK rates · London City Bond, Burton</h2>
           <p className="text-text-muted mt-0.5 max-w-2xl text-sm">
             Wine at our UK bond is charged under these rates while it is held there; wine in the UAE under the
-            membership. Enter LCB&rsquo;s prices at cost; members pay cost + {markup}%. Storage has no allowance.
+            membership. Enter what LCB charges us, from their tariff or invoice, not the member price: the {markup}%
+            is added for you. Storage has no allowance.
           </p>
         </div>
         {!isAdding && (
@@ -95,8 +106,8 @@ const UkRatesCard = () => {
             <thead className="bg-fill-muted/60 border-border-muted border-b">
               <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                 <th className="px-3 py-2 text-left">Charge</th>
-                <th className="px-3 py-2 text-right">LCB cost</th>
-                <th className="px-3 py-2 text-right">Member pays</th>
+                <th className="px-3 py-2 text-right">LCB charges us</th>
+                <th className="px-3 py-2 text-right">Member pays (+ {markup}%)</th>
               </tr>
             </thead>
             <tbody className="divide-border-muted divide-y">
@@ -114,9 +125,19 @@ const UkRatesCard = () => {
               ))}
             </tbody>
           </table>
-          <p className="text-text-muted border-border-muted border-t px-3 py-2 text-xs">
-            In force since {format(new Date(current.effectiveFrom), 'd MMMM yyyy')}
-            {current.notes ? ` · ${current.notes}` : ''}
+          <p className="text-text-muted border-border-muted flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-xs">
+            <span>
+              In force since {format(new Date(current.effectiveFrom), 'd MMMM yyyy')}
+              {current.notes ? ` · ${current.notes}` : ''}
+            </span>
+            <button
+              type="button"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate({ id: current.id })}
+              className="hover:text-red-700 disabled:opacity-50"
+            >
+              Remove this version (entered in error)
+            </button>
           </p>
         </div>
       ) : (
@@ -156,7 +177,7 @@ const UkRatesCard = () => {
             {FIELDS.map((field) => (
               <label key={field.key} className="block">
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                  {field.label} (£ {field.unit}, at cost)
+                  {field.label}: what LCB charges us, £ {field.unit}
                 </span>
                 <input
                   inputMode="decimal"

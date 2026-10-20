@@ -15,7 +15,7 @@ import logger from '@/utils/logger';
  */
 const getUkRates = async (on: Date = new Date()) => {
   try {
-    const history = await db.select().from(cellarUkRates).orderBy(desc(cellarUkRates.effectiveFrom));
+    const history = await db.select().from(cellarUkRates).orderBy(desc(cellarUkRates.effectiveFrom), desc(cellarUkRates.createdAt));
     const current = history.find((row) => row.effectiveFrom <= on) ?? null;
     return { current, history };
   } catch (error) {
