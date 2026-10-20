@@ -38,8 +38,8 @@ const CellarPhoneTabs = () => {
   useEffect(() => setMoreOpen(false), [pathname]);
 
   const main = [
-    { href: '/platform/cellar', label: 'Cellar', icon: IconBottle },
-    { href: '/platform/cellar/available', label: 'Cellar List', icon: IconSparkles },
+    { href: '/platform/cellar', label: 'My Cellar', icon: IconBottle },
+    { href: '/platform/cellar/available', label: 'C&C Cellar', icon: IconSparkles },
     { href: '/platform/cellar/deliveries', label: 'Deliveries', icon: IconTruckDelivery },
     ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
   ];
