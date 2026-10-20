@@ -1,3 +1,9 @@
+## [2.0.449](https://github.com/craftandculture/Craft-Culture/compare/v2.0.448...v2.0.449) (2026-10-20)
+
+### Features
+
+* pick lists lead with the client's name and logo, show the PCO number, and can be searched ([e17f09f](https://github.com/craftandculture/Craft-Culture/commit/e17f09fafa224066f4c32968191f8a3a4f31f54e))
+
 ## [2.0.448](https://github.com/craftandculture/Craft-Culture/compare/v2.0.447...v2.0.448) (2026-10-20)
 
 ### Bug Fixes
