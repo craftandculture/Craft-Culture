@@ -1,6 +1,6 @@
 'use client';
 
-import { IconChevronDown } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -91,7 +91,22 @@ const BringWineIn = ({ reference, folded = false, onAdded }: BringWineInProps) =
   return (
     <div className="border-border-muted bg-surface-primary rounded-xl border p-4 shadow-sm sm:p-5">
       {activationSheet}
-      <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Bring your wine in</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">Bring your wine in</p>
+        {folded && (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setSource(null);
+            }}
+            aria-label="Collapse"
+            className="text-text-muted -my-2 -mr-2 grid size-9 place-items-center rounded-full"
+          >
+            <IconChevronUp size={18} />
+          </button>
+        )}
+      </div>
       <p className="text-text-primary mt-1 text-sm">Tell us where your wine is held and we will arrange the rest.</p>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {offered.map((item) => (
