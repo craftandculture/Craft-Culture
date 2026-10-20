@@ -32,6 +32,7 @@ const offered = wineSources.filter(
 const SOURCE_LABEL: Partial<Record<WineSource, string>> = {
   lcb: 'From LCB in the UK',
   uk_eu_cellar: 'From another cellar or merchant',
+  uae_bond: 'From a UAE bonded warehouse',
   investment_company: 'From an investment platform',
   multiple_locations: 'From several places',
   with_cc: 'Wine we already hold for you',

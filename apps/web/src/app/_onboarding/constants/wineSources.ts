@@ -13,6 +13,12 @@ const wineSources = [
     isTransfer: true,
   },
   {
+    value: 'uae_bond',
+    label: 'Wine held in bond elsewhere in the UAE',
+    hint: 'Already in a UAE bonded or free zone warehouse? We can arrange an in-bond transfer into your private cellar, with duty and VAT still suspended.',
+    isTransfer: true,
+  },
+  {
     value: 'investment_company',
     label: 'Wine held with a wine investment platform',
     hint: 'We can coordinate the transfer of your holdings into your private cellar.',

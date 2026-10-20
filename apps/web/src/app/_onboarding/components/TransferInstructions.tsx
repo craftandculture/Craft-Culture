@@ -20,12 +20,18 @@ export interface TransferInstructionsProps {
  * Bond moves by a transfer inside LCB, with nothing physically moved; wine
  * anywhere else is sent to Burton under bond. Either way the member's
  * reference goes on the paperwork — it is how the wine is recognised as
- * theirs when it arrives.
+ * theirs when it arrives. Wine already in bond in the UAE moves by an in-bond
+ * transfer we arrange, so it carries no UK address.
  */
 const TransferInstructions = ({ source, reference }: TransferInstructionsProps) => {
   const isAtLcb = source === 'lcb';
+  const isInUae = source === 'uae_bond';
 
-  const details = isAtLcb
+  const details = isInUae
+    ? reference
+      ? [['Your reference, to quote', reference]]
+      : []
+    : isAtLcb
     ? [
         ['Transfer to', `Craft & Culture at ${lcbBurton.name}`],
         ["C&C's reference at London City Bond", lcbBurton.reference],
@@ -54,10 +60,16 @@ const TransferInstructions = ({ source, reference }: TransferInstructionsProps) 
   return (
     <div className="border-border-muted bg-surface-secondary/40 rounded-lg border p-3 sm:p-4">
       <p className="text-text-primary text-sm font-semibold">
-        {isAtLcb ? 'If you would like to instruct the merchant yourself' : 'If you would like to instruct them yourself'}
+        {isAtLcb
+          ? 'If you would like to instruct the merchant yourself'
+          : isInUae
+            ? 'If you would like to instruct the warehouse yourself'
+            : 'If you would like to instruct them yourself'}
       </p>
       <p className="text-text-muted mt-1 text-xs leading-5">
-        {isAtLcb
+        {isInUae
+          ? 'Ask them to release your wine to Craft & Culture as an in-bond transfer within the UAE, keeping duty suspended. Please let us know before it moves and we will arrange the customs paperwork and collection.'
+          : isAtLcb
           ? 'Ask them to transfer your wine to us within London City Bond, keeping it under bond. LCB call this a Transfer – Retain Status. Nothing is moved, so it is usually done within days.'
           : 'Ask them to send your wine under bond to our UK bond at Burton. Wine coming from outside the UK needs a customs entry, so please tell us before it leaves and we will arrange it.'}
       </p>

@@ -4,8 +4,9 @@ import wineSources from '@/app/_onboarding/constants/wineSources';
 import db from '@/database/client';
 import { cellarIntakes } from '@/database/schema';
 
+// Transfers that arrive through our UK bond; wine already in the UAE never passes LCB
 const TRANSFER_SOURCES = wineSources
-  .filter((source) => source.isTransfer)
+  .filter((source) => source.isTransfer && source.value !== 'uae_bond')
   .map((source) => source.value as string);
 
 /**
