@@ -25,7 +25,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
-type DocumentType = 'partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery';
+type DocumentType = 'partner_invoice' | 'partner_sales_order' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery';
 
 interface DocumentUploadProps {
   orderId: string;
@@ -34,6 +34,7 @@ interface DocumentUploadProps {
 
 const documentTypeLabels: Record<DocumentType, string> = {
   partner_invoice: 'Partner Invoice',
+  partner_sales_order: 'Partner SO',
   cc_invoice: 'C&C Invoice',
   distributor_invoice: 'Distributor Invoice',
   payment_proof: 'Payment Proof',
@@ -58,7 +59,7 @@ const extractionStatusConfig: Record<string, { label: string; colorRole: 'muted'
  */
 const DocumentUpload = ({
   orderId,
-  allowedTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'],
+  allowedTypes = ['partner_invoice', 'partner_sales_order', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'],
 }: DocumentUploadProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();

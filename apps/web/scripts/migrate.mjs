@@ -239,6 +239,13 @@ const runMigrations = async () => {
     );
     console.log('✅ logistics_document_type BOE values ready');
 
+    // PCO documents: a partner's sales order (Cru sends an SO, not an invoice).
+    console.log('🔄 Ensuring private_client_document_type has partner_sales_order...');
+    await client.unsafe(
+      `ALTER TYPE "private_client_document_type" ADD VALUE IF NOT EXISTS 'partner_sales_order'`,
+    );
+    console.log('✅ private_client_document_type partner_sales_order ready');
+
     // Shipments: UAE-to-UAE mainland transfer type.
     console.log('🔄 Ensuring logistics_shipment_type has mainland_transfer...');
     await client.unsafe(

@@ -62,15 +62,16 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
   // - Admin: all documents (full visibility)
   // - Partner: partner_invoice (their own), distributor_invoice (to pay), payment_proof, proof_of_delivery
   // - Distributor: distributor_invoice (their own), payment_proof, proof_of_delivery only
+  // - partner_sales_order is the partner's own SO, priced like their invoice: admin + partner only
   // CRITICAL: Partner invoices should NEVER be visible to distributors (reveals partner costs/margins)
-  let allowedDocTypes: ('partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery')[];
+  let allowedDocTypes: ('partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery' | 'partner_sales_order')[];
 
   if (isAdmin) {
     // Admin sees everything
-    allowedDocTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
+    allowedDocTypes = ['partner_invoice', 'partner_sales_order', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
   } else if (isPartner) {
     // Partner sees their invoice, distributor invoice (to pay), payment proofs, and proof of delivery
-    allowedDocTypes = ['partner_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
+    allowedDocTypes = ['partner_invoice', 'partner_sales_order', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
   } else {
     // Distributor - can only see their own invoice, payment proofs, and proof of delivery
     // NEVER show partner_invoice (protects partner pricing/margins)

@@ -1243,6 +1243,7 @@ const DistributorOrderDetailPage = () => {
                   {documents.map((doc) => {
                     const docTypeLabels: Record<string, string> = {
                       partner_invoice: 'Partner Invoice',
+                      partner_sales_order: 'Partner SO',
                       cc_invoice: 'C&C Invoice',
                       distributor_invoice: 'Distributor Invoice',
                       payment_proof: 'Payment Proof',
