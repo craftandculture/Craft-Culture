@@ -1,3 +1,10 @@
+## [2.0.477](https://github.com/craftandculture/Craft-Culture/compare/v2.0.476...v2.0.477) (2026-10-21)
+
+### Features
+
+* a freight request is saved and sent to its forwarders in one step, and its page shows where it stands, what to do next and every email sent ([a715cdd](https://github.com/craftandculture/Craft-Culture/commit/a715cdd19300bb824c1b6f35350365a1e05b81c2))
+* on phones, an order's stock lines show as cards with the status picker and edit panel in reach ([09006d5](https://github.com/craftandculture/Craft-Culture/commit/09006d5bd4ef0a7b2b11aa888451779ea72ed53e))
+
 ## [2.0.476](https://github.com/craftandculture/Craft-Culture/compare/v2.0.475...v2.0.476) (2026-10-21)
 
 ### Features
