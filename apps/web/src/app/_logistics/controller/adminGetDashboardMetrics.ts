@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getOpenQuoteRequestSteps from '../data/getOpenQuoteRequestSteps';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /**
@@ -44,6 +45,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     recentActivity,
     pendingQuoteRequests,
     inProgressQuoteRequests,
+    requestSteps,
   ] = await Promise.all([
     // Shipment counts by status
     db
@@ -186,6 +188,9 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       .select({ count: count() })
       .from(logisticsQuoteRequests)
       .where(eq(logisticsQuoteRequests.status, 'in_progress')),
+
+    // Open requests by the step they wait on; empty if the read fails rather than failing the dashboard
+    getOpenQuoteRequestSteps(now).catch(() => []),
   ]);
 
   // Process shipment status counts
@@ -241,6 +246,13 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     quoteRequests: {
       pendingCount: pendingQuoteRequests[0]?.count || 0,
       inProgressCount: inProgressQuoteRequests[0]?.count || 0,
+      /** Waiting on forwarders: to send, awaiting reply, or due a chase */
+      awaitingRepliesCount: requestSteps.filter((r) =>
+        ['choose_forwarders', 'send', 'awaiting', 'chase'].includes(r.nextStep),
+      ).length,
+      chaseCount: requestSteps.filter((r) => r.nextStep === 'chase').length,
+      /** Quotes in: to price for the client, send the price, or accept */
+      toPriceCount: requestSteps.filter((r) => ['price', 'send_price', 'accept'].includes(r.nextStep)).length,
     },
   };
 });

@@ -1,30 +1,35 @@
-import { count, like } from 'drizzle-orm';
+import { desc, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsQuoteRequests } from '@/database/schema';
 
 /**
- * Generate a unique quote request number in the format QRQ-YYYY-XXXX
+ * Generate the next quote request number, QRQ-YYYY-NNNN
+ *
+ * The next after the highest on file this year, not a count of rows, so a
+ * deleted request can never hand its number to a new one. Two saves in the
+ * same moment can still pick the same number; callers retry on the unique
+ * index (see `isUniqueViolation`).
  *
  * @example
- *   generateRequestNumber(); // returns 'QRQ-2026-0001'
+ *   await generateRequestNumber(); // 'QRQ-2026-0013'
  *
- * @returns A unique quote request number string
+ * @returns The next request number
  */
 const generateRequestNumber = async () => {
   const year = new Date().getFullYear();
   const prefix = `QRQ-${year}-`;
 
-  // Count existing requests for this year
-  const [result] = await db
-    .select({ count: count() })
+  const [latest] = await db
+    .select({ requestNumber: logisticsQuoteRequests.requestNumber })
     .from(logisticsQuoteRequests)
-    .where(like(logisticsQuoteRequests.requestNumber, `${prefix}%`));
+    .where(like(logisticsQuoteRequests.requestNumber, `${prefix}%`))
+    .orderBy(desc(logisticsQuoteRequests.requestNumber))
+    .limit(1);
 
-  const nextNumber = (result?.count ?? 0) + 1;
-  const paddedNumber = nextNumber.toString().padStart(4, '0');
+  const last = Number(latest?.requestNumber.slice(prefix.length)) || 0;
 
-  return `${prefix}${paddedNumber}`;
+  return `${prefix}${(last + 1).toString().padStart(4, '0')}`;
 };
 
 export default generateRequestNumber;

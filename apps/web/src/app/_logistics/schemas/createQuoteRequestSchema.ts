@@ -23,6 +23,17 @@ const createQuoteRequestSchema = z.object({
   totalPallets: z.number().int().positive().optional(),
   totalWeightKg: z.number().positive().optional(),
   totalVolumeM3: z.number().positive().optional(),
+  totalBottles: z.number().int().positive().optional(),
+  total75clEquivalents: z.number().positive().optional(),
+
+  // Where the request was started from
+  sourceType: z.enum(['shipment', 'uk_move']).optional(),
+  sourceId: z.string().uuid().optional(),
+
+  /** The date forwarders are asked to reply by */
+  replyBy: z.coerce.date().optional(),
+  /** Forwarders to ask, added to the request as it is saved */
+  forwarderIds: z.array(z.string().uuid()).max(20).optional(),
 
   // Special requirements
   requiresThermalLiner: z.boolean().default(false),

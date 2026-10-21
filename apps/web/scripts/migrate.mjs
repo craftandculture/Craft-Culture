@@ -3313,6 +3313,137 @@ const runMigrations = async () => {
     );
     console.log('✅ auth_rate_limits ready');
 
+    /*
+      Freight quotes: forwarders on file, who each request went to, the
+      forwarder's own document, and prices that rank across currencies.
+
+      Forwarders are seeded from the names already typed on quotes, so the
+      list starts with everyone who has ever quoted, and existing quotes are
+      linked to them by exact name.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_forwarders" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL UNIQUE,
+        "email_domains" text[] DEFAULT '{}'::text[] NOT NULL,
+        "contacts" jsonb DEFAULT '[]'::jsonb NOT NULL,
+        "is_active" boolean DEFAULT true NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_forwarders_active_idx" ON "logistics_forwarders" ("is_active")`,
+    );
+
+    for (const ddl of [
+      `ALTER TABLE "logistics_quotes" ADD COLUMN IF NOT EXISTS "forwarder_id" uuid REFERENCES "logistics_forwarders"("id") ON DELETE SET NULL`,
+      `ALTER TABLE "logistics_quotes" ADD COLUMN IF NOT EXISTS "forwarder_reference" text`,
+      `ALTER TABLE "logistics_quotes" ADD COLUMN IF NOT EXISTS "total_usd" double precision`,
+      `ALTER TABLE "logistics_quotes" ADD COLUMN IF NOT EXISTS "fx_to_usd" double precision`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "total_bottles" integer`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "total_75cl_equivalents" double precision`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "source_type" text`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "source_id" uuid`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "reply_by" timestamp`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_price_usd" double precision`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_quote_id" uuid`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_quoted_at" timestamp`,
+      `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "client_price_usd" double precision`,
+      `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "quoted_margin_usd" double precision`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_quotes_forwarder_id_idx" ON "logistics_quotes" ("forwarder_id")`,
+    );
+
+    // A quote's request id was never a foreign key; clear any that point nowhere, then make it one
+    await client.unsafe(`
+      UPDATE "logistics_quotes" SET "request_id" = NULL
+      WHERE "request_id" IS NOT NULL
+        AND "request_id" NOT IN (SELECT "id" FROM "logistics_quote_requests")
+    `);
+    await client.unsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'logistics_quotes_request_id_fk'
+        ) THEN
+          ALTER TABLE "logistics_quotes"
+            ADD CONSTRAINT "logistics_quotes_request_id_fk"
+            FOREIGN KEY ("request_id") REFERENCES "logistics_quote_requests"("id") ON DELETE SET NULL;
+        END IF;
+      END $$
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_quote_request_recipients" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "request_id" uuid NOT NULL REFERENCES "logistics_quote_requests"("id") ON DELETE CASCADE,
+        "forwarder_id" uuid NOT NULL REFERENCES "logistics_forwarders"("id") ON DELETE CASCADE,
+        "sent_at" timestamp,
+        "sent_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "chased_at" timestamp,
+        "outcome" text DEFAULT 'awaiting' NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "logistics_quote_request_recipients_unique_idx" ON "logistics_quote_request_recipients" ("request_id", "forwarder_id")`,
+    );
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_quote_attachments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "quote_id" uuid NOT NULL REFERENCES "logistics_quotes"("id") ON DELETE CASCADE,
+        "file_name" text NOT NULL,
+        "file_url" text NOT NULL,
+        "file_size" integer,
+        "mime_type" text,
+        "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_quote_attachments_quote_id_idx" ON "logistics_quote_attachments" ("quote_id")`,
+    );
+
+    // Everyone who has quoted becomes a forwarder on file, with their email as a contact
+    await client.unsafe(`
+      INSERT INTO "logistics_forwarders" ("name", "email_domains", "contacts")
+      SELECT
+        trim(q."forwarder_name"),
+        COALESCE(array_agg(DISTINCT lower(split_part(q."forwarder_email", '@', 2)))
+          FILTER (WHERE q."forwarder_email" LIKE '%@%'), '{}'::text[]),
+        COALESCE(jsonb_agg(DISTINCT jsonb_build_object('email', lower(q."forwarder_email")))
+          FILTER (WHERE q."forwarder_email" LIKE '%@%'), '[]'::jsonb)
+      FROM "logistics_quotes" q
+      WHERE trim(q."forwarder_name") <> ''
+      GROUP BY trim(q."forwarder_name")
+      ON CONFLICT ("name") DO NOTHING
+    `);
+    await client.unsafe(`
+      UPDATE "logistics_quotes" q SET "forwarder_id" = f."id"
+      FROM "logistics_forwarders" f
+      WHERE q."forwarder_id" IS NULL AND trim(q."forwarder_name") = f."name"
+    `);
+
+    // Dollar and dollar-pegged quotes convert at a fixed rate; anything else is set when next saved
+    await client.unsafe(`
+      UPDATE "logistics_quotes" SET
+        "fx_to_usd" = CASE upper("currency")
+          WHEN 'USD' THEN 1 WHEN 'AED' THEN 0.2723 WHEN 'SAR' THEN 0.2667
+          WHEN 'QAR' THEN 0.2747 WHEN 'BHD' THEN 2.6539 WHEN 'OMR' THEN 2.6008 END,
+        "total_usd" = round(("total_price" * CASE upper("currency")
+          WHEN 'USD' THEN 1 WHEN 'AED' THEN 0.2723 WHEN 'SAR' THEN 0.2667
+          WHEN 'QAR' THEN 0.2747 WHEN 'BHD' THEN 2.6539 WHEN 'OMR' THEN 2.6008 END)::numeric, 2)
+      WHERE "total_usd" IS NULL
+        AND upper("currency") IN ('USD', 'AED', 'SAR', 'QAR', 'BHD', 'OMR')
+    `);
+    console.log('✅ freight quote forwarders, recipients and attachments ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

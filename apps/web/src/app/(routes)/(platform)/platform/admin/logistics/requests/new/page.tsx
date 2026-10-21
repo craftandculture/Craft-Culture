@@ -4,10 +4,10 @@ import {
   IconArrowLeft,
   IconPlus,
 } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -58,8 +58,22 @@ const priorityOptions: { value: Priority; label: string }[] = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
+/** The date three working days ahead, as the default for forwarders to reply by */
+const threeWorkingDaysAhead = () => {
+  const d = new Date();
+  for (let added = 0; added < 3; ) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
+  return d.toISOString().slice(0, 10);
+};
+
 /**
  * Create new quote request page
+ *
+ * Opened from a shipment or a UK move (?sourceType=&sourceId=) it starts with
+ * that route and cargo counted from its lines, bottles and 75cl equivalents
+ * included, so the request is checked rather than typed.
  */
 const NewQuoteRequestPage = () => {
   const router = useRouter();
@@ -81,6 +95,9 @@ const NewQuoteRequestPage = () => {
   const [totalPallets, setTotalPallets] = useState<number | ''>('');
   const [totalWeightKg, setTotalWeightKg] = useState<number | ''>('');
   const [totalVolumeM3, setTotalVolumeM3] = useState<number | ''>('');
+  const [totalBottles, setTotalBottles] = useState<number | ''>('');
+  const [total75cl, setTotal75cl] = useState<number | ''>('');
+  const [replyBy, setReplyBy] = useState(threeWorkingDaysAhead);
   const [requiresThermalLiner, setRequiresThermalLiner] = useState(false);
   const [requiresTracker, setRequiresTracker] = useState(false);
   const [requiresInsurance, setRequiresInsurance] = useState(false);
@@ -91,6 +108,37 @@ const NewQuoteRequestPage = () => {
   const [targetDeliveryDate, setTargetDeliveryDate] = useState('');
   const [isFlexibleDates, setIsFlexibleDates] = useState(true);
   const [notes, setNotes] = useState('');
+
+  // Started from a shipment or UK move: fill the form from it once
+  const searchParams = useSearchParams();
+  const sourceType = searchParams.get('sourceType');
+  const sourceId = searchParams.get('sourceId');
+  const validSource = (sourceType === 'shipment' || sourceType === 'uk_move') && !!sourceId;
+  const { data: draft } = useQuery({
+    ...api.logistics.admin.requests.draftFromSource.queryOptions({
+      sourceType: sourceType === 'uk_move' ? 'uk_move' : 'shipment',
+      sourceId: sourceId ?? '',
+    }),
+    enabled: validSource,
+  });
+  const filledFrom = useRef<string | null>(null);
+  useEffect(() => {
+    if (!draft || filledFrom.current === draft.sourceId) return;
+    filledFrom.current = draft.sourceId;
+    setOriginCountry(draft.originCountry);
+    setOriginCity(draft.originCity);
+    setOriginWarehouse(draft.originWarehouse);
+    setDestinationCountry(draft.destinationCountry);
+    setDestinationCity(draft.destinationCity);
+    setDestinationWarehouse(draft.destinationWarehouse);
+    if (draft.transportMode) setTransportMode(draft.transportMode);
+    setTotalCases(draft.totalCases ?? '');
+    setTotalBottles(draft.totalBottles ?? '');
+    setTotal75cl(draft.total75clEquivalents ?? '');
+    setTotalPallets(draft.totalPallets ?? '');
+    setTotalWeightKg(draft.totalWeightKg ?? '');
+    setTotalVolumeM3(draft.totalVolumeM3 ?? '');
+  }, [draft]);
 
   // Create mutation
   const { mutate: createRequest, isPending } = useMutation({
@@ -134,6 +182,11 @@ const NewQuoteRequestPage = () => {
       totalPallets: totalPallets ? Number(totalPallets) : undefined,
       totalWeightKg: totalWeightKg ? Number(totalWeightKg) : undefined,
       totalVolumeM3: totalVolumeM3 ? Number(totalVolumeM3) : undefined,
+      totalBottles: totalBottles ? Number(totalBottles) : undefined,
+      // Without a 75cl figure the bottles are taken as 75cl
+      total75clEquivalents: total75cl ? Number(total75cl) : totalBottles ? Number(totalBottles) : undefined,
+      ...(validSource && draft ? { sourceType: draft.sourceType, sourceId: draft.sourceId } : {}),
+      replyBy: replyBy ? new Date(`${replyBy}T12:00:00`) : undefined,
       requiresThermalLiner,
       requiresTracker,
       requiresInsurance,
@@ -160,7 +213,9 @@ const NewQuoteRequestPage = () => {
           <div>
             <Typography variant="headingLg">New Quote Request</Typography>
             <Typography variant="bodySm" colorRole="muted">
-              Request a freight quote from the logistics team
+              {draft
+                ? `Filled in from ${draft.sourceLabel}; check the cargo, then choose forwarders on the next page`
+                : 'Describe the cargo, then choose forwarders on the next page'}
             </Typography>
           </div>
         </div>
@@ -323,6 +378,32 @@ const NewQuoteRequestPage = () => {
                 />
               </div>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="totalBottles">Bottles</label>
+                <Input
+                  id="totalBottles"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 993"
+                  value={totalBottles}
+                  onChange={(e) => setTotalBottles(e.target.value ? parseInt(e.target.value) : '')}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="total75cl">75cl equivalent</label>
+                <Input
+                  id="total75cl"
+                  type="number"
+                  min="1"
+                  step="0.1"
+                  placeholder="Leave empty if all 75cl"
+                  value={total75cl}
+                  onChange={(e) => setTotal75cl(e.target.value ? Number(e.target.value) : '')}
+                />
+                <p className="text-xs text-text-muted">A magnum counts 2, a half bottle 0.5. Quotes are compared on this.</p>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="totalCases">Total Cases</label>
@@ -475,6 +556,10 @@ const NewQuoteRequestPage = () => {
                   value={targetDeliveryDate}
                   onChange={(e) => setTargetDeliveryDate(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="replyBy">Forwarders to reply by</label>
+                <Input id="replyBy" type="date" value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
               </div>
             </div>
             <div className="flex items-center space-x-2">

@@ -3,11 +3,9 @@
 import {
   IconArrowLeft,
   IconCheck,
-  IconChevronRight,
   IconClock,
   IconDownload,
   IconFileText,
-  IconGitCompare,
   IconLoader2,
   IconPaperclip,
   IconPlus,
@@ -26,6 +24,11 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import AwardEmails from '@/app/_logistics/components/quotes/AwardEmails';
+import ClientPriceBox from '@/app/_logistics/components/quotes/ClientPriceBox';
+import QuoteDropZone from '@/app/_logistics/components/quotes/QuoteDropZone';
+import QuoteRanking from '@/app/_logistics/components/quotes/QuoteRanking';
+import RequestForwarders from '@/app/_logistics/components/quotes/RequestForwarders';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -60,32 +63,12 @@ const priorityBadgeVariants: Record<RequestPriority, BadgeRole> = {
   urgent: 'danger',
 };
 
-const quoteBadgeVariants: Record<string, BadgeRole> = {
-  draft: 'muted',
-  pending: 'warning',
-  accepted: 'success',
-  rejected: 'danger',
-  expired: 'muted',
-};
-
-/** The most quotes the comparison screen sets side by side */
-const MAX_COMPARE = 5;
-
 const statusIcons: Record<RequestStatus, typeof IconClock> = {
   pending: IconClock,
   in_progress: IconTruck,
   quoted: IconFileText,
   completed: IconCheck,
   cancelled: IconX,
-};
-
-const formatCurrency = (amount: number, currency = 'USD') => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 };
 
 const formatDate = (date: Date | null | undefined) => {
@@ -98,7 +81,12 @@ const formatDate = (date: Date | null | undefined) => {
 };
 
 /**
- * Quote Request detail page
+ * A quote request: the one page its freight is worked from
+ *
+ * Top to bottom: the cargo, the forwarders asked (with each one's email to
+ * copy), a drop zone for the quotes they send back, the quotes ranked per
+ * 75cl in USD, the client's price and margin, and once a quote is accepted,
+ * the award and decline emails.
  */
 const QuoteRequestDetailPage = () => {
   const params = useParams();
@@ -106,6 +94,7 @@ const QuoteRequestDetailPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [chosenQuoteId, setChosenQuoteId] = useState<string | null>(null);
 
   const { data: request, isLoading } = useQuery({
     ...api.logistics.admin.requests.getOne.queryOptions({ requestId }),
@@ -202,14 +191,13 @@ const QuoteRequestDetailPage = () => {
 
   const StatusIcon = statusIcons[request.status];
 
-  // Cheapest first; rejected and expired quotes sink to the bottom
-  const isLive = (status: string) => status !== 'rejected' && status !== 'expired';
-  const quotes = [...(request.quotes ?? [])].sort(
-    (a, b) => Number(!isLive(a.status)) - Number(!isLive(b.status)) || a.totalPrice - b.totalPrice,
-  );
-  const liveQuotes = quotes.filter((q) => isLive(q.status));
-  const bestQuoteId = liveQuotes[0]?.id;
-  const compareIds = (liveQuotes.length >= 2 ? liveQuotes : quotes).slice(0, MAX_COMPARE).map((q) => q.id);
+  // The client is priced on the quote chosen, else the one priced before, else the cheapest still live
+  const liveQuotes = request.quotes.filter((q) => q.status === 'pending' && !q.isExpired);
+  const pricedQuoteId =
+    [chosenQuoteId, request.clientQuoteId].find((id) => id && liveQuotes.some((q) => q.id === id)) ??
+    liveQuotes[0]?.id ??
+    null;
+  const accepted = request.quotes.some((q) => q.status === 'accepted');
   const canAssign = request.status === 'pending';
   const canComplete = request.status === 'in_progress' || request.status === 'quoted';
   const canAddQuote = request.status !== 'completed' && request.status !== 'cancelled';
@@ -320,7 +308,7 @@ const QuoteRequestDetailPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-6">
                   <div>
                     <Typography variant="bodySm" colorRole="muted">
                       Product Type
@@ -335,6 +323,20 @@ const QuoteRequestDetailPage = () => {
                     </Typography>
                     <Typography variant="bodyMd">
                       {request.totalCases ?? '-'}
+                    </Typography>
+                  </div>
+                  <div>
+                    <Typography variant="bodySm" colorRole="muted">
+                      Bottles
+                    </Typography>
+                    <Typography variant="bodyMd">{request.totalBottles ?? '-'}</Typography>
+                  </div>
+                  <div>
+                    <Typography variant="bodySm" colorRole="muted">
+                      75cl equivalent
+                    </Typography>
+                    <Typography variant="bodyMd">
+                      {request.total75clEquivalents != null ? Math.round(request.total75clEquivalents) : '-'}
                     </Typography>
                   </div>
                   <div>
@@ -406,75 +408,15 @@ const QuoteRequestDetailPage = () => {
               </Card>
             )}
 
-            {/* Linked Quotes */}
-            <Card>
-              <div className="p-4 pb-0">
-                <div className="flex items-center justify-between">
-                  <CardTitle>Quotes ({quotes.length})</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {compareIds.length >= 2 && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
-                          <ButtonContent iconLeft={IconGitCompare}>Compare quotes</ButtonContent>
-                        </Link>
-                      </Button>
-                    )}
-                    {canAddQuote && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/platform/admin/logistics/quotes/new?requestId=${requestId}`}>
-                          <ButtonContent iconLeft={IconPlus}>Add Quote</ButtonContent>
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <CardContent>
-                {quotes.length === 0 ? (
-                  <Typography variant="bodyMd" colorRole="muted" className="text-center py-4">
-                    No quotes have been added to this request yet.
-                  </Typography>
-                ) : (
-                  <div className="space-y-3">
-                    {quotes.map((quote) => (
-                      <Link
-                        key={quote.id}
-                        href={`/platform/admin/logistics/quotes/${quote.id}`}
-                        className="flex items-center justify-between rounded-lg border border-border-primary p-3 transition-colors hover:border-border-brand"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Typography variant="bodySm" className="font-mono">
-                              {quote.quoteNumber}
-                            </Typography>
-                            <Badge colorRole={quoteBadgeVariants[quote.status] ?? 'muted'}>
-                              {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                            </Badge>
-                            {quote.id === bestQuoteId && quotes.length > 1 && (
-                              <Badge colorRole="success">Best price</Badge>
-                            )}
-                          </div>
-                          <Typography variant="bodyMd">{quote.forwarderName}</Typography>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <Typography variant="headingSm">
-                              {formatCurrency(quote.totalPrice, quote.currency)}
-                            </Typography>
-                            {quote.transitDays && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {quote.transitDays} days
-                              </Typography>
-                            )}
-                          </div>
-                          <IconChevronRight className="h-5 w-5 text-text-muted" />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <RequestForwarders request={request} />
+
+            {canAddQuote && !accepted && <QuoteDropZone requestId={requestId} />}
+
+            <QuoteRanking request={request} selectedQuoteId={pricedQuoteId} onSelect={setChosenQuoteId} />
+
+            {pricedQuoteId && !accepted && <ClientPriceBox request={request} quoteId={pricedQuoteId} />}
+
+            <AwardEmails request={request} />
 
             {/* Attachments */}
             <Card>

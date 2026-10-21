@@ -28,6 +28,7 @@ import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
+import adminExtractQuote from './controller/adminExtractQuote';
 import adminExtractSheet from './controller/adminExtractSheet';
 import adminExtractShipmentInvoice from './controller/adminExtractShipmentInvoice';
 import adminFindLwinMismatches from './controller/adminFindLwinMismatches';
@@ -38,6 +39,7 @@ import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetExportJob from './controller/adminGetExportJob';
 import adminGetExportJobs from './controller/adminGetExportJobs';
+import adminGetForwarders from './controller/adminGetForwarders';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
 import adminGetInvoices from './controller/adminGetInvoices';
 import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
@@ -45,19 +47,23 @@ import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminGetQuote from './controller/adminGetQuote';
 import adminGetQuoteRequest from './controller/adminGetQuoteRequest';
+import adminGetQuoteRequestDraft from './controller/adminGetQuoteRequestDraft';
 import adminGetQuoteRequests from './controller/adminGetQuoteRequests';
 import adminGetQuotes from './controller/adminGetQuotes';
 import adminGetReportMetrics from './controller/adminGetReportMetrics';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
+import adminMarkRequestRecipients from './controller/adminMarkRequestRecipients';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
 import adminSaveBond from './controller/adminSaveBond';
 import adminSearchZohoInvoices from './controller/adminSearchZohoInvoices';
+import adminSetClientPrice from './controller/adminSetClientPrice';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
+import adminSetRequestRecipients from './controller/adminSetRequestRecipients';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
@@ -65,6 +71,7 @@ import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoice
 import adminSyncItemsToZoho from './controller/adminSyncItemsToZoho';
 import adminUpdate from './controller/adminUpdate';
 import adminUpdateExportJob from './controller/adminUpdateExportJob';
+import adminUpdateForwarder from './controller/adminUpdateForwarder';
 import adminUpdateGroupCostLine from './controller/adminUpdateGroupCostLine';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateQuote from './controller/adminUpdateQuote';
@@ -73,6 +80,7 @@ import adminUpdateShipmentGroup from './controller/adminUpdateShipmentGroup';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import adminUploadDocument from './controller/adminUploadDocument';
 import adminUploadGroupDocument from './controller/adminUploadGroupDocument';
+import adminUploadQuoteAttachment from './controller/adminUploadQuoteAttachment';
 import adminUploadQuoteRequestAttachment from './controller/adminUploadQuoteRequestAttachment';
 import partnerGetMany from './controller/partnerGetMany';
 import partnerGetOne from './controller/partnerGetOne';
@@ -179,6 +187,14 @@ const adminRouter = createTRPCRouter({
     accept: adminAcceptQuote,
     reject: adminRejectQuote,
     compare: adminCompareQuotes,
+    extract: adminExtractQuote,
+    uploadAttachment: adminUploadQuoteAttachment,
+  }),
+
+  // Forwarders on file, built from the quotes they send
+  forwarders: createTRPCRouter({
+    getMany: adminGetForwarders,
+    update: adminUpdateForwarder,
   }),
 
   // Quote Requests
@@ -189,6 +205,10 @@ const adminRouter = createTRPCRouter({
     getOne: adminGetQuoteRequest,
     assign: adminAssignQuoteRequest,
     uploadAttachment: adminUploadQuoteRequestAttachment,
+    draftFromSource: adminGetQuoteRequestDraft,
+    setRecipients: adminSetRequestRecipients,
+    markRecipients: adminMarkRequestRecipients,
+    setClientPrice: adminSetClientPrice,
   }),
 });
 

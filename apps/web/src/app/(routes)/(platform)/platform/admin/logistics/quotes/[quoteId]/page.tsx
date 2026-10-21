@@ -171,6 +171,7 @@ const QuoteDetailPage = () => {
         );
       }
       setShowAcceptPanel(false);
+      if (quote?.request) toast.info('The award and decline emails are ready on the request page');
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getMany']] });
@@ -345,7 +346,9 @@ const QuoteDetailPage = () => {
             <CardContent className="p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <Typography variant="bodySm" colorRole="muted">
-                  This quote is pending review. Accept or reject it.
+                  {quote.validUntil && new Date(quote.validUntil).getTime() < Date.now()
+                    ? `This quote was valid until ${formatDate(quote.validUntil)}. Ask the forwarder to confirm or reissue it; it cannot be accepted as it stands.`
+                    : 'This quote is pending review. Accept or reject it.'}
                 </Typography>
                 <div className="flex gap-2">
                   <Button
@@ -582,6 +585,22 @@ const QuoteDetailPage = () => {
                       {quote.forwarderEmail}
                     </Typography>
                   )}
+                  {quote.forwarderReference && (
+                    <Typography variant="bodySm" colorRole="muted">
+                      Their reference {quote.forwarderReference}
+                    </Typography>
+                  )}
+                  {quote.attachments.map((a) => (
+                    <a
+                      key={a.id}
+                      href={a.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block text-sm text-text-primary underline"
+                    >
+                      {a.fileName}
+                    </a>
+                  ))}
                 </div>
                 <div>
                   <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">

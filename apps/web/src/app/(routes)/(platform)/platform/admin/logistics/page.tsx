@@ -127,16 +127,16 @@ const LogisticsDashboardPage = () => {
   const docsFlag = (metrics?.documents.expiredCount ?? 0) + (metrics?.documents.expiringCount ?? 0);
   const sideRows = [
     {
-      label: 'Freight quotes to review',
-      value: String(metrics?.quotes.pendingCount ?? 0),
+      label: 'Freight to price or accept',
+      value: String(metrics?.quoteRequests?.toPriceCount ?? 0),
       href: '/platform/admin/logistics/quotes',
       flag: (metrics?.quotes.expiringCount ?? 0) > 0,
     },
     {
-      label: 'Quote requests open',
-      value: String((metrics?.quoteRequests?.pendingCount ?? 0) + (metrics?.quoteRequests?.inProgressCount ?? 0)),
+      label: 'Awaiting forwarder replies',
+      value: String(metrics?.quoteRequests?.awaitingRepliesCount ?? 0),
       href: '/platform/admin/logistics/quotes',
-      flag: (metrics?.quoteRequests?.pendingCount ?? 0) > 0,
+      flag: (metrics?.quoteRequests?.chaseCount ?? 0) > 0,
     },
     {
       label: 'Documents expired or expiring',

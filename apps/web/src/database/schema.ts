@@ -3071,6 +3071,11 @@ export const logisticsShipments = pgTable(
     otherCostsUsd: doublePrecision('other_costs_usd'),
     totalLandedCostUsd: doublePrecision('total_landed_cost_usd'),
 
+    // What the client was quoted for the freight, and the margin over the
+    // accepted forwarder quote, written when a freight quote is accepted
+    clientPriceUsd: doublePrecision('client_price_usd'),
+    quotedMarginUsd: doublePrecision('quoted_margin_usd'),
+
     // Cost allocation method
     costAllocationMethod: logisticsCostAllocationMethod('cost_allocation_method').default(
       'by_bottle',
@@ -3700,6 +3705,36 @@ export const logisticsRateCards = pgTable(
 
 export type LogisticsRateCard = typeof logisticsRateCards.$inferSelect;
 
+/** One person at a forwarder who receives quote requests */
+export interface ForwarderContact {
+  name?: string;
+  email: string;
+}
+
+/**
+ * Freight forwarders that quote for us
+ *
+ * Built from the quotes themselves rather than set up in advance: saving a
+ * quote from a forwarder not yet on file adds it, and the email addresses on
+ * its quotes become its contacts. Quotes keep their typed forwarder name too,
+ * so a quote from before this list existed still reads as it did.
+ */
+export const logisticsForwarders = pgTable(
+  'logistics_forwarders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull().unique(),
+    /** Lower-case domains its people write from, used to match a quote to it */
+    emailDomains: text('email_domains').array().notNull().default(sql`'{}'::text[]`),
+    contacts: jsonb('contacts').$type<ForwarderContact[]>().notNull().default([]),
+    isActive: boolean('is_active').notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [index('logistics_forwarders_active_idx').on(table.isActive)],
+);
+
+export type LogisticsForwarder = typeof logisticsForwarders.$inferSelect;
+
 /**
  * Freight quote status for tracking quote lifecycle
  */
@@ -3726,13 +3761,18 @@ export const logisticsQuotes = pgTable(
     forwarderName: text('forwarder_name').notNull(),
     forwarderContact: text('forwarder_contact'),
     forwarderEmail: text('forwarder_email'),
+    forwarderId: uuid('forwarder_id').references(() => logisticsForwarders.id, {
+      onDelete: 'set null',
+    }),
+    /** The forwarder's own reference for this quote, quoted back when we award it */
+    forwarderReference: text('forwarder_reference'),
 
     // Optional link to shipment
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, {
       onDelete: 'set null',
     }),
 
-    // Optional link to quote request (forward reference, relation defined separately)
+    // Optional link to quote request (FK to logistics_quote_requests added in the DB migration)
     requestId: uuid('request_id'),
 
     // Route details (for standalone quotes)
@@ -3745,6 +3785,9 @@ export const logisticsQuotes = pgTable(
     // Pricing
     totalPrice: doublePrecision('total_price').notNull(),
     currency: text('currency').notNull().default('USD'),
+    /** The total in USD at the rate on the day it was saved, so quotes in different currencies rank */
+    totalUsd: doublePrecision('total_usd'),
+    fxToUsd: doublePrecision('fx_to_usd'),
 
     // Transit details
     transitDays: integer('transit_days'),
@@ -3899,6 +3942,22 @@ export const logisticsQuoteRequests = pgTable(
     totalPallets: integer('total_pallets'),
     totalWeightKg: doublePrecision('total_weight_kg'),
     totalVolumeM3: doublePrecision('total_volume_m3'),
+    /** Bottles and 75cl equivalents (a magnum counts 2), so a quote reads per bottle */
+    totalBottles: integer('total_bottles'),
+    total75clEquivalents: doublePrecision('total_75cl_equivalents'),
+
+    // Where the request came from, so it opens with that cargo filled in
+    sourceType: text('source_type'), // 'shipment' | 'uk_move' | null when typed in
+    sourceId: uuid('source_id'),
+
+    /** The date forwarders are asked to reply by */
+    replyBy: timestamp('reply_by', { mode: 'date' }),
+
+    // What the client is quoted, against which forwarder quote, and when the
+    // client email was copied
+    clientPriceUsd: doublePrecision('client_price_usd'),
+    clientQuoteId: uuid('client_quote_id'),
+    clientQuotedAt: timestamp('client_quoted_at', { mode: 'date' }),
 
     // Special requirements
     requiresThermalLiner: boolean('requires_thermal_liner').notNull().default(false),
@@ -3963,6 +4022,61 @@ export const logisticsQuoteRequestAttachments = pgTable(
 ).enableRLS();
 
 export type LogisticsQuoteRequestAttachment = typeof logisticsQuoteRequestAttachments.$inferSelect;
+
+/**
+ * The forwarders a quote request went to, and where each one stands
+ *
+ * A row is added when a forwarder is chosen for the request; copying its
+ * email stamps `sentAt`, saving its quote moves it to `quoted`, and accepting
+ * another forwarder's quote moves it to `declined`.
+ */
+export const logisticsQuoteRequestRecipients = pgTable(
+  'logistics_quote_request_recipients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestId: uuid('request_id')
+      .references(() => logisticsQuoteRequests.id, { onDelete: 'cascade' })
+      .notNull(),
+    forwarderId: uuid('forwarder_id')
+      .references(() => logisticsForwarders.id, { onDelete: 'cascade' })
+      .notNull(),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
+    chasedAt: timestamp('chased_at', { mode: 'date' }),
+    outcome: text('outcome').notNull().default('awaiting'), // 'awaiting' | 'quoted' | 'declined'
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('logistics_quote_request_recipients_unique_idx').on(
+      table.requestId,
+      table.forwarderId,
+    ),
+  ],
+);
+
+export type LogisticsQuoteRequestRecipient = typeof logisticsQuoteRequestRecipients.$inferSelect;
+
+/**
+ * The forwarder's own quote document (PDF or image), kept with the quote it was read into
+ */
+export const logisticsQuoteAttachments = pgTable(
+  'logistics_quote_attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    quoteId: uuid('quote_id')
+      .references(() => logisticsQuotes.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileName: text('file_name').notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_quote_attachments_quote_id_idx').on(table.quoteId)],
+);
+
+export type LogisticsQuoteAttachment = typeof logisticsQuoteAttachments.$inferSelect;
 
 // ============================================================================
 // WINE EXCHANGE TABLES

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconChevronRight,
   IconFileInvoice,
   IconGitCompare,
@@ -27,6 +28,7 @@ import {
   secondaryButton,
   sectionHeading,
 } from '@/app/_logistics/components/exports/exportUi';
+import type { QuoteRequestNextStep } from '@/app/_logistics/utils/quoteRequestNextStep';
 import type {
   logisticsQuoteRequestStatus,
   logisticsQuoteStatus,
@@ -35,7 +37,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 type RequestStatus = (typeof logisticsQuoteRequestStatus.enumValues)[number];
 type QuoteStatus = (typeof logisticsQuoteStatus.enumValues)[number];
-type Focus = '' | 'awaiting' | 'decide' | 'completed' | 'standalone';
+type Focus = '' | 'action' | 'awaiting' | 'decide' | 'completed' | 'standalone';
 
 const requestStatusLabel: Record<RequestStatus, string> = {
   pending: 'Pending',
@@ -60,6 +62,24 @@ const quoteStatusTone: Record<QuoteStatus, Tone> = {
   rejected: 'red',
   expired: 'slate',
 };
+
+/** What each request is waiting on, as the list says it */
+const nextStepLabel: Record<QuoteRequestNextStep, { text: string; tone: Tone } | null> = {
+  choose_forwarders: { text: 'Choose forwarders', tone: 'amber' },
+  send: { text: 'Send to forwarders', tone: 'amber' },
+  chase: { text: 'Chase due', tone: 'red' },
+  awaiting: { text: 'Awaiting replies', tone: 'blue' },
+  price: { text: 'Price the client', tone: 'violet' },
+  send_price: { text: 'Send the client price', tone: 'violet' },
+  accept: { text: 'Awaiting the client', tone: 'blue' },
+  done: null,
+};
+
+const ACTION_STEPS: QuoteRequestNextStep[] = ['choose_forwarders', 'send', 'chase', 'price', 'send_price'];
+const DECIDE_STEPS: QuoteRequestNextStep[] = ['price', 'send_price', 'accept'];
+
+const usd = (n: number | null | undefined) =>
+  n == null ? '—' : `USD ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const modeLabel: Record<string, string> = {
   sea_fcl: 'Sea FCL',
@@ -102,7 +122,7 @@ const FreightQuotesPage = () => {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<RequestStatus | ''>('');
-  const [focus, setFocus] = useState<Focus>('');
+  const [focus, setFocus] = useState<Focus>('action');
   const [selected, setSelected] = useState<string[]>([]);
 
   const {
@@ -133,8 +153,9 @@ const FreightQuotesPage = () => {
   const standalone = quoteData?.quotes ?? [];
 
   const isOpen = (s: RequestStatus) => s !== 'completed' && s !== 'cancelled';
-  const awaiting = requests.filter((r) => isOpen(r.status) && !r.quotes.some((q) => isLive(q.status)));
-  const toDecide = requests.filter((r) => isOpen(r.status) && r.quotes.some((q) => q.status === 'pending'));
+  const needsAction = requests.filter((r) => ACTION_STEPS.includes(r.nextStep));
+  const awaiting = requests.filter((r) => r.nextStep === 'awaiting');
+  const toDecide = requests.filter((r) => DECIDE_STEPS.includes(r.nextStep));
   const completed = requests.filter((r) => r.status === 'completed');
 
   const tiles: {
@@ -148,9 +169,19 @@ const FreightQuotesPage = () => {
     valueTone?: string;
   }[] = [
     {
+      key: 'action',
+      label: 'Needs action',
+      sub: 'Send, chase or price',
+      value: needsAction.length,
+      icon: IconAlertCircle,
+      tone: 'border-red-100 from-red-50/50 dark:border-red-900/50 dark:from-red-500/10',
+      iconTone: 'bg-red-100/70 text-red-600 dark:bg-red-500/20',
+      valueTone: 'text-red-600',
+    },
+    {
       key: 'awaiting',
-      label: 'Awaiting quotes',
-      sub: 'Open, no live quote yet',
+      label: 'Awaiting replies',
+      sub: 'Sent, not yet due a chase',
       value: awaiting.length,
       icon: IconHourglass,
       tone: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10',
@@ -159,8 +190,8 @@ const FreightQuotesPage = () => {
     },
     {
       key: 'decide',
-      label: 'To decide',
-      sub: 'Quotes waiting to be accepted',
+      label: 'Quotes in',
+      sub: 'To price, send or accept',
       value: toDecide.length,
       icon: IconGitCompare,
       tone: 'border-violet-100 from-violet-50/50 dark:border-violet-900/50 dark:from-violet-500/10',
@@ -190,6 +221,7 @@ const FreightQuotesPage = () => {
 
   const shownRequests = requests.filter((r) => {
     if (focus === 'standalone') return false;
+    if (focus === 'action' && !needsAction.includes(r)) return false;
     if (focus === 'awaiting' && !awaiting.includes(r)) return false;
     if (focus === 'decide' && !toDecide.includes(r)) return false;
     if (focus === 'completed' && r.status !== 'completed') return false;
@@ -242,7 +274,7 @@ const FreightQuotesPage = () => {
           </Link>
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
           {tiles.map((tile) => {
             const active = focus === tile.key;
             const TileIcon = tile.icon;
@@ -312,13 +344,18 @@ const FreightQuotesPage = () => {
             <p className="py-12 text-center text-sm text-text-muted">Loading requests…</p>
           ) : shownRequests.length === 0 ? (
             <p className="py-12 text-center text-sm text-text-muted">
-              {requests.length ? 'No requests match.' : 'No quote requests yet. Open the first with New request.'}
+              {focus === 'action' && requests.length
+                ? 'Nothing needs action. Every request is with forwarders or the client.'
+                : requests.length
+                  ? 'No requests match.'
+                  : 'No quote requests yet. Open the first with New request.'}
             </p>
           ) : (
             <ul className="divide-y divide-border-muted">
               {shownRequests.map((r) => {
                 const live = r.quotes.filter((q) => isLive(q.status));
                 const best = live[0];
+                const step = nextStepLabel[r.nextStep];
                 const pendingCount = r.quotes.filter((q) => q.status === 'pending').length;
                 const compareIds = (live.length >= 2 ? live : r.quotes).slice(0, MAX_COMPARE).map((q) => q.id);
                 const href = `/platform/admin/logistics/requests/${r.id}`;
@@ -338,7 +375,11 @@ const FreightQuotesPage = () => {
                           <span className="font-mono text-sm font-semibold text-text-primary group-hover:underline">
                             {r.requestNumber}
                           </span>
-                          <span className={pillClass(requestStatusTone[r.status])}>{requestStatusLabel[r.status]}</span>
+                          {step ? (
+                            <span className={pillClass(step.tone)}>{step.text}</span>
+                          ) : (
+                            <span className={pillClass(requestStatusTone[r.status])}>{requestStatusLabel[r.status]}</span>
+                          )}
                           {(r.priority === 'high' || r.priority === 'urgent') && (
                             <span className={pillClass(r.priority === 'urgent' ? 'red' : 'amber')}>
                               {titleCase(r.priority)}
@@ -370,8 +411,11 @@ const FreightQuotesPage = () => {
                           {r.quotes.length === 0
                             ? 'No quotes yet'
                             : `${r.quotes.length} quote${r.quotes.length === 1 ? '' : 's'}`}
-                          {best && r.quotes.length > 0 ? ` · best ${money(best.totalPrice, best.currency)}` : ''}
+                          {best && r.quotes.length > 0
+                            ? ` · best ${best.per75clUsd != null ? `${usd(best.per75clUsd)} per 75cl` : money(best.totalPrice, best.currency)}`
+                            : ''}
                           {pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
+                          {r.marginUsd != null ? ` · margin ${usd(r.marginUsd)}` : ''}
                         </span>
                         {compareIds.length >= 2 && (
                           <Link
@@ -392,6 +436,23 @@ const FreightQuotesPage = () => {
                       </div>
                     </div>
 
+                    {r.recipients.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {r.recipients.map((x) => (
+                          <span
+                            key={x.forwarderId}
+                            className={pillClass(
+                              x.outcome === 'quoted' ? 'emerald' : x.outcome === 'declined' ? 'slate' : x.sentAt ? 'blue' : 'amber',
+                            )}
+                          >
+                            {x.name}
+                            {' · '}
+                            {x.outcome === 'quoted' ? 'quoted' : x.outcome === 'declined' ? 'not chosen' : x.sentAt ? 'asked' : 'not sent'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {r.quotes.length > 0 && (
                       <ul className="mt-2 space-y-1 border-l-2 border-border-muted pl-3">
                         {r.quotes.map((q) => (
@@ -406,6 +467,9 @@ const FreightQuotesPage = () => {
                                 <span className="hidden text-xs text-text-muted sm:inline">{q.transitDays} days</span>
                               ) : null}
                               <span className="tabular-nums text-text-primary">{money(q.totalPrice, q.currency)}</span>
+                              {q.per75clUsd != null && (
+                                <span className="hidden tabular-nums text-xs text-text-muted md:inline">{usd(q.per75clUsd)} / 75cl</span>
+                              )}
                               {best && q.id === best.id && live.length > 1 && (
                                 <span className={pillClass('emerald')}>Best price</span>
                               )}

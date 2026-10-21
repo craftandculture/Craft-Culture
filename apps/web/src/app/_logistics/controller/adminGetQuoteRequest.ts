@@ -1,15 +1,23 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  logisticsForwarders,
+  logisticsQuoteAttachments,
+  logisticsQuoteLineItems,
   logisticsQuoteRequestAttachments,
+  logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
   users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import getSuggestedClientPrice from '../data/getSuggestedClientPrice';
+import quoteTotalUsd from '../utils/quoteTotalUsd';
+import quoteUnitPrices from '../utils/quoteUnitPrices';
 
 /**
  * Get a single quote request with full details
@@ -18,47 +26,12 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  */
 const adminGetQuoteRequest = adminProcedure
   .input(z.object({ requestId: z.string().uuid() }))
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     const { requestId } = input;
 
     // Get request with requester info
     const [request] = await db
-      .select({
-        id: logisticsQuoteRequests.id,
-        requestNumber: logisticsQuoteRequests.requestNumber,
-        status: logisticsQuoteRequests.status,
-        priority: logisticsQuoteRequests.priority,
-        requestedAt: logisticsQuoteRequests.requestedAt,
-        assignedAt: logisticsQuoteRequests.assignedAt,
-        completedAt: logisticsQuoteRequests.completedAt,
-        cancellationReason: logisticsQuoteRequests.cancellationReason,
-        originCountry: logisticsQuoteRequests.originCountry,
-        originCity: logisticsQuoteRequests.originCity,
-        originWarehouse: logisticsQuoteRequests.originWarehouse,
-        destinationCountry: logisticsQuoteRequests.destinationCountry,
-        destinationCity: logisticsQuoteRequests.destinationCity,
-        destinationWarehouse: logisticsQuoteRequests.destinationWarehouse,
-        transportMode: logisticsQuoteRequests.transportMode,
-        productType: logisticsQuoteRequests.productType,
-        productDescription: logisticsQuoteRequests.productDescription,
-        totalCases: logisticsQuoteRequests.totalCases,
-        totalPallets: logisticsQuoteRequests.totalPallets,
-        totalWeightKg: logisticsQuoteRequests.totalWeightKg,
-        totalVolumeM3: logisticsQuoteRequests.totalVolumeM3,
-        requiresThermalLiner: logisticsQuoteRequests.requiresThermalLiner,
-        requiresTracker: logisticsQuoteRequests.requiresTracker,
-        requiresInsurance: logisticsQuoteRequests.requiresInsurance,
-        temperatureControlled: logisticsQuoteRequests.temperatureControlled,
-        minTemperature: logisticsQuoteRequests.minTemperature,
-        maxTemperature: logisticsQuoteRequests.maxTemperature,
-        targetPickupDate: logisticsQuoteRequests.targetPickupDate,
-        targetDeliveryDate: logisticsQuoteRequests.targetDeliveryDate,
-        isFlexibleDates: logisticsQuoteRequests.isFlexibleDates,
-        notes: logisticsQuoteRequests.notes,
-        internalNotes: logisticsQuoteRequests.internalNotes,
-        createdAt: logisticsQuoteRequests.createdAt,
-        updatedAt: logisticsQuoteRequests.updatedAt,
-      })
+      .select()
       .from(logisticsQuoteRequests)
       .where(eq(logisticsQuoteRequests.id, requestId));
 
@@ -106,21 +79,76 @@ const adminGetQuoteRequest = adminProcedure
       .from(logisticsQuoteRequestAttachments)
       .where(eq(logisticsQuoteRequestAttachments.requestId, requestId));
 
-    // Get linked quotes
-    const quotes = await db
+    // Linked quotes, priced in USD per bottle and per 75cl, cheapest per 75cl first
+    const quoteRows = await db
       .select({
         id: logisticsQuotes.id,
         quoteNumber: logisticsQuotes.quoteNumber,
+        forwarderId: logisticsQuotes.forwarderId,
         forwarderName: logisticsQuotes.forwarderName,
+        forwarderEmail: logisticsQuotes.forwarderEmail,
+        forwarderReference: logisticsQuotes.forwarderReference,
         totalPrice: logisticsQuotes.totalPrice,
         currency: logisticsQuotes.currency,
+        totalUsd: logisticsQuotes.totalUsd,
         transitDays: logisticsQuotes.transitDays,
         status: logisticsQuotes.status,
         validUntil: logisticsQuotes.validUntil,
+        shipmentId: logisticsQuotes.shipmentId,
         createdAt: logisticsQuotes.createdAt,
       })
       .from(logisticsQuotes)
       .where(eq(logisticsQuotes.requestId, requestId));
+
+    const quoteIds = quoteRows.map((q) => q.id);
+    const [lines, quoteFiles] = quoteIds.length
+      ? await Promise.all([
+          db
+            .select({ quoteId: logisticsQuoteLineItems.quoteId, category: logisticsQuoteLineItems.category })
+            .from(logisticsQuoteLineItems)
+            .where(inArray(logisticsQuoteLineItems.quoteId, quoteIds)),
+          db
+            .select()
+            .from(logisticsQuoteAttachments)
+            .where(inArray(logisticsQuoteAttachments.quoteId, quoteIds)),
+        ])
+      : [[], []];
+
+    const now = Date.now();
+    const quotes = quoteRows
+      .map((q) => {
+        const usd = quoteTotalUsd(q);
+
+        return {
+          ...q,
+          totalUsd: usd,
+          ...quoteUnitPrices(usd, request.totalBottles, request.total75clEquivalents),
+          isExpired: q.status === 'expired' || (q.status === 'pending' && !!q.validUntil && q.validUntil.getTime() < now),
+          categories: [...new Set(lines.filter((l) => l.quoteId === q.id).map((l) => l.category))],
+          attachments: quoteFiles.filter((f) => f.quoteId === q.id),
+        };
+      })
+      .sort(
+        (a, b) =>
+          (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+      );
+
+    // The forwarders asked, with their contacts, so the page writes their emails
+    const recipients = await db
+      .select({
+        forwarderId: logisticsQuoteRequestRecipients.forwarderId,
+        sentAt: logisticsQuoteRequestRecipients.sentAt,
+        chasedAt: logisticsQuoteRequestRecipients.chasedAt,
+        outcome: logisticsQuoteRequestRecipients.outcome,
+        name: logisticsForwarders.name,
+        contacts: logisticsForwarders.contacts,
+      })
+      .from(logisticsQuoteRequestRecipients)
+      .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+      .where(eq(logisticsQuoteRequestRecipients.requestId, requestId))
+      .orderBy(asc(logisticsForwarders.name));
+
+    const suggestedClientPrice = await getSuggestedClientPrice(request);
 
     return {
       ...request,
@@ -129,6 +157,10 @@ const adminGetQuoteRequest = adminProcedure
       completedByUser,
       attachments,
       quotes,
+      recipients,
+      suggestedClientPrice,
+      /** Signs the emails the page writes */
+      senderName: ctx.user.name || 'Craft & Culture',
     };
   });
 

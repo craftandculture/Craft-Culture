@@ -1,10 +1,19 @@
 import { and, asc, count, desc, eq, ilike, inArray, lt, or } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsQuoteRequests, logisticsQuotes, users } from '@/database/schema';
+import {
+  logisticsForwarders,
+  logisticsQuoteRequestRecipients,
+  logisticsQuoteRequests,
+  logisticsQuotes,
+  users,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
+import quoteRequestNextStep from '../utils/quoteRequestNextStep';
+import quoteTotalUsd from '../utils/quoteTotalUsd';
+import quoteUnitPrices from '../utils/quoteUnitPrices';
 
 /**
  * List quote requests with filtering and pagination
@@ -77,6 +86,12 @@ const adminGetQuoteRequests = adminProcedure
         totalCases: logisticsQuoteRequests.totalCases,
         totalPallets: logisticsQuoteRequests.totalPallets,
         totalWeightKg: logisticsQuoteRequests.totalWeightKg,
+        totalBottles: logisticsQuoteRequests.totalBottles,
+        total75clEquivalents: logisticsQuoteRequests.total75clEquivalents,
+        replyBy: logisticsQuoteRequests.replyBy,
+        clientPriceUsd: logisticsQuoteRequests.clientPriceUsd,
+        clientQuoteId: logisticsQuoteRequests.clientQuoteId,
+        clientQuotedAt: logisticsQuoteRequests.clientQuotedAt,
         requiresThermalLiner: logisticsQuoteRequests.requiresThermalLiner,
         requiresTracker: logisticsQuoteRequests.requiresTracker,
         targetPickupDate: logisticsQuoteRequests.targetPickupDate,
@@ -117,6 +132,7 @@ const adminGetQuoteRequests = adminProcedure
             forwarderName: logisticsQuotes.forwarderName,
             totalPrice: logisticsQuotes.totalPrice,
             currency: logisticsQuotes.currency,
+            totalUsd: logisticsQuotes.totalUsd,
             transitDays: logisticsQuotes.transitDays,
             status: logisticsQuotes.status,
             validUntil: logisticsQuotes.validUntil,
@@ -126,11 +142,50 @@ const adminGetQuoteRequests = adminProcedure
           .orderBy(asc(logisticsQuotes.totalPrice))
       : [];
 
+    const recipientRows = requestIds.length
+      ? await db
+          .select({
+            requestId: logisticsQuoteRequestRecipients.requestId,
+            forwarderId: logisticsQuoteRequestRecipients.forwarderId,
+            name: logisticsForwarders.name,
+            sentAt: logisticsQuoteRequestRecipients.sentAt,
+            chasedAt: logisticsQuoteRequestRecipients.chasedAt,
+            outcome: logisticsQuoteRequestRecipients.outcome,
+          })
+          .from(logisticsQuoteRequestRecipients)
+          .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+          .where(inArray(logisticsQuoteRequestRecipients.requestId, requestIds))
+          .orderBy(asc(logisticsForwarders.name))
+      : [];
+
     return {
-      requests: items.map((r) => ({
-        ...r,
-        quotes: quoteRows.filter((q) => q.requestId === r.id),
-      })),
+      requests: items.map((r) => {
+        // Ranked in USD per 75cl, so a quote in pounds and one in dollars compare
+        const quotes = quoteRows
+          .filter((q) => q.requestId === r.id)
+          .map((q) => {
+            const usd = quoteTotalUsd(q);
+
+            return { ...q, totalUsd: usd, ...quoteUnitPrices(usd, r.totalBottles, r.total75clEquivalents) };
+          })
+          .sort(
+            (a, b) =>
+              (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+          );
+        const recipients = recipientRows.filter((x) => x.requestId === r.id);
+        const chosen = quotes.find((q) => q.id === r.clientQuoteId);
+
+        return {
+          ...r,
+          quotes,
+          recipients,
+          nextStep: quoteRequestNextStep({ ...r, quotes, recipients }),
+          marginUsd:
+            r.clientPriceUsd != null && chosen?.totalUsd != null
+              ? Math.round((r.clientPriceUsd - chosen.totalUsd) * 100) / 100
+              : null,
+        };
+      }),
       totalCount: countResult?.count ?? 0,
       nextCursor,
     };

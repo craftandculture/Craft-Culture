@@ -121,6 +121,9 @@ export const digestUrl = (s: { id: string; jobNumber?: string | null }) =>
 
 export const quoteUrl = (id: string) => `${LOGISTICS_BOARD_URL}/quotes/${id}`;
 
+/** A quote request's own page, where its forwarders, quotes and emails are */
+export const quoteRequestUrl = (id: string) => `${LOGISTICS_BOARD_URL}/requests/${id}`;
+
 export { shortDate };
 
 /**

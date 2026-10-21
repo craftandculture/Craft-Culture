@@ -1023,6 +1023,14 @@ const ShipmentDetailPage = () => {
                 <Icon icon={IconArrowRight} size="sm" />
               </Link>
             )}
+            {shipment.status !== 'delivered' && shipment.status !== 'cancelled' && (
+              <Link
+                href={`/platform/admin/logistics/requests/new?sourceType=shipment&sourceId=${shipmentId}`}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-primary px-3 text-sm font-medium text-text-primary transition-colors hover:bg-fill-primary-hover"
+              >
+                Get freight quotes
+              </Link>
+            )}
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               <Icon icon={IconRefresh} size="sm" />
             </Button>

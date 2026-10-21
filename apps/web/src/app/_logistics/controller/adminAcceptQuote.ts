@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
   logisticsShipmentActivityLogs,
@@ -14,6 +15,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import generateShipmentNumber from '../utils/generateShipmentNumber';
+import quoteTotalUsd from '../utils/quoteTotalUsd';
 import resolveFxToUsd from '../utils/resolveFxToUsd';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
 
@@ -79,6 +81,13 @@ const adminAcceptQuote = adminProcedure.input(acceptQuoteSchema).mutation(async 
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: `Cannot accept quote with status "${quote.status}"`,
+    });
+  }
+
+  if (quote.validUntil && quote.validUntil.getTime() < Date.now()) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Quote ${quote.quoteNumber} expired on ${quote.validUntil.toISOString().slice(0, 10)}; ask the forwarder to confirm or reissue it`,
     });
   }
 
@@ -235,6 +244,36 @@ const adminAcceptQuote = adminProcedure.input(acceptQuoteSchema).mutation(async 
       }
     }
 
+    // What the client was quoted rides with the shipment, so its margin is known later
+    let clientPriceRecorded = false;
+
+    if (targetShipmentId && request?.clientPriceUsd != null) {
+      const costUsd = quoteTotalUsd(quote) ?? (quote.fxToUsd ? quote.totalPrice * quote.fxToUsd : null);
+
+      await db
+        .update(logisticsShipments)
+        .set({
+          clientPriceUsd: request.clientPriceUsd,
+          quotedMarginUsd: costUsd == null ? null : Math.round((request.clientPriceUsd - costUsd) * 100) / 100,
+          updatedAt: now,
+        })
+        .where(eq(logisticsShipments.id, targetShipmentId));
+      clientPriceRecorded = true;
+    }
+
+    // Every other forwarder asked has lost this one
+    if (quote.requestId) {
+      await db
+        .update(logisticsQuoteRequestRecipients)
+        .set({ outcome: 'declined', updatedAt: now })
+        .where(
+          and(
+            eq(logisticsQuoteRequestRecipients.requestId, quote.requestId),
+            quote.forwarderId ? ne(logisticsQuoteRequestRecipients.forwarderId, quote.forwarderId) : undefined,
+          ),
+        );
+    }
+
     let requestCompleted = false;
 
     if (request && request.status !== 'completed' && request.status !== 'cancelled') {
@@ -263,6 +302,7 @@ const adminAcceptQuote = adminProcedure.input(acceptQuoteSchema).mutation(async 
       shipmentId: targetShipmentId,
       createdShipmentNumber,
       freightCostRecorded,
+      clientPriceRecorded,
       requestCompleted,
     };
   } catch (error) {

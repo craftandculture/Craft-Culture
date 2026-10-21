@@ -3,8 +3,11 @@ import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsQuoteLineItems, logisticsQuotes } from '@/database/schema';
+import { logisticsQuoteLineItems, logisticsQuoteRequests, logisticsQuotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import quoteTotalUsd from '../utils/quoteTotalUsd';
+import quoteUnitPrices from '../utils/quoteUnitPrices';
 
 const compareQuotesSchema = z.object({
   quoteIds: z.array(z.string().uuid()).min(2).max(5),
@@ -47,24 +50,47 @@ const adminCompareQuotes = adminProcedure.input(compareQuotesSchema).query(async
     lineItemsByQuote.set(item.quoteId, existing);
   }
 
-  // Build comparison data
-  const quotesWithItems = quotes.map((quote) => ({
-    ...quote,
-    lineItems: lineItemsByQuote.get(quote.id) || [],
-  }));
+  // Quotes answering one request price per bottle and per 75cl of its cargo
+  const requestIds = [...new Set(quotes.map((q) => q.requestId).filter((id): id is string => !!id))];
+  const requests = requestIds.length
+    ? await db
+        .select({
+          id: logisticsQuoteRequests.id,
+          totalBottles: logisticsQuoteRequests.totalBottles,
+          total75clEquivalents: logisticsQuoteRequests.total75clEquivalents,
+        })
+        .from(logisticsQuoteRequests)
+        .where(inArray(logisticsQuoteRequests.id, requestIds))
+    : [];
 
-  // Calculate comparison metrics
-  const prices = quotes.map((q) => q.totalPrice);
+  // Build comparison data, every total also in USD so currencies compare
+  const quotesWithItems = quotes.map((quote) => {
+    const usd = quoteTotalUsd(quote);
+    const request = requests.find((r) => r.id === quote.requestId);
+
+    return {
+      ...quote,
+      totalUsd: usd,
+      ...quoteUnitPrices(usd, request?.totalBottles ?? null, request?.total75clEquivalents ?? null),
+      lineItems: lineItemsByQuote.get(quote.id) || [],
+    };
+  });
+
+  // Metrics are in USD when every quote converts; otherwise in the quotes' own figures, flagged
+  const allInUsd = quotesWithItems.every((q) => q.totalUsd != null);
+  const priceOf = (q: (typeof quotesWithItems)[number]) => (allInUsd ? q.totalUsd! : q.totalPrice);
+  const prices = quotesWithItems.map(priceOf);
   const transitDays = quotes.map((q) => q.transitDays).filter((d): d is number => d !== null);
 
   const comparison = {
+    currency: allInUsd ? 'USD' : null,
     lowestPrice: Math.min(...prices),
     highestPrice: Math.max(...prices),
     averagePrice: prices.reduce((a, b) => a + b, 0) / prices.length,
     priceDifference: Math.max(...prices) - Math.min(...prices),
     fastestTransit: transitDays.length > 0 ? Math.min(...transitDays) : null,
     slowestTransit: transitDays.length > 0 ? Math.max(...transitDays) : null,
-    lowestPriceQuoteId: quotes.find((q) => q.totalPrice === Math.min(...prices))?.id,
+    lowestPriceQuoteId: quotesWithItems.find((q) => priceOf(q) === Math.min(...prices))?.id,
     fastestQuoteId:
       transitDays.length > 0
         ? quotes.find((q) => q.transitDays === Math.min(...transitDays))?.id

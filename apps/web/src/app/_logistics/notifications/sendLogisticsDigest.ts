@@ -9,12 +9,15 @@ import {
   type WeeklySummary,
   digestUrl,
   logisticsDigestMessage,
+  quoteRequestUrl,
   quoteUrl,
   shortDate,
   weeklySummaryMessage,
 } from './logisticsSlackMessages';
 import postLogisticsSlack from './postLogisticsSlack';
+import expireLapsedQuotes from '../data/expireLapsedQuotes';
 import getAttentionGroups from '../data/getAttentionGroups';
+import getOpenQuoteRequestSteps from '../data/getOpenQuoteRequestSteps';
 import NOT_ARRIVED_STATUSES from '../utils/notArrivedStatuses';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -112,7 +115,7 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
   const in3Days = new Date(now.getTime() + 3 * DAY);
   const in7Days = new Date(now.getTime() + 7 * DAY);
 
-  const [groups, arriving, quotes, awaitingDocs] = await Promise.all([
+  const [groups, arriving, quotes, awaitingDocs, requestSteps] = await Promise.all([
     getAttentionGroups(now),
     db
       .select({
@@ -156,7 +159,10 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
       .from(logisticsJobs)
       .where(and(eq(logisticsJobs.kind, 'export'), eq(logisticsJobs.stage, 'shipped')))
       .orderBy(logisticsJobs.jobNumber),
+    // A read that fails (a migration not yet run) leaves these sections empty, not the digest
+    getOpenQuoteRequestSteps(now).catch(() => []),
   ]);
+  const route = (r: (typeof requestSteps)[number]) => `${r.originCountry} to ${r.destinationCountry}`;
 
   type BoardRow = (typeof groups)[number]['shipments'][number];
   const fromBoard = (key: string, note?: (s: BoardRow) => string | null): DigestItem[] =>
@@ -206,6 +212,20 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
     { title: 'No cases or bottles entered', action: true, items: fromBoard('no_quantities') },
     { title: 'Export jobs with no invoice', action: true, items: fromBoard('no_invoice') },
     {
+      title: 'Forwarders to chase for a quote',
+      action: true,
+      items: requestSteps
+        .filter((r) => r.nextStep === 'chase')
+        .map((r) => ({ ref: r.requestNumber, url: quoteRequestUrl(r.id), name: route(r), note: r.awaiting.join(', ') || null })),
+    },
+    {
+      title: 'Freight priced, client not yet sent the price',
+      action: true,
+      items: requestSteps
+        .filter((r) => r.nextStep === 'send_price')
+        .map((r) => ({ ref: r.requestNumber, url: quoteRequestUrl(r.id), name: route(r) })),
+    },
+    {
       title: 'Quotes expiring within 7 days',
       action: false,
       items: quotes.map((q) => ({
@@ -229,6 +249,8 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
  * @returns What was posted, and why a post did not go if it did not
  */
 const sendLogisticsDigest = async (now = new Date()) => {
+  // Lapsed quotes stop being offered before the digest lists what is left
+  await expireLapsedQuotes(now).catch(() => 0);
   const sections = await getDigestSections(now);
   const text = logisticsDigestMessage(sections, mentionText());
   const digestFailure = text ? await postLogisticsSlack(text) : null;

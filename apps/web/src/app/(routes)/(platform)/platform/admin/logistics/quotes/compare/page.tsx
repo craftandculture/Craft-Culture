@@ -247,9 +247,19 @@ const QuoteComparePage = () => {
                         >
                           {formatCurrency(quote.totalPrice, quote.currency)}
                         </Typography>
-                        {isLowestPrice && quotes.length > 1 && (
+                        {comparison.currency && quote.currency.toUpperCase() !== 'USD' && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {formatCurrency(quote.totalUsd)} in USD
+                          </Typography>
+                        )}
+                        {quote.per75clUsd != null && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            USD {quote.per75clUsd.toFixed(2)} per 75cl · USD {quote.perBottleUsd?.toFixed(2) ?? "—"} per bottle
+                          </Typography>
+                        )}
+                        {isLowestPrice && quotes.length > 1 && comparison.currency && (
                           <Typography variant="bodyXs" className="text-green-600 mt-1">
-                            Save {formatCurrency(comparison.highestPrice - quote.totalPrice)}
+                            Save {formatCurrency(comparison.highestPrice - (quote.totalUsd ?? quote.totalPrice))}
                           </Typography>
                         )}
                       </div>

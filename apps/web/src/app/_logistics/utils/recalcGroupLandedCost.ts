@@ -8,24 +8,10 @@ import {
   logisticsShipments,
 } from '@/database/schema';
 
+import item75clEquivalents from './item75clEquivalents';
+import itemBottles from './itemBottles';
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
-
-const bottlesOf = (i: {
-  totalBottles: number | null;
-  cases: number;
-  bottlesPerCase: number | null;
-}) => i.totalBottles ?? i.cases * (i.bottlesPerCase ?? 12);
-
-/**
- * 75cl-equivalent units — a 1500ml magnum = 2, a 3000ml = 4, etc. Freight is
- * split on this so larger formats carry their fair share.
- */
-const equivOf = (i: {
-  totalBottles: number | null;
-  cases: number;
-  bottlesPerCase: number | null;
-  bottleSizeMl: number | null;
-}) => bottlesOf(i) * ((i.bottleSizeMl ?? 750) / 750);
 
 /** Tolerance when comparing stored figures with a fresh allocation. */
 const STALE_EPSILON = 0.005;
@@ -130,13 +116,13 @@ const recalcGroupLandedCost = async (
     }
   }
 
-  const totalBottles = items.reduce((s, i) => s + bottlesOf(i), 0);
-  const totalEquiv = items.reduce((s, i) => s + equivOf(i), 0);
+  const totalBottles = items.reduce((s, i) => s + itemBottles(i), 0);
+  const totalEquiv = items.reduce((s, i) => s + item75clEquivalents(i), 0);
   const equivByShipment = new Map<string, number>();
   for (const i of items) {
     equivByShipment.set(
       i.shipmentId,
-      (equivByShipment.get(i.shipmentId) ?? 0) + equivOf(i),
+      (equivByShipment.get(i.shipmentId) ?? 0) + item75clEquivalents(i),
     );
   }
 
@@ -146,8 +132,8 @@ const recalcGroupLandedCost = async (
   const landedByShipment = new Map<string, number>();
 
   for (const item of items) {
-    const bottles = bottlesOf(item);
-    const equiv = equivOf(item);
+    const bottles = itemBottles(item);
+    const equiv = item75clEquivalents(item);
     const productCost = bottles * (item.productCostPerBottle ?? 0);
     const sharedShare = totalEquiv > 0 ? sharedUsd * (equiv / totalEquiv) : 0;
     const shipEquiv = equivByShipment.get(item.shipmentId) ?? 0;

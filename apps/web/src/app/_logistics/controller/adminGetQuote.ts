@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  logisticsQuoteAttachments,
   logisticsQuoteLineItems,
   logisticsQuoteRequests,
   logisticsQuotes,
@@ -54,7 +55,7 @@ const adminGetQuote = adminProcedure
     }
 
     // Run all secondary queries in parallel for better performance
-    const [lineItems, acceptedByResult, rejectedByResult, requestResult] = await Promise.all([
+    const [lineItems, acceptedByResult, rejectedByResult, requestResult, attachments] = await Promise.all([
       // Get line items
       db
         .select()
@@ -97,6 +98,9 @@ const adminGetQuote = adminProcedure
             .where(eq(logisticsQuoteRequests.id, result.quote.requestId))
             .limit(1)
         : Promise.resolve([]),
+
+      // The forwarder's own document, where it was kept
+      db.select().from(logisticsQuoteAttachments).where(eq(logisticsQuoteAttachments.quoteId, id)),
     ]);
 
     const acceptedByUser = acceptedByResult[0] || null;
@@ -110,6 +114,7 @@ const adminGetQuote = adminProcedure
       rejectedByUser,
       request: requestResult[0] ?? null,
       lineItems,
+      attachments,
     };
   });
 

@@ -156,6 +156,12 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
         <label className="text-text-muted text-[11px] font-semibold">
           Freight, Burton → UAE (USD)
           <input className={field} inputMode="decimal" value={freight} onChange={(event) => setFreight(event.target.value)} />
+          <a
+            href={`/platform/admin/logistics/requests/new?sourceType=uk_move&sourceId=${move.id}`}
+            className="text-text-brand mt-0.5 block font-normal hover:underline"
+          >
+            Get forwarder quotes for this move
+          </a>
         </label>
         <label className="text-text-muted text-[11px] font-semibold">
           LCB charges at cost (USD)

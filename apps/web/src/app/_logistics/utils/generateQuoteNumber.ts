@@ -1,30 +1,34 @@
-import { count, like } from 'drizzle-orm';
+import { desc, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsQuotes } from '@/database/schema';
 
 /**
- * Generate a unique quote number in the format QTE-YYYY-XXXX
+ * Generate the next freight quote number, QTE-YYYY-NNNN
+ *
+ * The next after the highest on file this year, not a count of rows, so a
+ * deleted quote can never hand its number to a new one. Callers retry on the
+ * unique index when two saves pick the same number (see `isUniqueViolation`).
  *
  * @example
- *   generateQuoteNumber(); // returns 'QTE-2026-0001'
+ *   await generateQuoteNumber(); // 'QTE-2026-0042'
  *
- * @returns A unique quote number string
+ * @returns The next quote number
  */
 const generateQuoteNumber = async () => {
   const year = new Date().getFullYear();
   const prefix = `QTE-${year}-`;
 
-  // Count existing quotes for this year
-  const [result] = await db
-    .select({ count: count() })
+  const [latest] = await db
+    .select({ quoteNumber: logisticsQuotes.quoteNumber })
     .from(logisticsQuotes)
-    .where(like(logisticsQuotes.quoteNumber, `${prefix}%`));
+    .where(like(logisticsQuotes.quoteNumber, `${prefix}%`))
+    .orderBy(desc(logisticsQuotes.quoteNumber))
+    .limit(1);
 
-  const nextNumber = (result?.count ?? 0) + 1;
-  const paddedNumber = nextNumber.toString().padStart(4, '0');
+  const last = Number(latest?.quoteNumber.slice(prefix.length)) || 0;
 
-  return `${prefix}${paddedNumber}`;
+  return `${prefix}${(last + 1).toString().padStart(4, '0')}`;
 };
 
 export default generateQuoteNumber;

@@ -8,6 +8,10 @@ const createQuoteSchema = z.object({
   forwarderName: z.string().min(1, 'Forwarder name is required'),
   forwarderContact: z.string().optional(),
   forwarderEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  /** The forwarder on file; when missing it is found or added from the name and email */
+  forwarderId: z.string().uuid().optional(),
+  /** The forwarder's own reference for this quote */
+  forwarderReference: z.string().optional(),
 
   // Optional link to shipment
   shipmentId: z.string().uuid().optional(),

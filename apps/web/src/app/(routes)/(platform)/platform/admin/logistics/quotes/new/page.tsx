@@ -11,6 +11,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import pendingQuoteDraft from '@/app/_logistics/utils/pendingQuoteDraft';
+import type { PendingQuoteDraft } from '@/app/_logistics/utils/pendingQuoteDraft';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -63,6 +65,8 @@ const categoryOptions = [
  * Opened from a quote request (?requestId=) it answers that request: the
  * route, transport mode and cargo are copied from it and the quote is linked
  * to it. Opened from a shipment (?shipmentId=) it is linked to that shipment.
+ * Opened with ?draft=1 from a request's drop zone, it starts filled in with
+ * the quote read from the forwarder's document, which is kept with the quote.
  */
 const NewQuotePage = () => {
   const router = useRouter();
@@ -79,6 +83,8 @@ const NewQuotePage = () => {
   const [forwarderName, setForwarderName] = useState('');
   const [forwarderContact, setForwarderContact] = useState('');
   const [forwarderEmail, setForwarderEmail] = useState('');
+  const [forwarderReference, setForwarderReference] = useState('');
+  const [forwarderId, setForwarderId] = useState<string | undefined>(undefined);
   const [originCountry, setOriginCountry] = useState('');
   const [originCity, setOriginCity] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('');
@@ -106,6 +112,33 @@ const NewQuotePage = () => {
     enabled: !!requestId,
   });
 
+  // A quote read from the forwarder's document fills the form once; the person checks it
+  const [read, setRead] = useState<PendingQuoteDraft | null>(null);
+  useEffect(() => {
+    if (searchParams.get('draft') !== '1') return;
+    const taken = pendingQuoteDraft();
+    if (!taken || taken.requestId !== requestId) return;
+    const d = taken.draft;
+    setRead(taken);
+    setForwarderId(d.forwarderId ?? undefined);
+    setForwarderName(d.matchedForwarderName ?? d.forwarderName);
+    setForwarderContact(d.contactName ?? '');
+    setForwarderEmail(d.forwarderEmail ?? '');
+    setForwarderReference(d.forwarderReference ?? '');
+    setCurrency(d.currency || 'USD');
+    setTransitDays(d.transitDays ?? '');
+    setValidUntil(d.validUntil ?? '');
+    if (d.transportMode) setTransportMode(d.transportMode);
+    setNotes(d.notes ?? '');
+    setLineItems(
+      d.lineItems.length
+        ? d.lineItems.map((l) => ({ category: l.category, description: l.description, unitPrice: null, quantity: 1, total: l.total, currency: null }))
+        : [{ category: 'Freight', description: 'Freight', unitPrice: null, quantity: 1, total: d.totalPrice, currency: null }],
+    );
+  }, [requestId, searchParams]);
+
+  const { mutateAsync: uploadAttachment } = useMutation(api.logistics.admin.quotes.uploadAttachment.mutationOptions());
+
   // Copy the request's route once it loads, without overwriting anything typed
   const prefilledFrom = useRef<string | null>(null);
   useEffect(() => {
@@ -121,12 +154,21 @@ const NewQuotePage = () => {
   // Create mutation
   const { mutate: createQuote, isPending } = useMutation({
     ...api.logistics.admin.quotes.create.mutationOptions(),
-    onSuccess: (result) => {
-      toast.success('Quote created successfully');
+    onSuccess: async (result) => {
+      toast.success('Quote saved');
+      if (read?.file) {
+        await uploadAttachment({
+          quoteId: result.id,
+          fileName: read.file.fileName,
+          fileData: read.file.base64,
+          mimeType: read.file.mimeType,
+        }).catch(() => toast.error('The quote was saved, but its document could not be attached'));
+      }
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes', 'getMany']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
-      router.push(`/platform/admin/logistics/quotes/${result.id}`);
+      // Back to the request, where the quote now ranks against the others
+      router.push(requestId ? backHref : `/platform/admin/logistics/quotes/${result.id}`);
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create quote');
@@ -179,6 +221,8 @@ const NewQuotePage = () => {
       forwarderName,
       forwarderContact: forwarderContact || undefined,
       forwarderEmail: forwarderEmail || undefined,
+      forwarderId: forwarderId && forwarderName === (read?.draft.matchedForwarderName ?? '') ? forwarderId : undefined,
+      forwarderReference: forwarderReference || undefined,
       shipmentId,
       requestId,
       originCountry: originCountry || undefined,
@@ -290,13 +334,40 @@ const NewQuotePage = () => {
           </Card>
         )}
 
+        {read && (
+          <div
+            className={`rounded-xl border p-4 text-sm ${
+              read.draft.linesMatchTotal
+                ? 'border-border-muted bg-surface-secondary/40 text-text-primary'
+                : 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-500/10 dark:text-amber-200'
+            }`}
+          >
+            <p className="font-medium">
+              Read from {read.file ? read.file.fileName : 'the pasted email'}. Check every figure against the document before saving.
+            </p>
+            <p className="mt-1">
+              Currency <strong>{read.draft.currency}</strong> · document total{' '}
+              <strong>{read.draft.totalPrice.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>
+              {read.draft.lineItems.length > 0 && (
+                <>
+                  {' '}· lines add up to <strong>{read.draft.lineSum.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>
+                  {!read.draft.linesMatchTotal && ' — they do not match; find the missing or misread line'}
+                </>
+              )}
+              {read.draft.matchedForwarderName
+                ? ` · matched to ${read.draft.matchedForwarderName} on file`
+                : ' · a new forwarder; it will be added when you save'}
+            </p>
+          </div>
+        )}
+
         {/* Forwarder Details */}
         <Card>
           <div className="p-4 pb-0">
             <CardTitle>Forwarder Details</CardTitle>
           </div>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="forwarderName">Forwarder Name *</label>
                 <Input
@@ -324,6 +395,15 @@ const NewQuotePage = () => {
                   placeholder="email@forwarder.com"
                   value={forwarderEmail}
                   onChange={(e) => setForwarderEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="forwarderReference">Their quote reference</label>
+                <Input
+                  id="forwarderReference"
+                  placeholder="As printed on their quote"
+                  value={forwarderReference}
+                  onChange={(e) => setForwarderReference(e.target.value)}
                 />
               </div>
             </div>
@@ -429,6 +509,9 @@ const NewQuotePage = () => {
                     <SelectItem value="EUR">EUR</SelectItem>
                     <SelectItem value="AED">AED</SelectItem>
                     <SelectItem value="GBP">GBP</SelectItem>
+                    {!['USD', 'EUR', 'AED', 'GBP'].includes(currency) && (
+                      <SelectItem value={currency}>{currency}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
