@@ -1,3 +1,9 @@
+## [2.0.467](https://github.com/craftandculture/Craft-Culture/compare/v2.0.466...v2.0.467) (2026-10-21)
+
+### Bug Fixes
+
+* a sales order voided in Zoho now releases the stock it was holding, and pressing Sync Orders clears it straight away ([a0db2f4](https://github.com/craftandculture/Craft-Culture/commit/a0db2f440204dd22f74b8eda67b69981093e34fb))
+
 ## [2.0.466](https://github.com/craftandculture/Craft-Culture/compare/v2.0.465...v2.0.466) (2026-10-20)
 
 ### Bug Fixes
