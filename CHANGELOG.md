@@ -1,3 +1,11 @@
+## [2.0.476](https://github.com/craftandculture/Craft-Culture/compare/v2.0.475...v2.0.476) (2026-10-21)
+
+### Features
+
+* freight emails send through the Logistics email template in Loops, from logistics@ with replies to logistics@ ([08bbbaf](https://github.com/craftandculture/Craft-Culture/commit/08bbbaf986833deccbe1f7bb0a44ede3530ac307))
+* on phones, cellar members and distribution lines read as cards, and the partners page no longer scrolls sideways ([0914db3](https://github.com/craftandculture/Craft-Culture/commit/0914db3b99e41cdd08abb5465f09d2a7bfa077c8))
+* Pricing Manager on phones shows a card per wine, and a tap opens its profit, last sale and the in-bond and private client prices to edit ([9e63a47](https://github.com/craftandculture/Craft-Culture/commit/9e63a47acd0f013a9fa983d75c0badbdaae89218))
+
 ## [2.0.475](https://github.com/craftandculture/Craft-Culture/compare/v2.0.474...v2.0.475) (2026-10-21)
 
 ### Features
