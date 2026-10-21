@@ -196,6 +196,55 @@ const INBOUND_LISTABLE = [
   'at_warehouse',
 ];
 
+/**
+ * One price, edited on a phone: a USD field and a Save button
+ *
+ * The table's cells edit in place, which a thumb cannot do; this is the same
+ * save, from the card a phone shows instead of the row.
+ */
+const PhonePriceField = ({
+  label,
+  value,
+  onSave,
+  hint,
+}: {
+  label: string;
+  value: number | null;
+  onSave: (v: number) => void;
+  hint?: (v: number) => string | null;
+}) => {
+  const [draft, setDraft] = useState(value != null ? value.toFixed(2) : '');
+  const num = parseFloat(draft);
+  const valid = !isNaN(num) && num > 0;
+  const changed = valid && (value == null || Math.abs(num - value) >= 0.005);
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-muted">{label}</span>
+      <span className="flex items-center gap-2">
+        <span className="relative flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
+          <input
+            inputMode="decimal"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-7 pr-3 text-base tabular-nums text-text-primary focus:border-border-brand focus:outline-none"
+          />
+        </span>
+        <button
+          type="button"
+          disabled={!changed}
+          onClick={() => onSave(num)}
+          className="h-11 shrink-0 rounded-lg bg-text-primary px-4 text-sm font-semibold text-surface-primary disabled:opacity-30"
+        >
+          Save
+        </button>
+      </span>
+      {valid && hint?.(num) ? <span className="mt-1 block text-xs text-text-muted">{hint(num)}</span> : null}
+    </label>
+  );
+};
+
 const PriceCell = ({
   value,
   onSave,
@@ -2408,7 +2457,7 @@ const PricingManagerPage = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-surface-muted shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
+              <thead className="sticky top-0 z-10 hidden bg-surface-muted md:table-header-group shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
                   {/* Sits over the pinned pair, so it is pinned with them */}
@@ -2880,6 +2929,37 @@ const PricingManagerPage = () => {
                       ).lastSold ?? null;
                     const isExpanded = expandedLwin === product.lwin18;
 
+                    // The two prices a phone can change too; one definition for both layouts.
+                    // In bond: the margin the typed price implies is what gets stored.
+                    const saveInBond = (price: number) => {
+                      if (landed == null || landed <= 0) return;
+                      const pct = ((price - landed) / price) * 100;
+                      setLineMarginsMut.mutate({
+                        lwin18s: [product.lwin18],
+                        b2bMarginPct: Math.max(0, Math.min(99, Number(pct.toFixed(2)))),
+                      });
+                    };
+                    const inBondHint = (price: number) =>
+                      landed != null && landed > 0 && price > 0
+                        ? price <= landed
+                          ? `below cost — landed is ${money(landed, currency)}`
+                          : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
+                        : null;
+                    const savePc = (v: number) => {
+                      if (ownerId) {
+                        setOwnerPricingMut.mutate({
+                          lwin18: product.lwin18,
+                          ownerId,
+                          pcSellingPricePerBottle: v,
+                        });
+                      } else {
+                        setSellingPriceMut.mutate({
+                          lwin18: product.lwin18,
+                          sellingPricePerBottle: v,
+                        });
+                      }
+                    };
+
                     return (
                       <Fragment
                         key={`${isInbound ? 'inb-' : ''}${product.lwin18}${
@@ -2901,7 +2981,7 @@ const PricingManagerPage = () => {
                         the columns scrolling underneath show through.
                       */}
                       <tr
-                        className={`transition-colors ${
+                        className={`hidden transition-colors md:table-row ${
                           isInbound
                             ? 'bg-amber-50 hover:bg-amber-100'
                             : isLoss
@@ -3190,21 +3270,8 @@ const PricingManagerPage = () => {
                               ? casePrice(inBondPrice, caseConfig, currency)
                               : undefined
                           }
-                          hintFor={(price) =>
-                            landed != null && landed > 0 && price > 0
-                              ? price <= landed
-                                ? `below cost — landed is ${money(landed, currency)}`
-                                : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
-                              : null
-                          }
-                          onSave={(price) => {
-                            if (landed == null || landed <= 0) return;
-                            const pct = ((price - landed) / price) * 100;
-                            setLineMarginsMut.mutate({
-                              lwin18s: [product.lwin18],
-                              b2bMarginPct: Math.max(0, Math.min(99, Number(pct.toFixed(2)))),
-                            });
-                          }}
+                          hintFor={inBondHint}
+                          onSave={saveInBond}
                         />
 
                         {/* PC Price (editable) — Private Client group */}
@@ -3219,20 +3286,7 @@ const PricingManagerPage = () => {
                               ? casePrice(sellPrice, caseConfig, currency)
                               : undefined
                           }
-                          onSave={(v) => {
-                            if (ownerId) {
-                              setOwnerPricingMut.mutate({
-                                lwin18: product.lwin18,
-                                ownerId,
-                                pcSellingPricePerBottle: v,
-                              });
-                            } else {
-                              setSellingPriceMut.mutate({
-                                lwin18: product.lwin18,
-                                sellingPricePerBottle: v,
-                              });
-                            }
-                          }}
+                          onSave={savePc}
                         />
 
                         {/* Margin — type a % on any row and the price follows.
@@ -3309,7 +3363,7 @@ const PricingManagerPage = () => {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr className="bg-surface-muted/40">
+                        <tr className="hidden bg-surface-muted/40 md:table-row">
                           <td colSpan={13} className="border-l-4 border-l-transparent px-3 py-3">
                             {/*
                               What the line is worth if it all sells at the
@@ -3401,6 +3455,72 @@ const PricingManagerPage = () => {
                           </td>
                         </tr>
                       )}
+                      {/* The phone's version of this row: the figures that matter, a tap for the rest */}
+                      <tr className="md:hidden">
+                        <td colSpan={13} className="border-b border-border-muted p-0">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedLwin((cur) => (cur === product.lwin18 ? null : product.lwin18))}
+                            aria-expanded={isExpanded}
+                            className={`block w-full p-4 text-left ${isInbound ? 'bg-amber-50' : isLoss ? 'bg-red-50' : ''}`}
+                          >
+                            <span className="flex items-start justify-between gap-2">
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-text-primary">{product.productName}</span>
+                                <span className="mt-0.5 block text-xs text-text-muted">
+                                  {[ownerCue?.isMixed ? 'Mixed owners' : ownerCue?.fullName, `${caseConfig}×${product.bottleSize ?? '75cl'}`, `${product.totalCases} cs`].filter(Boolean).join(' · ')}
+                                </span>
+                              </span>
+                              <span className="flex shrink-0 flex-col items-end gap-1">
+                                {isInbound ? (
+                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                    In transit{eta ? ` · ${new Date(eta).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                                  </span>
+                                ) : null}
+                                {isLoss ? (
+                                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Below cost</span>
+                                ) : null}
+                              </span>
+                            </span>
+                            <span className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                              {[
+                                ['Landed', landed != null ? money(landed, currency) : '—', 'text-text-primary'],
+                                ['In bond', inBondPrice != null ? money(inBondPrice, currency) : '—', 'text-text-primary font-semibold'],
+                                ['Private', sellPrice != null && sellPrice > 0 ? money(sellPrice, currency) : '—', 'text-text-primary font-semibold'],
+                                ['Margin', displayMargin != null ? `${displayMargin.toFixed(1)}%` : '—', marginColor],
+                              ].map(([label, value, tone]) => (
+                                <span key={label} className="min-w-0">
+                                  <span className="block text-[10px] uppercase tracking-wide text-text-muted">{label}</span>
+                                  <span className={`block truncate tabular-nums ${tone}`}>{value}</span>
+                                </span>
+                              ))}
+                            </span>
+                          </button>
+                          {isExpanded && (
+                            <div className="space-y-3 border-t border-border-muted bg-surface-muted/40 p-4">
+                              {displayMarginPerBottle != null && product.totalCases > 0 ? (
+                                <p className="text-xs text-text-muted">
+                                  Profit if sold{' '}
+                                  <span className={`font-semibold ${displayMarginPerBottle < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                    ${Math.round(displayMarginPerBottle * product.totalCases * caseConfig).toLocaleString('en-US')}
+                                  </span>{' '}
+                                  on {(product.totalCases * caseConfig).toLocaleString()} bottles
+                                </p>
+                              ) : null}
+                              <p className="text-xs text-text-muted">
+                                {lastSold
+                                  ? `Last sold at $${lastSold.pricePerBottle.toFixed(2)}/btl · ${lastSold.tier === 'PC' ? 'Private Client' : 'B2B'} · ${lastSold.ref}`
+                                  : 'No recorded sale yet for this wine.'}
+                              </p>
+                              {!isSpiritOrRtd && landed != null && landed > 0 ? (
+                                <PhonePriceField label="In bond per bottle (USD)" value={inBondPrice} onSave={saveInBond} hint={inBondHint} />
+                              ) : null}
+                              <PhonePriceField label="Private client per bottle (USD)" value={sellPrice} onSave={savePc} />
+                              <p className="text-[11px] text-text-muted">Costs, logistics and overrides are edited on a larger screen.</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
                       </Fragment>
                     );
                   })
