@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconCopy, IconMail } from '@tabler/icons-react';
+import { IconCheck, IconCopy, IconLoader2, IconMail, IconSend } from '@tabler/icons-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -17,6 +17,9 @@ export interface CopyTextCardProps {
   onUndo?: () => void;
   /** Collapsed cards show only the title row until opened */
   defaultOpen?: boolean;
+  /** Sends it from logistics@; when set, sending is the main action and copying the fallback */
+  onSend?: () => void;
+  isSending?: boolean;
 }
 
 /** Longest mailto link offered; beyond this mail apps truncate the body silently */
@@ -29,7 +32,7 @@ const MAILTO_LIMIT = 1800;
  * records that, and the toast offers an undo for ten seconds. Addresses and
  * subject copy on their own as well, for mail apps that take them separately.
  */
-const CopyTextCard = ({ title, status, email, onCopied, onUndo, defaultOpen = false }: CopyTextCardProps) => {
+const CopyTextCard = ({ title, status, email, onCopied, onUndo, defaultOpen = false, onSend, isSending = false }: CopyTextCardProps) => {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -91,7 +94,13 @@ const CopyTextCard = ({ title, status, email, onCopied, onUndo, defaultOpen = fa
             {email.body}
           </pre>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={primaryButton} onClick={() => copy('email', email.body)}>
+            {onSend && (
+              <button type="button" className={primaryButton} disabled={isSending} onClick={onSend}>
+                {isSending ? <IconLoader2 size={15} className="animate-spin" /> : <IconSend size={15} />} Send from
+                logistics@
+              </button>
+            )}
+            <button type="button" className={onSend ? secondaryButton : primaryButton} onClick={() => copy('email', email.body)}>
               {copied === 'email' ? <IconCheck size={15} /> : <IconCopy size={15} />} Copy email text
             </button>
             {addresses && (

@@ -1,0 +1,50 @@
+import loops from '@/lib/loops/client';
+
+import logisticsEmailTemplateId from './logisticsEmailTemplateId';
+
+/** Where forwarders' replies land, so the whole team sees them */
+export const LOGISTICS_INBOX = 'logistics@craftculture.xyz';
+
+/**
+ * Send one email from logistics@ through Loops
+ *
+ * The body goes line by line into the template's repeating block, so the
+ * email keeps its lines and lists without any HTML being sent. Replies go to
+ * the logistics inbox; the person who pressed Send is copied in.
+ *
+ * @example
+ *   await sendLogisticsEmail({ to: 'ops@forwarder.com', cc: ['jyothi@craftculture.xyz'], subject, body });
+ *
+ * @param email - One recipient, anyone copied, the subject and the plain-text body
+ * @returns Whether Loops accepted it, and why not
+ */
+const sendLogisticsEmail = async (email: { to: string; cc: string[]; subject: string; body: string }) => {
+  const transactionalId = logisticsEmailTemplateId();
+
+  if (!transactionalId) {
+    return { ok: false as const, error: 'No Loops template is set for logistics emails' };
+  }
+
+  try {
+    const dataVariables = {
+      subject: email.subject,
+      replyTo: LOGISTICS_INBOX,
+      cc: email.cc.join(', '),
+      // A blank line still needs a value; a single space keeps the paragraph break
+      lines: email.body.split('\n').map((text) => ({ text: text.trim() ? text : ' ' })),
+    };
+
+    // The Loops API takes arrays of objects for repeating blocks; this SDK version types only flat values
+    await loops.sendTransactionalEmail({
+      transactionalId,
+      email: email.to,
+      dataVariables: dataVariables as unknown as Record<string, string | number>,
+    });
+
+    return { ok: true as const, error: null };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : 'The email could not be sent' };
+  }
+};
+
+export default sendLogisticsEmail;

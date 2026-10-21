@@ -3451,6 +3451,30 @@ const runMigrations = async () => {
     `);
     console.log('✅ freight quote forwarders, recipients and attachments ready');
 
+    // Freight emails sent from logistics@, one row per forwarder emailed
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "logistics_quote_emails" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "request_id" uuid NOT NULL REFERENCES "logistics_quote_requests"("id") ON DELETE CASCADE,
+        "forwarder_id" uuid REFERENCES "logistics_forwarders"("id") ON DELETE SET NULL,
+        "quote_id" uuid REFERENCES "logistics_quotes"("id") ON DELETE SET NULL,
+        "kind" text NOT NULL,
+        "to_emails" text[] NOT NULL,
+        "cc_emails" text[] DEFAULT '{}'::text[] NOT NULL,
+        "subject" text NOT NULL,
+        "body" text NOT NULL,
+        "status" text NOT NULL,
+        "error" text,
+        "sent_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_quote_emails_request_id_idx" ON "logistics_quote_emails" ("request_id")`,
+    );
+    console.log('✅ logistics_quote_emails ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

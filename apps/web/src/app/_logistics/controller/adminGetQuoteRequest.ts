@@ -1,11 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import {
   logisticsForwarders,
   logisticsQuoteAttachments,
+  logisticsQuoteEmails,
   logisticsQuoteLineItems,
   logisticsQuoteRequestAttachments,
   logisticsQuoteRequestRecipients,
@@ -16,6 +17,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getSuggestedClientPrice from '../data/getSuggestedClientPrice';
+import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
 import quoteUnitPrices from '../utils/quoteUnitPrices';
 
@@ -150,6 +152,23 @@ const adminGetQuoteRequest = adminProcedure
 
     const suggestedClientPrice = await getSuggestedClientPrice(request);
 
+    // What went from logistics@, newest first; empty if the table is not there yet
+    const emails = await db
+      .select({
+        id: logisticsQuoteEmails.id,
+        forwarderId: logisticsQuoteEmails.forwarderId,
+        kind: logisticsQuoteEmails.kind,
+        toEmails: logisticsQuoteEmails.toEmails,
+        subject: logisticsQuoteEmails.subject,
+        status: logisticsQuoteEmails.status,
+        error: logisticsQuoteEmails.error,
+        createdAt: logisticsQuoteEmails.createdAt,
+      })
+      .from(logisticsQuoteEmails)
+      .where(eq(logisticsQuoteEmails.requestId, requestId))
+      .orderBy(desc(logisticsQuoteEmails.createdAt))
+      .catch(() => []);
+
     return {
       ...request,
       requester,
@@ -159,6 +178,9 @@ const adminGetQuoteRequest = adminProcedure
       quotes,
       recipients,
       suggestedClientPrice,
+      emails,
+      /** Whether the page can send from logistics@, or only offers emails to copy */
+      canSendEmail: !!logisticsEmailTemplateId(),
       /** Signs the emails the page writes */
       senderName: ctx.user.name || 'Craft & Culture',
     };

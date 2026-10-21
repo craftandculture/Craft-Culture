@@ -62,6 +62,7 @@ import adminRemoveItem from './controller/adminRemoveItem';
 import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
 import adminSaveBond from './controller/adminSaveBond';
 import adminSearchZohoInvoices from './controller/adminSearchZohoInvoices';
+import adminSendFreightEmails from './controller/adminSendFreightEmails';
 import adminSetClientPrice from './controller/adminSetClientPrice';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetRequestRecipients from './controller/adminSetRequestRecipients';
@@ -211,6 +212,7 @@ const adminRouter = createTRPCRouter({
     setRecipients: adminSetRequestRecipients,
     markRecipients: adminMarkRequestRecipients,
     setClientPrice: adminSetClientPrice,
+    sendEmails: adminSendFreightEmails,
   }),
 });
 

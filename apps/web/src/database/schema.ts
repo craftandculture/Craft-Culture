@@ -4079,6 +4079,36 @@ export const logisticsQuoteAttachments = pgTable(
 
 export type LogisticsQuoteAttachment = typeof logisticsQuoteAttachments.$inferSelect;
 
+/**
+ * Every freight email the Index sent from logistics@, kept with its request
+ *
+ * One row per forwarder emailed: what was sent, to whom, by whom, and whether
+ * the mail service accepted it. The request page reads it to show what went.
+ */
+export const logisticsQuoteEmails = pgTable(
+  'logistics_quote_emails',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestId: uuid('request_id')
+      .references(() => logisticsQuoteRequests.id, { onDelete: 'cascade' })
+      .notNull(),
+    forwarderId: uuid('forwarder_id').references(() => logisticsForwarders.id, { onDelete: 'set null' }),
+    quoteId: uuid('quote_id').references(() => logisticsQuotes.id, { onDelete: 'set null' }),
+    kind: text('kind').notNull(), // 'request' | 'chase' | 'award' | 'decline'
+    toEmails: text('to_emails').array().notNull(),
+    ccEmails: text('cc_emails').array().notNull().default(sql`'{}'::text[]`),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    status: text('status').notNull(), // 'sent' | 'failed'
+    error: text('error'),
+    sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [index('logistics_quote_emails_request_id_idx').on(table.requestId)],
+);
+
+export type LogisticsQuoteEmail = typeof logisticsQuoteEmails.$inferSelect;
+
 // ============================================================================
 // WINE EXCHANGE TABLES
 // B2B marketplace connecting EU suppliers with UAE trade buyers

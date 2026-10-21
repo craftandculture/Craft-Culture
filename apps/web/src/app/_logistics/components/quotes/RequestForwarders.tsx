@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPlus, IconUsers } from '@tabler/icons-react';
+import { IconLoader2, IconPlus, IconSend, IconUsers } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useMemo, useState } from 'react';
@@ -91,6 +91,22 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
     onError: (error) => toast.error(error.message || 'Could not save the email'),
   });
 
+  const send = useMutation({
+    ...api.logistics.admin.requests.sendEmails.mutationOptions(),
+    onSuccess: (result) => {
+      if (result.sent) toast.success(`Sent from logistics@ to ${result.sent} forwarder${result.sent === 1 ? '' : 's'}`);
+      result.failed.forEach((f) => toast.error(`${f.name}: ${f.error ?? 'not sent'}`));
+      refresh();
+    },
+    onError: (error) => toast.error(error.message || 'The email was not sent'),
+  });
+  const sendTo = (forwarderIds: string[], kind: 'request' | 'chase') =>
+    send.mutate({ requestId: request.id, kind, forwarderIds });
+  const lastFailure = (forwarderId: string) => {
+    const latest = request.emails.find((e) => e.forwarderId === forwarderId);
+    return latest?.status === 'failed' ? latest.error : null;
+  };
+
   const markAs = (forwarderIds: string[], action: 'sent' | 'chased' | 'undo_sent' | 'undo_chased') =>
     mark.mutate({ requestId: request.id, forwarderIds, action });
 
@@ -127,9 +143,22 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
           {request.recipients.length}
         </span>
         {isOpen && !editing && (
-          <button type="button" className={`${secondaryButton} ml-auto`} onClick={() => setEditing(true)}>
-            Choose forwarders
-          </button>
+          <div className="ml-auto flex gap-2">
+            {request.canSendEmail && unsent.length > 0 && (
+              <button
+                type="button"
+                className={primaryButton}
+                disabled={send.isPending}
+                onClick={() => sendTo(unsent.map((r) => r.forwarderId), 'request')}
+              >
+                {send.isPending ? <IconLoader2 size={15} className="animate-spin" /> : <IconSend size={15} />} Send to{' '}
+                {unsent.length === 1 ? unsent[0]!.name : `all ${unsent.length}`}
+              </button>
+            )}
+            <button type="button" className={secondaryButton} onClick={() => setEditing(true)}>
+              Choose forwarders
+            </button>
+          </div>
         )}
       </div>
 
@@ -210,6 +239,9 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
                   <span className={pillClass(state.tone)}>{state.label}</span>
                   <span className="text-xs text-text-muted">{r.contacts.map((c) => c.email).join(', ')}</span>
                 </div>
+                {lastFailure(r.forwarderId) && (
+                  <p className="text-xs text-red-600">Last email failed: {lastFailure(r.forwarderId)}</p>
+                )}
 
                 {r.contacts.length === 0 && r.outcome === 'awaiting' && (
                   <div className="flex gap-2">
@@ -243,6 +275,9 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
                     onCopied={() => markAs([r.forwarderId], kind === 'request' ? 'sent' : 'chased')}
                     onUndo={() => markAs([r.forwarderId], kind === 'request' ? 'undo_sent' : 'undo_chased')}
                     defaultOpen={kind === 'chase'}
+                    {...(request.canSendEmail
+                      ? { onSend: () => sendTo([r.forwarderId], kind), isSending: send.isPending }
+                      : {})}
                   />
                 )}
               </li>
@@ -251,7 +286,7 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
         </ul>
       )}
 
-      {unsent.length > 1 && (
+      {unsent.length > 1 && !request.canSendEmail && (
         <div className="border-t border-border-muted px-4 py-3">
           <CopyTextCard
             title={`One email to all ${unsent.length}, in Bcc`}
