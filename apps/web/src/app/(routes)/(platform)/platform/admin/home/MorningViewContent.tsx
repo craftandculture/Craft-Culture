@@ -195,10 +195,10 @@ const MorningViewContent = () => {
           ))}
         </div>
         <div className="grid gap-5 lg:grid-cols-5">
-          <Card className="lg:col-span-3">
+          <Card className="min-w-0 lg:col-span-3">
             <CardContent className="h-80 animate-pulse p-6" />
           </Card>
-          <div className="space-y-5 lg:col-span-2">
+          <div className="min-w-0 space-y-5 lg:col-span-2">
             <Card><CardContent className="h-56 animate-pulse p-6" /></Card>
             <Card><CardContent className="h-24 animate-pulse p-6" /></Card>
           </div>
@@ -392,7 +392,7 @@ const MorningViewContent = () => {
       {/* ── Two-column layout ────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-5">
         {/* Agent Briefing — left 3 cols */}
-        <div className="lg:col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between px-6 py-4">
@@ -457,7 +457,7 @@ const MorningViewContent = () => {
         </div>
 
         {/* Right column — Recent Orders + Quick Actions */}
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           <HomeTasksCard />
 
           {/* Recent Orders */}

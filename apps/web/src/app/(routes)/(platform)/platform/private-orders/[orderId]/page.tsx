@@ -44,6 +44,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
+import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -1084,7 +1086,9 @@ const PrivateOrderDetailPage = () => {
             )}
 
             {order.items && order.items.length > 0 ? (
-              <div className="overflow-x-auto">
+              <>
+              {/* Phones read the lines as cards; the table returns while a line is being edited */}
+              <div className={`overflow-x-auto ${editingItem ? '' : 'hidden md:block'}`}>
                 <table className="w-full text-xs">
                   <thead className="border-b border-border-muted bg-surface-secondary/50">
                     <tr>
@@ -1207,6 +1211,38 @@ const PrivateOrderDetailPage = () => {
                   </tbody>
                 </table>
               </div>
+              {!editingItem && (
+                <MobileCardList>
+                  {order.items.map((item) => (
+                    <MobileCard
+                      key={item.id}
+                      title={item.productName}
+                      aside={
+                        <span className="text-sm font-semibold tabular-nums">
+                          {formatCurrencyValue(getAmount(item.totalUsd), currency)}
+                        </span>
+                      }
+                      meta={[item.producer, item.vintage, `${item.caseConfig}×${item.bottleSize}`].filter(Boolean).join(' · ')}
+                      fields={[
+                        { label: 'Quantity', value: `${item.quantity} ${item.caseConfig === 1 ? 'bottle' : 'case'}${item.quantity === 1 ? '' : 's'}` },
+                        { label: `${currency} per case`, value: formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency) },
+                      ]}
+                    >
+                      {canEditItems && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditItem(item)}>
+                            <Icon icon={IconEdit} size="xs" /> Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)} disabled={isRemovingItem}>
+                            <Icon icon={IconTrash} size="xs" colorRole="danger" /> Remove
+                          </Button>
+                        </div>
+                      )}
+                    </MobileCard>
+                  ))}
+                </MobileCardList>
+              )}
+              </>
             ) : (
               <div className="py-4 text-center">
                 <Typography variant="bodySm" colorRole="muted">

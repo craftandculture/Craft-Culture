@@ -15,6 +15,8 @@ import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
+import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import StockStatusBadge, { StockSourceBadge } from './StockStatusBadge';
@@ -328,7 +330,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
 
       {/* Expandable detail table */}
       {isExpanded && (
-        <div className="mt-2 overflow-x-auto rounded-lg border border-border-muted">
+        <>
+        <div className="mt-2 hidden overflow-x-auto rounded-lg border border-border-muted md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border-muted bg-surface-secondary text-left">
@@ -391,6 +394,27 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
             </tbody>
           </table>
         </div>
+        {/* The same lines as cards on a phone */}
+        <MobileCardList className="mt-2">
+          {sortedItems.map((item) => {
+            const status = (item.stockStatus ?? 'pending') as StockStatus;
+            const showETA =
+              item.stockExpectedAt &&
+              (status === 'pending' || status === 'confirmed' || status === 'in_transit_to_cc');
+
+            return (
+              <MobileCard
+                key={item.id}
+                title={item.productName}
+                aside={<StockStatusBadge status={status} showIcon />}
+                meta={[item.vintage, `Qty ${item.quantity}`, showETA ? `Arrives ${item.stockExpectedAt!.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : null].filter(Boolean).join(' · ')}
+              >
+                {item.source ? <StockSourceBadge source={item.source} showIcon compact /> : null}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+        </>
       )}
     </div>
   );
