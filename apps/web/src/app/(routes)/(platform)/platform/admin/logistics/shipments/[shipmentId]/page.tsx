@@ -51,6 +51,8 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
+import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -2420,7 +2422,8 @@ const ShipmentDetailPage = () => {
                         </span>
                       )}
                     </div>
-                    <div className="overflow-x-auto -mx-6">
+                    {/* Phones get one card per line below; a tap opens the same editor as the table */}
+                    <div className="-mx-6 hidden overflow-x-auto md:block">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
@@ -2801,6 +2804,47 @@ const ShipmentDetailPage = () => {
                         </tfoot>
                       </table>
                     </div>
+                    <MobileCardList>
+                      {shownItems.map((item) => {
+                        const missing = missingFor(item);
+                        const money = (n: number | null | undefined) => (n ? `$${n.toFixed(2)}` : '—');
+                        return (
+                          <MobileCard
+                            key={item.id}
+                            title={item.productName}
+                            onClick={() => openSheet(item)}
+                            aside={
+                              <span className="text-xs text-text-muted tabular-nums">
+                                {item.cases} cs · {item.totalBottles ?? '—'} btl
+                              </span>
+                            }
+                            meta={[item.producer, item.vintage && !item.productName.includes(String(item.vintage)) ? item.vintage : null, item.lwin ?? 'No LWIN'].filter(Boolean).join(' · ')}
+                            fields={[
+                              { label: 'Cost / btl', value: money(item.productCostPerBottle) },
+                              { label: 'Landed / btl', value: money(item.landedCostPerBottle) },
+                              { label: 'HS', value: item.hsCode ? (hsLabel(item.hsCode) ?? item.hsCode) : <span className="text-red-600">Missing</span> },
+                              {
+                                label: 'Margin',
+                                value:
+                                  item.marginPercent !== null && item.marginPercent !== undefined ? (
+                                    <span className={item.marginPercent >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                      {item.marginPercent.toFixed(0)}%
+                                    </span>
+                                  ) : (
+                                    '—'
+                                  ),
+                              },
+                            ]}
+                          >
+                            {missing.length > 0 && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                Missing {missing.join(', ')}
+                              </span>
+                            )}
+                          </MobileCard>
+                        );
+                      })}
+                    </MobileCardList>
                     </>
                   )}
                 </CardContent>
@@ -2819,7 +2863,7 @@ const ShipmentDetailPage = () => {
                 */}
                 <SheetContent
                   side="right"
-                  className="flex h-full flex-col gap-0 p-0 sm:max-w-lg"
+                  className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg"
                 >
                   <div className="shrink-0 px-6 pt-6">
                   {/* The wine, not "Item" — it is what the whole panel is about */}

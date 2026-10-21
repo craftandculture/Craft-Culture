@@ -360,7 +360,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         {tabPanel}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <ExportDocumentPreview
           document={data.document}
           editable={editable && !applyMutation.isPending}
