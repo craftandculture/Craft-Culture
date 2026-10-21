@@ -1,3 +1,9 @@
+## [2.0.469](https://github.com/craftandculture/Craft-Culture/compare/v2.0.468...v2.0.469) (2026-10-21)
+
+### Features
+
+* **pco:** add Partner SO as a PCO document type ([189b123](https://github.com/craftandculture/Craft-Culture/commit/189b123e125e2b77d5a555277d16f9372712004f))
+
 ## [2.0.468](https://github.com/craftandculture/Craft-Culture/compare/v2.0.467...v2.0.468) (2026-10-21)
 
 ### Features
