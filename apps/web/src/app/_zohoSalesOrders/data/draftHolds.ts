@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { type HoldShort, holdLines } from '@/app/_wms/utils/holdStockForSalesOrder';
 import releaseLineHolds from '@/app/_wms/utils/releaseLineHolds';
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
+import isZohoOrderGone from '@/app/_zohoSalesOrders/utils/isZohoOrderGone';
 import {
   wmsStockReservations,
   zohoDraftHoldLines,
@@ -27,9 +28,6 @@ type DraftLine = ZohoSalesOrder['line_items'][number] & { item_type?: string };
 
 /** A line worth holding: a wine with a code and a quantity, not a heading */
 const holdable = (line: DraftLine) => Boolean(line.sku) && line.quantity > 0 && !/header/i.test(line.item_type ?? '');
-
-/** Zoho answers a deleted order with an error, not an empty one */
-const isGone = (error: unknown) => /does not exist|not found|404|1002/i.test(error instanceof Error ? error.message : String(error));
 
 /**
  * Bring a hold's lines into line with the draft, then hold what is not held
@@ -147,7 +145,7 @@ export const refreshDraftHold = async ({ db, holdId }: { db: Db; holdId: string 
   try {
     remote = await getSalesOrder(hold.zohoSalesOrderId);
   } catch (error) {
-    if (!isGone(error)) return { outcome: 'unreachable' as const, short: [] as HoldShort[] };
+    if (!isZohoOrderGone(error)) return { outcome: 'unreachable' as const, short: [] as HoldShort[] };
   }
 
   const release = async (reason: string) => {
