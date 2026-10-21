@@ -34,6 +34,13 @@ const createQuoteRequestSchema = z.object({
   replyBy: z.coerce.date().optional(),
   /** Forwarders to ask, added to the request as it is saved */
   forwarderIds: z.array(z.string().uuid()).max(20).optional(),
+  /** Forwarders typed in on the form, added to the list as the request is saved */
+  newForwarders: z
+    .array(z.object({ name: z.string().trim().min(1), email: z.string().trim().email().optional().or(z.literal('')) }))
+    .max(10)
+    .optional(),
+  /** Email the request to its forwarders from logistics@ as soon as it is saved */
+  sendNow: z.boolean().optional(),
 
   // Special requirements
   requiresThermalLiner: z.boolean().default(false),

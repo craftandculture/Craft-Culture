@@ -18,6 +18,8 @@ export interface AdminNavLink {
   href: string;
   /** Shown to C&C staff only, not every admin: see _distribution/utils/isStaff */
   staffOnly?: boolean;
+  /** Other pages that belong under this tab, such as a request opened from the quotes list */
+  alsoMatches?: string[];
 }
 
 export interface AdminNavSection {
@@ -77,7 +79,7 @@ const adminNav: AdminNavSection[] = [
       { label: 'Shipments', href: '/platform/admin/logistics/shipments' },
       { label: 'Exports', href: '/platform/admin/logistics/exports' },
       { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices' },
-      { label: 'Freight quotes', href: '/platform/admin/logistics/quotes' },
+      { label: 'Freight quotes', href: '/platform/admin/logistics/quotes', alsoMatches: ['/platform/admin/logistics/requests'] },
       { label: 'Freight bills', href: '/platform/admin/logistics/invoices' },
       { label: 'Reports', href: '/platform/admin/logistics/reports' },
     ],

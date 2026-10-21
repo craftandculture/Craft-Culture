@@ -4,6 +4,7 @@ import db from '@/database/client';
 import { logisticsQuoteRequests, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
 import normaliseCountry from '../utils/normaliseCountry';
 
 /** Offered from the start, before the Index has seen a route */
@@ -74,7 +75,7 @@ const adminGetRouteOptions = adminProcedure.query(async () => {
 
   const [countries, cities, warehouses] = await Promise.all([tally('countries'), tally('cities'), tally('warehouses')]);
 
-  return { countries, cities, warehouses };
+  return { countries, cities, warehouses, canSendEmail: !!logisticsEmailTemplateId() };
 });
 
 export default adminGetRouteOptions;

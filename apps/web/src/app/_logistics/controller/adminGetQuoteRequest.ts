@@ -18,6 +18,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getSuggestedClientPrice from '../data/getSuggestedClientPrice';
 import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
+import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
 import quoteUnitPrices from '../utils/quoteUnitPrices';
 
@@ -160,11 +161,14 @@ const adminGetQuoteRequest = adminProcedure
         kind: logisticsQuoteEmails.kind,
         toEmails: logisticsQuoteEmails.toEmails,
         subject: logisticsQuoteEmails.subject,
+        body: logisticsQuoteEmails.body,
+        forwarderName: logisticsForwarders.name,
         status: logisticsQuoteEmails.status,
         error: logisticsQuoteEmails.error,
         createdAt: logisticsQuoteEmails.createdAt,
       })
       .from(logisticsQuoteEmails)
+      .leftJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteEmails.forwarderId))
       .where(eq(logisticsQuoteEmails.requestId, requestId))
       .orderBy(desc(logisticsQuoteEmails.createdAt))
       .catch(() => []);
@@ -179,6 +183,7 @@ const adminGetQuoteRequest = adminProcedure
       recipients,
       suggestedClientPrice,
       emails,
+      nextStep: quoteRequestNextStep({ ...request, recipients, quotes }),
       /** Whether the page can send from logistics@, or only offers emails to copy */
       canSendEmail: !!logisticsEmailTemplateId(),
       /** Signs the emails the page writes */

@@ -8,9 +8,12 @@ import {
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import findOrCreateForwarder from '../data/findOrCreateForwarder';
+import sendFreightEmails from '../data/sendFreightEmails';
 import createQuoteRequestSchema from '../schemas/createQuoteRequestSchema';
 import generateRequestNumber from '../utils/generateRequestNumber';
 import isUniqueViolation from '../utils/isUniqueViolation';
+import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
 import normaliseCountry from '../utils/normaliseCountry';
 
 /**
@@ -80,17 +83,27 @@ const adminCreateQuoteRequest = approvedProcedure
         });
       }
 
-      if (input.forwarderIds?.length) {
+      const added = await Promise.all(
+        (input.newForwarders ?? []).map((f) => findOrCreateForwarder({ name: f.name, email: f.email || null })),
+      );
+      const forwarderIds = [...new Set([...(input.forwarderIds ?? []), ...added.map((f) => f.id)])];
+      const saved = request;
+
+      if (forwarderIds.length) {
         await db
           .insert(logisticsQuoteRequestRecipients)
-          .values(
-            [...new Set(input.forwarderIds)].map((forwarderId) => ({
-              requestId: request.id,
-              forwarderId,
-            })),
-          )
+          .values(forwarderIds.map((forwarderId) => ({ requestId: saved.id, forwarderId })))
           .onConflictDoNothing();
       }
+
+      // Saving and sending is one step; a failed send leaves the request saved, its forwarders not marked sent
+      const emailResult =
+        input.sendNow && forwarderIds.length && logisticsEmailTemplateId()
+          ? await sendFreightEmails({ requestId: saved.id, kind: 'request', forwarderIds }, ctx.user).catch((error) => {
+              logger.error('Request saved but not sent', { requestId: saved.id, error });
+              return null;
+            })
+          : null;
 
       logger.info('Created quote request', {
         requestId: request.id,
@@ -98,7 +111,7 @@ const adminCreateQuoteRequest = approvedProcedure
         requestedBy: ctx.user.id,
       });
 
-      return request;
+      return { ...request, emailResult };
     } catch (error) {
       logger.error('Failed to create quote request', { error, input });
       throw new TRPCError({

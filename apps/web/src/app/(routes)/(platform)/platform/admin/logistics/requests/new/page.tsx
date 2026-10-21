@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import ForwarderPicker, { type NewForwarder } from '@/app/_logistics/components/quotes/ForwarderPicker';
 import normaliseCountry from '@/app/_logistics/utils/normaliseCountry';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -99,6 +100,8 @@ const NewQuoteRequestPage = () => {
   const [totalBottles, setTotalBottles] = useState<number | ''>('');
   const [total75cl, setTotal75cl] = useState<number | ''>('');
   const [replyBy, setReplyBy] = useState(threeWorkingDaysAhead);
+  const [forwarderIds, setForwarderIds] = useState<string[]>([]);
+  const [newForwarders, setNewForwarders] = useState<NewForwarder[]>([]);
   const [requiresThermalLiner, setRequiresThermalLiner] = useState(false);
   const [requiresTracker, setRequiresTracker] = useState(false);
   const [requiresInsurance, setRequiresInsurance] = useState(false);
@@ -148,7 +151,10 @@ const NewQuoteRequestPage = () => {
   const { mutate: createRequest, isPending } = useMutation({
     ...api.logistics.admin.requests.create.mutationOptions(),
     onSuccess: (result) => {
-      toast.success('Quote request created successfully');
+      const sent = result.emailResult;
+      if (sent?.sent) toast.success(`Request saved and sent to ${sent.sent} forwarder${sent.sent === 1 ? '' : 's'}`);
+      else toast.success('Request saved');
+      sent?.failed.forEach((f) => toast.error(`${f.name}: ${f.error ?? 'not sent'}`));
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests', 'getMany']] });
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
       router.push(`/platform/admin/logistics/requests/${result.id}`);
@@ -158,8 +164,10 @@ const NewQuoteRequestPage = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Which button was pressed: save and send, or save only
+    const sendNow = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('data-send') === 'true';
 
     if (!originCountry) {
       toast.error('Origin country is required');
@@ -191,6 +199,9 @@ const NewQuoteRequestPage = () => {
       total75clEquivalents: total75cl ? Number(total75cl) : totalBottles ? Number(totalBottles) : undefined,
       ...(validSource && draft ? { sourceType: draft.sourceType, sourceId: draft.sourceId } : {}),
       replyBy: replyBy ? new Date(`${replyBy}T12:00:00`) : undefined,
+      forwarderIds,
+      newForwarders: newForwarders.filter((f) => f.name.trim()),
+      sendNow,
       requiresThermalLiner,
       requiresTracker,
       requiresInsurance,
@@ -203,6 +214,9 @@ const NewQuoteRequestPage = () => {
       notes: notes || undefined,
     });
   };
+
+  // Forwarders the request will go to: those ticked and those typed in
+  const askCount = forwarderIds.length + newForwarders.filter((f) => f.name.trim()).length;
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
@@ -603,6 +617,15 @@ const NewQuoteRequestPage = () => {
           </CardContent>
         </Card>
 
+        <ForwarderPicker
+          originCountry={originCountry}
+          destinationCountry={destinationCountry}
+          selected={forwarderIds}
+          onSelectedChange={setForwarderIds}
+          added={newForwarders}
+          onAddedChange={setNewForwarders}
+        />
+
         {/* Notes */}
         <Card>
           <div className="p-4 pb-0">
@@ -627,13 +650,21 @@ const NewQuoteRequestPage = () => {
           <Button variant="outline" asChild>
             <Link href="/platform/admin/logistics/quotes">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? (
-              <ButtonContent isLoading>Creating...</ButtonContent>
-            ) : (
-              <ButtonContent iconLeft={IconPlus}>Create Request</ButtonContent>
-            )}
+          <Button type="submit" variant="outline" disabled={isPending}>
+            <ButtonContent>Save without sending</ButtonContent>
           </Button>
+          {routeOptions?.canSendEmail && askCount > 0 && (
+            <Button type="submit" data-send="true" disabled={isPending}>
+              {isPending ? (
+                <ButtonContent isLoading>Sending...</ButtonContent>
+              ) : (
+                <ButtonContent iconLeft={IconPlus}>
+                  Save and send to {askCount} forwarder
+                  {askCount === 1 ? '' : 's'}
+                </ButtonContent>
+              )}
+            </Button>
+          )}
         </div>
       </form>
     </div>

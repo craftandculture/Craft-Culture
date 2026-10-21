@@ -21,7 +21,10 @@ const AdminSectionTabs = ({ userRole, isStaff = false }: AdminSectionTabsProps) 
   const section = getSectionFromPathname(pathname);
   // Operator and staff-only pages are filtered where the menu is defined
   const tabs = visibleAdminNav({ role: userRole, isStaff }).find((item) => item.key === section)?.links;
-  const current = activeHref(pathname, tabs?.map((tab) => tab.href) ?? []);
+  // A tab also lights for the pages it owns beyond its own address
+  const owned = (tabs ?? []).flatMap((tab) => [tab.href, ...(tab.alsoMatches ?? [])].map((href) => ({ href, tab: tab.href })));
+  const matched = activeHref(pathname, owned.map((o) => o.href));
+  const current = owned.find((o) => o.href === matched)?.tab ?? null;
 
   if (!tabs?.length) return null;
 
