@@ -82,7 +82,7 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/platform/admin/activity-logs">
+              <Link href="/platform/admin/activity">
                 <DropdownMenuContentWrapper iconLeft={IconClipboardList} align="start">
                   Activity Log
                 </DropdownMenuContentWrapper>

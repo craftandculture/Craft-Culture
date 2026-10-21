@@ -155,9 +155,9 @@ const LogisticsDashboardPage = () => {
   const links = [
     { label: 'All shipments', href: '/platform/admin/logistics/shipments', icon: IconShip },
     { label: 'Export jobs', href: '/platform/admin/logistics/exports', icon: IconTruckDelivery },
-    { label: 'Freight quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
-    { label: 'Freight bills', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
-    { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
+    { label: 'Freight Quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
+    { label: 'Freight Bills', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
+    { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
     { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
     { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },
   ];
