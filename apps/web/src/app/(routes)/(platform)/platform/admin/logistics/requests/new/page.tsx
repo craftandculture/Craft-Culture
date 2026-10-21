@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import normaliseCountry from '@/app/_logistics/utils/normaliseCountry';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -109,6 +110,9 @@ const NewQuoteRequestPage = () => {
   const [isFlexibleDates, setIsFlexibleDates] = useState(true);
   const [notes, setNotes] = useState('');
 
+  // Places used on past routes, offered as each route field is typed
+  const { data: routeOptions } = useQuery(api.logistics.admin.requests.routeOptions.queryOptions());
+
   // Started from a shipment or UK move: fill the form from it once
   const searchParams = useSearchParams();
   const sourceType = searchParams.get('sourceType');
@@ -203,6 +207,16 @@ const NewQuoteRequestPage = () => {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Suggestions for the route fields; anything not listed can still be typed */}
+        <datalist id="route-countries">
+          {routeOptions?.countries.map((c) => <option key={c} value={c} />)}
+        </datalist>
+        <datalist id="route-cities">
+          {routeOptions?.cities.map((c) => <option key={c} value={c} />)}
+        </datalist>
+        <datalist id="route-warehouses">
+          {routeOptions?.warehouses.map((w) => <option key={w} value={w} />)}
+        </datalist>
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
@@ -260,6 +274,9 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="originCountry">Country *</label>
                     <Input
                       id="originCountry"
+                      list="route-countries"
+                      autoComplete="off"
+                      onBlur={(e) => setOriginCountry(normaliseCountry(e.target.value))}
                       placeholder="e.g. France"
                       value={originCountry}
                       onChange={(e) => setOriginCountry(e.target.value)}
@@ -270,6 +287,8 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="originCity">City</label>
                     <Input
                       id="originCity"
+                      list="route-cities"
+                      autoComplete="off"
                       placeholder="e.g. Bordeaux"
                       value={originCity}
                       onChange={(e) => setOriginCity(e.target.value)}
@@ -279,6 +298,8 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="originWarehouse">Warehouse / Supplier</label>
                     <Input
                       id="originWarehouse"
+                      list="route-warehouses"
+                      autoComplete="off"
                       placeholder="e.g. La Place Wine"
                       value={originWarehouse}
                       onChange={(e) => setOriginWarehouse(e.target.value)}
@@ -295,7 +316,10 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="destinationCountry">Country *</label>
                     <Input
                       id="destinationCountry"
-                      placeholder="e.g. UAE"
+                      list="route-countries"
+                      autoComplete="off"
+                      onBlur={(e) => setDestinationCountry(normaliseCountry(e.target.value))}
+                      placeholder="e.g. United Arab Emirates"
                       value={destinationCountry}
                       onChange={(e) => setDestinationCountry(e.target.value)}
                       required
@@ -305,6 +329,8 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="destinationCity">City</label>
                     <Input
                       id="destinationCity"
+                      list="route-cities"
+                      autoComplete="off"
                       placeholder="e.g. Dubai"
                       value={destinationCity}
                       onChange={(e) => setDestinationCity(e.target.value)}
@@ -314,7 +340,9 @@ const NewQuoteRequestPage = () => {
                     <label className="text-sm font-medium" htmlFor="destinationWarehouse">Warehouse</label>
                     <Input
                       id="destinationWarehouse"
-                      placeholder="e.g. RAK FTZ"
+                      list="route-warehouses"
+                      autoComplete="off"
+                      placeholder="e.g. C&C bonded warehouse"
                       value={destinationWarehouse}
                       onChange={(e) => setDestinationWarehouse(e.target.value)}
                     />

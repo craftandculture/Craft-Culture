@@ -51,6 +51,7 @@ import adminGetQuoteRequestDraft from './controller/adminGetQuoteRequestDraft';
 import adminGetQuoteRequests from './controller/adminGetQuoteRequests';
 import adminGetQuotes from './controller/adminGetQuotes';
 import adminGetReportMetrics from './controller/adminGetReportMetrics';
+import adminGetRouteOptions from './controller/adminGetRouteOptions';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
@@ -206,6 +207,7 @@ const adminRouter = createTRPCRouter({
     assign: adminAssignQuoteRequest,
     uploadAttachment: adminUploadQuoteRequestAttachment,
     draftFromSource: adminGetQuoteRequestDraft,
+    routeOptions: adminGetRouteOptions,
     setRecipients: adminSetRequestRecipients,
     markRecipients: adminMarkRequestRecipients,
     setClientPrice: adminSetClientPrice,

@@ -11,6 +11,7 @@ import logger from '@/utils/logger';
 import createQuoteRequestSchema from '../schemas/createQuoteRequestSchema';
 import generateRequestNumber from '../utils/generateRequestNumber';
 import isUniqueViolation from '../utils/isUniqueViolation';
+import normaliseCountry from '../utils/normaliseCountry';
 
 /**
  * Create a new quote request
@@ -36,10 +37,10 @@ const adminCreateQuoteRequest = approvedProcedure
               status: 'pending',
               priority: input.priority,
               requestedBy: ctx.user.id,
-              originCountry: input.originCountry,
+              originCountry: normaliseCountry(input.originCountry),
               originCity: input.originCity || null,
               originWarehouse: input.originWarehouse || null,
-              destinationCountry: input.destinationCountry,
+              destinationCountry: normaliseCountry(input.destinationCountry),
               destinationCity: input.destinationCity || null,
               destinationWarehouse: input.destinationWarehouse || null,
               transportMode: input.transportMode || null,
