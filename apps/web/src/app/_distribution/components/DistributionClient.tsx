@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import formatBottles from '@/app/_triangulation/utils/formatBottles';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
+import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
+import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -605,7 +607,8 @@ const DistributionClient = () => {
           </Typography>
         </div>
       ) : (
-        <div className="border-border-primary max-h-[32rem] overflow-auto rounded-xl border">
+        <>
+        <div className="border-border-primary hidden max-h-[32rem] overflow-auto rounded-xl border md:block">
           <table className="w-full min-w-[54rem] text-left text-sm">
             {/* Sticky, because the columns stop meaning anything once scrolled past */}
             <thead className="text-text-muted bg-fill-primary border-border-primary sticky top-0 z-10 border-b">
@@ -859,6 +862,48 @@ const DistributionClient = () => {
             </tbody>
           </table>
         </div>
+        {/* A phone reads each wine as a card; owners, packs and closing are set on a larger screen */}
+        <MobileCardList>
+          {rows.map((row) => {
+            const sold = row.heldDeclared === null ? null : row.outBottles - row.heldDeclared;
+            const soldValue = soldValueOf(row);
+            return (
+              <MobileCard
+                key={`${row.ownerId}-${row.lwin18 ?? row.productName}`}
+                title={row.productName}
+                aside={
+                  <span className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <span className={`size-2 shrink-0 rounded-full ${colourOf(row.ownerId).dot}`} />
+                    {row.ownerName}
+                  </span>
+                }
+                meta={[row.lwin18, row.outletCode, row.pack ? `pack ${row.pack}` : null, row.theirLine ? 'they buy' : 'consigned'].filter(Boolean).join(' · ')}
+                fields={[
+                  { label: 'Out', value: formatBottles(row.outBottles) },
+                  { label: 'Their stock', value: row.heldDeclared === null ? '—' : formatBottles(row.heldDeclared) },
+                  { label: 'Sold', value: sold === null ? '—' : <span className={sold < 0 ? 'text-text-danger' : ''}>{formatBottles(sold)}</span> },
+                  { label: 'Sold value', value: soldValue === null ? '—' : formatValue(soldValue ?? 0, row.currency) },
+                ]}
+              >
+                {(sold ?? 0) < 0 || row.packAssumed ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(sold ?? 0) < 0 ? (
+                      <Badge size="xs" colorRole="danger">
+                        they hold {Math.abs(sold ?? 0)} more than we sent
+                      </Badge>
+                    ) : null}
+                    {row.packAssumed ? (
+                      <Badge size="xs" colorRole="warning">
+                        pack assumed
+                      </Badge>
+                    ) : null}
+                  </div>
+                ) : null}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+        </>
       )}
 
       {summary && summary.wines > 0 ? (

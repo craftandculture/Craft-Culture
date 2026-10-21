@@ -169,8 +169,9 @@ const DuplicatePartners = () => {
                   const shown = preview?.key === previewKey ? preview : null;
 
                   return (
-                    <div key={duplicate.id} className="flex flex-col gap-1">
+                    <div key={duplicate.id} className="flex min-w-0 max-w-full flex-col gap-1">
                       <Button
+                        className="max-w-full"
                         size="sm"
                         variant={shown ? 'default' : 'outline'}
                         isDisabled={isPending}
@@ -185,9 +186,12 @@ const DuplicatePartners = () => {
                         <ButtonContent
                           iconLeft={isPending ? IconLoader2 : IconArrowRight}
                         >
-                          {shown
-                            ? `Merge ${shown.totalRows} row${shown.totalRows === 1 ? '' : 's'} — confirm`
-                            : `Preview merging "${duplicate.businessName}"`}
+                          {/* A long name truncates rather than widening the page on a phone */}
+                          <span className="block truncate">
+                            {shown
+                              ? `Merge ${shown.totalRows} row${shown.totalRows === 1 ? '' : 's'} — confirm`
+                              : `Preview merging "${duplicate.businessName}"`}
+                          </span>
                         </ButtonContent>
                       </Button>
 

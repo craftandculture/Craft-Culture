@@ -8,6 +8,8 @@ import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
+import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -181,7 +183,8 @@ const CellarMembersList = () => {
       )}
 
       {!isLoading && shown.length > 0 && (
-        <div className="border-border-muted overflow-x-auto rounded-xl border">
+        <>
+        <div className="border-border-muted hidden overflow-x-auto rounded-xl border md:block">
           <table className="w-full min-w-[780px] text-sm">
             <thead>
               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
@@ -279,6 +282,54 @@ const CellarMembersList = () => {
             </tbody>
           </table>
         </div>
+        {/* One card per member on a phone */}
+        <MobileCardList>
+          {shown.map((member) => (
+            <MobileCard
+              key={member.id}
+              title={member.name}
+              aside={
+                member.membershipStatus ? (
+                  <span
+                    className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+                      membershipPill[member.membershipStatus] ?? membershipPill.not_activated
+                    }`}
+                  >
+                    {membershipLabel[member.membershipStatus] ?? member.membershipStatus}
+                  </span>
+                ) : null
+              }
+              meta={[member.code, `last movement ${since(member.lastMovementAt)}`].filter(Boolean).join(' · ')}
+              fields={[
+                { label: 'Cases', value: member.cases || '—' },
+                { label: 'Bottles', value: member.bottles || '—' },
+                { label: 'Value', value: member.valueUsd ? money(member.valueUsd) : '—' },
+                { label: `Over ${includedCases}`, value: member.overageCases > 0 ? member.overageCases : '—' },
+              ]}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {member.waitingOnUs > 0 ? (
+                  <Link
+                    href="/platform/admin/cellar-releases"
+                    className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                  >
+                    {member.waitingOnUs} to quote
+                    {member.oldestSubmittedAt ? ` · ${since(member.oldestSubmittedAt)}` : ''}
+                  </Link>
+                ) : member.waitingOnThem > 0 ? (
+                  <span className="text-text-muted text-xs">{member.waitingOnThem} with them</span>
+                ) : null}
+                <ZohoCustomerLink
+                  partnerId={member.id}
+                  memberName={member.name}
+                  zohoContactId={member.zohoContactId}
+                  onLinked={() => void refetch()}
+                />
+              </div>
+            </MobileCard>
+          ))}
+        </MobileCardList>
+        </>
       )}
 
       <Typography variant="bodyXs" colorRole="muted" className="mt-3 block">
