@@ -262,7 +262,7 @@ const StockManagementSection = ({
         {/* Items Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="border-b border-border-muted bg-surface-secondary/50">
+            <thead className="hidden md:table-header-group border-b border-border-muted bg-surface-secondary/50">
               <tr>
                 <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
                   Product
@@ -291,7 +291,7 @@ const StockManagementSection = ({
 
                 return (
                   <React.Fragment key={item.id}>
-                    <tr className="hover:bg-surface-muted/20">
+                    <tr className="hidden hover:bg-surface-muted/20 md:table-row">
                       <td className="px-2 py-2">
                         <div className="font-medium">{item.productName}</div>
                         {item.vintage && (
@@ -352,6 +352,52 @@ const StockManagementSection = ({
                         >
                           {isExpanded ? 'Close' : 'Edit'}
                         </Button>
+                      </td>
+                    </tr>
+                    {/* The phone's version of this row: status changes in place, Edit opens the same panel */}
+                    <tr className="md:hidden">
+                      <td colSpan={6} className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-text-primary">{item.productName}</div>
+                            <div className="mt-0.5 text-xs text-text-muted">
+                              {[
+                                item.vintage,
+                                `Qty ${item.quantity}`,
+                                item.stockExpectedAt && ['pending', 'confirmed', 'in_transit_to_cc'].includes(currentStatus)
+                                  ? `ETA ${formatDate(item.stockExpectedAt)}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </div>
+                          </div>
+                          {item.source ? <StockSourceBadge source={item.source} /> : null}
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Select
+                            value={currentStatus}
+                            onValueChange={(v) => handleStatusChange(item.id, v as StockStatus)}
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="h-10 flex-1 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getStatusOptionsForItem(currentStatus).map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    {opt.icon}
+                                    <span>{opt.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="sm" onClick={() => setExpandedItem(isExpanded ? null : item.id)}>
+                            {isExpanded ? 'Close' : 'Edit'}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                     {isExpanded && (
