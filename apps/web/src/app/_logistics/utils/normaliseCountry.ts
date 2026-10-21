@@ -19,6 +19,10 @@ const ALIASES: Record<string, string> = {
   za: 'South Africa',
   au: 'Australia',
   nz: 'New Zealand',
+  global: 'Global',
+  worldwide: 'Global',
+  anywhere: 'Global',
+  all: 'Global',
 };
 
 /**

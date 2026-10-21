@@ -2,7 +2,11 @@ import { and, asc, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsForwarders, logisticsQuoteRequests, logisticsQuotes } from '@/database/schema';
+import {
+  logisticsForwarders,
+  logisticsQuoteRequests,
+  logisticsQuotes,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import normaliseCountry from '../utils/normaliseCountry';
@@ -10,12 +14,15 @@ import normaliseCountry from '../utils/normaliseCountry';
 /**
  * List forwarders on file, flagging those that have quoted on a route
  *
- * A new request ticks the forwarders that have quoted this route before or
- * that collect from its origin country, so the usual names are chosen without
- * anyone looking them up.
+ * A new request ticks the forwarders that have quoted this route before or that
+ * collect from its origin country, so the usual names are chosen without anyone
+ * looking them up.
  *
  * @example
- *   await trpcClient.logistics.admin.forwarders.getMany.query({ originCountry: 'United Kingdom', destinationCountry: 'United Arab Emirates' });
+ *   await trpcClient.logistics.admin.forwarders.getMany.query({
+ *     originCountry: 'United Kingdom',
+ *     destinationCountry: 'United Arab Emirates',
+ *   });
  */
 const adminGetForwarders = adminProcedure
   .input(
@@ -31,7 +38,11 @@ const adminGetForwarders = adminProcedure
     const forwarders = await db
       .select()
       .from(logisticsForwarders)
-      .where(input?.includeInactive ? undefined : eq(logisticsForwarders.isActive, true))
+      .where(
+        input?.includeInactive
+          ? undefined
+          : eq(logisticsForwarders.isActive, true),
+      )
       .orderBy(asc(logisticsForwarders.name));
 
     const quoteCounts = await db
@@ -46,7 +57,10 @@ const adminGetForwarders = adminProcedure
         ? await db
             .selectDistinct({ forwarderId: logisticsQuotes.forwarderId })
             .from(logisticsQuotes)
-            .leftJoin(logisticsQuoteRequests, eq(logisticsQuoteRequests.id, logisticsQuotes.requestId))
+            .leftJoin(
+              logisticsQuoteRequests,
+              eq(logisticsQuoteRequests.id, logisticsQuotes.requestId),
+            )
             .where(
               and(
                 isNotNull(logisticsQuotes.forwarderId),
@@ -59,14 +73,23 @@ const adminGetForwarders = adminProcedure
     const countBy = new Map(quoteCounts.map((r) => [r.forwarderId, r.quotes]));
     const routeIds = new Set(onRoute.map((r) => r.forwarderId));
 
-    const origin = input?.originCountry ? normaliseCountry(input.originCountry).toLowerCase() : null;
+    const origin = input?.originCountry
+      ? normaliseCountry(input.originCountry).toLowerCase()
+      : null;
 
     return forwarders.map((f) => ({
       ...f,
       quoteCount: countBy.get(f.id) ?? 0,
       usedOnRoute: routeIds.has(f.id),
-      /** Collects from the request's origin country, as set on the forwarder */
-      coversRoute: !!origin && f.originCountries.some((c) => c.toLowerCase() === origin),
+      /**
+       * Collects from the request's origin country, or from anywhere, as set on
+       * the forwarder
+       */
+      coversRoute:
+        !!origin &&
+        f.originCountries.some(
+          (c) => c.toLowerCase() === origin || c.toLowerCase() === 'global',
+        ),
     }));
   });
 
