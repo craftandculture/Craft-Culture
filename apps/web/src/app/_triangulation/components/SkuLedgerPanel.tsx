@@ -327,7 +327,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                 return (
                   <div
                     key={group.kind}
-                    className="border-border-primary overflow-hidden rounded-lg border"
+                    className="border-border-primary overflow-x-auto rounded-lg border"
                   >
                     <div className="border-border-primary bg-fill-muted/20 flex items-center justify-between gap-3 border-b px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -462,6 +462,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                 the missing bottles are.
               </p>
             </Typography>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <tbody>
                 {uncountedZoho.map((line) => (
@@ -489,6 +490,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         ) : null}
 
@@ -540,6 +542,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                     ))}
                   </div>
                 ) : null}
+                <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <tbody>
                     {group.lines.map((stray) => (
@@ -570,6 +573,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             ))}
           </div>

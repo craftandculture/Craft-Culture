@@ -6,7 +6,7 @@ export const cardContentStyles = tv({
     size: {
       sm: 'gap-3 px-3 py-2',
       md: 'gap-6 p-6',
-      lg: 'gap-8 p-8 md:px-10 md:py-9',
+      lg: 'gap-6 p-5 sm:gap-8 sm:p-8 md:px-10 md:py-9',
     },
   },
   defaultVariants: {

@@ -346,7 +346,7 @@ const WMSPartnerRequestsPage = () => {
       {/* Resolve Modal */}
       {resolveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto">
             <CardContent className="p-6">
               <Typography variant="headingSm" className="mb-4">
                 {resolveModal.action === 'approved' ? 'Approve' : 'Reject'} Request

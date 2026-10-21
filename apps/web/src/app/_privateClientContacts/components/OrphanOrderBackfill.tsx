@@ -84,7 +84,7 @@ const OrphanOrderBackfill = () => {
             client{preview.clients === 1 ? '' : 's'}
           </p>
 
-          <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-amber-200 bg-white">
+          <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-amber-200 bg-white">
             <table className="w-full text-[12.5px]">
               <tbody className="divide-y divide-amber-100">
                 {preview.details.map((row) => (

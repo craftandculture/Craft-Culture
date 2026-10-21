@@ -41,7 +41,7 @@ const StatementSection = ({
         {empty}
       </p>
     ) : (
-      <div className="border-border-muted overflow-hidden rounded-xl border">
+      <div className="border-border-muted overflow-x-auto rounded-xl border">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted/60 border-border-muted border-b">
             <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">

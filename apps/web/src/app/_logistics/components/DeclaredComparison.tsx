@@ -106,6 +106,7 @@ const DeclaredComparison = ({ rows, source }: DeclaredComparisonProps) => {
         </Typography>
       </div>
 
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-text-muted text-left text-xs uppercase">
@@ -161,6 +162,7 @@ const DeclaredComparison = ({ rows, source }: DeclaredComparisonProps) => {
           })}
         </tbody>
       </table>
+      </div>
 
       {source ? (
         <Typography variant="bodyXs" colorRole="muted" className="mt-2">

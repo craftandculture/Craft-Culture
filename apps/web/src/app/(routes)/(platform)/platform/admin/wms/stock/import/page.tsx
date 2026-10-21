@@ -648,7 +648,7 @@ const WMSStockImportPage = () => {
 
                   {/* Validation summary */}
                   {validationComplete && (
-                    <div className="mb-4 grid grid-cols-5 gap-2">
+                    <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
                       <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 dark:bg-emerald-900/20">
                         <IconCircleCheck className="h-4 w-4 text-emerald-500" />
                         <div>
@@ -741,7 +741,7 @@ const WMSStockImportPage = () => {
                   )}
 
                   {/* Item preview table with validation */}
-                  <div className="mb-4 max-h-[500px] overflow-y-auto rounded border border-border-primary">
+                  <div className="mb-4 max-h-[500px] overflow-auto rounded border border-border-primary">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-fill-secondary">
                         <tr>

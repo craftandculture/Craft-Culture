@@ -1,7 +1,7 @@
 import { VariantProps, tv } from 'tailwind-variants';
 
 const pageHeaderActionStyles = tv({
-  base: 'flex items-center gap-2',
+  base: 'flex flex-wrap items-center gap-2',
 });
 
 export interface PageHeaderActionsProps

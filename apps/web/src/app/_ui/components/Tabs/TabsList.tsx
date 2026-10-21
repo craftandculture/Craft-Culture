@@ -4,7 +4,8 @@ import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { VariantProps, tv } from 'tailwind-variants';
 
 const tabsListStyles = tv({
-  base: 'bg-fill-muted/25 text-text-muted inline-flex items-center justify-center p-1',
+  // Scrolls sideways rather than overflowing when the tabs outgrow a phone
+  base: 'bg-fill-muted/25 text-text-muted inline-flex max-w-full items-center justify-start overflow-x-auto p-1 sm:justify-center',
   variants: {
     shape: {
       rect: 'rounded-xl',

@@ -1229,7 +1229,7 @@ const WMSPickListDetailPage = () => {
       {showDeleteModal && (
         <>
           <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowDeleteModal(false)} />
-          <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2">
+          <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 max-h-[calc(100svh-2rem)] overflow-y-auto sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2">
             <Card>
               <CardContent className="p-5">
                 <Typography variant="headingSm" className="mb-2">

@@ -700,7 +700,7 @@ const QuoteDetailPage = () => {
                     <Typography variant="bodySm" className="font-medium mb-2">
                       {category}
                     </Typography>
-                    <div className="rounded-lg border border-border-primary overflow-hidden">
+                    <div className="rounded-lg border border-border-primary overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-surface-secondary">
                           <tr>
