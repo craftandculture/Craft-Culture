@@ -1,3 +1,9 @@
+## [2.0.471](https://github.com/craftandculture/Craft-Culture/compare/v2.0.470...v2.0.471) (2026-10-21)
+
+### Features
+
+* the phone menu scrolls, folds by section, finds pages by name and carries every admin page; the header gains a search button on phones ([f5ae2a4](https://github.com/craftandculture/Craft-Culture/commit/f5ae2a491d965f3db88817ee4decd9947cbff04d))
+
 ## [2.0.470](https://github.com/craftandculture/Craft-Culture/compare/v2.0.469...v2.0.470) (2026-10-21)
 
 ### Features
