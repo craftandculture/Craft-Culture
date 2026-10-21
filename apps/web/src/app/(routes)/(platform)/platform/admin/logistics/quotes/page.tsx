@@ -65,7 +65,10 @@ const quoteStatusTone: Record<QuoteStatus, Tone> = {
 };
 
 /** What each request is waiting on, as the list says it */
-const nextStepLabel: Record<QuoteRequestNextStep, { text: string; tone: Tone } | null> = {
+const nextStepLabel: Record<
+  QuoteRequestNextStep,
+  { text: string; tone: Tone } | null
+> = {
   choose_forwarders: { text: 'Choose forwarders', tone: 'amber' },
   send: { text: 'Send to forwarders', tone: 'amber' },
   chase: { text: 'Chase due', tone: 'red' },
@@ -76,11 +79,19 @@ const nextStepLabel: Record<QuoteRequestNextStep, { text: string; tone: Tone } |
   done: null,
 };
 
-const ACTION_STEPS: QuoteRequestNextStep[] = ['choose_forwarders', 'send', 'chase', 'price', 'send_price'];
+const ACTION_STEPS: QuoteRequestNextStep[] = [
+  'choose_forwarders',
+  'send',
+  'chase',
+  'price',
+  'send_price',
+];
 const DECIDE_STEPS: QuoteRequestNextStep[] = ['price', 'send_price', 'accept'];
 
 const usd = (n: number | null | undefined) =>
-  n == null ? '—' : `USD ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  n == null
+    ? '—'
+    : `USD ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const modeLabel: Record<string, string> = {
   sea_fcl: 'Sea FCL',
@@ -98,7 +109,8 @@ const MAX_COMPARE = 5;
  * @param status - Quote status
  * @returns False for rejected and expired quotes
  */
-const isLive = (status: QuoteStatus) => status !== 'rejected' && status !== 'expired';
+const isLive = (status: QuoteStatus) =>
+  status !== 'rejected' && status !== 'expired';
 
 /**
  * Capitalise the first letter of a status
@@ -106,7 +118,8 @@ const isLive = (status: QuoteStatus) => status !== 'rejected' && status !== 'exp
  * @param text - Status as stored
  * @returns The status as it reads on screen
  */
-const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const titleCase = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * Freight quotes: one home for quote requests and the quotes they receive
@@ -123,7 +136,8 @@ const FreightQuotesPage = () => {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<RequestStatus | ''>('');
-  const [focus, setFocus] = useState<Focus>('action');
+  // Opens on Needs action when something does; otherwise on everything, so the list is never empty by default
+  const [chosenFocus, setFocus] = useState<Focus | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
 
   const {
@@ -155,6 +169,7 @@ const FreightQuotesPage = () => {
 
   const isOpen = (s: RequestStatus) => s !== 'completed' && s !== 'cancelled';
   const needsAction = requests.filter((r) => ACTION_STEPS.includes(r.nextStep));
+  const focus: Focus = chosenFocus ?? (needsAction.length ? 'action' : '');
   const awaiting = requests.filter((r) => r.nextStep === 'awaiting');
   const toDecide = requests.filter((r) => DECIDE_STEPS.includes(r.nextStep));
   const completed = requests.filter((r) => r.status === 'completed');
@@ -232,48 +247,72 @@ const FreightQuotesPage = () => {
   const showStandalone = !!shipmentId || focus === '' || focus === 'standalone';
 
   const toggleSelected = (id: string) =>
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  const canCompareSelected = selected.length >= 2 && selected.length <= MAX_COMPARE;
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  const canCompareSelected =
+    selected.length >= 2 && selected.length <= MAX_COMPARE;
 
   return (
     <div className="container mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm text-text-muted">
-            <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+          <div className="text-text-muted mb-1 flex items-center gap-1.5 text-sm">
+            <Link
+              href="/platform/admin/logistics"
+              className="hover:text-text-primary transition-colors"
+            >
               Logistics
             </Link>
             <IconChevronRight className="size-4" />
             <span className="text-text-primary">Freight quotes</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Freight quotes</h1>
-          <p className="mt-0.5 text-sm text-text-muted">
-            Requests for freight and the forwarder quotes received against each one
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">
+            Freight quotes
+          </h1>
+          <p className="text-text-muted mt-0.5 text-sm">
+            Requests for freight and the forwarder quotes received against each
+            one
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/platform/admin/logistics/forwarders" className={secondaryButton}>
+          <Link
+            href="/platform/admin/logistics/forwarders"
+            className={secondaryButton}
+          >
             <IconUsers size={16} /> Forwarders
           </Link>
-          <Link href="/platform/admin/logistics/quotes/new" className={secondaryButton}>
+          <Link
+            href="/platform/admin/logistics/quotes/new"
+            className={secondaryButton}
+          >
             <IconPlus size={16} /> Quote without a request
           </Link>
-          <Link href="/platform/admin/logistics/requests/new" className={primaryButton}>
+          <Link
+            href="/platform/admin/logistics/requests/new"
+            className={primaryButton}
+          >
             <IconPlus size={16} /> New request
           </Link>
         </div>
       </div>
 
       {(requestsError || quotesError) && (
-        <p className={`${card} p-6 text-sm text-text-muted`}>
-          Freight quotes could not be loaded: {(requestsError ?? quotesError)?.message}
+        <p className={`${card} text-text-muted p-6 text-sm`}>
+          Freight quotes could not be loaded:{' '}
+          {(requestsError ?? quotesError)?.message}
         </p>
       )}
 
       {shipmentId ? (
-        <p className={`${card} flex items-center justify-between gap-3 p-4 text-sm text-text-muted`}>
+        <p
+          className={`${card} text-text-muted flex items-center justify-between gap-3 p-4 text-sm`}
+        >
           Showing the quotes linked to one shipment.
-          <Link href="/platform/admin/logistics/quotes" className={secondaryButton}>
+          <Link
+            href="/platform/admin/logistics/quotes"
+            className={secondaryButton}
+          >
             Show all freight quotes
           </Link>
         </p>
@@ -286,23 +325,36 @@ const FreightQuotesPage = () => {
               <button
                 key={tile.key}
                 type="button"
-                onClick={() => setFocus(active ? '' : tile.key)}
+                onClick={() => {
+                  setFocus(active ? '' : tile.key);
+                  setStatus('');
+                }}
                 className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
-                  active ? 'ring-2 ring-text-primary ring-offset-1 ring-offset-surface-primary' : ''
+                  active
+                    ? 'ring-text-primary ring-offset-surface-primary ring-2 ring-offset-1'
+                    : ''
                 }`}
               >
-                <span className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}>
+                <span
+                  className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}
+                >
                   <TileIcon size={13} />
                 </span>
                 <span
-                  className={`block text-lg font-bold leading-tight tabular-nums ${
-                    tile.value === 0 ? 'text-text-muted' : (tile.valueTone ?? '')
+                  className={`block text-lg font-bold tabular-nums leading-tight ${
+                    tile.value === 0
+                      ? 'text-text-muted'
+                      : (tile.valueTone ?? '')
                   }`}
                 >
                   {tile.value}
                 </span>
-                <span className="block text-[11px] text-text-muted">{tile.label}</span>
-                <span className="block text-[10px] text-text-muted/80">{tile.sub}</span>
+                <span className="text-text-muted block text-[11px]">
+                  {tile.label}
+                </span>
+                <span className="text-text-muted/80 block text-[10px]">
+                  {tile.sub}
+                </span>
               </button>
             );
           })}
@@ -310,25 +362,44 @@ const FreightQuotesPage = () => {
       )}
 
       <div className="relative">
-        <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+        <IconSearch className="text-text-muted pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search requests by number, route or cargo, and quotes by number or forwarder"
-          className="h-11 w-full rounded-xl border border-border-muted bg-surface-primary pl-10 pr-3 text-sm text-text-primary shadow-sm placeholder:text-text-muted focus:border-text-primary focus:outline-none"
+          className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-primary h-11 w-full rounded-xl border pl-10 pr-3 text-sm shadow-sm focus:outline-none"
         />
       </div>
 
       {!shipmentId && focus !== 'standalone' && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          <button type="button" className={pill(status === '')} onClick={() => setStatus('')}>
+          <button
+            type="button"
+            className={pill(status === '')}
+            onClick={() => {
+              setStatus('');
+              setFocus('');
+            }}
+          >
             All requests
-            <span className="ml-1.5 tabular-nums opacity-60">{requests.length}</span>
+            <span className="ml-1.5 tabular-nums opacity-60">
+              {requests.length}
+            </span>
           </button>
           {(Object.keys(requestStatusLabel) as RequestStatus[]).map((s) => (
-            <button key={s} type="button" className={pill(status === s)} onClick={() => setStatus(status === s ? '' : s)}>
+            <button
+              key={s}
+              type="button"
+              className={pill(status === s)}
+              onClick={() => {
+                setStatus(status === s ? '' : s);
+                setFocus('');
+              }}
+            >
               {requestStatusLabel[s]}
-              <span className="ml-1.5 tabular-nums opacity-60">{requests.filter((r) => r.status === s).length}</span>
+              <span className="ml-1.5 tabular-nums opacity-60">
+                {requests.filter((r) => r.status === s).length}
+              </span>
             </button>
           ))}
         </div>
@@ -337,17 +408,19 @@ const FreightQuotesPage = () => {
       {/* Requests, each with its quotes beneath it */}
       {!shipmentId && focus !== 'standalone' && (
         <div className={card}>
-          <div className="flex items-center gap-2 border-b border-border-muted px-4 py-3">
+          <div className="border-border-muted flex items-center gap-2 border-b px-4 py-3">
             <span className={sectionHeading}>Requests</span>
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+            <span className="bg-surface-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-medium">
               {shownRequests.length}
             </span>
           </div>
 
           {requestsLoading ? (
-            <p className="py-12 text-center text-sm text-text-muted">Loading requests…</p>
+            <p className="text-text-muted py-12 text-center text-sm">
+              Loading requests…
+            </p>
           ) : shownRequests.length === 0 ? (
-            <p className="py-12 text-center text-sm text-text-muted">
+            <p className="text-text-muted py-12 text-center text-sm">
               {focus === 'action' && requests.length
                 ? 'Nothing needs action. Every request is with forwarders or the client.'
                 : requests.length
@@ -355,13 +428,17 @@ const FreightQuotesPage = () => {
                   : 'No quote requests yet. Open the first with New request.'}
             </p>
           ) : (
-            <ul className="divide-y divide-border-muted">
+            <ul className="divide-border-muted divide-y">
               {shownRequests.map((r) => {
                 const live = r.quotes.filter((q) => isLive(q.status));
                 const best = live[0];
                 const step = nextStepLabel[r.nextStep];
-                const pendingCount = r.quotes.filter((q) => q.status === 'pending').length;
-                const compareIds = (live.length >= 2 ? live : r.quotes).slice(0, MAX_COMPARE).map((q) => q.id);
+                const pendingCount = r.quotes.filter(
+                  (q) => q.status === 'pending',
+                ).length;
+                const compareIds = (live.length >= 2 ? live : r.quotes)
+                  .slice(0, MAX_COMPARE)
+                  .map((q) => q.id);
                 const href = `/platform/admin/logistics/requests/${r.id}`;
                 const cargo = [
                   titleCase(r.productType),
@@ -376,16 +453,27 @@ const FreightQuotesPage = () => {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
                       <Link href={href} className="group min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-semibold text-text-primary group-hover:underline">
+                          <span className="text-text-primary font-mono text-sm font-semibold group-hover:underline">
                             {r.requestNumber}
                           </span>
                           {step ? (
-                            <span className={pillClass(step.tone)}>{step.text}</span>
+                            <span className={pillClass(step.tone)}>
+                              {step.text}
+                            </span>
                           ) : (
-                            <span className={pillClass(requestStatusTone[r.status])}>{requestStatusLabel[r.status]}</span>
+                            <span
+                              className={pillClass(requestStatusTone[r.status])}
+                            >
+                              {requestStatusLabel[r.status]}
+                            </span>
                           )}
-                          {(r.priority === 'high' || r.priority === 'urgent') && (
-                            <span className={pillClass(r.priority === 'urgent' ? 'red' : 'amber')}>
+                          {(r.priority === 'high' ||
+                            r.priority === 'urgent') && (
+                            <span
+                              className={pillClass(
+                                r.priority === 'urgent' ? 'red' : 'amber',
+                              )}
+                            >
                               {titleCase(r.priority)}
                             </span>
                           )}
@@ -400,18 +488,23 @@ const FreightQuotesPage = () => {
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 truncate text-sm text-text-primary">
-                          {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
+                        <p className="text-text-primary mt-0.5 truncate text-sm">
+                          {r.originCity || r.originCountry} →{' '}
+                          {r.destinationCity || r.destinationCountry}
                         </p>
-                        <p className="truncate text-xs text-text-muted">
+                        <p className="text-text-muted truncate text-xs">
                           {cargo.join(' · ')}
-                          {r.requester ? ` · ${r.requester.name || r.requester.email}` : ''}
+                          {r.requester
+                            ? ` · ${r.requester.name || r.requester.email}`
+                            : ''}
                           {' · '}
-                          {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(r.createdAt), {
+                            addSuffix: true,
+                          })}
                         </p>
                       </Link>
                       <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                        <span className="text-xs text-text-muted">
+                        <span className="text-text-muted text-xs">
                           {r.quotes.length === 0
                             ? 'No quotes yet'
                             : `${r.quotes.length} quote${r.quotes.length === 1 ? '' : 's'}`}
@@ -419,7 +512,9 @@ const FreightQuotesPage = () => {
                             ? ` · best ${best.per75clUsd != null ? `${usd(best.per75clUsd)} per 75cl` : money(best.totalPrice, best.currency)}`
                             : ''}
                           {pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
-                          {r.marginUsd != null ? ` · margin ${usd(r.marginUsd)}` : ''}
+                          {r.marginUsd != null
+                            ? ` · margin ${usd(r.marginUsd)}`
+                            : ''}
                         </span>
                         {compareIds.length >= 2 && (
                           <Link
@@ -446,38 +541,66 @@ const FreightQuotesPage = () => {
                           <span
                             key={x.forwarderId}
                             className={pillClass(
-                              x.outcome === 'quoted' ? 'emerald' : x.outcome === 'declined' ? 'slate' : x.sentAt ? 'blue' : 'amber',
+                              x.outcome === 'quoted'
+                                ? 'emerald'
+                                : x.outcome === 'declined'
+                                  ? 'slate'
+                                  : x.sentAt
+                                    ? 'blue'
+                                    : 'amber',
                             )}
                           >
                             {x.name}
                             {' · '}
-                            {x.outcome === 'quoted' ? 'quoted' : x.outcome === 'declined' ? 'not chosen' : x.sentAt ? 'asked' : 'not sent'}
+                            {x.outcome === 'quoted'
+                              ? 'quoted'
+                              : x.outcome === 'declined'
+                                ? 'not chosen'
+                                : x.sentAt
+                                  ? 'asked'
+                                  : 'not sent'}
                           </span>
                         ))}
                       </div>
                     )}
 
                     {r.quotes.length > 0 && (
-                      <ul className="mt-2 space-y-1 border-l-2 border-border-muted pl-3">
+                      <ul className="border-border-muted mt-2 space-y-1 border-l-2 pl-3">
                         {r.quotes.map((q) => (
                           <li key={q.id}>
                             <Link
                               href={`/platform/admin/logistics/quotes/${q.id}`}
-                              className="flex items-center gap-3 rounded-md px-2 py-1 text-sm transition-colors hover:bg-surface-secondary/50"
+                              className="hover:bg-surface-secondary/50 flex items-center gap-3 rounded-md px-2 py-1 text-sm transition-colors"
                             >
-                              <span className="font-mono text-xs text-text-muted">{q.quoteNumber}</span>
-                              <span className="min-w-0 flex-1 truncate text-text-primary">{q.forwarderName}</span>
+                              <span className="text-text-muted font-mono text-xs">
+                                {q.quoteNumber}
+                              </span>
+                              <span className="text-text-primary min-w-0 flex-1 truncate">
+                                {q.forwarderName}
+                              </span>
                               {q.transitDays ? (
-                                <span className="hidden text-xs text-text-muted sm:inline">{q.transitDays} days</span>
+                                <span className="text-text-muted hidden text-xs sm:inline">
+                                  {q.transitDays} days
+                                </span>
                               ) : null}
-                              <span className="tabular-nums text-text-primary">{money(q.totalPrice, q.currency)}</span>
+                              <span className="text-text-primary tabular-nums">
+                                {money(q.totalPrice, q.currency)}
+                              </span>
                               {q.per75clUsd != null && (
-                                <span className="hidden tabular-nums text-xs text-text-muted md:inline">{usd(q.per75clUsd)} / 75cl</span>
+                                <span className="text-text-muted hidden text-xs tabular-nums md:inline">
+                                  {usd(q.per75clUsd)} / 75cl
+                                </span>
                               )}
                               {best && q.id === best.id && live.length > 1 && (
-                                <span className={pillClass('emerald')}>Best price</span>
+                                <span className={pillClass('emerald')}>
+                                  Best price
+                                </span>
                               )}
-                              <span className={pillClass(quoteStatusTone[q.status])}>{titleCase(q.status)}</span>
+                              <span
+                                className={pillClass(quoteStatusTone[q.status])}
+                              >
+                                {titleCase(q.status)}
+                              </span>
                             </Link>
                           </li>
                         ))}
@@ -494,15 +617,21 @@ const FreightQuotesPage = () => {
       {/* Quotes entered without a request */}
       {showStandalone && (
         <div className={card}>
-          <div className="flex items-center gap-2 border-b border-border-muted px-4 py-3">
-            <span className={sectionHeading}>{shipmentId ? 'Quotes for this shipment' : 'Quotes without a request'}</span>
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+          <div className="border-border-muted flex items-center gap-2 border-b px-4 py-3">
+            <span className={sectionHeading}>
+              {shipmentId
+                ? 'Quotes for this shipment'
+                : 'Quotes without a request'}
+            </span>
+            <span className="bg-surface-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-medium">
               {standalone.length}
             </span>
             {selected.length > 0 && (
               <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-text-muted">
-                  {canCompareSelected ? `${selected.length} selected` : `Select 2 to ${MAX_COMPARE} quotes to compare`}
+                <span className="text-text-muted text-xs">
+                  {canCompareSelected
+                    ? `${selected.length} selected`
+                    : `Select 2 to ${MAX_COMPARE} quotes to compare`}
                 </span>
                 {canCompareSelected && (
                   <Link
@@ -517,13 +646,17 @@ const FreightQuotesPage = () => {
           </div>
 
           {quotesLoading ? (
-            <p className="py-12 text-center text-sm text-text-muted">Loading quotes…</p>
+            <p className="text-text-muted py-12 text-center text-sm">
+              Loading quotes…
+            </p>
           ) : standalone.length === 0 ? (
-            <p className="py-8 text-center text-sm text-text-muted">
-              {shipmentId ? 'No quotes are linked to this shipment.' : 'Every quote answers a request.'}
+            <p className="text-text-muted py-8 text-center text-sm">
+              {shipmentId
+                ? 'No quotes are linked to this shipment.'
+                : 'Every quote answers a request.'}
             </p>
           ) : (
-            <ul className="divide-y divide-border-muted">
+            <ul className="divide-border-muted divide-y">
               {standalone.map((q) => (
                 <li key={q.id} className="flex items-center gap-3 px-4 py-3">
                   <input
@@ -538,18 +671,31 @@ const FreightQuotesPage = () => {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm font-semibold text-text-primary">{q.quoteNumber}</span>
-                        <span className={pillClass(quoteStatusTone[q.status])}>{titleCase(q.status)}</span>
-                        {q.shipment && <span className={pillClass('blue')}>{q.shipment.shipmentNumber}</span>}
+                        <span className="text-text-primary font-mono text-sm font-semibold">
+                          {q.quoteNumber}
+                        </span>
+                        <span className={pillClass(quoteStatusTone[q.status])}>
+                          {titleCase(q.status)}
+                        </span>
+                        {q.shipment && (
+                          <span className={pillClass('blue')}>
+                            {q.shipment.shipmentNumber}
+                          </span>
+                        )}
                       </div>
-                      <p className="mt-0.5 truncate text-sm text-text-primary">{q.forwarderName}</p>
-                      <p className="truncate text-xs text-text-muted">
-                        {q.originCity || q.originCountry || '—'} → {q.destinationCity || q.destinationCountry || '—'}
-                        {q.transportMode ? ` · ${modeLabel[q.transportMode]}` : ''}
+                      <p className="text-text-primary mt-0.5 truncate text-sm">
+                        {q.forwarderName}
+                      </p>
+                      <p className="text-text-muted truncate text-xs">
+                        {q.originCity || q.originCountry || '—'} →{' '}
+                        {q.destinationCity || q.destinationCountry || '—'}
+                        {q.transportMode
+                          ? ` · ${modeLabel[q.transportMode]}`
+                          : ''}
                         {q.transitDays ? ` · ${q.transitDays} days` : ''}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-text-primary">
+                    <span className="text-text-primary shrink-0 text-sm font-semibold tabular-nums">
                       {money(q.totalPrice, q.currency)}
                     </span>
                   </Link>
