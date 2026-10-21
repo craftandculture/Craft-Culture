@@ -1,3 +1,9 @@
+## [2.0.480](https://github.com/craftandculture/Craft-Culture/compare/v2.0.479...v2.0.480) (2026-10-21)
+
+### Bug Fixes
+
+* **logistics:** freight emails keep their paragraph breaks, greet the forwarder's team and sign off from Logistics ([29d9799](https://github.com/craftandculture/Craft-Culture/commit/29d979952e10330ddd1913d159ea522457d19c19))
+
 ## [2.0.479](https://github.com/craftandculture/Craft-Culture/compare/v2.0.478...v2.0.479) (2026-10-21)
 
 ### Features
