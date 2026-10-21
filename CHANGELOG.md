@@ -1,3 +1,9 @@
+## [2.0.470](https://github.com/craftandculture/Craft-Culture/compare/v2.0.469...v2.0.470) (2026-10-21)
+
+### Features
+
+* route fields on a freight request suggest the countries, cities and warehouses already used, and UK or UAE are saved in full ([fe915d2](https://github.com/craftandculture/Craft-Culture/commit/fe915d24e54b23925c2306ff1857284d6aaf6ee5))
+
 ## [2.0.469](https://github.com/craftandculture/Craft-Culture/compare/v2.0.468...v2.0.469) (2026-10-21)
 
 ### Features
