@@ -1,3 +1,9 @@
+## [2.0.475](https://github.com/craftandculture/Craft-Culture/compare/v2.0.474...v2.0.475) (2026-10-21)
+
+### Features
+
+* on phones, shipment lines read as cards that open the line editor full width, and export invoices no longer scroll sideways ([1477264](https://github.com/craftandculture/Craft-Culture/commit/14772643acaa7ba16cebf149394d91bb207d2f66))
+
 ## [2.0.474](https://github.com/craftandculture/Craft-Culture/compare/v2.0.473...v2.0.474) (2026-10-21)
 
 ### Features
