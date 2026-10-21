@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  IconArrowLeft,
-  IconPlus,
-  IconTrash,
-} from '@tabler/icons-react';
+import { IconArrowLeft, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -62,11 +58,11 @@ const categoryOptions = [
 /**
  * Create new freight quote page
  *
- * Opened from a quote request (?requestId=) it answers that request: the
- * route, transport mode and cargo are copied from it and the quote is linked
- * to it. Opened from a shipment (?shipmentId=) it is linked to that shipment.
- * Opened with ?draft=1 from a request's drop zone, it starts filled in with
- * the quote read from the forwarder's document, which is kept with the quote.
+ * Opened from a quote request (?requestId=) it answers that request: the route,
+ * transport mode and cargo are copied from it and the quote is linked to it.
+ * Opened from a shipment (?shipmentId=) it is linked to that shipment. Opened
+ * with ?draft=1 from a request's drop zone, it starts filled in with the quote
+ * read from the forwarder's document, which is kept with the quote.
  */
 const NewQuotePage = () => {
   const router = useRouter();
@@ -97,7 +93,14 @@ const NewQuotePage = () => {
   const [notes, setNotes] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { category: 'Freight', description: '', unitPrice: null, quantity: 1, total: 0, currency: null },
+    {
+      category: 'Freight',
+      description: '',
+      unitPrice: null,
+      quantity: 1,
+      total: 0,
+      currency: null,
+    },
   ]);
 
   // If linked to shipment, fetch shipment details
@@ -108,7 +111,9 @@ const NewQuotePage = () => {
 
   // If answering a quote request, fetch it to copy its route and cargo
   const { data: request } = useQuery({
-    ...api.logistics.admin.requests.getOne.queryOptions({ requestId: requestId! }),
+    ...api.logistics.admin.requests.getOne.queryOptions({
+      requestId: requestId!,
+    }),
     enabled: !!requestId,
   });
 
@@ -132,12 +137,30 @@ const NewQuotePage = () => {
     setNotes(d.notes ?? '');
     setLineItems(
       d.lineItems.length
-        ? d.lineItems.map((l) => ({ category: l.category, description: l.description, unitPrice: null, quantity: 1, total: l.total, currency: null }))
-        : [{ category: 'Freight', description: 'Freight', unitPrice: null, quantity: 1, total: d.totalPrice, currency: null }],
+        ? d.lineItems.map((l) => ({
+            category: l.category,
+            description: l.description,
+            unitPrice: null,
+            quantity: 1,
+            total: l.total,
+            currency: null,
+          }))
+        : [
+            {
+              category: 'Freight',
+              description: 'Freight',
+              unitPrice: null,
+              quantity: 1,
+              total: d.totalPrice,
+              currency: null,
+            },
+          ],
     );
   }, [requestId, searchParams]);
 
-  const { mutateAsync: uploadAttachment } = useMutation(api.logistics.admin.quotes.uploadAttachment.mutationOptions());
+  const { mutateAsync: uploadAttachment } = useMutation(
+    api.logistics.admin.quotes.uploadAttachment.mutationOptions(),
+  );
 
   // Copy the request's route once it loads, without overwriting anything typed
   const prefilledFrom = useRef<string | null>(null);
@@ -162,25 +185,47 @@ const NewQuotePage = () => {
           fileName: read.file.fileName,
           fileData: read.file.base64,
           mimeType: read.file.mimeType,
-        }).catch(() => toast.error('The quote was saved, but its document could not be attached'));
+        }).catch(() =>
+          toast.error(
+            'The quote was saved, but its document could not be attached',
+          ),
+        );
       }
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes', 'getMany']] });
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'quotes', 'getMany']],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'requests']],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'getDashboardMetrics']],
+      });
       // Back to the request, where the quote now ranks against the others
-      router.push(requestId ? backHref : `/platform/admin/logistics/quotes/${result.id}`);
+      router.push(
+        requestId ? backHref : `/platform/admin/logistics/quotes/${result.id}`,
+      );
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create quote');
     },
   });
 
-  const totalPrice = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  const totalPrice = lineItems.reduce(
+    (sum, item) => sum + (item.total || 0),
+    0,
+  );
 
   const addLineItem = () => {
     setLineItems([
       ...lineItems,
-      { category: 'Freight', description: '', unitPrice: null, quantity: 1, total: 0, currency: null },
+      {
+        category: 'Freight',
+        description: '',
+        unitPrice: null,
+        quantity: 1,
+        total: 0,
+        currency: null,
+      },
     ]);
   };
 
@@ -188,7 +233,11 @@ const NewQuotePage = () => {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof LineItem, value: string | number | null) => {
+  const updateLineItem = (
+    index: number,
+    field: keyof LineItem,
+    value: string | number | null,
+  ) => {
     const current = lineItems[index];
     if (!current) return;
 
@@ -221,7 +270,11 @@ const NewQuotePage = () => {
       forwarderName,
       forwarderContact: forwarderContact || undefined,
       forwarderEmail: forwarderEmail || undefined,
-      forwarderId: forwarderId && forwarderName === (read?.draft.matchedForwarderName ?? '') ? forwarderId : undefined,
+      forwarderId:
+        forwarderId &&
+        forwarderName === (read?.draft.matchedForwarderName ?? '')
+          ? forwarderId
+          : undefined,
       forwarderReference: forwarderReference || undefined,
       shipmentId,
       requestId,
@@ -284,43 +337,51 @@ const NewQuotePage = () => {
             <CardContent>
               <dl className="grid gap-3 text-sm sm:grid-cols-4">
                 <div>
-                  <dt className="text-xs text-text-muted">Route</dt>
+                  <dt className="text-text-muted text-xs">Route</dt>
                   <dd>
                     {request.originCity || request.originCountry} →{' '}
                     {request.destinationCity || request.destinationCountry}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-text-muted">Cargo</dt>
+                  <dt className="text-text-muted text-xs">Cargo</dt>
                   <dd className="capitalize">
                     {[
                       request.productType,
                       request.totalCases ? `${request.totalCases} cases` : null,
-                      request.totalPallets ? `${request.totalPallets} pallets` : null,
+                      request.totalPallets
+                        ? `${request.totalPallets} pallets`
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-text-muted">Weight and volume</dt>
+                  <dt className="text-text-muted text-xs">Weight and volume</dt>
                   <dd>
                     {[
-                      request.totalWeightKg ? `${request.totalWeightKg.toFixed(0)} kg` : null,
-                      request.totalVolumeM3 ? `${request.totalVolumeM3.toFixed(2)} m³` : null,
+                      request.totalWeightKg
+                        ? `${request.totalWeightKg.toFixed(0)} kg`
+                        : null,
+                      request.totalVolumeM3
+                        ? `${request.totalVolumeM3.toFixed(2)} m³`
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(' · ') || '-'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-text-muted">Requirements</dt>
+                  <dt className="text-text-muted text-xs">Requirements</dt>
                   <dd>
                     {[
                       request.requiresThermalLiner ? 'Thermal liner' : null,
                       request.requiresTracker ? 'Tracker' : null,
                       request.requiresInsurance ? 'Insurance' : null,
-                      request.temperatureControlled ? 'Temperature controlled' : null,
+                      request.temperatureControlled
+                        ? 'Temperature controlled'
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(', ') || 'None'}
@@ -328,7 +389,9 @@ const NewQuotePage = () => {
                 </div>
               </dl>
               {request.productDescription && (
-                <p className="mt-3 text-sm text-text-muted">{request.productDescription}</p>
+                <p className="text-text-muted mt-3 text-sm">
+                  {request.productDescription}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -343,15 +406,27 @@ const NewQuotePage = () => {
             }`}
           >
             <p className="font-medium">
-              Read from {read.file ? read.file.fileName : 'the pasted email'}. Check every figure against the document before saving.
+              Read from {read.file ? read.file.fileName : 'the pasted email'}.
+              Check every figure against the document before saving.
             </p>
             <p className="mt-1">
               Currency <strong>{read.draft.currency}</strong> · document total{' '}
-              <strong>{read.draft.totalPrice.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>
+              <strong>
+                {read.draft.totalPrice.toLocaleString('en-GB', {
+                  minimumFractionDigits: 2,
+                })}
+              </strong>
               {read.draft.lineItems.length > 0 && (
                 <>
-                  {' '}· lines add up to <strong>{read.draft.lineSum.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>
-                  {!read.draft.linesMatchTotal && ' — they do not match; find the missing or misread line'}
+                  {' '}
+                  · lines add up to{' '}
+                  <strong>
+                    {read.draft.lineSum.toLocaleString('en-GB', {
+                      minimumFractionDigits: 2,
+                    })}
+                  </strong>
+                  {!read.draft.linesMatchTotal &&
+                    ' — they do not match; find the missing or misread line'}
                 </>
               )}
               {read.draft.matchedForwarderName
@@ -369,7 +444,9 @@ const NewQuotePage = () => {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="forwarderName">Forwarder Name *</label>
+                <label className="text-sm font-medium" htmlFor="forwarderName">
+                  Forwarder Name *
+                </label>
                 <Input
                   id="forwarderName"
                   placeholder="e.g. DHL, Kuehne+Nagel"
@@ -379,7 +456,12 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="forwarderContact">Contact Person</label>
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="forwarderContact"
+                >
+                  Contact Person
+                </label>
                 <Input
                   id="forwarderContact"
                   placeholder="Contact name"
@@ -388,7 +470,9 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="forwarderEmail">Email</label>
+                <label className="text-sm font-medium" htmlFor="forwarderEmail">
+                  Email
+                </label>
                 <Input
                   id="forwarderEmail"
                   type="email"
@@ -398,7 +482,12 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="forwarderReference">Their quote reference</label>
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="forwarderReference"
+                >
+                  Their quote reference
+                </label>
                 <Input
                   id="forwarderReference"
                   placeholder="As printed on their quote"
@@ -423,7 +512,12 @@ const NewQuotePage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="originCountry">Country</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="originCountry"
+                    >
+                      Country
+                    </label>
                     <Input
                       id="originCountry"
                       placeholder="e.g. France"
@@ -432,7 +526,9 @@ const NewQuotePage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="originCity">City</label>
+                    <label className="text-sm font-medium" htmlFor="originCity">
+                      City
+                    </label>
                     <Input
                       id="originCity"
                       placeholder="e.g. Bordeaux"
@@ -448,7 +544,12 @@ const NewQuotePage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="destinationCountry">Country</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="destinationCountry"
+                    >
+                      Country
+                    </label>
                     <Input
                       id="destinationCountry"
                       placeholder="e.g. UAE"
@@ -457,7 +558,12 @@ const NewQuotePage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="destinationCity">City</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="destinationCity"
+                    >
+                      City
+                    </label>
                     <Input
                       id="destinationCity"
                       placeholder="e.g. Dubai"
@@ -470,10 +576,14 @@ const NewQuotePage = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="transportMode">Transport Mode</label>
+                <label className="text-sm font-medium" htmlFor="transportMode">
+                  Transport Mode
+                </label>
                 <Select
                   value={transportMode}
-                  onValueChange={(v) => setTransportMode(v as TransportMode)}
+                  onValueChange={(v) =>
+                    v && setTransportMode(v as TransportMode)
+                  }
                 >
                   <SelectTrigger id="transportMode">
                     <SelectValue placeholder="Select mode" />
@@ -488,19 +598,31 @@ const NewQuotePage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="transitDays">Transit Days</label>
+                <label className="text-sm font-medium" htmlFor="transitDays">
+                  Transit Days
+                </label>
                 <Input
                   id="transitDays"
                   type="number"
                   min="1"
                   placeholder="e.g. 21"
                   value={transitDays}
-                  onChange={(e) => setTransitDays(e.target.value ? parseInt(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTransitDays(
+                      e.target.value ? parseInt(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="currency">Currency</label>
-                <Select value={currency} onValueChange={setCurrency}>
+                <label className="text-sm font-medium" htmlFor="currency">
+                  Currency
+                </label>
+                <Select
+                  value={currency}
+                  // Radix reports '' when the value is set from a read quote; keep the currency held
+                  onValueChange={(v) => v && setCurrency(v)}
+                >
                   <SelectTrigger id="currency">
                     <SelectValue />
                   </SelectTrigger>
@@ -527,7 +649,9 @@ const NewQuotePage = () => {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="validFrom">Valid From</label>
+                <label className="text-sm font-medium" htmlFor="validFrom">
+                  Valid From
+                </label>
                 <Input
                   id="validFrom"
                   type="date"
@@ -536,7 +660,9 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="validUntil">Valid Until</label>
+                <label className="text-sm font-medium" htmlFor="validUntil">
+                  Valid Until
+                </label>
                 <Input
                   id="validUntil"
                   type="date"
@@ -553,7 +679,12 @@ const NewQuotePage = () => {
           <div className="p-4 pb-0">
             <div className="flex items-center justify-between">
               <CardTitle>Cost Breakdown</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addLineItem}
+              >
                 <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
               </Button>
             </div>
@@ -562,13 +693,15 @@ const NewQuotePage = () => {
             {lineItems.map((item, index) => (
               <div
                 key={index}
-                className="grid gap-4 rounded-lg border border-border-primary p-4 sm:grid-cols-12"
+                className="border-border-primary grid gap-4 rounded-lg border p-4 sm:grid-cols-12"
               >
                 <div className="space-y-2 sm:col-span-2">
                   <label className="text-sm font-medium">Category</label>
                   <Select
                     value={item.category}
-                    onValueChange={(v) => updateLineItem(index, 'category', v)}
+                    onValueChange={(v) =>
+                      v && updateLineItem(index, 'category', v)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -587,7 +720,9 @@ const NewQuotePage = () => {
                   <Input
                     placeholder="Description of charge"
                     value={item.description}
-                    onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                    onChange={(e) =>
+                      updateLineItem(index, 'description', e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
@@ -598,7 +733,11 @@ const NewQuotePage = () => {
                     placeholder="0.00"
                     value={item.unitPrice ?? ''}
                     onChange={(e) =>
-                      updateLineItem(index, 'unitPrice', e.target.value ? parseFloat(e.target.value) : null)
+                      updateLineItem(
+                        index,
+                        'unitPrice',
+                        e.target.value ? parseFloat(e.target.value) : null,
+                      )
                     }
                   />
                 </div>
@@ -608,7 +747,13 @@ const NewQuotePage = () => {
                     type="number"
                     min="1"
                     value={item.quantity}
-                    onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      updateLineItem(
+                        index,
+                        'quantity',
+                        parseInt(e.target.value) || 1,
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
@@ -618,7 +763,13 @@ const NewQuotePage = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={item.total || ''}
-                    onChange={(e) => updateLineItem(index, 'total', parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      updateLineItem(
+                        index,
+                        'total',
+                        parseFloat(e.target.value) || 0,
+                      )
+                    }
                   />
                 </div>
                 <div className="flex items-end sm:col-span-1">
@@ -635,15 +786,20 @@ const NewQuotePage = () => {
                 </div>
               </div>
             ))}
-            <div className="flex items-center justify-end gap-4 border-t border-border-primary pt-4">
+            <div className="border-border-primary flex items-center justify-end gap-4 border-t pt-4">
               <Typography variant="bodySm" colorRole="muted">
                 Total Quote Price:
               </Typography>
               <Typography variant="headingMd">
-                {new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency,
-                }).format(totalPrice)}
+                {/^[A-Z]{3}$/.test(currency)
+                  ? new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency,
+                    }).format(totalPrice)
+                  : totalPrice.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
               </Typography>
             </div>
           </CardContent>
@@ -656,7 +812,9 @@ const NewQuotePage = () => {
           </div>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="notes">Quote Notes (visible to all)</label>
+              <label className="text-sm font-medium" htmlFor="notes">
+                Quote Notes (visible to all)
+              </label>
               <TextArea
                 id="notes"
                 placeholder="General notes about this quote..."
@@ -666,7 +824,9 @@ const NewQuotePage = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="internalNotes">Internal Notes (admin only)</label>
+              <label className="text-sm font-medium" htmlFor="internalNotes">
+                Internal Notes (admin only)
+              </label>
               <TextArea
                 id="internalNotes"
                 placeholder="Internal notes for reference..."
