@@ -1,3 +1,9 @@
+## [2.0.473](https://github.com/craftandculture/Craft-Culture/compare/v2.0.472...v2.0.473) (2026-10-21)
+
+### Features
+
+* freight request, reminder, award and decline emails send from logistics@ in one click, and each one sent is logged on the request ([4c180af](https://github.com/craftandculture/Craft-Culture/commit/4c180afd328f7f242303c239bda666f13e9bd62c))
+
 ## [2.0.472](https://github.com/craftandculture/Craft-Culture/compare/v2.0.471...v2.0.472) (2026-10-21)
 
 ### Features
