@@ -12,6 +12,7 @@ import { z } from 'zod';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
+import releaseClosedOrderHolds from '@/app/_zohoSalesOrders/data/releaseClosedOrderHolds';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import db from '@/database/client';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
@@ -194,15 +195,31 @@ const adminSyncSalesOrders = adminProcedure
   // Held drafts follow their Zoho draft: lines changed, voided, confirmed
   const drafts = await refreshAllDraftHolds({ db });
 
+  /*
+    An order voided in Zoho releases its stock here too, so pressing Sync
+    clears it straight away rather than on the next scheduled run.
+  */
+  const closed = await releaseClosedOrderHolds({
+    db,
+    seenZohoIds: salesOrders.map((order) => order.salesorder_id),
+  }).catch((error) => {
+    console.error('Failed to release stock for closed orders', { error });
+    return { checked: 0, released: [] };
+  });
+  const releasedNote = closed.released.length
+    ? `. Released stock held for ${closed.released.map((order) => `${order.salesOrderNumber} (${order.status} in Zoho)`).join(', ')}`
+    : '';
+
   return {
     success: true,
     ...results,
     draftHoldsRefreshed: drafts.refreshed,
     failed,
     shortOnSync,
+    releasedClosed: closed.released,
     message: `Synced ${results.created} new, ${results.updated} updated from ${results.fetched} orders${
       shortOnSync.length ? `. Not enough free stock for: ${shortOnSync.join('; ')}` : ''
-    }`,
+    }${releasedNote}`,
   };
 });
 

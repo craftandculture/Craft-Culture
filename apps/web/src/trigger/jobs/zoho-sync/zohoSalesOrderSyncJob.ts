@@ -9,11 +9,10 @@ import { logger, schedules } from '@trigger.dev/sdk';
 import { and, eq, isNull } from 'drizzle-orm';
 
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
-import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
+import releaseClosedOrderHolds from '@/app/_zohoSalesOrders/data/releaseClosedOrderHolds';
 import {
-  wmsStockReservations,
   zohoInvoices,
   zohoSalesOrderItems,
   zohoSalesOrders,
@@ -250,65 +249,16 @@ export const zohoSalesOrderSyncJob = schedules.task({
       results.errors++;
     }
 
-    /*
-      Release stock held for orders that no longer exist in Zoho.
-
-      This sync fetches open and invoiced orders only, so an order that is
-      voided or cancelled simply stops appearing — and nothing released the
-      cases it was holding. They sat reserved indefinitely, which is why stock
-      showed as allocated with no order behind it.
-
-      Absence alone is not proof: a paging failure or a rate limit looks
-      identical. Each candidate is fetched individually and released only when
-      Zoho confirms it is void or draft.
-    */
+    /* Stock held for orders voided in Zoho, which the listing no longer returns */
     try {
-      const seen = new Set(salesOrderIdsSeen);
-
-      // Nothing came back at all — that is an outage, not an empty Zoho.
-      if (seen.size === 0) throw new Error('no orders fetched; skipping sweep');
-
-      const candidates = await triggerDb
-        .selectDistinct({
-          id: zohoSalesOrders.id,
-          zohoSalesOrderId: zohoSalesOrders.zohoSalesOrderId,
-          salesOrderNumber: zohoSalesOrders.salesOrderNumber,
-        })
-        .from(zohoSalesOrders)
-        .innerJoin(
-          wmsStockReservations,
-          and(
-            eq(wmsStockReservations.orderId, zohoSalesOrders.id),
-            eq(wmsStockReservations.orderType, 'zoho'),
-            eq(wmsStockReservations.status, 'active'),
-          ),
-        )
-        .limit(25);
-
-      for (const candidate of candidates) {
-        if (seen.has(candidate.zohoSalesOrderId)) continue;
-
-        const remote = await getSalesOrder(candidate.zohoSalesOrderId).catch(
-          () => null,
+      const closed = await releaseClosedOrderHolds({
+        db: triggerDb,
+        seenZohoIds: salesOrderIdsSeen,
+      });
+      for (const order of closed.released) {
+        logger.info(
+          `Released ${order.cases} cases held for ${order.salesOrderNumber} (${order.status} in Zoho)`,
         );
-
-        // Unreachable is not the same as gone. Leave it for the next run.
-        if (!remote) continue;
-
-        if (remote.status !== 'void' && remote.status !== 'draft') continue;
-
-        const released = await releaseStockReservations({
-          orderType: 'zoho',
-          orderId: candidate.id,
-          reason: `Order ${remote.status} in Zoho`,
-          db: triggerDb,
-        });
-
-        if (released.releasedCount > 0) {
-          logger.info(
-            `Released ${released.totalCasesReleased} cases held for ${candidate.salesOrderNumber} (${remote.status} in Zoho)`,
-          );
-        }
       }
     } catch (error) {
       logger.error('Failed to release stock for closed orders', { error });
