@@ -64,6 +64,21 @@ const sendFreightEmails = async (
     });
   }
 
+  // Forwarders cannot price a consignment with no size; ask for it before anything goes out
+  if (
+    input.kind === 'request' &&
+    !request.totalCases &&
+    !request.totalBottles &&
+    !request.totalWeightKg &&
+    !request.totalPallets
+  ) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Add the cases, bottles, pallets or weight before sending; forwarders cannot quote without them',
+    });
+  }
+
   const forwarders = await db
     .select()
     .from(logisticsForwarders)
@@ -138,7 +153,12 @@ const sendFreightEmails = async (
       const one = { name: forwarder.name, contacts: [contact] };
 
       return input.kind === 'request' || input.kind === 'chase'
-        ? buildFreightEmail({ kind: input.kind, request, forwarders: [one], senderName })
+        ? buildFreightEmail({
+            kind: input.kind,
+            request,
+            forwarders: [one],
+            senderName,
+          })
         : buildFreightEmail({
             kind: input.kind,
             request,
@@ -158,7 +178,11 @@ const sendFreightEmails = async (
     const errors: string[] = [];
     for (const contact of contacts) {
       const email = emailFor(contact);
-      const sent = await sendLogisticsEmail({ to: contact.email, subject: email.subject, body: email.body });
+      const sent = await sendLogisticsEmail({
+        to: contact.email,
+        subject: email.subject,
+        body: email.body,
+      });
 
       if (sent.ok) ok = true;
       else errors.push(`${contact.email}: ${sent.error}`);

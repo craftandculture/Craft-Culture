@@ -49,11 +49,33 @@ export interface FreightEmailQuote {
 }
 
 export type FreightEmailInput =
-  | { kind: 'request' | 'chase'; request: FreightEmailRequest; forwarders: FreightEmailForwarder[]; senderName: string }
-  | { kind: 'award' | 'decline'; request: FreightEmailRequest; forwarder: FreightEmailForwarder; quote: FreightEmailQuote; senderName: string }
-  | { kind: 'client_quote'; request: FreightEmailRequest; quote: FreightEmailQuote; clientPriceUsd: number; senderName: string };
+  | {
+      kind: 'request' | 'chase';
+      request: FreightEmailRequest;
+      forwarders: FreightEmailForwarder[];
+      senderName: string;
+    }
+  | {
+      kind: 'award' | 'decline';
+      request: FreightEmailRequest;
+      forwarder: FreightEmailForwarder;
+      quote: FreightEmailQuote;
+      senderName: string;
+    }
+  | {
+      kind: 'client_quote';
+      request: FreightEmailRequest;
+      quote: FreightEmailQuote;
+      clientPriceUsd: number;
+      senderName: string;
+    };
 
-const MODES = { sea_fcl: 'Sea freight (full container)', sea_lcl: 'Sea freight (shared container)', air: 'Air freight', road: 'Road freight' } as const;
+const MODES = {
+  sea_fcl: 'Sea freight (full container)',
+  sea_lcl: 'Sea freight (shared container)',
+  air: 'Air freight',
+  road: 'Road freight',
+} as const;
 
 const CATEGORY_WORDS: Record<string, string> = {
   freight: 'freight',
@@ -69,21 +91,38 @@ const CATEGORY_WORDS: Record<string, string> = {
 };
 
 const day = (d: Date) =>
-  new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(d);
+  new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Dubai',
+  }).format(d);
 
 const num = (n: number, digits = 0) =>
-  new Intl.NumberFormat('en-GB', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(n);
+  new Intl.NumberFormat('en-GB', {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(n);
 
-const money = (amount: number, currency: string) => `${currency.toUpperCase()} ${num(amount, 2)}`;
+const money = (amount: number, currency: string) =>
+  `${currency.toUpperCase()} ${num(amount, 2)}`;
 
-const place = (...parts: (string | null)[]) => parts.filter((p) => p && p.trim()).join(', ');
+const place = (...parts: (string | null)[]) =>
+  parts.filter((p) => p && p.trim()).join(', ');
 
-const isUae = (country: string) => /^(ae|uae|united arab emirates)$/i.test(country.trim());
+const isUae = (country: string) =>
+  /^(ae|uae|united arab emirates)$/i.test(country.trim());
 
 const greeting = (forwarders: FreightEmailForwarder[]) => {
-  const first = forwarders.length === 1 ? forwarders[0]?.contacts[0]?.name?.split(' ')[0] : undefined;
+  const only = forwarders.length === 1 ? forwarders[0] : undefined;
+  const first = only?.contacts[0]?.name?.split(' ')[0];
 
-  return first ? `Dear ${first},` : 'Dear Sir or Madam,';
+  // A named person first, then the forwarder's team, and only to several forwarders at once Sir or Madam
+  return first
+    ? `Dear ${first},`
+    : only
+      ? `Dear ${only.name} team,`
+      : 'Dear Sir or Madam,';
 };
 
 const quantityLine = (r: FreightEmailRequest) => {
@@ -92,7 +131,9 @@ const quantityLine = (r: FreightEmailRequest) => {
     r.totalBottles ? `${num(r.totalBottles)} bottles` : null,
   ].filter(Boolean);
   const equiv =
-    r.total75clEquivalents && r.totalBottles && Math.abs(r.total75clEquivalents - r.totalBottles) > 0.5
+    r.total75clEquivalents &&
+    r.totalBottles &&
+    Math.abs(r.total75clEquivalents - r.totalBottles) > 0.5
       ? ` (${num(r.total75clEquivalents)} × 75cl equivalent)`
       : '';
 
@@ -107,29 +148,43 @@ const cargoBlock = (r: FreightEmailRequest) =>
     `- Goods: ${r.productDescription || (r.productType === 'spirits' ? 'Spirits' : 'Fine wine')}`,
     quantityLine(r) && `- Quantity: ${quantityLine(r)}`,
     r.totalPallets && `- Pallets: ${num(r.totalPallets)}`,
-    r.totalWeightKg && `- Weight: approximately ${num(r.totalWeightKg)} kg gross`,
-    r.totalVolumeM3 && `- Volume: approximately ${num(r.totalVolumeM3, 1)} cubic metres`,
+    r.totalWeightKg &&
+      `- Weight: approximately ${num(r.totalWeightKg)} kg gross`,
+    r.totalVolumeM3 &&
+      `- Volume: approximately ${num(r.totalVolumeM3, 1)} cubic metres`,
   ].filter(Boolean);
 
 const requirementLines = (r: FreightEmailRequest) => {
   const range =
-    r.minTemperature != null && r.maxTemperature != null ? ` (${num(r.minTemperature)}–${num(r.maxTemperature)}°C)` : '';
+    r.minTemperature != null && r.maxTemperature != null
+      ? ` (${num(r.minTemperature)}–${num(r.maxTemperature)}°C)`
+      : '';
 
   return [
-    (r.temperatureControlled || r.requiresThermalLiner) && `- Temperature-managed throughout${range}`,
+    (r.temperatureControlled || r.requiresThermalLiner) &&
+      `- Temperature-managed throughout${range}`,
     r.requiresThermalLiner && '- Thermal liner',
     r.requiresTracker && '- Temperature tracker in the consignment',
     r.requiresInsurance && '- Transit insurance, shown as a separate line',
   ].filter(Boolean);
 };
 
-const signOff = (senderName: string) => ['Kind regards,', senderName, 'Craft & Culture'];
+const signOff = (senderName: string) => [
+  'Kind regards,',
+  '',
+  senderName,
+  'Logistics, Craft & Culture',
+  'logistics@craftculture.xyz',
+  'craftculture.xyz',
+];
 
 /**
  * Write a freight email ready to copy into the sender's own mail
  *
  * Five kinds, all from the request and (where it applies) the chosen quote:
- * - `request`: asks forwarders to quote; several forwarders go in Bcc on one email
+ *
+ * - `request`: asks forwarders to quote; several forwarders go in Bcc on one
+ *   email
  * - `chase`: a short reminder of an unanswered request
  * - `award`: tells the chosen forwarder, quoting their reference back
  * - `decline`: thanks a forwarder whose quote was not taken
@@ -140,7 +195,12 @@ const signOff = (senderName: string) => ['Kind regards,', senderName, 'Craft & C
  * request. The Index sends nothing; a person reads and sends each one.
  *
  * @example
- *   buildFreightEmail({ kind: 'request', request, forwarders: [hillebrand], senderName: 'Jyothi' });
+ *   buildFreightEmail({
+ *     kind: 'request',
+ *     request,
+ *     forwarders: [hillebrand],
+ *     senderName: 'Jyothi',
+ *   });
  *   // { to: ['ops@hillebrand.com'], bcc: [], subject: 'Freight quote request QRQ-2026-0012: …', body: '…' }
  *
  * @param input - Which email, and what it is written from
@@ -149,11 +209,17 @@ const signOff = (senderName: string) => ['Kind regards,', senderName, 'Craft & C
 const buildFreightEmail = (input: FreightEmailInput) => {
   const r = input.request;
   const origin = place(r.originWarehouse, r.originCity, r.originCountry);
-  const destination = place(r.destinationWarehouse, r.destinationCity, r.destinationCountry);
+  const destination = place(
+    r.destinationWarehouse,
+    r.destinationCity,
+    r.destinationCountry,
+  );
   const mode = r.transportMode ? MODES[r.transportMode] : null;
 
   if (input.kind === 'request' || input.kind === 'chase') {
-    const emails = input.forwarders.flatMap((f) => f.contacts.map((c) => c.email));
+    const emails = input.forwarders.flatMap((f) =>
+      f.contacts.map((c) => c.email),
+    );
     const single = input.forwarders.length === 1;
     const to = single ? emails : [];
     const bcc = single ? [] : emails;
@@ -191,20 +257,28 @@ const buildFreightEmail = (input: FreightEmailInput) => {
         '',
         'Cargo',
         ...cargoBlock(r),
-        ...(requirementLines(r).length ? ['', 'Requirements', ...requirementLines(r)] : []),
+        ...(requirementLines(r).length
+          ? ['', 'Requirements', ...requirementLines(r)]
+          : []),
         ...(r.targetPickupDate || r.targetDeliveryDate
           ? [
               '',
               'Timing',
-              ...(r.targetPickupDate ? [`- Ready for collection: ${day(r.targetPickupDate)}`] : []),
-              ...(r.targetDeliveryDate ? [`- Required delivery: ${day(r.targetDeliveryDate)}`] : []),
+              ...(r.targetPickupDate
+                ? [`- Ready for collection: ${day(r.targetPickupDate)}`]
+                : []),
+              ...(r.targetDeliveryDate
+                ? [`- Required delivery: ${day(r.targetDeliveryDate)}`]
+                : []),
             ]
           : []),
         '',
         'Please itemise freight, origin and destination charges, documentation and any surcharges, and state the currency, the transit time and how long the quote is valid.',
         ...(r.notes?.trim() ? ['', r.notes.trim()] : []),
         '',
-        r.replyBy ? `We would be grateful for your quote by ${day(r.replyBy)}.` : 'We would be grateful for your quote at your earliest convenience.',
+        r.replyBy
+          ? `We would be grateful for your quote by ${day(r.replyBy)}.`
+          : 'We would be grateful for your quote at your earliest convenience.',
         '',
         ...signOff(input.senderName),
       ].join('\n'),
@@ -252,7 +326,11 @@ const buildFreightEmail = (input: FreightEmailInput) => {
     throw new Error('Unknown freight email kind');
   }
 
-  const { perBottleUsd } = quoteUnitPrices(input.clientPriceUsd, r.totalBottles, r.total75clEquivalents);
+  const { perBottleUsd } = quoteUnitPrices(
+    input.clientPriceUsd,
+    r.totalBottles,
+    r.total75clEquivalents,
+  );
   const clientDestination = isUae(r.destinationCountry)
     ? 'the C&C bonded warehouse, United Arab Emirates'
     : place(r.destinationCity, r.destinationCountry);
@@ -277,12 +355,22 @@ const buildFreightEmail = (input: FreightEmailInput) => {
       `- From: ${place(r.originCity, r.originCountry)}`,
       `- To: ${clientDestination}`,
       ...(quantityLine(r) ? [`- Consignment: ${quantityLine(r)}`] : []),
-      ...(mode ? [`- Service: ${mode}${r.temperatureControlled || r.requiresThermalLiner ? ', temperature-managed' : ''}`] : []),
-      ...(input.quote.transitDays ? [`- Estimated transit time: about ${num(input.quote.transitDays)} days`] : []),
+      ...(mode
+        ? [
+            `- Service: ${mode}${r.temperatureControlled || r.requiresThermalLiner ? ', temperature-managed' : ''}`,
+          ]
+        : []),
+      ...(input.quote.transitDays
+        ? [
+            `- Estimated transit time: about ${num(input.quote.transitDays)} days`,
+          ]
+        : []),
       `- Price: USD ${num(input.clientPriceUsd, 2)}${perBottleUsd != null ? ` (USD ${num(perBottleUsd, 2)} per bottle)` : ''}`,
       ...(included.length ? [`- Includes: ${included.join(', ')}`] : []),
       `- Excludes: import duty, VAT and any charges not listed above${insured ? '' : '; transit insurance can be arranged on request'}`,
-      ...(input.quote.validUntil ? [`- Valid until: ${day(input.quote.validUntil)}`] : []),
+      ...(input.quote.validUntil
+        ? [`- Valid until: ${day(input.quote.validUntil)}`]
+        : []),
       '',
       `To proceed, please reply to confirm, quoting reference ${r.requestNumber}, and we will arrange collection.`,
       '',
