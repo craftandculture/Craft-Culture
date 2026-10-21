@@ -86,7 +86,6 @@ const adminSendFreightEmails = adminProcedure
     });
 
     const senderName = ctx.user.name || 'Craft & Culture';
-    const cc = ctx.user.email ? [ctx.user.email] : [];
     const results: { forwarderId: string; name: string; ok: boolean; error: string | null }[] = [];
 
     for (const forwarder of forwarders) {
@@ -113,7 +112,7 @@ const adminSendFreightEmails = adminProcedure
       let ok = true;
       let error: string | null = null;
       for (const to of email.to) {
-        const sent = await sendLogisticsEmail({ to, cc, subject: email.subject, body: email.body });
+        const sent = await sendLogisticsEmail({ to, subject: email.subject, body: email.body });
         if (!sent.ok) {
           ok = false;
           error = sent.error;
@@ -126,7 +125,6 @@ const adminSendFreightEmails = adminProcedure
         quoteId: input.kind === 'award' ? won!.id : (own?.id ?? null),
         kind: input.kind,
         toEmails: email.to,
-        ccEmails: cc,
         subject: email.subject,
         body: email.body,
         status: ok ? 'sent' : 'failed',
