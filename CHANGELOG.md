@@ -1,3 +1,9 @@
+## [2.0.472](https://github.com/craftandculture/Craft-Culture/compare/v2.0.471...v2.0.472) (2026-10-21)
+
+### Features
+
+* wide tables scroll sideways on phones, tall pop-ups scroll, form fields stack, and a shared phone card is ready for list screens ([bbde3cc](https://github.com/craftandculture/Craft-Culture/commit/bbde3cc4a38e21c5b79645d87cc033a2c9c8f197))
+
 ## [2.0.471](https://github.com/craftandculture/Craft-Culture/compare/v2.0.470...v2.0.471) (2026-10-21)
 
 ### Features
