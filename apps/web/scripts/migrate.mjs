@@ -3475,6 +3475,16 @@ const runMigrations = async () => {
     );
     console.log('✅ logistics_quote_emails ready');
 
+    // What each forwarder covers, so a new route can suggest it
+    for (const ddl of [
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "modes" text[] DEFAULT '{}'::text[] NOT NULL`,
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "origin_countries" text[] DEFAULT '{}'::text[] NOT NULL`,
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "notes" text`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    console.log('✅ forwarder coverage ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -5,11 +5,14 @@ import db from '@/database/client';
 import { logisticsForwarders, logisticsQuoteRequests, logisticsQuotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import normaliseCountry from '../utils/normaliseCountry';
+
 /**
  * List forwarders on file, flagging those that have quoted on a route
  *
- * The request page ticks the forwarders that have quoted this route before,
- * so the usual names are chosen without anyone looking them up.
+ * A new request ticks the forwarders that have quoted this route before or
+ * that collect from its origin country, so the usual names are chosen without
+ * anyone looking them up.
  *
  * @example
  *   await trpcClient.logistics.admin.forwarders.getMany.query({ originCountry: 'United Kingdom', destinationCountry: 'United Arab Emirates' });
@@ -56,10 +59,14 @@ const adminGetForwarders = adminProcedure
     const countBy = new Map(quoteCounts.map((r) => [r.forwarderId, r.quotes]));
     const routeIds = new Set(onRoute.map((r) => r.forwarderId));
 
+    const origin = input?.originCountry ? normaliseCountry(input.originCountry).toLowerCase() : null;
+
     return forwarders.map((f) => ({
       ...f,
       quoteCount: countBy.get(f.id) ?? 0,
       usedOnRoute: routeIds.has(f.id),
+      /** Collects from the request's origin country, as set on the forwarder */
+      coversRoute: !!origin && f.originCountries.some((c) => c.toLowerCase() === origin),
     }));
   });
 

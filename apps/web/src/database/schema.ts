@@ -3710,6 +3710,9 @@ export type LogisticsRateCard = typeof logisticsRateCards.$inferSelect;
 export interface ForwarderContact {
   name?: string;
   email: string;
+  phone?: string;
+  /** What they handle, e.g. "Air quotes" or "Operations" */
+  role?: string;
 }
 
 /**
@@ -3728,6 +3731,11 @@ export const logisticsForwarders = pgTable(
     /** Lower-case domains its people write from, used to match a quote to it */
     emailDomains: text('email_domains').array().notNull().default(sql`'{}'::text[]`),
     contacts: jsonb('contacts').$type<ForwarderContact[]>().notNull().default([]),
+    /** Modes it quotes: 'air', 'sea_fcl', 'sea_lcl', 'road'; empty = not stated */
+    modes: text('modes').array().notNull().default(sql`'{}'::text[]`),
+    /** Countries it collects from, so a new route ticks it even before it has quoted one */
+    originCountries: text('origin_countries').array().notNull().default(sql`'{}'::text[]`),
+    notes: text('notes'),
     isActive: boolean('is_active').notNull().default(true),
     ...timestamps,
   },

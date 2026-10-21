@@ -133,18 +133,16 @@ const sendFreightEmails = async (
     const own =
       quotes.find((q) => q.forwarderId === forwarder.id && q.id !== won?.id) ??
       null;
-    const email =
-      input.kind === 'request' || input.kind === 'chase'
-        ? buildFreightEmail({
-            kind: input.kind,
-            request,
-            forwarders: [forwarder],
-            senderName,
-          })
+    // One email per person, greeted by name, so nobody sees another forwarder's contacts
+    const emailFor = (contact: (typeof contacts)[number]) => {
+      const one = { name: forwarder.name, contacts: [contact] };
+
+      return input.kind === 'request' || input.kind === 'chase'
+        ? buildFreightEmail({ kind: input.kind, request, forwarders: [one], senderName })
         : buildFreightEmail({
             kind: input.kind,
             request,
-            forwarder,
+            forwarder: one,
             quote:
               input.kind === 'award'
                 ? asQuote(won!)
@@ -153,34 +151,32 @@ const sendFreightEmails = async (
                   : { ...asQuote(won!), forwarderReference: null },
             senderName,
           });
+    };
 
-    // One email per address, so nobody sees another forwarder's contacts
-    let ok = true;
-    let error: string | null = null;
-    for (const to of email.to) {
-      const sent = await sendLogisticsEmail({
-        to,
+    // Sent if it reached at least one of the forwarder's people; each failure is kept
+    let ok = false;
+    const errors: string[] = [];
+    for (const contact of contacts) {
+      const email = emailFor(contact);
+      const sent = await sendLogisticsEmail({ to: contact.email, subject: email.subject, body: email.body });
+
+      if (sent.ok) ok = true;
+      else errors.push(`${contact.email}: ${sent.error}`);
+
+      await db.insert(logisticsQuoteEmails).values({
+        requestId: request.id,
+        forwarderId: forwarder.id,
+        quoteId: input.kind === 'award' ? won!.id : (own?.id ?? null),
+        kind: input.kind,
+        toEmails: [contact.email],
         subject: email.subject,
         body: email.body,
+        status: sent.ok ? 'sent' : 'failed',
+        error: sent.error,
+        sentBy: user.id,
       });
-      if (!sent.ok) {
-        ok = false;
-        error = sent.error;
-      }
     }
-
-    await db.insert(logisticsQuoteEmails).values({
-      requestId: request.id,
-      forwarderId: forwarder.id,
-      quoteId: input.kind === 'award' ? won!.id : (own?.id ?? null),
-      kind: input.kind,
-      toEmails: email.to,
-      subject: email.subject,
-      body: email.body,
-      status: ok ? 'sent' : 'failed',
-      error,
-      sentBy: user.id,
-    });
+    const error = errors.length ? errors.join('; ') : null;
 
     if (ok && (input.kind === 'request' || input.kind === 'chase')) {
       const now = new Date();

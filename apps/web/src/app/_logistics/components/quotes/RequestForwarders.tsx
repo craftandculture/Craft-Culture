@@ -57,7 +57,7 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
       new Set(
         request.recipients.length
           ? request.recipients.map((r) => r.forwarderId)
-          : forwarders.filter((f) => f.usedOnRoute).map((f) => f.id),
+          : forwarders.filter((f) => f.usedOnRoute || f.coversRoute).map((f) => f.id),
       ),
     [ticked, request.recipients, forwarders],
   );
@@ -179,7 +179,11 @@ const RequestForwarders = ({ request }: RequestForwardersProps) => {
                 >
                   <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggle(f.id)} />
                   {f.name}
-                  {f.usedOnRoute && <span className="text-[11px] text-text-muted">used on this route</span>}
+                  {f.usedOnRoute ? (
+                    <span className="text-[11px] text-text-muted">used on this route</span>
+                  ) : f.coversRoute ? (
+                    <span className="text-[11px] text-text-muted">covers this route</span>
+                  ) : null}
                   {f.contacts.length === 0 && <span className="text-[11px] text-amber-600">no email</span>}
                 </label>
               ))}

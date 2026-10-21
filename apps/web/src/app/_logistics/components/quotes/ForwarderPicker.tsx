@@ -48,7 +48,7 @@ const ForwarderPicker = ({
   );
 
   // The usual forwarders for the route, until the person picks their own
-  const usual = forwarders.filter((f) => f.usedOnRoute).map((f) => f.id).join(',');
+  const usual = forwarders.filter((f) => f.usedOnRoute || f.coversRoute).map((f) => f.id).join(',');
   useEffect(() => {
     if (!touched.current) onSelectedChange(usual ? usual.split(',') : []);
   }, [usual, onSelectedChange]);
@@ -66,7 +66,7 @@ const ForwarderPicker = ({
       <div>
         <span className={sectionHeading}>Forwarders to ask</span>
         <p className="mt-0.5 text-xs text-text-muted">
-          Those that have quoted this route before are ticked. Each gets its own email.
+          Forwarders that have quoted this route, or collect from its origin, are ticked. Each gets its own email.
         </p>
       </div>
 
@@ -81,7 +81,11 @@ const ForwarderPicker = ({
             >
               <input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggle(f.id)} />
               {f.name}
-              {f.usedOnRoute && <span className="text-[11px] text-text-muted">used on this route</span>}
+              {f.usedOnRoute ? (
+                    <span className="text-[11px] text-text-muted">used on this route</span>
+                  ) : f.coversRoute ? (
+                    <span className="text-[11px] text-text-muted">covers this route</span>
+                  ) : null}
               {f.contacts.length === 0 && <span className="text-[11px] text-amber-600">no email</span>}
             </label>
           ))}

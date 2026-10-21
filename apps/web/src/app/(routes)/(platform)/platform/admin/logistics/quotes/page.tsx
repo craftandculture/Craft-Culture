@@ -11,6 +11,7 @@ import {
   IconSearch,
   IconSnowflake,
   IconThermometer,
+  IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -251,6 +252,9 @@ const FreightQuotesPage = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link href="/platform/admin/logistics/forwarders" className={secondaryButton}>
+            <IconUsers size={16} /> Forwarders
+          </Link>
           <Link href="/platform/admin/logistics/quotes/new" className={secondaryButton}>
             <IconPlus size={16} /> Quote without a request
           </Link>

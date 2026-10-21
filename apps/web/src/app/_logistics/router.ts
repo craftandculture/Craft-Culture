@@ -16,6 +16,7 @@ import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminConfirmDeclaredTotals from './controller/adminConfirmDeclaredTotals';
 import adminCreate from './controller/adminCreate';
 import adminCreateExportJob from './controller/adminCreateExportJob';
+import adminCreateForwarder from './controller/adminCreateForwarder';
 import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminCreateShipmentGroup from './controller/adminCreateShipmentGroup';
@@ -55,6 +56,7 @@ import adminGetRouteOptions from './controller/adminGetRouteOptions';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
+import adminImportForwarders from './controller/adminImportForwarders';
 import adminMarkRequestRecipients from './controller/adminMarkRequestRecipients';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
@@ -196,7 +198,9 @@ const adminRouter = createTRPCRouter({
   // Forwarders on file, built from the quotes they send
   forwarders: createTRPCRouter({
     getMany: adminGetForwarders,
+    create: adminCreateForwarder,
     update: adminUpdateForwarder,
+    import: adminImportForwarders,
   }),
 
   // Quote Requests
