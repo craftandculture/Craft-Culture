@@ -1,3 +1,9 @@
+## [2.0.479](https://github.com/craftandculture/Craft-Culture/compare/v2.0.478...v2.0.479) (2026-10-21)
+
+### Features
+
+* **logistics:** forwarder countries chosen from a list, with a Global option ([335da47](https://github.com/craftandculture/Craft-Culture/commit/335da4798bcc24da7892591995281bb9d5295ea7))
+
 ## [2.0.478](https://github.com/craftandculture/Craft-Culture/compare/v2.0.477...v2.0.478) (2026-10-21)
 
 ### Features
