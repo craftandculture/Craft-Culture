@@ -32,7 +32,7 @@ let tokenRefreshPromise: Promise<string> | null = null;
  */
 const getZohoUrls = () => {
   const region = serverConfig.zohoRegion || 'us';
-  const domains: Record<string, { accounts: string; api: string }> = {
+  const domains = {
     us: {
       accounts: 'https://accounts.zoho.com',
       api: 'https://www.zohoapis.com/books/v3',
@@ -49,8 +49,8 @@ const getZohoUrls = () => {
       accounts: 'https://accounts.zoho.com.au',
       api: 'https://www.zohoapis.com.au/books/v3',
     },
-  };
-  return domains[region] || domains.us;
+  } satisfies Record<string, { accounts: string; api: string }>;
+  return domains[region as keyof typeof domains] || domains.us;
 };
 
 /**
