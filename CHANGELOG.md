@@ -1,3 +1,14 @@
+## [2.0.468](https://github.com/craftandculture/Craft-Culture/compare/v2.0.467...v2.0.468) (2026-10-21)
+
+### Features
+
+* freight quotes are asked, compared and priced on one request page, with emails ready to copy ([8b2c0dd](https://github.com/craftandculture/Craft-Culture/commit/8b2c0dd159fcb586b271e17011993566a6eb76f0))
+* the logistics dashboard always offers an Import filter, even when no imports arrived this week ([16d60a9](https://github.com/craftandculture/Craft-Culture/commit/16d60a90fa9b16e9aea0624e9f3ccb240e7a1a6c))
+
+### Bug Fixes
+
+* clicking just below the logo no longer jumps to Home; the logo link stops at the top bar ([d9afb97](https://github.com/craftandculture/Craft-Culture/commit/d9afb9716e22296086cf0722b65f4f760adba934))
+
 ## [2.0.467](https://github.com/craftandculture/Craft-Culture/compare/v2.0.466...v2.0.467) (2026-10-21)
 
 ### Bug Fixes
