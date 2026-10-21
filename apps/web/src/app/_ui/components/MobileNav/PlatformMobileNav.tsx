@@ -1,21 +1,39 @@
 'use client';
 
-import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
-import type { User } from '@/database/schema';
+import { useQuery } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 
-import MobileNav from './MobileNav';
+import { visibleAdminNav } from '@/app/_admin/constants/adminNav';
+import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
+import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
+import type { User } from '@/database/schema';
+import useTRPC from '@/lib/trpc/browser';
+
+import MobileNav, { type NavSection } from './MobileNav';
 
 interface PlatformMobileNavProps {
   user: Pick<User, 'role' | 'customerType'> & {
     partner?: { type: string } | null;
   };
+  /** C&C staff, for the admin pages only they may see */
+  isStaff?: boolean;
 }
 
 /**
  * Platform-specific mobile navigation that builds sections based on user role
  */
-const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
-  const sections = [];
+const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) => {
+  const api = useTRPC();
+  const pathname = usePathname();
+  const isTeam = user.role === 'admin' || user.role === 'wms_operator';
+  // Shared Team Tasks jobs, as the desktop bar shows them to partners
+  const { data: partnerTasks } = useQuery({
+    ...api.teamTasks.partnerCount.queryOptions(),
+    enabled: !isTeam,
+    retry: false,
+    refetchInterval: 120_000,
+  });
+  const sections: NavSection[] = [];
   const access = resolveAccessProfile({
     role: user.role,
     customerType: user.customerType,
@@ -69,121 +87,20 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     });
   }
 
-  // WMS Operator sections — limited admin nav
-  if (user.role === 'wms_operator') {
-    sections.push({
-      title: 'Tasks',
-      links: [{ href: '/platform/admin/tasks', label: 'Team tasks' }],
-    });
-    sections.push({
-      title: 'Orders',
-      links: [{ href: '/platform/admin/private-orders', label: 'Private Orders' }],
-    });
-    sections.push({
-      title: 'Stock',
-      links: [
-        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
-      ],
-    });
-    sections.push({
-      title: 'Warehouse',
-      links: [
-        { href: '/platform/admin/wms', label: 'WMS Dashboard' },
-        { href: '/platform/admin/wms/receive', label: 'Receiving' },
-        { href: '/platform/admin/wms/pick', label: 'Pick' },
-        { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
-        { href: '/platform/admin/wms/labels', label: 'Labels' },
-        { href: '/platform/admin/wms/movements', label: 'Movements' },
-        { href: '/platform/admin/wms/cycle-count', label: 'Cycle Count' },
-      ],
-    });
+  // Partners with a job shared with them on Team Tasks
+  if (!isTeam && partnerTasks?.jobs) {
+    sections.push({ title: 'Tasks', links: [{ href: '/platform/tasks', label: 'Tasks' }] });
   }
 
-  // Admin sections — 6-section IA matching top nav
-  if (user.role === 'admin') {
-    sections.push({
-      title: 'Home',
-      links: [{ href: '/platform/admin/home', label: 'Home' }],
-    });
-    sections.push({
-      title: 'Tasks',
-      links: [{ href: '/platform/admin/tasks', label: 'Team tasks' }],
-    });
-    sections.push({
-      title: 'Orders',
-      links: [
-        { href: '/platform/admin', label: 'Overview' },
-        { href: '/platform/admin/private-orders', label: 'Private Orders' },
-        { href: '/platform/admin/zoho-sales-orders', label: 'Zoho Sales' },
-        { href: '/platform/admin/source', label: 'Source' },
-        { href: '/platform/admin/quote-approvals', label: 'Approvals' },
-        { href: '/platform/quotes', label: 'Quotes' },
-        { href: '/platform/my-quotes', label: 'My Quotes' },
-      ],
-    });
-    sections.push({
-      title: 'Logistics',
-      links: [
-        { href: '/platform/admin/logistics', label: 'Dashboard' },
-        { href: '/platform/admin/logistics/shipments', label: 'Shipments' },
-        { href: '/platform/admin/logistics/exports', label: 'Exports' },
-        { href: '/platform/admin/logistics/export-invoices', label: 'Export invoices' },
-        { href: '/platform/admin/logistics/quotes', label: 'Freight quotes' },
-        { href: '/platform/admin/logistics/invoices', label: 'Freight bills' },
-        { href: '/platform/admin/logistics/reports', label: 'Reports' },
-      ],
-    });
-    sections.push({
-      title: 'Stock',
-      links: [
-        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
-      ],
-    });
-    sections.push({
-      title: 'Warehouse',
-      links: [
-        { href: '/platform/admin/wms', label: 'WMS Dashboard' },
-        { href: '/platform/admin/wms/receive', label: 'Receiving' },
-        { href: '/platform/admin/wms/pick', label: 'Pick' },
-        { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
-        { href: '/platform/admin/wms/labels', label: 'Labels' },
-        { href: '/platform/admin/wms/movements', label: 'Movements' },
-        { href: '/platform/admin/wms/cycle-count', label: 'Cycle Count' },
-      ],
-    });
-    sections.push({
-      title: 'Partners',
-      links: [
-        { href: '/platform/admin/users', label: 'Users' },
-        { href: '/platform/admin/partners', label: 'Distributors' },
-        { href: '/platform/admin/wine-partners', label: 'Wine Partners' },
-        { href: '/platform/admin/collectors', label: 'Collectors' },
-        { href: '/platform/admin/cellar-members', label: 'Cellar Members' },
-        { href: '/platform/admin/consignment', label: 'Consignment' },
-        { href: '/platform/admin/cellar-purchases', label: 'Cellar purchases' },
-        { href: '/platform/admin/payouts', label: 'Member payouts' },
-        { href: '/platform/admin/cellar-releases', label: 'Cellar Releases' },
-        { href: '/platform/admin/cellar-rates', label: 'Release Rates' },
-      ],
-    });
-    sections.push({
-      title: 'Finance',
-      links: [
-        { href: '/platform/admin/commissions', label: 'Commissions' },
-        { href: '/platform/admin/pricing', label: 'Pricing' },
-        { href: '/platform/admin/pricing-calculator', label: 'Calculator' },
-        { href: '/platform/admin/triangulation', label: 'Triangulation' },
-      ],
-    });
-    sections.push({
-      title: 'System',
-      links: [
-        { href: '/platform/admin/activity', label: 'Activity' },
-        { href: '/platform/admin/agents', label: 'Agents' },
-        { href: '/platform/admin/zoho-import', label: 'Zoho Import' },
-        { href: '/platform/admin/settings', label: 'Settings' },
-      ],
-    });
+  // The admin menu, from the one definition the desktop bar and tabs also read
+  if (isTeam) {
+    for (const item of visibleAdminNav({ role: user.role, isStaff })) {
+      sections.push({
+        title: item.label,
+        icon: item.icon,
+        links: item.links.length ? item.links.map((link) => ({ href: link.href, label: link.label })) : [{ href: item.href, label: item.label }],
+      });
+    }
   }
 
   // Support routes to the desk that knows this kind of account.
@@ -198,7 +115,10 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     links: [{ href: getSupportHref(), label: 'Support' }],
   });
 
-  return <MobileNav sections={sections} />;
+  // A member in their cellar has its own tabs; a second menu would only compete
+  if (access.kind === 'collector' && pathname.startsWith('/platform/cellar')) return null;
+
+  return <MobileNav sections={sections} footer={<><span className="text-sm text-text-muted">Theme</span><ThemeToggle /></>} />;
 };
 
 export default PlatformMobileNav;

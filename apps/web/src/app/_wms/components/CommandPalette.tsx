@@ -41,6 +41,9 @@ type PaletteItem =
  * for a wine / location / owner (via the existing stock search). Purely additive
  * navigation; mounted once in the admin layout.
  */
+/** Window event that opens the palette, for the header's search button on touch screens */
+export const OPEN_COMMAND_PALETTE = 'cc:open-command-palette';
+
 const CommandPalette = () => {
   const router = useRouter();
   const api = useTRPC();
@@ -60,8 +63,13 @@ const CommandPalette = () => {
         setOpen(false);
       }
     };
+    const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(OPEN_COMMAND_PALETTE, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(OPEN_COMMAND_PALETTE, onOpen);
+    };
   }, []);
 
   useEffect(() => {

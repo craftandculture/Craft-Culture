@@ -4,89 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { getSectionFromPathname } from '@/app/_admin/components/AdminTopNav';
-
-interface TabItem {
-  label: string;
-  href: string;
-  /** Shown to C&C staff only, not every admin: see _distribution/utils/isStaff */
-  staffOnly?: boolean;
-}
-
-const sectionTabs: Record<string, TabItem[]> = {
-  orders: [
-    { label: 'Overview', href: '/platform/admin' },
-    { label: 'Private Orders', href: '/platform/admin/private-orders' },
-    { label: 'Zoho Sales', href: '/platform/admin/zoho-sales-orders' },
-    { label: 'Order Check', href: '/platform/admin/order-check' },
-    { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
-    { label: 'Source', href: '/platform/admin/source' },
-    { label: 'Approvals', href: '/platform/admin/quote-approvals' },
-    { label: 'Quotes', href: '/platform/quotes' },
-    { label: 'My Quotes', href: '/platform/my-quotes' },
-  ],
-  logistics: [
-    { label: 'Dashboard', href: '/platform/admin/logistics' },
-    { label: 'Shipments', href: '/platform/admin/logistics/shipments' },
-    { label: 'Exports', href: '/platform/admin/logistics/exports' },
-    { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices' },
-    { label: 'Freight quotes', href: '/platform/admin/logistics/quotes' },
-    { label: 'Freight bills', href: '/platform/admin/logistics/invoices' },
-    { label: 'Reports', href: '/platform/admin/logistics/reports' },
-  ],
-  warehouse: [
-    { label: 'Dashboard', href: '/platform/admin/wms' },
-    { label: 'Receiving', href: '/platform/admin/wms/receive' },
-    { label: 'Pick', href: '/platform/admin/wms/pick' },
-    { label: 'Dispatch', href: '/platform/admin/wms/dispatch' },
-    { label: 'Labels', href: '/platform/admin/wms/labels' },
-    { label: 'Movements', href: '/platform/admin/wms/movements' },
-    { label: 'Cycle Count', href: '/platform/admin/wms/cycle-count' },
-  ],
-  partners: [
-    { label: 'Users', href: '/platform/admin/users' },
-    { label: 'Clients', href: '/platform/admin/clients' },
-    { label: 'Distributors', href: '/platform/admin/partners' },
-    { label: 'Wine Partners', href: '/platform/admin/wine-partners' },
-    { label: 'Collectors', href: '/platform/admin/collectors' },
-    { label: 'Cellar Members', href: '/platform/admin/cellar-members' },
-    { label: 'Consignment', href: '/platform/admin/consignment' },
-    { label: 'Cellar purchases', href: '/platform/admin/cellar-purchases' },
-    { label: 'Member payouts', href: '/platform/admin/payouts' },
-    { label: 'Cellar Releases', href: '/platform/admin/cellar-releases' },
-    { label: 'Release Rates', href: '/platform/admin/cellar-rates' },
-  ],
-  finance: [
-    { label: 'Commissions', href: '/platform/admin/commissions' },
-    { label: 'Pricing', href: '/platform/admin/pricing' },
-    { label: 'Pricing Manager', href: '/platform/admin/pricing-manager' },
-    { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
-    { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
-    { label: 'Client LPOs', href: '/platform/admin/lpo' },
-    { label: 'Distribution', href: '/platform/admin/distribution' },
-    { label: 'Daily Sales', href: '/platform/admin/daily-sales', staffOnly: true },
-    // Triangulation stays until Crurated's figures agree in both
-    { label: 'Triangulation', href: '/platform/admin/triangulation' },
-  ],
-  agents: [
-    { label: 'Dashboard', href: '/platform/admin/agents' },
-  ],
-  settings: [
-    { label: 'Activity', href: '/platform/admin/activity' },
-    { label: 'Zoho Import', href: '/platform/admin/zoho-import' },
-    { label: 'Settings', href: '/platform/admin/settings' },
-  ],
-};
+import { activeHref, visibleAdminNav } from '@/app/_admin/constants/adminNav';
 
 interface AdminSectionTabsProps {
   userRole?: string;
   /** C&C staff, for the tabs only they may see */
   isStaff?: boolean;
 }
-
-/** Tabs visible to WMS operators per section */
-const operatorTabOverrides: Record<string, Set<string>> = {
-  orders: new Set(['/platform/admin/private-orders']),
-};
 
 /**
  * Section-aware tab bar for admin navigation
@@ -95,27 +19,18 @@ const operatorTabOverrides: Record<string, Set<string>> = {
 const AdminSectionTabs = ({ userRole, isStaff = false }: AdminSectionTabsProps) => {
   const pathname = usePathname();
   const section = getSectionFromPathname(pathname);
-  let tabs = sectionTabs[section];
+  // Operator and staff-only pages are filtered where the menu is defined
+  const tabs = visibleAdminNav({ role: userRole, isStaff }).find((item) => item.key === section)?.links;
+  const current = activeHref(pathname, tabs?.map((tab) => tab.href) ?? []);
 
-  // Filter tabs for WMS operators
-  if (userRole === 'wms_operator' && tabs) {
-    const allowedHrefs = operatorTabOverrides[section];
-    if (allowedHrefs) {
-      tabs = tabs.filter((tab) => allowedHrefs.has(tab.href));
-    }
-  }
-
-  // Partners are shown the distribution screens; daily sales is ours alone
-  tabs = tabs?.filter((tab) => !tab.staffOnly || isStaff);
-
-  if (!tabs) return null;
+  if (!tabs?.length) return null;
 
   return (
     <div className="border-b border-border-muted bg-white dark:bg-background-secondary">
       <div className="container">
         <nav className="-mb-px flex gap-0 overflow-x-auto">
           {tabs.map((tab) => {
-            const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
+            const isActive = tab.href === current;
 
             return (
               <Link

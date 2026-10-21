@@ -18,6 +18,7 @@ import LayoutModeProvider from '@/app/_ui/components/LayoutModeProvider/LayoutMo
 import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
 import PlatformMobileNav from '@/app/_ui/components/MobileNav/PlatformMobileNav';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
+import CommandPaletteButton from '@/app/_wms/components/CommandPaletteButton';
 import WMSHeader from '@/app/_wms/components/WMSHeader';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import getQueryClient from '@/lib/react-query';
@@ -77,8 +78,11 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
       )}
       <header className="border-border-primary sticky top-0 z-50 bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4 border-b border-border-primary">
-          <div className="flex items-center gap-3 md:gap-6">
-            <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
+          <div className="flex items-center gap-3 lg:gap-6">
+            <PlatformMobileNav
+              user={{ role: user.role, customerType: user.customerType, partner: user.partner }}
+              isStaff={isStaff(user)}
+            />
             <Link
               href={access.home}
               // The logo artwork is a padded square taller than the bar; clip it so the link stops at the bar's edge
@@ -86,7 +90,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
-            <nav className="hidden items-center gap-2 md:flex">
+            {/* From lg up; below it the menu drawer carries every link */}
+            <nav className="hidden items-center gap-2 lg:flex">
               {/* Quotes section - hidden for wine partners and admins (admins have it in section tabs) */}
               {access.can.raiseQuotes && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
@@ -237,17 +242,21 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            {(user.role === 'admin' || user.role === 'wms_operator') && <CommandPaletteButton />}
             <NotificationBell />
             {user.role === 'admin' && (
               <Link
                 href="/platform/admin/settings"
-                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-fill-muted"
+                className="hidden h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-fill-muted lg:flex"
                 aria-label="Settings"
               >
                 <Icon icon={IconSettings} size="md" colorRole="muted" />
               </Link>
             )}
-            <ThemeToggle />
+            {/* Below lg the theme switch sits at the foot of the menu, so the bar fits a small phone */}
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
             <UserDropdown user={user} />
           </div>
         </div>
