@@ -1,3 +1,9 @@
+## [2.0.474](https://github.com/craftandculture/Craft-Culture/compare/v2.0.473...v2.0.474) (2026-10-21)
+
+### Features
+
+* on phones, order lines and stock status read as cards, and the home page no longer scrolls sideways ([b0938eb](https://github.com/craftandculture/Craft-Culture/commit/b0938eb2e0c7fe8a8bea863b2e1e59e1eb3c521f))
+
 ## [2.0.473](https://github.com/craftandculture/Craft-Culture/compare/v2.0.472...v2.0.473) (2026-10-21)
 
 ### Features
