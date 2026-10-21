@@ -1,3 +1,9 @@
+## [2.0.478](https://github.com/craftandculture/Craft-Culture/compare/v2.0.477...v2.0.478) (2026-10-21)
+
+### Features
+
+* forwarders are kept on their own page with their people, modes and countries, can be imported from a spreadsheet, and a new route ticks the ones that cover it ([93a5860](https://github.com/craftandculture/Craft-Culture/commit/93a586096d5297f9296b0b0a0a4c1778c9d45f26))
+
 ## [2.0.477](https://github.com/craftandculture/Craft-Culture/compare/v2.0.476...v2.0.477) (2026-10-21)
 
 ### Features
