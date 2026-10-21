@@ -1,3 +1,9 @@
+## [2.0.482](https://github.com/craftandculture/Craft-Culture/compare/v2.0.481...v2.0.482) (2026-10-21)
+
+### Bug Fixes
+
+* **logistics:** freight quotes list shows every request when nothing needs action ([4601f69](https://github.com/craftandculture/Craft-Culture/commit/4601f69719c434ec120bf1fd35f0710041effd0b))
+
 ## [2.0.481](https://github.com/craftandculture/Craft-Culture/compare/v2.0.480...v2.0.481) (2026-10-21)
 
 ### Bug Fixes
