@@ -1,3 +1,20 @@
+## [2.0.483](https://github.com/craftandculture/Craft-Culture/compare/v2.0.482...v2.0.483) (2026-10-22)
+
+### Features
+
+* take the Quotes page out of the admin menu and Morning View ([fdf2768](https://github.com/craftandculture/Craft-Culture/commit/fdf276895a4a1ced8a8ccf7b1bf8642f4ffbadbd))
+
+### Bug Fixes
+
+* an order deleted in Zoho now gives back the stock it was holding, on Sync Orders and when it is dismissed from the pick queue ([1cd6d94](https://github.com/craftandculture/Craft-Culture/commit/1cd6d94e81357850671f441fbaa9c7bef9fdfdfd))
+* carry the Zoho region type fix from PR [#7](https://github.com/craftandculture/Craft-Culture/issues/7) so this branch's type check passes ([f71d9bb](https://github.com/craftandculture/Craft-Culture/commit/f71d9bbdac471f348804f6f69186832ae9b27a9e))
+* main's type check passes again after the Zoho invoice PDF download was added ([091afaf](https://github.com/craftandculture/Craft-Culture/commit/091afaf0c09451ee955774627246e7ebe6509c53))
+* receiving on the scanner asks before clearing or removing on the page itself, so Chrome can no longer silently block it ([0a1a02b](https://github.com/craftandculture/Craft-Culture/commit/0a1a02bdbefe6b05ab210364f2c8e07c1773a1b6))
+
+### Code Refactoring
+
+* remove 93 unused files and use consistent capitals in the admin menu ([4c21afd](https://github.com/craftandculture/Craft-Culture/commit/4c21afdc3091e10f105f873aadf11fd7083a0fd3))
+
 ## [2.0.482](https://github.com/craftandculture/Craft-Culture/compare/v2.0.481...v2.0.482) (2026-10-21)
 
 ### Bug Fixes
