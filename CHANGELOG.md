@@ -1,3 +1,9 @@
+## [2.0.489](https://github.com/craftandculture/Craft-Culture/compare/v2.0.488...v2.0.489) (2026-10-22)
+
+### Bug Fixes
+
+* **logistics:** Freight quotes always opens on all requests ([c0d4dc7](https://github.com/craftandculture/Craft-Culture/commit/c0d4dc7e5194a38cbd0d326ac31b4c2a2a2e3a08))
+
 ## [2.0.488](https://github.com/craftandculture/Craft-Culture/compare/v2.0.487...v2.0.488) (2026-10-22)
 
 ### Features
