@@ -17,6 +17,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import db from '@/database/client';
 import { zohoSalesOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -91,18 +92,36 @@ const adminDismissDeletedSalesOrder = wmsOperatorProcedure
 
     const note = `Dismissed — no longer exists in Zoho (checked ${new Date().toISOString()})`;
 
-    await db
-      .update(zohoSalesOrders)
-      .set({
-        status: 'cancelled',
-        notes: order.notes ? `${order.notes}\n${note}` : note,
-        updatedAt: new Date(),
-      })
-      .where(eq(zohoSalesOrders.id, salesOrderId));
+    /*
+      The sync held this order's stock the moment it arrived. Cancelling the
+      row without giving those cases back left them reserved against an order
+      that no longer exists, with nothing on screen able to clear them.
+    */
+    const released = await db.transaction(async (tx) => {
+      await tx
+        .update(zohoSalesOrders)
+        .set({
+          status: 'cancelled',
+          notes: order.notes ? `${order.notes}\n${note}` : note,
+          updatedAt: new Date(),
+        })
+        .where(eq(zohoSalesOrders.id, salesOrderId));
+
+      return releaseStockReservations({
+        orderType: 'zoho',
+        orderId: salesOrderId,
+        reason: 'Order deleted in Zoho',
+        db: tx,
+      });
+    });
+
+    const releasedNote = released.totalCasesReleased
+      ? ` and ${released.totalCasesReleased} reserved case${released.totalCasesReleased === 1 ? '' : 's'} released`
+      : '';
 
     return {
       success: true,
-      message: `${order.salesOrderNumber} was deleted in Zoho — removed from the pick queue`,
+      message: `${order.salesOrderNumber} was deleted in Zoho — removed from the pick queue${releasedNote}`,
     };
   });
 

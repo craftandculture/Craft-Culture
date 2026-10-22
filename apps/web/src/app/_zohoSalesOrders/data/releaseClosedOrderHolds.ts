@@ -1,6 +1,7 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
+import isZohoOrderGone from '@/app/_zohoSalesOrders/utils/isZohoOrderGone';
 import { wmsStockReservations, zohoSalesOrders } from '@/database/schema';
 import { getSalesOrder } from '@/lib/zoho/salesOrders';
 
@@ -15,12 +16,14 @@ interface ReleaseClosedOrderHoldsParams {
 const MAX_CHECKED = 25;
 
 /**
- * Release stock held for sales orders that have been voided in Zoho
+ * Release stock held for sales orders that have been voided or deleted in Zoho
  *
  * The syncs list open and invoiced orders only, so a voided order simply stops
  * appearing and nothing released the cases it held. Absence alone is not
  * proof (a paging failure looks the same), so each missing order is fetched
- * and released only when Zoho confirms it is void or draft.
+ * and released only when Zoho confirms it is void or draft, or answers that it
+ * does not exist. A deleted order used to be skipped as "unreachable" on every
+ * run, so its cases stayed reserved for good (SO-00202).
  *
  * Orders the listing DID return are excluded before the limit is applied.
  * They used to fill the 25 checks, so a voided order behind enough open ones
@@ -64,19 +67,24 @@ const releaseClosedOrderHolds = async ({
   const released: { salesOrderNumber: string; cases: number; status: string }[] = [];
 
   for (const candidate of candidates) {
-    const remote = await getSalesOrder(candidate.zohoSalesOrderId).catch(
-      () => null,
-    );
+    let status: string | undefined;
+    try {
+      const remote = await getSalesOrder(candidate.zohoSalesOrderId);
+      status = remote?.status;
+    } catch (error) {
+      // Unreachable is not the same as gone. Leave it for the next run.
+      if (!isZohoOrderGone(error)) continue;
+      status = 'deleted';
+    }
 
-    // Unreachable is not the same as gone. Leave it for the next run.
-    if (!remote) continue;
-
-    if (remote.status !== 'void' && remote.status !== 'draft') continue;
+    if (status !== 'void' && status !== 'draft' && status !== 'deleted') {
+      continue;
+    }
 
     const result = await releaseStockReservations({
       orderType: 'zoho',
       orderId: candidate.id,
-      reason: `Order ${remote.status} in Zoho`,
+      reason: `Order ${status} in Zoho`,
       db,
     });
 
@@ -84,7 +92,7 @@ const releaseClosedOrderHolds = async ({
       released.push({
         salesOrderNumber: candidate.salesOrderNumber,
         cases: result.totalCasesReleased,
-        status: remote.status,
+        status,
       });
     }
   }
