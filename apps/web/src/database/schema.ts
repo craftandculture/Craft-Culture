@@ -3960,6 +3960,9 @@ export const logisticsQuoteRequests = pgTable(
     sourceId: uuid('source_id'),
     /** The job (SHP shipment) this request is quoted for; every request has one */
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, { onDelete: 'set null' }),
+    /** Who the freight is for: the client quote greets them and can be sent to them */
+    clientName: text('client_name'),
+    clientEmail: text('client_email'),
 
     /** The date forwarders are asked to reply by */
     replyBy: timestamp('reply_by', { mode: 'date' }),

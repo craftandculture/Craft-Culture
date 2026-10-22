@@ -92,6 +92,20 @@ const all = [
 ];
 
 describe('buildFreightEmail', () => {
+  it('greets the client by name, or formally when no name is held', () => {
+    const named = buildFreightEmail({
+      kind: 'client_quote',
+      request: { ...request, clientName: 'Mr Smith' },
+      quote,
+      clientPriceUsd: 3200,
+      senderName: 'Kevin',
+    });
+
+    expect(named.body.startsWith('Dear Mr Smith,')).toBe(true);
+    expect(all[all.length - 1]!.body.startsWith('Dear Sir or Madam,')).toBe(true);
+    for (const email of all) expect(email.body).not.toContain('[client name]');
+  });
+
   it('carries the request number in every subject', () => {
     for (const email of all) expect(email.subject).toContain('QRQ-2026-0012');
   });

@@ -34,7 +34,8 @@ const adminRejectQuote = adminProcedure.input(rejectQuoteSchema).mutation(async 
     });
   }
 
-  if (quote.status !== 'pending') {
+  // An expired quote can be set aside too, so it stops asking to be fixed
+  if (!['pending', 'expired', 'draft'].includes(quote.status)) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: `Cannot reject quote with status "${quote.status}"`,

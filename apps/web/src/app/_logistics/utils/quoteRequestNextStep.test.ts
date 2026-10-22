@@ -6,7 +6,14 @@ import workingDaysSince from './workingDaysSince';
 // Wednesday 21 October 2026, 10:00 Dubai
 const now = new Date('2026-10-21T06:00:00Z');
 const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000);
-const base = { status: 'pending', recipients: [], quotes: [], clientPriceUsd: null, clientQuotedAt: null };
+const base = {
+  status: 'pending',
+  recipients: [],
+  quotes: [],
+  clientPriceUsd: null,
+  clientQuotedAt: null,
+  totalCases: 10,
+};
 const asked = (sentAt: Date | null, outcome = 'awaiting', chasedAt: Date | null = null) => ({ sentAt, chasedAt, outcome });
 
 describe('workingDaysSince', () => {
@@ -19,7 +26,24 @@ describe('workingDaysSince', () => {
 });
 
 describe('quoteRequestNextStep', () => {
+  it('asks for the cargo size before anything else', () =>
+    expect(quoteRequestNextStep({ ...base, totalCases: null }, now)).toBe('add_cargo'));
+
   it('asks for forwarders first', () => expect(quoteRequestNextStep(base, now)).toBe('choose_forwarders'));
+
+  it('does not count a lapsed quote as live', () => {
+    const lapsed = { status: 'pending', validUntil: daysAgo(1) };
+
+    expect(quoteRequestNextStep({ ...base, recipients: [asked(daysAgo(2), 'quoted')], quotes: [lapsed] }, now)).toBe(
+      'fix_quotes',
+    );
+    expect(
+      quoteRequestNextStep(
+        { ...base, recipients: [asked(daysAgo(2), 'quoted')], quotes: [lapsed, { status: 'pending', validUntil: null }] },
+        now,
+      ),
+    ).toBe('price');
+  });
 
   it('wants the request sent once forwarders are chosen', () =>
     expect(quoteRequestNextStep({ ...base, recipients: [asked(null)] }, now)).toBe('send'));

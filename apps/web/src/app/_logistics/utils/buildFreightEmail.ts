@@ -28,6 +28,8 @@ export interface FreightEmailRequest {
   targetDeliveryDate: Date | null;
   replyBy: Date | null;
   notes: string | null;
+  /** How the client is greeted on their quote, as staff typed it (e.g. "Mr Smith") */
+  clientName?: string | null;
 }
 
 /** A forwarder and the people its emails go to */
@@ -348,7 +350,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
     bcc: [],
     subject: `Freight quotation ${r.requestNumber}: ${r.originCity || r.originCountry} to ${isUae(r.destinationCountry) ? 'the UAE' : r.destinationCity || r.destinationCountry}`,
     body: [
-      'Dear [client name],',
+      r.clientName?.trim() ? `Dear ${r.clientName.trim()},` : 'Dear Sir or Madam,',
       '',
       'Thank you for your enquiry. We are pleased to quote for moving your wine as follows.',
       '',

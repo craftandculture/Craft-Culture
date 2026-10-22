@@ -12,6 +12,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import updateQuoteRequestSchema from '../schemas/updateQuoteRequestSchema';
+import normaliseCountry from '../utils/normaliseCountry';
 
 /**
  * Update a quote request
@@ -62,13 +63,13 @@ const adminUpdateQuoteRequest = adminProcedure
     if (updateData.priority !== undefined)
       updates.priority = updateData.priority;
     if (updateData.originCountry !== undefined)
-      updates.originCountry = updateData.originCountry;
+      updates.originCountry = normaliseCountry(updateData.originCountry);
     if (updateData.originCity !== undefined)
       updates.originCity = updateData.originCity;
     if (updateData.originWarehouse !== undefined)
       updates.originWarehouse = updateData.originWarehouse;
     if (updateData.destinationCountry !== undefined)
-      updates.destinationCountry = updateData.destinationCountry;
+      updates.destinationCountry = normaliseCountry(updateData.destinationCountry);
     if (updateData.destinationCity !== undefined)
       updates.destinationCity = updateData.destinationCity;
     if (updateData.destinationWarehouse !== undefined)
@@ -87,6 +88,15 @@ const adminUpdateQuoteRequest = adminProcedure
       updates.totalWeightKg = updateData.totalWeightKg;
     if (updateData.totalVolumeM3 !== undefined)
       updates.totalVolumeM3 = updateData.totalVolumeM3;
+    if (updateData.totalBottles !== undefined)
+      updates.totalBottles = updateData.totalBottles;
+    if (updateData.total75clEquivalents !== undefined)
+      updates.total75clEquivalents = updateData.total75clEquivalents;
+    if (updateData.replyBy !== undefined) updates.replyBy = updateData.replyBy;
+    if (updateData.clientName !== undefined)
+      updates.clientName = updateData.clientName || null;
+    if (updateData.clientEmail !== undefined)
+      updates.clientEmail = updateData.clientEmail || null;
     if (updateData.requiresThermalLiner !== undefined)
       updates.requiresThermalLiner = updateData.requiresThermalLiner;
     if (updateData.requiresTracker !== undefined)
@@ -120,6 +130,42 @@ const adminUpdateQuoteRequest = adminProcedure
         code: 'INTERNAL_SERVER_ERROR',
         message: 'The database returned no row',
       });
+    }
+
+    // A job still in draft follows its request's route and mode; one under way keeps its own
+    const routeChanged = (
+      [
+        'originCountry',
+        'originCity',
+        'originWarehouse',
+        'destinationCountry',
+        'destinationCity',
+        'destinationWarehouse',
+        'transportMode',
+        'totalCases',
+      ] as const
+    ).some((k) => updateData[k] !== undefined);
+
+    if (routeChanged && updated.shipmentId && updateData.status !== 'cancelled') {
+      await db
+        .update(logisticsShipments)
+        .set({
+          originCountry: updated.originCountry,
+          originCity: updated.originCity,
+          originWarehouse: updated.originWarehouse,
+          destinationCountry: updated.destinationCountry,
+          destinationCity: updated.destinationCity,
+          destinationWarehouse: updated.destinationWarehouse,
+          ...(updated.transportMode && { transportMode: updated.transportMode }),
+          ...(updated.totalCases != null && { totalCases: updated.totalCases }),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(logisticsShipments.id, updated.shipmentId),
+            eq(logisticsShipments.status, 'draft'),
+          ),
+        );
     }
 
     if (

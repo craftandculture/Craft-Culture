@@ -29,6 +29,15 @@ const updateQuoteRequestSchema = z.object({
   totalPallets: z.number().int().positive().optional().nullable(),
   totalWeightKg: z.number().positive().optional().nullable(),
   totalVolumeM3: z.number().positive().optional().nullable(),
+  totalBottles: z.number().int().positive().optional().nullable(),
+  total75clEquivalents: z.number().positive().optional().nullable(),
+
+  /** The date forwarders are asked to reply by */
+  replyBy: z.coerce.date().optional().nullable(),
+
+  // Who the freight is for; the client quote greets them and can be sent to them
+  clientName: z.string().trim().max(200).optional().nullable(),
+  clientEmail: z.string().trim().email('Enter a valid email').optional().nullable().or(z.literal('')),
 
   // Special requirements
   requiresThermalLiner: z.boolean().optional(),

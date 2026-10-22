@@ -33,6 +33,10 @@ const getOpenQuoteRequestSteps = async (now = new Date()) => {
       destinationCountry: logisticsQuoteRequests.destinationCountry,
       clientPriceUsd: logisticsQuoteRequests.clientPriceUsd,
       clientQuotedAt: logisticsQuoteRequests.clientQuotedAt,
+      totalCases: logisticsQuoteRequests.totalCases,
+      totalBottles: logisticsQuoteRequests.totalBottles,
+      totalPallets: logisticsQuoteRequests.totalPallets,
+      totalWeightKg: logisticsQuoteRequests.totalWeightKg,
     })
     .from(logisticsQuoteRequests)
     .where(notInArray(logisticsQuoteRequests.status, ['completed', 'cancelled']));
@@ -42,7 +46,11 @@ const getOpenQuoteRequestSteps = async (now = new Date()) => {
   const ids = requests.map((r) => r.id);
   const [quotes, recipients] = await Promise.all([
     db
-      .select({ requestId: logisticsQuotes.requestId, status: logisticsQuotes.status })
+      .select({
+        requestId: logisticsQuotes.requestId,
+        status: logisticsQuotes.status,
+        validUntil: logisticsQuotes.validUntil,
+      })
       .from(logisticsQuotes)
       .where(inArray(logisticsQuotes.requestId, ids)),
     db

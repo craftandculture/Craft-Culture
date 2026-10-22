@@ -3,7 +3,6 @@
 import { IconCheck } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -45,6 +44,30 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
     setValue(start != null ? String(start) : '');
     setBasis('total');
   }, [quoteId, start]);
+
+  const [clientEmail, setClientEmail] = useState(request.clientEmail ?? '');
+  useEffect(() => setClientEmail(request.clientEmail ?? ''), [request.clientEmail]);
+
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
+
+  const sendToClient = useMutation({
+    ...api.logistics.admin.requests.sendClientQuote.mutationOptions(),
+    onSuccess: (r) => {
+      toast.success(`Quote sent to ${r.to}`);
+      refresh();
+    },
+    onError: (error) => toast.error(error.message || 'The quote was not sent'),
+  });
+
+  const accept = useMutation({
+    ...api.logistics.admin.quotes.accept.mutationOptions(),
+    onSuccess: () => {
+      toast.success(`Accepted: ${request.job ? `the cost is on job ${request.job.shipmentNumber}` : 'quote accepted'}`);
+      refresh();
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes']] });
+    },
+    onError: (error) => toast.error(error.message || 'The quote was not accepted'),
+  });
 
   const setPrice = useMutation({
     ...api.logistics.admin.requests.setClientPrice.mutationOptions(),
@@ -150,19 +173,38 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
         >
           {isSaved ? <IconCheck size={15} /> : null} {isSaved ? 'Price saved' : 'Save the price'}
         </button>
-        {request.clientQuotedAt && isSaved && (
-          <Link href={`/platform/admin/logistics/quotes/${quote.id}`} className={secondaryButton}>
-            Client agreed: accept this quote
-          </Link>
+        {isSaved && (
+          <button
+            type="button"
+            className={request.clientQuotedAt ? primaryButton : secondaryButton}
+            disabled={accept.isPending || !request.job}
+            title={request.job ? undefined : 'Open the job first'}
+            onClick={() => accept.mutate({ quoteId: quote.id })}
+          >
+            <IconCheck size={15} /> Client agreed: accept {quote.forwarderName}
+          </button>
         )}
       </div>
+
+      {isSaved && saved != null && request.canSendEmail && (
+        <label className="block max-w-md">
+          <span className={label}>Client email</span>
+          <input
+            className={input}
+            type="email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            placeholder="To send the quote from logistics@"
+          />
+        </label>
+      )}
 
       {isSaved && saved != null && (
         <CopyTextCard
           title="Quote to the client"
           status={
             request.clientQuotedAt
-              ? { label: `Copied ${request.clientQuotedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, tone: 'blue' }
+              ? { label: `Quoted ${request.clientQuotedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, tone: 'blue' }
               : { label: 'Not sent', tone: 'amber' }
           }
           email={buildFreightEmail({
@@ -180,6 +222,12 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
             clientPriceUsd: saved,
             senderName: request.senderName,
           })}
+          onSend={
+            request.canSendEmail && /^\S+@\S+\.\S+$/.test(clientEmail.trim())
+              ? () => sendToClient.mutate({ requestId: request.id, to: clientEmail.trim() })
+              : undefined
+          }
+          isSending={sendToClient.isPending}
           onCopied={() => setPrice.mutate({ requestId: request.id, quoteId: quote.id, clientPriceUsd: saved, copied: true })}
           onUndo={() => setPrice.mutate({ requestId: request.id, quoteId: quote.id, clientPriceUsd: saved, copied: false })}
           defaultOpen={!request.clientQuotedAt}

@@ -69,9 +69,11 @@ const nextStepLabel: Record<
   QuoteRequestNextStep,
   { text: string; tone: Tone } | null
 > = {
+  add_cargo: { text: 'Add the cargo size', tone: 'amber' },
   choose_forwarders: { text: 'Choose forwarders', tone: 'amber' },
   send: { text: 'Send to forwarders', tone: 'amber' },
   chase: { text: 'Chase due', tone: 'red' },
+  fix_quotes: { text: 'Quotes expired', tone: 'red' },
   awaiting: { text: 'Awaiting replies', tone: 'blue' },
   price: { text: 'Price the client', tone: 'violet' },
   send_price: { text: 'Send the client price', tone: 'violet' },
@@ -80,9 +82,11 @@ const nextStepLabel: Record<
 };
 
 const ACTION_STEPS: QuoteRequestNextStep[] = [
+  'add_cargo',
   'choose_forwarders',
   'send',
   'chase',
+  'fix_quotes',
   'price',
   'send_price',
 ];

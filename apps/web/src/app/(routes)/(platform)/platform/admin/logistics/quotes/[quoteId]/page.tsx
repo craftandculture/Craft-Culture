@@ -321,9 +321,9 @@ const QuoteDetailPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isEditable && (
+            {(isEditable || quote.status === 'expired') && quote.requestId && (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/platform/admin/logistics/quotes/${quote.id}/edit`}>
+                <Link href={`/platform/admin/logistics/requests/${quote.requestId}?editQuote=${quote.id}`}>
                   <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
                 </Link>
               </Button>

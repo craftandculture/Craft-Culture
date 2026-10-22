@@ -3359,6 +3359,8 @@ const runMigrations = async () => {
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "client_price_usd" double precision`,
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "quoted_margin_usd" double precision`,
       `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "shipment_id" uuid REFERENCES "logistics_shipments"("id") ON DELETE SET NULL`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_name" text`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_email" text`,
     ]) {
       await client.unsafe(ddl);
     }

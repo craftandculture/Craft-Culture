@@ -18,6 +18,7 @@ const KIND_LABEL: Record<string, string> = {
   chase: 'Reminder',
   award: 'Award',
   decline: 'Not chosen',
+  client_quote: 'To the client',
 };
 
 const when = (d: Date) =>

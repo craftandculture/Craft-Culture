@@ -7,12 +7,17 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import updateQuoteSchema from '../schemas/updateQuoteSchema';
+import quoteStatusAfterEdit from '../utils/quoteStatusAfterEdit';
+import resolveFxToUsd from '../utils/resolveFxToUsd';
 
 /**
  * Update an existing freight quote
  *
- * Updates quote details and optionally replaces all line items.
- * Only quotes in 'draft' or 'pending' status can be updated.
+ * Updates quote details and optionally replaces all line items, in which case
+ * the total is their sum. Only draft, pending and expired quotes can be
+ * edited: an expired one whose validity is moved forward (a misread date, or
+ * the forwarder confirming it still stands) is live again. The USD total is
+ * worked out again whenever the price or currency changes.
  */
 const adminUpdateQuote = adminProcedure.input(updateQuoteSchema).mutation(async ({ input }) => {
   const { id, lineItems, ...updateData } = input;
@@ -31,13 +36,22 @@ const adminUpdateQuote = adminProcedure.input(updateQuoteSchema).mutation(async 
     });
   }
 
-  // Only allow updates to draft or pending quotes
-  if (!['draft', 'pending'].includes(existingQuote.status)) {
+  // Accepted and rejected quotes are settled; anything else can be put right
+  if (!['draft', 'pending', 'expired'].includes(existingQuote.status)) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: `Cannot update quote with status "${existingQuote.status}"`,
     });
   }
+
+  const totalPrice =
+    lineItems && lineItems.length > 0
+      ? Math.round(lineItems.reduce((sum, item) => sum + item.total, 0) * 100) / 100
+      : (updateData.totalPrice ?? existingQuote.totalPrice);
+  const currency = (updateData.currency ?? existingQuote.currency).trim().toUpperCase();
+  const repriced = totalPrice !== existingQuote.totalPrice || currency !== existingQuote.currency.toUpperCase();
+  const fx = repriced ? await resolveFxToUsd(currency) : null;
+  const validUntil = updateData.validUntil === undefined ? existingQuote.validUntil : updateData.validUntil;
 
   try {
     // Update quote
@@ -52,11 +66,20 @@ const adminUpdateQuote = adminProcedure.input(updateQuoteSchema).mutation(async 
         destinationCountry: updateData.destinationCountry ?? existingQuote.destinationCountry,
         destinationCity: updateData.destinationCity ?? existingQuote.destinationCity,
         transportMode: updateData.transportMode ?? existingQuote.transportMode,
-        totalPrice: updateData.totalPrice ?? existingQuote.totalPrice,
-        currency: updateData.currency ?? existingQuote.currency,
+        forwarderReference:
+          updateData.forwarderReference === undefined
+            ? existingQuote.forwarderReference
+            : updateData.forwarderReference.trim() || null,
+        totalPrice,
+        currency,
+        ...(fx && {
+          fxToUsd: fx.source === 'unresolved' ? null : fx.rate,
+          totalUsd: fx.source === 'unresolved' ? null : Math.round(totalPrice * fx.rate * 100) / 100,
+        }),
         transitDays: updateData.transitDays ?? existingQuote.transitDays,
         validFrom: updateData.validFrom ?? existingQuote.validFrom,
-        validUntil: updateData.validUntil ?? existingQuote.validUntil,
+        validUntil,
+        ...(existingQuote.status !== 'draft' && { status: quoteStatusAfterEdit(validUntil) }),
         notes: updateData.notes ?? existingQuote.notes,
         internalNotes: updateData.internalNotes ?? existingQuote.internalNotes,
         updatedAt: new Date(),
