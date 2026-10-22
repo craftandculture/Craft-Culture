@@ -140,8 +140,13 @@ const FreightQuotesPage = () => {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<RequestStatus | ''>('');
-  // Opens on Needs action when something does; otherwise on everything, so the list is never empty by default
-  const [chosenFocus, setFocus] = useState<Focus | null>(null);
+  /*
+    Always opens on everything. It used to open on Needs action whenever
+    something did, while the All requests pill still read as selected, so the
+    same page showed two lists depending on when it was loaded. The tiles
+    count what needs doing; clicking one narrows the list.
+  */
+  const [focus, setFocus] = useState<Focus>('');
   const [selected, setSelected] = useState<string[]>([]);
 
   const {
@@ -173,7 +178,6 @@ const FreightQuotesPage = () => {
 
   const isOpen = (s: RequestStatus) => s !== 'completed' && s !== 'cancelled';
   const needsAction = requests.filter((r) => ACTION_STEPS.includes(r.nextStep));
-  const focus: Focus = chosenFocus ?? (needsAction.length ? 'action' : '');
   const awaiting = requests.filter((r) => r.nextStep === 'awaiting');
   const toDecide = requests.filter((r) => DECIDE_STEPS.includes(r.nextStep));
   const completed = requests.filter((r) => r.status === 'completed');
@@ -378,7 +382,7 @@ const FreightQuotesPage = () => {
         <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             type="button"
-            className={pill(status === '')}
+            className={pill(status === '' && focus === '')}
             onClick={() => {
               setStatus('');
               setFocus('');
