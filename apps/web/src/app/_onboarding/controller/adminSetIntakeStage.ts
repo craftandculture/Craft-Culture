@@ -37,6 +37,7 @@ const adminSetIntakeStage = staffAdminProcedure
       partnerId: intake.partnerId,
       source: intake.source,
       holderName: intake.holderName,
+      route: intake.route,
       stage: input.stage,
     });
 

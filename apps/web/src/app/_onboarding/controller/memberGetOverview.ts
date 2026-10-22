@@ -17,6 +17,7 @@ import logger from '@/utils/logger';
 
 import getIntakeShipments from '../data/getIntakeShipments';
 import getMembershipTerms from '../data/getMembershipTerms';
+import intakeRouteOf from '../utils/intakeRouteOf';
 import laterIntakeStage from '../utils/laterIntakeStage';
 import missingProfileItems from '../utils/missingProfileItems';
 
@@ -129,6 +130,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       const shipment = shipments.get(intake.id);
       return {
         ...intake,
+        route: intakeRouteOf(intake),
         stage: laterIntakeStage(intake.stage, shipment?.impliedStage ?? null),
         shipment: shipment
           ? {

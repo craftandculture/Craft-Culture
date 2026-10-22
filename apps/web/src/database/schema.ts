@@ -7917,6 +7917,8 @@ export const cellarIntakes = pgTable(
     /** For building a cellar from UAE stock: what they like to drink */
     tastes: text('tastes'),
     stage: text('stage').notNull().default('requested'),
+    /** uk_bond | forwarder | uae; null = implied by source (see intakeRouteOf) */
+    route: text('route'),
     shipmentId: uuid('shipment_id'),
     ...timestamps,
   },

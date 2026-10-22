@@ -10,8 +10,11 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 
 import AddIntakeForm from './AddIntakeForm';
-import intakeStages from '../../constants/intakeStages';
+import type { IntakeRoute } from '../../constants/intakeRoutes';
+import intakeRoutes from '../../constants/intakeRoutes';
+import type { IntakeStage } from '../../constants/intakeStages';
 import wineSources from '../../constants/wineSources';
+import intakeStagesFor from '../../utils/intakeStagesFor';
 
 const selectClass =
   'border-border-muted bg-surface-primary text-text-primary h-9 w-full rounded-lg border px-2 text-xs font-semibold sm:w-auto';
@@ -35,6 +38,15 @@ const IntakesList = () => {
     api.onboarding.admin.setIntakeStage.mutationOptions({
       onSuccess: () => {
         toast.success('Stage updated — the member has been told');
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+  const setRoute = useMutation(
+    api.onboarding.admin.setIntakeRoute.mutationOptions({
+      onSuccess: () => {
+        toast.success('Route updated');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -144,19 +156,37 @@ const IntakesList = () => {
                     ))}
                   </select>
                 )}
+                {isTransfer && (
+                  <select
+                    value={intake.route}
+                    disabled={setRoute.isPending}
+                    onChange={(event) =>
+                      setRoute.mutate({ intakeId: intake.id, route: event.target.value as IntakeRoute })
+                    }
+                    className={`${selectClass} sm:max-w-56`}
+                    aria-label="Route"
+                    title="How the wine reaches our UAE warehouse"
+                  >
+                    {intakeRoutes.map((route) => (
+                      <option key={route.value} value={route.value}>
+                        {route.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <select
                   value={intake.stage}
                   disabled={setStage.isPending}
                   onChange={(event) =>
                     setStage.mutate({
                       intakeId: intake.id,
-                      stage: event.target.value as (typeof intakeStages)[number]['value'] | 'closed',
+                      stage: event.target.value as IntakeStage,
                     })
                   }
                   className={selectClass}
                   aria-label="Stage"
                 >
-                  {intakeStages.map((stage) => (
+                  {intakeStagesFor(intake.route).map((stage) => (
                     <option key={stage.value} value={stage.value}>
                       {stage.label}
                     </option>

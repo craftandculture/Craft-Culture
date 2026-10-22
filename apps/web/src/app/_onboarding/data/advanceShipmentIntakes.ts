@@ -5,6 +5,7 @@ import { cellarIntakes, logisticsShipments } from '@/database/schema';
 import logger from '@/utils/logger';
 
 import notifyIntakeStage from './notifyIntakeStage';
+import intakeRouteOf from '../utils/intakeRouteOf';
 import intakeStageFromShipment from '../utils/intakeStageFromShipment';
 import laterIntakeStage from '../utils/laterIntakeStage';
 
@@ -27,8 +28,7 @@ const advanceShipmentIntakes = async (shipmentId: string) => {
       .where(eq(logisticsShipments.id, shipmentId))
       .limit(1);
 
-    const implied = shipment ? intakeStageFromShipment(shipment.status) : null;
-    if (!implied) return;
+    if (!shipment) return;
 
     const linked = await db
       .select()
@@ -36,6 +36,7 @@ const advanceShipmentIntakes = async (shipmentId: string) => {
       .where(and(eq(cellarIntakes.shipmentId, shipmentId), ne(cellarIntakes.stage, 'closed')));
 
     for (const intake of linked) {
+      const implied = intakeStageFromShipment(shipment.status, intakeRouteOf(intake));
       const next = laterIntakeStage(intake.stage, implied);
       if (next === intake.stage) continue;
 
@@ -46,6 +47,7 @@ const advanceShipmentIntakes = async (shipmentId: string) => {
           partnerId: intake.partnerId,
           source: intake.source,
           holderName: intake.holderName,
+          route: intake.route,
           stage: next,
         });
       }

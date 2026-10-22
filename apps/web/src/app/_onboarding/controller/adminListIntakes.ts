@@ -7,6 +7,7 @@ import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 
 import getIntakeShipments from '../data/getIntakeShipments';
+import intakeRouteOf from '../utils/intakeRouteOf';
 import laterIntakeStage from '../utils/laterIntakeStage';
 
 /**
@@ -36,7 +37,11 @@ const adminListIntakes = staffAdminProcedure.query(async () => {
       ...row,
       /** The reference the wine should arrive under at LCB */
       memberCode: (row.intake.partnerId && codes.get(row.intake.partnerId)) || null,
-      intake: { ...row.intake, stage: laterIntakeStage(row.intake.stage, shipment?.impliedStage ?? null) },
+      intake: {
+        ...row.intake,
+        route: intakeRouteOf(row.intake),
+        stage: laterIntakeStage(row.intake.stage, shipment?.impliedStage ?? null),
+      },
       shipment,
     };
   });

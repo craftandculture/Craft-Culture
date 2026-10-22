@@ -246,6 +246,11 @@ const runMigrations = async () => {
     );
     console.log('✅ private_client_document_type partner_sales_order ready');
 
+    // Cellar transfers: the route wine takes to the UAE (UK bond, forwarder, in-UAE).
+    console.log('🔄 Ensuring cellar_intakes.route column...');
+    await client.unsafe(`ALTER TABLE "cellar_intakes" ADD COLUMN IF NOT EXISTS "route" text`);
+    console.log('✅ cellar_intakes.route ready');
+
     // Shipments: UAE-to-UAE mainland transfer type.
     console.log('🔄 Ensuring logistics_shipment_type has mainland_transfer...');
     await client.unsafe(
