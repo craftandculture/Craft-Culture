@@ -142,7 +142,6 @@
   "src/app/api/admin/pco/proforma-preview/route.ts|TS2345": 1,
   "src/app/api/distributor/pco/proforma/route.ts|TS2345": 1,
   "src/app/api/distributor/pco/summary/route.ts|TS2345": 1,
-  "src/lib/zoho/client.ts|TS2339": 2,
   "src/test/mocks.ts|TS2739": 1,
   "src/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob.ts|TS2559": 2,
   "src/trigger/jobs/logistics-document-extraction/logisticsDocumentExtractionJob.ts|TS2559": 1,
