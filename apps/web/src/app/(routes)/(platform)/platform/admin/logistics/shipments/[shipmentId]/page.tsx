@@ -6,6 +6,7 @@ import {
   IconCalculator,
   IconCheck,
   IconCloud,
+  IconDownload,
   IconFileText,
   IconLoader2,
   IconLock,
@@ -35,6 +36,7 @@ import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusSte
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
 import ShipmentTypeBadge from '@/app/_logistics/components/ShipmentTypeBadge';
 import SignaturePad from '@/app/_logistics/components/SignaturePad';
+import buildShipmentItemsCsv from '@/app/_logistics/utils/buildShipmentItemsCsv';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import { SHIPMENT_STATUSES } from '@/app/_logistics/utils/shipmentStatuses';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
@@ -2262,6 +2264,25 @@ const ShipmentDetailPage = () => {
                         )}
                         </>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={shownItems.length === 0}
+                        title="Download these lines to check against the supplier invoice"
+                        onClick={() => {
+                          const blob = new Blob([buildShipmentItemsCsv(shownItems)], {
+                            type: 'text/csv;charset=utf-8',
+                          });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `${shipment.shipmentNumber}-items.csv`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <ButtonContent iconLeft={IconDownload}>Export CSV</ButtonContent>
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
