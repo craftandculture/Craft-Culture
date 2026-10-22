@@ -382,7 +382,7 @@ const ScoutBrief = () => {
                     <TableRow isHeaderRow>
                       <TableHead>Wine</TableHead>
                       <TableHead>Competitor</TableHead>
-                      <TableHead>Your Price</TableHead>
+                      <TableHead>Yours, duty paid (+15%)</TableHead>
                       <TableHead className="text-right">Gap</TableHead>
                     </TableRow>
                   </TableHeader>
