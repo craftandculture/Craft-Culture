@@ -1,16 +1,16 @@
 'use client';
 
-import {
-  IconArrowLeft,
-  IconPlus,
-} from '@tabler/icons-react';
+import { IconArrowLeft, IconPlus } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import ForwarderPicker, { type NewForwarder } from '@/app/_logistics/components/quotes/ForwarderPicker';
+import ForwarderPicker, {
+  type NewForwarder,
+} from '@/app/_logistics/components/quotes/ForwarderPicker';
+import defaultJobType from '@/app/_logistics/utils/defaultJobType';
 import normaliseCountry from '@/app/_logistics/utils/normaliseCountry';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -37,6 +37,15 @@ import useTRPC from '@/lib/trpc/browser';
 type TransportMode = (typeof logisticsTransportMode.enumValues)[number];
 type ProductType = (typeof logisticsProductType.enumValues)[number];
 type Priority = (typeof logisticsQuoteRequestPriority.enumValues)[number];
+
+type JobType = 'inbound' | 'outbound' | 're_export' | 'mainland_transfer';
+
+const jobTypeOptions: { value: JobType; label: string }[] = [
+  { value: 'inbound', label: 'Inbound to the UAE' },
+  { value: 'outbound', label: 'Outbound' },
+  { value: 're_export', label: 'Re-export from the UAE' },
+  { value: 'mainland_transfer', label: 'Transfer within the UAE' },
+];
 
 const transportModeOptions: { value: TransportMode; label: string }[] = [
   { value: 'sea_fcl', label: 'Sea (FCL)' },
@@ -112,15 +121,20 @@ const NewQuoteRequestPage = () => {
   const [targetDeliveryDate, setTargetDeliveryDate] = useState('');
   const [isFlexibleDates, setIsFlexibleDates] = useState(true);
   const [notes, setNotes] = useState('');
+  // Empty until someone picks one; the job type is otherwise read from the route
+  const [jobType, setJobType] = useState<JobType | ''>('');
 
   // Places used on past routes, offered as each route field is typed
-  const { data: routeOptions } = useQuery(api.logistics.admin.requests.routeOptions.queryOptions());
+  const { data: routeOptions } = useQuery(
+    api.logistics.admin.requests.routeOptions.queryOptions(),
+  );
 
   // Started from a shipment or UK move: fill the form from it once
   const searchParams = useSearchParams();
   const sourceType = searchParams.get('sourceType');
   const sourceId = searchParams.get('sourceId');
-  const validSource = (sourceType === 'shipment' || sourceType === 'uk_move') && !!sourceId;
+  const validSource =
+    (sourceType === 'shipment' || sourceType === 'uk_move') && !!sourceId;
   const { data: draft } = useQuery({
     ...api.logistics.admin.requests.draftFromSource.queryOptions({
       sourceType: sourceType === 'uk_move' ? 'uk_move' : 'shipment',
@@ -152,11 +166,21 @@ const NewQuoteRequestPage = () => {
     ...api.logistics.admin.requests.create.mutationOptions(),
     onSuccess: (result) => {
       const sent = result.emailResult;
-      if (sent?.sent) toast.success(`Request saved and sent to ${sent.sent} forwarder${sent.sent === 1 ? '' : 's'}`);
-      else toast.success('Request saved');
-      sent?.failed.forEach((f) => toast.error(`${f.name}: ${f.error ?? 'not sent'}`));
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests', 'getMany']] });
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getDashboardMetrics']] });
+      const job = `job ${result.job.shipmentNumber}`;
+      if (sent?.sent)
+        toast.success(
+          `Request saved on ${job} and sent to ${sent.sent} forwarder${sent.sent === 1 ? '' : 's'}`,
+        );
+      else toast.success(`Request saved on ${job}`);
+      sent?.failed.forEach((f) =>
+        toast.error(`${f.name}: ${f.error ?? 'not sent'}`),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'requests', 'getMany']],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'getDashboardMetrics']],
+      });
       router.push(`/platform/admin/logistics/requests/${result.id}`);
     },
     onError: (error) => {
@@ -167,7 +191,9 @@ const NewQuoteRequestPage = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // Which button was pressed: save and send, or save only
-    const sendNow = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('data-send') === 'true';
+    const sendNow =
+      (e.nativeEvent as SubmitEvent).submitter?.getAttribute('data-send') ===
+      'true';
 
     if (!originCountry) {
       toast.error('Origin country is required');
@@ -196,8 +222,14 @@ const NewQuoteRequestPage = () => {
       totalVolumeM3: totalVolumeM3 ? Number(totalVolumeM3) : undefined,
       totalBottles: totalBottles ? Number(totalBottles) : undefined,
       // Without a 75cl figure the bottles are taken as 75cl
-      total75clEquivalents: total75cl ? Number(total75cl) : totalBottles ? Number(totalBottles) : undefined,
-      ...(validSource && draft ? { sourceType: draft.sourceType, sourceId: draft.sourceId } : {}),
+      total75clEquivalents: total75cl
+        ? Number(total75cl)
+        : totalBottles
+          ? Number(totalBottles)
+          : undefined,
+      ...(validSource && draft
+        ? { sourceType: draft.sourceType, sourceId: draft.sourceId }
+        : {}),
       replyBy: replyBy ? new Date(`${replyBy}T12:00:00`) : undefined,
       forwarderIds,
       newForwarders: newForwarders.filter((f) => f.name.trim()),
@@ -208,28 +240,40 @@ const NewQuoteRequestPage = () => {
       temperatureControlled,
       minTemperature: minTemperature ? Number(minTemperature) : undefined,
       maxTemperature: maxTemperature ? Number(maxTemperature) : undefined,
-      targetPickupDate: targetPickupDate ? new Date(targetPickupDate) : undefined,
-      targetDeliveryDate: targetDeliveryDate ? new Date(targetDeliveryDate) : undefined,
+      targetPickupDate: targetPickupDate
+        ? new Date(targetPickupDate)
+        : undefined,
+      targetDeliveryDate: targetDeliveryDate
+        ? new Date(targetDeliveryDate)
+        : undefined,
       isFlexibleDates,
       notes: notes || undefined,
+      jobType: jobType || defaultJobType(originCountry, destinationCountry),
     });
   };
 
   // Forwarders the request will go to: those ticked and those typed in
-  const askCount = forwarderIds.length + newForwarders.filter((f) => f.name.trim()).length;
+  const askCount =
+    forwarderIds.length + newForwarders.filter((f) => f.name.trim()).length;
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Suggestions for the route fields; anything not listed can still be typed */}
         <datalist id="route-countries">
-          {routeOptions?.countries.map((c) => <option key={c} value={c} />)}
+          {routeOptions?.countries.map((c) => (
+            <option key={c} value={c} />
+          ))}
         </datalist>
         <datalist id="route-cities">
-          {routeOptions?.cities.map((c) => <option key={c} value={c} />)}
+          {routeOptions?.cities.map((c) => (
+            <option key={c} value={c} />
+          ))}
         </datalist>
         <datalist id="route-warehouses">
-          {routeOptions?.warehouses.map((w) => <option key={w} value={w} />)}
+          {routeOptions?.warehouses.map((w) => (
+            <option key={w} value={w} />
+          ))}
         </datalist>
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -255,8 +299,13 @@ const NewQuoteRequestPage = () => {
           </div>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="priority">Priority Level</label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+              <label className="text-sm font-medium" htmlFor="priority">
+                Priority Level
+              </label>
+              <Select
+                value={priority}
+                onValueChange={(v) => setPriority(v as Priority)}
+              >
                 <SelectTrigger id="priority" className="w-48">
                   <SelectValue />
                 </SelectTrigger>
@@ -285,12 +334,19 @@ const NewQuoteRequestPage = () => {
                 </Typography>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="originCountry">Country *</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="originCountry"
+                    >
+                      Country *
+                    </label>
                     <Input
                       id="originCountry"
                       list="route-countries"
                       autoComplete="off"
-                      onBlur={(e) => setOriginCountry(normaliseCountry(e.target.value))}
+                      onBlur={(e) =>
+                        setOriginCountry(normaliseCountry(e.target.value))
+                      }
                       placeholder="e.g. France"
                       value={originCountry}
                       onChange={(e) => setOriginCountry(e.target.value)}
@@ -298,7 +354,9 @@ const NewQuoteRequestPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="originCity">City</label>
+                    <label className="text-sm font-medium" htmlFor="originCity">
+                      City
+                    </label>
                     <Input
                       id="originCity"
                       list="route-cities"
@@ -309,7 +367,12 @@ const NewQuoteRequestPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="originWarehouse">Warehouse / Supplier</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="originWarehouse"
+                    >
+                      Warehouse / Supplier
+                    </label>
                     <Input
                       id="originWarehouse"
                       list="route-warehouses"
@@ -327,12 +390,19 @@ const NewQuoteRequestPage = () => {
                 </Typography>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="destinationCountry">Country *</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="destinationCountry"
+                    >
+                      Country *
+                    </label>
                     <Input
                       id="destinationCountry"
                       list="route-countries"
                       autoComplete="off"
-                      onBlur={(e) => setDestinationCountry(normaliseCountry(e.target.value))}
+                      onBlur={(e) =>
+                        setDestinationCountry(normaliseCountry(e.target.value))
+                      }
                       placeholder="e.g. United Arab Emirates"
                       value={destinationCountry}
                       onChange={(e) => setDestinationCountry(e.target.value)}
@@ -340,7 +410,12 @@ const NewQuoteRequestPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="destinationCity">City</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="destinationCity"
+                    >
+                      City
+                    </label>
                     <Input
                       id="destinationCity"
                       list="route-cities"
@@ -351,7 +426,12 @@ const NewQuoteRequestPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="destinationWarehouse">Warehouse</label>
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="destinationWarehouse"
+                    >
+                      Warehouse
+                    </label>
                     <Input
                       id="destinationWarehouse"
                       list="route-warehouses"
@@ -364,11 +444,41 @@ const NewQuoteRequestPage = () => {
                 </div>
               </div>
             </div>
+            {!(validSource && draft?.sourceType === 'shipment') && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="jobType">
+                  Job
+                </label>
+                <Select
+                  value={
+                    jobType || defaultJobType(originCountry, destinationCountry)
+                  }
+                  onValueChange={(v) => v && setJobType(v as JobType)}
+                >
+                  <SelectTrigger id="jobType" className="w-64">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobTypeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-text-muted text-xs">
+                  Saving opens the job (an SHP number) these quotes are for. No
+                  quotes without a job.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="transportMode">Preferred Transport Mode</label>
+              <label className="text-sm font-medium" htmlFor="transportMode">
+                Preferred Transport Mode
+              </label>
               <Select
                 value={transportMode}
-                onValueChange={(v) => setTransportMode(v as TransportMode)}
+                onValueChange={(v) => v && setTransportMode(v as TransportMode)}
               >
                 <SelectTrigger id="transportMode" className="w-48">
                   <SelectValue placeholder="Select mode" />
@@ -393,7 +503,9 @@ const NewQuoteRequestPage = () => {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="productType">Product Type</label>
+                <label className="text-sm font-medium" htmlFor="productType">
+                  Product Type
+                </label>
                 <Select
                   value={productType}
                   onValueChange={(v) => setProductType(v as ProductType)}
@@ -411,7 +523,12 @@ const NewQuoteRequestPage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="productDescription">Product Description</label>
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="productDescription"
+                >
+                  Product Description
+                </label>
                 <Input
                   id="productDescription"
                   placeholder="e.g. Premium Bordeaux wines"
@@ -422,18 +539,26 @@ const NewQuoteRequestPage = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="totalBottles">Bottles</label>
+                <label className="text-sm font-medium" htmlFor="totalBottles">
+                  Bottles
+                </label>
                 <Input
                   id="totalBottles"
                   type="number"
                   min="1"
                   placeholder="e.g. 993"
                   value={totalBottles}
-                  onChange={(e) => setTotalBottles(e.target.value ? parseInt(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotalBottles(
+                      e.target.value ? parseInt(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="total75cl">75cl equivalent</label>
+                <label className="text-sm font-medium" htmlFor="total75cl">
+                  75cl equivalent
+                </label>
                 <Input
                   id="total75cl"
                   type="number"
@@ -441,36 +566,55 @@ const NewQuoteRequestPage = () => {
                   step="0.1"
                   placeholder="Leave empty if all 75cl"
                   value={total75cl}
-                  onChange={(e) => setTotal75cl(e.target.value ? Number(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotal75cl(e.target.value ? Number(e.target.value) : '')
+                  }
                 />
-                <p className="text-xs text-text-muted">A magnum counts 2, a half bottle 0.5. Quotes are compared on this.</p>
+                <p className="text-text-muted text-xs">
+                  A magnum counts 2, a half bottle 0.5. Quotes are compared on
+                  this.
+                </p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="totalCases">Total Cases</label>
+                <label className="text-sm font-medium" htmlFor="totalCases">
+                  Total Cases
+                </label>
                 <Input
                   id="totalCases"
                   type="number"
                   min="1"
                   placeholder="e.g. 100"
                   value={totalCases}
-                  onChange={(e) => setTotalCases(e.target.value ? parseInt(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotalCases(
+                      e.target.value ? parseInt(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="totalPallets">Total Pallets</label>
+                <label className="text-sm font-medium" htmlFor="totalPallets">
+                  Total Pallets
+                </label>
                 <Input
                   id="totalPallets"
                   type="number"
                   min="1"
                   placeholder="e.g. 5"
                   value={totalPallets}
-                  onChange={(e) => setTotalPallets(e.target.value ? parseInt(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotalPallets(
+                      e.target.value ? parseInt(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="totalWeightKg">Weight (kg)</label>
+                <label className="text-sm font-medium" htmlFor="totalWeightKg">
+                  Weight (kg)
+                </label>
                 <Input
                   id="totalWeightKg"
                   type="number"
@@ -478,11 +622,17 @@ const NewQuoteRequestPage = () => {
                   min="0"
                   placeholder="e.g. 1500"
                   value={totalWeightKg}
-                  onChange={(e) => setTotalWeightKg(e.target.value ? parseFloat(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotalWeightKg(
+                      e.target.value ? parseFloat(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="totalVolumeM3">Volume (m3)</label>
+                <label className="text-sm font-medium" htmlFor="totalVolumeM3">
+                  Volume (m3)
+                </label>
                 <Input
                   id="totalVolumeM3"
                   type="number"
@@ -490,7 +640,11 @@ const NewQuoteRequestPage = () => {
                   min="0"
                   placeholder="e.g. 5.5"
                   value={totalVolumeM3}
-                  onChange={(e) => setTotalVolumeM3(e.target.value ? parseFloat(e.target.value) : '')}
+                  onChange={(e) =>
+                    setTotalVolumeM3(
+                      e.target.value ? parseFloat(e.target.value) : '',
+                    )
+                  }
                 />
               </div>
             </div>
@@ -508,9 +662,14 @@ const NewQuoteRequestPage = () => {
                 <Checkbox
                   id="requiresThermalLiner"
                   checked={requiresThermalLiner}
-                  onCheckedChange={(checked) => setRequiresThermalLiner(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setRequiresThermalLiner(checked === true)
+                  }
                 />
-                <label className="text-sm font-medium cursor-pointer" htmlFor="requiresThermalLiner">
+                <label
+                  className="cursor-pointer text-sm font-medium"
+                  htmlFor="requiresThermalLiner"
+                >
                   Requires Thermal Liner
                 </label>
               </div>
@@ -518,9 +677,14 @@ const NewQuoteRequestPage = () => {
                 <Checkbox
                   id="requiresTracker"
                   checked={requiresTracker}
-                  onCheckedChange={(checked) => setRequiresTracker(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setRequiresTracker(checked === true)
+                  }
                 />
-                <label className="text-sm font-medium cursor-pointer" htmlFor="requiresTracker">
+                <label
+                  className="cursor-pointer text-sm font-medium"
+                  htmlFor="requiresTracker"
+                >
                   Requires Temperature Tracker
                 </label>
               </div>
@@ -528,9 +692,14 @@ const NewQuoteRequestPage = () => {
                 <Checkbox
                   id="requiresInsurance"
                   checked={requiresInsurance}
-                  onCheckedChange={(checked) => setRequiresInsurance(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setRequiresInsurance(checked === true)
+                  }
                 />
-                <label className="text-sm font-medium cursor-pointer" htmlFor="requiresInsurance">
+                <label
+                  className="cursor-pointer text-sm font-medium"
+                  htmlFor="requiresInsurance"
+                >
                   Requires Insurance
                 </label>
               </div>
@@ -538,9 +707,14 @@ const NewQuoteRequestPage = () => {
                 <Checkbox
                   id="temperatureControlled"
                   checked={temperatureControlled}
-                  onCheckedChange={(checked) => setTemperatureControlled(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setTemperatureControlled(checked === true)
+                  }
                 />
-                <label className="text-sm font-medium cursor-pointer" htmlFor="temperatureControlled">
+                <label
+                  className="cursor-pointer text-sm font-medium"
+                  htmlFor="temperatureControlled"
+                >
                   Temperature Controlled
                 </label>
               </div>
@@ -548,25 +722,43 @@ const NewQuoteRequestPage = () => {
             {temperatureControlled && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="minTemperature">Min Temperature (C)</label>
+                  <label
+                    className="text-sm font-medium"
+                    htmlFor="minTemperature"
+                  >
+                    Min Temperature (C)
+                  </label>
                   <Input
                     id="minTemperature"
                     type="number"
                     step="0.1"
                     placeholder="e.g. 12"
                     value={minTemperature}
-                    onChange={(e) => setMinTemperature(e.target.value ? parseFloat(e.target.value) : '')}
+                    onChange={(e) =>
+                      setMinTemperature(
+                        e.target.value ? parseFloat(e.target.value) : '',
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="maxTemperature">Max Temperature (C)</label>
+                  <label
+                    className="text-sm font-medium"
+                    htmlFor="maxTemperature"
+                  >
+                    Max Temperature (C)
+                  </label>
                   <Input
                     id="maxTemperature"
                     type="number"
                     step="0.1"
                     placeholder="e.g. 18"
                     value={maxTemperature}
-                    onChange={(e) => setMaxTemperature(e.target.value ? parseFloat(e.target.value) : '')}
+                    onChange={(e) =>
+                      setMaxTemperature(
+                        e.target.value ? parseFloat(e.target.value) : '',
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -582,7 +774,12 @@ const NewQuoteRequestPage = () => {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="targetPickupDate">Target Pickup Date</label>
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="targetPickupDate"
+                >
+                  Target Pickup Date
+                </label>
                 <Input
                   id="targetPickupDate"
                   type="date"
@@ -591,7 +788,12 @@ const NewQuoteRequestPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="targetDeliveryDate">Target Delivery Date</label>
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="targetDeliveryDate"
+                >
+                  Target Delivery Date
+                </label>
                 <Input
                   id="targetDeliveryDate"
                   type="date"
@@ -600,17 +802,29 @@ const NewQuoteRequestPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="replyBy">Forwarders to reply by</label>
-                <Input id="replyBy" type="date" value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
+                <label className="text-sm font-medium" htmlFor="replyBy">
+                  Forwarders to reply by
+                </label>
+                <Input
+                  id="replyBy"
+                  type="date"
+                  value={replyBy}
+                  onChange={(e) => setReplyBy(e.target.value)}
+                />
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="isFlexibleDates"
                 checked={isFlexibleDates}
-                onCheckedChange={(checked) => setIsFlexibleDates(checked === true)}
+                onCheckedChange={(checked) =>
+                  setIsFlexibleDates(checked === true)
+                }
               />
-              <label className="text-sm font-medium cursor-pointer" htmlFor="isFlexibleDates">
+              <label
+                className="cursor-pointer text-sm font-medium"
+                htmlFor="isFlexibleDates"
+              >
                 Dates are flexible
               </label>
             </div>
@@ -633,7 +847,9 @@ const NewQuoteRequestPage = () => {
           </div>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="notes">Additional Notes</label>
+              <label className="text-sm font-medium" htmlFor="notes">
+                Additional Notes
+              </label>
               <TextArea
                 id="notes"
                 placeholder="Any additional information or requirements..."

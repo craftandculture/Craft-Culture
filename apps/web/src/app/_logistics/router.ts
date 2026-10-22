@@ -58,6 +58,7 @@ import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminImportForwarders from './controller/adminImportForwarders';
 import adminMarkRequestRecipients from './controller/adminMarkRequestRecipients';
+import adminOpenRequestJob from './controller/adminOpenRequestJob';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
@@ -216,6 +217,7 @@ const adminRouter = createTRPCRouter({
     setRecipients: adminSetRequestRecipients,
     markRecipients: adminMarkRequestRecipients,
     setClientPrice: adminSetClientPrice,
+    openJob: adminOpenRequestJob,
     sendEmails: adminSendFreightEmails,
   }),
 });

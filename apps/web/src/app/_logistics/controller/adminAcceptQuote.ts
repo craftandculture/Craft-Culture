@@ -28,7 +28,9 @@ const acceptQuoteSchema = z.object({
   /** Or open a new draft shipment from the quote's route */
   createShipment: z
     .object({
-      type: z.enum(['inbound', 'outbound', 're_export', 'mainland_transfer']).default('inbound'),
+      type: z
+        .enum(['inbound', 'outbound', 're_export', 'mainland_transfer'])
+        .default('inbound'),
       transportMode: z.enum(transportModes).optional(),
       originCountry: z.string().optional(),
       originCity: z.string().optional(),
@@ -44,12 +46,14 @@ const acceptQuoteSchema = z.object({
  * Accept a freight quote
  *
  * Marks the quote as accepted, then:
- * - links it to an existing shipment, or opens a new draft shipment from the
- *   quote's route, transport mode and the request it answers
- * - records the quoted price as the shipment's freight cost, as a line in the
+ *
+ * - Files it against the request's job, or links it to an existing shipment, or
+ *   (for quotes from before every request had a job) opens a new draft
+ *   shipment; a draft job takes the winning quote's mode and forwarder
+ * - Records the quoted price as the shipment's freight cost, as a line in the
  *   shipment's cost ledger where the shipment keeps one
- * - rejects the other pending quotes for the same request and shipment
- * - marks the request the quote answers as completed
+ * - Rejects the other pending quotes for the same request and shipment
+ * - Marks the request the quote answers as completed
  *
  * @example
  *   await trpcClient.logistics.admin.quotes.accept.mutate({
@@ -57,261 +61,329 @@ const acceptQuoteSchema = z.object({
  *     createShipment: { type: 'inbound' },
  *   });
  */
-const adminAcceptQuote = adminProcedure.input(acceptQuoteSchema).mutation(async ({ input, ctx }) => {
-  const { quoteId, shipmentId, createShipment, updateShipmentCosts } = input;
+const adminAcceptQuote = adminProcedure
+  .input(acceptQuoteSchema)
+  .mutation(async ({ input, ctx }) => {
+    const { quoteId, shipmentId, createShipment, updateShipmentCosts } = input;
 
-  if (shipmentId && createShipment) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Choose either an existing shipment or a new one, not both',
-    });
-  }
+    if (shipmentId && createShipment) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Choose either an existing shipment or a new one, not both',
+      });
+    }
 
-  const [quote] = await db
-    .select()
-    .from(logisticsQuotes)
-    .where(eq(logisticsQuotes.id, quoteId))
-    .limit(1);
-
-  if (!quote) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Quote not found' });
-  }
-
-  if (quote.status !== 'pending') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Cannot accept quote with status "${quote.status}"`,
-    });
-  }
-
-  if (quote.validUntil && quote.validUntil.getTime() < Date.now()) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Quote ${quote.quoteNumber} expired on ${quote.validUntil.toISOString().slice(0, 10)}; ask the forwarder to confirm or reissue it`,
-    });
-  }
-
-  const [request] = quote.requestId
-    ? await db
-        .select()
-        .from(logisticsQuoteRequests)
-        .where(eq(logisticsQuoteRequests.id, quote.requestId))
-        .limit(1)
-    : [];
-
-  if (shipmentId) {
-    const [existing] = await db
-      .select({ id: logisticsShipments.id })
-      .from(logisticsShipments)
-      .where(eq(logisticsShipments.id, shipmentId))
+    const [quote] = await db
+      .select()
+      .from(logisticsQuotes)
+      .where(eq(logisticsQuotes.id, quoteId))
       .limit(1);
 
-    if (!existing) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Shipment not found' });
+    if (!quote) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Quote not found' });
     }
-  }
 
-  const transportMode =
-    createShipment?.transportMode ?? quote.transportMode ?? request?.transportMode ?? null;
-
-  if (createShipment && !transportMode) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Choose a transport mode for the new shipment',
-    });
-  }
-
-  try {
-    let targetShipmentId = shipmentId || quote.shipmentId || null;
-    let createdShipmentNumber: string | null = null;
-
-    if (createShipment && transportMode) {
-      const shipmentNumber = await generateShipmentNumber();
-      const [shipment] = await db
-        .insert(logisticsShipments)
-        .values({
-          shipmentNumber,
-          type: createShipment.type,
-          transportMode,
-          status: 'draft',
-          originCountry: createShipment.originCountry || quote.originCountry || request?.originCountry || null,
-          originCity: createShipment.originCity || quote.originCity || request?.originCity || null,
-          originWarehouse: request?.originWarehouse || null,
-          destinationCountry:
-            createShipment.destinationCountry || quote.destinationCountry || request?.destinationCountry || null,
-          destinationCity:
-            createShipment.destinationCity || quote.destinationCity || request?.destinationCity || null,
-          destinationWarehouse: request?.destinationWarehouse || undefined,
-          carrierName: quote.forwarderName,
-          internalNotes: `Opened from accepted quote ${quote.quoteNumber}${request ? ` (request ${request.requestNumber})` : ''}`,
-          createdBy: ctx.user.id,
-        })
-        .returning();
-
-      if (!shipment) {
-        throw new Error('Shipment insert returned no row');
-      }
-
-      await db.insert(logisticsShipmentActivityLogs).values({
-        shipmentId: shipment.id,
-        userId: ctx.user.id,
-        action: 'created',
-        newStatus: 'draft',
-        notes: `Shipment ${shipmentNumber} created from accepted quote ${quote.quoteNumber}`,
+    if (quote.status !== 'pending') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Cannot accept quote with status "${quote.status}"`,
       });
-
-      targetShipmentId = shipment.id;
-      createdShipmentNumber = shipmentNumber;
     }
 
-    const now = new Date();
-
-    const [acceptedQuote] = await db
-      .update(logisticsQuotes)
-      .set({
-        status: 'accepted',
-        shipmentId: targetShipmentId,
-        acceptedAt: now,
-        acceptedBy: ctx.user.id,
-        updatedAt: now,
-      })
-      .where(eq(logisticsQuotes.id, quoteId))
-      .returning();
-
-    // Only one quote can win a request or a shipment
-    const competitors = [
-      targetShipmentId ? eq(logisticsQuotes.shipmentId, targetShipmentId) : undefined,
-      quote.requestId ? eq(logisticsQuotes.requestId, quote.requestId) : undefined,
-    ].filter((c) => c !== undefined);
-
-    if (competitors.length > 0) {
-      await db
-        .update(logisticsQuotes)
-        .set({
-          status: 'rejected',
-          rejectedAt: now,
-          rejectedBy: ctx.user.id,
-          rejectionReason: `Quote ${quote.quoteNumber} was accepted instead`,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            or(...competitors),
-            eq(logisticsQuotes.status, 'pending'),
-            ne(logisticsQuotes.id, quoteId),
-          ),
-        );
+    if (quote.validUntil && quote.validUntil.getTime() < Date.now()) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Quote ${quote.quoteNumber} expired on ${quote.validUntil.toISOString().slice(0, 10)}; ask the forwarder to confirm or reissue it`,
+      });
     }
 
-    let freightCostRecorded = false;
+    const [request] = quote.requestId
+      ? await db
+          .select()
+          .from(logisticsQuoteRequests)
+          .where(eq(logisticsQuoteRequests.id, quote.requestId))
+          .limit(1)
+      : [];
 
-    if (targetShipmentId && updateShipmentCosts) {
-      const fx = await resolveFxToUsd(quote.currency);
+    if (shipmentId) {
+      const [existing] = await db
+        .select({ id: logisticsShipments.id })
+        .from(logisticsShipments)
+        .where(eq(logisticsShipments.id, shipmentId))
+        .limit(1);
 
-      if (fx.source !== 'unresolved') {
-        const ledgerLines = await db
-          .select({ id: logisticsShipmentCostLines.id })
-          .from(logisticsShipmentCostLines)
-          .where(eq(logisticsShipmentCostLines.shipmentId, targetShipmentId))
-          .limit(1);
-        const amountUsd = Math.round(quote.totalPrice * fx.rate * 100) / 100;
+      if (!existing) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Shipment not found',
+        });
+      }
+    }
 
-        // A shipment that keeps a ledger gets a ledger line; one whose costs were
-        // typed in directly keeps them, and only its freight figure changes
-        if (ledgerLines.length > 0 || createdShipmentNumber) {
-          await db.insert(logisticsShipmentCostLines).values({
-            shipmentId: targetShipmentId,
-            category: 'freight',
-            description: `Freight per accepted quote ${quote.quoteNumber}`,
-            amount: quote.totalPrice,
-            currency: quote.currency.toUpperCase(),
-            fxToUsd: fx.rate,
-            amountUsd,
-            vendor: quote.forwarderName,
-            invoiceRef: quote.quoteNumber,
-            sourceDocument: 'Accepted freight quote',
+    const transportMode =
+      createShipment?.transportMode ??
+      quote.transportMode ??
+      request?.transportMode ??
+      null;
+
+    if (createShipment && !transportMode) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Choose a transport mode for the new shipment',
+      });
+    }
+
+    try {
+      let targetShipmentId =
+        shipmentId || quote.shipmentId || request?.shipmentId || null;
+      let createdShipmentNumber: string | null = null;
+
+      if (createShipment && transportMode) {
+        const shipmentNumber = await generateShipmentNumber();
+        const [shipment] = await db
+          .insert(logisticsShipments)
+          .values({
+            shipmentNumber,
+            type: createShipment.type,
+            transportMode,
+            status: 'draft',
+            originCountry:
+              createShipment.originCountry ||
+              quote.originCountry ||
+              request?.originCountry ||
+              null,
+            originCity:
+              createShipment.originCity ||
+              quote.originCity ||
+              request?.originCity ||
+              null,
+            originWarehouse: request?.originWarehouse || null,
+            destinationCountry:
+              createShipment.destinationCountry ||
+              quote.destinationCountry ||
+              request?.destinationCountry ||
+              null,
+            destinationCity:
+              createShipment.destinationCity ||
+              quote.destinationCity ||
+              request?.destinationCity ||
+              null,
+            destinationWarehouse: request?.destinationWarehouse || undefined,
+            carrierName: quote.forwarderName,
+            internalNotes: `Opened from accepted quote ${quote.quoteNumber}${request ? ` (request ${request.requestNumber})` : ''}`,
             createdBy: ctx.user.id,
-          });
-          await syncShipmentCostsFromLedger(targetShipmentId);
-        } else {
-          await db
-            .update(logisticsShipments)
-            .set({ freightCostUsd: amountUsd, updatedAt: now })
-            .where(eq(logisticsShipments.id, targetShipmentId));
+          })
+          .returning();
+
+        if (!shipment) {
+          throw new Error('Shipment insert returned no row');
         }
 
-        freightCostRecorded = true;
+        await db.insert(logisticsShipmentActivityLogs).values({
+          shipmentId: shipment.id,
+          userId: ctx.user.id,
+          action: 'created',
+          newStatus: 'draft',
+          notes: `Shipment ${shipmentNumber} created from accepted quote ${quote.quoteNumber}`,
+        });
+
+        targetShipmentId = shipment.id;
+        createdShipmentNumber = shipmentNumber;
       }
-    }
 
-    // What the client was quoted rides with the shipment, so its margin is known later
-    let clientPriceRecorded = false;
+      const now = new Date();
 
-    if (targetShipmentId && request?.clientPriceUsd != null) {
-      const costUsd = quoteTotalUsd(quote) ?? (quote.fxToUsd ? quote.totalPrice * quote.fxToUsd : null);
+      // The job was opened as a draft before the mode and forwarder were known; the winning quote sets them
+      if (targetShipmentId && !createdShipmentNumber) {
+        await db
+          .update(logisticsShipments)
+          .set({
+            ...(quote.transportMode && { transportMode: quote.transportMode }),
+            carrierName: quote.forwarderName,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(logisticsShipments.id, targetShipmentId),
+              eq(logisticsShipments.status, 'draft'),
+            ),
+          );
+      }
 
-      await db
-        .update(logisticsShipments)
+      const [acceptedQuote] = await db
+        .update(logisticsQuotes)
         .set({
-          clientPriceUsd: request.clientPriceUsd,
-          quotedMarginUsd: costUsd == null ? null : Math.round((request.clientPriceUsd - costUsd) * 100) / 100,
+          status: 'accepted',
+          shipmentId: targetShipmentId,
+          acceptedAt: now,
+          acceptedBy: ctx.user.id,
           updatedAt: now,
         })
-        .where(eq(logisticsShipments.id, targetShipmentId));
-      clientPriceRecorded = true;
+        .where(eq(logisticsQuotes.id, quoteId))
+        .returning();
+
+      // Only one quote can win a request or a shipment
+      const competitors = [
+        targetShipmentId
+          ? eq(logisticsQuotes.shipmentId, targetShipmentId)
+          : undefined,
+        quote.requestId
+          ? eq(logisticsQuotes.requestId, quote.requestId)
+          : undefined,
+      ].filter((c) => c !== undefined);
+
+      if (competitors.length > 0) {
+        await db
+          .update(logisticsQuotes)
+          .set({
+            status: 'rejected',
+            rejectedAt: now,
+            rejectedBy: ctx.user.id,
+            rejectionReason: `Quote ${quote.quoteNumber} was accepted instead`,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              or(...competitors),
+              eq(logisticsQuotes.status, 'pending'),
+              ne(logisticsQuotes.id, quoteId),
+            ),
+          );
+      }
+
+      let freightCostRecorded = false;
+
+      if (targetShipmentId && updateShipmentCosts) {
+        const fx = await resolveFxToUsd(quote.currency);
+
+        if (fx.source !== 'unresolved') {
+          const ledgerLines = await db
+            .select({ id: logisticsShipmentCostLines.id })
+            .from(logisticsShipmentCostLines)
+            .where(eq(logisticsShipmentCostLines.shipmentId, targetShipmentId))
+            .limit(1);
+          const amountUsd = Math.round(quote.totalPrice * fx.rate * 100) / 100;
+
+          // A shipment that keeps a ledger gets a ledger line; one whose costs were
+          // typed in directly keeps them, and only its freight figure changes
+          // A job opened by its request is new, so it keeps a ledger from the start
+          const openedByRequest =
+            !!request &&
+            request.sourceType !== 'shipment' &&
+            request.shipmentId === targetShipmentId;
+
+          if (
+            ledgerLines.length > 0 ||
+            createdShipmentNumber ||
+            openedByRequest
+          ) {
+            await db.insert(logisticsShipmentCostLines).values({
+              shipmentId: targetShipmentId,
+              category: 'freight',
+              description: `Freight per accepted quote ${quote.quoteNumber}`,
+              amount: quote.totalPrice,
+              currency: quote.currency.toUpperCase(),
+              fxToUsd: fx.rate,
+              amountUsd,
+              vendor: quote.forwarderName,
+              invoiceRef: quote.quoteNumber,
+              sourceDocument: 'Accepted freight quote',
+              createdBy: ctx.user.id,
+            });
+            await syncShipmentCostsFromLedger(targetShipmentId);
+          } else {
+            await db
+              .update(logisticsShipments)
+              .set({ freightCostUsd: amountUsd, updatedAt: now })
+              .where(eq(logisticsShipments.id, targetShipmentId));
+          }
+
+          freightCostRecorded = true;
+        }
+      }
+
+      // What the client was quoted rides with the shipment, so its margin is known later
+      let clientPriceRecorded = false;
+
+      if (targetShipmentId && request?.clientPriceUsd != null) {
+        const costUsd =
+          quoteTotalUsd(quote) ??
+          (quote.fxToUsd ? quote.totalPrice * quote.fxToUsd : null);
+
+        await db
+          .update(logisticsShipments)
+          .set({
+            clientPriceUsd: request.clientPriceUsd,
+            quotedMarginUsd:
+              costUsd == null
+                ? null
+                : Math.round((request.clientPriceUsd - costUsd) * 100) / 100,
+            updatedAt: now,
+          })
+          .where(eq(logisticsShipments.id, targetShipmentId));
+        clientPriceRecorded = true;
+      }
+
+      // Every other forwarder asked has lost this one
+      if (quote.requestId) {
+        await db
+          .update(logisticsQuoteRequestRecipients)
+          .set({ outcome: 'declined', updatedAt: now })
+          .where(
+            and(
+              eq(logisticsQuoteRequestRecipients.requestId, quote.requestId),
+              quote.forwarderId
+                ? ne(
+                    logisticsQuoteRequestRecipients.forwarderId,
+                    quote.forwarderId,
+                  )
+                : undefined,
+            ),
+          );
+      }
+
+      let requestCompleted = false;
+
+      if (
+        request &&
+        request.status !== 'completed' &&
+        request.status !== 'cancelled'
+      ) {
+        await db
+          .update(logisticsQuoteRequests)
+          .set({
+            status: 'completed',
+            completedAt: now,
+            completedBy: ctx.user.id,
+            updatedAt: now,
+          })
+          .where(eq(logisticsQuoteRequests.id, request.id));
+        requestCompleted = true;
+      }
+
+      logger.info('Accepted freight quote', {
+        quoteId,
+        shipmentId: targetShipmentId,
+        createdShipment: createdShipmentNumber,
+        requestId: quote.requestId,
+        acceptedBy: ctx.user.id,
+      });
+
+      return {
+        ...acceptedQuote,
+        shipmentId: targetShipmentId,
+        createdShipmentNumber,
+        freightCostRecorded,
+        clientPriceRecorded,
+        requestCompleted,
+      };
+    } catch (error) {
+      logger.error('Failed to accept freight quote', { error, quoteId });
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to accept quote',
+      });
     }
-
-    // Every other forwarder asked has lost this one
-    if (quote.requestId) {
-      await db
-        .update(logisticsQuoteRequestRecipients)
-        .set({ outcome: 'declined', updatedAt: now })
-        .where(
-          and(
-            eq(logisticsQuoteRequestRecipients.requestId, quote.requestId),
-            quote.forwarderId ? ne(logisticsQuoteRequestRecipients.forwarderId, quote.forwarderId) : undefined,
-          ),
-        );
-    }
-
-    let requestCompleted = false;
-
-    if (request && request.status !== 'completed' && request.status !== 'cancelled') {
-      await db
-        .update(logisticsQuoteRequests)
-        .set({
-          status: 'completed',
-          completedAt: now,
-          completedBy: ctx.user.id,
-          updatedAt: now,
-        })
-        .where(eq(logisticsQuoteRequests.id, request.id));
-      requestCompleted = true;
-    }
-
-    logger.info('Accepted freight quote', {
-      quoteId,
-      shipmentId: targetShipmentId,
-      createdShipment: createdShipmentNumber,
-      requestId: quote.requestId,
-      acceptedBy: ctx.user.id,
-    });
-
-    return {
-      ...acceptedQuote,
-      shipmentId: targetShipmentId,
-      createdShipmentNumber,
-      freightCostRecorded,
-      clientPriceRecorded,
-      requestCompleted,
-    };
-  } catch (error) {
-    logger.error('Failed to accept freight quote', { error, quoteId });
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to accept quote',
-    });
-  }
-});
+  });
 
 export default adminAcceptQuote;

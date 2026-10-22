@@ -3358,9 +3358,19 @@ const runMigrations = async () => {
       `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_quoted_at" timestamp`,
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "client_price_usd" double precision`,
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "quoted_margin_usd" double precision`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "shipment_id" uuid REFERENCES "logistics_shipments"("id") ON DELETE SET NULL`,
     ]) {
       await client.unsafe(ddl);
     }
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_quote_requests_shipment_id_idx" ON "logistics_quote_requests" ("shipment_id")`,
+    );
+    // A request started from a shipment is quoted for that shipment's job
+    await client.unsafe(`
+      UPDATE "logistics_quote_requests" r SET "shipment_id" = r."source_id"
+      WHERE r."shipment_id" IS NULL AND r."source_type" = 'shipment'
+        AND EXISTS (SELECT 1 FROM "logistics_shipments" s WHERE s."id" = r."source_id")
+    `);
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "logistics_quotes_forwarder_id_idx" ON "logistics_quotes" ("forwarder_id")`,
     );

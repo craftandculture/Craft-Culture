@@ -12,6 +12,7 @@ import {
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
+  logisticsShipments,
   users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -107,7 +108,10 @@ const adminGetQuoteRequest = adminProcedure
     const [lines, quoteFiles] = quoteIds.length
       ? await Promise.all([
           db
-            .select({ quoteId: logisticsQuoteLineItems.quoteId, category: logisticsQuoteLineItems.category })
+            .select({
+              quoteId: logisticsQuoteLineItems.quoteId,
+              category: logisticsQuoteLineItems.category,
+            })
             .from(logisticsQuoteLineItems)
             .where(inArray(logisticsQuoteLineItems.quoteId, quoteIds)),
           db
@@ -125,15 +129,28 @@ const adminGetQuoteRequest = adminProcedure
         return {
           ...q,
           totalUsd: usd,
-          ...quoteUnitPrices(usd, request.totalBottles, request.total75clEquivalents),
-          isExpired: q.status === 'expired' || (q.status === 'pending' && !!q.validUntil && q.validUntil.getTime() < now),
-          categories: [...new Set(lines.filter((l) => l.quoteId === q.id).map((l) => l.category))],
+          ...quoteUnitPrices(
+            usd,
+            request.totalBottles,
+            request.total75clEquivalents,
+          ),
+          isExpired:
+            q.status === 'expired' ||
+            (q.status === 'pending' &&
+              !!q.validUntil &&
+              q.validUntil.getTime() < now),
+          categories: [
+            ...new Set(
+              lines.filter((l) => l.quoteId === q.id).map((l) => l.category),
+            ),
+          ],
           attachments: quoteFiles.filter((f) => f.quoteId === q.id),
         };
       })
       .sort(
         (a, b) =>
-          (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+          (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) -
+          (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
       );
 
     // The forwarders asked, with their contacts, so the page writes their emails
@@ -147,7 +164,10 @@ const adminGetQuoteRequest = adminProcedure
         contacts: logisticsForwarders.contacts,
       })
       .from(logisticsQuoteRequestRecipients)
-      .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+      .innerJoin(
+        logisticsForwarders,
+        eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId),
+      )
       .where(eq(logisticsQuoteRequestRecipients.requestId, requestId))
       .orderBy(asc(logisticsForwarders.name));
 
@@ -168,13 +188,31 @@ const adminGetQuoteRequest = adminProcedure
         createdAt: logisticsQuoteEmails.createdAt,
       })
       .from(logisticsQuoteEmails)
-      .leftJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteEmails.forwarderId))
+      .leftJoin(
+        logisticsForwarders,
+        eq(logisticsForwarders.id, logisticsQuoteEmails.forwarderId),
+      )
       .where(eq(logisticsQuoteEmails.requestId, requestId))
       .orderBy(desc(logisticsQuoteEmails.createdAt))
       .catch(() => []);
 
+    // The SHP job the request is quoted for
+    const [job] = request.shipmentId
+      ? await db
+          .select({
+            id: logisticsShipments.id,
+            shipmentNumber: logisticsShipments.shipmentNumber,
+            status: logisticsShipments.status,
+            type: logisticsShipments.type,
+          })
+          .from(logisticsShipments)
+          .where(eq(logisticsShipments.id, request.shipmentId))
+          .limit(1)
+      : [];
+
     return {
       ...request,
+      job: job ?? null,
       requester,
       assignee,
       completedByUser,
@@ -184,7 +222,10 @@ const adminGetQuoteRequest = adminProcedure
       suggestedClientPrice,
       emails,
       nextStep: quoteRequestNextStep({ ...request, recipients, quotes }),
-      /** Whether the page can send from logistics@, or only offers emails to copy */
+      /**
+       * Whether the page can send from logistics@, or only offers emails to
+       * copy
+       */
       canSendEmail: !!logisticsEmailTemplateId(),
       /** Signs the emails the page writes */
       senderName: ctx.user.name || 'Craft & Culture',

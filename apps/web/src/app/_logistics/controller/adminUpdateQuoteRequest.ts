@@ -1,8 +1,13 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, notExists } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsQuoteRequests } from '@/database/schema';
+import {
+  logisticsQuoteRequests,
+  logisticsShipmentActivityLogs,
+  logisticsShipmentItems,
+  logisticsShipments,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -11,8 +16,10 @@ import updateQuoteRequestSchema from '../schemas/updateQuoteRequestSchema';
 /**
  * Update a quote request
  *
- * Allows updating request details including status changes.
- * Handles special status transitions like cancellation.
+ * Allows updating request details including status changes. Handles special
+ * status transitions like cancellation. Cancelling a request also cancels the
+ * job it opened, while that job is still an empty draft; a job that was a
+ * shipment first is left alone.
  */
 const adminUpdateQuoteRequest = adminProcedure
   .input(updateQuoteRequestSchema)
@@ -52,31 +59,55 @@ const adminUpdateQuoteRequest = adminProcedure
     }
 
     // Handle field updates
-    if (updateData.priority !== undefined) updates.priority = updateData.priority;
-    if (updateData.originCountry !== undefined) updates.originCountry = updateData.originCountry;
-    if (updateData.originCity !== undefined) updates.originCity = updateData.originCity;
-    if (updateData.originWarehouse !== undefined) updates.originWarehouse = updateData.originWarehouse;
-    if (updateData.destinationCountry !== undefined) updates.destinationCountry = updateData.destinationCountry;
-    if (updateData.destinationCity !== undefined) updates.destinationCity = updateData.destinationCity;
-    if (updateData.destinationWarehouse !== undefined) updates.destinationWarehouse = updateData.destinationWarehouse;
-    if (updateData.transportMode !== undefined) updates.transportMode = updateData.transportMode;
-    if (updateData.productType !== undefined) updates.productType = updateData.productType;
-    if (updateData.productDescription !== undefined) updates.productDescription = updateData.productDescription;
-    if (updateData.totalCases !== undefined) updates.totalCases = updateData.totalCases;
-    if (updateData.totalPallets !== undefined) updates.totalPallets = updateData.totalPallets;
-    if (updateData.totalWeightKg !== undefined) updates.totalWeightKg = updateData.totalWeightKg;
-    if (updateData.totalVolumeM3 !== undefined) updates.totalVolumeM3 = updateData.totalVolumeM3;
-    if (updateData.requiresThermalLiner !== undefined) updates.requiresThermalLiner = updateData.requiresThermalLiner;
-    if (updateData.requiresTracker !== undefined) updates.requiresTracker = updateData.requiresTracker;
-    if (updateData.requiresInsurance !== undefined) updates.requiresInsurance = updateData.requiresInsurance;
-    if (updateData.temperatureControlled !== undefined) updates.temperatureControlled = updateData.temperatureControlled;
-    if (updateData.minTemperature !== undefined) updates.minTemperature = updateData.minTemperature;
-    if (updateData.maxTemperature !== undefined) updates.maxTemperature = updateData.maxTemperature;
-    if (updateData.targetPickupDate !== undefined) updates.targetPickupDate = updateData.targetPickupDate;
-    if (updateData.targetDeliveryDate !== undefined) updates.targetDeliveryDate = updateData.targetDeliveryDate;
-    if (updateData.isFlexibleDates !== undefined) updates.isFlexibleDates = updateData.isFlexibleDates;
+    if (updateData.priority !== undefined)
+      updates.priority = updateData.priority;
+    if (updateData.originCountry !== undefined)
+      updates.originCountry = updateData.originCountry;
+    if (updateData.originCity !== undefined)
+      updates.originCity = updateData.originCity;
+    if (updateData.originWarehouse !== undefined)
+      updates.originWarehouse = updateData.originWarehouse;
+    if (updateData.destinationCountry !== undefined)
+      updates.destinationCountry = updateData.destinationCountry;
+    if (updateData.destinationCity !== undefined)
+      updates.destinationCity = updateData.destinationCity;
+    if (updateData.destinationWarehouse !== undefined)
+      updates.destinationWarehouse = updateData.destinationWarehouse;
+    if (updateData.transportMode !== undefined)
+      updates.transportMode = updateData.transportMode;
+    if (updateData.productType !== undefined)
+      updates.productType = updateData.productType;
+    if (updateData.productDescription !== undefined)
+      updates.productDescription = updateData.productDescription;
+    if (updateData.totalCases !== undefined)
+      updates.totalCases = updateData.totalCases;
+    if (updateData.totalPallets !== undefined)
+      updates.totalPallets = updateData.totalPallets;
+    if (updateData.totalWeightKg !== undefined)
+      updates.totalWeightKg = updateData.totalWeightKg;
+    if (updateData.totalVolumeM3 !== undefined)
+      updates.totalVolumeM3 = updateData.totalVolumeM3;
+    if (updateData.requiresThermalLiner !== undefined)
+      updates.requiresThermalLiner = updateData.requiresThermalLiner;
+    if (updateData.requiresTracker !== undefined)
+      updates.requiresTracker = updateData.requiresTracker;
+    if (updateData.requiresInsurance !== undefined)
+      updates.requiresInsurance = updateData.requiresInsurance;
+    if (updateData.temperatureControlled !== undefined)
+      updates.temperatureControlled = updateData.temperatureControlled;
+    if (updateData.minTemperature !== undefined)
+      updates.minTemperature = updateData.minTemperature;
+    if (updateData.maxTemperature !== undefined)
+      updates.maxTemperature = updateData.maxTemperature;
+    if (updateData.targetPickupDate !== undefined)
+      updates.targetPickupDate = updateData.targetPickupDate;
+    if (updateData.targetDeliveryDate !== undefined)
+      updates.targetDeliveryDate = updateData.targetDeliveryDate;
+    if (updateData.isFlexibleDates !== undefined)
+      updates.isFlexibleDates = updateData.isFlexibleDates;
     if (updateData.notes !== undefined) updates.notes = updateData.notes;
-    if (updateData.internalNotes !== undefined) updates.internalNotes = updateData.internalNotes;
+    if (updateData.internalNotes !== undefined)
+      updates.internalNotes = updateData.internalNotes;
 
     const [updated] = await db
       .update(logisticsQuoteRequests)
@@ -89,6 +120,42 @@ const adminUpdateQuoteRequest = adminProcedure
         code: 'INTERNAL_SERVER_ERROR',
         message: 'The database returned no row',
       });
+    }
+
+    if (
+      updateData.status === 'cancelled' &&
+      existing.shipmentId &&
+      existing.sourceType !== 'shipment'
+    ) {
+      const [cancelledJob] = await db
+        .update(logisticsShipments)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(
+          and(
+            eq(logisticsShipments.id, existing.shipmentId),
+            eq(logisticsShipments.status, 'draft'),
+            notExists(
+              db
+                .select({ id: logisticsShipmentItems.id })
+                .from(logisticsShipmentItems)
+                .where(
+                  eq(logisticsShipmentItems.shipmentId, existing.shipmentId),
+                ),
+            ),
+          ),
+        )
+        .returning({ id: logisticsShipments.id });
+
+      if (cancelledJob) {
+        await db.insert(logisticsShipmentActivityLogs).values({
+          shipmentId: cancelledJob.id,
+          userId: ctx.user.id,
+          action: 'status_changed',
+          previousStatus: 'draft',
+          newStatus: 'cancelled',
+          notes: `Cancelled with freight request ${existing.requestNumber}`,
+        });
+      }
     }
 
     logger.info('Updated quote request', {

@@ -226,8 +226,8 @@ const FreightQuotesPage = () => {
     },
     {
       key: 'standalone',
-      label: 'Without a request',
-      sub: 'Quotes entered directly',
+      label: 'Without a job',
+      sub: 'Older quotes entered directly',
       value: standalone.length,
       icon: IconFileInvoice,
       tone: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
@@ -283,12 +283,6 @@ const FreightQuotesPage = () => {
             <IconUsers size={16} /> Forwarders
           </Link>
           <Link
-            href="/platform/admin/logistics/quotes/new"
-            className={secondaryButton}
-          >
-            <IconPlus size={16} /> Quote without a request
-          </Link>
-          <Link
             href="/platform/admin/logistics/requests/new"
             className={primaryButton}
           >
@@ -317,47 +311,52 @@ const FreightQuotesPage = () => {
           </Link>
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
-          {tiles.map((tile) => {
-            const active = focus === tile.key;
-            const TileIcon = tile.icon;
-            return (
-              <button
-                key={tile.key}
-                type="button"
-                onClick={() => {
-                  setFocus(active ? '' : tile.key);
-                  setStatus('');
-                }}
-                className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
-                  active
-                    ? 'ring-text-primary ring-offset-surface-primary ring-2 ring-offset-1'
-                    : ''
-                }`}
-              >
-                <span
-                  className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}
-                >
-                  <TileIcon size={13} />
-                </span>
-                <span
-                  className={`block text-lg font-bold tabular-nums leading-tight ${
-                    tile.value === 0
-                      ? 'text-text-muted'
-                      : (tile.valueTone ?? '')
+        <div
+          className={`grid grid-cols-2 gap-2.5 ${standalone.length ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}
+        >
+          {/* Quotes now always belong to a job; the older ones show only while there are any */}
+          {tiles
+            .filter((t) => t.key !== 'standalone' || t.value > 0)
+            .map((tile) => {
+              const active = focus === tile.key;
+              const TileIcon = tile.icon;
+              return (
+                <button
+                  key={tile.key}
+                  type="button"
+                  onClick={() => {
+                    setFocus(active ? '' : tile.key);
+                    setStatus('');
+                  }}
+                  className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
+                    active
+                      ? 'ring-text-primary ring-offset-surface-primary ring-2 ring-offset-1'
+                      : ''
                   }`}
                 >
-                  {tile.value}
-                </span>
-                <span className="text-text-muted block text-[11px]">
-                  {tile.label}
-                </span>
-                <span className="text-text-muted/80 block text-[10px]">
-                  {tile.sub}
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}
+                  >
+                    <TileIcon size={13} />
+                  </span>
+                  <span
+                    className={`block text-lg font-bold tabular-nums leading-tight ${
+                      tile.value === 0
+                        ? 'text-text-muted'
+                        : (tile.valueTone ?? '')
+                    }`}
+                  >
+                    {tile.value}
+                  </span>
+                  <span className="text-text-muted block text-[11px]">
+                    {tile.label}
+                  </span>
+                  <span className="text-text-muted/80 block text-[10px]">
+                    {tile.sub}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       )}
 
@@ -456,6 +455,11 @@ const FreightQuotesPage = () => {
                           <span className="text-text-primary font-mono text-sm font-semibold group-hover:underline">
                             {r.requestNumber}
                           </span>
+                          {r.job && (
+                            <span className="text-text-muted font-mono text-xs">
+                              {r.job.shipmentNumber}
+                            </span>
+                          )}
                           {step ? (
                             <span className={pillClass(step.tone)}>
                               {step.text}

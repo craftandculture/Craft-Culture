@@ -3958,6 +3958,8 @@ export const logisticsQuoteRequests = pgTable(
     // Where the request came from, so it opens with that cargo filled in
     sourceType: text('source_type'), // 'shipment' | 'uk_move' | null when typed in
     sourceId: uuid('source_id'),
+    /** The job (SHP shipment) this request is quoted for; every request has one */
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, { onDelete: 'set null' }),
 
     /** The date forwarders are asked to reply by */
     replyBy: timestamp('reply_by', { mode: 'date' }),

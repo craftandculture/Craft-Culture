@@ -1,13 +1,23 @@
 'use client';
 
-import { IconCheck, IconChevronRight, IconLoader2, IconPaperclip, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconChevronRight,
+  IconLoader2,
+  IconPaperclip,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { card, pillClass, secondaryButton } from '@/app/_logistics/components/exports/exportUi';
+import {
+  card,
+  pillClass,
+  secondaryButton,
+} from '@/app/_logistics/components/exports/exportUi';
 import AwardEmails from '@/app/_logistics/components/quotes/AwardEmails';
 import ClientPriceBox from '@/app/_logistics/components/quotes/ClientPriceBox';
 import EmailHistory from '@/app/_logistics/components/quotes/EmailHistory';
@@ -17,19 +27,48 @@ import RequestForwarders from '@/app/_logistics/components/quotes/RequestForward
 import type { QuoteRequestNextStep } from '@/app/_logistics/utils/quoteRequestNextStep';
 import useTRPC from '@/lib/trpc/browser';
 
-const STEPS = ['Ask forwarders', 'Quotes come in', 'Price the client', 'Client agrees', 'Booked'] as const;
+const STEPS = [
+  'Ask forwarders',
+  'Quotes come in',
+  'Price the client',
+  'Client agrees',
+  'Booked',
+] as const;
 
 /** Where each next step sits on the bar, and what the page asks for */
-const STEP_OF: Record<QuoteRequestNextStep, { index: number; prompt: string }> = {
-  choose_forwarders: { index: 0, prompt: 'Choose the forwarders to ask for a quote.' },
-  send: { index: 0, prompt: 'Send the request to the forwarders chosen.' },
-  awaiting: { index: 1, prompt: 'With the forwarders. Drop each quote below as it arrives.' },
-  chase: { index: 1, prompt: 'A forwarder is due a reminder; send it below.' },
-  price: { index: 2, prompt: 'Quotes are in. Choose one and set the client price.' },
-  send_price: { index: 2, prompt: 'The price is set. Send the client their quote.' },
-  accept: { index: 3, prompt: 'Waiting for the client. When they agree, accept the quote.' },
-  done: { index: 4, prompt: 'Accepted. Tell the forwarders below; the shipment carries it from here.' },
-};
+const STEP_OF: Record<QuoteRequestNextStep, { index: number; prompt: string }> =
+  {
+    choose_forwarders: {
+      index: 0,
+      prompt: 'Choose the forwarders to ask for a quote.',
+    },
+    send: { index: 0, prompt: 'Send the request to the forwarders chosen.' },
+    awaiting: {
+      index: 1,
+      prompt: 'With the forwarders. Drop each quote below as it arrives.',
+    },
+    chase: {
+      index: 1,
+      prompt: 'A forwarder is due a reminder; send it below.',
+    },
+    price: {
+      index: 2,
+      prompt: 'Quotes are in. Choose one and set the client price.',
+    },
+    send_price: {
+      index: 2,
+      prompt: 'The price is set. Send the client their quote.',
+    },
+    accept: {
+      index: 3,
+      prompt: 'Waiting for the client. When they agree, accept the quote.',
+    },
+    done: {
+      index: 4,
+      prompt:
+        'Accepted. Tell the forwarders below; the shipment carries it from here.',
+    },
+  };
 
 const MODE: Record<string, string> = {
   sea_fcl: 'Sea, full container',
@@ -39,9 +78,17 @@ const MODE: Record<string, string> = {
 };
 
 const day = (d: Date | null) =>
-  d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  d
+    ? d.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 const num = (n: number | null, digits = 0) =>
-  n == null ? null : n.toLocaleString('en-GB', { maximumFractionDigits: digits });
+  n == null
+    ? null
+    : n.toLocaleString('en-GB', { maximumFractionDigits: digits });
 
 /**
  * A quote request: the one page its freight is worked from
@@ -59,29 +106,46 @@ const QuoteRequestDetailPage = () => {
   const [chosenQuoteId, setChosenQuoteId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const { data: request, isLoading } = useQuery(api.logistics.admin.requests.getOne.queryOptions({ requestId }));
+  const { data: request, isLoading } = useQuery(
+    api.logistics.admin.requests.getOne.queryOptions({ requestId }),
+  );
+
+  const { mutate: openJob, isPending: isOpeningJob } = useMutation({
+    ...api.logistics.admin.requests.openJob.mutationOptions(),
+    onSuccess: (job) => {
+      toast.success(`Job ${job.shipmentNumber} opened`);
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'requests']],
+      });
+    },
+    onError: (error) =>
+      toast.error(error.message || 'The job could not be opened'),
+  });
 
   const { mutate: updateRequest, isPending: isUpdating } = useMutation({
     ...api.logistics.admin.requests.update.mutationOptions(),
     onSuccess: () => {
       toast.success('Request cancelled');
       setCancelling(false);
-      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
+      void queryClient.invalidateQueries({
+        queryKey: [['logistics', 'admin', 'requests']],
+      });
     },
-    onError: (error) => toast.error(error.message || 'Could not cancel the request'),
+    onError: (error) =>
+      toast.error(error.message || 'Could not cancel the request'),
   });
 
   if (isLoading) {
     return (
       <div className="flex justify-center p-12">
-        <IconLoader2 className="animate-spin text-text-muted" />
+        <IconLoader2 className="text-text-muted animate-spin" />
       </div>
     );
   }
 
   if (!request) {
     return (
-      <p className="container mx-auto max-w-5xl px-4 py-12 text-center text-sm text-text-muted">
+      <p className="text-text-muted container mx-auto max-w-5xl px-4 py-12 text-center text-sm">
         Request not found.
       </p>
     );
@@ -93,20 +157,35 @@ const QuoteRequestDetailPage = () => {
   const step = STEP_OF[request.nextStep];
 
   // The client is priced on the quote chosen, else the one priced before, else the cheapest still live
-  const liveQuotes = request.quotes.filter((q) => q.status === 'pending' && !q.isExpired);
+  const liveQuotes = request.quotes.filter(
+    (q) => q.status === 'pending' && !q.isExpired,
+  );
   const pricedQuoteId =
-    [chosenQuoteId, request.clientQuoteId].find((id) => id && liveQuotes.some((q) => q.id === id)) ??
+    [chosenQuoteId, request.clientQuoteId].find(
+      (id) => id && liveQuotes.some((q) => q.id === id),
+    ) ??
     liveQuotes[0]?.id ??
     null;
 
   const facts = [
-    { label: 'Mode', value: request.transportMode ? MODE[request.transportMode] : 'Air or sea' },
+    {
+      label: 'Mode',
+      value: request.transportMode ? MODE[request.transportMode] : 'Air or sea',
+    },
     { label: 'Cases', value: num(request.totalCases) },
     { label: 'Bottles', value: num(request.totalBottles) },
     { label: '75cl equivalent', value: num(request.total75clEquivalents) },
     { label: 'Pallets', value: num(request.totalPallets) },
-    { label: 'Weight', value: request.totalWeightKg ? `${num(request.totalWeightKg)} kg` : null },
-    { label: 'Volume', value: request.totalVolumeM3 ? `${num(request.totalVolumeM3, 1)} m³` : null },
+    {
+      label: 'Weight',
+      value: request.totalWeightKg ? `${num(request.totalWeightKg)} kg` : null,
+    },
+    {
+      label: 'Volume',
+      value: request.totalVolumeM3
+        ? `${num(request.totalVolumeM3, 1)} m³`
+        : null,
+    },
     { label: 'Ready', value: day(request.targetPickupDate) },
     { label: 'Needed by', value: day(request.targetDeliveryDate) },
     { label: 'Replies by', value: day(request.replyBy) },
@@ -117,7 +196,8 @@ const QuoteRequestDetailPage = () => {
       ? ` ${request.minTemperature}–${request.maxTemperature}°C`
       : '';
   const needs = [
-    (request.temperatureControlled || request.requiresThermalLiner) && `Temperature-managed${range}`,
+    (request.temperatureControlled || request.requiresThermalLiner) &&
+      `Temperature-managed${range}`,
     request.requiresThermalLiner && 'Thermal liner',
     request.requiresTracker && 'Tracker',
     request.requiresInsurance && 'Insurance quoted separately',
@@ -128,19 +208,49 @@ const QuoteRequestDetailPage = () => {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm text-text-muted">
-            <Link href="/platform/admin/logistics/quotes" className="hover:text-text-primary">
+          <div className="text-text-muted mb-1 flex items-center gap-1.5 text-sm">
+            <Link
+              href="/platform/admin/logistics/quotes"
+              className="hover:text-text-primary"
+            >
               Freight quotes
             </Link>
             <IconChevronRight className="size-4" />
-            <span className="font-mono text-text-primary">{request.requestNumber}</span>
+            <span className="text-text-primary font-mono">
+              {request.requestNumber}
+            </span>
+            {request.job ? (
+              <Link
+                href={`/platform/admin/logistics/shipments/${request.job.id}`}
+                className="border-border-muted text-text-primary hover:border-text-primary ml-2 rounded-full border px-2 py-0.5 font-mono text-xs"
+              >
+                Job {request.job.shipmentNumber}
+                {request.job.status === 'cancelled' ? ' (cancelled)' : ''}
+              </Link>
+            ) : (
+              !cancelled && (
+                <button
+                  type="button"
+                  disabled={isOpeningJob}
+                  onClick={() => openJob({ requestId })}
+                  className="ml-2 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-800 hover:border-amber-500 dark:border-amber-800 dark:bg-amber-500/10 dark:text-amber-200"
+                >
+                  No job yet: open the job
+                </button>
+              )
+            )}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
-            {request.originCity || request.originCountry} → {request.destinationCity || request.destinationCountry}
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">
+            {request.originCity || request.originCountry} →{' '}
+            {request.destinationCity || request.destinationCountry}
           </h1>
-          <p className="mt-0.5 text-sm text-text-muted">
-            {[request.originWarehouse, request.destinationWarehouse].filter(Boolean).join(' to ')}
-            {request.requester ? ` · requested by ${request.requester.name || request.requester.email}` : ''}
+          <p className="text-text-muted mt-0.5 text-sm">
+            {[request.originWarehouse, request.destinationWarehouse]
+              .filter(Boolean)
+              .join(' to ')}
+            {request.requester
+              ? ` · requested by ${request.requester.name || request.requester.email}`
+              : ''}
             {` · ${day(request.requestedAt)}`}
           </p>
         </div>
@@ -148,7 +258,9 @@ const QuoteRequestDetailPage = () => {
           <div className="flex items-center gap-2">
             {cancelling ? (
               <>
-                <span className="text-sm text-text-muted">Cancel this request?</span>
+                <span className="text-text-muted text-sm">
+                  Cancel this request?
+                </span>
                 <button
                   type="button"
                   className={secondaryButton}
@@ -173,7 +285,11 @@ const QuoteRequestDetailPage = () => {
                 </button>
               </>
             ) : (
-              <button type="button" className={secondaryButton} onClick={() => setCancelling(true)}>
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => setCancelling(true)}
+              >
                 Cancel request
               </button>
             )}
@@ -184,8 +300,12 @@ const QuoteRequestDetailPage = () => {
       {/* Where it stands */}
       <div className={`${card} p-4`}>
         {cancelled ? (
-          <p className="text-sm text-text-muted">
-            Cancelled{request.cancellationReason ? `: ${request.cancellationReason}` : ''}.
+          <p className="text-text-muted text-sm">
+            Cancelled
+            {request.cancellationReason
+              ? `: ${request.cancellationReason}`
+              : ''}
+            .
           </p>
         ) : (
           <>
@@ -194,12 +314,18 @@ const QuoteRequestDetailPage = () => {
                 <li key={label} className="space-y-1.5">
                   <div
                     className={`h-1.5 rounded-full ${
-                      i < step.index ? 'bg-emerald-500' : i === step.index ? 'bg-text-primary' : 'bg-surface-muted'
+                      i < step.index
+                        ? 'bg-emerald-500'
+                        : i === step.index
+                          ? 'bg-text-primary'
+                          : 'bg-surface-muted'
                     }`}
                   />
                   <span
                     className={`block text-[11px] leading-tight ${
-                      i === step.index ? 'font-semibold text-text-primary' : 'text-text-muted'
+                      i === step.index
+                        ? 'text-text-primary font-semibold'
+                        : 'text-text-muted'
                     }`}
                   >
                     {label}
@@ -207,7 +333,9 @@ const QuoteRequestDetailPage = () => {
                 </li>
               ))}
             </ol>
-            <p className="mt-3 text-sm font-medium text-text-primary">{step.prompt}</p>
+            <p className="text-text-primary mt-3 text-sm font-medium">
+              {step.prompt}
+            </p>
           </>
         )}
       </div>
@@ -217,15 +345,19 @@ const QuoteRequestDetailPage = () => {
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-5">
           {facts.map((f) => (
             <div key={f.label}>
-              <dt className="text-[11px] text-text-muted">{f.label}</dt>
-              <dd className="text-sm font-medium tabular-nums text-text-primary">{f.value}</dd>
+              <dt className="text-text-muted text-[11px]">{f.label}</dt>
+              <dd className="text-text-primary text-sm font-medium tabular-nums">
+                {f.value}
+              </dd>
             </div>
           ))}
         </dl>
         {(needs.length > 0 || request.productDescription) && (
           <div className="flex flex-wrap items-center gap-1.5">
             {request.productDescription && (
-              <span className="mr-1 text-sm text-text-primary">{request.productDescription}</span>
+              <span className="text-text-primary mr-1 text-sm">
+                {request.productDescription}
+              </span>
             )}
             {needs.map((n) => (
               <span key={n} className={pillClass('slate')}>
@@ -234,7 +366,11 @@ const QuoteRequestDetailPage = () => {
             ))}
           </div>
         )}
-        {request.notes && <p className="whitespace-pre-wrap text-sm text-text-muted">{request.notes}</p>}
+        {request.notes && (
+          <p className="text-text-muted whitespace-pre-wrap text-sm">
+            {request.notes}
+          </p>
+        )}
         {request.attachments.length > 0 && (
           <div className="flex flex-wrap gap-3">
             {request.attachments.map((a) => (
@@ -243,7 +379,7 @@ const QuoteRequestDetailPage = () => {
                 href={a.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-text-primary underline"
+                className="text-text-primary inline-flex items-center gap-1 text-sm underline"
               >
                 <IconPaperclip size={14} /> {a.fileName}
               </a>
@@ -257,10 +393,16 @@ const QuoteRequestDetailPage = () => {
       {isOpen && !accepted && <QuoteDropZone requestId={requestId} />}
 
       {(request.quotes.length > 0 || !cancelled) && (
-        <QuoteRanking request={request} selectedQuoteId={pricedQuoteId} onSelect={setChosenQuoteId} />
+        <QuoteRanking
+          request={request}
+          selectedQuoteId={pricedQuoteId}
+          onSelect={setChosenQuoteId}
+        />
       )}
 
-      {pricedQuoteId && !accepted && !cancelled && <ClientPriceBox request={request} quoteId={pricedQuoteId} />}
+      {pricedQuoteId && !accepted && !cancelled && (
+        <ClientPriceBox request={request} quoteId={pricedQuoteId} />
+      )}
 
       <AwardEmails request={request} />
 

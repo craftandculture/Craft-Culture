@@ -6,6 +6,7 @@ import {
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
+  logisticsShipments,
   users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -24,7 +25,8 @@ import quoteUnitPrices from '../utils/quoteUnitPrices';
 const adminGetQuoteRequests = adminProcedure
   .input(getQuoteRequestsSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, status, priority, requestedBy, assignedTo, search } = input;
+    const { limit, cursor, status, priority, requestedBy, assignedTo, search } =
+      input;
 
     // Build where conditions
     const conditions = [];
@@ -64,7 +66,9 @@ const adminGetQuoteRequests = adminProcedure
       });
 
       if (cursorRequest) {
-        conditions.push(lt(logisticsQuoteRequests.createdAt, cursorRequest.createdAt));
+        conditions.push(
+          lt(logisticsQuoteRequests.createdAt, cursorRequest.createdAt),
+        );
       }
     }
 
@@ -103,9 +107,19 @@ const adminGetQuoteRequests = adminProcedure
           name: users.name,
           email: users.email,
         },
+        /** The SHP job the request is quoted for */
+        job: {
+          id: logisticsShipments.id,
+          shipmentNumber: logisticsShipments.shipmentNumber,
+          status: logisticsShipments.status,
+        },
       })
       .from(logisticsQuoteRequests)
       .leftJoin(users, eq(logisticsQuoteRequests.requestedBy, users.id))
+      .leftJoin(
+        logisticsShipments,
+        eq(logisticsShipments.id, logisticsQuoteRequests.shipmentId),
+      )
       .where(whereClause)
       .orderBy(desc(logisticsQuoteRequests.createdAt))
       .limit(limit + 1);
@@ -153,7 +167,13 @@ const adminGetQuoteRequests = adminProcedure
             outcome: logisticsQuoteRequestRecipients.outcome,
           })
           .from(logisticsQuoteRequestRecipients)
-          .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+          .innerJoin(
+            logisticsForwarders,
+            eq(
+              logisticsForwarders.id,
+              logisticsQuoteRequestRecipients.forwarderId,
+            ),
+          )
           .where(inArray(logisticsQuoteRequestRecipients.requestId, requestIds))
           .orderBy(asc(logisticsForwarders.name))
       : [];
@@ -166,11 +186,16 @@ const adminGetQuoteRequests = adminProcedure
           .map((q) => {
             const usd = quoteTotalUsd(q);
 
-            return { ...q, totalUsd: usd, ...quoteUnitPrices(usd, r.totalBottles, r.total75clEquivalents) };
+            return {
+              ...q,
+              totalUsd: usd,
+              ...quoteUnitPrices(usd, r.totalBottles, r.total75clEquivalents),
+            };
           })
           .sort(
             (a, b) =>
-              (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+              (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) -
+              (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
           );
         const recipients = recipientRows.filter((x) => x.requestId === r.id);
         const chosen = quotes.find((q) => q.id === r.clientQuoteId);
