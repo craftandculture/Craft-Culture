@@ -1,3 +1,9 @@
+## [2.0.485](https://github.com/craftandculture/Craft-Culture/compare/v2.0.484...v2.0.485) (2026-10-22)
+
+### Features
+
+* **logistics:** export a shipment's items to CSV ([2e77dd6](https://github.com/craftandculture/Craft-Culture/commit/2e77dd63122c84bf2ceb52530ecd85b0011b93cc))
+
 ## [2.0.484](https://github.com/craftandculture/Craft-Culture/compare/v2.0.483...v2.0.484) (2026-10-22)
 
 ### Features
