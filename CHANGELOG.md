@@ -1,3 +1,9 @@
+## [2.0.486](https://github.com/craftandculture/Craft-Culture/compare/v2.0.485...v2.0.486) (2026-10-22)
+
+### Features
+
+* **logistics:** freight request page is one editable workspace ([a953fff](https://github.com/craftandculture/Craft-Culture/commit/a953fff461dabd9ccc9be3255ed6822fc4556d23))
+
 ## [2.0.485](https://github.com/craftandculture/Craft-Culture/compare/v2.0.484...v2.0.485) (2026-10-22)
 
 ### Features
