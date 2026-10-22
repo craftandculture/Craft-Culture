@@ -21,7 +21,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
+import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -117,6 +119,9 @@ const WMSReceiveShipmentPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lotNumber, setLotNumber] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
+  // In-page confirms; the browser's confirm() can be suppressed by Chrome
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
 
   // Current bay assignment state (for the current product)
   const [pendingCases, setPendingCases] = useState(0);
@@ -794,7 +799,7 @@ const WMSReceiveShipmentPage = () => {
       // Auto-advance to next product
       handleNextProduct();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save to warehouse');
+      toast.error(err instanceof Error ? err.message : 'Failed to save to warehouse');
     } finally {
       setIsCommitting(false);
     }
@@ -866,7 +871,9 @@ const WMSReceiveShipmentPage = () => {
     );
 
     if (uncommitted.length > 0) {
-      alert(`${uncommitted.length} product(s) not yet saved to warehouse. Please confirm each product before finishing.`);
+      toast.error(
+        `${uncommitted.length} product(s) not yet saved to warehouse. Please confirm each product before finishing.`,
+      );
       return;
     }
 
@@ -875,9 +882,8 @@ const WMSReceiveShipmentPage = () => {
 
   // Reset handler
   const handleReset = () => {
-    if (confirm('Clear all progress and start fresh? This cannot be undone.')) {
-      deleteDraftMutate({ shipmentId });
-    }
+    setIsConfirmingReset(false);
+    deleteDraftMutate({ shipmentId });
   };
 
   // Debounced search for Add Item
@@ -964,7 +970,7 @@ const WMSReceiveShipmentPage = () => {
   const handleDeleteAddedItem = (itemId: string) => {
     const item = receivedItems.get(itemId);
     if (!item?.isAddedItem || item.isCommitted) return;
-    if (!confirm(`Remove "${item.productName}" from this receiving session?`)) return;
+    setConfirmingRemoveId(null);
     const newMap = new Map(receivedItems);
     newMap.delete(itemId);
     setReceivedItems(newMap);
@@ -1129,9 +1135,19 @@ const WMSReceiveShipmentPage = () => {
               <IconCheck className="h-4 w-4" />
             </span>
           ) : null}
-          {lastSaved && (
+          {lastSaved && isConfirmingReset && (
+            <InlineConfirm
+              message="Clear all progress?"
+              confirmLabel="Clear"
+              danger
+              isPending={isDeletingDraft}
+              onConfirm={handleReset}
+              onCancel={() => setIsConfirmingReset(false)}
+            />
+          )}
+          {lastSaved && !isConfirmingReset && (
             <button
-              onClick={handleReset}
+              onClick={() => setIsConfirmingReset(true)}
               disabled={isDeletingDraft}
               className="rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
             >
@@ -1394,12 +1410,23 @@ const WMSReceiveShipmentPage = () => {
                                 <IconPlus className="h-3 w-3" />
                                 Added
                               </span>
-                              {!receivedItem.isCommitted && (
+                              {!receivedItem.isCommitted && confirmingRemoveId === receivedItem.id && (
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <InlineConfirm
+                                    message="Remove this product?"
+                                    confirmLabel="Remove"
+                                    danger
+                                    onConfirm={() => handleDeleteAddedItem(receivedItem.id)}
+                                    onCancel={() => setConfirmingRemoveId(null)}
+                                  />
+                                </span>
+                              )}
+                              {!receivedItem.isCommitted && confirmingRemoveId !== receivedItem.id && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeleteAddedItem(receivedItem.id);
+                                    setConfirmingRemoveId(receivedItem.id);
                                   }}
                                   className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
                                 >
