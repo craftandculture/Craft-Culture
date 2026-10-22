@@ -1,3 +1,9 @@
+## [2.0.484](https://github.com/craftandculture/Craft-Culture/compare/v2.0.483...v2.0.484) (2026-10-22)
+
+### Features
+
+* **logistics:** every freight request opens its job; no quotes without a job ([6b2791e](https://github.com/craftandculture/Craft-Culture/commit/6b2791e898824654617e5539137357dbfd50c5cd))
+
 ## [2.0.483](https://github.com/craftandculture/Craft-Culture/compare/v2.0.482...v2.0.483) (2026-10-22)
 
 ### Features
