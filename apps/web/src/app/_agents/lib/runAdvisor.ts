@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { and, desc, eq, gte, inArray, lt, not, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import describeRevenuePace from '@/app/_agents/utils/describeRevenuePace';
 import db from '@/database/client';
 import {
   agentOutputs,
@@ -14,6 +15,9 @@ import {
   zohoInvoices,
 } from '@/database/schema';
 
+/** A month at or above this is an excellent month for C&C (Kevin, Oct 2026) */
+const STRONG_MONTH_USD = 150_000;
+
 const advisorOutputSchema = z.object({
   executiveSummary: z.string(),
   kpiSnapshot: z.object({
@@ -24,14 +28,26 @@ const advisorOutputSchema = z.object({
     stockCasesTotal: z.number(),
     dispatchPending: z.number(),
   }),
-  risks: z.array(
-    z.object({
-      severity: z.enum(['high', 'medium', 'low']),
-      title: z.string(),
-      description: z.string(),
-      suggestedAction: z.string(),
-    }),
-  ),
+  wins: z
+    .array(
+      z.object({
+        title: z.string(),
+        description: z.string(),
+      }),
+    )
+    .describe('What is going well, with the number that shows it'),
+  risks: z
+    .array(
+      z.object({
+        severity: z.enum(['high', 'medium', 'low']),
+        title: z.string(),
+        description: z.string(),
+        suggestedAction: z.string(),
+      }),
+    )
+    .describe(
+      'Improvements: things worth tightening up, framed constructively. high = do this week, medium = soon, low = when convenient',
+    ),
   opportunities: z.array(
     z.object({
       title: z.string(),
@@ -55,20 +71,24 @@ const advisorOutputSchema = z.object({
   ),
 });
 
-const buildMarkdown = (data: z.infer<typeof advisorOutputSchema>) => {
+type AdvisorOutput = z.infer<typeof advisorOutputSchema> & {
+  kpiSnapshot: { revenueTrendDetail?: string };
+};
+
+const buildMarkdown = (data: AdvisorOutput) => {
   const lines: string[] = [];
   lines.push('## Executive Summary\n');
   lines.push(data.executiveSummary, '');
 
   lines.push('## KPI Snapshot\n');
-  lines.push(
-    `| Metric | Value |`,
-  );
+  lines.push(`| Metric | Value |`);
   lines.push('|--------|-------|');
   lines.push(
     `| Revenue This Month | $${data.kpiSnapshot.revenueThisMonthUsd.toLocaleString()} |`,
   );
-  lines.push(`| Revenue Trend | ${data.kpiSnapshot.revenueTrend} |`);
+  lines.push(
+    `| Revenue Trend | ${data.kpiSnapshot.revenueTrend}${data.kpiSnapshot.revenueTrendDetail ? ` (${data.kpiSnapshot.revenueTrendDetail})` : ''} |`,
+  );
   lines.push(`| Open Orders | ${data.kpiSnapshot.openOrders} |`);
   lines.push(
     `| Overdue Invoices | $${data.kpiSnapshot.overdueInvoicesUsd.toLocaleString()} |`,
@@ -79,16 +99,24 @@ const buildMarkdown = (data: z.infer<typeof advisorOutputSchema>) => {
   lines.push(`| Dispatch Pending | ${data.kpiSnapshot.dispatchPending} |`);
   lines.push('');
 
+  if (data.wins.length > 0) {
+    lines.push('## Wins\n');
+    for (const win of data.wins) {
+      lines.push(`- **${win.title}** — ${win.description}`);
+    }
+    lines.push('');
+  }
+
   if (data.risks.length > 0) {
-    lines.push('## Risks\n');
+    lines.push('## Improvements\n');
     for (const risk of data.risks) {
-      const severity =
+      const timing =
         risk.severity === 'high'
-          ? '!!!'
+          ? 'This week'
           : risk.severity === 'medium'
-            ? '!!'
-            : '!';
-      lines.push(`### [${severity}] ${risk.title}`);
+            ? 'Soon'
+            : 'When convenient';
+      lines.push(`### [${timing}] ${risk.title}`);
       lines.push(risk.description);
       lines.push(`**Action:** ${risk.suggestedAction}\n`);
     }
@@ -135,6 +163,18 @@ const runAdvisor = async () => {
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+    const daysInLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+    ).getDate();
+    // Exclusive end of "last month up to today's day of the month"
+    const lastMonthSamePointEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      Math.min(now.getDate(), daysInLastMonth) + 1,
+    );
 
     const revenueStatuses = [
       'sent',
@@ -147,7 +187,9 @@ const runAdvisor = async () => {
     // Run all independent queries in parallel
     const [
       revenueThisMonthResult,
+      revenueLastMonthToDateResult,
       revenueLastMonthResult,
+      monthlyRevenueResult,
       ordersByStatusResult,
       overdueResult,
       stockTotalResult,
@@ -167,6 +209,20 @@ const runAdvisor = async () => {
           ),
         ),
 
+      // Revenue last month up to the same day of the month
+      db
+        .select({
+          total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        })
+        .from(zohoInvoices)
+        .where(
+          and(
+            inArray(zohoInvoices.status, revenueStatuses),
+            gte(zohoInvoices.invoiceDate, lastMonthStart),
+            lt(zohoInvoices.invoiceDate, lastMonthSamePointEnd),
+          ),
+        ),
+
       // Revenue last month
       db
         .select({
@@ -181,6 +237,23 @@ const runAdvisor = async () => {
           ),
         ),
 
+      // Complete months over the last year, to know the record
+      db
+        .select({
+          month: sql<string>`to_char(${zohoInvoices.invoiceDate}, 'YYYY-MM')`,
+          total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        })
+        .from(zohoInvoices)
+        .where(
+          and(
+            inArray(zohoInvoices.status, revenueStatuses),
+            gte(zohoInvoices.invoiceDate, twelveMonthsAgo),
+            lt(zohoInvoices.invoiceDate, thisMonthStart),
+          ),
+        )
+        .groupBy(sql`to_char(${zohoInvoices.invoiceDate}, 'YYYY-MM')`)
+        .orderBy(sql`to_char(${zohoInvoices.invoiceDate}, 'YYYY-MM')`),
+
       // Orders grouped by status (excluding draft/cancelled)
       db
         .select({
@@ -188,11 +261,7 @@ const runAdvisor = async () => {
           count: sql<number>`count(*)`,
         })
         .from(privateClientOrders)
-        .where(
-          not(
-            inArray(privateClientOrders.status, ['draft', 'cancelled']),
-          ),
-        )
+        .where(not(inArray(privateClientOrders.status, ['draft', 'cancelled'])))
         .groupBy(privateClientOrders.status),
 
       // Overdue invoices
@@ -227,11 +296,36 @@ const runAdvisor = async () => {
         .from(privateClientContacts),
     ]);
 
-    const revenueThisMonth = revenueThisMonthResult[0]?.total ?? 0;
-    const revenueLastMonth = revenueLastMonthResult[0]?.total ?? 0;
-    const overdueUsd = overdueResult[0]?.total ?? 0;
-    const stockCasesTotal = stockTotalResult[0]?.total ?? 0;
-    const totalContacts = totalContactsResult[0]?.count ?? 0;
+    const revenueThisMonth = Number(revenueThisMonthResult[0]?.total ?? 0);
+    const revenueLastMonthToDate = Number(
+      revenueLastMonthToDateResult[0]?.total ?? 0,
+    );
+    const revenueLastMonth = Number(revenueLastMonthResult[0]?.total ?? 0);
+    const overdueUsd = Number(overdueResult[0]?.total ?? 0);
+    const stockCasesTotal = Number(stockTotalResult[0]?.total ?? 0);
+    const totalContacts = Number(totalContactsResult[0]?.count ?? 0);
+
+    const monthlyRevenue = monthlyRevenueResult.map((row) => ({
+      month: row.month,
+      total: Number(row.total),
+    }));
+    const bestMonth = monthlyRevenue.reduce<
+      (typeof monthlyRevenue)[number] | null
+    >(
+      (best, row) => (best === null || row.total > best.total ? row : best),
+      null,
+    );
+    const strongMonths = monthlyRevenue.filter(
+      (row) => row.total >= STRONG_MONTH_USD,
+    ).length;
+
+    const pace = describeRevenuePace({
+      now,
+      revenueThisMonth,
+      revenueLastMonthToDate,
+      revenueLastMonth,
+      bestMonthUsd: bestMonth?.total ?? null,
+    });
 
     const openOrders = ordersByStatusResult.reduce(
       (sum, row) => sum + Number(row.count),
@@ -240,9 +334,7 @@ const runAdvisor = async () => {
 
     const pendingDispatchStatuses = ['draft', 'picking', 'staged'];
     const dispatchPending = dispatchResult
-      .filter((row) =>
-        pendingDispatchStatuses.includes(row.status ?? ''),
-      )
+      .filter((row) => pendingDispatchStatuses.includes(row.status ?? ''))
       .reduce((sum, row) => sum + Number(row.count), 0);
 
     // Fetch latest agent briefs for synthesis
@@ -273,19 +365,6 @@ const runAdvisor = async () => {
     }
 
     // Build context strings
-    const revenueTrendPct =
-      revenueLastMonth > 0
-        ? (
-            ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) *
-            100
-          ).toFixed(1)
-        : 'N/A';
-
-    const revenueTrendStr =
-      revenueLastMonth > 0
-        ? `${revenueThisMonth >= revenueLastMonth ? '+' : ''}${revenueTrendPct}% vs last month`
-        : 'No prior month data';
-
     const orderStatusCtx = ordersByStatusResult
       .map((row) => `  ${row.status}: ${row.count}`)
       .join('\n');
@@ -308,20 +387,21 @@ const runAdvisor = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: advisorOutputSchema,
-      system: `You are Business, a strategic business intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
+      system: `You are Business, the weekly business brief for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
 
-You synthesize insights from all other intelligence agents (Scout, Concierge, Socials, Purchasing, Pricing) plus financial and operational data to produce a weekly strategic brief.
+You bring together the other intelligence agents (Scout, Concierge, Socials, Purchasing, Pricing) and the financial and operational data into one weekly brief for the founders.
 
-Think like a CEO's chief of staff — what are the key risks, opportunities, and priorities this week?
+Context that must shape your reading:
+- C&C is a young company that is growing well. Judge it against its own track record, not against mature competitors with decades of scale.
+- A month at or above $${STRONG_MONTH_USD.toLocaleString('en-US')} revenue is an excellent month for C&C.
+- This month is still in progress. Never compare month-to-date with a full previous month. The revenue comparison you are given is already like-for-like; use it as given.
 
-Guidelines:
-- Focus on actionable, high-impact recommendations
-- Consider cash flow health (overdue invoices vs revenue)
-- Monitor inventory levels — too high means tied-up capital, too low means lost sales
-- Track sales pipeline from order volume and status distribution
-- Synthesize agent insights into a unified strategic picture
-- Be direct and specific — name the action, the number, the timeline
-- Prioritize ruthlessly — the weekly focus should have no more than 5 items
+Tone:
+- Balanced and constructive, like a trusted chief of staff who is on the team's side. Lead with what is going well, then what to improve.
+- Calm, professional language. Do not use words such as "crisis", "alarm", "emergency", "concerning", "broken", "blitz" or "mountain".
+- Frame each risk as an improvement with a clear, proportionate next step. Reserve "high" for things that genuinely need doing this week.
+- Be specific: name the number and the action. Do not invent figures you were not given.
+- Keep the weekly focus to 5 items at most.
 - Today's date: ${now.toISOString().slice(0, 10)}`,
       messages: [
         {
@@ -329,9 +409,14 @@ Guidelines:
           content: `Generate this week's strategic Advisor brief for Craft & Culture.
 
 FINANCIAL DATA:
-- Revenue this month: $${revenueThisMonth.toFixed(2)} USD
-- Revenue last month: $${revenueLastMonth.toFixed(2)} USD
-- Revenue trend: ${revenueTrendStr}
+- Revenue this month to date: $${revenueThisMonth.toFixed(2)} USD (${pace.daysLeft} days left in the month)
+- Revenue last month at the same point: $${revenueLastMonthToDate.toFixed(2)} USD
+- Revenue last month in full: $${revenueLastMonth.toFixed(2)} USD
+- Like-for-like trend: ${pace.headline}; ${pace.detail}
+- Best month in the last 12: ${bestMonth ? `${bestMonth.month}, $${bestMonth.total.toFixed(2)} USD` : 'no history yet'}${pace.isRecord ? ' (this month has already passed it)' : ''}
+- Months at or above $${STRONG_MONTH_USD.toLocaleString('en-US')} in the last 12: ${strongMonths}
+- Monthly revenue, last 12 complete months:
+${monthlyRevenue.map((row) => `  ${row.month}: $${row.total.toFixed(0)}`).join('\n') || '  No history yet.'}
 - Overdue invoices: $${overdueUsd.toFixed(2)} USD
 
 ORDER PIPELINE (excluding draft/cancelled):
@@ -351,17 +436,30 @@ AGENT SUMMARIES (latest briefs from each agent):
 ${agentCtx}
 
 Generate:
-1. Executive summary (3-5 sentences covering the overall business health)
-2. KPI snapshot with revenue trend description
-3. Top risks ranked by severity — cash flow, inventory, operational, competitive
-4. Opportunities with estimated USD impact
-5. Agent synthesis — one key takeaway from each agent's latest brief
-6. Weekly focus — up to 5 prioritized actions for the week ahead`,
+1. Executive summary (3-5 sentences): open with how the business is doing and its wins, then the main improvements
+2. KPI snapshot (the figures are filled in from the data; give your best reading)
+3. Wins — 2 to 4 things going well, each backed by a number
+4. Improvements (the "risks" field) — cash collection, inventory, operations, pricing — ranked by when they need doing
+5. Opportunities with estimated USD impact
+6. Agent synthesis — one key takeaway from each agent's latest brief
+7. Weekly focus — up to 5 prioritised actions for the week ahead`,
         },
       ],
     });
 
-    const data = result.object;
+    // The figures come from the data, never from the model
+    const data: AdvisorOutput = {
+      ...result.object,
+      kpiSnapshot: {
+        revenueThisMonthUsd: revenueThisMonth,
+        revenueTrend: pace.headline,
+        revenueTrendDetail: pace.detail,
+        openOrders,
+        overdueInvoicesUsd: overdueUsd,
+        stockCasesTotal,
+        dispatchPending,
+      },
+    };
     const markdown = buildMarkdown(data);
 
     await db.insert(agentOutputs).values({
@@ -380,6 +478,7 @@ Generate:
 
     return {
       success: true,
+      wins: data.wins.length,
       risks: data.risks.length,
       opportunities: data.opportunities.length,
       weeklyFocus: data.weeklyFocus.length,
