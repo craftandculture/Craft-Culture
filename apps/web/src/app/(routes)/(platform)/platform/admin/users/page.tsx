@@ -85,6 +85,10 @@ const UserEditDialog = ({
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
     user?.approvalStatus ?? 'pending',
   );
+  const { data: me } = useQuery(api.users.getMe.queryOptions());
+
+  // Your own role and status are locked; another admin has to change them
+  const isSelf = !!user && me?.id === user.id;
 
   // Reset form when user changes
   useEffect(() => {
@@ -251,7 +255,11 @@ const UserEditDialog = ({
             <Typography variant="bodySm" className="font-medium">
               Role
             </Typography>
-            <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
+            <Select
+              value={role}
+              onValueChange={(v) => setRole(v as typeof role)}
+              disabled={isSelf}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -270,6 +278,7 @@ const UserEditDialog = ({
             <Select
               value={approvalStatus}
               onValueChange={(v) => setApprovalStatus(v as typeof approvalStatus)}
+              disabled={isSelf}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -280,6 +289,11 @@ const UserEditDialog = ({
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
+            {isSelf && (
+              <Typography variant="bodyXs" colorRole="muted">
+                Ask another admin to change your own role or approval status.
+              </Typography>
+            )}
           </div>
 
           <DialogFooter>
