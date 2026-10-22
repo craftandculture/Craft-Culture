@@ -1,3 +1,9 @@
+## [2.0.487](https://github.com/craftandculture/Craft-Culture/compare/v2.0.486...v2.0.487) (2026-10-22)
+
+### Features
+
+* **cellar:** route each incoming transfer via UK bond, forwarder or in-UAE ([6045dc0](https://github.com/craftandculture/Craft-Culture/commit/6045dc0d7e34f0fb67aadb37e0afaa7f1f0917d9))
+
 ## [2.0.486](https://github.com/craftandculture/Craft-Culture/compare/v2.0.485...v2.0.486) (2026-10-22)
 
 ### Features
