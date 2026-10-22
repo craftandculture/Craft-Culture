@@ -1,3 +1,9 @@
+## [2.0.488](https://github.com/craftandculture/Craft-Culture/compare/v2.0.487...v2.0.488) (2026-10-22)
+
+### Features
+
+* **logistics:** freight requests show the client for quick reference ([11b5aeb](https://github.com/craftandculture/Craft-Culture/commit/11b5aebc32c82b89b012aa0dbfec2cb5e6f8ee45))
+
 ## [2.0.487](https://github.com/craftandculture/Craft-Culture/compare/v2.0.486...v2.0.487) (2026-10-22)
 
 ### Features
