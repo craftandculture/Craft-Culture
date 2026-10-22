@@ -148,7 +148,6 @@ const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string
 /** Quick action definitions */
 const quickActions = [
   { label: '+ New Order', href: '/platform/admin/private-orders/new', icon: IconPlus },
-  { label: '+ Create Quote', href: '/platform/quotes', icon: IconFileText },
   { label: 'Open WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
   { label: 'Run Scout', href: '/platform/admin/agents', icon: IconBolt },
 ];

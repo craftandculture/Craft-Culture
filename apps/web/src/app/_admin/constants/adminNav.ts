@@ -63,7 +63,6 @@ const adminNav: AdminNavSection[] = [
       { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
       { label: 'Source', href: '/platform/admin/source' },
       { label: 'Approvals', href: '/platform/admin/quote-approvals' },
-      { label: 'Quotes', href: '/platform/quotes' },
       { label: 'My Quotes', href: '/platform/my-quotes' },
     ],
   },
