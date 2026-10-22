@@ -63,6 +63,8 @@ const adminCreateQuoteRequest = approvedProcedure
               sourceId: input.sourceType ? input.sourceId || null : null,
               shipmentId:
                 input.sourceType === 'shipment' ? input.sourceId || null : null,
+              clientName: input.clientName || null,
+              clientEmail: input.clientEmail || null,
               replyBy: input.replyBy || null,
               requiresThermalLiner: input.requiresThermalLiner,
               requiresTracker: input.requiresTracker,

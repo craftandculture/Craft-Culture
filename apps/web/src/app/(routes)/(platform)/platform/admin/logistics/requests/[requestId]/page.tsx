@@ -215,6 +215,7 @@ const QuoteRequestDetailPage = () => {
             )}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+            {request.clientName ? `${request.clientName} · ` : ''}
             {request.originCity || request.originCountry} → {request.destinationCity || request.destinationCountry}
           </h1>
           <p className="mt-0.5 text-sm text-text-muted">

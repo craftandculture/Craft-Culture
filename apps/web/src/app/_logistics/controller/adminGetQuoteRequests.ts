@@ -54,6 +54,7 @@ const adminGetQuoteRequests = adminProcedure
           ilike(logisticsQuoteRequests.originCountry, `%${search}%`),
           ilike(logisticsQuoteRequests.destinationCountry, `%${search}%`),
           ilike(logisticsQuoteRequests.productDescription, `%${search}%`),
+          ilike(logisticsQuoteRequests.clientName, `%${search}%`),
         ),
       );
     }
@@ -79,6 +80,7 @@ const adminGetQuoteRequests = adminProcedure
       .select({
         id: logisticsQuoteRequests.id,
         requestNumber: logisticsQuoteRequests.requestNumber,
+        clientName: logisticsQuoteRequests.clientName,
         status: logisticsQuoteRequests.status,
         priority: logisticsQuoteRequests.priority,
         originCountry: logisticsQuoteRequests.originCountry,

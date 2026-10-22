@@ -29,6 +29,9 @@ const createQuoteRequestSchema = z.object({
   // Where the request was started from
   sourceType: z.enum(['shipment', 'uk_move']).optional(),
   sourceId: z.string().uuid().optional(),
+  /** Who the freight is for; shown on the list and greeted on their quote */
+  clientName: z.string().trim().max(200).optional(),
+  clientEmail: z.string().trim().email('Enter a valid email').optional().or(z.literal('')),
   /** The kind of job the request opens; read from the route when omitted */
   jobType: z
     .enum(['inbound', 'outbound', 're_export', 'mainland_transfer'])

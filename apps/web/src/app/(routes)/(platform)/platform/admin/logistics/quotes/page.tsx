@@ -369,7 +369,7 @@ const FreightQuotesPage = () => {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search requests by number, route or cargo, and quotes by number or forwarder"
+          placeholder="Search requests by number, client, route or cargo, and quotes by number or forwarder"
           className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-primary h-11 w-full rounded-xl border pl-10 pr-3 text-sm shadow-sm focus:outline-none"
         />
       </div>
@@ -497,6 +497,12 @@ const FreightQuotesPage = () => {
                           )}
                         </div>
                         <p className="text-text-primary mt-0.5 truncate text-sm">
+                          {r.clientName ? (
+                            <span className="font-semibold">{r.clientName}</span>
+                          ) : (
+                            <span className="text-text-muted">No client</span>
+                          )}
+                          {' · '}
                           {r.originCity || r.originCountry} →{' '}
                           {r.destinationCity || r.destinationCountry}
                         </p>

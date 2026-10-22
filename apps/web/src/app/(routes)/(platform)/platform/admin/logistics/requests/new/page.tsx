@@ -102,6 +102,8 @@ const NewQuoteRequestPage = () => {
   const [transportMode, setTransportMode] = useState<TransportMode | ''>('');
   const [productType, setProductType] = useState<ProductType>('wine');
   const [productDescription, setProductDescription] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
   const [totalCases, setTotalCases] = useState<number | ''>('');
   const [totalPallets, setTotalPallets] = useState<number | ''>('');
   const [totalWeightKg, setTotalWeightKg] = useState<number | ''>('');
@@ -216,6 +218,8 @@ const NewQuoteRequestPage = () => {
       transportMode: transportMode || undefined,
       productType,
       productDescription: productDescription || undefined,
+      clientName: clientName.trim() || undefined,
+      clientEmail: clientEmail.trim() || undefined,
       totalCases: totalCases ? Number(totalCases) : undefined,
       totalPallets: totalPallets ? Number(totalPallets) : undefined,
       totalWeightKg: totalWeightKg ? Number(totalWeightKg) : undefined,
@@ -501,6 +505,31 @@ const NewQuoteRequestPage = () => {
             <CardTitle>Cargo Details</CardTitle>
           </div>
           <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="clientName">
+                  Client
+                </label>
+                <Input
+                  id="clientName"
+                  placeholder="Who the freight is for, e.g. Mr Smith"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="clientEmail">
+                  Client email
+                </label>
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  placeholder="For sending them their quote"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="productType">
