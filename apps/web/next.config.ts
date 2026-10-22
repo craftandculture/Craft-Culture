@@ -55,9 +55,11 @@ const nextConfig: NextConfig = {
   redirects: async () => {
     return [
       {
+        // `/platform` sends each account to its own home (admins to Home).
+        // Temporary, so browsers do not cache where a role lands.
         source: '/',
-        destination: '/platform/quotes',
-        permanent: true,
+        destination: '/platform',
+        permanent: false,
       },
     ];
   },
