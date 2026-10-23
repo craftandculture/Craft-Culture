@@ -23,7 +23,6 @@ import type { Tone } from '@/app/_logistics/components/exports/exportUi';
 import {
   card,
   money,
-  pill,
   pillClass,
   primaryButton,
   secondaryButton,
@@ -148,7 +147,6 @@ const FreightQuotesPage = () => {
   const shipmentId = searchParams.get('shipmentId') || undefined;
 
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<RequestStatus | ''>('');
   /*
     Always opens on everything. It used to open on Needs action whenever
     something did, while the All requests pill still read as selected, so the
@@ -185,7 +183,6 @@ const FreightQuotesPage = () => {
   const requests = requestData?.requests ?? [];
   const standalone = quoteData?.quotes ?? [];
 
-  const isOpen = (s: RequestStatus) => s !== 'completed' && s !== 'cancelled';
   const needsAction = requests.filter((r) => ACTION_STEPS.includes(r.nextStep));
   const awaiting = requests.filter((r) => r.nextStep === 'awaiting');
   const toDecide = requests.filter((r) => DECIDE_STEPS.includes(r.nextStep));
@@ -258,7 +255,6 @@ const FreightQuotesPage = () => {
     if (focus === 'awaiting' && !awaiting.includes(r)) return false;
     if (focus === 'decide' && !toDecide.includes(r)) return false;
     if (focus === 'completed' && r.status !== 'completed') return false;
-    if (status && r.status !== status) return false;
     return true;
   });
   const showStandalone = !!shipmentId || focus === '' || focus === 'standalone';
@@ -288,8 +284,7 @@ const FreightQuotesPage = () => {
             Freight quotes
           </h1>
           <p className="text-text-muted mt-0.5 text-sm">
-            Requests for freight and the forwarder quotes received against each
-            one
+            Freight requests and the forwarder quotes against them
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -343,7 +338,6 @@ const FreightQuotesPage = () => {
                   type="button"
                   onClick={() => {
                     setFocus(active ? '' : tile.key);
-                    setStatus('');
                   }}
                   className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
                     active
@@ -382,53 +376,30 @@ const FreightQuotesPage = () => {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search requests by number, client, route or cargo, and quotes by number or forwarder"
+          placeholder="Search by client, route, request or quote number"
           className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-primary h-11 w-full rounded-xl border pl-10 pr-3 text-sm shadow-sm focus:outline-none"
         />
       </div>
 
-      {!shipmentId && focus !== 'standalone' && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            className={pill(status === '' && focus === '')}
-            onClick={() => {
-              setStatus('');
-              setFocus('');
-            }}
-          >
-            All requests
-            <span className="ml-1.5 tabular-nums opacity-60">
-              {requests.length}
-            </span>
-          </button>
-          {(Object.keys(requestStatusLabel) as RequestStatus[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={pill(status === s)}
-              onClick={() => {
-                setStatus(status === s ? '' : s);
-                setFocus('');
-              }}
-            >
-              {requestStatusLabel[s]}
-              <span className="ml-1.5 tabular-nums opacity-60">
-                {requests.filter((r) => r.status === s).length}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Requests, each with its quotes beneath it */}
+      {/* Requests: one line each — who and where, what it waits on, the best price */}
       {!shipmentId && focus !== 'standalone' && (
         <div className={card}>
           <div className="border-border-muted flex items-center gap-2 border-b px-4 py-3">
-            <span className={sectionHeading}>Requests</span>
+            <span className={sectionHeading}>
+              {focus ? tiles.find((t) => t.key === focus)?.label : 'All requests'}
+            </span>
             <span className="bg-surface-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-medium">
               {shownRequests.length}
             </span>
+            {focus && (
+              <button
+                type="button"
+                onClick={() => setFocus('')}
+                className="text-text-muted hover:text-text-primary ml-auto text-xs"
+              >
+                Show all
+              </button>
+            )}
           </div>
 
           {requestsLoading ? (
@@ -449,213 +420,73 @@ const FreightQuotesPage = () => {
                 const live = r.quotes.filter((q) => isLive(q.status));
                 const best = live[0];
                 const step = nextStepLabel[r.nextStep];
-                const compareIds = (live.length >= 2 ? live : r.quotes)
-                  .slice(0, MAX_COMPARE)
-                  .map((q) => q.id);
-                const href = `/platform/admin/logistics/requests/${r.id}`;
-                const cargo = [
-                  titleCase(r.productType),
-                  r.bottles
-                    ? `${r.bottles.toLocaleString('en-GB')} bottles`
-                    : null,
-                  r.totalCases ? `${r.totalCases} cases` : null,
-                  r.totalPallets ? `${r.totalPallets} pallets` : null,
-                  r.totalWeightKg ? `${r.totalWeightKg.toFixed(0)} kg` : null,
+                const quoted = r.recipients.filter((x) => x.outcome === 'quoted').length;
+                const meta = [
+                  r.job?.shipmentNumber,
+                  r.bottles ? `${r.bottles.toLocaleString('en-GB')} btl` : r.totalCases ? `${r.totalCases} cs` : null,
                   r.transportMode ? modeLabel[r.transportMode] : null,
+                  r.recipients.length
+                    ? `${quoted} of ${r.recipients.length} forwarder${r.recipients.length === 1 ? '' : 's'} quoted`
+                    : null,
+                  formatDistanceToNow(new Date(r.createdAt), { addSuffix: true }),
                 ].filter(Boolean);
 
                 return (
-                  <li key={r.id} className="px-4 py-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-                      <Link href={href} className="group min-w-0 flex-1">
+                  <li key={r.id}>
+                    <Link
+                      href={`/platform/admin/logistics/requests/${r.id}`}
+                      className="hover:bg-surface-secondary/50 flex items-center gap-4 px-4 py-3 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-text-primary font-mono text-sm font-semibold group-hover:underline">
-                            {r.requestNumber}
+                          <span className="text-text-primary truncate text-sm font-semibold">
+                            {r.clientName || 'No client'}
                           </span>
-                          {r.job && (
-                            <span className="text-text-muted font-mono text-xs">
-                              {r.job.shipmentNumber}
-                            </span>
-                          )}
-                          {step ? (
-                            <span className={pillClass(step.tone)}>
-                              {step.text}
-                            </span>
-                          ) : (
-                            <span
-                              className={pillClass(requestStatusTone[r.status])}
-                            >
-                              {requestStatusLabel[r.status]}
-                            </span>
-                          )}
-                          {(r.priority === 'high' ||
-                            r.priority === 'urgent') && (
-                            <span
-                              className={pillClass(
-                                r.priority === 'urgent' ? 'red' : 'amber',
-                              )}
-                            >
-                              {titleCase(r.priority)}
-                            </span>
-                          )}
-                          {r.requiresThermalLiner && (
-                            <span className={pillClass('slate')}>
-                              <IconSnowflake size={11} /> Liner
-                            </span>
-                          )}
-                          {r.requiresTracker && (
-                            <span className={pillClass('slate')}>
-                              <IconThermometer size={11} /> Tracker
-                            </span>
+                          <span className="text-text-muted truncate text-sm">
+                            {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
+                          </span>
+                          {r.priority === 'urgent' && (
+                            <span className={pillClass('red')}>Urgent</span>
                           )}
                         </div>
-                        <p className="text-text-primary mt-0.5 truncate text-sm">
-                          {r.clientName ? (
-                            <span className="font-semibold">
-                              {r.clientName}
+                        <p className="text-text-muted mt-0.5 flex items-center gap-1.5 truncate text-xs">
+                          <span className="font-mono">{r.requestNumber}</span>
+                          {meta.map((m) => (
+                            <span key={m} className="truncate">· {m}</span>
+                          ))}
+                          {r.requiresThermalLiner && <IconSnowflake size={12} aria-label="Thermal liner" />}
+                          {r.requiresTracker && <IconThermometer size={12} aria-label="Temperature tracker" />}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        {best ? (
+                          <>
+                            <span className="text-text-primary block text-sm font-semibold tabular-nums">
+                              {best.perBottleUsd != null
+                                ? `${usd(best.perBottleUsd)} / btl`
+                                : money(best.totalPrice, best.currency)}
                             </span>
-                          ) : (
-                            <span className="text-text-muted">No client</span>
-                          )}
-                          {' · '}
-                          {r.originCity || r.originCountry} →{' '}
-                          {r.destinationCity || r.destinationCountry}
-                        </p>
-                        <p className="text-text-muted truncate text-xs">
-                          {cargo.join(' · ')}
-                          {r.requester
-                            ? ` · ${r.requester.name || r.requester.email}`
-                            : ''}
-                          {' · '}
-                          {formatDistanceToNow(new Date(r.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </p>
-                      </Link>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                        <span className="text-text-muted text-xs">
-                          {r.quotes.length === 0
-                            ? 'No quotes yet'
-                            : `${r.quotes.length} quote${r.quotes.length === 1 ? '' : 's'}`}
-                          {best && r.quotes.length > 0
-                            ? ` · best ${best.perBottleUsd != null ? `${usd(best.perBottleUsd)} / bottle` : money(best.totalPrice, best.currency)}`
-                            : ''}
-                          {r.marginUsd != null
-                            ? ` · margin ${usd(r.marginUsd)}`
-                            : ''}
-                        </span>
-                        {compareIds.length >= 2 && (
-                          <Link
-                            href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}
-                            className={secondaryButton}
-                          >
-                            <IconGitCompare size={15} /> Compare
-                          </Link>
-                        )}
-                        {isOpen(r.status) && (
-                          <Link
-                            href={`/platform/admin/logistics/quotes/new?requestId=${r.id}`}
-                            className={secondaryButton}
-                          >
-                            <IconPlus size={15} /> Add quote
-                          </Link>
+                            <span className="text-text-muted block text-[11px]">
+                              {live.length > 1 ? `best of ${live.length}` : forwarderLabel(best.forwarderName)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-text-muted text-xs">No quotes yet</span>
                         )}
                       </div>
-                    </div>
 
-                    {r.recipients.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {r.recipients.map((x) => (
-                          <span
-                            key={x.forwarderId}
-                            className={pillClass(
-                              x.outcome === 'quoted'
-                                ? 'emerald'
-                                : x.outcome === 'declined'
-                                  ? 'slate'
-                                  : x.sentAt
-                                    ? 'blue'
-                                    : 'amber',
-                            )}
-                          >
-                            {x.name}
-                            {' · '}
-                            {x.outcome === 'quoted'
-                              ? 'quoted'
-                              : x.outcome === 'declined'
-                                ? 'not chosen'
-                                : x.sentAt
-                                  ? 'asked'
-                                  : 'not sent'}
+                      <span className="hidden w-44 shrink-0 justify-end sm:flex">
+                        {step ? (
+                          <span className={pillClass(step.tone)}>{step.text}</span>
+                        ) : (
+                          <span className={pillClass(requestStatusTone[r.status])}>
+                            {requestStatusLabel[r.status]}
                           </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {r.quotes.length > 0 && !r.bottles && (
-                      <Link
-                        href={href}
-                        className="text-text-muted hover:text-text-primary mt-2 inline-block text-xs underline-offset-2 hover:underline"
-                      >
-                        Add the bottle count to see the price per bottle
-                      </Link>
-                    )}
-
-                    {r.quotes.length > 0 && (
-                      <ul className="border-border-muted mt-2 space-y-1 border-l-2 pl-3">
-                        {r.quotes.map((q) => (
-                          <li key={q.id}>
-                            <Link
-                              href={`/platform/admin/logistics/quotes/${q.id}`}
-                              className="hover:bg-surface-secondary/50 flex items-center gap-3 rounded-md px-2 py-1 text-sm transition-colors"
-                            >
-                              <span className="text-text-muted font-mono text-xs">
-                                {q.quoteNumber}
-                              </span>
-                              <span
-                                className={`min-w-0 flex-1 truncate ${
-                                  forwarderLabel(q.forwarderName) ===
-                                  q.forwarderName
-                                    ? 'text-text-primary'
-                                    : 'text-text-muted italic'
-                                }`}
-                              >
-                                {forwarderLabel(q.forwarderName)}
-                              </span>
-                              {q.transitDays ? (
-                                <span className="text-text-muted hidden text-xs sm:inline">
-                                  {q.transitDays} days
-                                </span>
-                              ) : null}
-                              <span className="text-right tabular-nums">
-                                <span className="text-text-primary block font-semibold">
-                                  {money(q.totalPrice, q.currency)}
-                                </span>
-                                {q.perBottleUsd != null && (
-                                  <span className="text-text-muted block text-xs">
-                                    {usd(q.perBottleUsd)} / bottle
-                                    {q.per75clUsd != null &&
-                                    q.per75clUsd !== q.perBottleUsd
-                                      ? ` · ${usd(q.per75clUsd)} / 75cl`
-                                      : ''}
-                                  </span>
-                                )}
-                              </span>
-                              {best && q.id === best.id && live.length > 1 && (
-                                <span className={pillClass('emerald')}>
-                                  Best price
-                                </span>
-                              )}
-                              <span
-                                className={pillClass(quoteStatusTone[q.status])}
-                              >
-                                {titleCase(q.status)}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                        )}
+                      </span>
+                      <IconChevronRight size={16} className="text-text-muted shrink-0" />
+                    </Link>
                   </li>
                 );
               })}
