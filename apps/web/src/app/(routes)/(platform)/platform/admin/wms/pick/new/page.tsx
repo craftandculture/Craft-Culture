@@ -63,6 +63,8 @@ const NewPickListPage = () => {
   const [readinessFilter, setReadinessFilter] = useState<ReadinessFilter>('all');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // Two taps to close an order as already picked: the first arms it, the second confirms.
+  const [confirmPickedId, setConfirmPickedId] = useState<string | null>(null);
 
   // Fetch invoiced Zoho sales orders ready for picking
   const { data: zohoOrders, isLoading } = useQuery({
@@ -86,10 +88,12 @@ const NewPickListPage = () => {
   const dismissMutation = useMutation({
     ...api.zohoSalesOrders.dismissDeleted.mutationOptions(),
     onSuccess: (result) => {
+      setConfirmPickedId(null);
       void queryClient.invalidateQueries({ queryKey: [['zohoSalesOrders']] });
       toast.success(result.message);
     },
     onError: (error) => {
+      setConfirmPickedId(null);
       toast.error(error.message || 'Could not remove that order');
     },
   });
@@ -576,6 +580,39 @@ const NewPickListPage = () => {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <PickOrderLines orderId={order.id} />
+                          {/*
+                            An old job picked outside this queue stays here for
+                            good, because Zoho still has it. Closes it as
+                            delivered; no stock moves.
+                          */}
+                          <div className="mt-2 flex items-center justify-between gap-3 border-t border-border-muted pt-2">
+                            <p className="text-[12px] text-text-muted">
+                              Already picked and sent?
+                            </p>
+                            <button
+                              type="button"
+                              disabled={dismissMutation.isPending}
+                              onClick={() => {
+                                if (confirmPickedId !== order.id) {
+                                  setConfirmPickedId(order.id);
+                                  return;
+                                }
+                                dismissMutation.mutate({
+                                  salesOrderId: order.id,
+                                  reason: 'already_fulfilled',
+                                });
+                              }}
+                              className={
+                                confirmPickedId === order.id
+                                  ? 'rounded-md bg-red-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-red-700 disabled:opacity-60'
+                                  : 'rounded-md border border-border-primary px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:bg-black/5 disabled:opacity-60'
+                              }
+                            >
+                              {confirmPickedId === order.id
+                                ? `Confirm: remove ${order.salesOrderNumber}`
+                                : 'Remove from queue'}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
