@@ -1,4 +1,4 @@
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 
 import { teamTaskParts } from '@/database/schema';
 
@@ -31,10 +31,14 @@ const writeParts = async (tx: any, taskId: string, parts: JobInput['parts']) => 
   const ids: string[] = [];
   for (const [position, part] of parts.entries()) {
     if (part.id) {
-      // An owner change or a new due date resets the overdue alert for it.
+      // Only an owner change or a new due date re-arms the overdue alert;
+      // SET reads the row as it was, so the CASE compares old with new.
+      const overdueNotifiedAt = sql`CASE WHEN ${teamTaskParts.ownerId} IS DISTINCT FROM ${part.ownerId}::uuid
+        OR ${teamTaskParts.due} IS DISTINCT FROM ${part.due}::date
+        THEN NULL ELSE ${teamTaskParts.overdueNotifiedAt} END`;
       await tx
         .update(teamTaskParts)
-        .set({ ownerId: part.ownerId, what: part.what, due: part.due, position, overdueNotifiedAt: null })
+        .set({ ownerId: part.ownerId, what: part.what, due: part.due, position, overdueNotifiedAt })
         .where(and(eq(teamTaskParts.id, part.id), eq(teamTaskParts.taskId, taskId)));
       ids.push(part.id);
     } else {
