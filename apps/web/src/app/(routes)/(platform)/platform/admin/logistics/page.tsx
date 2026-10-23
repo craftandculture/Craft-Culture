@@ -60,6 +60,7 @@ const formatCurrency = (amount: number) => {
  */
 const LogisticsDashboardPage = () => {
   const [typeFilter, setTypeFilter] = useState<ShipmentType | 'all'>('all');
+  const [stageTab, setStageTab] = useState<'shipments' | 'quotes'>('shipments');
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -108,7 +109,10 @@ const LogisticsDashboardPage = () => {
 
   const metrics = data;
   const shipments = metrics?.shipments;
-  const recent = metrics?.recentShipments ?? [];
+  const allRecent = metrics?.recentShipments ?? [];
+  const quoteJobs = allRecent.filter((s) => s.isQuote);
+  const shipmentJobs = allRecent.filter((s) => !s.isQuote);
+  const recent = stageTab === 'quotes' ? quoteJobs : shipmentJobs;
   const visible = recent.filter((s) => typeFilter === 'all' || s.type === typeFilter);
 
   // Where shipments are on the way in, read left to right
@@ -225,18 +229,51 @@ const LogisticsDashboardPage = () => {
             <NeedsAttentionCard />
 
             <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
-              <div className="flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-text-primary">Recent shipments</p>
-                  <p className="mt-0.5 text-xs text-text-muted">Live, and finished in the last 7 days</p>
+              <div className="flex items-center justify-between gap-3 border-b border-border-muted px-4">
+                <div className="flex gap-4">
+                  {(
+                    [
+                      { key: 'shipments', label: 'Shipments', count: shipmentJobs.length },
+                      { key: 'quotes', label: 'Quotes', count: quoteJobs.length },
+                    ] as const
+                  ).map((tab) => {
+                    const active = stageTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setStageTab(tab.key);
+                          setTypeFilter('all');
+                        }}
+                        className={`-mb-px inline-flex items-center gap-1.5 border-b-2 py-3 text-sm font-semibold transition-colors ${
+                          active
+                            ? 'border-text-primary text-text-primary'
+                            : 'border-transparent text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="tabular-nums text-xs font-medium opacity-70">{tab.count}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <Link
-                  href="/platform/admin/logistics/shipments"
+                  href={
+                    stageTab === 'quotes'
+                      ? '/platform/admin/logistics/quotes'
+                      : '/platform/admin/logistics/shipments'
+                  }
                   className="inline-flex items-center gap-1 text-sm text-text-muted transition-colors hover:text-text-primary"
                 >
                   View all <IconArrowRight size={14} />
                 </Link>
               </div>
+              <p className="px-4 pt-3 text-xs text-text-muted">
+                {stageTab === 'quotes'
+                  ? 'Jobs still waiting on a freight quote to be accepted'
+                  : 'Live, and finished in the last 7 days'}
+              </p>
               <div className="-mx-px flex gap-1.5 overflow-x-auto px-4 py-3">
                 {(['all', 'inbound', 'outbound', 'mainland_transfer', 're_export'] as const).map((t) => {
                   const count = recent.filter((s) => t === 'all' || s.type === t).length;
@@ -262,9 +299,11 @@ const LogisticsDashboardPage = () => {
 
               {visible.length === 0 ? (
                 <p className="border-t border-border-muted px-4 py-10 text-center text-sm text-text-muted">
-                  {typeFilter === 'inbound'
-                    ? 'No imports in the last 7 days. Older ones are under View all.'
-                    : 'No live shipments. Finished ones are under View all.'}
+                  {stageTab === 'quotes'
+                    ? 'No jobs waiting on a quote.'
+                    : typeFilter === 'inbound'
+                      ? 'No imports in the last 7 days. Older ones are under View all.'
+                      : 'No live shipments. Finished ones are under View all.'}
                 </p>
               ) : (
                 <ul className="divide-y divide-border-muted border-t border-border-muted">

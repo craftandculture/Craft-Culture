@@ -90,6 +90,13 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
           WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
         ), ${logisticsShipments.totalBottles}, 0)`,
         createdAt: logisticsShipments.createdAt,
+        // Still a quote: a draft job opened by a freight request that is not
+        // yet accepted. Accepting completes the request, which makes it a shipment.
+        isQuote: sql<boolean>`(${logisticsShipments.status} = 'draft' AND EXISTS (
+          SELECT 1 FROM ${logisticsQuoteRequests}
+          WHERE ${logisticsQuoteRequests.shipmentId} = ${logisticsShipments.id}
+            AND ${logisticsQuoteRequests.status} IN ('pending', 'in_progress', 'quoted')
+        ))`,
         jobNumber: logisticsJobs.jobNumber,
         partyName: partyNameSql,
         partyLogoUrl: partyLogoSql,
