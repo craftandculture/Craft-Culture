@@ -1,3 +1,20 @@
+## [2.0.490](https://github.com/craftandculture/Craft-Culture/compare/v2.0.489...v2.0.490) (2026-10-23)
+
+### Improvements
+
+* Business brief leads with wins and compares revenue like for like ([0ac9f55](https://github.com/craftandculture/Craft-Culture/commit/0ac9f55eff7a2408c8103e8e4576337bddd33c4b))
+* order and admin screens refresh every 30 seconds instead of every 5 ([5581717](https://github.com/craftandculture/Craft-Culture/commit/55817178bb2da6cfc9ee1e471babd9f03bea599b))
+* Pricing and Scout briefs compare our prices with competitors as duty free + 15% ([6782bfc](https://github.com/craftandculture/Craft-Culture/commit/6782bfc9aa9ac931d1907d0312d35309ab68566d))
+
+### Bug Fixes
+
+* a job can no longer be saved with parts that wait for each other ([e1fa052](https://github.com/craftandculture/Craft-Culture/commit/e1fa0523e517a25df40555057e9cbf6ead4529d1))
+* an admin can no longer remove their own admin access by mistake ([9ed9433](https://github.com/craftandculture/Craft-Culture/commit/9ed94336cf1a3073fbdf8669f8eecd37a1e96bc3))
+* closing a repeating job twice at once now creates only one next job ([1240ad1](https://github.com/craftandculture/Craft-Culture/commit/1240ad152af56ce9777e0eb4040fd07ca71a857c))
+* editing a job no longer re-sends overdue alerts for parts nobody changed ([fcb93a1](https://github.com/craftandculture/Craft-Culture/commit/fcb93a18b126281c85a49a12d8b5cf727a2b49af))
+* opening the site address now takes each account to its own home page ([5ca8d9a](https://github.com/craftandculture/Craft-Culture/commit/5ca8d9afc1e24439e29aaf47aa8043569979a73b))
+* show loose bottles from cracked cases in Stock Explorer ([be51bae](https://github.com/craftandculture/Craft-Culture/commit/be51bae64794e3edc3204a6b0c733538b371a321))
+
 ## [2.0.489](https://github.com/craftandculture/Craft-Culture/compare/v2.0.488...v2.0.489) (2026-10-22)
 
 ### Bug Fixes
