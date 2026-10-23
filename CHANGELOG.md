@@ -1,3 +1,9 @@
+## [2.0.495](https://github.com/craftandculture/Craft-Culture/compare/v2.0.494...v2.0.495) (2026-10-23)
+
+### Features
+
+* the freight quotes list shows each request on one line, with what it waits on and its best price ([2e48c23](https://github.com/craftandculture/Craft-Culture/commit/2e48c234c2afad752013438ae3560fe5e93fb7b6))
+
 ## [2.0.494](https://github.com/craftandculture/Craft-Culture/compare/v2.0.493...v2.0.494) (2026-10-23)
 
 ### Features
