@@ -1,3 +1,9 @@
+## [2.0.491](https://github.com/craftandculture/Craft-Culture/compare/v2.0.490...v2.0.491) (2026-10-23)
+
+### Bug Fixes
+
+* **pco:** Zoho sales orders bill Landed Duty Free, not the bare line price ([68ebf32](https://github.com/craftandculture/Craft-Culture/commit/68ebf3242b7f9a52054a8914960d632f74d8f547))
+
 ## [2.0.490](https://github.com/craftandculture/Craft-Culture/compare/v2.0.489...v2.0.490) (2026-10-23)
 
 ### Improvements
