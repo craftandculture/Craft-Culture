@@ -19,6 +19,10 @@ describe('lwin11Of', () => {
     expect(lwin11Of('1012781-2015-12-00750')?.lwin11).toBe(lwin11Of('1012781-2015-06-01500')?.lwin11);
   });
 
+  it('reads a 0000 vintage as non-vintage', () => {
+    expect(lwin11Of('2360072-0000-06-00750')).toEqual({ lwin7: '2360072', vintage: '1000', lwin11: '23600721000' });
+  });
+
   it('refuses codes that are not LWIN18s', () => {
     expect(lwin11Of('GINLANG700-0000-06-00700')).toBeNull();
     expect(lwin11Of(null)).toBeNull();

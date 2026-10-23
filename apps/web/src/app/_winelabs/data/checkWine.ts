@@ -11,7 +11,7 @@ import matchToLwin from '@/lib/winelabs/matchToLwin';
  * Check one wine we hold against Wine Labs and cache the answer
  *
  * Three questions, at most 26 credits: does a name search land on our LWIN,
- * what are the wine's details and drinking window, and what does it sell for.
+ * what are the vintage's details and drinking window, and what does it sell for.
  * Details and price are asked of our own LWIN when it is a real one, since a
  * name search that misses does not mean Wine Labs lacks the wine; of an
  * internal code, only when the name search found a real LWIN to ask about.
@@ -29,7 +29,8 @@ const checkWine = async (wine: StockWine) => {
   const isInternal = wine.lwin7.startsWith('9');
   const lookupLwin7 = isInternal ? (match?.lwin7 ?? null) : wine.lwin7;
 
-  const info = lookupLwin7 ? await getWineInfo(lookupLwin7) : null;
+  // Drinking windows belong to a vintage, so details are asked of the wine and vintage, not the LWIN7 alone
+  const info = lookupLwin7 ? await getWineInfo(`${lookupLwin7}${wine.vintage}`) : null;
   const price = lookupLwin7 ? await getPriceStats(`${lookupLwin7}${wine.vintage}`) : null;
 
   const now = new Date();

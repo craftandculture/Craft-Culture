@@ -9,6 +9,7 @@ import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
  * @example
  *   lwin11Of('1012781-2015-06-00750'); // { lwin7: '1012781', vintage: '2015', lwin11: '10127812015' }
  *   lwin11Of('101278120150600750'); // same
+ *   lwin11Of('2360072-0000-06-00750'); // vintage '1000', LWIN's non-vintage
  *   lwin11Of('GIN-0001'); // null
  *
  * @param lwin18 - An LWIN18, dashed or compact
@@ -17,7 +18,9 @@ import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 const lwin11Of = (lwin18: string | null | undefined) => {
   const match = normalizeLwin18(lwin18)?.match(/^(\d{7})-(\d{4})-\d{2}-\d{5}$/);
   if (!match?.[1] || !match[2]) return null;
-  return { lwin7: match[1], vintage: match[2], lwin11: `${match[1]}${match[2]}` };
+  // Some stock carries 0000 for non-vintage; LWIN's own placeholder is 1000
+  const vintage = match[2] === '0000' ? '1000' : match[2];
+  return { lwin7: match[1], vintage, lwin11: `${match[1]}${vintage}` };
 };
 
 export default lwin11Of;
