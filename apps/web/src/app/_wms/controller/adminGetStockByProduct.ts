@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, ilike, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 
 import findPartnerByClientCode from '@/app/_cellar/data/findPartnerByClientCode';
 import getClientCodes from '@/app/_cellar/data/getClientCodes';
@@ -226,83 +226,99 @@ const adminGetStockByProduct = wmsOperatorProcedure
       totalCount = countResult?.count ?? 0;
     }
 
-    // For each product, get location breakdown
-
     // Member references, shown beside the owner so staff learn to match them
     const clientCodes = await getClientCodes();
 
-    const productsWithLocations = await Promise.all(
-      products.map(async (product) => {
-        const locationConditions = includeZeroQty
-          ? [eq(wmsStock.lwin18, product.lwin18)]
-          : [
-              eq(wmsStock.lwin18, product.lwin18),
-              gt(wmsStock.quantityCases, 0),
-            ];
-        if (product.caseConfig !== null) {
-          locationConditions.push(eq(wmsStock.caseConfig, product.caseConfig));
-        }
+    // Bays for the whole page in one query, grouped per row in memory below.
+    // Uses the same case-or-bottle filter as the list: a bay holding only the
+    // loose bottles of a cracked case is still stock, and dropping it left
+    // the row with no bays and its bottles missing from the total.
+    const pageLwins = [...new Set(products.map((product) => product.lwin18))];
+    const pageLocations =
+      pageLwins.length > 0
+        ? await db
+            .select({
+              stockId: wmsStock.id,
+              locationId: wmsStock.locationId,
+              locationCode: wmsLocations.locationCode,
+              locationType: wmsLocations.locationType,
+              storageMethod: wmsLocations.storageMethod,
+              quantityCases: wmsStock.quantityCases,
+              availableCases: wmsStock.availableCases,
+              openBottles: wmsStock.openBottles,
+              ownerId: wmsStock.ownerId,
+              ownerName: wmsStock.ownerName,
+              notForSale: wmsStock.notForSale,
+              lotNumber: wmsStock.lotNumber,
+              expiryDate: wmsStock.expiryDate,
+              reExportBoeNumber: wmsStock.reExportBoeNumber,
+              photos: wmsStock.photos,
+              lwin18: wmsStock.lwin18,
+              caseConfig: wmsStock.caseConfig,
+            })
+            .from(wmsStock)
+            .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(
+              and(
+                inArray(wmsStock.lwin18, pageLwins),
+                includeZeroQty
+                  ? undefined
+                  : sql`(${wmsStock.quantityCases} > 0 OR ${wmsStock.openBottles} > 0)`,
+              ),
+            )
+            .orderBy(asc(wmsLocations.locationCode))
+        : [];
 
-        const locations = await db
-          .select({
-            stockId: wmsStock.id,
-            locationId: wmsStock.locationId,
-            locationCode: wmsLocations.locationCode,
-            locationType: wmsLocations.locationType,
-            storageMethod: wmsLocations.storageMethod,
-            quantityCases: wmsStock.quantityCases,
-            availableCases: wmsStock.availableCases,
-            openBottles: wmsStock.openBottles,
-            ownerId: wmsStock.ownerId,
-            ownerName: wmsStock.ownerName,
-            notForSale: wmsStock.notForSale,
-            lotNumber: wmsStock.lotNumber,
-            expiryDate: wmsStock.expiryDate,
-            reExportBoeNumber: wmsStock.reExportBoeNumber,
-            photos: wmsStock.photos,
-          })
-          .from(wmsStock)
-          .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(and(...locationConditions))
-          .orderBy(asc(wmsLocations.locationCode));
-
-        // Calculate expiry status
-        const now = new Date();
-        const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-        let expiryStatus: 'none' | 'ok' | 'warning' | 'expired' = 'none';
-
-        if (product.earliestExpiry) {
-          if (product.earliestExpiry < now) {
-            expiryStatus = 'expired';
-          } else if (product.earliestExpiry <= ninetyDays) {
-            expiryStatus = 'warning';
-          } else {
-            expiryStatus = 'ok';
-          }
-        } else if (!product.hasPerishable) {
-          expiryStatus = 'ok';
-        }
-
-        const totalOpenBottles = locations.reduce(
-          (sum, location) => sum + (location.openBottles ?? 0),
-          0,
+    const productsWithLocations = products.map((product) => {
+      // A row with no pack size takes every pack of its wine, as before
+      const locations = pageLocations
+        .filter(
+          (location) =>
+            location.lwin18 === product.lwin18 &&
+            (product.caseConfig === null ||
+              location.caseConfig === product.caseConfig),
+        )
+        .map(
+          ({ lwin18: _lwin18, caseConfig: _caseConfig, ...location }) =>
+            location,
         );
 
-        return {
-          ...product,
-          locations: locations.map((location) => ({
-            ...location,
-            ownerCode: clientCodes.get(location.ownerId) ?? null,
-          })),
-          expiryStatus,
-          // Cases in bottles PLUS the loose bottles left by cracked cases —
-          // counting only cases reported 0 bottles for a bay holding five.
-          totalBottles:
-            product.totalCases * (product.caseConfig ?? 1) + totalOpenBottles,
-          totalOpenBottles,
-        };
-      }),
-    );
+      // Calculate expiry status
+      const now = new Date();
+      const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+      let expiryStatus: 'none' | 'ok' | 'warning' | 'expired' = 'none';
+
+      if (product.earliestExpiry) {
+        if (product.earliestExpiry < now) {
+          expiryStatus = 'expired';
+        } else if (product.earliestExpiry <= ninetyDays) {
+          expiryStatus = 'warning';
+        } else {
+          expiryStatus = 'ok';
+        }
+      } else if (!product.hasPerishable) {
+        expiryStatus = 'ok';
+      }
+
+      const totalOpenBottles = locations.reduce(
+        (sum, location) => sum + (location.openBottles ?? 0),
+        0,
+      );
+
+      return {
+        ...product,
+        locations: locations.map((location) => ({
+          ...location,
+          ownerCode: clientCodes.get(location.ownerId) ?? null,
+        })),
+        expiryStatus,
+        // Cases in bottles PLUS the loose bottles left by cracked cases —
+        // counting only cases reported 0 bottles for a bay holding five.
+        totalBottles:
+          product.totalCases * (product.caseConfig ?? 1) + totalOpenBottles,
+        totalOpenBottles,
+      };
+    });
 
     return {
       products: productsWithLocations,
