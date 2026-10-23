@@ -1,3 +1,9 @@
+## [2.0.493](https://github.com/craftandculture/Craft-Culture/compare/v2.0.492...v2.0.493) (2026-10-23)
+
+### Features
+
+* Previous and Next buttons beside the PCO number step through the order list ([ca9d17d](https://github.com/craftandculture/Craft-Culture/commit/ca9d17d44327b18d20c64dd118c856c97b0cfaf6))
+
 ## [2.0.492](https://github.com/craftandculture/Craft-Culture/compare/v2.0.491...v2.0.492) (2026-10-23)
 
 ### Features
