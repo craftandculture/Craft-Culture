@@ -1,3 +1,9 @@
+## [2.0.492](https://github.com/craftandculture/Craft-Culture/compare/v2.0.491...v2.0.492) (2026-10-23)
+
+### Features
+
+* freight quotes show the price per bottle, using the shipment's bottles when the request has none ([2f96372](https://github.com/craftandculture/Craft-Culture/commit/2f9637264847f682f7697349988e789f582e8d19))
+
 ## [2.0.491](https://github.com/craftandculture/Craft-Culture/compare/v2.0.490...v2.0.491) (2026-10-23)
 
 ### Bug Fixes
