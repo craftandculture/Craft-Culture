@@ -12,6 +12,7 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import useTaskMutations from '../hooks/useTaskMutations';
 import type { JobInput } from '../schemas/jobSchema';
 import type { Board, BoardTask } from '../types/Board';
+import hasWaitLoop from '../utils/hasWaitLoop';
 import quickDue, { type QuickDue } from '../utils/quickDue';
 
 interface JobFormProps {
@@ -101,6 +102,7 @@ const JobForm = ({ board, today, task, open, onOpenChange, onSaved, prefill }: J
     if (areaId === NEW_AREA && !newAreaName.trim()) return setError('Name the new area.');
     if (cleanParts.some((p) => !p.what.trim())) return setError('Fill in what each person does, in the box next to their name.');
     if (urgent && cleanParts.some((p) => !p.due)) return setError('Urgent jobs need a due date on every part.');
+    if (hasWaitLoop(cleanParts)) return setError('These parts wait for each other, so neither can start. Change one of the "waits for" choices.');
     if (cleanParts.some((p) => !owners.some((o) => o.id === p.ownerId))) {
       return setError('A part belongs to a partner this job is no longer shared with. Give it to someone else.');
     }

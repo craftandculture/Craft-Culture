@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import hasWaitLoop from '../utils/hasWaitLoop';
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a YYYY-MM-DD date');
 
 export const partInputSchema = z.object({
@@ -51,7 +53,11 @@ const jobSchema = z
   .refine(
     (job) => job.parts.every((p, i) => p.waitsForIndex === null || (p.waitsForIndex !== i && p.waitsForIndex < job.parts.length)),
     { message: 'A part can only wait for another part of the same job', path: ['parts'] },
-  );
+  )
+  .refine((job) => !hasWaitLoop(job.parts), {
+    message: 'These parts wait for each other, so neither can start',
+    path: ['parts'],
+  });
 
 export type JobInput = z.infer<typeof jobSchema>;
 
