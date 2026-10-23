@@ -1,3 +1,9 @@
+## [2.0.498](https://github.com/craftandculture/Craft-Culture/compare/v2.0.497...v2.0.498) (2026-10-23)
+
+### Bug Fixes
+
+* the Wine Labs check asks for each vintage's details, where drinking windows are held, and reads a 0000 vintage as non-vintage ([f1beaa8](https://github.com/craftandculture/Craft-Culture/commit/f1beaa8412fc4d3e33909a7e7f158a1122547c7d))
+
 ## [2.0.497](https://github.com/craftandculture/Craft-Culture/compare/v2.0.496...v2.0.497) (2026-10-23)
 
 ### Bug Fixes
