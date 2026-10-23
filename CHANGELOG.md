@@ -1,3 +1,9 @@
+## [2.0.497](https://github.com/craftandculture/Craft-Culture/compare/v2.0.496...v2.0.497) (2026-10-23)
+
+### Bug Fixes
+
+* the Wine Labs check claims each wine before checking it, so two runs at once cannot pay twice, and shows the calls made and the details returned ([79d33cb](https://github.com/craftandculture/Craft-Culture/commit/79d33cbb5b2477ec4bc51e471fc4b199ec5af796))
+
 ## [2.0.496](https://github.com/craftandculture/Craft-Culture/compare/v2.0.495...v2.0.496) (2026-10-23)
 
 ### Features
