@@ -15,6 +15,7 @@ import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
 import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
 import quoteUnitPrices from '../utils/quoteUnitPrices';
+import requestUnitCounts from '../utils/requestUnitCounts';
 
 /**
  * List quote requests with filtering and pagination
@@ -115,6 +116,7 @@ const adminGetQuoteRequests = adminProcedure
           shipmentNumber: logisticsShipments.shipmentNumber,
           status: logisticsShipments.status,
         },
+        jobBottles: logisticsShipments.totalBottles,
       })
       .from(logisticsQuoteRequests)
       .leftJoin(users, eq(logisticsQuoteRequests.requestedBy, users.id))
@@ -181,7 +183,9 @@ const adminGetQuoteRequests = adminProcedure
       : [];
 
     return {
-      requests: items.map((r) => {
+      requests: items.map(({ jobBottles, ...r }) => {
+        const counts = requestUnitCounts(r, jobBottles);
+
         // Ranked in USD per 75cl, so a quote in pounds and one in dollars compare
         const quotes = quoteRows
           .filter((q) => q.requestId === r.id)
@@ -191,7 +195,7 @@ const adminGetQuoteRequests = adminProcedure
             return {
               ...q,
               totalUsd: usd,
-              ...quoteUnitPrices(usd, r.totalBottles, r.total75clEquivalents),
+              ...quoteUnitPrices(usd, counts.bottles, counts.equivalents),
             };
           })
           .sort(
@@ -204,6 +208,8 @@ const adminGetQuoteRequests = adminProcedure
 
         return {
           ...r,
+          bottles: counts.bottles,
+          bottlesFrom: counts.bottlesFrom,
           quotes,
           recipients,
           nextStep: quoteRequestNextStep({ ...r, quotes, recipients }),

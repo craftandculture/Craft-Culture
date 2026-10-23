@@ -104,6 +104,15 @@ const modeLabel: Record<string, string> = {
   road: 'Road',
 };
 
+/**
+ * The forwarder a quote is from, as the list shows it
+ *
+ * @param name - Forwarder name as stored
+ * @returns The name, or a prompt when the quote was entered without one
+ */
+const forwarderLabel = (name: string | null) =>
+  !name || name === 'Unknown' ? 'Forwarder not set' : name;
+
 /** The most quotes the comparison screen sets side by side */
 const MAX_COMPARE = 5;
 
@@ -440,15 +449,15 @@ const FreightQuotesPage = () => {
                 const live = r.quotes.filter((q) => isLive(q.status));
                 const best = live[0];
                 const step = nextStepLabel[r.nextStep];
-                const pendingCount = r.quotes.filter(
-                  (q) => q.status === 'pending',
-                ).length;
                 const compareIds = (live.length >= 2 ? live : r.quotes)
                   .slice(0, MAX_COMPARE)
                   .map((q) => q.id);
                 const href = `/platform/admin/logistics/requests/${r.id}`;
                 const cargo = [
                   titleCase(r.productType),
+                  r.bottles
+                    ? `${r.bottles.toLocaleString('en-GB')} bottles`
+                    : null,
                   r.totalCases ? `${r.totalCases} cases` : null,
                   r.totalPallets ? `${r.totalPallets} pallets` : null,
                   r.totalWeightKg ? `${r.totalWeightKg.toFixed(0)} kg` : null,
@@ -502,7 +511,9 @@ const FreightQuotesPage = () => {
                         </div>
                         <p className="text-text-primary mt-0.5 truncate text-sm">
                           {r.clientName ? (
-                            <span className="font-semibold">{r.clientName}</span>
+                            <span className="font-semibold">
+                              {r.clientName}
+                            </span>
                           ) : (
                             <span className="text-text-muted">No client</span>
                           )}
@@ -527,9 +538,8 @@ const FreightQuotesPage = () => {
                             ? 'No quotes yet'
                             : `${r.quotes.length} quote${r.quotes.length === 1 ? '' : 's'}`}
                           {best && r.quotes.length > 0
-                            ? ` · best ${best.per75clUsd != null ? `${usd(best.per75clUsd)} per 75cl` : money(best.totalPrice, best.currency)}`
+                            ? ` · best ${best.perBottleUsd != null ? `${usd(best.perBottleUsd)} / bottle` : money(best.totalPrice, best.currency)}`
                             : ''}
-                          {pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
                           {r.marginUsd != null
                             ? ` · margin ${usd(r.marginUsd)}`
                             : ''}
@@ -582,6 +592,15 @@ const FreightQuotesPage = () => {
                       </div>
                     )}
 
+                    {r.quotes.length > 0 && !r.bottles && (
+                      <Link
+                        href={href}
+                        className="text-text-muted hover:text-text-primary mt-2 inline-block text-xs underline-offset-2 hover:underline"
+                      >
+                        Add the bottle count to see the price per bottle
+                      </Link>
+                    )}
+
                     {r.quotes.length > 0 && (
                       <ul className="border-border-muted mt-2 space-y-1 border-l-2 pl-3">
                         {r.quotes.map((q) => (
@@ -593,22 +612,35 @@ const FreightQuotesPage = () => {
                               <span className="text-text-muted font-mono text-xs">
                                 {q.quoteNumber}
                               </span>
-                              <span className="text-text-primary min-w-0 flex-1 truncate">
-                                {q.forwarderName}
+                              <span
+                                className={`min-w-0 flex-1 truncate ${
+                                  forwarderLabel(q.forwarderName) ===
+                                  q.forwarderName
+                                    ? 'text-text-primary'
+                                    : 'text-text-muted italic'
+                                }`}
+                              >
+                                {forwarderLabel(q.forwarderName)}
                               </span>
                               {q.transitDays ? (
                                 <span className="text-text-muted hidden text-xs sm:inline">
                                   {q.transitDays} days
                                 </span>
                               ) : null}
-                              <span className="text-text-primary tabular-nums">
-                                {money(q.totalPrice, q.currency)}
-                              </span>
-                              {q.per75clUsd != null && (
-                                <span className="text-text-muted hidden text-xs tabular-nums md:inline">
-                                  {usd(q.per75clUsd)} / 75cl
+                              <span className="text-right tabular-nums">
+                                <span className="text-text-primary block font-semibold">
+                                  {money(q.totalPrice, q.currency)}
                                 </span>
-                              )}
+                                {q.perBottleUsd != null && (
+                                  <span className="text-text-muted block text-xs">
+                                    {usd(q.perBottleUsd)} / bottle
+                                    {q.per75clUsd != null &&
+                                    q.per75clUsd !== q.perBottleUsd
+                                      ? ` · ${usd(q.per75clUsd)} / 75cl`
+                                      : ''}
+                                  </span>
+                                )}
+                              </span>
                               {best && q.id === best.id && live.length > 1 && (
                                 <span className={pillClass('emerald')}>
                                   Best price

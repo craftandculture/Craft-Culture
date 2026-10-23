@@ -270,7 +270,11 @@ const RequestDetailsCard = ({ request, editing, onEditingChange }: RequestDetail
   const facts = [
     { label: 'Mode', value: r.transportMode ? MODE[r.transportMode] : 'Air or sea' },
     { label: 'Cases', value: num(r.totalCases) },
-    { label: 'Bottles', value: num(r.totalBottles) },
+    {
+      label: 'Bottles',
+      value:
+        r.bottlesFrom === 'shipment' ? `${num(r.bottles)} (from the shipment)` : num(r.totalBottles),
+    },
     {
       label: '75cl equivalent',
       value: r.total75clEquivalents && r.total75clEquivalents !== r.totalBottles ? num(r.total75clEquivalents) : null,
@@ -295,7 +299,7 @@ const RequestDetailsCard = ({ request, editing, onEditingChange }: RequestDetail
 
   const missing = [
     !sized && 'the cases, bottles or weight (forwarders cannot quote without them)',
-    sized && !r.totalBottles && 'the bottle count (for prices per bottle)',
+    sized && !r.bottles && 'the bottle count (for prices per bottle)',
     !r.clientName && !r.clientEmail && "the client's name and email (for their quote)",
   ].filter((m): m is string => !!m);
 

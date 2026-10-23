@@ -82,8 +82,8 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
     !value || !Number.isFinite(typed) || typed <= 0
       ? null
       : basis === 'bottle'
-        ? request.totalBottles
-          ? Math.round(typed * request.totalBottles * 100) / 100
+        ? request.bottles
+          ? Math.round(typed * request.bottles * 100) / 100
           : null
         : typed;
   const cost = quote.totalUsd;
@@ -120,12 +120,12 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
           <button
             type="button"
             className={secondaryButton}
-            disabled={!request.totalBottles}
+            disabled={!request.bottles}
             onClick={() => {
-              if (priceUsd != null && request.totalBottles) {
+              if (priceUsd != null && request.bottles) {
                 setValue(
                   basis === 'total'
-                    ? (Math.round((priceUsd / request.totalBottles) * 100) / 100).toString()
+                    ? (Math.round((priceUsd / request.bottles) * 100) / 100).toString()
                     : priceUsd.toString(),
                 );
               }

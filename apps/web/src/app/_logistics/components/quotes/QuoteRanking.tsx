@@ -68,7 +68,7 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect, onEdit, onAddBottles
         <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
           {request.quotes.length}
         </span>
-        {!request.totalBottles && request.quotes.length > 0 && (
+        {!request.bottles && request.quotes.length > 0 && (
           <button type="button" className="text-xs text-amber-700 hover:underline dark:text-amber-300" onClick={onAddBottles}>
             Add the bottle count to see prices per bottle
           </button>

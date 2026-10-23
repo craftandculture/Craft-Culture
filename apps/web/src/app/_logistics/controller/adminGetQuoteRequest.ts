@@ -22,6 +22,7 @@ import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
 import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
 import quoteUnitPrices from '../utils/quoteUnitPrices';
+import requestUnitCounts from '../utils/requestUnitCounts';
 
 /**
  * Get a single quote request with full details
@@ -121,6 +122,23 @@ const adminGetQuoteRequest = adminProcedure
         ])
       : [[], []];
 
+    // The SHP job the request is quoted for
+    const [job] = request.shipmentId
+      ? await db
+          .select({
+            id: logisticsShipments.id,
+            shipmentNumber: logisticsShipments.shipmentNumber,
+            status: logisticsShipments.status,
+            type: logisticsShipments.type,
+            totalBottles: logisticsShipments.totalBottles,
+          })
+          .from(logisticsShipments)
+          .where(eq(logisticsShipments.id, request.shipmentId))
+          .limit(1)
+      : [];
+
+    const counts = requestUnitCounts(request, job?.totalBottles);
+
     const now = Date.now();
     const quotes = quoteRows
       .map((q) => {
@@ -129,11 +147,7 @@ const adminGetQuoteRequest = adminProcedure
         return {
           ...q,
           totalUsd: usd,
-          ...quoteUnitPrices(
-            usd,
-            request.totalBottles,
-            request.total75clEquivalents,
-          ),
+          ...quoteUnitPrices(usd, counts.bottles, counts.equivalents),
           isExpired:
             q.status === 'expired' ||
             (q.status === 'pending' &&
@@ -196,22 +210,10 @@ const adminGetQuoteRequest = adminProcedure
       .orderBy(desc(logisticsQuoteEmails.createdAt))
       .catch(() => []);
 
-    // The SHP job the request is quoted for
-    const [job] = request.shipmentId
-      ? await db
-          .select({
-            id: logisticsShipments.id,
-            shipmentNumber: logisticsShipments.shipmentNumber,
-            status: logisticsShipments.status,
-            type: logisticsShipments.type,
-          })
-          .from(logisticsShipments)
-          .where(eq(logisticsShipments.id, request.shipmentId))
-          .limit(1)
-      : [];
-
     return {
       ...request,
+      bottles: counts.bottles,
+      bottlesFrom: counts.bottlesFrom,
       job: job ?? null,
       requester,
       assignee,

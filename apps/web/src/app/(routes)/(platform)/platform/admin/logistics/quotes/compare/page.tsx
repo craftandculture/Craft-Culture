@@ -252,9 +252,12 @@ const QuoteComparePage = () => {
                             {formatCurrency(quote.totalUsd)} in USD
                           </Typography>
                         )}
-                        {quote.per75clUsd != null && (
+                        {quote.perBottleUsd != null && (
                           <Typography variant="bodyXs" colorRole="muted">
-                            USD {quote.per75clUsd.toFixed(2)} per 75cl · USD {quote.perBottleUsd?.toFixed(2) ?? "—"} per bottle
+                            USD {quote.perBottleUsd.toFixed(2)} per bottle
+                            {quote.per75clUsd != null && quote.per75clUsd !== quote.perBottleUsd
+                              ? ` · USD ${quote.per75clUsd.toFixed(2)} per 75cl`
+                              : ''}
                           </Typography>
                         )}
                         {isLowestPrice && quotes.length > 1 && comparison.currency && (
