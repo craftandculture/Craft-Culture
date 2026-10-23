@@ -1,3 +1,9 @@
+## [2.0.496](https://github.com/craftandculture/Craft-Culture/compare/v2.0.495...v2.0.496) (2026-10-23)
+
+### Features
+
+* a Wine Labs check page shows how well Wine Labs knows the wines we hold, with drinking windows and retail prices ([d02d591](https://github.com/craftandculture/Craft-Culture/commit/d02d591d1d8fbe05fb63d63574ff40adba8a480d))
+
 ## [2.0.495](https://github.com/craftandculture/Craft-Culture/compare/v2.0.494...v2.0.495) (2026-10-23)
 
 ### Features
