@@ -88,6 +88,11 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
     enabled: !isLeaving,
   });
 
+  const { data: me } = useQuery(api.users.getMe.queryOptions());
+
+  // Your own role is locked; another admin has to change it
+  const isSelf = me?.id === userId;
+
   // Mutations
   const { mutate: updateUser, isPending: isUpdating } = useMutation(
     api.users.adminUpdate.mutationOptions({
@@ -548,6 +553,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
                       <Select
                         value={editedRole}
                         onValueChange={(v) => setEditedRole(v as typeof editedRole)}
+                        disabled={isSelf}
                       >
                         <SelectTrigger>
                           <SelectValue />

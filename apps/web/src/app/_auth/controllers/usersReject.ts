@@ -22,6 +22,13 @@ const usersReject = adminProcedure
   .mutation(async ({ input, ctx }) => {
     const { userId } = input;
 
+    if (userId === ctx.user.id) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Ask another admin to change your own access',
+      });
+    }
+
     // Get the user to reject
     const [user] = await db
       .select()
