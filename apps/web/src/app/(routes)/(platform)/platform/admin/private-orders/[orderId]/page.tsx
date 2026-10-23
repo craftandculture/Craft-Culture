@@ -7,6 +7,8 @@ import {
   IconBuildingWarehouse,
   IconCheck,
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconCurrencyDollar,
   IconEdit,
   IconHistory,
@@ -23,7 +25,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
@@ -42,6 +44,7 @@ import StockManagementSection from '@/app/_privateClientOrders/components/StockM
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
+import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
 import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -189,6 +192,13 @@ const AdminPrivateOrderDetailPage = () => {
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
   const [distributorPaymentRef, setDistributorPaymentRef] = useState('');
   const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
+  // The orders either side of this one on the list it was opened from
+  const [neighbours, setNeighbours] = useState<ReturnType<typeof pcoListNeighbours>>(null);
+
+  useEffect(() => {
+    setNeighbours(pcoListNeighbours(orderId));
+  }, [orderId]);
+
 
   // Fetch order details
   const {
@@ -491,6 +501,24 @@ const AdminPrivateOrderDetailPage = () => {
     });
   };
 
+  // Edits on this page that are not saved yet: a line being edited or added, an LWIN being set, a payment reference typed
+  const hasUnsavedChanges =
+    !!editingItem || isAddingItem || !!codingItemId || !!partnerPaymentRef.trim() || !!distributorPaymentRef.trim();
+
+  /**
+   * Open the previous or next order, asking first when this one has unsaved edits
+   */
+  const goToOrder = (target: { id: string; orderNumber: string } | null) => {
+    if (!target) return;
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(`You have unsaved changes on ${order?.orderNumber}. Leave without saving and open ${target.orderNumber}?`)
+    ) {
+      return;
+    }
+    router.push(`/platform/admin/private-orders/${target.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -547,6 +575,33 @@ const AdminPrivateOrderDetailPage = () => {
               </Link>
             </Button>
             <Typography variant="headingLg">{order.orderNumber}</Typography>
+            {neighbours && neighbours.total > 1 && (
+              <div className="flex items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => goToOrder(neighbours.previous)}
+                  isDisabled={!neighbours.previous}
+                  aria-label={neighbours.previous ? `Previous order, ${neighbours.previous.orderNumber}` : 'No previous order'}
+                  title={neighbours.previous ? `Previous: ${neighbours.previous.orderNumber}` : undefined}
+                >
+                  <Icon icon={IconChevronLeft} size="sm" />
+                </Button>
+                <Typography variant="bodyXs" colorRole="muted" className="tabular-nums">
+                  {neighbours.position} of {neighbours.total}
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => goToOrder(neighbours.next)}
+                  isDisabled={!neighbours.next}
+                  aria-label={neighbours.next ? `Next order, ${neighbours.next.orderNumber}` : 'No next order'}
+                  title={neighbours.next ? `Next: ${neighbours.next.orderNumber}` : undefined}
+                >
+                  <Icon icon={IconChevronRight} size="sm" />
+                </Button>
+              </div>
+            )}
             <PrivateOrderStatusBadge status={order.status} />
           </div>
 

@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import type { PcoStage } from '@/app/_privateClientOrders/constants';
 import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
+import { savePcoListOrder } from '@/app/_privateClientOrders/utils/pcoListOrder';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -226,6 +227,12 @@ const AdminPrivateOrdersPage = () => {
 
   const orders = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
+
+  // An order's Previous and Next buttons step through this list as shown
+  useEffect(() => {
+    if (!data) return;
+    savePcoListOrder(data.data.map((o) => ({ id: o.id, orderNumber: o.orderNumber })));
+  }, [data]);
 
   // Counts for the quick filters: one row fetched each, the total is what matters
   const countOf = (filters: { status?: OrderStatus; distributor?: string }) =>
