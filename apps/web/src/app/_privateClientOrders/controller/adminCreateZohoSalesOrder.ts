@@ -249,8 +249,8 @@ const adminCreateZohoSalesOrder = adminProcedure
         line_items: lineItems,
         notes:
           `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}. ` +
-          'Priced at the agreed line prices — what the distributor is billed, ' +
-          'before their own margin and VAT. Check before confirming.' +
+          'Priced at Landed Duty Free (the agreed line prices plus the C&C margin), ' +
+          'what the distributor is billed before their own margin and VAT. Check before confirming.' +
           (plan.unpriced.length > 0
             ? ` NEEDS A PRICE — no price on the order line, sent at zero: ${plan.unpriced.join('; ')}.`
             : '') +

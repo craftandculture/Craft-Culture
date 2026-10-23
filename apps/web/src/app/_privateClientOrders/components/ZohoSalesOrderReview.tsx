@@ -213,8 +213,9 @@ const ZohoSalesOrderReview = ({
           </Typography>
         </div>
         <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-          Priced at what each line was agreed at. The distributor adds their own
-          margin and VAT to reach the client&rsquo;s price.
+          Priced at Landed Duty Free: each line&rsquo;s agreed price plus the C&amp;C
+          margin. The distributor adds their own margin and VAT to reach the
+          client&rsquo;s price.
         </Typography>
       </div>
     </div>

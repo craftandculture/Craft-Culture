@@ -1,6 +1,8 @@
 import { asc, eq } from 'drizzle-orm';
 
 import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
+import { getOrderPCOVariables } from '@/app/_pricing/data/getOrderPricingOverrides';
+import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
@@ -9,6 +11,8 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
+import { DEFAULT_EXCHANGE_RATES } from '@/lib/pricing/defaults';
+import { calculatePCOAdmin } from '@/lib/pricing/pricingEngine';
 
 import resolveTradePrices from './resolveTradePrices';
 import saleLwin18Of from './saleLwin18Of';
@@ -122,6 +126,22 @@ const planZohoSalesOrder = async (orderId: string) => {
     : [];
 
   const prices = await resolveTradePrices();
+
+  /*
+    The distributor is billed at Landed Duty Free: the line's agreed price with
+    C&C's margin on top, exactly as the order page and the order's own totals
+    work it out (order override, then partner override, then the global PCO
+    variables). Billing the bare line price left the margin off every invoice:
+    Cru's Discovery 6 went out at 195.28 instead of 224.46.
+  */
+  const globalVariables = await getPCOVariables();
+  const variables = globalVariables
+    ? await getOrderPCOVariables(orderId, order.partnerId ?? null, globalVariables)
+    : null;
+  const landedDutyFree = (linePrice: number) =>
+    variables
+      ? Math.round(calculatePCOAdmin(linePrice, variables, DEFAULT_EXCHANGE_RATES).landedDutyFree * 100) / 100
+      : null;
 
   const blockers: string[] = [];
   let needsZohoContact: {
@@ -249,12 +269,11 @@ const planZohoSalesOrder = async (orderId: string) => {
       tradePerBottle: trade?.perBottle ?? null,
       tradeSource: trade?.source ?? null,
       /*
-        The price this line was agreed at. The distributor is invoiced what was
-        struck with them, not what the cost model would compute today — a
-        catalogue that moves between the order and the invoice must not quietly
-        change the amount somebody is billed.
+        Landed Duty Free on the price this line was agreed at. The agreed price
+        stays the base, never the catalogue's figure of the day; C&C's margin
+        goes on top of it, as on the order's own Landed Duty Free.
       */
-      ratePerCase: item.pricePerCaseUsd,
+      ratePerCase: item.pricePerCaseUsd > 0 ? (landedDutyFree(item.pricePerCaseUsd) ?? 0) : 0,
       tradeRatePerCase: trade
         ? Math.round(trade.perBottle * pack * 100) / 100
         : null,
@@ -281,6 +300,10 @@ const planZohoSalesOrder = async (orderId: string) => {
         `${line.wine} — ${line.ratePerCase.toFixed(2)} vs ${line.tradeRatePerCase?.toFixed(2)} trade`,
     );
 
+  if (!variables) {
+    blockers.push('The PCO pricing settings could not be loaded, so the Landed Duty Free price cannot be worked out. Try again.');
+  }
+
   if (noLwin.length > 0) {
     blockers.push(
       `No LWIN on ${noLwin.length} line${noLwin.length === 1 ? '' : 's'}: ${noLwin.join('; ')}. Set the LWIN on each line (the edit button) first.`,
@@ -302,6 +325,8 @@ const planZohoSalesOrder = async (orderId: string) => {
         as the client's for a day.
       */
       clientTotalUsd: order.totalUsd,
+      /** The order's own Landed Duty Free, to check the sales order against */
+      landedDutyFreeUsd: order.subtotalUsd,
     },
     customer: distributor?.zohoContactId
       ? { contactId: distributor.zohoContactId, name: distributor.businessName }
@@ -312,7 +337,7 @@ const planZohoSalesOrder = async (orderId: string) => {
     needsZohoContact,
     /** Lines we could not price, which are created at zero and must be filled in */
     unpriced,
-    /** What the sales order bills — the agreed line prices */
+    /** What the sales order bills: Landed Duty Free on the agreed line prices */
     orderTotal: lines.reduce(
       (sum, line) => sum + line.ratePerCase * line.cases,
       0,
