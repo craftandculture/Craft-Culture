@@ -1,3 +1,10 @@
+## [2.0.494](https://github.com/craftandculture/Craft-Culture/compare/v2.0.493...v2.0.494) (2026-10-23)
+
+### Features
+
+* an old order that was already picked can be removed from the pick queue ([c774f53](https://github.com/craftandculture/Craft-Culture/commit/c774f530e3470df922cbd4a56a66e0f89c0aba3a))
+* the logistics dashboard splits jobs still waiting on a freight quote into their own Quotes tab ([20b8b38](https://github.com/craftandculture/Craft-Culture/commit/20b8b38cd1632d524908ffd44393673f533c9ccb))
+
 ## [2.0.493](https://github.com/craftandculture/Craft-Culture/compare/v2.0.492...v2.0.493) (2026-10-23)
 
 ### Features
