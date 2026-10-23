@@ -1,4 +1,4 @@
-import { desc, isNotNull } from 'drizzle-orm';
+import { desc, gte, isNotNull, sql } from 'drizzle-orm';
 
 import getStockWines from '@/app/_winelabs/data/getStockWines';
 import db from '@/database/client';
@@ -16,7 +16,10 @@ import serverConfig from '@/server.config';
  * @returns Configuration, credits, counts and the exceptions list
  */
 const getCoverageSummary = async () => {
-  const [wines, rows, credits, [lastError]] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+  const [wines, rows, credits, [lastError], calls] = await Promise.all([
     getStockWines(),
     db.select().from(winelabsWines),
     getWinelabsCreditsThisMonth(),
@@ -26,6 +29,18 @@ const getCoverageSummary = async () => {
       .where(isNotNull(winelabsCalls.error))
       .orderBy(desc(winelabsCalls.createdAt))
       .limit(1),
+    // What was actually called this month, to set against Wine Labs' own usage page
+    db
+      .select({
+        endpoint: winelabsCalls.endpoint,
+        status: winelabsCalls.status,
+        calls: sql<number>`count(*)::int`,
+        credits: sql<number>`coalesce(sum(${winelabsCalls.credits}), 0)::int`,
+      })
+      .from(winelabsCalls)
+      .where(gte(winelabsCalls.createdAt, monthStart))
+      .groupBy(winelabsCalls.endpoint, winelabsCalls.status)
+      .orderBy(winelabsCalls.endpoint, winelabsCalls.status),
   ]);
 
   const byLwin11 = new Map(rows.map((row) => [row.lwin11, row]));
@@ -49,6 +64,8 @@ const getCoverageSummary = async () => {
     internalKnown: count('internal_known'),
     hasPrice: checked.filter((row) => row.priceMedianUsd !== null).length,
     hasWindow: checked.filter((row) => row.drinkFrom !== null).length,
+    hasInfo: checked.filter((row) => row.info !== null).length,
+    calls,
     exceptions: checked.filter((row) => row.matchStatus !== 'agrees'),
     sample: checked.filter((row) => row.matchStatus === 'agrees').slice(0, 25),
   };

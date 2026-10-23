@@ -16,6 +16,7 @@ const STATUS = {
   different: { label: 'Different wine', tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
   not_found: { label: 'Not found', tone: 'bg-fill-muted text-text-muted' },
   internal_known: { label: 'Internal code known', tone: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
+  checking: { label: 'Checking', tone: 'bg-fill-muted text-text-muted' },
 } as const;
 
 const usd = (value: number | null) =>
@@ -55,6 +56,14 @@ const Rows = ({ rows }: { rows: CoverageSummary['exceptions'] }) => (
                 <span className="font-medium">{row.ourName}</span>
                 <span className="text-text-muted"> {row.vintage === '1000' ? 'NV' : row.vintage}</span>
                 <span className="block font-mono text-xs text-text-muted">{row.ourLwin7}</span>
+                {row.info && (
+                  <details className="mt-1 text-xs text-text-muted">
+                    <summary className="cursor-pointer">Wine Labs details</summary>
+                    <pre className="mt-1 max-w-xl overflow-x-auto whitespace-pre-wrap rounded bg-fill-muted p-2">
+                      {JSON.stringify(row.info, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </td>
               <td className="px-3 py-2">
                 {row.wlLwin7 ? (
@@ -123,9 +132,9 @@ const WineLabsPage = async () => {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Tile
-          label="Credits this month"
+          label="Credits logged this month"
           value={summary.credits.toLocaleString('en-US')}
-          note={`of ${summary.cap.toLocaleString('en-US')} cap`}
+          note={`at list rates, of ${summary.cap.toLocaleString('en-US')} cap`}
           tone={capReached ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-200' : 'bg-fill-muted'}
         />
         <Tile
@@ -143,18 +152,50 @@ const WineLabsPage = async () => {
         <Tile
           label="Has a market price"
           value={pct(summary.hasPrice)}
-          note={`${summary.hasWindow} with a drinking window`}
+          note={`details for ${summary.hasInfo} · ${summary.hasWindow} with a drinking window`}
           tone="bg-sky-50 text-sky-800 dark:bg-sky-900/20 dark:text-sky-200"
         />
       </div>
 
-      <RunBatchForm defaultSize={summary.credits < 100 ? 3 : 25} disabled={!summary.configured || capReached} />
+      <RunBatchForm defaultSize={3} disabled={!summary.configured || capReached} />
 
       {summary.lastError && (
         <p className="text-xs text-text-muted">
           Last Wine Labs error ({summary.lastError.endpoint},{' '}
           {summary.lastError.at.toLocaleString('en-GB', { timeZone: 'Asia/Dubai' })}): {summary.lastError.error}
         </p>
+      )}
+
+      {summary.calls.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Calls this month</h2>
+          <p className="text-xs text-text-muted">
+            Credits here are counted at Wine Labs&apos; list rates, which is the safe side for the cap. What is
+            actually billed is on the Data API page at winelabs.ai and has been lower.
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-border-muted">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
+                <tr>
+                  <th className="px-3 py-2">Endpoint</th>
+                  <th className="px-3 py-2">Response</th>
+                  <th className="px-3 py-2 text-right">Calls</th>
+                  <th className="px-3 py-2 text-right">Credits logged</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-muted">
+                {summary.calls.map((call) => (
+                  <tr key={`${call.endpoint}-${call.status}`}>
+                    <td className="px-3 py-2 font-mono text-xs">{call.endpoint}</td>
+                    <td className="px-3 py-2 tabular-nums">{call.status || 'unreachable'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{call.calls}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{call.credits}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       <section className="space-y-2">

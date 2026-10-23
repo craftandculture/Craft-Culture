@@ -1,5 +1,6 @@
 'use server';
 
+import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
@@ -46,11 +47,24 @@ const runCoverageBatch = async (
 
   let checked = 0;
   let error: string | null = null;
-  for (const wine of todo.slice(0, size)) {
+  for (const wine of todo) {
+    if (checked >= size) break;
+
+    // Claim the wine first, so a second run started alongside this one skips it rather than paying twice
+    const [claimed] = await db
+      .insert(winelabsWines)
+      .values({ lwin11: wine.lwin11, ourLwin7: wine.lwin7, ourName: wine.name, matchStatus: 'checking' })
+      .onConflictDoNothing()
+      .returning({ lwin11: winelabsWines.lwin11 });
+    if (!claimed) continue;
+
     try {
       await checkWine(wine);
       checked += 1;
     } catch (caught) {
+      await db
+        .delete(winelabsWines)
+        .where(and(eq(winelabsWines.lwin11, wine.lwin11), eq(winelabsWines.matchStatus, 'checking')));
       error = `${wine.name} ${wine.vintage}: ${caught instanceof Error ? caught.message : String(caught)}`;
       console.error('Wine Labs check failed', { lwin11: wine.lwin11, caught });
       break;
