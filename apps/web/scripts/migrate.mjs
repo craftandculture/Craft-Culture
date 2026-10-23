@@ -3502,6 +3502,49 @@ const runMigrations = async () => {
     }
     console.log('✅ forwarder coverage ready');
 
+    /*
+      Wine Labs market data (Oct 2026). One row per wine and vintage (LWIN11)
+      so every screen reads the same cached answer and a credit is spent once,
+      plus a log of each call so a month's spend can be capped.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_wines" (
+        "lwin11" text PRIMARY KEY NOT NULL,
+        "our_lwin7" text NOT NULL,
+        "our_name" text NOT NULL,
+        "match_status" text NOT NULL,
+        "wl_lwin7" text,
+        "wl_lwin" text,
+        "wl_id" text,
+        "wl_display_name" text,
+        "info" jsonb,
+        "drink_from" integer,
+        "drink_to" integer,
+        "info_fetched_at" timestamp,
+        "price" jsonb,
+        "price_median_usd" double precision,
+        "price_count" integer,
+        "price_fetched_at" timestamp,
+        "matched_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_calls" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "endpoint" text NOT NULL,
+        "credits" integer NOT NULL,
+        "status" integer NOT NULL,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "winelabs_calls_created_at_idx" ON "winelabs_calls" ("created_at")`,
+    );
+    console.log('✅ winelabs cache ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

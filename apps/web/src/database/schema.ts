@@ -8206,3 +8206,52 @@ export const cellarAccessGrants = pgTable(
 );
 
 export type CellarAccessGrant = typeof cellarAccessGrants.$inferSelect;
+
+/**
+ * Wine Labs answers, one row per wine and vintage (LWIN11)
+ *
+ * Every screen that wants a Wine Labs fact reads it here, so a credit is
+ * spent once per wine rather than once per page view. Nothing here is ever
+ * copied onto our own records: the match is a suggestion for staff to confirm
+ * and the price is retail, duty-paid, in USD, never our in-bond price.
+ */
+export const winelabsWines = pgTable('winelabs_wines', {
+  lwin11: text('lwin11').primaryKey(),
+  ourLwin7: text('our_lwin7').notNull(),
+  ourName: text('our_name').notNull(),
+  /** agrees | different | not_found | internal_known | error */
+  matchStatus: text('match_status').notNull(),
+  wlLwin7: text('wl_lwin7'),
+  wlLwin: text('wl_lwin'),
+  wlId: text('wl_id'),
+  wlDisplayName: text('wl_display_name'),
+  info: jsonb('info').$type<Record<string, unknown>>(),
+  drinkFrom: integer('drink_from'),
+  drinkTo: integer('drink_to'),
+  infoFetchedAt: timestamp('info_fetched_at', { mode: 'date' }),
+  price: jsonb('price').$type<Record<string, unknown>>(),
+  priceMedianUsd: doublePrecision('price_median_usd'),
+  priceCount: integer('price_count'),
+  priceFetchedAt: timestamp('price_fetched_at', { mode: 'date' }),
+  matchedAt: timestamp('matched_at', { mode: 'date' }).notNull().defaultNow(),
+  ...timestamps,
+});
+
+export type WinelabsWine = typeof winelabsWines.$inferSelect;
+
+/**
+ * Each Wine Labs call and the credits it cost, so a month's spend can be
+ * shown and capped
+ */
+export const winelabsCalls = pgTable(
+  'winelabs_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    endpoint: text('endpoint').notNull(),
+    credits: integer('credits').notNull(),
+    status: integer('status').notNull(),
+    error: text('error'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('winelabs_calls_created_at_idx').on(table.createdAt)],
+);

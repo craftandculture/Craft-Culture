@@ -34,6 +34,11 @@ const envSchema = z.object({
   WMS_DEVICE_TOKEN: z.string().optional(),
   WMS_DEVICE_USER_EMAIL: z.string().email().optional(),
   ZEBRA_PRINTER_IP: z.string().optional(),
+  // Wine Labs market data: the account's user_id, from winelabs.ai/api/usage
+  WINELABS_USER_ID: z.string().optional(),
+  WINELABS_BASE_URL: z.string().url().default('https://external-api.wine-labs.com'),
+  // Credits a calendar month may spend before calls stop; the plan allows 60k
+  WINELABS_MONTHLY_CREDIT_CAP: z.string().optional(),
 });
 
 const rawEnv = {
@@ -60,6 +65,9 @@ const rawEnv = {
   WMS_DEVICE_TOKEN: process.env.WMS_DEVICE_TOKEN,
   WMS_DEVICE_USER_EMAIL: process.env.WMS_DEVICE_USER_EMAIL,
   ZEBRA_PRINTER_IP: process.env.ZEBRA_PRINTER_IP,
+  WINELABS_USER_ID: process.env.WINELABS_USER_ID,
+  WINELABS_BASE_URL: process.env.WINELABS_BASE_URL,
+  WINELABS_MONTHLY_CREDIT_CAP: process.env.WINELABS_MONTHLY_CREDIT_CAP,
 };
 
 /**

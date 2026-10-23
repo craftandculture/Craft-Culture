@@ -134,6 +134,7 @@ const adminNav: AdminNavSection[] = [
       { label: 'Pricing', href: '/platform/admin/pricing' },
       { label: 'Pricing Manager', href: '/platform/admin/pricing-manager' },
       { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
+      { label: 'Wine Labs', href: '/platform/admin/wine-labs', staffOnly: true },
       { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
       { label: 'Client LPOs', href: '/platform/admin/lpo' },
       { label: 'Distribution', href: '/platform/admin/distribution' },
