@@ -16,6 +16,8 @@ import {
   wmsStockMovements,
 } from '@/database/schema';
 
+import toDutyPaidPrice from '../utils/toDutyPaidPrice';
+
 const AIR_FREIGHT_USD = 20;
 const SEA_FREIGHT_USD = 5;
 const GBP_TO_USD = 1.27;
@@ -72,10 +74,16 @@ const pricerOutputSchema = z.object({
   competitiveGaps: z.array(
     z.object({
       productName: z.string(),
-      ourPriceAed: z.number(),
-      competitorPriceAed: z.number(),
+      ourPriceAed: z
+        .number()
+        .describe('Our duty-paid equivalent: duty-free price + 15%'),
+      competitorPriceAed: z.number().describe('Competitor price, duty paid'),
       competitorName: z.string(),
-      gapPercent: z.number(),
+      gapPercent: z
+        .number()
+        .describe(
+          '(ourPriceAed - competitorPriceAed) / competitorPriceAed * 100; positive means we are dearer',
+        ),
     }),
   ),
   actionItems: z.array(
@@ -141,7 +149,10 @@ const buildMarkdown = (data: z.infer<typeof pricerOutputSchema>) => {
   if (data.competitiveGaps.length > 0) {
     lines.push('## Competitive Gaps\n');
     lines.push(
-      '| Product | Our Price (AED) | Competitor Price (AED) | Competitor | Gap |',
+      'Benchmarked duty paid: our duty-free price + 15% against competitor duty-paid prices.\n',
+    );
+    lines.push(
+      '| Product | Ours, duty paid (AED) | Competitor, duty paid (AED) | Competitor | Gap |',
     );
     lines.push(
       '|---------|----------------|----------------------|------------|-----|',
@@ -334,10 +345,18 @@ const runPricer = async () => {
       .join('\n');
 
     const salesCtx = recentSales
-      .map(
-        (s) =>
-          `${s.productName}: avg ${s.avgPricePerBottleUsd?.toFixed(2) ?? '?'} USD/bottle, ${s.totalQuantity ?? 0} cases sold across ${s.orderCount ?? 0} orders (90 days)`,
-      )
+      .map((s) => {
+        // AVG() comes back from Postgres as a string
+        const avgUsd =
+          s.avgPricePerBottleUsd === null
+            ? null
+            : Number(s.avgPricePerBottleUsd);
+        const priceStr =
+          avgUsd === null || Number.isNaN(avgUsd)
+            ? '? USD/bottle'
+            : `${avgUsd.toFixed(2)} USD/bottle duty free (${(avgUsd * USD_TO_AED).toFixed(0)} AED) → duty-paid equivalent ${toDutyPaidPrice(avgUsd * USD_TO_AED).toFixed(0)} AED`;
+        return `${s.productName}: avg ${priceStr}, ${s.totalQuantity ?? 0} cases sold across ${s.orderCount ?? 0} orders (90 days)`;
+      })
       .join('\n');
 
     const stockCtx = stockLevels
@@ -384,7 +403,8 @@ Key pricing factors:
 - LANDED COST: The true cost per bottle after freight, duty, handling. This is the floor — never price below landed cost
 - IN-BOND (IB) PRICING: Supplier cost + freight = UAE IB price. Air freight adds $20/bottle, sea freight adds $5/bottle. IB price is the cost floor for all pricing decisions. Use IB Sea for standard margins, IB Air when air freight is required for urgency
 - SUPPLIER COSTS: Sourcing costs from uploaded supplier lists (RARE Wine, CultX, etc). Combined with freight to calculate IB prices
-- COMPETITOR RETAIL: What MMI, JY Wine, and others charge. C&C should undercut where possible
+- COMPETITOR RETAIL: What MMI, JY Wine, and others charge. Competitor lists are all DUTY PAID. C&C should undercut where possible
+- DUTY BASIS: C&C prices are DUTY FREE (in bond). Benchmark them against competitors as duty free + 15%. The duty-paid equivalent is pre-calculated for each of our selling prices below. Never compare our duty-free price directly with a competitor price, as that flatters us by the duty
 - STOCK LEVELS: Overstock (>20 cases of a single SKU) = consider discount incentives. Low stock (<5 cases) = premium pricing acceptable
 - VELOCITY: High velocity (>10 cases/month) = price is working, be careful with changes. Low velocity = consider price reduction to move stock
 - SELLING HISTORY: What we've actually charged customers — compare to landed cost for real margin analysis
@@ -406,10 +426,10 @@ Guidelines:
           role: 'user',
           content: `Analyze our pricing and generate optimization recommendations.
 
-COMPETITOR RETAIL PRICES (${competitors.length} wines — per bottle in AED/USD):
+COMPETITOR RETAIL PRICES (${competitors.length} wines — per bottle in AED/USD, duty paid):
 ${competitorCtx}
 
-OUR RECENT SELLING PRICES (${recentSales.length} products — last 90 days):
+OUR RECENT SELLING PRICES (${recentSales.length} products — last 90 days, duty free, with duty-paid equivalent at +15%):
 ${salesCtx || 'No recent sales data available.'}
 
 CURRENT STOCK LEVELS (${stockLevels.length} SKUs):
@@ -428,7 +448,7 @@ Generate a daily Pricer brief with:
 1. Executive summary (2-3 sentences on pricing health and key opportunities)
 2. Price adjustments — specific products that need repricing, with current vs suggested price, change %, and reasoning
 3. Margin alerts — products where current margin is outside target range
-4. Competitive gaps — where our price vs competitor price has a significant gap (>10%)
+4. Competitive gaps — where our duty-paid equivalent (duty free + 15%) vs the competitor's duty-paid price has a significant gap (>10%). ourPriceAed is our duty-paid equivalent, never our duty-free price
 5. Prioritized action items — specific pricing actions to take today
 6. ibPricing — return the full list of supplier wines with their pre-calculated IB prices. Use EXACTLY the cost/IB values provided above (do not recalculate). Include all ${ibRows.length} products`,
         },

@@ -12,13 +12,17 @@ import {
   wmsStock,
 } from '@/database/schema';
 
+import toDutyPaidPrice from '../utils/toDutyPaidPrice';
+
 const scoutOutputSchema = z.object({
   executiveSummary: z.string(),
   priceGaps: z.array(
     z.object({
       productName: z.string(),
-      ourCostAed: z.number(),
-      competitorRetailAed: z.number(),
+      ourCostAed: z
+        .number()
+        .describe('Our duty-paid equivalent: duty-free price + 15%'),
+      competitorRetailAed: z.number().describe('Competitor price, duty paid'),
       competitorName: z.string(),
       marginPercent: z.number(),
       recommendation: z.string(),
@@ -60,7 +64,12 @@ const buildMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
 
   if (data.priceGaps.length > 0) {
     lines.push('## Price Gaps\n');
-    lines.push('| Product | Our IB Cost | Competitor Retail | Competitor | Margin |');
+    lines.push(
+      'Benchmarked duty paid: our duty-free price + 15% against competitor duty-paid prices.\n',
+    );
+    lines.push(
+      '| Product | Ours, duty paid | Competitor, duty paid | Competitor | Margin |',
+    );
     lines.push('|---------|-----------|-----------------|------------|--------|');
     for (const gap of data.priceGaps) {
       lines.push(
@@ -212,7 +221,7 @@ const runScout = async () => {
           const perBottle = p.offerPrice / units;
           const rate = toAed[p.offerCurrency.toUpperCase()] ?? 3.67;
           const perBottleAed = perBottle * rate;
-          priceStr = `IB cost ${perBottleAed.toFixed(0)} AED/bottle (${perBottle.toFixed(0)} ${p.offerCurrency} x${units})`;
+          priceStr = `IB cost ${perBottleAed.toFixed(0)} AED/bottle duty free → duty-paid equivalent ${toDutyPaidPrice(perBottleAed).toFixed(0)} AED (${perBottle.toFixed(0)} ${p.offerCurrency} x${units})`;
         }
         return `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${priceStr}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`;
       })
@@ -235,10 +244,12 @@ Your job is to analyze competitor pricing and identify where C&C can win on pric
 
 Key context:
 - ALL prices are PER BOTTLE in AED. Never compare case prices vs bottle prices
-- Competitor prices = per-bottle RETAIL price in AED (what they charge customers)
-- Our prices = per-bottle IN-BOND COST in AED (what we pay, already converted from GBP/EUR)
-- The gap between our IB cost and their retail price is our potential GROSS MARGIN
-- A healthy wine margin in UAE is 30-50%. If competitor retails at 500 AED and our IB cost is 200 AED, that's a 60% margin — excellent opportunity
+- Competitor prices = per-bottle RETAIL price in AED (what they charge customers). Competitor lists are all DUTY PAID
+- Our prices = per-bottle IN-BOND COST in AED (what we pay, already converted from GBP/EUR). These are DUTY FREE
+- To compare like for like, benchmark our figure as duty free + 15%. The duty-paid equivalent is pre-calculated for each of our wines below. Never compare our duty-free figure directly with a competitor price, as that flatters us by the duty
+- In priceGaps, ourCostAed is our duty-paid equivalent, never the duty-free figure
+- The gap between our duty-paid equivalent and their retail price is our potential GROSS MARGIN
+- A healthy wine margin in UAE is 30-50%. If competitor retails at 500 AED and our duty-paid equivalent is 230 AED (200 AED duty free + 15%), that's a 54% margin — excellent opportunity
 - 1 USD ≈ 3.67 AED, 1 GBP ≈ 4.67 AED. All conversions are already done for you
 - Match products using LWIN codes when available, otherwise by name/vintage similarity
 - Focus on commercially significant price gaps (>10% difference)
@@ -253,10 +264,10 @@ Key context:
           content: `Analyze today's competitive pricing landscape. Focus on where we can WIN on price.
 IMPORTANT: All prices below are PER BOTTLE in AED.
 
-COMPETITOR RETAIL PRICES — what they charge customers (${competitors.length} wines):
+COMPETITOR RETAIL PRICES — what they charge customers, duty paid (${competitors.length} wines):
 ${competitorCtx}
 
-OUR IN-BOND COST — what we pay per bottle in AED (${ourProducts.length} products):
+OUR IN-BOND COST — what we pay per bottle in AED, duty free, with duty-paid equivalent at +15% (${ourProducts.length} products):
 ${catalogCtx}
 
 OUR CURRENT STOCK (${stockSummary.length} SKUs):
