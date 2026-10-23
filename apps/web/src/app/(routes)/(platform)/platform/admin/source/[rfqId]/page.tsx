@@ -33,7 +33,6 @@ import QuoteExcelUpload from '@/app/_source/components/QuoteExcelUpload';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
-import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
 import formatLwin18 from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
@@ -98,6 +97,9 @@ const RfqDetailPage = () => {
     api.source.admin.generateFinalQuote.mutationOptions({
       onSuccess: async (data) => {
         // Export to PDF
+        const { default: exportRfqToPDF } = await import(
+          '@/app/_source/utils/exportRfqToPDF'
+        );
         await exportRfqToPDF(data.rfq, data.lineItems, data.summary, data.unquotedItems);
         void refetch();
       },

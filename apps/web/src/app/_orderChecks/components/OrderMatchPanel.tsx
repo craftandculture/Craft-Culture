@@ -14,7 +14,6 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
@@ -78,7 +77,8 @@ const readForUpload = (file: File) =>
     reader.readAsDataURL(file);
   });
 
-const exportReport = (r: Matched) => {
+const exportReport = async (r: Matched) => {
+  const XLSX = await import('xlsx');
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
     book,
@@ -238,7 +238,7 @@ const OrderMatchPanel = () => {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => exportReport(r)}
+                onClick={() => void exportReport(r)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border-muted px-3 py-1.5 text-sm text-text-primary hover:bg-surface-secondary/60"
               >
                 <IconDownload size={15} /> Export to Excel
