@@ -61,7 +61,7 @@ const ActivityFeedPage = () => {
       offset: 0,
       action: actionFilter !== 'all' ? actionFilter : undefined,
     }),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const getActivityIcon = (action: string) => {

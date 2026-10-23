@@ -103,7 +103,7 @@ const QuoteApprovalsList = () => {
         cursor: 0,
         search: search || undefined,
       }),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const quotes = quotesData?.data ?? [];

@@ -138,7 +138,7 @@ const PrivateOrderDetailPage = () => {
   const { data: order, isLoading, refetch } = useQuery({
     ...api.privateClientOrders.getOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
-    refetchInterval: 5000, // Auto-refresh every 10 seconds
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   // Subscription clubs (e.g. a monthly box) get the box tag and clone tool
@@ -151,7 +151,7 @@ const PrivateOrderDetailPage = () => {
   const { data: documents } = useQuery({
     ...api.privateClientOrders.getDocuments.queryOptions({ orderId }),
     enabled: !!orderId,
-    refetchInterval: 5000, // Auto-refresh every 10 seconds
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   const distributorInvoice = documents?.find((doc) => doc.documentType === 'distributor_invoice');

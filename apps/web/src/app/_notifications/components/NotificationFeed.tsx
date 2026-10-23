@@ -81,7 +81,7 @@ const NotificationFeed = ({
         }),
       initialPageParam: 0,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
-      refetchInterval: variant === 'drawer' ? 5000 : 30000,
+      refetchInterval: 30000,
     });
 
   const items = useMemo(
