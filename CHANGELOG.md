@@ -1,3 +1,9 @@
+## [2.0.511](https://github.com/craftandculture/Craft-Culture/compare/v2.0.510...v2.0.511) (2026-10-24)
+
+### Features
+
+* partner colleagues given view-only access can look but not change anything, and each consignment owner is linked to its partner account ([36d98f9](https://github.com/craftandculture/Craft-Culture/commit/36d98f921fdceaa612d10e2315d5fe4c01473957))
+
 ## [2.0.510](https://github.com/craftandculture/Craft-Culture/compare/v2.0.509...v2.0.510) (2026-10-24)
 
 ### Bug Fixes
