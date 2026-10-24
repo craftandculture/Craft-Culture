@@ -1,3 +1,9 @@
+## [2.0.507](https://github.com/craftandculture/Craft-Culture/compare/v2.0.506...v2.0.507) (2026-10-24)
+
+### Features
+
+* the member's delivery card leads with where the wine is, shows a ticked timeline with the time of each stage, and carries the PCO number; the admin release links straight to its PCO ([082e9fd](https://github.com/craftandculture/Craft-Culture/commit/082e9fdb20569b30bea8fa8d8776b0b2d2f03650))
+
 ## [2.0.506](https://github.com/craftandculture/Craft-Culture/compare/v2.0.505...v2.0.506) (2026-10-24)
 
 ### Features
