@@ -3657,6 +3657,36 @@ const runMigrations = async () => {
     `);
     console.log('✅ zoho invoice lines ready');
 
+    /*
+      Whose bottles left, for movements written before picks recorded it
+      (Index 3.0, 25 Oct 2026). Ihab Toma's October statement showed nothing
+      leaving while 75 of his bottles were picked for trade orders: picks
+      carried a bay but no owner. Where exactly one owner has ever held that
+      wine in that bay (zero-quantity rows included), the movement is stamped
+      with that owner and marked inferred; anything ambiguous is left for an
+      operator. Outflows only: picks, and count / adjust decreases.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "owner_inferred" boolean DEFAULT false NOT NULL`,
+    );
+    await dataFix('past outflows stamped with the owner of the bay they left', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements" m
+        SET "from_owner_id" = s.owner_id, "owner_inferred" = true
+        FROM (
+          SELECT "lwin18", "location_id", MIN("owner_id"::text)::uuid AS owner_id
+          FROM "wms_stock"
+          GROUP BY "lwin18", "location_id"
+          HAVING COUNT(DISTINCT "owner_id") = 1
+        ) s
+        WHERE m."from_owner_id" IS NULL
+          AND m."from_location_id" IS NOT NULL
+          AND m."movement_type" IN ('pick', 'count', 'adjust')
+          AND m."lwin18" = s."lwin18"
+          AND m."from_location_id" = s."location_id"
+      `);
+    });
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
