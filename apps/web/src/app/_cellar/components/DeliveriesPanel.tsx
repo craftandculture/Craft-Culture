@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 
 import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import type { AppRouter } from '@/trpc-router';
 
 type Request =
@@ -97,20 +98,19 @@ const ProgressStrip = ({ step }: { step: number }) => (
 const isFinished = (request: Request) =>
   request.orderStatus === 'delivered' || request.orderStatus === 'cancelled';
 
-/** The wines on a delivery, the first two by name */
-const winesOf = (request: Request) => {
-  const names = request.items.map((item) =>
-    item.vintage ? `${item.productName} ${item.vintage}` : item.productName,
-  );
-  const shown = names.slice(0, 2).join(', ');
+/*
+  How many wines a delivery shows before folding the rest away. Run together
+  in one line, five catalogue names with their sizes and strengths could not
+  be read; one wine per line, three at a time, can.
+*/
+const WINES_SHOWN = 3;
 
-  return names.length > 2 ? `${shown} and ${names.length - 2} more` : shown;
-};
-
-const bottlesOf = (request: Request) => {
+/** "5 wines · 6 bottles", the delivery at a glance */
+const summaryOf = (request: Request) => {
+  const wines = request.items.length;
   const bottles = request.items.reduce((sum, item) => sum + item.bottles, 0);
 
-  return `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+  return `${wines} ${wines === 1 ? 'wine' : 'wines'} · ${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
 };
 
 const PAST_SHOWN = 5;
@@ -129,6 +129,15 @@ const PAST_SHOWN = 5;
 const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
   const [showPast, setShowPast] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
+  const [openWines, setOpenWines] = useState<Set<string>>(new Set());
+
+  const toggleWines = (id: string) =>
+    setOpenWines((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const accepted = requests.filter((request) => request.status === 'confirmed');
   const live =
@@ -164,23 +173,53 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
         ? `To ${request.delivery.addressLabel}`
         : null;
 
+    const isOpen = openWines.has(request.id);
+    const wines = isOpen ? request.items : request.items.slice(0, WINES_SHOWN);
+    const hidden = request.items.length - WINES_SHOWN;
+
     return (
       <li key={request.id} className="px-4 py-3">
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{winesOf(request)}</p>
-            <p className="text-text-muted mt-0.5 text-xs">
-              {bottlesOf(request)}
-              {recipient ? ` · ${recipient}` : ''}
-              {when ? ` · ${when}` : ''}
-              {preferred ? ` · You asked for ${preferred}` : ''}
-              <span className="text-text-muted/70"> · {request.requestNumber}</span>
+            <p className="text-text-primary text-sm font-semibold">
+              {summaryOf(request)}
+              <span className="text-text-muted/70 ml-2 font-mono text-[11px] font-normal">{request.requestNumber}</span>
             </p>
+            {(recipient || when || preferred) && (
+              <p className="text-text-muted mt-0.5 text-xs">
+                {[recipient, when, preferred ? `You asked for ${preferred}` : null].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
           <span className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${stage.tone}`}>
             {stage.label}
           </span>
         </div>
+
+        <ul className="mt-2.5 flex flex-col gap-1">
+          {wines.map((item, index) => (
+            <li key={`${item.productName}-${index}`} className="flex items-baseline gap-3 text-sm">
+              <span className="min-w-0 flex-1 truncate text-emerald-800 dark:text-emerald-300">
+                {displayWineName(item.productName)}
+              </span>
+              <span className="text-text-muted flex-shrink-0 text-xs tabular-nums">
+                {item.vintage ?? 'NV'}
+                {item.bottles > 1 ? ` · ${item.bottles} btl` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {hidden > 0 && (
+          <button
+            type="button"
+            onClick={() => toggleWines(request.id)}
+            aria-expanded={isOpen}
+            className="text-text-muted hover:text-text-primary mt-1 inline-flex items-center gap-1 text-xs font-semibold"
+          >
+            {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
+            <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
+        )}
         {section === 'live' && <ProgressStrip step={stepOf(request)} />}
       </li>
     );
