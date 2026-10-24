@@ -1,3 +1,9 @@
+## [2.0.501](https://github.com/craftandculture/Craft-Culture/compare/v2.0.500...v2.0.501) (2026-10-24)
+
+### Features
+
+* staff can confirm a cellar release the member agreed on WhatsApp and link the Zoho order already raised, and a member's Accept now goes through when their wine was already picked on that order ([83fa440](https://github.com/craftandculture/Craft-Culture/commit/83fa440705b527f4eb5da252934672503126173e))
+
 ## [2.0.500](https://github.com/craftandculture/Craft-Culture/compare/v2.0.499...v2.0.500) (2026-10-24)
 
 ### Bug Fixes
