@@ -1,3 +1,13 @@
+## [2.0.512](https://github.com/craftandculture/Craft-Culture/compare/v2.0.511...v2.0.512) (2026-10-24)
+
+### Features
+
+* every pick and dispatch now records whose bottles left and which stock row they came from ([93a5b30](https://github.com/craftandculture/Craft-Culture/commit/93a5b3043469f089864a2ed4a7fc5e377a257fc2))
+
+### Bug Fixes
+
+* the Consignment & Distribution page loads again; owner links read the partner's business name ([989d2e2](https://github.com/craftandculture/Craft-Culture/commit/989d2e2dbf945d856084c43c57d414d94c2d7062))
+
 ## [2.0.511](https://github.com/craftandculture/Craft-Culture/compare/v2.0.510...v2.0.511) (2026-10-24)
 
 ### Features
