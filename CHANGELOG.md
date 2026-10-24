@@ -1,3 +1,9 @@
+## [2.0.499](https://github.com/craftandculture/Craft-Culture/compare/v2.0.498...v2.0.499) (2026-10-24)
+
+### Features
+
+* staff can remove wines or change bottle numbers on a cellar release before quoting it ([a0b4bd3](https://github.com/craftandculture/Craft-Culture/commit/a0b4bd3c6dead0f20650678c27fdeb59dada6e13))
+
 ## [2.0.498](https://github.com/craftandculture/Craft-Culture/compare/v2.0.497...v2.0.498) (2026-10-23)
 
 ### Bug Fixes
