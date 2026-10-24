@@ -5,6 +5,9 @@ import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
   privateClientOrders,
+  wmsDispatchBatches,
+  wmsPickLists,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
@@ -14,8 +17,8 @@ import getReleaseDeliveryDetails from '../data/getReleaseDeliveryDetails';
 /**
  * A member's release requests, newest first
  *
- * Lines come back with them: a request without its wines is a reference
- * number, and a member checking on one wants to see what they asked for.
+ * Lines come back with them: a request without its wines is a reference number,
+ * and a member checking on one wants to see what they asked for.
  *
  * @example
  *   const { requests } = await trpcClient.cellar.member.getReleases.query();
@@ -85,11 +88,31 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       */
       scheduledDeliveryDate: privateClientOrders.scheduledDeliveryDate,
       deliveredAt: privateClientOrders.deliveredAt,
+      /*
+        The warehouse's side, so the member sees picking, packing and
+        collection as they happen rather than one "being prepared" until the
+        distributor takes over.
+      */
+      pickListStatus: wmsPickLists.status,
+      salesOrderStatus: zohoSalesOrders.status,
+      dispatchStatus: wmsDispatchBatches.status,
     })
     .from(cellarReleaseRequests)
     .leftJoin(
       privateClientOrders,
       eq(cellarReleaseRequests.privateClientOrderId, privateClientOrders.id),
+    )
+    .leftJoin(
+      zohoSalesOrders,
+      eq(
+        zohoSalesOrders.zohoSalesOrderId,
+        privateClientOrders.zohoSalesOrderId,
+      ),
+    )
+    .leftJoin(wmsPickLists, eq(wmsPickLists.id, zohoSalesOrders.pickListId))
+    .leftJoin(
+      wmsDispatchBatches,
+      eq(wmsDispatchBatches.id, zohoSalesOrders.dispatchBatchId),
     )
     .where(eq(cellarReleaseRequests.partnerId, ctx.partner.id))
     .orderBy(desc(cellarReleaseRequests.createdAt))
@@ -124,7 +147,6 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
     )
     .orderBy(cellarReleaseRequestItems.productName);
 
-
   /*
     The same repair the admin view does. Without it a member saw NV and no
     format on lines a merge had stripped, while the admin quoting the same
@@ -140,7 +162,10 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
   const byRequest = new Map<string, typeof items>();
 
   for (const item of items) {
-    byRequest.set(item.requestId, [...(byRequest.get(item.requestId) ?? []), item]);
+    byRequest.set(item.requestId, [
+      ...(byRequest.get(item.requestId) ?? []),
+      item,
+    ]);
   }
 
   return {

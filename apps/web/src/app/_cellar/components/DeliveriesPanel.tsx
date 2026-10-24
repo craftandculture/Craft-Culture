@@ -5,6 +5,7 @@ import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
+import deliveryStage, { DELIVERY_STAGES } from '@/app/_cellar/utils/deliveryStage';
 import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import type { AppRouter } from '@/trpc-router';
@@ -18,60 +19,34 @@ export interface DeliveriesPanelProps {
   section: 'live' | 'past';
 }
 
+const AMBER =
+  'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900';
+const BLUE =
+  'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900';
+const GREEN =
+  'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900';
+
+/** How far a delivery has got, from the warehouse's own stages */
+const stepOf = (request: Request) => deliveryStage(request);
+
 /** Where an accepted delivery has got to, in the member's words */
 const stageOf = (request: Request) => {
-  switch (request.orderStatus) {
-    case 'delivered':
-      return {
-        label: 'Delivered',
-        tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
-      };
-    case 'stock_in_transit':
-    case 'with_distributor':
-    case 'out_for_delivery':
-      return {
-        label: 'On its way to you',
-        tone: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900',
-      };
-    case 'delivery_scheduled':
-      return {
-        label: 'Delivery arranged',
-        tone: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900',
-      };
-    default:
-      return {
-        label: 'Being prepared',
-        tone: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900',
-      };
-  }
+  const step = stepOf(request);
+
+  return {
+    label: DELIVERY_STAGES[step]?.label ?? 'Confirmed',
+    tone: step === 5 ? GREEN : step >= 3 ? BLUE : AMBER,
+  };
 };
 
 /*
-  The four steps a member recognises, in order. The order's own statuses are
-  finer than this — approvals, invoicing, stock moving to the distributor — and
-  none of that is the member's concern.
+  One segment per stage of the team's own process: confirmed, picked, packed,
+  collected, out for delivery, delivered. On a phone only the current stage is
+  named, or six labels would not fit.
 */
-const STEPS = ['Being prepared', 'Delivery arranged', 'On its way', 'Delivered'];
-
-const stepOf = (request: Request) => {
-  switch (request.orderStatus) {
-    case 'delivered':
-      return 3;
-    case 'stock_in_transit':
-    case 'with_distributor':
-    case 'out_for_delivery':
-      return 2;
-    case 'delivery_scheduled':
-      return 1;
-    default:
-      return 0;
-  }
-};
-
-/** Four segments, filled to where the delivery has got */
 const ProgressStrip = ({ step }: { step: number }) => (
-  <ol className="mt-2.5 grid grid-cols-4 gap-1" aria-label="Delivery progress">
-    {STEPS.map((label, index) => (
+  <ol className="mt-2.5 grid grid-cols-6 gap-1" aria-label="Delivery progress">
+    {DELIVERY_STAGES.map(({ label }, index) => (
       <li key={label} className="min-w-0">
         <span
           className={`block h-1 rounded-full ${
@@ -81,10 +56,10 @@ const ProgressStrip = ({ step }: { step: number }) => (
           }`}
         />
         <span
-          className={`mt-1 block truncate text-[10px] ${
+          className={`mt-1 truncate text-[10px] ${
             index === step
-              ? 'text-text-primary font-semibold'
-              : 'text-text-muted'
+              ? 'text-text-primary block font-semibold'
+              : 'text-text-muted hidden sm:block'
           }`}
           aria-current={index === step ? 'step' : undefined}
         >
