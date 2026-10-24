@@ -4,6 +4,7 @@ import adminAddUkRates from './controller/adminAddUkRates';
 import adminAmendReleaseItems from './controller/adminAmendReleaseItems';
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
 import adminAssignUkRotations from './controller/adminAssignUkRotations';
+import adminConfirmRelease from './controller/adminConfirmRelease';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
 import adminGetAttention from './controller/adminGetAttention';
 import adminGetCellarAccess from './controller/adminGetCellarAccess';
@@ -85,6 +86,7 @@ const adminRouter = createTRPCRouter({
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
   amendReleaseItems: adminAmendReleaseItems,
+  confirmRelease: adminConfirmRelease,
   getMembers: adminGetMembers,
   getUkStock: adminGetUkStock,
   importUkStock: adminImportUkStock,

@@ -116,6 +116,8 @@ const CellarReleasesPage = () => {
   const [editLines, setEditLines] = useState<Record<string, number> | null>(
     null,
   );
+  /* The Zoho order already raised for a release agreed outside the Index. */
+  const [salesOrderNumber, setSalesOrderNumber] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.cellar.admin.getReleases.queryOptions({ status }),
@@ -167,6 +169,22 @@ const CellarReleasesPage = () => {
             notes: current.notes,
           }));
         }
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: confirmForMember, isPending: isConfirming } = useMutation(
+    api.cellar.admin.confirmRelease.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          result.salesOrderNumber
+            ? `Confirmed — ${result.orderNumber} linked to ${result.salesOrderNumber}`
+            : `Confirmed — ${result.orderNumber} raised`,
+        );
+        setSalesOrderNumber('');
+        setOpenId(null);
+        void refetch();
       },
       onError: (error) => toast.error(error.message),
     }),
@@ -617,7 +635,7 @@ const CellarReleasesPage = () => {
 
                   {request.status === 'confirmed' ? (
                     <Typography variant="bodySm" colorRole="muted">
-                      Accepted by the member on{' '}
+                      Confirmed on{' '}
                       {request.confirmedAt
                         ? format(new Date(request.confirmedAt), 'd MMMM yyyy')
                         : '—'}{' '}
@@ -625,6 +643,76 @@ const CellarReleasesPage = () => {
                     </Typography>
                   ) : (
                     <>
+                      {/*
+                        Members often agree on WhatsApp and the Zoho order is
+                        raised there and then. Once it is picked their Accept
+                        has nothing left to take, so staff confirm it here and
+                        link the order that already carries the wine.
+                      */}
+                      {request.status === 'under_review' &&
+                        request.quotedAt && (
+                          <div className="border-border-muted bg-fill-muted/40 mb-4 rounded-lg border p-3">
+                            <Typography
+                              variant="bodySm"
+                              className="mb-1 font-medium"
+                            >
+                              Agreed outside the Index?
+                            </Typography>
+                            <Typography
+                              variant="bodyXs"
+                              colorRole="muted"
+                              className="mb-2"
+                            >
+                              Confirm it for the member at the quoted $
+                              {request.totalCostUsd?.toLocaleString() ?? 0}. If
+                              the Zoho order is already raised, enter its number
+                              so the order links to it instead of being sent to
+                              Zoho again.
+                            </Typography>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Input
+                                value={salesOrderNumber}
+                                onChange={(event) =>
+                                  setSalesOrderNumber(event.target.value)
+                                }
+                                placeholder="SO-00225 (optional)"
+                                className="max-w-[200px]"
+                              />
+                              <ConfirmAction
+                                title={`Confirm ${request.requestNumber} for the member?`}
+                                description={
+                                  <p>
+                                    The release is confirmed at $
+                                    {request.totalCostUsd?.toLocaleString() ??
+                                      0}
+                                    {salesOrderNumber.trim()
+                                      ? ` and linked to ${salesOrderNumber.trim().toUpperCase()}.`
+                                      : ' and a new order is raised for the team to send to Zoho.'}
+                                  </p>
+                                }
+                                confirmLabel="Confirm for member"
+                                onConfirm={() =>
+                                  confirmForMember({
+                                    requestId: request.id,
+                                    salesOrderNumber:
+                                      salesOrderNumber.trim() || undefined,
+                                  })
+                                }
+                              >
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  isDisabled={isConfirming || isEditing}
+                                >
+                                  <ButtonContent iconLeft={IconCheck}>
+                                    Confirm for member
+                                  </ButtonContent>
+                                </Button>
+                              </ConfirmAction>
+                            </div>
+                          </div>
+                        )}
+
                       <div className="mb-3 flex flex-wrap items-center gap-3">
                         <Typography
                           variant="bodyXs"
