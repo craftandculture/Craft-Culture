@@ -234,6 +234,7 @@ const PartnerMovementsPanel = ({
                       <div className="mt-0.5 font-mono text-[10px] text-text-muted">
                         {row.movementNumber}
                       </div>
+                      {row.detail && <div className="mt-0.5 text-[11px]">{row.detail}</div>}
                     </td>
                     {!lwin18 && (
                       <td className="px-3 py-2">
