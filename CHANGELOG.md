@@ -1,3 +1,9 @@
+## [2.0.517](https://github.com/craftandculture/Craft-Culture/compare/v2.0.516...v2.0.517) (2026-10-24)
+
+### Bug Fixes
+
+* partners and cellar members no longer receive staff movement notes, which named distributors and who bottles went to ([5559acc](https://github.com/craftandculture/Craft-Culture/commit/5559accb6e09187473c02046534d24409a6d4950))
+
 ## [2.0.516](https://github.com/craftandculture/Craft-Culture/compare/v2.0.515...v2.0.516) (2026-10-24)
 
 ### Bug Fixes
