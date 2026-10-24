@@ -25,8 +25,8 @@ type ReleaseLine = typeof cellarReleaseRequestItems.$inferSelect;
  * One move is not a failure. When the team has already raised the Zoho order
  * for this delivery and the warehouse has picked it, the bottles have left the
  * cellar row because they are on their way. Any shortfall covered by picks on
- * one of the member's unlinked orders is accepted, and that order is returned
- * so the PCO can be linked to it rather than pushed to Zoho a second time.
+ * one of the member's orders is accepted, and that order is returned so the
+ * release links to it rather than being pushed to Zoho a second time.
  *
  * @example
  *   const { salesOrder } = await checkReleaseStock({
@@ -137,6 +137,7 @@ const checkReleaseStock = async ({
       salesOrder: {
         zohoSalesOrderId: order.zohoSalesOrderId,
         salesOrderNumber: order.salesOrderNumber,
+        linkedOrderId: order.linkedOrderId,
       },
     };
   }
@@ -148,7 +149,7 @@ const checkReleaseStock = async ({
     throw new TRPCError({
       code: 'CONFLICT',
       message: salesOrderNumber
-        ? `${salesOrderNumber.trim().toUpperCase()} has not picked ${name}, or is already linked to another order. Check the order number.`
+        ? `${salesOrderNumber.trim().toUpperCase()} has not picked ${name}, or its order already carries another release. Check the order number.`
         : `${name} is no longer in the member's cellar. If it went out on a Zoho order, enter that order number.`,
     });
   }

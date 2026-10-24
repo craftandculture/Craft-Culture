@@ -3,6 +3,7 @@ import { and, eq, gte, isNotNull, or, sql } from 'drizzle-orm';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import db from '@/database/client';
 import {
+  cellarReleaseRequests,
   privateClientOrders,
   wmsPickListItems,
   wmsPickLists,
@@ -12,6 +13,8 @@ import {
 export interface ReleaseOrderPicks {
   zohoSalesOrderId: string;
   salesOrderNumber: string;
+  /** The PCO already raised for this order by hand, if any */
+  linkedOrderId: string | null;
   /** Bottles picked on the order, keyed by pack-agnostic LWIN pattern */
   bottlesByWine: Map<string, number>;
 }
@@ -24,8 +27,10 @@ export interface ReleaseOrderPicks {
  * Accept. The bottles have then left the cellar row, and the accept saw them as
  * missing. They are not missing: they are on their way, on that order.
  *
- * Only orders not already linked to a PCO are returned, so one pick can never
- * confirm two releases.
+ * The team sometimes raises a PCO by hand and pushes that to Zoho, so an order
+ * may already have a PCO; it is returned so the release links to it rather than
+ * raising a second. An order whose PCO already carries a release is left out,
+ * so one pick can never confirm two releases.
  *
  * @example
  *   await findReleasePicks({ lwins, zohoContactId, since }); // [{ salesOrderNumber: 'SO-00225', ... }]
@@ -71,6 +76,7 @@ const findReleasePicks = async ({
     .select({
       zohoSalesOrderId: zohoSalesOrders.zohoSalesOrderId,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
+      linkedOrderId: privateClientOrders.id,
       lwin18: wmsPickListItems.lwin18,
       quantityBottles: wmsPickListItems.quantityBottles,
       pickedQuantity: wmsPickListItems.pickedQuantity,
@@ -80,6 +86,13 @@ const findReleasePicks = async ({
     .innerJoin(
       wmsPickListItems,
       eq(wmsPickListItems.pickListId, wmsPickLists.id),
+    )
+    .leftJoin(
+      privateClientOrders,
+      eq(
+        privateClientOrders.zohoSalesOrderId,
+        zohoSalesOrders.zohoSalesOrderId,
+      ),
     )
     .where(
       and(
@@ -93,8 +106,8 @@ const findReleasePicks = async ({
           ),
         ),
         sql`NOT EXISTS (
-          SELECT 1 FROM ${privateClientOrders}
-          WHERE ${privateClientOrders.zohoSalesOrderId} = ${zohoSalesOrders.zohoSalesOrderId}
+          SELECT 1 FROM ${cellarReleaseRequests}
+          WHERE ${cellarReleaseRequests.privateClientOrderId} = ${privateClientOrders.id}
         )`,
       ),
     );
@@ -115,6 +128,7 @@ const findReleasePicks = async ({
     const order = byOrder.get(row.zohoSalesOrderId) ?? {
       zohoSalesOrderId: row.zohoSalesOrderId,
       salesOrderNumber: row.salesOrderNumber,
+      linkedOrderId: row.linkedOrderId,
       bottlesByWine: new Map<string, number>(),
     };
 

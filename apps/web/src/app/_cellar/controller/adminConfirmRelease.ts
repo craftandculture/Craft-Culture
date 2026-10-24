@@ -88,8 +88,16 @@ const adminConfirmRelease = staffAdminProcedure
         .select({
           zohoSalesOrderId: zohoSalesOrders.zohoSalesOrderId,
           salesOrderNumber: zohoSalesOrders.salesOrderNumber,
+          linkedOrderId: privateClientOrders.id,
         })
         .from(zohoSalesOrders)
+        .leftJoin(
+          privateClientOrders,
+          eq(
+            privateClientOrders.zohoSalesOrderId,
+            zohoSalesOrders.zohoSalesOrderId,
+          ),
+        )
         .where(
           and(
             eq(
@@ -97,8 +105,8 @@ const adminConfirmRelease = staffAdminProcedure
               salesOrderNumber.toUpperCase(),
             ),
             sql`NOT EXISTS (
-              SELECT 1 FROM ${privateClientOrders}
-              WHERE ${privateClientOrders.zohoSalesOrderId} = ${zohoSalesOrders.zohoSalesOrderId}
+              SELECT 1 FROM ${cellarReleaseRequests}
+              WHERE ${cellarReleaseRequests.privateClientOrderId} = ${privateClientOrders.id}
             )`,
           ),
         )
@@ -107,7 +115,7 @@ const adminConfirmRelease = staffAdminProcedure
       if (!found) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `${salesOrderNumber.toUpperCase()} is not in the Index yet, or is already linked to another order.`,
+          message: `${salesOrderNumber.toUpperCase()} is not in the Index yet, or its order already carries another release.`,
         });
       }
 

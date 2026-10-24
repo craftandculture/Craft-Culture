@@ -29,7 +29,8 @@ type ReleaseLine = typeof cellarReleaseRequestItems.$inferSelect;
  *
  * When the Zoho order already exists, because the team raised it before the
  * member pressed Accept, the PCO is linked to it, so the button that raises a
- * sales order refuses to raise a second.
+ * sales order refuses to raise a second. When the team also raised that PCO by
+ * hand, the release is linked to it and nothing new is raised.
  *
  * @example
  *   const order = await raiseReleaseOrder({
@@ -54,7 +55,11 @@ const raiseReleaseOrder = async ({
   request: CellarReleaseRequest;
   lines: ReleaseLine[];
   confirmedBy: string;
-  salesOrder: { zohoSalesOrderId: string; salesOrderNumber: string } | null;
+  salesOrder: {
+    zohoSalesOrderId: string;
+    salesOrderNumber: string;
+    linkedOrderId: string | null;
+  } | null;
 }) => {
   const [owner] = await db
     .select({
@@ -111,6 +116,33 @@ const raiseReleaseOrder = async ({
         message:
           'This request has just changed. Please refresh to see where it stands.',
       });
+    }
+
+    const linkedOrderId = salesOrder?.linkedOrderId;
+
+    if (linkedOrderId) {
+      const [linked] = await tx
+        .select({
+          id: privateClientOrders.id,
+          orderNumber: privateClientOrders.orderNumber,
+        })
+        .from(privateClientOrders)
+        .where(eq(privateClientOrders.id, linkedOrderId))
+        .limit(1);
+
+      if (!linked) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'The order raised for this delivery could not be found.',
+        });
+      }
+
+      await tx
+        .update(cellarReleaseRequests)
+        .set({ privateClientOrderId: linked.id })
+        .where(eq(cellarReleaseRequests.id, request.id));
+
+      return linked;
     }
 
     const yearStart = `PCO-${now.getFullYear()}-`;
