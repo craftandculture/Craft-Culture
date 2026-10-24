@@ -1,3 +1,9 @@
+## [2.0.500](https://github.com/craftandculture/Craft-Culture/compare/v2.0.499...v2.0.500) (2026-10-24)
+
+### Bug Fixes
+
+* the pick screen sends the picker to a bay that still holds the wine, using up the smaller packs first, and a failed pick can switch bays without starting again ([294da24](https://github.com/craftandculture/Craft-Culture/commit/294da241636b727aa3ad8cccf9e9c8a3398129d5))
+
 ## [2.0.499](https://github.com/craftandculture/Craft-Culture/compare/v2.0.498...v2.0.499) (2026-10-24)
 
 ### Features
