@@ -3552,6 +3552,21 @@ const runMigrations = async () => {
       stock its name matches, only where exactly one partner matches; anything
       ambiguous is left for staff to link on the Distribution page.
     */
+    /*
+      Whose bottles left (Index 3.0, Oct 2026). Picks and dispatches recorded
+      no owner and no stock row, so a bottle that left the warehouse vanished
+      from its owner's statement. Additive, nullable, no foreign keys.
+    */
+    for (const ddl of [
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "stock_id" uuid`,
+      `ALTER TABLE "wms_pick_list_items" ADD COLUMN IF NOT EXISTS "picked_stock_id" uuid`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_order_id_idx" ON "wms_stock_movements" ("order_id")`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_from_owner_idx" ON "wms_stock_movements" ("from_owner_id")`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    console.log('✅ movements carry owner and stock row');
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
