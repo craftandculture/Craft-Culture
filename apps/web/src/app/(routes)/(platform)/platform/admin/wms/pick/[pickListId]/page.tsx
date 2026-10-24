@@ -158,6 +158,8 @@ const WMSPickListDetailPage = () => {
       resetAfterPick();
       toast.success(`Picked ${qty} case(s)${where}`);
     },
+    // Re-read the list so the bay shown is one that can still cover the pick.
+    onError: () => invalidatePickQueries(),
   });
 
   // Bottle (split-case) pick — always cloud tRPC; the local NUC server has no
@@ -171,6 +173,7 @@ const WMSPickListDetailPage = () => {
       // Only a cracked case leaves one; a clean pick returns null.
       if (result?.remainder) setRemainderToRelabel(result.remainder);
     },
+    onError: () => invalidatePickQueries(),
   });
 
   // Complete pick list mutation — routes through local NUC when available
@@ -351,6 +354,18 @@ const WMSPickListDetailPage = () => {
   // Get next location hint for picker
   const nextItem = unpickedItems[currentItemIndex + 1];
   const nextLocationHint = nextItem?.suggestedLocationCode;
+
+  /*
+    The line being picked, by id rather than by position.
+
+    The list is sorted by bay, and the bay is now worked out from live stock on
+    every read. A refresh mid-pick that moves this line to another bay also
+    moves it in the sort, and reading by index would then show the picker a
+    different wine's bay while they hold this one.
+  */
+  const pickingLine =
+    (pickingItem && data?.items.find((item) => item.id === pickingItem.itemId)) ||
+    currentItem;
 
   // Start picking current item
   const startPicking = () => {
@@ -857,7 +872,9 @@ const WMSPickListDetailPage = () => {
                     {currentItem.suggestedLocationCode ?? '—'}
                   </div>
                   <span className="text-[10px] text-text-muted">
-                    go to location
+                    {currentItem.bayMovedFrom
+                      ? `${currentItem.bayMovedFrom} is empty — stock moved here`
+                      : 'go to location'}
                   </span>
                 </div>
               </div>
@@ -914,9 +931,9 @@ const WMSPickListDetailPage = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Picking</span>
-                {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null }) && (
+                {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null }) && (
                   <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                    {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null })}
+                    {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null })}
                   </span>
                 )}
               </div>
@@ -933,19 +950,24 @@ const WMSPickListDetailPage = () => {
           </div>
 
           {/* GO TO LOCATION — prominent only during location step */}
-          {currentItem?.suggestedLocationCode && scanStep === 'location' && (
+          {pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-4 text-center dark:bg-amber-900/20">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                 Go to Bay
               </span>
               <div className="font-mono text-3xl font-bold text-amber-700 dark:text-amber-300">
-                {currentItem.suggestedLocationCode}
+                {pickingLine.suggestedLocationCode}
               </div>
+              {pickingLine.bayMovedFrom && (
+                <div className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                  {pickingLine.bayMovedFrom} is empty for this wine — use this bay instead
+                </div>
+              )}
             </div>
           )}
 
           {/* No suggested location warning */}
-          {!currentItem?.suggestedLocationCode && scanStep === 'location' && (
+          {!pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-red-400 bg-red-50 px-4 py-3 text-center dark:bg-red-900/20">
               <Typography variant="bodySm" className="font-semibold text-red-700 dark:text-red-300">
                 No location found in system
@@ -1009,18 +1031,18 @@ const WMSPickListDetailPage = () => {
                       error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
                       autoFocus
                     />
-                    {currentItem?.suggestedLocationId && (
+                    {pickingLine?.suggestedLocationId && (
                       <button
                         type="button"
                         onClick={() => {
-                          setPickedLocationId(currentItem.suggestedLocationId);
-                          setPickedLocationCode(currentItem.suggestedLocationCode ?? 'Manual');
+                          setPickedLocationId(pickingLine.suggestedLocationId);
+                          setPickedLocationCode(pickingLine.suggestedLocationCode ?? 'Manual');
                           setScanStep('case');
                         }}
                         className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                       >
                         <Icon icon={IconHandStop} size="xs" className="mr-1 inline-block" />
-                        Skip Scan — Use {currentItem.suggestedLocationCode}
+                        Skip Scan — Use {pickingLine.suggestedLocationCode}
                       </button>
                     )}
                   </div>
@@ -1124,10 +1146,39 @@ const WMSPickListDetailPage = () => {
           </div>
 
           {(pickItemMutation.isError || pickBottlesMutation.isError) && (
-            <Typography variant="bodyXs" className="text-center text-red-600">
-              {pickItemMutation.error?.message ??
-                pickBottlesMutation.error?.message}
-            </Typography>
+            <div className="space-y-2">
+              <Typography variant="bodyXs" className="block text-center text-red-600">
+                {pickItemMutation.error?.message ??
+                  pickBottlesMutation.error?.message}
+              </Typography>
+              {/*
+                Back to the bay step without losing the line. The only way out
+                was Cancel and start again, and the scans from the failed try
+                were still remembered, so the same case label scanned at the
+                next bay was refused as already scanned.
+              */}
+              <Button
+                variant="outline"
+                className="h-12 w-full"
+                onClick={() => {
+                  pickItemMutation.reset();
+                  pickBottlesMutation.reset();
+                  setPickedLocationId(null);
+                  setPickedLocationCode('');
+                  setCaseVerified(false);
+                  setScanStep('location');
+                  setScannedBarcodes(new Set());
+                  setDuplicateScanError(null);
+                  setLocationError(null);
+                }}
+              >
+                Scan a different bay
+                {pickingLine?.suggestedLocationCode &&
+                pickingLine.suggestedLocationCode !== pickedLocationCode
+                  ? ` — go to ${pickingLine.suggestedLocationCode}`
+                  : ''}
+              </Button>
+            </div>
           )}
 
           {/* Next bay hint */}
