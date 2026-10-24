@@ -1,5 +1,5 @@
 import { logger, schedules } from '@trigger.dev/sdk';
-import { and, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import {
@@ -136,7 +136,8 @@ const sendDeadlineReminder = async ({
  * responded to RFQs approaching their deadline.
  *
  * Sends reminders when:
- * - RFQ deadline is within the next 24-48 hours
+ * - RFQ deadline is 24-25 hours away (one hourly slice, so each partner is
+ *   reminded once rather than on every run for a day)
  * - Partner status is 'pending' or 'viewed' (not yet submitted/declined)
  */
 export const sourceDeadlineReminderJob = schedules.task({
@@ -146,11 +147,19 @@ export const sourceDeadlineReminderJob = schedules.task({
     timezone: 'Asia/Dubai',
   },
   async run() {
-    const now = new Date();
-    const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const fortyEightHoursFromNow = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    /*
+      Nothing records that a reminder went out, so the window must be exactly
+      one run wide. It was 24-48 hours, which every hourly run matched again —
+      about 24 emails and notifications per partner. Measured from the top of
+      the hour so consecutive runs tile without gaps or overlaps, whatever
+      second the scheduler fires.
+    */
+    const hourStart = new Date();
+    hourStart.setUTCMinutes(0, 0, 0);
+    const windowStart = new Date(hourStart.getTime() + 24 * 60 * 60 * 1000);
+    const windowEnd = new Date(hourStart.getTime() + 25 * 60 * 60 * 1000);
 
-    // Find RFQs with deadlines in the 24-48 hour window
+    // Find RFQs whose deadline falls in this run's one-hour slice
     const rfqsWithUpcomingDeadlines = await triggerDb
       .select({
         id: sourceRfqs.id,
@@ -163,8 +172,8 @@ export const sourceDeadlineReminderJob = schedules.task({
       .where(
         and(
           inArray(sourceRfqs.status, ['sent', 'collecting']),
-          gt(sourceRfqs.responseDeadline, twentyFourHoursFromNow),
-          lt(sourceRfqs.responseDeadline, fortyEightHoursFromNow),
+          gte(sourceRfqs.responseDeadline, windowStart),
+          lt(sourceRfqs.responseDeadline, windowEnd),
         ),
       );
 
@@ -174,7 +183,7 @@ export const sourceDeadlineReminderJob = schedules.task({
     }
 
     logger.info(
-      `Found ${rfqsWithUpcomingDeadlines.length} RFQs with deadlines in 24-48 hours`,
+      `Found ${rfqsWithUpcomingDeadlines.length} RFQs with deadlines in 24-25 hours`,
     );
 
     let remindersCount = 0;
