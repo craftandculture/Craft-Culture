@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  cellarReleaseRequests,
   partners,
   privateClientContacts,
   privateClientOrderActivityLogs,
@@ -120,8 +121,23 @@ const adminGetOne = wmsOperatorProcedure
       .where(eq(privateClientOrderActivityLogs.orderId, input.id))
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
+    /*
+      The Private Cellar release this order delivers, if any. The wine is the
+      member's own, so the team needs to see that before invoicing it.
+    */
+    const [cellarRelease] = await db
+      .select({
+        id: cellarReleaseRequests.id,
+        requestNumber: cellarReleaseRequests.requestNumber,
+        totalCostUsd: cellarReleaseRequests.totalCostUsd,
+      })
+      .from(cellarReleaseRequests)
+      .where(eq(cellarReleaseRequests.privateClientOrderId, input.id))
+      .limit(1);
+
     return {
       ...orderResult.order,
+      cellarRelease: cellarRelease ?? null,
       partner: orderResult.partner,
       distributor,
       feedBundle,

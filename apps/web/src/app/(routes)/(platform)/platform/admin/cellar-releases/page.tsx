@@ -14,7 +14,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
@@ -97,6 +97,14 @@ const CellarReleasesPage = () => {
   const api = useTRPC();
   const [status, setStatus] = useState<StatusFilter>('open');
   const [openId, setOpenId] = useState<string | null>(null);
+
+  /* Arrived from a PCO's "From cellar release" link: show that request open. */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('open');
+    if (!id) return;
+    setStatus('all');
+    setOpenId(id);
+  }, []);
   const [form, setForm] = useState({
     clearance: '',
     delivery: '',

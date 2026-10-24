@@ -603,6 +603,15 @@ const AdminPrivateOrderDetailPage = () => {
               </div>
             )}
             <PrivateOrderStatusBadge status={order.status} />
+            {order.cellarRelease && (
+              <Link
+                href={`/platform/admin/cellar-releases?open=${order.cellarRelease.id}`}
+                className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900"
+                title={`Member's own wine — bill only the delivery quote of $${order.cellarRelease.totalCostUsd?.toLocaleString() ?? 0}`}
+              >
+                From cellar release {order.cellarRelease.requestNumber}
+              </Link>
+            )}
           </div>
 
           {/* Quick actions bar */}
