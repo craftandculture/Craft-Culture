@@ -18,31 +18,37 @@ export interface DeliveryProgress {
 export const DELIVERY_STAGES = [
   {
     label: 'Confirmed',
+    headline: 'Confirmed, preparing shortly',
     title: 'Your delivery is confirmed',
     message: 'We have your request and will begin preparing your wine.',
   },
   {
     label: 'Being picked',
+    headline: 'Being picked in the cellar',
     title: 'Your wine is being picked',
     message: 'Our cellar team is taking your bottles from the bond.',
   },
   {
     label: 'Packed',
+    headline: 'Packed and awaiting collection',
     title: 'Your wine is packed',
     message: 'Your bottles are checked, packed and waiting for collection.',
   },
   {
     label: 'Collected',
+    headline: 'With the licensed distributor',
     title: 'Your wine has been collected',
     message: 'Your wine has left our warehouse with the licensed distributor.',
   },
   {
     label: 'Out for delivery',
+    headline: 'Out for delivery',
     title: 'Your wine is out for delivery',
     message: 'Your wine is on its way to you.',
   },
   {
     label: 'Delivered',
+    headline: 'Delivered',
     title: 'Your wine has been delivered',
     message: 'Your delivery has arrived. We hope you enjoy it.',
   },

@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -305,6 +306,7 @@ const CellarReleasesPage = () => {
                     {request.partnerName ?? 'Unknown member'}
                     <span className="text-text-muted ml-2 font-mono text-xs">
                       {request.requestNumber}
+                      {request.orderNumber ? ` · ${request.orderNumber}` : ''}
                     </span>
                   </Typography>
                   <Typography
@@ -640,6 +642,20 @@ const CellarReleasesPage = () => {
                         ? format(new Date(request.confirmedAt), 'd MMMM yyyy')
                         : '—'}{' '}
                       · total ${request.totalCostUsd?.toLocaleString() ?? 0}
+                      {request.privateClientOrderId && (
+                        <>
+                          {' · '}
+                          <Link
+                            href={`/platform/admin/private-orders/${request.privateClientOrderId}`}
+                            className="text-text-primary font-mono font-semibold underline underline-offset-2"
+                          >
+                            {request.orderNumber ?? 'Open order'}
+                          </Link>
+                          {request.zohoSalesOrderNumber
+                            ? ` · ${request.zohoSalesOrderNumber}`
+                            : ''}
+                        </>
+                      )}
                     </Typography>
                   ) : (
                     <>

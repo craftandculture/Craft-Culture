@@ -1,6 +1,6 @@
 'use client';
 
-import { IconChevronDown, IconTruckDelivery } from '@tabler/icons-react';
+import { IconCheck, IconChevronDown, IconTruckDelivery } from '@tabler/icons-react';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -19,54 +19,81 @@ export interface DeliveriesPanelProps {
   section: 'live' | 'past';
 }
 
-const AMBER =
-  'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900';
-const BLUE =
-  'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900';
-const GREEN =
-  'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900';
-
 /** How far a delivery has got, from the warehouse's own stages */
 const stepOf = (request: Request) => deliveryStage(request);
 
-/** Where an accepted delivery has got to, in the member's words */
-const stageOf = (request: Request) => {
-  const step = stepOf(request);
+/** When each stage was reached, where the Index records it */
+const reachedAt = (request: Request): (Date | null)[] =>
+  [
+    request.confirmedAt,
+    request.pickStartedAt,
+    request.packedAt,
+    request.collectedAt,
+    null,
+    request.deliveredAt,
+  ].map((value) => (value ? new Date(value) : null));
 
-  return {
-    label: DELIVERY_STAGES[step]?.label ?? 'Confirmed',
-    tone: step === 5 ? GREEN : step >= 3 ? BLUE : AMBER,
-  };
-};
+const stamp = (date: Date) => format(date, 'd MMM, HH:mm');
 
 /*
-  One segment per stage of the team's own process: confirmed, picked, packed,
-  collected, out for delivery, delivered. On a phone only the current stage is
-  named, or six labels would not fit.
+  One step per stage of the team's own process: confirmed, picked, packed,
+  collected, out for delivery, delivered. Done steps carry a tick and the time
+  they happened; the current one is ringed. On a phone only the current stage
+  is named, or six labels would not fit.
 */
-const ProgressStrip = ({ step }: { step: number }) => (
-  <ol className="mt-2.5 grid grid-cols-6 gap-1" aria-label="Delivery progress">
-    {DELIVERY_STAGES.map(({ label }, index) => (
-      <li key={label} className="min-w-0">
-        <span
-          className={`block h-1 rounded-full ${
-            index <= step
-              ? 'bg-emerald-600 dark:bg-emerald-400'
-              : 'bg-fill-muted'
-          }`}
-        />
-        <span
-          className={`mt-1 truncate text-[10px] ${
-            index === step
-              ? 'text-text-primary block font-semibold'
-              : 'text-text-muted hidden sm:block'
-          }`}
-          aria-current={index === step ? 'step' : undefined}
-        >
-          {label}
-        </span>
-      </li>
-    ))}
+const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }) => (
+  <ol className="mt-4 grid grid-cols-6" aria-label="Delivery progress">
+    {DELIVERY_STAGES.map(({ label }, index) => {
+      const done = index < step || (index === step && step === DELIVERY_STAGES.length - 1);
+      const current = index === step && !done;
+      const time = index <= step ? times[index] : null;
+
+      return (
+        <li key={label} className="min-w-0" aria-current={current ? 'step' : undefined}>
+          <div className="flex items-center">
+            <span
+              className={`flex size-4 flex-shrink-0 items-center justify-center rounded-full ${
+                done
+                  ? 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-black'
+                  : current
+                    ? 'bg-surface-primary ring-2 ring-emerald-600 dark:ring-emerald-400'
+                    : 'bg-fill-muted'
+              }`}
+            >
+              {done && <IconCheck size={10} stroke={3} />}
+              {current && <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />}
+            </span>
+            {index < DELIVERY_STAGES.length - 1 && (
+              <span
+                className={`mx-1 h-0.5 flex-1 rounded-full ${
+                  index < step ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-fill-muted'
+                }`}
+              />
+            )}
+          </div>
+          <p
+            className={`mt-1.5 truncate pr-2 text-[11px] ${
+              index === step
+                ? 'text-text-primary block font-semibold'
+                : index < step
+                  ? 'text-text-secondary hidden sm:block'
+                  : 'text-text-muted hidden sm:block'
+            }`}
+          >
+            {label}
+          </p>
+          {time && (
+            <p
+              className={`text-text-muted truncate pr-2 text-[10px] tabular-nums ${
+                index === step ? 'block' : 'hidden sm:block'
+              }`}
+            >
+              {stamp(time)}
+            </p>
+          )}
+        </li>
+      );
+    })}
   </ol>
 );
 
@@ -125,7 +152,6 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
   if (live.length === 0 && past.length === 0) return null;
 
   const row = (request: Request) => {
-    const stage = stageOf(request);
     const when =
       request.orderStatus === 'delivered' && request.deliveredAt
         ? `Delivered ${format(new Date(request.deliveredAt), 'd MMM yyyy')}`
@@ -152,47 +178,60 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
     const wines = isOpen ? request.items : request.items.slice(0, WINES_SHOWN);
     const hidden = request.items.length - WINES_SHOWN;
 
+    const step = stepOf(request);
+    const stage = DELIVERY_STAGES[step];
+    const details = [
+      summaryOf(request),
+      recipient,
+      when,
+      preferred ? `You asked for ${preferred}` : null,
+    ].filter(Boolean);
+
     return (
-      <li key={request.id} className="px-4 py-3">
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <p className="text-text-primary text-sm font-semibold">
-              {summaryOf(request)}
-              <span className="text-text-muted/70 ml-2 font-mono text-[11px] font-normal">{request.requestNumber}</span>
-            </p>
-            {(recipient || when || preferred) && (
-              <p className="text-text-muted mt-0.5 text-xs">
-                {[recipient, when, preferred ? `You asked for ${preferred}` : null].filter(Boolean).join(' · ')}
-              </p>
-            )}
-          </div>
-          <span className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${stage.tone}`}>
-            {stage.label}
+      <li key={request.id} className="px-4 py-4 sm:px-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="text-text-primary text-base font-semibold">
+            {step === 5 && request.deliveredAt
+              ? `Delivered ${format(new Date(request.deliveredAt), 'd MMMM')}`
+              : stage?.headline}
+          </p>
+          <span className="text-text-muted flex-shrink-0 font-mono text-[11px]">
+            {request.requestNumber}
+            {request.orderNumber ? ` · ${request.orderNumber}` : ''}
           </span>
         </div>
+        <p className="text-text-muted mt-0.5 text-xs">{details.join(' · ')}</p>
 
-        <ul className="mt-2.5 flex flex-col gap-1">
-          {wines.map((item, index) => (
-            /* Vintage beside the name: pushed to the far edge it read as an unlabelled number. */
-            <li key={`${item.productName}-${index}`} className="truncate text-sm">
-              <span className="text-emerald-800 dark:text-emerald-300">{displayWineName(item.productName)}</span>
-              <span className="text-text-muted tabular-nums"> {item.vintage ?? 'NV'}</span>
-              {item.bottles > 1 && <span className="text-text-muted text-xs"> · {item.bottles} bottles</span>}
-            </li>
-          ))}
-        </ul>
-        {hidden > 0 && (
-          <button
-            type="button"
-            onClick={() => toggleWines(request.id)}
-            aria-expanded={isOpen}
-            className="text-text-muted hover:text-text-primary mt-1 inline-flex items-center gap-1 text-xs font-semibold"
-          >
-            {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
-            <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          </button>
-        )}
-        {section === 'live' && <ProgressStrip step={stepOf(request)} />}
+        {section === 'live' && <ProgressSteps step={step} times={reachedAt(request)} />}
+
+        {/*
+          The wine, quietly underneath. Name in the primary colour, vintage
+          beside it; pushed to the far edge it read as an unlabelled number.
+        */}
+        <div className="border-border-muted mt-4 border-t pt-3">
+          <ul className="flex flex-col gap-1.5">
+            {wines.map((item, index) => (
+              <li key={`${item.productName}-${index}`} className="flex items-baseline gap-2 text-sm">
+                <span className="text-text-primary min-w-0 truncate">{displayWineName(item.productName)}</span>
+                <span className="text-text-muted flex-shrink-0 tabular-nums">{item.vintage ?? 'NV'}</span>
+                {item.bottles > 1 && (
+                  <span className="text-text-muted flex-shrink-0 text-xs">× {item.bottles}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => toggleWines(request.id)}
+              aria-expanded={isOpen}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 dark:text-emerald-300"
+            >
+              {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
+              <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+        </div>
       </li>
     );
   };

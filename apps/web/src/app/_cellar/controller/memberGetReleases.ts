@@ -81,6 +81,8 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
         accepted it, and the next they heard was the doorbell.
       */
       orderStatus: privateClientOrders.status,
+      /* The order number the team works from, so a member can quote it */
+      orderNumber: privateClientOrders.orderNumber,
       /*
         The day the delivery is arranged for. scheduledDeliveryAt is when
         somebody arranged it, which is not the same thing, and showing it as
@@ -96,6 +98,10 @@ const memberGetReleases = stockOwnerProcedure.query(async ({ ctx }) => {
       pickListStatus: wmsPickLists.status,
       salesOrderStatus: zohoSalesOrders.status,
       dispatchStatus: wmsDispatchBatches.status,
+      /* When each stage was reached, shown under its step */
+      pickStartedAt: wmsPickLists.startedAt,
+      packedAt: wmsPickLists.completedAt,
+      collectedAt: wmsDispatchBatches.dispatchedAt,
     })
     .from(cellarReleaseRequests)
     .leftJoin(
