@@ -3545,6 +3545,33 @@ const runMigrations = async () => {
     );
     console.log('✅ winelabs cache ready');
 
+    /*
+      One owner key (Index 3.0, Oct 2026). The distribution ledger's owners
+      (cons_owners) were seeded with no partner account, so their consignment
+      sales could reach no portal. Link each to the partner whose warehouse
+      stock its name matches, only where exactly one partner matches; anything
+      ambiguous is left for staff to link on the Distribution page.
+    */
+    await dataFix('consignment owners linked to their partner accounts', async () => {
+      await client.unsafe(`
+        UPDATE "cons_owners" ow
+        SET "partner_id" = m."owner_id", "updated_at" = now()
+        FROM (
+          SELECT ow2."id" AS cons_id, MIN(s."owner_id"::text)::uuid AS owner_id
+          FROM "cons_owners" ow2
+          JOIN "wms_stock" s
+            ON ow2."wms_owner_match" IS NOT NULL
+           AND UPPER(s."owner_name") LIKE '%' || UPPER(ow2."wms_owner_match") || '%'
+          WHERE ow2."partner_id" IS NULL
+          GROUP BY ow2."id"
+          HAVING COUNT(DISTINCT s."owner_id") = 1
+        ) m
+        WHERE ow."id" = m.cons_id
+          AND ow."partner_id" IS NULL
+          AND NOT EXISTS (SELECT 1 FROM "cons_owners" o3 WHERE o3."partner_id" = m."owner_id")
+      `);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {
