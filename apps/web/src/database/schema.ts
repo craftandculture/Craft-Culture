@@ -4738,6 +4738,12 @@ export const wmsStockMovements = pgTable(
     toLocationId: uuid('to_location_id').references(() => wmsLocations.id),
     fromOwnerId: uuid('from_owner_id').references(() => partners.id),
     toOwnerId: uuid('to_owner_id').references(() => partners.id),
+    /**
+     * The stock row a pick or dispatch drew from (Index 3.0). No foreign key:
+     * an emptied row can be deleted, and the record of what left must outlive
+     * it. With from_owner_id this is what says whose bottles went out.
+     */
+    stockId: uuid('stock_id'),
     lotNumber: text('lot_number'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     orderId: uuid('order_id'),
@@ -5031,6 +5037,8 @@ export const wmsPickListItems = pgTable(
     suggestedLocationId: uuid('suggested_location_id').references(() => wmsLocations.id),
     suggestedStockId: uuid('suggested_stock_id').references(() => wmsStock.id),
     pickedFromLocationId: uuid('picked_from_location_id').references(() => wmsLocations.id),
+    /** The stock row actually picked from, so the owner is known (Index 3.0) */
+    pickedStockId: uuid('picked_stock_id'),
     pickedQuantity: integer('picked_quantity'),
     pickedAt: timestamp('picked_at', { mode: 'date' }),
     pickedBy: uuid('picked_by').references(() => users.id),

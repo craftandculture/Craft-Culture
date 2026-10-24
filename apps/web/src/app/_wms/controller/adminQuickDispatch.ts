@@ -272,6 +272,7 @@ const adminQuickDispatch = wmsOperatorProcedure
             .select({
               id: wmsStock.id,
               quantityCases: wmsStock.quantityCases,
+              ownerId: wmsStock.ownerId,
             })
             .from(wmsStock)
             .where(
@@ -295,22 +296,24 @@ const adminQuickDispatch = wmsOperatorProcedure
             });
 
             remaining -= result.totalPicked;
-          }
 
-          const picked = item.quantity - remaining;
-          if (picked > 0) {
-            const movementNumber = await generateMovementNumber();
-            await db.insert(wmsStockMovements).values({
-              movementNumber,
-              movementType: 'pick',
-              lwin18: lwin,
-              productName: item.name,
-              quantityCases: picked,
-              orderId: orderRef.id,
-              notes: `Quick dispatch ${batchNumber}`,
-              performedBy: ctx.user.id,
-              performedAt: now,
-            });
+            // One movement per row drawn, so each owner's bottles are accounted for (Index 3.0)
+            if (result.totalPicked > 0) {
+              const movementNumber = await generateMovementNumber();
+              await db.insert(wmsStockMovements).values({
+                movementNumber,
+                movementType: 'pick',
+                lwin18: lwin,
+                productName: item.name,
+                quantityCases: result.totalPicked,
+                fromOwnerId: stock.ownerId,
+                stockId: stock.id,
+                orderId: orderRef.id,
+                notes: `Quick dispatch ${batchNumber}`,
+                performedBy: ctx.user.id,
+                performedAt: now,
+              });
+            }
           }
         }
       } else {
@@ -332,6 +335,7 @@ const adminQuickDispatch = wmsOperatorProcedure
             .select({
               id: wmsStock.id,
               quantityCases: wmsStock.quantityCases,
+              ownerId: wmsStock.ownerId,
             })
             .from(wmsStock)
             .where(
@@ -347,6 +351,7 @@ const adminQuickDispatch = wmsOperatorProcedure
               .select({
                 id: wmsStock.id,
                 quantityCases: wmsStock.quantityCases,
+                ownerId: wmsStock.ownerId,
               })
               .from(wmsStock)
               .where(
@@ -370,22 +375,24 @@ const adminQuickDispatch = wmsOperatorProcedure
             });
 
             remaining -= result.totalPicked;
-          }
 
-          const picked = item.quantity - remaining;
-          if (picked > 0) {
-            const movementNumber = await generateMovementNumber();
-            await db.insert(wmsStockMovements).values({
-              movementNumber,
-              movementType: 'pick',
-              lwin18: item.lwin,
-              productName: item.productName,
-              quantityCases: picked,
-              orderId: orderRef.id,
-              notes: `Quick dispatch ${batchNumber}`,
-              performedBy: ctx.user.id,
-              performedAt: now,
-            });
+            // One movement per row drawn, so each owner's bottles are accounted for (Index 3.0)
+            if (result.totalPicked > 0) {
+              const movementNumber = await generateMovementNumber();
+              await db.insert(wmsStockMovements).values({
+                movementNumber,
+                movementType: 'pick',
+                lwin18: item.lwin,
+                productName: item.productName,
+                quantityCases: result.totalPicked,
+                fromOwnerId: stock.ownerId,
+                stockId: stock.id,
+                orderId: orderRef.id,
+                notes: `Quick dispatch ${batchNumber}`,
+                performedBy: ctx.user.id,
+                performedAt: now,
+              });
+            }
           }
         }
       }

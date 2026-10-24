@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
@@ -16,6 +16,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { updateBatchStatusSchema } from '../schemas/dispatchBatchSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import planDispatchMovements from '../utils/planDispatchMovements';
 
 /**
  * Update dispatch batch status
@@ -148,25 +149,49 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
             .from(privateClientOrderItems)
             .where(inArray(privateClientOrderItems.orderId, orderIds));
 
-          const allItems = [...zohoItems, ...pcoItems].filter(
-            (item) => item.lwin18 && item.quantity > 0,
-          );
+          // What was actually picked for these orders, with whose bottles they were
+          const picks = await db
+            .select({
+              orderId: wmsStockMovements.orderId,
+              lwin18: wmsStockMovements.lwin18,
+              productName: wmsStockMovements.productName,
+              quantityCases: wmsStockMovements.quantityCases,
+              quantityBottles: wmsStockMovements.quantityBottles,
+              fromOwnerId: wmsStockMovements.fromOwnerId,
+              stockId: wmsStockMovements.stockId,
+            })
+            .from(wmsStockMovements)
+            .where(
+              and(
+                eq(wmsStockMovements.movementType, 'pick'),
+                inArray(wmsStockMovements.orderId, orderIds),
+              ),
+            );
+
+          const movements = planDispatchMovements({
+            orderIds,
+            picks,
+            lines: [...zohoItems, ...pcoItems],
+          });
 
           // Build order number lookup
           const orderNumberMap = new Map(
             batchOrders.map((o) => [o.orderId, o.orderNumber]),
           );
 
-          for (const item of allItems) {
+          for (const movement of movements) {
             const movementNumber = await generateMovementNumber();
             await db.insert(wmsStockMovements).values({
               movementNumber,
               movementType: 'dispatch',
-              lwin18: item.lwin18 ?? 'UNKNOWN',
-              productName: item.productName ?? 'Unknown Product',
-              quantityCases: item.quantity,
-              orderId: item.orderId,
-              notes: `Batch ${batch.batchNumber} → ${batch.distributorName} (${orderNumberMap.get(item.orderId) ?? ''})`,
+              lwin18: movement.lwin18,
+              productName: movement.productName,
+              quantityCases: movement.quantityCases,
+              quantityBottles: movement.quantityBottles,
+              fromOwnerId: movement.fromOwnerId,
+              stockId: movement.stockId,
+              orderId: movement.orderId,
+              notes: `Batch ${batch.batchNumber} → ${batch.distributorName} (${orderNumberMap.get(movement.orderId) ?? ''})`,
               performedBy: ctx.user.id,
               performedAt: new Date(),
             });
