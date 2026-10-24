@@ -18,6 +18,7 @@ import {
 import type { HillebrandShipment } from './getShipments';
 import { inboundStatusMessage } from '../../notifications/logisticsSlackMessages';
 import postLogisticsSlack from '../../notifications/postLogisticsSlack';
+import omitEmptyFields from '../../utils/omitEmptyFields';
 import { forwardOnlyStatus } from '../../utils/shipmentStatuses';
 
 /**
@@ -383,7 +384,9 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
         if (existing) {
           // Hillebrand refreshes tracking and dates, but never undoes what the
           // app or a person has set: the status only moves forward, and the
-          // type, destination, notes and (once lines exist) the counts are kept
+          // type, destination, notes and (once lines exist) the counts are kept.
+          // A field Hillebrand did not send (or the shorter list data lacks) is
+          // left alone rather than blanked, so a hand-entered ETA or B/L stays
           const status = forwardOnlyStatus(existing.status, shipmentData.status);
           const [hasItems] = await db
             .select({ id: logisticsShipmentItems.id })
@@ -403,7 +406,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
           await db
             .update(logisticsShipments)
             .set({
-              ...tracking,
+              ...omitEmptyFields(tracking),
               status,
               ...(!existing.destinationCity && { destinationCity }),
               ...(!existing.destinationWarehouse && { destinationWarehouse }),
