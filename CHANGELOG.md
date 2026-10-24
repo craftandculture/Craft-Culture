@@ -1,3 +1,9 @@
+## [2.0.509](https://github.com/craftandculture/Craft-Culture/compare/v2.0.508...v2.0.509) (2026-10-24)
+
+### Bug Fixes
+
+* the scanner keeps telling the picker to break a case open for the whole pick, not only before Pick is tapped ([d478c20](https://github.com/craftandculture/Craft-Culture/commit/d478c2018c79d127ad1b993ba90ffa8123df9549))
+
 ## [2.0.508](https://github.com/craftandculture/Craft-Culture/compare/v2.0.507...v2.0.508) (2026-10-24)
 
 ### Features
