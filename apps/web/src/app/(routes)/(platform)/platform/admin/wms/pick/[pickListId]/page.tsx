@@ -34,6 +34,9 @@ import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import caseScanMatchesLwin from '@/app/_wms/utils/caseScanMatchesLwin';
+import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
+import pakKeyOf from '@/app/_wms/utils/pakKeyOf';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -278,12 +281,30 @@ const WMSPickListDetailPage = () => {
       const result = await lookupLocation({ barcode });
 
       /*
-        Any bay is accepted, not only the suggested one. The suggestion is a
-        best guess; the picker can see a shelf holding the same wine, and
-        blocking them sent people up to a pallet for a case within reach. The
-        pick itself checks the scanned bay holds enough and says where else it
-        is if not.
+        Any bay holding this wine is accepted, not only the suggested one. The
+        suggestion is a best guess; the picker can see a shelf holding the same
+        wine, and blocking them sent people up to a pallet for a case within
+        reach. A bay that does not hold the wine at all is still refused here,
+        at the scan — accepting it let any barcode through until Confirm.
+
+        Matched pack-agnostically, like the pick itself. A line whose code
+        cannot be split (released before it had a usable LWIN) is left to the
+        pick, which falls back to the product name at the bay.
       */
+      if (pickingItem && lwinPackAgnosticPattern(pickingItem.lwin18)) {
+        const wanted = pakKeyOf(normalizeLwin18(pickingItem.lwin18));
+        const holdsWine = result.stock.some(
+          (row) => pakKeyOf(normalizeLwin18(row.lwin18)) === wanted,
+        );
+
+        if (!holdsWine) {
+          const suggestedCode = data?.items.find((i) => i.id === pickingItem.itemId)?.suggestedLocationCode;
+          setLocationError(
+            `${pickingItem.productName} is not in ${result.location.locationCode}${suggestedCode ? ` — try ${suggestedCode}` : ''}`,
+          );
+          return;
+        }
+      }
 
       setPickedLocationId(result.location.id);
       setPickedLocationCode(result.location.locationCode);
@@ -295,7 +316,7 @@ const WMSPickListDetailPage = () => {
     } finally {
       setIsLookingUpLocation(false);
     }
-  }, [scannedBarcodes, lookupLocation]);
+  }, [scannedBarcodes, lookupLocation, pickingItem, data]);
 
   // Handle case barcode scan
   const handleCaseScan = useCallback((barcode: string) => {
@@ -320,8 +341,10 @@ const WMSPickListDetailPage = () => {
     */
     const normalizedScan = barcode.replace(/-/g, '').toLowerCase();
     const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
-    const exactMatch =
-      normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan);
+    // One way only: the scan may carry the code (`CASE-{lwin18}-001`), but a
+    // scan that is merely part of the code — `2015`, `750`, a bare wine ID —
+    // says nothing about which case this is.
+    const exactMatch = normalizedScan.includes(normalizedLwin);
 
     if (exactMatch || caseScanMatchesLwin(barcode, pickingItem.lwin18)) {
       setCaseVerified(true);
