@@ -1,3 +1,9 @@
+## [2.0.515](https://github.com/craftandculture/Craft-Culture/compare/v2.0.514...v2.0.515) (2026-10-24)
+
+### Bug Fixes
+
+* Zoho syncs reconnect — credentials ending in a literal "\n" are cleaned before the token request ([ccdb9c6](https://github.com/craftandculture/Craft-Culture/commit/ccdb9c62b841294fed4299cb4f8bfeb2637e3483))
+
 ## [2.0.514](https://github.com/craftandculture/Craft-Culture/compare/v2.0.513...v2.0.514) (2026-10-24)
 
 ### Features
