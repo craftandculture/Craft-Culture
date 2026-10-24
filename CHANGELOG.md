@@ -1,3 +1,9 @@
+## [2.0.505](https://github.com/craftandculture/Craft-Culture/compare/v2.0.504...v2.0.505) (2026-10-24)
+
+### Bug Fixes
+
+* the pick screen refuses a bay that does not hold the wine, and a scan that is only part of the code ([e5e2ff8](https://github.com/craftandculture/Craft-Culture/commit/e5e2ff86c2ffabe483d88de439ce7371415defa3))
+
 ## [2.0.504](https://github.com/craftandculture/Craft-Culture/compare/v2.0.503...v2.0.504) (2026-10-24)
 
 ### Bug Fixes
