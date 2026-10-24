@@ -165,7 +165,9 @@ export const zohoSalesOrderSyncJob = schedules.task({
                 billingAddress: fullOrder.billing_address,
                 shippingAddress: fullOrder.shipping_address,
                 zohoCreatedTime: new Date(fullOrder.created_time),
-                zohoLastModifiedTime: new Date(fullOrder.last_modified_time),
+                // Left empty until the stock is held (below), so a failed hold
+                // is retried by the next run instead of being skipped as unchanged
+                zohoLastModifiedTime: null,
                 lastSyncAt: new Date(),
               })
               .returning({ id: zohoSalesOrders.id });
@@ -188,7 +190,7 @@ export const zohoSalesOrderSyncJob = schedules.task({
               );
             }
 
-            return order;
+            return order!;
           });
 
           // Link invoice number from zohoInvoices (matched by reference_number = SO number)
@@ -226,8 +228,14 @@ export const zohoSalesOrderSyncJob = schedules.task({
             if (hold.short.length > 0) {
               logger.warn(`Stock shortage for ${fullOrder.salesorder_number}`, { short: hold.short });
             }
+
+            await triggerDb
+              .update(zohoSalesOrders)
+              .set({ zohoLastModifiedTime: new Date(fullOrder.last_modified_time) })
+              .where(eq(zohoSalesOrders.id, newOrder.id));
           } catch (reserveError) {
-            // Don't fail the sync if holding fails
+            // Don't fail the sync if holding fails — the order has no
+            // last-modified time yet, so the next run holds it again
             logger.error(`Failed to hold stock for ${fullOrder.salesorder_number}`, { error: reserveError });
           }
 
