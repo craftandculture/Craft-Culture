@@ -972,6 +972,29 @@ const WMSPickListDetailPage = () => {
             </div>
           </div>
 
+          {/*
+            The break-a-case instruction again, for the whole scan.
+
+            It used to show only on the line card, which is gone once Pick is
+            tapped. A picker at the bay then saw "4 bottles" over a 6x75cl
+            badge and nothing saying a case had to be opened, and the relabel
+            prompt for the two left over only arrives after Confirm Pick.
+          */}
+          {pickingLine && isCrackPick(pickingLine) && (
+            <div className="flex items-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
+              <Icon icon={IconPackage} size="sm" className="shrink-0 text-amber-600" />
+              <Typography variant="bodySm" className="font-semibold text-amber-800 dark:text-amber-300">
+                {wholeCases(pickingLine) > 0
+                  ? `Take ${wholeCases(pickingLine)} sealed ${formatCaseConfig(pickingLine)} case${wholeCases(pickingLine) === 1 ? '' : 's'}, then break one more — `
+                  : `Break open a ${formatCaseConfig(pickingLine)} case — `}
+                take {looseBottles(pickingLine)} loose bottle
+                {looseBottles(pickingLine) === 1 ? '' : 's'}, return{' '}
+                {(pickingLine.caseConfig ?? 0) - looseBottles(pickingLine)} to the
+                shelf. You will be asked to relabel them after Confirm Pick.
+              </Typography>
+            </div>
+          )}
+
           {/* GO TO LOCATION — prominent only during location step */}
           {pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-4 text-center dark:bg-amber-900/20">
