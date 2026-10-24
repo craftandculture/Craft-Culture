@@ -1,3 +1,9 @@
+## [2.0.502](https://github.com/craftandculture/Craft-Culture/compare/v2.0.501...v2.0.502) (2026-10-24)
+
+### Bug Fixes
+
+* confirming a cellar release links it to the PCO the team already raised for that Zoho order instead of refusing ([5d64844](https://github.com/craftandculture/Craft-Culture/commit/5d648441dfda67995526b08b922eb7f65edbd544))
+
 ## [2.0.501](https://github.com/craftandculture/Craft-Culture/compare/v2.0.500...v2.0.501) (2026-10-24)
 
 ### Features
