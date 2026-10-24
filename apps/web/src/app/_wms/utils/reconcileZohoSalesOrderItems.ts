@@ -110,8 +110,10 @@ const reconcileZohoSalesOrderItems = async ({
           // SKU carries the pack config (…-06-… = 6-pack) which drives the
           // pick's bottle count, and description mirrors it. A pack change that
           // keeps the same total was previously invisible here — sync both.
-          // Compare canonicalised so a re-dashing alone isn't churned forever.
-          (canonicalSku(local.sku) ?? '') !== (canonicalSku(item.sku) ?? '') ||
+          // The stored SKU is compared as-is: every write canonicalises, so
+          // this only differs once, for a line stored mis-dashed before that
+          // — which is then rewritten and re-held instead of left unmatched.
+          (local.sku ?? '') !== (canonicalSku(item.sku) ?? '') ||
           (local.description ?? '') !== (item.description ?? ''))
       ) {
         changed.push({ zoho: item, localId: local.id });
