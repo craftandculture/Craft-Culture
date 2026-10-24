@@ -201,6 +201,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         lwin18: string;
         productName: string;
         caseConfig: number | null;
+        ownerId: string;
       }[] = [];
 
       const stockSelect = {
@@ -212,6 +213,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         lwin18: wmsStock.lwin18,
         productName: wmsStock.productName,
         caseConfig: wmsStock.caseConfig,
+        ownerId: wmsStock.ownerId,
       };
 
       // Strategy 1: Match by LWIN18, PACK-AGNOSTIC — the ordered pack and the
@@ -299,6 +301,7 @@ const adminReleaseToPick = wmsOperatorProcedure
               lwin18: wmsStock.lwin18,
               productName: wmsStock.productName,
               caseConfig: wmsStock.caseConfig,
+              ownerId: wmsStock.ownerId,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -461,6 +464,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         if (held > 0) {
           await db.insert(wmsStockReservations).values({
             stockId: suggestedStock.stockId,
+            // Whose bottles are promised: the owner a client sees as "reserved" (Index 3.0)
+            ownerId: suggestedStock.ownerId,
             orderType: 'zoho',
             orderId: order.id,
             orderItemId: item.id,
