@@ -209,12 +209,26 @@ const syncExistingSalesOrder = async ({
   const invoiceNumber = pickInvoiceNumber(fullOrder);
   const invoiceUpdate = invoiceNumber ? { invoiceNumber } : {};
 
-  if (PRE_PICK_STATUSES.has(status)) {
-    await db
+  /*
+    Zoho's status and last-modified time are what the short-circuit above
+    compares, so they are written LAST, once every step that depends on them has
+    succeeded. Written first, a reconcile or hold that failed part-way (a dropped
+    connection) left the order looking unchanged, and no later run retried it —
+    its lines stayed on the old quantities until someone edited it in Zoho.
+  */
+  const markSynced = () =>
+    db
       .update(zohoSalesOrders)
       .set({
         zohoStatus: zohoOrder.status,
         zohoLastModifiedTime: zohoModifiedAt,
+      })
+      .where(eq(zohoSalesOrders.id, existing.id));
+
+  if (PRE_PICK_STATUSES.has(status)) {
+    await db
+      .update(zohoSalesOrders)
+      .set({
         total: fullOrder.total,
         subTotal: fullOrder.sub_total,
         // Only the insert captured this, so a reference typed into Zoho after
@@ -246,6 +260,8 @@ const syncExistingSalesOrder = async ({
       orderId: existing.id,
       orderNumber: fullOrder.salesorder_number,
     });
+
+    await markSynced();
 
     return { outcome: 'reconciled' as const, reconciled };
   }
@@ -280,8 +296,6 @@ const syncExistingSalesOrder = async ({
   await db
     .update(zohoSalesOrders)
     .set({
-      zohoStatus: zohoOrder.status,
-      zohoLastModifiedTime: zohoModifiedAt,
       total: fullOrder.total,
       subTotal: fullOrder.sub_total,
       referenceNumber: fullOrder.reference_number,
@@ -300,8 +314,12 @@ const syncExistingSalesOrder = async ({
       db,
     });
 
+    await markSynced();
+
     return { outcome: 'reconciled' as const, reconciled };
   }
+
+  await markSynced();
 
   return shouldFlag
     ? ({ outcome: 'flagged' } as const)

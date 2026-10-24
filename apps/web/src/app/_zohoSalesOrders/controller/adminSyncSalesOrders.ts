@@ -128,7 +128,9 @@ const adminSyncSalesOrders = adminProcedure
             billingAddress: fullOrder.billing_address,
             shippingAddress: fullOrder.shipping_address,
             zohoCreatedTime: new Date(fullOrder.created_time),
-            zohoLastModifiedTime: new Date(fullOrder.last_modified_time),
+            // Left empty until the stock is held (below), so a failed hold
+            // is retried by the next sync instead of being skipped as unchanged
+            zohoLastModifiedTime: null,
             // Straight off the order — see pickInvoiceNumber for why the
             // reference_number match isn't enough on its own.
             invoiceNumber: pickInvoiceNumber(fullOrder),
@@ -172,6 +174,12 @@ const adminSyncSalesOrders = adminProcedure
         orderId: newOrderId,
         orderNumber: fullOrder.salesorder_number,
       });
+
+      await db
+        .update(zohoSalesOrders)
+        .set({ zohoLastModifiedTime: new Date(fullOrder.last_modified_time) })
+        .where(eq(zohoSalesOrders.id, newOrderId));
+
       if (hold.short.length) {
         shortOnSync.push(
           `${fullOrder.salesorder_number}: ${hold.short.map((s) => `${s.name} (${s.bottlesShort} btl short)`).join(', ')}`,
