@@ -1,3 +1,9 @@
+## [2.0.518](https://github.com/craftandculture/Craft-Culture/compare/v2.0.517...v2.0.518) (2026-10-24)
+
+### Bug Fixes
+
+* past picks and stock decreases are stamped with the owner of the bay they left, so members' and partners' history shows what went out ([3c3e257](https://github.com/craftandculture/Craft-Culture/commit/3c3e2576a8d455843ae905a23e2850c86796e6e4))
+
 ## [2.0.517](https://github.com/craftandculture/Craft-Culture/compare/v2.0.516...v2.0.517) (2026-10-24)
 
 ### Bug Fixes
