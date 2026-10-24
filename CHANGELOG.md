@@ -1,3 +1,9 @@
+## [2.0.513](https://github.com/craftandculture/Craft-Culture/compare/v2.0.512...v2.0.513) (2026-10-24)
+
+### Features
+
+* Stock Explorer can take cases or bottles out of stock with a reason, so they show on the owner's statement instead of vanishing ([3650f26](https://github.com/craftandculture/Craft-Culture/commit/3650f264e243f23a463bed30a8d37898d01ddc0b))
+
 ## [2.0.512](https://github.com/craftandculture/Craft-Culture/compare/v2.0.511...v2.0.512) (2026-10-24)
 
 ### Features
