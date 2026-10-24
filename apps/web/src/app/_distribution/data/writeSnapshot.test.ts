@@ -36,9 +36,12 @@ const parsed: ParsedCityDrinksStock = {
 const fakeSql = () => {
   const bound: unknown[] = [];
   const rowsPassed: unknown[] = [];
+  const outsideTransaction: unknown[] = [];
+  let inTransaction = false;
 
-  const sql = ((...args: unknown[]) => {
+  const client = (...args: unknown[]) => {
     if (Array.isArray(args[0]) && 'raw' in (args[0] as object)) {
+      if (!inTransaction) outsideTransaction.push(args[0]);
       bound.push(...args.slice(1));
 
       return Promise.resolve([]);
@@ -47,9 +50,19 @@ const fakeSql = () => {
     rowsPassed.push(args[0]);
 
     return { __rows: args[0] };
-  }) as never;
+  };
 
-  return { sql, bound, rowsPassed };
+  client.begin = async (callback: (tx: typeof client) => Promise<unknown>) => {
+    inTransaction = true;
+
+    try {
+      return await callback(client);
+    } finally {
+      inTransaction = false;
+    }
+  };
+
+  return { sql: client as never, bound, rowsPassed, outsideTransaction };
 };
 
 describe('writeSnapshot', () => {
@@ -80,6 +93,19 @@ describe('writeSnapshot', () => {
     const rows = rowsPassed[0] as { taken_at: unknown }[];
 
     expect(bound).toContain(rows[0]!.taken_at);
+  });
+
+  /*
+    The feed keeps no history, so a re-pull whose insert fails must not leave
+    the earlier position deleted with nothing in its place.
+  */
+  it('replaces inside one transaction', async () => {
+    const { sql, bound, outsideTransaction } = fakeSql();
+
+    await writeSnapshot(sql, 'outlet-1', parsed);
+
+    expect(bound.length).toBeGreaterThan(0);
+    expect(outsideTransaction).toHaveLength(0);
   });
 
   it('writes nothing when the feed is empty, rather than an empty insert', async () => {

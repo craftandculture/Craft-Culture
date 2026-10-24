@@ -42,12 +42,19 @@ const writeSnapshot = async (
   */
   const takenAt = parsed.takenAt.toISOString();
 
-  await sql`
-    DELETE FROM cons_snapshots
-    WHERE outlet_id = ${outletId} AND taken_at = ${takenAt}
-  `;
+  /*
+    One transaction, so a failed insert cannot leave the old position deleted
+    and nothing in its place. The feed keeps no history: a re-pull of the same
+    moment that dies half-way would otherwise lose that position for good.
+  */
+  await sql.begin(async (tx) => {
+    await tx`
+      DELETE FROM cons_snapshots
+      WHERE outlet_id = ${outletId} AND taken_at = ${takenAt}
+    `;
 
-  if (parsed.rows.length > 0) {
+    if (parsed.rows.length === 0) return;
+
     const values = parsed.rows.map((row) => ({
       outlet_id: outletId,
       taken_at: takenAt,
@@ -68,8 +75,8 @@ const writeSnapshot = async (
       outright — the first live pull fetched all 389 products and then failed
       on the write for exactly that reason.
     */
-    await sql`INSERT INTO cons_snapshots ${sql(values)}`;
-  }
+    await tx`INSERT INTO cons_snapshots ${tx(values)}`;
+  });
 
   return {
     takenAt: parsed.takenAt,
