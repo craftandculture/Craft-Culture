@@ -1,3 +1,10 @@
+## [2.0.514](https://github.com/craftandculture/Craft-Culture/compare/v2.0.513...v2.0.514) (2026-10-24)
+
+### Features
+
+* cellar deliveries are recorded as owner deliveries, and the invoice sync now reads each Zoho invoice's lines and the sales order line behind them ([0b97d8d](https://github.com/craftandculture/Craft-Culture/commit/0b97d8d0292a6b324911665916e44be9d00b5e0f))
+* stock held when an order is released to picking now records whose stock it is ([287ac03](https://github.com/craftandculture/Craft-Culture/commit/287ac03a43e54f4344b22b0a0e7fb44ab70753d7))
+
 ## [2.0.513](https://github.com/craftandculture/Craft-Culture/compare/v2.0.512...v2.0.513) (2026-10-24)
 
 ### Features
