@@ -12,7 +12,6 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import ExcelJS from 'exceljs';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
@@ -223,6 +222,7 @@ const PdfExtractPage = () => {
   const handleExportExcel = async () => {
     if (!extractedData) return;
 
+    const { default: ExcelJS } = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Craft & Culture';
     workbook.created = new Date();

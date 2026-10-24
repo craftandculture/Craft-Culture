@@ -3,7 +3,6 @@
 import { IconFileSpreadsheet, IconUpload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 import extractVintageFromName from '@/app/_pricingCalculator/utils/extractVintageFromName';
 import Button from '@/app/_ui/components/Button/Button';
@@ -58,8 +57,9 @@ const SupplierUpload = () => {
       setFileName(file.name);
 
       const reader = new FileReader();
-      reader.onload = (evt) => {
+      reader.onload = async (evt) => {
         try {
+          const XLSX = await import('xlsx');
           const data = new Uint8Array(evt.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]!];
