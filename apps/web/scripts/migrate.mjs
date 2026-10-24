@@ -3598,6 +3598,25 @@ const runMigrations = async () => {
     await client.unsafe(`CREATE INDEX IF NOT EXISTS "wms_stock_outflows_owner_idx" ON "wms_stock_outflows" ("owner_id", "performed_at")`);
     console.log('✅ stock outflows ready');
 
+    /*
+      What kind of order a PCO is (Index 3.0, Oct 2026). Every outbound
+      request runs through the PCO pipeline; the kind decides what the
+      bottles become on the owner's statement: client_sale (sold to a private
+      client), owner_delivery (a cellar member's own wine delivered to them,
+      not a sale), partner_samples, cellar_sale.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "order_kind" text DEFAULT 'client_sale' NOT NULL`,
+    );
+    await dataFix('cellar deliveries marked as owner deliveries', async () => {
+      await client.unsafe(`
+        UPDATE "private_client_orders" o SET "order_kind" = 'owner_delivery'
+        FROM "cellar_release_requests" r
+        WHERE r."private_client_order_id" = o."id" AND o."order_kind" = 'client_sale'
+      `);
+    });
+    console.log('✅ PCO order kinds ready');
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
