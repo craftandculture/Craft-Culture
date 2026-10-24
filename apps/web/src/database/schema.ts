@@ -8263,3 +8263,40 @@ export const winelabsCalls = pgTable(
   },
   (table) => [index('winelabs_calls_created_at_idx').on(table.createdAt)],
 );
+
+/**
+ * Bottles taken out of stock by hand, and why (Index 3.0)
+ *
+ * One row beside each "take out of stock" movement: samples, marketing,
+ * breakage, loss, collected by the owner, sold outside Zoho. The movement
+ * moves the stock; this says where it went and how the owner is settled, so
+ * the bottles show on their statement instead of vanishing from it.
+ */
+export const wmsStockOutflows = pgTable(
+  'wms_stock_outflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    movementId: uuid('movement_id').notNull(),
+    stockId: uuid('stock_id').notNull(),
+    ownerId: uuid('owner_id').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    bottles: integer('bottles').notNull(),
+    /** One of STOCK_OUT_REASONS */
+    reason: text('reason').notNull(),
+    /** cc_landed | owner_reimbursed | price | not_a_sale | write_off */
+    settlement: text('settlement').notNull(),
+    recipient: text('recipient'),
+    note: text('note'),
+    unitPriceUsd: doublePrecision('unit_price_usd'),
+    reference: text('reference'),
+    /** Entered after the fact, from the "gone but still showing" clean-up */
+    backdated: boolean('backdated').notNull().default(false),
+    performedBy: uuid('performed_by').notNull(),
+    performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('wms_stock_outflows_owner_idx').on(table.ownerId, table.performedAt)],
+);
+
+export type WmsStockOutflow = typeof wmsStockOutflows.$inferSelect;

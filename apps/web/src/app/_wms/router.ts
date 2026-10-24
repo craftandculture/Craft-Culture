@@ -117,6 +117,7 @@ import adminSetStockForSale from './controller/adminSetStockForSale';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
+import adminTakeOutOfStock from './controller/adminTakeOutOfStock';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUnsealPallet from './controller/adminUnsealPallet';
@@ -222,6 +223,7 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
+  takeOut: adminTakeOutOfStock,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,
