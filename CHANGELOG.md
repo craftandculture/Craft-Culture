@@ -1,3 +1,9 @@
+## [2.0.508](https://github.com/craftandculture/Craft-Culture/compare/v2.0.507...v2.0.508) (2026-10-24)
+
+### Features
+
+* a PCO raised from a Private Cellar release shows a link back to that release ([2b638d0](https://github.com/craftandculture/Craft-Culture/commit/2b638d0abd3151e506f57a063bae41e3e09b38ea))
+
 ## [2.0.507](https://github.com/craftandculture/Craft-Culture/compare/v2.0.506...v2.0.507) (2026-10-24)
 
 ### Features
