@@ -198,14 +198,11 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
 
         <ul className="mt-2.5 flex flex-col gap-1">
           {wines.map((item, index) => (
-            <li key={`${item.productName}-${index}`} className="flex items-baseline gap-3 text-sm">
-              <span className="min-w-0 flex-1 truncate text-emerald-800 dark:text-emerald-300">
-                {displayWineName(item.productName)}
-              </span>
-              <span className="text-text-muted flex-shrink-0 text-xs tabular-nums">
-                {item.vintage ?? 'NV'}
-                {item.bottles > 1 ? ` · ${item.bottles} btl` : ''}
-              </span>
+            /* Vintage beside the name: pushed to the far edge it read as an unlabelled number. */
+            <li key={`${item.productName}-${index}`} className="truncate text-sm">
+              <span className="text-emerald-800 dark:text-emerald-300">{displayWineName(item.productName)}</span>
+              <span className="text-text-muted tabular-nums"> {item.vintage ?? 'NV'}</span>
+              {item.bottles > 1 && <span className="text-text-muted text-xs"> · {item.bottles} bottles</span>}
             </li>
           ))}
         </ul>
