@@ -41,7 +41,7 @@ const envSchema = z.object({
   WINELABS_MONTHLY_CREDIT_CAP: z.string().optional(),
 });
 
-const rawEnv = {
+const rawEnvAsSet = {
   NODE_ENV: process.env.NODE_ENV,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   DB_URL: process.env.DB_URL,
@@ -69,6 +69,22 @@ const rawEnv = {
   WINELABS_BASE_URL: process.env.WINELABS_BASE_URL,
   WINELABS_MONTHLY_CREDIT_CAP: process.env.WINELABS_MONTHLY_CREDIT_CAP,
 };
+
+/**
+ * Every value with any trailing LITERAL escape ("\\n" as two characters)
+ * removed
+ *
+ * Values uploaded to Vercel and Trigger.dev by script arrived with the escape
+ * written out instead of interpreted. It is not whitespace, so it survives a
+ * trim, and from 3 to 25 Oct 2026 it broke every Zoho sync (the organisation
+ * id and every credential ended "\\n"). No real key, id or URL ends that way.
+ */
+const rawEnv = Object.fromEntries(
+  Object.entries(rawEnvAsSet).map(([key, value]) => [
+    key,
+    typeof value === 'string' ? value.replace(/(\\[nrt])+$/, '') : value,
+  ]),
+) as typeof rawEnvAsSet;
 
 /**
  * Check if all required env vars are present
