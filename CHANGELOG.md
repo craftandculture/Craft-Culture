@@ -1,3 +1,9 @@
+## [2.0.516](https://github.com/craftandculture/Craft-Culture/compare/v2.0.515...v2.0.516) (2026-10-24)
+
+### Bug Fixes
+
+* Zoho syncs fully reconnect — every environment value has a trailing literal "\n" removed as it is read ([474d7e7](https://github.com/craftandculture/Craft-Culture/commit/474d7e7e5def693271b14c55eb0a5b330f278d90))
+
 ## [2.0.515](https://github.com/craftandculture/Craft-Culture/compare/v2.0.514...v2.0.515) (2026-10-24)
 
 ### Bug Fixes
