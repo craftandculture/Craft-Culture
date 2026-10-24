@@ -1,3 +1,9 @@
+## [2.0.503](https://github.com/craftandculture/Craft-Culture/compare/v2.0.502...v2.0.503) (2026-10-24)
+
+### Features
+
+* a member's delivery card lists each wine on its own line with its vintage, three at a time, instead of one long run-on line ([3c87275](https://github.com/craftandculture/Craft-Culture/commit/3c8727588df00a672cdf50c0040ad8bc08992004))
+
 ## [2.0.502](https://github.com/craftandculture/Craft-Culture/compare/v2.0.501...v2.0.502) (2026-10-24)
 
 ### Bug Fixes
