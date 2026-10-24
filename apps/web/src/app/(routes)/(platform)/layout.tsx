@@ -160,6 +160,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                       >
                         Activity
                       </Link>
+                      <Link
+                        href="/platform/partner/logistics"
+                        className="text-text-primary hover:bg-fill-muted ml-0.5 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                      >
+                        Shipments
+                      </Link>
                     </>
                   )}
                 </div>

@@ -44,7 +44,8 @@ type DocumentType =
 
 interface PartnerDocumentUploadProps {
   shipmentId: string;
-  documents?: LogisticsDocument[];
+  /** Only the fields a partner is sent (see toPartnerShipmentDocument) */
+  documents?: Pick<LogisticsDocument, 'id' | 'fileName' | 'documentType' | 'mimeType' | 'fileSize' | 'fileUrl'>[];
   onUploadComplete?: () => void;
 }
 
