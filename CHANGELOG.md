@@ -1,3 +1,9 @@
+## [2.0.506](https://github.com/craftandculture/Craft-Culture/compare/v2.0.505...v2.0.506) (2026-10-24)
+
+### Features
+
+* Private Cellar deliveries follow the warehouse's own stages — confirmed, being picked, packed, collected, out for delivery, delivered — and members are notified as each stage is reached ([dd246a9](https://github.com/craftandculture/Craft-Culture/commit/dd246a978eb9e9d268d7497c83fbf25c8b5e1a78))
+
 ## [2.0.505](https://github.com/craftandculture/Craft-Culture/compare/v2.0.504...v2.0.505) (2026-10-24)
 
 ### Bug Fixes
