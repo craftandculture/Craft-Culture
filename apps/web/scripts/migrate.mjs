@@ -3567,6 +3567,37 @@ const runMigrations = async () => {
     }
     console.log('✅ movements carry owner and stock row');
 
+    /*
+      Take out of stock with a reason (Index 3.0, Oct 2026). Every bottle
+      removed by hand (samples, marketing, breakage, loss, collected, sold
+      outside Zoho) gets one row here beside its movement, so the owner's
+      statement can say where it went and how it is settled. Its own table,
+      so a missed migration cannot break reads of the movements themselves.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_stock_outflows" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "movement_id" uuid NOT NULL,
+        "stock_id" uuid NOT NULL,
+        "owner_id" uuid NOT NULL,
+        "lwin18" text NOT NULL,
+        "product_name" text NOT NULL,
+        "bottles" integer NOT NULL,
+        "reason" text NOT NULL,
+        "settlement" text NOT NULL,
+        "recipient" text,
+        "note" text,
+        "unit_price_usd" double precision,
+        "reference" text,
+        "backdated" boolean DEFAULT false NOT NULL,
+        "performed_by" uuid NOT NULL,
+        "performed_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "wms_stock_outflows_owner_idx" ON "wms_stock_outflows" ("owner_id", "performed_at")`);
+    console.log('✅ stock outflows ready');
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
