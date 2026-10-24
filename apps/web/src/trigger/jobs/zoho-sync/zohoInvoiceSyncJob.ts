@@ -8,6 +8,7 @@
 import { logger, schedules } from '@trigger.dev/sdk';
 import { eq } from 'drizzle-orm';
 
+import syncInvoiceLines from '@/app/_zohoSalesOrders/data/syncInvoiceLines';
 import pruneZohoInvoices from '@/app/_zohoSalesOrders/utils/pruneZohoInvoices';
 import { zohoInvoices } from '@/database/schema';
 import { isZohoConfigured } from '@/lib/zoho/client';
@@ -33,6 +34,8 @@ export const zohoInvoiceSyncJob = schedules.task({
     let hasMore = true;
     const seenIds = new Set<string>();
     const voidIds = new Set<string>();
+    // Invoices whose lines may need reading (Index 3.0)
+    const forLines: { invoiceId: string; invoiceNumber: string; lastModified: string | null }[] = [];
 
     try {
       while (hasMore) {
@@ -51,6 +54,11 @@ export const zohoInvoiceSyncJob = schedules.task({
           seenIds.add(inv.invoice_id);
           if (inv.status === 'void') voidIds.add(inv.invoice_id);
           if (inv.status === 'draft' || inv.status === 'void') continue;
+          forLines.push({
+            invoiceId: inv.invoice_id,
+            invoiceNumber: inv.invoice_number,
+            lastModified: inv.last_modified_time ?? null,
+          });
 
           try {
             const [existing] = await triggerDb
@@ -144,6 +152,18 @@ export const zohoInvoiceSyncJob = schedules.task({
       logger.warn('Invoices missing from Zoho NOT removed — too many at once', {
         invoices: pruned.invoices,
       });
+    }
+
+    /*
+      Invoice lines, for invoices new or changed since last read. Its own
+      try: the balances above are what the team relies on every ten minutes,
+      and a slow or failing line read must never hold them up.
+    */
+    try {
+      const lines = await syncInvoiceLines({ invoices: forLines, db: triggerDb });
+      logger.info('Zoho invoice lines read', lines);
+    } catch (error) {
+      logger.error('Zoho invoice lines not read this run', { error });
     }
 
     logger.info('Zoho invoice sync completed', results);

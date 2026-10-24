@@ -1111,6 +1111,14 @@ export const privateClientOrders = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     orderNumber: text('order_number').notNull().unique(),
 
+    /**
+     * What the order's bottles become on the owner's statement (Index 3.0):
+     * client_sale (sold to a private client), owner_delivery (a cellar
+     * member's own wine delivered to them, not a sale), partner_samples
+     * (the partner's own samples or entertaining, not a sale), cellar_sale.
+     */
+    orderKind: text('order_kind').notNull().default('client_sale'),
+
     // Partner who created the order (wine partner) - nullable for admin-created orders
     partnerId: uuid('partner_id').references(() => partners.id, {
       onDelete: 'restrict',
@@ -8300,3 +8308,46 @@ export const wmsStockOutflows = pgTable(
 );
 
 export type WmsStockOutflow = typeof wmsStockOutflows.$inferSelect;
+
+/**
+ * Zoho invoice lines (Index 3.0)
+ *
+ * Each line of a synced invoice, with the sales order line it was raised
+ * from, so a bottle that left the warehouse can be tied to the line it was
+ * billed on. Filled by the invoice sync for invoices that are new or changed.
+ */
+export const zohoInvoiceLineItems = pgTable(
+  'zoho_invoice_line_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoInvoiceId: text('zoho_invoice_id').notNull(),
+    invoiceNumber: text('invoice_number').notNull(),
+    zohoLineItemId: text('zoho_line_item_id'),
+    lineOrder: integer('line_order').notNull(),
+    /** Header rows (CONSIGNMENT_MIX owner headings) come back as lines too */
+    itemType: text('item_type'),
+    zohoItemId: text('zoho_item_id'),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    quantity: doublePrecision('quantity').notNull(),
+    unit: text('unit'),
+    rate: doublePrecision('rate').notNull(),
+    itemTotal: doublePrecision('item_total'),
+    zohoSalesorderId: text('zoho_salesorder_id'),
+    zohoSalesorderItemId: text('zoho_salesorder_item_id'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('zoho_invoice_line_items_invoice_idx').on(table.zohoInvoiceId),
+    index('zoho_invoice_line_items_sku_idx').on(table.sku),
+  ],
+);
+
+/** Which version of each Zoho invoice's lines has been read */
+export const zohoInvoiceLineSync = pgTable('zoho_invoice_line_sync', {
+  zohoInvoiceId: text('zoho_invoice_id').primaryKey(),
+  lastModified: text('last_modified'),
+  zohoSalesorderId: text('zoho_salesorder_id'),
+  zohoSalesorderNumber: text('zoho_salesorder_number'),
+  syncedAt: timestamp('synced_at', { mode: 'date' }).notNull().defaultNow(),
+});

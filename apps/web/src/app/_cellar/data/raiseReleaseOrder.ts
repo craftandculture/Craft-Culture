@@ -162,6 +162,8 @@ const raiseReleaseOrder = async ({
       .insert(privateClientOrders)
       .values({
         orderNumber: generateOrderNumber(nextSequence),
+        // The member's own wine coming to them: delivered, not sold
+        orderKind: 'owner_delivery',
         partnerId: request.partnerId,
         clientName: isGift
           ? `${details?.recipientName} (gift from ${memberName})`
