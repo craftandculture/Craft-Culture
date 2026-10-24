@@ -3617,6 +3617,46 @@ const runMigrations = async () => {
     });
     console.log('✅ PCO order kinds ready');
 
+    /*
+      Zoho invoice lines (Index 3.0, Oct 2026). Invoices were stored without
+      their lines and linked to sales orders by a text number, so nothing tied
+      a bottle that left to the invoice line it was billed on. Lines are
+      fetched by the invoice sync when an invoice is new or changed; the sync
+      marker lives in its own table so zoho_invoices itself is untouched.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_invoice_id" text NOT NULL,
+        "invoice_number" text NOT NULL,
+        "zoho_line_item_id" text,
+        "line_order" integer NOT NULL,
+        "item_type" text,
+        "zoho_item_id" text,
+        "sku" text,
+        "name" text NOT NULL,
+        "quantity" double precision NOT NULL,
+        "unit" text,
+        "rate" double precision NOT NULL,
+        "item_total" double precision,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_item_id" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_invoice_idx" ON "zoho_invoice_line_items" ("zoho_invoice_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_sku_idx" ON "zoho_invoice_line_items" ("sku")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_sync" (
+        "zoho_invoice_id" text PRIMARY KEY NOT NULL,
+        "last_modified" text,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_number" text,
+        "synced_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ zoho invoice lines ready');
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
