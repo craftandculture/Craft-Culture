@@ -1,3 +1,9 @@
+## [2.0.510](https://github.com/craftandculture/Craft-Culture/compare/v2.0.509...v2.0.510) (2026-10-24)
+
+### Bug Fixes
+
+* wine partners see only their own lines on a shipment, with no costs, prices, margins or internal notes, and Shipments is in their menu ([b782702](https://github.com/craftandculture/Craft-Culture/commit/b782702ecab48a4e6bfcb618bd5a1074b1fbeeb5))
+
 ## [2.0.509](https://github.com/craftandculture/Craft-Culture/compare/v2.0.508...v2.0.509) (2026-10-24)
 
 ### Bug Fixes
