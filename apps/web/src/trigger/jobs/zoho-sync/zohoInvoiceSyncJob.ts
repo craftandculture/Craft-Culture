@@ -16,6 +16,11 @@ import { listInvoices } from '@/lib/zoho/invoices';
 import triggerDb from '@/trigger/triggerDb';
 
 export const zohoInvoiceSyncJob = schedules.task({
+  // Scheduled every few minutes: the next run is the retry. Without these the
+  // project defaults (5 attempts, 5 hours) let failing runs pile up and spend
+  // the Trigger.dev budget (25 Oct 2026).
+  retry: { maxAttempts: 1 },
+  maxDuration: 8 * 60,
   id: 'zoho-invoice-sync',
   cron: {
     pattern: '*/10 * * * *',
@@ -34,6 +39,7 @@ export const zohoInvoiceSyncJob = schedules.task({
     let hasMore = true;
     const seenIds = new Set<string>();
     const voidIds = new Set<string>();
+    let consecutiveFailures = 0;
     // Invoices whose lines may need reading (Index 3.0)
     const forLines: { invoiceId: string; invoiceNumber: string; lastModified: string | null }[] = [];
 
@@ -114,11 +120,24 @@ export const zohoInvoiceSyncJob = schedules.task({
               });
               results.created++;
             }
+            consecutiveFailures = 0;
           } catch (error) {
             results.errors++;
+            consecutiveFailures++;
             logger.error(`Failed to sync invoice ${inv.invoice_number}`, {
               error,
             });
+            /*
+              Five in a row is the database, not the invoices. On 25 Oct 2026 a
+              stale DB password made every write fail slowly; each run then
+              spent ~20 minutes failing 356 invoices one by one, runs piled up
+              on the 10-minute schedule and exhausted the Trigger.dev budget.
+            */
+            if (consecutiveFailures >= 5) {
+              throw new Error(
+                `Zoho invoice sync stopped after ${consecutiveFailures} failed writes in a row: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            }
           }
         }
 

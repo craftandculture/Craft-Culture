@@ -23,6 +23,11 @@ import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrder
 import triggerDb from '@/trigger/triggerDb';
 
 export const zohoSalesOrderSyncJob = schedules.task({
+  // Scheduled every few minutes: the next run is the retry. Without these the
+  // project defaults (5 attempts, 5 hours) let failing runs pile up and spend
+  // the Trigger.dev budget (25 Oct 2026).
+  retry: { maxAttempts: 1 },
+  maxDuration: 100,
   id: 'zoho-sales-order-sync',
   cron: {
     pattern: '*/2 * * * *', // Every 2 minutes
