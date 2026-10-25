@@ -1,3 +1,9 @@
+## [2.0.525](https://github.com/craftandculture/Craft-Culture/compare/v2.0.524...v2.0.525) (2026-10-25)
+
+### Bug Fixes
+
+* a Private Cellar member's wine can no longer be reserved, released or picked for a trade order unless they have offered it for sale ([efcf6e5](https://github.com/craftandculture/Craft-Culture/commit/efcf6e52411ad900a9f265b68002c5ee8d20b06c))
+
 ## [2.0.524](https://github.com/craftandculture/Craft-Culture/compare/v2.0.523...v2.0.524) (2026-10-25)
 
 ### Features
