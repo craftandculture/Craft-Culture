@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, gt, inArray, like, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
@@ -147,7 +147,7 @@ const adminRecordAgreedPrices = adminProcedure
       .where(
         and(
           sql`(${sql.join(keys.map((key) => sql`${wmsStockMovements.lwin18} LIKE ${keyPattern(key)}`), sql` OR `)})`,
-          like(wmsStockMovements.movementType, 'receive'),
+          eq(wmsStockMovements.movementType, 'receive'),
         ),
       );
 
