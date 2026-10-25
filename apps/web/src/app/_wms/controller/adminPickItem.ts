@@ -537,13 +537,18 @@ const adminPickItem = wmsOperatorProcedure
       });
 
       const [locked] = await tx
-        .select({ openBottles: wmsStock.openBottles })
+        .select({
+          quantityCases: wmsStock.quantityCases,
+          openBottles: wmsStock.openBottles,
+        })
         .from(wmsStock)
         .where(eq(wmsStock.id, stock.id))
         .for('update');
 
       if (
         !locked ||
+        // Held cases are taken without a cap, so recheck what is on the shelf
+        locked.quantityCases < casesRemoved ||
         (isBottlePick && locked.openBottles !== stock.openBottles)
       ) {
         throw stockChanged;
