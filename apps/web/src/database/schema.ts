@@ -4752,6 +4752,11 @@ export const wmsStockMovements = pgTable(
      * it. With from_owner_id this is what says whose bottles went out.
      */
     stockId: uuid('stock_id'),
+    /**
+     * The owner was worked out afterwards from the bay the movement left (only
+     * one owner ever held that wine there), not recorded at the time
+     */
+    ownerInferred: boolean('owner_inferred').notNull().default(false),
     lotNumber: text('lot_number'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     orderId: uuid('order_id'),

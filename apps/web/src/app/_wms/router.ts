@@ -51,6 +51,7 @@ import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
 import adminGetOrderReservations from './controller/adminGetOrderReservations';
+import adminGetOwnerOutflows from './controller/adminGetOwnerOutflows';
 import adminGetOwnerPricing from './controller/adminGetOwnerPricing';
 import adminGetOwnerPricingSettings from './controller/adminGetOwnerPricingSettings';
 import adminGetPallet from './controller/adminGetPallet';
@@ -210,6 +211,8 @@ const stockRouter = createTRPCRouter({
   getByOwner: adminGetStockByOwner,
   getInbound: adminGetInboundStock,
   getMovements: adminGetMovementHistory,
+  // Who each outflow belonged to, and where it went: the statement check
+  getOwnerOutflows: adminGetOwnerOutflows,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
