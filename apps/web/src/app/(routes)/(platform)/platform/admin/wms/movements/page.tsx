@@ -26,6 +26,7 @@ import ChangeTakeOutReason from '@/app/_wms/components/ChangeTakeOutReason';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import PackBadge from '@/app/_wms/components/PackBadge';
+import RecordCorrectionAsTakeOut from '@/app/_wms/components/RecordCorrectionAsTakeOut';
 import useTRPC from '@/lib/trpc/browser';
 
 type MovementType =
@@ -336,6 +337,10 @@ const WMSMovementsPage = () => {
                               movementId={movement.id}
                               reasonCode={movement.reasonCode}
                             />
+                          )}
+                          {(movement.reasonCode === 'pack_correction' ||
+                            (movement.movementType === 'count' && movement.quantityCases < 0)) && (
+                            <RecordCorrectionAsTakeOut movementId={movement.id} />
                           )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs">

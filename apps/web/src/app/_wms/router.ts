@@ -88,6 +88,7 @@ import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
 import adminReconcileCycleCount from './controller/adminReconcileCycleCount';
 import adminReconcileStock from './controller/adminReconcileStock';
+import adminRecordCorrectionAsTakeOut from './controller/adminRecordCorrectionAsTakeOut';
 import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
@@ -229,6 +230,7 @@ const stockRouter = createTRPCRouter({
   adjustQuantity: adminAdjustStockQuantity,
   takeOut: adminTakeOutOfStock,
   changeTakeOutReason: adminChangeTakeOutReason,
+  recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,
