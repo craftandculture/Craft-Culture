@@ -8,7 +8,7 @@ import {
   IconTag,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -34,6 +34,28 @@ import useTRPC from '@/lib/trpc/browser';
 const listedPrice = (askPerBottleUsd: number) =>
   askPerBottleUsd /
   (1 - Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100);
+
+/**
+ * "Set as €180 · €1 = $1.1203 on 26 Oct", for a price typed in another currency
+ *
+ * USD is what the member is owed; this says where the figure came from, at
+ * the rate fixed on the day they listed.
+ */
+const setInLine = (mandate: {
+  askCurrency: string;
+  askPerBottleLocal: number | null;
+  askFxRate: number | null;
+  askFxAt: Date | string | null;
+}) => {
+  if (mandate.askCurrency === 'USD' || !mandate.askPerBottleLocal || !mandate.askFxRate) return null;
+  const local = mandate.askPerBottleLocal.toLocaleString('en-US', {
+    style: 'currency',
+    currency: mandate.askCurrency,
+    maximumFractionDigits: 2,
+  });
+  const on = mandate.askFxAt ? ` on ${format(new Date(mandate.askFxAt), 'd MMM yyyy')}` : '';
+  return `Set as ${local} · 1 ${mandate.askCurrency} = $${mandate.askFxRate.toFixed(4)}${on}`;
+};
 
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', {
@@ -194,6 +216,11 @@ const SellingPage = () => {
                       <span className="text-text-muted block text-[11px] font-normal">
                         per bottle
                       </span>
+                      {setInLine(mandate) && (
+                        <span className="text-text-muted block text-[11px] font-normal">
+                          {setInLine(mandate)}
+                        </span>
+                      )}
                     </dd>
                   </div>
                   <div className="hidden sm:block">
@@ -303,6 +330,11 @@ const SellingPage = () => {
                       <span className="text-text-muted block text-[11px]">
                         per bottle
                       </span>
+                      {setInLine(mandate) && (
+                        <span className="text-text-muted block text-[11px]">
+                          {setInLine(mandate)}
+                        </span>
+                      )}
                     </td>
                     {/*
                       The margin, disclosed rather than discovered. A member who

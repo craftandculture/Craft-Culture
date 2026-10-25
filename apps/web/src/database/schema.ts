@@ -5551,6 +5551,17 @@ export const saleMandates = pgTable(
       while they are setting it, rather than deducted from it afterwards.
     */
     askPerBottleUsd: doublePrecision('ask_per_bottle_usd').notNull(),
+    /*
+      The currency the member typed their price in. USD is the base and what
+      everything is settled in; a price set in EUR, GBP or AED is converted at
+      the rate on the day it was listed, and that rate is kept here so a later
+      move in the exchange rate never changes what the member was promised.
+    */
+    askCurrency: text('ask_currency').notNull().default('USD'),
+    askPerBottleLocal: doublePrecision('ask_per_bottle_local'),
+    /** USD per one unit of askCurrency, on askFxAt */
+    askFxRate: doublePrecision('ask_fx_rate'),
+    askFxAt: timestamp('ask_fx_at', { mode: 'date' }),
 
     status: saleMandateStatus('status').notNull().default('draft'),
     expiresAt: timestamp('expires_at', { mode: 'date' }),

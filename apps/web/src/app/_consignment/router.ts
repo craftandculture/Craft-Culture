@@ -14,6 +14,7 @@ import adminReversePurchase from './controller/adminReversePurchase';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
 import memberCancelPurchase from './controller/memberCancelPurchase';
 import memberCreatePurchase from './controller/memberCreatePurchase';
+import memberGetFxRates from './controller/memberGetFxRates';
 import memberGetMandates from './controller/memberGetMandates';
 import memberGetProceeds from './controller/memberGetProceeds';
 import memberGetPurchases from './controller/memberGetPurchases';
@@ -25,6 +26,7 @@ const memberRouter = createTRPCRouter({
   offerForSale: memberOfferForSale,
   withdrawMandate: memberWithdrawMandate,
   getMandates: memberGetMandates,
+  getFxRates: memberGetFxRates,
   browseCatalogue: memberBrowseCatalogue,
   createPurchase: memberCreatePurchase,
   markPurchasePaid: memberMarkPurchasePaid,
