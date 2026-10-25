@@ -1,3 +1,9 @@
+## [2.0.536](https://github.com/craftandculture/Craft-Culture/compare/v2.0.535...v2.0.536) (2026-10-25)
+
+### Bug Fixes
+
+* freight requests list shows the client and the service on separate lines ([3bc70c1](https://github.com/craftandculture/Craft-Culture/commit/3bc70c1210d5cc857ec3418290c7adbbad39f386))
+
 ## [2.0.535](https://github.com/craftandculture/Craft-Culture/compare/v2.0.534...v2.0.535) (2026-10-25)
 
 ### Features
