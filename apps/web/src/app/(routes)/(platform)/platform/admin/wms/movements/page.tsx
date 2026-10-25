@@ -22,6 +22,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ChangeTakeOutReason from '@/app/_wms/components/ChangeTakeOutReason';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import PackBadge from '@/app/_wms/components/PackBadge';
@@ -330,6 +331,12 @@ const WMSMovementsPage = () => {
                           <div className="font-mono text-[11px] text-text-muted">
                             {movement.lwin18}
                           </div>
+                          {movement.reasonCode?.startsWith('stock_out:') && (
+                            <ChangeTakeOutReason
+                              movementId={movement.id}
+                              reasonCode={movement.reasonCode}
+                            />
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs">
                           {(() => {

@@ -1,9 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { wmsStock, wmsStockMovements, wmsStockOutflows } from '@/database/schema';
+import { wmsLocations, wmsStock, wmsStockMovements, wmsStockOutflows } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import STOCK_OUT_REASONS from '../constants/stockOutReasons';
@@ -45,7 +45,7 @@ const adminTakeOutOfStock = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const reason = STOCK_OUT_REASONS[input.reason];
     if (reason.needsRecipient && !input.recipient) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Say who or what the bottles went to.' });
+      throw new TRPCError({ code: 'BAD_REQUEST', message: `Fill in "${reason.detailLabel}".` });
     }
     if (reason.needsPrice && (!input.unitPriceUsd || !input.reference)) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'A sale outside Zoho needs the price per bottle and a reference.' });
@@ -80,9 +80,9 @@ const adminTakeOutOfStock = wmsOperatorProcedure
         .where(eq(wmsStock.id, stock.id));
 
       const leavesSingles = opensCases && plan.leftover > 0;
-      if (leavesSingles) {
-        await moveBottlesToSingles({ sourceStockId: stock.id, bottles: plan.leftover, performedBy: ctx.user.id, db: tx });
-      }
+      const singlesStockId = leavesSingles
+        ? await moveBottlesToSingles({ sourceStockId: stock.id, bottles: plan.leftover, performedBy: ctx.user.id, db: tx })
+        : null;
 
       // The singles' movement is not yet committed, so the generator cannot see its number
       const movementNumber = await generateMovementNumber(leavesSingles ? 1 : 0);
@@ -127,8 +127,27 @@ const adminTakeOutOfStock = wmsOperatorProcedure
         performedBy: ctx.user.id,
       });
 
+      /*
+        The bottles left behind are still in the box they came from, wearing
+        its old label; the panel offers the relabel the pick screen does.
+      */
+      const [singles] = singlesStockId
+        ? await tx
+            .select({
+              stockId: wmsStock.id,
+              lwin18: wmsStock.lwin18,
+              productName: wmsStock.productName,
+              bottles: sql<number>`(${wmsStock.quantityCases} * COALESCE(${wmsStock.caseConfig}, 1)) + COALESCE(${wmsStock.openBottles}, 0)`,
+              locationCode: wmsLocations.locationCode,
+            })
+            .from(wmsStock)
+            .leftJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(eq(wmsStock.id, singlesStockId))
+        : [];
+
       return {
         movementNumber,
+        remainder: singles ?? null,
         bottles: plan.bottlesOut,
         ownerName: stock.ownerName,
         ownerSees: reason.ownerSees,

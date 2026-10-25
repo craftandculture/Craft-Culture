@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import RelabelRemainderPrompt from '@/app/_wms/components/RelabelRemainderPrompt';
+import type { RemainderToRelabel } from '@/app/_wms/components/RelabelRemainderPrompt';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import type { StockOutReason } from '@/app/_wms/constants/stockOutReasons';
 import planStockOut from '@/app/_wms/utils/planStockOut';
@@ -42,6 +44,7 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
   const [reference, setReference] = useState('');
   const [backdated, setBackdated] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [remainder, setRemainder] = useState<RemainderToRelabel | null>(null);
 
   const row = locations.find((loc) => loc.stockId === stockId);
   const pack = caseConfig ?? 12;
@@ -54,7 +57,7 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
       )
     : { ok: false as const, error: 'Choose a bay.' };
   const missing =
-    (rule.needsRecipient && !recipient.trim() ? 'Say who or what they went to. ' : '') +
+    (rule.needsRecipient && !recipient.trim() ? `Fill in "${rule.detailLabel}". ` : '') +
     (rule.needsPrice && (!(Number(price) > 0) || !reference.trim()) ? 'Add the price per bottle and a reference.' : '');
 
   const takeOut = useMutation(
@@ -62,6 +65,11 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
       onSuccess: async (result) => {
         toast.success(`${result.bottles} bottle(s) taken out of ${result.ownerName}'s stock. They see: ${result.ownerSees}.`);
         await queryClient.invalidateQueries();
+        // A case was opened: its leftover bottles still wear the old label
+        if (result.remainder) {
+          setRemainder({ ...result.remainder, bottles: Number(result.remainder.bottles) });
+          return;
+        }
         onClose();
       },
       onError: (error) => {
@@ -85,6 +93,14 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
     });
 
   const field = 'border-border-muted bg-background-primary rounded-md border px-2 py-1.5 text-sm';
+
+  if (remainder) {
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <RelabelRemainderPrompt remainder={remainder} onDone={onClose} />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border-muted space-y-3 rounded-lg border bg-amber-50/60 p-3 dark:bg-amber-900/10" onClick={(e) => e.stopPropagation()}>
@@ -135,8 +151,8 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium">
-          {rule.needsRecipient ? 'Went to (required)' : 'Went to'}
-          <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Event, client or person" className={field} />
+          {rule.needsRecipient ? `${rule.detailLabel} (required)` : rule.detailLabel}
+          <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder={rule.detailHint} className={field} />
         </label>
         {rule.needsPrice && (
           <>
