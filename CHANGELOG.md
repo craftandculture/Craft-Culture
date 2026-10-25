@@ -1,3 +1,9 @@
+## [2.0.534](https://github.com/craftandculture/Craft-Culture/compare/v2.0.533...v2.0.534) (2026-10-25)
+
+### Bug Fixes
+
+* the member statement's holdings column reads Location, not Where ([ba1a013](https://github.com/craftandculture/Craft-Culture/commit/ba1a013d69152657b04d8c128526f12b75881fd4))
+
 ## [2.0.533](https://github.com/craftandculture/Craft-Culture/compare/v2.0.532...v2.0.533) (2026-10-25)
 
 ### Features
