@@ -11,6 +11,11 @@ interface MoveBottlesParams {
   bottles: number;
   /** Who cracked the case — the movement needs an author. */
   performedBy: string;
+  /**
+   * Movement number for the arrival, generated before the surrounding
+   * transaction. Generating it inside one can deadlock the connection pool.
+   */
+  movementNumber?: string;
   /** When, if not now: a take-out recorded after the event is dated when it happened */
   performedAt?: Date;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +46,7 @@ interface MoveBottlesParams {
  *
  * @param sourceStockId - The stock row the case was cracked from
  * @param bottles - How many loose bottles remain
+ * @param movementNumber - Pre-generated movement number (optional)
  * @param db - Drizzle handle (use the surrounding transaction)
  * @returns The id of the single-bottle stock row, or null when there was
  *   nothing to move or the source LWIN can't carry a pack segment
@@ -49,6 +55,7 @@ const moveBottlesToSingles = async ({
   sourceStockId,
   bottles,
   performedBy,
+  movementNumber,
   performedAt = new Date(),
   db,
 }: MoveBottlesParams) => {
@@ -89,7 +96,7 @@ const moveBottlesToSingles = async ({
   // "orphan" stock record — and the reconciliation's auto-fix DELETES those.
   const recordArrival = async () => {
     await db.insert(wmsStockMovements).values({
-      movementNumber: await generateMovementNumber(),
+      movementNumber: movementNumber ?? (await generateMovementNumber()),
       movementType: 'repack_in' as const,
       lwin18: singlesLwin18,
       productName: singlesName,
