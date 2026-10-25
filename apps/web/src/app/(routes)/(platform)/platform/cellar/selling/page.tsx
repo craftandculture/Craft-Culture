@@ -14,6 +14,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (value: number) =>
@@ -88,7 +89,7 @@ const SellingPage = () => {
   const { mutate: withdraw, isPending } = useMutation(
     api.consignment.member.withdrawMandate.mutationOptions({
       onSuccess: (result) => {
-        toast.success(`${result.mandateNumber} withdrawn — it is back in your cellar.`);
+        toast.success(`${result.mandateNumber} withdrawn. It is back in your cellar.`);
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -140,7 +141,7 @@ const SellingPage = () => {
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-text-primary min-w-0 text-sm font-semibold leading-snug">
-                    {mandate.productName}
+                    {displayWineName(mandate.productName, { keepVintage: true })}
                   </p>
                   <span
                     className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONES[state.tone]}`}
@@ -240,7 +241,7 @@ const SellingPage = () => {
                   >
                     <td className="px-4 py-3">
                       <Typography variant="bodySm" className="font-medium">
-                        {mandate.productName}
+                        {displayWineName(mandate.productName, { keepVintage: true })}
                       </Typography>
                       <Typography
                         variant="bodyXs"

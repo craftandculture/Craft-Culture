@@ -120,7 +120,7 @@ const InvoicesPage = () => {
       {data?.state === 'ok' && (
         <>
           {data.due.length > 0 && (
-            <section className="mb-6 rounded-xl border border-amber-200 bg-gradient-to-b from-amber-50/70 to-transparent p-4 dark:border-amber-900/50 dark:from-amber-500/10">
+            <section className="mb-6 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-transparent p-4 dark:border-emerald-900/50 dark:from-emerald-500/10">
               <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">
                 To pay
               </p>

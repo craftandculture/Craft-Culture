@@ -25,11 +25,11 @@ import useTRPC from '@/lib/trpc/browser';
 const ID_DOCUMENTS = [
   {
     type: 'emirates_id_front',
-    label: 'Emirates ID — front',
+    label: 'Emirates ID (front)',
   },
   {
     type: 'emirates_id_back',
-    label: 'Emirates ID — back',
+    label: 'Emirates ID (back)',
   },
 ] as const;
 
@@ -185,7 +185,7 @@ const CellarProfilePage = () => {
 
       <Typography
         variant="bodyXs"
-        className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
+        className="text-text-muted mb-1 block font-semibold uppercase tracking-wider"
       >
         C&amp;C Private Cellar
       </Typography>
@@ -358,7 +358,7 @@ const CellarProfilePage = () => {
                         icon={existing ? IconCheck : IconFileText}
                         size="sm"
                         className={
-                          existing ? 'text-text-brand' : 'text-text-muted'
+                          existing ? 'text-emerald-600' : 'text-text-muted'
                         }
                       />
                       <div className="min-w-0">
@@ -387,7 +387,7 @@ const CellarProfilePage = () => {
                             href={`/api/cellar/identity?type=${document.type}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-text-brand text-xs font-semibold hover:underline"
+                            className="text-text-primary text-xs font-semibold underline underline-offset-2"
                           >
                             View
                           </a>
