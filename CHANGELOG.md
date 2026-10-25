@@ -1,3 +1,9 @@
+## [2.0.555](https://github.com/craftandculture/Craft-Culture/compare/v2.0.554...v2.0.555) (2026-10-25)
+
+### Features
+
+* members can offer several wines at once and set prices in USD, EUR, GBP or AED, fixed in USD on the day they list ([36a4996](https://github.com/craftandculture/Craft-Culture/commit/36a4996a0f2436f8ebbdb5a863ff7b17771fc5fe))
+
 ## [2.0.554](https://github.com/craftandculture/Craft-Culture/compare/v2.0.553...v2.0.554) (2026-10-25)
 
 ### Features
