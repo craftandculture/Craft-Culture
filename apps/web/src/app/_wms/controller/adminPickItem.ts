@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
-import isUniqueViolation from '@/app/_logistics/utils/isUniqueViolation';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
@@ -24,6 +23,28 @@ import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
 import moveBottlesToSingles from '../utils/moveBottlesToSingles';
 import parseSkuPack from '../utils/parseSkuPack';
 import rankStockByPack from '../utils/rankStockByPack';
+
+const isMovementNumberClash = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) return false;
+
+  const candidate = error as {
+    code?: string;
+    constraint_name?: string;
+    constraint?: string;
+    cause?: unknown;
+  };
+
+  if (
+    candidate.code === '23505' &&
+    String(candidate.constraint_name ?? candidate.constraint ?? '').includes(
+      'movement_number',
+    )
+  ) {
+    return true;
+  }
+
+  return candidate.cause ? isMovementNumberClash(candidate.cause) : false;
+};
 
 /**
  * Mark a pick list item as picked and update stock
@@ -673,9 +694,10 @@ const adminPickItem = wmsOperatorProcedure
         Movement numbers are worked out before the transaction, so two picks
         at the same moment can draw the same one. The unique index refuses the
         second and the whole pick rolls back; a retry draws a fresh number.
-        Say so rather than surfacing a database error.
+        Say so rather than surfacing a database error. Only that clash: any
+        other duplicate would fail the same way on every retry.
       */
-      if (isUniqueViolation(error)) {
+      if (isMovementNumberClash(error)) {
         throw new TRPCError({
           code: 'CONFLICT',
           message: 'Another pick was saved at the same moment. Try again.',
