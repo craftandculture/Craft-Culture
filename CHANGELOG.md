@@ -1,3 +1,9 @@
+## [2.0.554](https://github.com/craftandculture/Craft-Culture/compare/v2.0.553...v2.0.554) (2026-10-25)
+
+### Features
+
+* the Private Cellar portal matches the rest of Index, with the account kept apart from the cellar ([615a5c3](https://github.com/craftandculture/Craft-Culture/commit/615a5c3a09743c2a8b9d332c107b7c10e100a664))
+
 ## [2.0.553](https://github.com/craftandculture/Craft-Culture/compare/v2.0.552...v2.0.553) (2026-10-25)
 
 ### Features
