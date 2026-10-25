@@ -1,3 +1,9 @@
+## [2.0.539](https://github.com/craftandculture/Craft-Culture/compare/v2.0.538...v2.0.539) (2026-10-25)
+
+### Features
+
+* the wine partner's order dashboard matches the distributor and admin layout ([c0b818e](https://github.com/craftandculture/Craft-Culture/commit/c0b818e0dcaca7cb601a83758b0594bf697c6fb6))
+
 ## [2.0.538](https://github.com/craftandculture/Craft-Culture/compare/v2.0.537...v2.0.538) (2026-10-25)
 
 ### Features
