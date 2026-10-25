@@ -1,3 +1,9 @@
+## [2.0.552](https://github.com/craftandculture/Craft-Culture/compare/v2.0.551...v2.0.552) (2026-10-25)
+
+### Bug Fixes
+
+* corrections found in review of statements, take-outs, the pick guard and agreed prices ([2163231](https://github.com/craftandculture/Craft-Culture/commit/2163231da4287aad142f712a79bc27189d676341))
+
 ## [2.0.551](https://github.com/craftandculture/Craft-Culture/compare/v2.0.550...v2.0.551) (2026-10-25)
 
 ### Bug Fixes
