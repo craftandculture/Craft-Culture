@@ -1,3 +1,9 @@
+## [2.0.547](https://github.com/craftandculture/Craft-Culture/compare/v2.0.546...v2.0.547) (2026-10-25)
+
+### Features
+
+* a pack fix or count correction that removed bottles can be recorded as the take-out it was ([a764506](https://github.com/craftandculture/Craft-Culture/commit/a764506a44c519bc93e6ed2dd595767bc7b1be5f))
+
 ## [2.0.546](https://github.com/craftandculture/Craft-Culture/compare/v2.0.545...v2.0.546) (2026-10-25)
 
 ### Features
