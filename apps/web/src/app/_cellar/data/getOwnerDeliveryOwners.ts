@@ -39,11 +39,20 @@ const getOwnerDeliveryOwners = async (orderIds: (string | null)[]) => {
   if (ids.length === 0) return result;
 
   const salesOrders = await db
-    .select({ id: zohoSalesOrders.id, ref: zohoSalesOrders.referenceNumber })
+    .select({
+      id: zohoSalesOrders.id,
+      pcoId: zohoSalesOrders.privateClientOrderId,
+      ref: zohoSalesOrders.referenceNumber,
+    })
     .from(zohoSalesOrders)
     .where(inArray(zohoSalesOrders.id, ids));
+  // The stored link first; the reference text only until the sync has linked it
+  const linkedPcoIds = salesOrders
+    .map((row) => row.pcoId)
+    .filter((id): id is string => !!id);
   const refs = salesOrders
-    .map((row) => row.ref?.trim())
+    .filter((row) => !row.pcoId)
+    .map((row) => row.ref?.match(/PCO-\d{4}-\d+/i)?.[0]?.toUpperCase())
     .filter((ref): ref is string => !!ref);
 
   const deliveries = await db
@@ -63,7 +72,7 @@ const getOwnerDeliveryOwners = async (orderIds: (string | null)[]) => {
       and(
         eq(privateClientOrders.orderKind, 'owner_delivery'),
         or(
-          inArray(privateClientOrders.id, ids),
+          inArray(privateClientOrders.id, [...ids, ...linkedPcoIds]),
           refs.length ? inArray(privateClientOrders.orderNumber, refs) : undefined,
         ),
       ),
@@ -83,7 +92,12 @@ const getOwnerDeliveryOwners = async (orderIds: (string | null)[]) => {
     if (direct) result.set(id, describe(direct));
   }
   for (const so of salesOrders) {
-    const viaRef = so.ref ? byNumber.get(so.ref.trim()) : undefined;
+    const refNumber = so.ref?.match(/PCO-\d{4}-\d+/i)?.[0]?.toUpperCase();
+    const viaRef = so.pcoId
+      ? byPcoId.get(so.pcoId)
+      : refNumber
+        ? byNumber.get(refNumber)
+        : undefined;
     if (viaRef) result.set(so.id, describe(viaRef));
   }
 

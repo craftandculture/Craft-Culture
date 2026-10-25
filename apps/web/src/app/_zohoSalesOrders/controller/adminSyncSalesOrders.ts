@@ -12,6 +12,7 @@ import { z } from 'zod';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
+import linkSalesOrdersToPcos from '@/app/_zohoSalesOrders/data/linkSalesOrdersToPcos';
 import releaseClosedOrderHolds from '@/app/_zohoSalesOrders/data/releaseClosedOrderHolds';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import db from '@/database/client';
@@ -206,6 +207,11 @@ const adminSyncSalesOrders = adminProcedure
     console.error('Failed to release stock for closed orders', { error });
     return { checked: 0, released: [] };
   });
+  // Which PCO each order fulfils, including ones raised by hand in Zoho
+  await linkSalesOrdersToPcos({ db }).catch((error) => {
+    console.error('Failed to link sales orders to PCOs', { error });
+  });
+
   const releasedNote = closed.released.length
     ? `. Released stock held for ${closed.released.map((order) => `${order.salesOrderNumber} (${order.status} in Zoho)`).join(', ')}`
     : '';

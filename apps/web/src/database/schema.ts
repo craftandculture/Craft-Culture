@@ -6114,6 +6114,12 @@ export const zohoSalesOrders = pgTable(
     orderDate: date('order_date', { mode: 'date' }).notNull(),
     shipmentDate: date('shipment_date', { mode: 'date' }),
     referenceNumber: text('reference_number'),
+    /**
+     * The private client order this sales order fulfils. Set by the Zoho sync
+     * (linkSalesOrdersToPcos) from the PCO's own record of the SO, or from the
+     * PCO number in Reference; read this, never the reference text.
+     */
+    privateClientOrderId: uuid('private_client_order_id'),
     subTotal: doublePrecision('sub_total').notNull(),
     total: doublePrecision('total').notNull(),
     currencyCode: text('currency_code').default('USD'),
