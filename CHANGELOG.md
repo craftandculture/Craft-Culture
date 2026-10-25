@@ -1,3 +1,9 @@
+## [2.0.535](https://github.com/craftandculture/Craft-Culture/compare/v2.0.534...v2.0.535) (2026-10-25)
+
+### Features
+
+* Private Cellar members get an Activity tab showing everything that has happened to their wine ([e3bc09d](https://github.com/craftandculture/Craft-Culture/commit/e3bc09de890ef4ceed52142b049ccc815955da9a))
+
 ## [2.0.534](https://github.com/craftandculture/Craft-Culture/compare/v2.0.533...v2.0.534) (2026-10-25)
 
 ### Bug Fixes
