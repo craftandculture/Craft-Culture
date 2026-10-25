@@ -60,6 +60,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
 import StockForSaleToggle from '@/app/_wms/components/StockForSaleToggle';
+import TakeOutOfStockPanel from '@/app/_wms/components/TakeOutOfStockPanel';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
@@ -766,6 +767,7 @@ const ProductRow = ({
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
   const [packStockId, setPackStockId] = useState<string | null>(null);
+  const [takingOut, setTakingOut] = useState(false);
   const [packConfig, setPackConfig] = useState(0);
   const [packReason, setPackReason] = useState('');
   const [transferringStockId, setTransferringStockId] = useState<string | null>(
@@ -1124,6 +1126,18 @@ const ProductRow = ({
                     {adjustingStockId ? 'Cancel' : 'Adjust'}
                   </Button>
                   <Button
+                    variant={takingOut ? 'default' : 'outline'}
+                    size="xs"
+                    title="Samples, marketing, breakage, collected: bottles leave with a reason the owner's statement shows"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTakingOut((v) => !v);
+                    }}
+                  >
+                    <IconPackage className="mr-1 h-3 w-3" />
+                    {takingOut ? 'Cancel' : 'Take out'}
+                  </Button>
+                  <Button
                     variant={packStockId ? 'default' : 'outline'}
                     size="xs"
                     title="Correct the pack size when it was recorded wrongly — keeps the case count, moves the bottle count"
@@ -1144,6 +1158,16 @@ const ProductRow = ({
                   </Button>
                 </div>
               </div>
+              {takingOut && (
+                <div className="mb-2">
+                  <TakeOutOfStockPanel
+                    productName={product.productName}
+                    caseConfig={product.caseConfig}
+                    locations={product.locations}
+                    onClose={() => setTakingOut(false)}
+                  />
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-[13px]">
                   <thead>

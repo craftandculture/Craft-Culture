@@ -86,6 +86,10 @@ export interface ZohoContactResponse {
  * Invoice line item
  */
 export interface ZohoLineItem {
+  /** The line's own id; present on lines read back from Zoho */
+  line_item_id?: string;
+  /** On an invoice raised from a sales order: the order line it came from */
+  salesorder_item_id?: string;
   item_id?: string;
   /**
    * What kind of row this is.
@@ -155,6 +159,9 @@ export interface ZohoInvoice {
   terms?: string;
   created_time?: string;
   last_modified_time?: string;
+  /** Present when the invoice was raised from a sales order */
+  salesorder_id?: string;
+  salesorder_number?: string;
 }
 
 /**

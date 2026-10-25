@@ -3502,6 +3502,211 @@ const runMigrations = async () => {
     }
     console.log('✅ forwarder coverage ready');
 
+    /*
+      Wine Labs market data (Oct 2026). One row per wine and vintage (LWIN11)
+      so every screen reads the same cached answer and a credit is spent once,
+      plus a log of each call so a month's spend can be capped.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_wines" (
+        "lwin11" text PRIMARY KEY NOT NULL,
+        "our_lwin7" text NOT NULL,
+        "our_name" text NOT NULL,
+        "match_status" text NOT NULL,
+        "wl_lwin7" text,
+        "wl_lwin" text,
+        "wl_id" text,
+        "wl_display_name" text,
+        "info" jsonb,
+        "drink_from" integer,
+        "drink_to" integer,
+        "info_fetched_at" timestamp,
+        "price" jsonb,
+        "price_median_usd" double precision,
+        "price_count" integer,
+        "price_fetched_at" timestamp,
+        "matched_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_calls" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "endpoint" text NOT NULL,
+        "credits" integer NOT NULL,
+        "status" integer NOT NULL,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "winelabs_calls_created_at_idx" ON "winelabs_calls" ("created_at")`,
+    );
+    console.log('✅ winelabs cache ready');
+
+    /*
+      One owner key (Index 3.0, Oct 2026). The distribution ledger's owners
+      (cons_owners) were seeded with no partner account, so their consignment
+      sales could reach no portal. Link each to the partner whose warehouse
+      stock its name matches, only where exactly one partner matches; anything
+      ambiguous is left for staff to link on the Distribution page.
+    */
+    /*
+      Whose bottles left (Index 3.0, Oct 2026). Picks and dispatches recorded
+      no owner and no stock row, so a bottle that left the warehouse vanished
+      from its owner's statement. Additive, nullable, no foreign keys.
+    */
+    for (const ddl of [
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "stock_id" uuid`,
+      `ALTER TABLE "wms_pick_list_items" ADD COLUMN IF NOT EXISTS "picked_stock_id" uuid`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_order_id_idx" ON "wms_stock_movements" ("order_id")`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_from_owner_idx" ON "wms_stock_movements" ("from_owner_id")`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    console.log('✅ movements carry owner and stock row');
+
+    /*
+      Take out of stock with a reason (Index 3.0, Oct 2026). Every bottle
+      removed by hand (samples, marketing, breakage, loss, collected, sold
+      outside Zoho) gets one row here beside its movement, so the owner's
+      statement can say where it went and how it is settled. Its own table,
+      so a missed migration cannot break reads of the movements themselves.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_stock_outflows" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "movement_id" uuid NOT NULL,
+        "stock_id" uuid NOT NULL,
+        "owner_id" uuid NOT NULL,
+        "lwin18" text NOT NULL,
+        "product_name" text NOT NULL,
+        "bottles" integer NOT NULL,
+        "reason" text NOT NULL,
+        "settlement" text NOT NULL,
+        "recipient" text,
+        "note" text,
+        "unit_price_usd" double precision,
+        "reference" text,
+        "backdated" boolean DEFAULT false NOT NULL,
+        "performed_by" uuid NOT NULL,
+        "performed_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "wms_stock_outflows_owner_idx" ON "wms_stock_outflows" ("owner_id", "performed_at")`);
+    console.log('✅ stock outflows ready');
+
+    /*
+      What kind of order a PCO is (Index 3.0, Oct 2026). Every outbound
+      request runs through the PCO pipeline; the kind decides what the
+      bottles become on the owner's statement: client_sale (sold to a private
+      client), owner_delivery (a cellar member's own wine delivered to them,
+      not a sale), partner_samples, cellar_sale.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "order_kind" text DEFAULT 'client_sale' NOT NULL`,
+    );
+    await dataFix('cellar deliveries marked as owner deliveries', async () => {
+      await client.unsafe(`
+        UPDATE "private_client_orders" o SET "order_kind" = 'owner_delivery'
+        FROM "cellar_release_requests" r
+        WHERE r."private_client_order_id" = o."id" AND o."order_kind" = 'client_sale'
+      `);
+    });
+    console.log('✅ PCO order kinds ready');
+
+    /*
+      Zoho invoice lines (Index 3.0, Oct 2026). Invoices were stored without
+      their lines and linked to sales orders by a text number, so nothing tied
+      a bottle that left to the invoice line it was billed on. Lines are
+      fetched by the invoice sync when an invoice is new or changed; the sync
+      marker lives in its own table so zoho_invoices itself is untouched.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_invoice_id" text NOT NULL,
+        "invoice_number" text NOT NULL,
+        "zoho_line_item_id" text,
+        "line_order" integer NOT NULL,
+        "item_type" text,
+        "zoho_item_id" text,
+        "sku" text,
+        "name" text NOT NULL,
+        "quantity" double precision NOT NULL,
+        "unit" text,
+        "rate" double precision NOT NULL,
+        "item_total" double precision,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_item_id" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_invoice_idx" ON "zoho_invoice_line_items" ("zoho_invoice_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_sku_idx" ON "zoho_invoice_line_items" ("sku")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_sync" (
+        "zoho_invoice_id" text PRIMARY KEY NOT NULL,
+        "last_modified" text,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_number" text,
+        "synced_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ zoho invoice lines ready');
+
+    /*
+      Whose bottles left, for movements written before picks recorded it
+      (Index 3.0, 25 Oct 2026). Ihab Toma's October statement showed nothing
+      leaving while 75 of his bottles were picked for trade orders: picks
+      carried a bay but no owner. Where exactly one owner has ever held that
+      wine in that bay (zero-quantity rows included), the movement is stamped
+      with that owner and marked inferred; anything ambiguous is left for an
+      operator. Outflows only: picks, and count / adjust decreases.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "owner_inferred" boolean DEFAULT false NOT NULL`,
+    );
+    await dataFix('past outflows stamped with the owner of the bay they left', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements" m
+        SET "from_owner_id" = s.owner_id, "owner_inferred" = true
+        FROM (
+          SELECT "lwin18", "location_id", MIN("owner_id"::text)::uuid AS owner_id
+          FROM "wms_stock"
+          GROUP BY "lwin18", "location_id"
+          HAVING COUNT(DISTINCT "owner_id") = 1
+        ) s
+        WHERE m."from_owner_id" IS NULL
+          AND m."from_location_id" IS NOT NULL
+          AND m."movement_type" IN ('pick', 'count', 'adjust')
+          AND m."lwin18" = s."lwin18"
+          AND m."from_location_id" = s."location_id"
+      `);
+    });
+
+    await dataFix('consignment owners linked to their partner accounts', async () => {
+      await client.unsafe(`
+        UPDATE "cons_owners" ow
+        SET "partner_id" = m."owner_id", "updated_at" = now()
+        FROM (
+          SELECT ow2."id" AS cons_id, MIN(s."owner_id"::text)::uuid AS owner_id
+          FROM "cons_owners" ow2
+          JOIN "wms_stock" s
+            ON ow2."wms_owner_match" IS NOT NULL
+           AND UPPER(s."owner_name") LIKE '%' || UPPER(ow2."wms_owner_match") || '%'
+          WHERE ow2."partner_id" IS NULL
+          GROUP BY ow2."id"
+          HAVING COUNT(DISTINCT s."owner_id") = 1
+        ) m
+        WHERE ow."id" = m.cons_id
+          AND ow."partner_id" IS NULL
+          AND NOT EXISTS (SELECT 1 FROM "cons_owners" o3 WHERE o3."partner_id" = m."owner_id")
+      `);
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {

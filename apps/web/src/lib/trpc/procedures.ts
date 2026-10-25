@@ -193,7 +193,7 @@ export const partnerTaskProcedure = approvedProcedure.use(
  * Injects the partnerId into the context for data isolation.
  */
 export const winePartnerProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );
@@ -219,8 +219,25 @@ export const winePartnerProcedure = approvedProcedure.use(
       });
     }
 
+    /*
+      A partner can give a colleague view-only access. Held here, once, so a
+      mutation added later is covered without anyone remembering to gate it.
+    */
+    const { default: getPartnerMemberRole } = await import(
+      '@/app/_partners/data/getPartnerMemberRole'
+    );
+    const partnerRole = await getPartnerMemberRole(partner.id, ctx.user.id);
+
+    if (type === 'mutation' && partnerRole === 'viewer') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You have view-only access to this account. Ask its owner to change your access.',
+      });
+    }
+
     return await next({
-      ctx: { ...ctx, partner, partnerId: partner.id },
+      ctx: { ...ctx, partner, partnerId: partner.id, partnerRole },
     });
   },
 );
@@ -332,6 +349,20 @@ export const stockOwnerProcedure = approvedProcedure.use(
       partner.type === 'private_collector'
         ? await getCellarRole(partner.id, ctx.user.id)
         : ('holder' as const);
+
+    // A wine partner's view-only colleague, the same rule as winePartnerProcedure
+    if (partner.type === 'wine_partner' && type === 'mutation') {
+      const { default: getPartnerMemberRole } = await import(
+        '@/app/_partners/data/getPartnerMemberRole'
+      );
+      if ((await getPartnerMemberRole(partner.id, ctx.user.id)) === 'viewer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'You have view-only access to this account. Ask its owner to change your access.',
+        });
+      }
+    }
 
     if (cellarRole === 'revoked') {
       throw new TRPCError({

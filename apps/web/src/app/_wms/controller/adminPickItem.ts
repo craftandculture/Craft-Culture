@@ -461,6 +461,7 @@ const adminPickItem = wmsOperatorProcedure
         .update(wmsPickListItems)
         .set({
           pickedFromLocationId,
+          pickedStockId: stock.id,
           pickedQuantity: recordedPickedQuantity,
           pickedAt: new Date(),
           pickedBy: userId,
@@ -563,6 +564,10 @@ const adminPickItem = wmsOperatorProcedure
         // cases, so cases alone reads as nothing having moved.
         quantityBottles: isBottlePick ? pickedBottles : casesRemoved * pack,
         fromLocationId: pickedFromLocationId,
+        // Whose bottles these were, so they move to "left the warehouse" on the
+        // owner's statement instead of vanishing from it (Index 3.0)
+        fromOwnerId: stock.ownerId,
+        stockId: stock.id,
         orderId: pickList.orderId,
         notes: isBottlePick
           ? `Pick list ${pickList.pickListNumber} — ${pickedBottles} bottle(s) (split-case)`

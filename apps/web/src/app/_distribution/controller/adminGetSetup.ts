@@ -37,6 +37,14 @@ export interface DistributionOwner {
   /** Days until payment falls due here; null is open-ended */
   termsDays: number | null;
   outBottles: number;
+  /** The partner account this owner is; null until linked, and then its statements reach no portal */
+  partnerId: string | null;
+  partnerName: string | null;
+}
+
+export interface DistributionPartnerOption {
+  id: string;
+  name: string;
 }
 
 /**
@@ -112,13 +120,22 @@ const adminGetSetup = adminProcedure.query(async () => {
            ow.takes_unattributed AS "takesUnattributed",
            a.terms_days AS "termsDays",
            COALESCE(SUM(m.bottles) FILTER (WHERE m.kind = 'out'), 0)::float8
-             AS "outBottles"
+             AS "outBottles",
+           ow.partner_id AS "partnerId", pt.business_name AS "partnerName"
     FROM cons_owners ow
+    LEFT JOIN partners pt ON pt.id = ow.partner_id
     LEFT JOIN cons_arrangements a ON a.owner_id = ow.id
     LEFT JOIN cons_movements m ON m.arrangement_id = a.id
     WHERE ow.is_active
-    GROUP BY ow.id, ow.name, ow.consignment_tag, ow.takes_unattributed, a.terms_days
+    GROUP BY ow.id, ow.name, ow.consignment_tag, ow.takes_unattributed, a.terms_days, ow.partner_id, pt.business_name
     ORDER BY ow.name
+  `;
+
+  // The accounts an owner can be linked to: whoever holds stock with us
+  const partnerOptions = await client<DistributionPartnerOption[]>`
+    SELECT id, business_name AS name FROM partners
+    WHERE type IN ('wine_partner', 'private_collector') AND status = 'active'
+    ORDER BY name
   `;
 
   return {
@@ -132,6 +149,7 @@ const adminGetSetup = adminProcedure.query(async () => {
         .map(({ month, bottles, source }) => ({ month, bottles, source })),
     })),
     owners,
+    partnerOptions,
   };
 });
 

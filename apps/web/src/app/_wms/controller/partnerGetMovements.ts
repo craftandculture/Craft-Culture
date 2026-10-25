@@ -5,6 +5,7 @@ import db from '@/database/client';
 import { users, wmsLocations, wmsStockMovements } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
+import partnerMovementDetail from '../utils/partnerMovementDetail';
 import partnerMovementScope from '../utils/partnerMovementScope';
 
 /**
@@ -118,8 +119,14 @@ const partnerGetMovements = winePartnerProcedure
 
     const hasMore = rows.length > input.limit;
 
+    // Staff notes name distributors and recipients; partners get a safe description instead
+    const shown = (hasMore ? rows.slice(0, input.limit) : rows).map(({ notes: _notes, reasonCode, ...row }) => ({
+      ...row,
+      detail: partnerMovementDetail(row.movementType, reasonCode),
+    }));
+
     return {
-      movements: hasMore ? rows.slice(0, input.limit) : rows,
+      movements: shown,
       hasMore,
       /** Wines held with another owner, whose unstamped history is withheld. */
       sharedWineCount: scope.sharedWineCount,

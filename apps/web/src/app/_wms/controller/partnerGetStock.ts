@@ -20,6 +20,7 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import partnerMovementDetail from '../utils/partnerMovementDetail';
 import partnerMovementScope from '../utils/partnerMovementScope';
 
 /**
@@ -210,7 +211,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       quantityCases: wmsStockMovements.quantityCases,
       fromOwnerId: wmsStockMovements.fromOwnerId,
       toOwnerId: wmsStockMovements.toOwnerId,
-      notes: wmsStockMovements.notes,
+      reasonCode: wmsStockMovements.reasonCode,
       performedAt: wmsStockMovements.performedAt,
     })
     .from(wmsStockMovements)
@@ -221,7 +222,14 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       ),
     )
     .orderBy(desc(wmsStockMovements.performedAt))
-    .limit(50);
+    .limit(50)
+    /*
+      Staff notes name distributors and who bottles went to; a client sees a
+      safe description in its place (partnerMovementDetail), never the notes.
+    */
+    .then((rows) =>
+      rows.map(({ reasonCode, ...row }) => ({ ...row, notes: partnerMovementDetail(row.movementType, reasonCode) })),
+    );
 
   /*
     What the wine cost when it was imported — the figure on the import

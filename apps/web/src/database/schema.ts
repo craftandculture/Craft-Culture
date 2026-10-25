@@ -1111,6 +1111,14 @@ export const privateClientOrders = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     orderNumber: text('order_number').notNull().unique(),
 
+    /**
+     * What the order's bottles become on the owner's statement (Index 3.0):
+     * client_sale (sold to a private client), owner_delivery (a cellar
+     * member's own wine delivered to them, not a sale), partner_samples
+     * (the partner's own samples or entertaining, not a sale), cellar_sale.
+     */
+    orderKind: text('order_kind').notNull().default('client_sale'),
+
     // Partner who created the order (wine partner) - nullable for admin-created orders
     partnerId: uuid('partner_id').references(() => partners.id, {
       onDelete: 'restrict',
@@ -4738,6 +4746,12 @@ export const wmsStockMovements = pgTable(
     toLocationId: uuid('to_location_id').references(() => wmsLocations.id),
     fromOwnerId: uuid('from_owner_id').references(() => partners.id),
     toOwnerId: uuid('to_owner_id').references(() => partners.id),
+    /**
+     * The stock row a pick or dispatch drew from (Index 3.0). No foreign key:
+     * an emptied row can be deleted, and the record of what left must outlive
+     * it. With from_owner_id this is what says whose bottles went out.
+     */
+    stockId: uuid('stock_id'),
     lotNumber: text('lot_number'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     orderId: uuid('order_id'),
@@ -5031,6 +5045,8 @@ export const wmsPickListItems = pgTable(
     suggestedLocationId: uuid('suggested_location_id').references(() => wmsLocations.id),
     suggestedStockId: uuid('suggested_stock_id').references(() => wmsStock.id),
     pickedFromLocationId: uuid('picked_from_location_id').references(() => wmsLocations.id),
+    /** The stock row actually picked from, so the owner is known (Index 3.0) */
+    pickedStockId: uuid('picked_stock_id'),
     pickedQuantity: integer('picked_quantity'),
     pickedAt: timestamp('picked_at', { mode: 'date' }),
     pickedBy: uuid('picked_by').references(() => users.id),
@@ -8206,3 +8222,132 @@ export const cellarAccessGrants = pgTable(
 );
 
 export type CellarAccessGrant = typeof cellarAccessGrants.$inferSelect;
+
+/**
+ * Wine Labs answers, one row per wine and vintage (LWIN11)
+ *
+ * Every screen that wants a Wine Labs fact reads it here, so a credit is
+ * spent once per wine rather than once per page view. Nothing here is ever
+ * copied onto our own records: the match is a suggestion for staff to confirm
+ * and the price is retail, duty-paid, in USD, never our in-bond price.
+ */
+export const winelabsWines = pgTable('winelabs_wines', {
+  lwin11: text('lwin11').primaryKey(),
+  ourLwin7: text('our_lwin7').notNull(),
+  ourName: text('our_name').notNull(),
+  /** agrees | different | not_found | internal_known | error */
+  matchStatus: text('match_status').notNull(),
+  wlLwin7: text('wl_lwin7'),
+  wlLwin: text('wl_lwin'),
+  wlId: text('wl_id'),
+  wlDisplayName: text('wl_display_name'),
+  info: jsonb('info').$type<Record<string, unknown>>(),
+  drinkFrom: integer('drink_from'),
+  drinkTo: integer('drink_to'),
+  infoFetchedAt: timestamp('info_fetched_at', { mode: 'date' }),
+  price: jsonb('price').$type<Record<string, unknown>>(),
+  priceMedianUsd: doublePrecision('price_median_usd'),
+  priceCount: integer('price_count'),
+  priceFetchedAt: timestamp('price_fetched_at', { mode: 'date' }),
+  matchedAt: timestamp('matched_at', { mode: 'date' }).notNull().defaultNow(),
+  ...timestamps,
+});
+
+export type WinelabsWine = typeof winelabsWines.$inferSelect;
+
+/**
+ * Each Wine Labs call and the credits it cost, so a month's spend can be
+ * shown and capped
+ */
+export const winelabsCalls = pgTable(
+  'winelabs_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    endpoint: text('endpoint').notNull(),
+    credits: integer('credits').notNull(),
+    status: integer('status').notNull(),
+    error: text('error'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('winelabs_calls_created_at_idx').on(table.createdAt)],
+);
+
+/**
+ * Bottles taken out of stock by hand, and why (Index 3.0)
+ *
+ * One row beside each "take out of stock" movement: samples, marketing,
+ * breakage, loss, collected by the owner, sold outside Zoho. The movement
+ * moves the stock; this says where it went and how the owner is settled, so
+ * the bottles show on their statement instead of vanishing from it.
+ */
+export const wmsStockOutflows = pgTable(
+  'wms_stock_outflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    movementId: uuid('movement_id').notNull(),
+    stockId: uuid('stock_id').notNull(),
+    ownerId: uuid('owner_id').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    bottles: integer('bottles').notNull(),
+    /** One of STOCK_OUT_REASONS */
+    reason: text('reason').notNull(),
+    /** cc_landed | owner_reimbursed | price | not_a_sale | write_off */
+    settlement: text('settlement').notNull(),
+    recipient: text('recipient'),
+    note: text('note'),
+    unitPriceUsd: doublePrecision('unit_price_usd'),
+    reference: text('reference'),
+    /** Entered after the fact, from the "gone but still showing" clean-up */
+    backdated: boolean('backdated').notNull().default(false),
+    performedBy: uuid('performed_by').notNull(),
+    performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('wms_stock_outflows_owner_idx').on(table.ownerId, table.performedAt)],
+);
+
+export type WmsStockOutflow = typeof wmsStockOutflows.$inferSelect;
+
+/**
+ * Zoho invoice lines (Index 3.0)
+ *
+ * Each line of a synced invoice, with the sales order line it was raised
+ * from, so a bottle that left the warehouse can be tied to the line it was
+ * billed on. Filled by the invoice sync for invoices that are new or changed.
+ */
+export const zohoInvoiceLineItems = pgTable(
+  'zoho_invoice_line_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoInvoiceId: text('zoho_invoice_id').notNull(),
+    invoiceNumber: text('invoice_number').notNull(),
+    zohoLineItemId: text('zoho_line_item_id'),
+    lineOrder: integer('line_order').notNull(),
+    /** Header rows (CONSIGNMENT_MIX owner headings) come back as lines too */
+    itemType: text('item_type'),
+    zohoItemId: text('zoho_item_id'),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    quantity: doublePrecision('quantity').notNull(),
+    unit: text('unit'),
+    rate: doublePrecision('rate').notNull(),
+    itemTotal: doublePrecision('item_total'),
+    zohoSalesorderId: text('zoho_salesorder_id'),
+    zohoSalesorderItemId: text('zoho_salesorder_item_id'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('zoho_invoice_line_items_invoice_idx').on(table.zohoInvoiceId),
+    index('zoho_invoice_line_items_sku_idx').on(table.sku),
+  ],
+);
+
+/** Which version of each Zoho invoice's lines has been read */
+export const zohoInvoiceLineSync = pgTable('zoho_invoice_line_sync', {
+  zohoInvoiceId: text('zoho_invoice_id').primaryKey(),
+  lastModified: text('last_modified'),
+  zohoSalesorderId: text('zoho_salesorder_id'),
+  zohoSalesorderNumber: text('zoho_salesorder_number'),
+  syncedAt: timestamp('synced_at', { mode: 'date' }).notNull().defaultNow(),
+});
