@@ -12,6 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
 
+import ConditionTrend from '@/app/_cellar/components/ConditionTrend';
 import useTRPC from '@/lib/trpc/browser';
 
 /** The conditions the membership commits to, everywhere it is stated */
@@ -48,6 +49,12 @@ const CellarConditions = () => {
     refetchInterval: 60_000,
   });
   const { data: uk } = useQuery(api.cellar.member.getUkHoldings.queryOptions());
+  const { data: history } = useQuery({
+    ...api.warehouse.getConditionHistory.queryOptions(),
+    staleTime: 30 * 60 * 1000,
+  });
+  const trendOf = (metric: 'temperature' | 'humidity') =>
+    (history?.points ?? []).filter((point) => point.metric === metric);
 
   const coldRoom = (data?.readings ?? []).filter((reading) =>
     (reading.location ?? '').toLowerCase().includes('cold room'),
@@ -94,7 +101,7 @@ const CellarConditions = () => {
             )}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
             {[
               {
                 icon: IconTemperature,
@@ -102,6 +109,9 @@ const CellarConditions = () => {
                 value: range(temperatures, '°C'),
                 target: `${TEMPERATURE.low}–${TEMPERATURE.high}°C`,
                 ok: temperatureOk,
+                trend: trendOf('temperature'),
+                range: TEMPERATURE,
+                unit: '°C',
               },
               {
                 icon: IconDroplet,
@@ -109,6 +119,9 @@ const CellarConditions = () => {
                 value: range(humidities, '%'),
                 target: `${HUMIDITY.low}–${HUMIDITY.high}%`,
                 ok: humidityOk,
+                trend: trendOf('humidity'),
+                range: HUMIDITY,
+                unit: '%',
               },
             ].map((tile) => (
               <div key={tile.label} className="border-border-muted rounded-lg border px-3 py-2.5">
@@ -127,6 +140,7 @@ const CellarConditions = () => {
                     </span>
                   )}
                 </span>
+                <ConditionTrend points={tile.trend} target={tile.range} unit={tile.unit} />
               </div>
             ))}
           </div>
