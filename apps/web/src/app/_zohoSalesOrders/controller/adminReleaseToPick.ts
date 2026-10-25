@@ -11,6 +11,7 @@ import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
@@ -350,6 +351,10 @@ const adminReleaseToPick = wmsOperatorProcedure
       // preview so the bay an operator was shown is the bay they're sent to.
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
+      // A Private Cellar member's wine is not trade stock unless they offered it
+      const holds = await getCollectorStockHolds(availableStock);
+      const heldForMembers = availableStock.filter((s) => holds.isHeld(s));
+      availableStock = availableStock.filter((s) => !holds.isHeld(s));
       availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Prefer a bay with enough UNRESERVED stock; fall back to one that
@@ -427,7 +432,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
-            ? 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
+            ? heldForMembers.length > 0
+              ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is in a Private Cellar member's cellar and not for sale — do not pick it`
+              : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
             : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
               : null,

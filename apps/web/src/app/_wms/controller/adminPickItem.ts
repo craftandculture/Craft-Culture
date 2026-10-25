@@ -2,8 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
 import {
+  privateClientOrders,
   wmsLocations,
   wmsPickListItems,
   wmsPickLists,
@@ -214,6 +216,36 @@ const adminPickItem = wmsOperatorProcedure
         code: 'NOT_FOUND',
         message: `No stock found at this location for ${pickListItem.productName}`,
       });
+    }
+
+    /*
+      A Private Cellar member's wine leaves only on their own delivery or a
+      sale of theirs. In October 2026 a member's bays were picked for trade
+      orders because any row of the wine was accepted. Other owners' rows of
+      the same wine in this bay are still pickable.
+    */
+    const [pcoOrder] = await db
+      .select({ orderKind: privateClientOrders.orderKind })
+      .from(privateClientOrders)
+      .where(eq(privateClientOrders.id, pickList.orderId));
+    const ownersOwnOrder =
+      pcoOrder?.orderKind === 'owner_delivery' ||
+      pcoOrder?.orderKind === 'cellar_sale';
+
+    if (!ownersOwnOrder) {
+      const holds = await getCollectorStockHolds(candidates);
+      const free = candidates.filter((row) => !holds.isHeld(row));
+
+      if (free.length === 0) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            `The ${pickListItem.productName} at ${location.locationCode} belongs to ` +
+            `${holds.ownerNameOf(candidates[0]?.ownerId ?? null)}'s private cellar and is not for sale. ` +
+            'Do not pick it. Pick this line from another bay, or ask the office.',
+        });
+      }
+      candidates = free;
     }
 
     const packOf = (row: (typeof candidates)[number]) => row.caseConfig ?? 12;
