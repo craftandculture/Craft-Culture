@@ -1,3 +1,9 @@
+## [2.0.531](https://github.com/craftandculture/Craft-Culture/compare/v2.0.530...v2.0.531) (2026-10-25)
+
+### Features
+
+* releases, PCOs and Zoho sales orders are linked by stored IDs, with the whole chain shown on each and broken links flagged ([46f6d23](https://github.com/craftandculture/Craft-Culture/commit/46f6d233bd635142526a6d7ffcf76bbe3309ed51))
+
 ## [2.0.530](https://github.com/craftandculture/Craft-Culture/compare/v2.0.529...v2.0.530) (2026-10-25)
 
 ### Bug Fixes
