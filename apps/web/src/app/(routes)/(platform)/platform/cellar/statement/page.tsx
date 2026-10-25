@@ -49,11 +49,16 @@ interface LeftRow {
   groupKey: string;
   groupLabel: string;
   status: string | null;
+  outcome: string;
+  amountUsd: number | null;
 }
 
 /** Rows that left the cellar, one group per order or reason, oldest first */
+const hasMoney = (outcome: string) => outcome === 'sale' || outcome === 'reimbursed';
+
 const groupsOf = (rows: LeftRow[]): StatementGroup[] => {
   const groups = new Map<string, StatementGroup>();
+  const totals = new Map<string, { sum: number; open: boolean; money: boolean }>();
   for (const row of rows) {
     const group = groups.get(row.groupKey) ?? {
       key: row.groupKey,
@@ -62,11 +67,39 @@ const groupsOf = (rows: LeftRow[]): StatementGroup[] => {
       date: row.at,
       wines: [],
     };
-    group.wines.push({ key: row.id, name: row.name, detail: row.detail, bottles: row.bottles });
+    group.wines.push({
+      key: row.id,
+      name: row.name,
+      detail: row.detail,
+      bottles: row.bottles,
+      // Money only where it means something: sales, samples, reimbursements
+      amount: hasMoney(row.outcome)
+        ? row.amountUsd != null
+          ? money(row.amountUsd)
+          : 'Price being agreed'
+        : null,
+    });
     groups.set(row.groupKey, group);
+    totals.set(row.groupKey, {
+      sum: (totals.get(row.groupKey)?.sum ?? 0) + (row.amountUsd ?? 0),
+      open: (totals.get(row.groupKey)?.open ?? false) || (hasMoney(row.outcome) && row.amountUsd == null),
+      money: hasMoney(row.outcome),
+    });
   }
 
-  return [...groups.values()];
+  return [...groups.values()].map((group) => {
+    const total = totals.get(group.key);
+    return {
+      ...group,
+      amount: total?.money
+        ? total.open
+          ? total.sum > 0
+            ? `${money(total.sum)} so far`
+            : 'Price being agreed'
+          : money(total.sum)
+        : null,
+    };
+  });
 };
 
 /** A CSV cell, quoted when it needs to be */
@@ -115,6 +148,7 @@ const StatementPage = () => {
             .reduce((sum, row) => sum + row.bottles, 0),
         uae: data.holdings.reduce((sum, row) => sum + row.bottles, 0),
         uk: data.ukHoldings.reduce((sum, row) => sum + row.totalBottles, 0),
+        value: data.holdings.reduce((sum, row) => sum + (row.valueUsd ?? 0), 0),
       }
     : null;
 
@@ -146,7 +180,7 @@ const StatementPage = () => {
         format(new Date(row.at), 'yyyy-MM-dd'),
         [row.name, row.detail].filter(Boolean).join(' '),
         row.bottles,
-        '',
+        row.amountUsd != null ? row.amountUsd.toFixed(2) : '',
       ]),
       ...data.sold.map((row) => [
         'Sold',
@@ -286,13 +320,13 @@ const StatementPage = () => {
               },
               {
                 label: 'Sold',
-                value: bottles(totals.sold),
-                sub: data.soldUsd > 0 ? money(data.soldUsd) : null,
+                value: money(data.soldUsd + data.soldLeftUsd),
+                sub: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
               },
               {
-                label: 'Paid to you',
-                value: money(data.paidUsd),
-                sub: null,
+                label: 'Owed to you',
+                value: money(Math.max(0, data.owedUsd)),
+                sub: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'Paid monthly',
               },
             ].map((tile) => (
               <div
@@ -392,6 +426,7 @@ const StatementPage = () => {
           <section className="mb-6">
             <h2 className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">
               Your cellar today · {bottles(totals.uae + totals.uk)}
+              {totals.value > 0 ? ` · ${money(totals.value)}` : ''}
             </h2>
             <p className="text-text-muted mb-2 text-xs">
               As held on {format(new Date(data.generatedAt), 'd MMMM yyyy')}
@@ -407,6 +442,7 @@ const StatementPage = () => {
                     <th className="px-3 py-2 text-left">Wine</th>
                     <th className="px-3 py-2 text-left">Location</th>
                     <th className="px-3 py-2 text-right">Bottles</th>
+                    <th className="px-3 py-2 text-right">Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-border-muted divide-y">
@@ -424,6 +460,12 @@ const StatementPage = () => {
                       </td>
                       <td className="text-text-muted px-3 py-2 text-xs">UAE</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.bottles}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.valueUsd != null ? money(row.valueUsd) : '—'}
+                        {row.valueBasis === 'your price' && (
+                          <span className="text-text-muted block text-[10px]">your price</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   {data.ukHoldings.map((row, index) => (
@@ -438,11 +480,12 @@ const StatementPage = () => {
                       </td>
                       <td className="text-text-muted px-3 py-2 text-xs">United Kingdom</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.totalBottles}</td>
+                      <td className="text-text-muted px-3 py-2 text-right">—</td>
                     </tr>
                   ))}
                   {data.holdings.length === 0 && data.ukHoldings.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="text-text-muted px-3 py-4 text-center text-sm">
+                      <td colSpan={4} className="text-text-muted px-3 py-4 text-center text-sm">
                         No wine held today.
                       </td>
                     </tr>
@@ -454,9 +497,12 @@ const StatementPage = () => {
 
           <p className="text-text-muted text-xs leading-5">
             Wine in the UAE is held in bond, duty suspended, under Craft &amp;
-            Culture&rsquo;s licence on your behalf. Sale amounts are your asking
-            price for the bottles sold. If anything here differs from your own
-            records, please contact the cellar team.
+            Culture&rsquo;s licence on your behalf. Sales are valued at your price
+            for each wine. Bottles taken as samples, or damaged in our care, are
+            valued at what they cost you to land. Wine you hold is valued at your
+            price where you have set one, and otherwise at its cost. Payments are
+            made monthly for sales the buyer has paid for. If anything here
+            differs from your own records, please contact the cellar team.
           </p>
         </>
       )}

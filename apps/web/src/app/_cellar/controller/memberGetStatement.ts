@@ -3,7 +3,9 @@ import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
+import getOwnerWineCosts from '@/app/_wms/data/getOwnerWineCosts';
 import displayWineName from '@/app/_wms/utils/displayWineName';
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
   cellarPurchases,
@@ -15,8 +17,10 @@ import {
   lwinWines,
   poolSales,
   privateClientOrders,
+  saleMandates,
   wmsStock,
   wmsStockMovements,
+  wmsStockOutflows,
   zohoSalesOrders,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
@@ -247,7 +251,9 @@ const memberGetStatement = stockOwnerProcedure
       customer and order are named (trade partners never are: see
       partnerMovementDetail).
     */
-    const leftRows = await db
+    // Up to the end of this month; from its start for the month's lines, from the beginning for what is owed
+    const readLeft = (since: Date | null) =>
+      db
       .select({
         id: wmsStockMovements.id,
         movementType: wmsStockMovements.movementType,
@@ -261,14 +267,17 @@ const memberGetStatement = stockOwnerProcedure
         customerName: zohoSalesOrders.customerName,
         pcoNumber: privateClientOrders.orderNumber,
         orderId: wmsStockMovements.orderId,
+        unitPriceUsd: wmsStockOutflows.unitPriceUsd,
       })
       .from(wmsStockMovements)
       .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
       .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
+      .leftJoin(wmsStockOutflows, eq(wmsStockOutflows.movementId, wmsStockMovements.id))
       .where(
         and(
           eq(wmsStockMovements.fromOwnerId, partnerId),
-          inMonth(wmsStockMovements.performedAt),
+          since ? gte(wmsStockMovements.performedAt, since) : undefined,
+          lt(wmsStockMovements.performedAt, to),
           or(
             eq(wmsStockMovements.movementType, 'pick'),
             and(
@@ -281,17 +290,77 @@ const memberGetStatement = stockOwnerProcedure
       )
       .orderBy(wmsStockMovements.performedAt);
 
+    const [leftRows, leftToDate, mandates, costs, [paidToDate], [poolToDate]] = await Promise.all([
+      readLeft(from),
+      readLeft(null),
+      db
+        .select({ lwinKey: saleMandates.lwinKey, ask: saleMandates.askPerBottleUsd })
+        .from(saleMandates)
+        .where(
+          and(
+            eq(saleMandates.ownerId, partnerId),
+            inArray(saleMandates.status, ['offered', 'listed', 'placed', 'partially_sold', 'sold']),
+          ),
+        ),
+      getOwnerWineCosts(partnerId),
+      db
+        .select({ total: sql<number>`COALESCE(SUM(${consignmentSettlements.owedToOwner}), 0)::float` })
+        .from(consignmentSettlements)
+        .where(
+          and(
+            eq(consignmentSettlements.ownerId, partnerId),
+            eq(consignmentSettlements.status, 'settled'),
+            lt(consignmentSettlements.settledAt, to),
+          ),
+        ),
+      db
+        .select({ total: sql<number>`COALESCE(SUM(${poolSales.owedToOwnerUsd}), 0)::float` })
+        .from(poolSales)
+        .where(and(eq(poolSales.ownerId, partnerId), lt(poolSales.soldAt, to))),
+    ]);
+
+    /*
+      What each bottle that left is worth to the owner. A sale is valued at
+      the owner's own price for that wine (their Selling offer, or the price
+      agreed with C&C and recorded there). Samples and damage are at what the
+      bottle cost them to land. Deliveries, collections and count corrections
+      carry no money. No price yet means null: shown as "price being agreed",
+      never as $0.
+    */
+    const askByKey = new Map(mandates.map((row) => [row.lwinKey, row.ask]));
+    const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
+      if (isOwnDelivery || row.movementType === 'count') return null;
+      if (row.reasonCode?.startsWith('stock_out:')) {
+        const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
+        if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
+        if (rule?.settlement === 'cc_landed' || rule?.settlement === 'owner_reimbursed') {
+          const landed = costs.get(lwinPakKeyOf(row.lwin18))?.landedPerBottle;
+          return landed != null ? bottles * landed : null;
+        }
+        return null;
+      }
+      const ask = askByKey.get(lwinPakKeyOf(row.lwin18));
+      return ask != null ? bottles * ask : null;
+    };
+
     /*
       The member's own deliveries, whether picked as the delivery order or as
       a Zoho order referencing it. Once delivered this month they are listed
       under Delivered, so are not listed twice; until then they are on their
       way to the member, not sold.
     */
-    const ownDeliveries = await getOwnerDeliveryOwners(leftRows.map((row) => row.orderId));
+    const ownDeliveries = await getOwnerDeliveryOwners(leftToDate.map((row) => row.orderId));
     const deliveryOf = (row: (typeof leftRows)[number]) => {
       const delivery = row.orderId ? ownDeliveries.get(row.orderId) : undefined;
       return delivery?.ownerId === partnerId ? delivery : undefined;
     };
+    const bottlesOfLeft = (row: (typeof leftRows)[number]) =>
+      Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18));
+    const amountOf = (row: (typeof leftRows)[number]) => {
+      const value = valueOf(row, bottlesOfLeft(row), !!deliveryOf(row));
+      return value != null ? Math.round(value * 100) / 100 : null;
+    };
+
     const leftShown = leftRows.filter((row) => {
       const delivery = deliveryOf(row);
       return !(
@@ -563,6 +632,7 @@ const memberGetStatement = stockOwnerProcedure
         bottles: Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18)),
         note: leftNote(row),
         ...leftOutcome(row),
+        amountUsd: amountOf(row),
       })),
 
       sold: sold.map((row) => ({
@@ -571,13 +641,43 @@ const memberGetStatement = stockOwnerProcedure
         amountUsd: round(row.amountUsd),
       })),
       soldUsd: round(sold.reduce((sum, row) => sum + row.amountUsd, 0)),
+      // Sales recorded from the warehouse this month, valued at the owner's price
+      soldLeftUsd: round(
+        leftShown
+          .filter((row) => leftOutcome(row).outcome === 'sale')
+          .reduce((sum, row) => sum + (amountOf(row) ?? 0), 0),
+      ),
+      reimbursedUsd: round(
+        leftShown
+          .filter((row) => leftOutcome(row).outcome === 'reimbursed')
+          .reduce((sum, row) => sum + (amountOf(row) ?? 0), 0),
+      ),
+      // Bottles sold with no price yet: "price being agreed", never $0
+      unpricedBottles: leftShown
+        .filter((row) => ['sale', 'reimbursed'].includes(leftOutcome(row).outcome) && amountOf(row) == null)
+        .reduce((sum, row) => sum + bottlesOfLeft(row), 0),
+      // Everything earned to the end of this month, less everything paid
+      owedUsd: round(
+        leftToDate.reduce((sum, row) => sum + (amountOf(row) ?? 0), 0) +
+          (poolToDate?.total ?? 0) -
+          (paidToDate?.total ?? 0),
+      ),
       paidUsd: round(paid.reduce((sum, row) => sum + row.amountUsd, 0)),
 
-      holdings: holdings.map((row) => ({
-        ...row,
-        productName: displayWineName(row.productName),
-        bottles: row.cases * (row.caseConfig ?? 1),
-      })),
+      holdings: holdings.map((row) => {
+        const bottles = row.cases * (row.caseConfig ?? 1);
+        // The owner's own price where set, otherwise what it cost them
+        const ask = askByKey.get(lwinPakKeyOf(row.lwin18));
+        const perBottle = ask ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle ?? null;
+
+        return {
+          ...row,
+          productName: displayWineName(row.productName),
+          bottles,
+          valueUsd: perBottle != null ? round(bottles * perBottle) : null,
+          valueBasis: ask != null ? ('your price' as const) : perBottle != null ? ('cost' as const) : null,
+        };
+      }),
       ukHoldings,
       ukReportedAt,
     };
