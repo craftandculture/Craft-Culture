@@ -167,7 +167,7 @@ const adminRecordAgreedPrices = adminProcedure
         key,
         productName:
           rows[0]?.productName ??
-          names.find((name) => lwinPakKeyOf(name.lwin18) === key)?.productName ??
+          names.find((name) => matchKey(name.lwin18) === match)?.productName ??
           null,
         agreedBottles: line.agreedBottles,
         soldBottles: sold,
@@ -177,7 +177,7 @@ const adminRecordAgreedPrices = adminProcedure
         askPerBottleUsd: Math.round(line.eurPerBottle * input.eurToUsd * 100) / 100,
         status: status as 'sold' | 'partially_sold' | 'offered',
         existingOffer: existingFor(line.lwin18)?.number ?? null,
-        problem: !rows[0] && !names.some((name) => lwinPakKeyOf(name.lwin18) === key)
+        problem: !rows[0] && !names.some((name) => matchKey(name.lwin18) === match)
           ? 'No wine of this code ever held for this owner'
           : remaining > heldBottles
             ? `${remaining} still to sell but only ${heldBottles} held`
