@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import cleanDbUrl from '@/utils/cleanDbUrl';
+
 const envSchema = z.object({
   NODE_ENV: z
     .union([
@@ -89,19 +91,9 @@ const rawEnv = Object.fromEntries(
   ]),
 ) as typeof rawEnvAsSet;
 
-/**
- * The database URL as pasted from Neon, reduced to the bare URL: Neon's copy
- * button can include `psql '…'` and quotes, and a pasted value can carry
- * whitespace or a literal "\\n". On 25 Oct 2026 such a paste into Trigger.dev
- * stopped every background job with "Invalid URL".
- */
+// Neon's copy button can wrap the URL in `psql '…'`; see cleanDbUrl
 if (typeof rawEnv.DB_URL === 'string') {
-  rawEnv.DB_URL = rawEnv.DB_URL.trim()
-    .replace(/^psql\s+/, '')
-    .replace(/^DB_URL=/, '')
-    .replace(/^['"]|['"]$/g, '')
-    .replace(/(\\[nrt])+$/, '')
-    .trim();
+  rawEnv.DB_URL = cleanDbUrl(rawEnv.DB_URL);
 }
 
 /**
