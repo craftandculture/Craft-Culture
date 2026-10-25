@@ -43,6 +43,8 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
   const [price, setPrice] = useState('');
   const [reference, setReference] = useState('');
   const [backdated, setBackdated] = useState(false);
+  // The day it actually left, when recorded afterwards
+  const [leftOn, setLeftOn] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [remainder, setRemainder] = useState<RemainderToRelabel | null>(null);
 
@@ -99,7 +101,8 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
   const ownerName = allOwner ?? row?.ownerName;
   const missing =
     (rule.needsRecipient && !recipient.trim() ? `Fill in "${rule.detailLabel}". ` : '') +
-    (rule.needsPrice && (!(Number(price) > 0) || !reference.trim()) ? 'Add the price per bottle and a reference.' : '');
+    (rule.needsPrice && (!(Number(price) > 0) || !reference.trim()) ? 'Add the price per bottle and a reference. ' : '') +
+    (backdated && !leftOn ? 'Add the date they left.' : '');
 
   const takeOut = useMutation(
     api.wms.admin.stock.takeOut.mutationOptions({
@@ -128,6 +131,7 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
         unitPriceUsd: rule.needsPrice ? Number(price) : undefined,
         reference: rule.needsPrice ? reference.trim() : undefined,
         backdated,
+        leftOn: backdated && leftOn ? leftOn : undefined,
       })
         .catch(() => null);
       if (!result) return;
@@ -238,6 +242,22 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
         <input type="checkbox" checked={backdated} onChange={(e) => setBackdated(e.target.checked)} />
         These bottles already left earlier and are only being recorded now
       </label>
+      {backdated && (
+        <label className="flex flex-wrap items-center gap-2 text-xs font-medium">
+          Date they left
+          <input
+            id="take-out-left-on"
+            type="date"
+            value={leftOn}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setLeftOn(e.target.value)}
+            className={field}
+          />
+          <span className="text-text-muted font-normal">
+            The owner&apos;s timeline and statement show it on this day.
+          </span>
+        </label>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {plan.ok ? (

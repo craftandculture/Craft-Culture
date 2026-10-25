@@ -37,11 +37,18 @@ const adminChangeTakeOutReason = wmsOperatorProcedure
       recipient: z.string().trim().max(200).optional(),
       unitPriceUsd: z.number().positive().optional(),
       reference: z.string().trim().max(100).optional(),
+      /** Correct the day it left (yyyy-mm-dd) */
+      leftOn: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
     const rule = STOCK_OUT_REASONS[input.reason];
-    if (rule.needsRecipient && !input.recipient) {
+    // Only the date changing: the reason and its detail stand as recorded
+    const dateOnly = !!input.leftOn && !input.recipient;
+    if (rule.needsRecipient && !input.recipient && !dateOnly) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: `Fill in "${rule.detailLabel}".` });
     }
     if (rule.needsPrice && (!input.unitPriceUsd || !input.reference)) {
@@ -68,11 +75,17 @@ const adminChangeTakeOutReason = wmsOperatorProcedure
       });
     }
 
+    const midday = input.leftOn ? new Date(`${input.leftOn}T12:00:00+04:00`) : null;
+    if (midday && midday.getTime() - Date.now() > 24 * 60 * 60 * 1000) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'The date it left cannot be in the future.' });
+    }
+    const leftAt = midday ? (midday.getTime() < Date.now() ? midday : new Date()) : null;
+
     const was = STOCK_OUT_REASONS[movement.reasonCode.slice('stock_out:'.length) as StockOutReason];
     const when = new Date().toISOString().slice(0, 10);
     const notes = [
-      [rule.label, input.recipient].filter(Boolean).join(' · '),
-      `Reason changed from ${was?.label ?? movement.reasonCode} by ${ctx.user.name ?? ctx.user.email} on ${when}`,
+      dateOnly ? null : [rule.label, input.recipient].filter(Boolean).join(' · '),
+      `${input.reason !== movement.reasonCode.slice('stock_out:'.length) ? `Reason changed from ${was?.label ?? movement.reasonCode}` : 'Corrected'}${leftAt ? `, dated ${input.leftOn} (was ${movement.performedAt.toISOString().slice(0, 10)})` : ''} by ${ctx.user.name ?? ctx.user.email} on ${when}`,
       movement.notes ? `Before: ${movement.notes}` : null,
     ]
       .filter(Boolean)
@@ -81,16 +94,22 @@ const adminChangeTakeOutReason = wmsOperatorProcedure
     await db.transaction(async (tx) => {
       await tx
         .update(wmsStockMovements)
-        .set({ reasonCode: `stock_out:${input.reason}`, notes, updatedAt: new Date() })
+        .set({
+          reasonCode: `stock_out:${input.reason}`,
+          notes,
+          ...(leftAt ? { performedAt: leftAt } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(wmsStockMovements.id, movement.id));
       await tx
         .update(wmsStockOutflows)
         .set({
           reason: input.reason,
           settlement: rule.settlement,
-          recipient: input.recipient ?? null,
+          ...(dateOnly ? {} : { recipient: input.recipient ?? null }),
           unitPriceUsd: rule.needsPrice ? (input.unitPriceUsd ?? null) : null,
           reference: rule.needsPrice ? (input.reference ?? null) : null,
+          ...(leftAt ? { performedAt: leftAt, backdated: true } : {}),
         })
         .where(eq(wmsStockOutflows.movementId, movement.id));
     });

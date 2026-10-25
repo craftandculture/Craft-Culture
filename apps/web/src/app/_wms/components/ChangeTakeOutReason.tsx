@@ -28,6 +28,7 @@ const ChangeTakeOutReason = ({ movementId, reasonCode }: ChangeTakeOutReasonProp
   const [detail, setDetail] = useState('');
   const [price, setPrice] = useState('');
   const [reference, setReference] = useState('');
+  const [leftOn, setLeftOn] = useState('');
   const rule = STOCK_OUT_REASONS[reason];
 
   const change = useMutation(
@@ -43,8 +44,8 @@ const ChangeTakeOutReason = ({ movementId, reasonCode }: ChangeTakeOutReasonProp
 
   const field = 'border-border-muted bg-background-primary rounded-md border px-2 py-1 text-xs';
   const ready =
-    reason !== current &&
-    (!rule.needsRecipient || detail.trim()) &&
+    (reason !== current || !!leftOn) &&
+    (!rule.needsRecipient || detail.trim() || (reason === current && !!leftOn)) &&
     (!rule.needsPrice || (Number(price) > 0 && reference.trim()));
 
   if (!open) {
@@ -52,7 +53,7 @@ const ChangeTakeOutReason = ({ movementId, reasonCode }: ChangeTakeOutReasonProp
       <span className="text-text-muted inline-flex items-center gap-2 text-xs">
         {STOCK_OUT_REASONS[current]?.label ?? current}
         <button type="button" onClick={() => setOpen(true)} className="text-text-primary underline underline-offset-2">
-          Change reason
+          Change reason or date
         </button>
       </span>
     );
@@ -70,6 +71,7 @@ const ChangeTakeOutReason = ({ movementId, reasonCode }: ChangeTakeOutReasonProp
           recipient: detail.trim() || undefined,
           unitPriceUsd: rule.needsPrice ? Number(price) : undefined,
           reference: rule.needsPrice ? reference.trim() : undefined,
+          leftOn: leftOn || undefined,
         });
       }}
     >
@@ -115,6 +117,16 @@ const ChangeTakeOutReason = ({ movementId, reasonCode }: ChangeTakeOutReasonProp
           />
         </>
       )}
+      <input
+        id={`reason-left-on-${movementId}`}
+        type="date"
+        value={leftOn}
+        max={new Date().toISOString().slice(0, 10)}
+        onChange={(event) => setLeftOn(event.target.value)}
+        className={field}
+        aria-label="Date it left"
+        title="Date it left, if not the day it was recorded"
+      />
       <span className="text-text-muted text-xs">Owner sees: {rule.ownerSees}</span>
       <button
         type="submit"
