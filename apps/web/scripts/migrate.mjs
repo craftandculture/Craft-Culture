@@ -3696,6 +3696,20 @@ const runMigrations = async () => {
       `);
     });
 
+    /*
+      The private client order a Zoho sales order fulfils (25 Oct 2026). The
+      only link was the PCO number typed into the SO's Reference, read as text
+      wherever it mattered: SO-00225, Ihab Toma's own delivery, read as a sale
+      to City Drinks. Filled by the Zoho sync (linkSalesOrdersToPcos), which
+      also fills past orders on its first run.
+    */
+    await client.unsafe(
+      `ALTER TABLE "zoho_sales_orders" ADD COLUMN IF NOT EXISTS "private_client_order_id" uuid`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "zoho_sales_orders_pco_idx" ON "zoho_sales_orders" ("private_client_order_id")`,
+    );
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow
