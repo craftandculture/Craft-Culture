@@ -1,3 +1,9 @@
+## [2.0.545](https://github.com/craftandculture/Craft-Culture/compare/v2.0.544...v2.0.545) (2026-10-25)
+
+### Features
+
+* Take out can draw from all of one owner's bays at once ([bf8d170](https://github.com/craftandculture/Craft-Culture/commit/bf8d170bc8e4315a3f838f537539538632d5da47))
+
 ## [2.0.544](https://github.com/craftandculture/Craft-Culture/compare/v2.0.543...v2.0.544) (2026-10-25)
 
 ### Bug Fixes
