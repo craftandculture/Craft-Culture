@@ -329,7 +329,7 @@ const adminPickItem = wmsOperatorProcedure
     // How many sealed cases this pick removes, and what to store on the line.
     let casesRemoved: number;
     let recordedPickedQuantity: number;
-    let resultMessage: string;
+    let resultMessage = '';
     /*
       The single-bottle row left behind when a case is cracked.
 
@@ -378,6 +378,9 @@ const adminPickItem = wmsOperatorProcedure
       });
     }
 
+    // Loose bottles left over by a bottle pick, worked out before any write.
+    let leftover = 0;
+
     if (isBottlePick) {
       // --- Split-case (bottle) pick ---
       // Draw from already-open bottles first, then crack sealed cases as needed.
@@ -406,65 +409,9 @@ const adminPickItem = wmsOperatorProcedure
       // Bottles left over once this pick is taken. They become REAL single
       // bottle stock rather than an open_bottles counter nothing else reads —
       // see moveBottlesToSingles for why that counter made stock invisible.
-      const leftover = stock.openBottles + casesRemoved * pack - pickedBottles;
-
-      /*
-        Cracking a reserved case goes through the same conversion a whole-case
-        pick uses.
-
-        Decrementing availableCases by hand here double-counted every reserved
-        case: availableCases had already been reduced when the order was
-        approved, so subtracting again drove it negative, and reservedCases was
-        left pointing at a case that had physically gone. That is the residue
-        behind bays reading as held with nothing holding them.
-      */
-      if (casesRemoved > 0) {
-        await convertReservationToPick({
-          stockId: stock.id,
-          orderId: pickList.orderId ?? '',
-          quantityCases: casesRemoved,
-          db,
-        });
-      }
-
-      await db
-        .update(wmsStock)
-        .set({
-          // Whatever this row was carrying loose has been moved into singles.
-          openBottles: 0,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsStock.id, stock.id));
-
-      const singlesId =
-        pack > 1
-          ? await moveBottlesToSingles({
-              sourceStockId: stock.id,
-              bottles: leftover,
-              performedBy: userId,
-              db,
-            })
-          : null;
-
-      remainderStockId = singlesId;
-
-      // A pick straight off a singles row leaves nothing over to move.
-      if (!singlesId && leftover > 0 && pack === 1) {
-        await db
-          .update(wmsStock)
-          .set({
-            quantityCases: sql`${wmsStock.quantityCases} + ${leftover}`,
-            availableCases: sql`${wmsStock.availableCases} + ${leftover}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(wmsStock.id, stock.id));
-      }
+      leftover = stock.openBottles + casesRemoved * pack - pickedBottles;
 
       recordedPickedQuantity = pickedBottles;
-      resultMessage =
-        `Picked ${pickedBottles} bottle(s) from ${location.locationCode}` +
-        (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
-        (singlesId ? `; ${leftover} single bottle(s) back on the shelf` : '');
     } else {
       // --- Whole-case pick ---
       // Gate on what is PHYSICALLY in the bay. availableCases excludes reserved
@@ -487,69 +434,156 @@ const adminPickItem = wmsOperatorProcedure
         });
       }
 
-      await convertReservationToPick({
-        stockId: stock.id,
-        orderId: pickList.orderId ?? '',
-        quantityCases: pickedQuantity,
-        db,
-      });
-
       casesRemoved = pickedQuantity;
       recordedPickedQuantity = pickedQuantity;
       resultMessage = `Picked ${pickedQuantity} cases from ${location.locationCode}`;
     }
 
-    // Update pick list item
-    const [updatedItem] = await db
-      .update(wmsPickListItems)
-      .set({
-        pickedFromLocationId,
-        pickedQuantity: recordedPickedQuantity,
-        pickedAt: new Date(),
-        pickedBy: userId,
-        isPicked: true,
-        notes,
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsPickListItems.id, pickListItemId))
-      .returning();
+    // Generated before the transaction: running the number generator inside
+    // one can deadlock the connection pool (same as repack). Offset so the
+    // singles arrival and the pick don't take the same number.
+    const movementNumber = await generateMovementNumber(0);
+    const singlesMovementNumber = await generateMovementNumber(1);
 
-    // Record movement
-    const movementNumber = await generateMovementNumber();
-    await db.insert(wmsStockMovements).values({
-      movementNumber,
-      movementType: 'pick',
-      // The code actually taken off the shelf, which may be a repacked pack
-      // rather than the one the line was released against.
-      lwin18: stock.lwin18,
-      productName: pickListItem.productName,
-      quantityCases: casesRemoved,
-      // What physically left the shelf. A split-case pick removes 0 whole
-      // cases, so cases alone reads as nothing having moved.
-      quantityBottles: isBottlePick ? pickedBottles : casesRemoved * pack,
-      fromLocationId: pickedFromLocationId,
-      orderId: pickList.orderId,
-      notes: isBottlePick
-        ? `Pick list ${pickList.pickListNumber} — ${pickedBottles} bottle(s) (split-case)`
-        : `Pick list ${pickList.pickListNumber}`,
-      performedBy: userId,
-      performedAt: new Date(),
+    /*
+      One transaction, opened by claiming the line.
+
+      These writes used to run one after another with nothing holding them
+      together. A dropped connection after the stock came off left the line
+      unpicked with its stock gone, and the picker's retry took it off again.
+      Two devices confirming the same line both passed the "already picked"
+      check above and both reduced stock. Claiming the line first, only while
+      it is still unpicked, makes the second confirm wait for the first and
+      then find nothing to claim; any failure rolls the whole pick back.
+    */
+    const updatedItem = await db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(wmsPickListItems)
+        .set({
+          pickedFromLocationId,
+          pickedQuantity: recordedPickedQuantity,
+          pickedAt: new Date(),
+          pickedBy: userId,
+          isPicked: true,
+          notes,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(wmsPickListItems.id, pickListItemId),
+            eq(wmsPickListItems.isPicked, false),
+          ),
+        )
+        .returning();
+
+      if (!claimed) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Item already picked',
+        });
+      }
+
+      if (isBottlePick) {
+        /*
+          Cracking a reserved case goes through the same conversion a whole-case
+          pick uses.
+
+          Decrementing availableCases by hand here double-counted every reserved
+          case: availableCases had already been reduced when the order was
+          approved, so subtracting again drove it negative, and reservedCases was
+          left pointing at a case that had physically gone. That is the residue
+          behind bays reading as held with nothing holding them.
+        */
+        if (casesRemoved > 0) {
+          await convertReservationToPick({
+            stockId: stock.id,
+            orderId: pickList.orderId ?? '',
+            quantityCases: casesRemoved,
+            db: tx,
+          });
+        }
+
+        await tx
+          .update(wmsStock)
+          .set({
+            // Whatever this row was carrying loose has been moved into singles.
+            openBottles: 0,
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsStock.id, stock.id));
+
+        const singlesId =
+          pack > 1
+            ? await moveBottlesToSingles({
+                sourceStockId: stock.id,
+                bottles: leftover,
+                performedBy: userId,
+                movementNumber: singlesMovementNumber,
+                db: tx,
+              })
+            : null;
+
+        remainderStockId = singlesId;
+
+        // A pick straight off a singles row leaves nothing over to move.
+        if (!singlesId && leftover > 0 && pack === 1) {
+          await tx
+            .update(wmsStock)
+            .set({
+              quantityCases: sql`${wmsStock.quantityCases} + ${leftover}`,
+              availableCases: sql`${wmsStock.availableCases} + ${leftover}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(wmsStock.id, stock.id));
+        }
+
+        resultMessage =
+          `Picked ${pickedBottles} bottle(s) from ${location.locationCode}` +
+          (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
+          (singlesId ? `; ${leftover} single bottle(s) back on the shelf` : '');
+      } else {
+        await convertReservationToPick({
+          stockId: stock.id,
+          orderId: pickList.orderId ?? '',
+          quantityCases: pickedQuantity,
+          db: tx,
+        });
+      }
+
+      // Record movement
+      await tx.insert(wmsStockMovements).values({
+        movementNumber,
+        movementType: 'pick',
+        // The code actually taken off the shelf, which may be a repacked pack
+        // rather than the one the line was released against.
+        lwin18: stock.lwin18,
+        productName: pickListItem.productName,
+        quantityCases: casesRemoved,
+        // What physically left the shelf. A split-case pick removes 0 whole
+        // cases, so cases alone reads as nothing having moved.
+        quantityBottles: isBottlePick ? pickedBottles : casesRemoved * pack,
+        fromLocationId: pickedFromLocationId,
+        orderId: pickList.orderId,
+        notes: isBottlePick
+          ? `Pick list ${pickList.pickListNumber} — ${pickedBottles} bottle(s) (split-case)`
+          : `Pick list ${pickList.pickListNumber}`,
+        performedBy: userId,
+        performedAt: new Date(),
+      });
+
+      // Counted in SQL, so two lines picked at once both count
+      await tx
+        .update(wmsPickLists)
+        .set({
+          pickedItems: sql`${wmsPickLists.pickedItems} + 1`,
+          status: sql`CASE WHEN ${wmsPickLists.status} = 'pending' THEN 'in_progress' ELSE ${wmsPickLists.status} END`,
+          startedAt: sql`COALESCE(${wmsPickLists.startedAt}, NOW())`,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsPickLists.id, pickList.id));
+
+      return claimed;
     });
-
-    // Update pick list status and counts
-    const newPickedCount = pickList.pickedItems + 1;
-    const newStatus =
-      pickList.status === 'pending' ? 'in_progress' : pickList.status;
-
-    await db
-      .update(wmsPickLists)
-      .set({
-        pickedItems: newPickedCount,
-        status: newStatus,
-        startedAt: pickList.startedAt ?? new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsPickLists.id, pickList.id));
 
     // First line picked: tell #warehouse-activity the list is under way
     if (pickList.status === 'pending') {
