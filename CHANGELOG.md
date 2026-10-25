@@ -1,3 +1,9 @@
+## [2.0.546](https://github.com/craftandculture/Craft-Culture/compare/v2.0.545...v2.0.546) (2026-10-25)
+
+### Features
+
+* a take-out recorded after the event is dated the day the bottles left ([e416bc9](https://github.com/craftandculture/Craft-Culture/commit/e416bc9b6f58a1f12f485812e48c5bc04d9385e0))
+
 ## [2.0.545](https://github.com/craftandculture/Craft-Culture/compare/v2.0.544...v2.0.545) (2026-10-25)
 
 ### Features
