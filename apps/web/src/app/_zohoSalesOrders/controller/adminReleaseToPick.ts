@@ -203,6 +203,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         productName: string;
         caseConfig: number | null;
         ownerId: string;
+        notForSale: boolean;
       }[] = [];
 
       const stockSelect = {
@@ -215,6 +216,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         productName: wmsStock.productName,
         caseConfig: wmsStock.caseConfig,
         ownerId: wmsStock.ownerId,
+        notForSale: wmsStock.notForSale,
       };
 
       // Strategy 1: Match by LWIN18, PACK-AGNOSTIC — the ordered pack and the
@@ -303,6 +305,7 @@ const adminReleaseToPick = wmsOperatorProcedure
               productName: wmsStock.productName,
               caseConfig: wmsStock.caseConfig,
               ownerId: wmsStock.ownerId,
+              notForSale: wmsStock.notForSale,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -351,7 +354,7 @@ const adminReleaseToPick = wmsOperatorProcedure
       // preview so the bay an operator was shown is the bay they're sent to.
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
-      // A Private Cellar member's wine is not trade stock unless they offered it
+      // Wine held for its owner is not trade stock unless they have offered it
       const holds = await getCollectorStockHolds(availableStock);
       const heldForMembers = availableStock.filter((s) => holds.isHeld(s));
       availableStock = availableStock.filter((s) => !holds.isHeld(s));
@@ -433,7 +436,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
             ? heldForMembers.length > 0
-              ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is in a Private Cellar member's cellar and not for sale — do not pick it`
+              ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is held for its owner, not for sale — do not pick it`
               : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
             : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`

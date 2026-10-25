@@ -1,6 +1,5 @@
 import { and, eq, gt, inArray, like, sql } from 'drizzle-orm';
 
-import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import { wmsStock, wmsStockReservations, zohoSalesOrderItems } from '@/database/schema';
 
 import inOurWarehouse from './inOurWarehouse';
@@ -115,12 +114,7 @@ export const holdLines = async ({
       the stock is held in (see release-to-pick), so it is settled against the
       first bay, the best pack fit.
     */
-    // A Private Cellar member's wine is never held for a trade order it was not offered to
-    const holds = await getCollectorStockHolds(candidates);
-    const ranked = rankStockByPack(
-      candidates.filter((row) => !holds.isHeld(row)),
-      statedPack ?? 1,
-    );
+    const ranked = rankStockByPack(candidates, statedPack ?? 1);
     const firstPack = packOf(ranked[0]?.caseConfig ?? null);
     const orderedPack = isBottleUnit ? 1 : (statedPack ?? firstPack);
     let bottlesLeft = isBottleUnit ? line.quantity : line.quantity * orderedPack;

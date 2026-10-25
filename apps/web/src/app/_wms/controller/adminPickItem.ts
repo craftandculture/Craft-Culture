@@ -219,10 +219,10 @@ const adminPickItem = wmsOperatorProcedure
     }
 
     /*
-      A Private Cellar member's wine leaves only on their own delivery or a
-      sale of theirs. In October 2026 a member's bays were picked for trade
-      orders because any row of the wine was accepted. Other owners' rows of
-      the same wine in this bay are still pickable.
+      Wine marked not for sale leaves only on its owner's own delivery or once
+      they offer it. In October 2026 a member's held bays were picked for trade
+      orders because any row of the wine was accepted. Other rows of the same
+      wine in this bay are still pickable.
     */
     const [pcoOrder] = await db
       .select({ orderKind: privateClientOrders.orderKind })
@@ -241,7 +241,7 @@ const adminPickItem = wmsOperatorProcedure
           code: 'FORBIDDEN',
           message:
             `The ${pickListItem.productName} at ${location.locationCode} belongs to ` +
-            `${holds.ownerNameOf(candidates[0]?.ownerId ?? null)}'s private cellar and is not for sale. ` +
+            `${holds.ownerNameOf(candidates[0]?.ownerId ?? null)} and is not for sale. ` +
             'Do not pick it. Pick this line from another bay, or ask the office.',
         });
       }

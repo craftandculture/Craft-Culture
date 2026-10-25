@@ -1,13 +1,12 @@
-import { and, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
-import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
 import {
   partners,
   privateClientOrders,
-  saleMandates,
   wmsLocations,
   wmsStockMovements,
   zohoSalesOrders,
@@ -24,9 +23,9 @@ const packOf = (lwin18: string) => {
  * Every bottle that left the warehouse in a period, by owner (staff only)
  *
  * The check behind the member statement's "Left your cellar": picks, take-outs
- * and count shortfalls, each with the order and customer it went to. A Private
- * Cellar member's bottles on a trade sales order with no sale mandate for that
- * wine are flagged — that is wine leaving that the member never offered.
+ * and count shortfalls, each with the order and customer it went to. Wine held
+ * for its owner (not for sale, and not since offered) that went out on a trade
+ * sales order is flagged — wine leaving that the owner never offered.
  * Outflows no owner could be worked out for are counted separately, for an
  * operator to attribute.
  *
@@ -73,6 +72,13 @@ const adminGetOwnerOutflows = adminProcedure
           quantityCases: wmsStockMovements.quantityCases,
           quantityBottles: wmsStockMovements.quantityBottles,
           ownerInferred: wmsStockMovements.ownerInferred,
+          // The bay's row for this owner and wine, emptied rows included
+          notForSale: sql<boolean>`(
+            SELECT bool_or(s.not_for_sale) FROM wms_stock s
+            WHERE s.owner_id = ${wmsStockMovements.fromOwnerId}
+              AND s.lwin18 = ${wmsStockMovements.lwin18}
+              AND s.location_id = ${wmsStockMovements.fromLocationId}
+          )`,
           ownerId: partners.id,
           ownerName: partners.businessName,
           ownerType: partners.type,
@@ -117,31 +123,7 @@ const adminGetOwnerOutflows = adminProcedure
         ),
     ]);
 
-    // Wines each collector has ever put up for sale
-    const collectorIds = [
-      ...new Set(
-        rows
-          .filter((row) => row.ownerType === 'private_collector')
-          .map((row) => row.ownerId),
-      ),
-    ];
-    const offered = collectorIds.length
-      ? await db
-          .select({
-            ownerId: saleMandates.ownerId,
-            lwinKey: saleMandates.lwinKey,
-          })
-          .from(saleMandates)
-          .where(
-            and(
-              inArray(saleMandates.ownerId, collectorIds),
-              ne(saleMandates.status, 'draft'),
-            ),
-          )
-      : [];
-    const offeredKeys = new Set(
-      offered.map((row) => `${row.ownerId}|${row.lwinKey}`),
-    );
+    const holds = await getCollectorStockHolds(rows);
 
     const lines = rows.map((row) => {
       const bottles = Math.abs(
@@ -153,10 +135,7 @@ const adminGetOwnerOutflows = adminProcedure
           ) as keyof typeof STOCK_OUT_REASONS)
         : null;
       const unoffered =
-        row.ownerType === 'private_collector' &&
-        row.movementType === 'pick' &&
-        !!row.salesOrderNumber &&
-        !offeredKeys.has(`${row.ownerId}|${lwinPakKeyOf(row.lwin18)}`);
+        row.movementType === 'pick' && !!row.salesOrderNumber && holds.isHeld(row);
 
       return {
         id: row.id,
@@ -178,7 +157,7 @@ const adminGetOwnerOutflows = adminProcedure
         orderKind: row.orderKind,
         customer: row.customerName,
         flag: unoffered
-          ? 'Private Cellar wine on a trade order, never offered for sale'
+          ? 'Held for its owner (not for sale) but picked for a trade order'
           : null,
       };
     });
