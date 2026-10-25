@@ -1,3 +1,9 @@
+## [2.0.532](https://github.com/craftandculture/Craft-Culture/compare/v2.0.531...v2.0.532) (2026-10-25)
+
+### Features
+
+* a take-out's reason can be corrected from Movements, each reason asks the right question, and an opened case prompts for a new label ([ee6fc94](https://github.com/craftandculture/Craft-Culture/commit/ee6fc949dc7cc85c4fc7b85247c150bfa6276433))
+
 ## [2.0.531](https://github.com/craftandculture/Craft-Culture/compare/v2.0.530...v2.0.531) (2026-10-25)
 
 ### Features
