@@ -253,6 +253,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   const costByLwin = await getMemberValuePerBottle(
     partner.id,
     products.map((product) => product.lwin18),
+    { ownOnly: partner.type !== 'private_collector' },
   );
 
   /*

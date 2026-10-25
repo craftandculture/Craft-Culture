@@ -138,7 +138,9 @@ const partnerGetActivity = winePartnerProcedure
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.orderNumber} · ${row.clientName}`,
-          detail: row.notes,
+          // Status-change notes carry staff wording and distributor names
+          // ("Assigned to …"); only notes written to be shared reach the partner
+          detail: row.action === 'note_added' ? row.notes : null,
           reference: row.orderNumber,
         })),
       );
@@ -163,6 +165,8 @@ const partnerGetActivity = winePartnerProcedure
           and(
             eq(sourceRfqPartners.rfqId, sourceRfqs.id),
             eq(sourceRfqPartners.partnerId, partner.id),
+            // Each partner's own RFQ log rows, never another partner's
+            sql`(${sourceRfqActivityLogs.partnerId} IS NULL OR ${sourceRfqActivityLogs.partnerId} = ${partner.id})`,
           ),
         )
         .orderBy(desc(sourceRfqActivityLogs.createdAt))
@@ -179,7 +183,7 @@ const partnerGetActivity = winePartnerProcedure
           at: row.createdAt,
           title: humanise(row.newStatus) ?? humanise(row.action) ?? 'Updated',
           subject: `${row.rfqNumber}${row.name ? ` · ${row.name}` : ''}`,
-          detail: row.notes,
+          detail: null,
           reference: row.rfqNumber,
         })),
       );

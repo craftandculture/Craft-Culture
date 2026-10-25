@@ -37,8 +37,17 @@ import getCostPerBottle from './getCostPerBottle';
  * @param lwins - The LWIN18s being valued
  * @returns Value per bottle, keyed pack-agnostically
  */
-const getMemberValuePerBottle = async (partnerId: string, lwins: string[]) => {
-  const values = await getCostPerBottle(lwins);
+const getMemberValuePerBottle = async (
+  partnerId: string,
+  lwins: string[],
+  options: { ownOnly?: boolean } = {},
+) => {
+  /*
+    A trade partner sees only its own invoice cost. The general cost is the
+    highest across every owner and C&C's pricing row, which is another
+    owner's figure, or ours, when the partner shipped none of that wine.
+  */
+  const values = options.ownOnly ? new Map<string, number>() : await getCostPerBottle(lwins);
 
   if (lwins.length === 0) return values;
 

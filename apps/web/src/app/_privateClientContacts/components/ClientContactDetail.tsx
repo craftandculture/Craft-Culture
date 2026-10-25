@@ -98,7 +98,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
             {contact.cityDrinksVerifiedAt && (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                title="City Drinks Verified"
+                title="Verified with the distributor"
               >
                 <Icon icon={IconShieldCheck} size="sm" />
                 <span className="text-xs font-medium">Verified</span>

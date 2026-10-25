@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { users, wmsLocations, wmsStockMovements } from '@/database/schema';
+import { wmsLocations, wmsStockMovements } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import partnerMovementDetail from '../utils/partnerMovementDetail';
@@ -106,12 +106,10 @@ const partnerGetMovements = winePartnerProcedure
         notes: wmsStockMovements.notes,
         reasonCode: wmsStockMovements.reasonCode,
         performedAt: wmsStockMovements.performedAt,
-        performedByName: users.name,
       })
       .from(wmsStockMovements)
       .leftJoin(fromLocation, eq(wmsStockMovements.fromLocationId, fromLocation.id))
       .leftJoin(toLocation, eq(wmsStockMovements.toLocationId, toLocation.id))
-      .leftJoin(users, eq(wmsStockMovements.performedBy, users.id))
       .where(filters)
       .orderBy(desc(wmsStockMovements.performedAt))
       .limit(input.limit + 1)

@@ -89,7 +89,7 @@ const ClientContactsList = () => {
             {row.original.cityDrinksVerifiedAt && (
               <span
                 className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                title="City Drinks Verified"
+                title="Verified with the distributor"
               >
                 <Icon icon={IconShieldCheck} size="xs" />
                 <span className="text-[10px] font-medium">Verified</span>
