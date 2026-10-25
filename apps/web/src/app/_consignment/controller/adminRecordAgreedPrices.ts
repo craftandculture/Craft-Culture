@@ -79,17 +79,34 @@ const adminRecordAgreedPrices = adminProcedure
       .where(
         and(
           eq(wmsStockMovements.fromOwnerId, owner.id),
-          eq(wmsStockMovements.movementType, 'pick'),
+          // Picked for orders, or taken out (samples, damage): gone either way
+          sql`(${wmsStockMovements.movementType} = 'pick' OR ${wmsStockMovements.reasonCode} LIKE 'stock_out:%')`,
           sql`(${sql.join(keys.map((key) => sql`${wmsStockMovements.lwin18} LIKE ${keyPattern(key)}`), sql` OR `)})`,
         ),
       );
     const deliveries = await getOwnerDeliveryOwners(picks.map((pick) => pick.orderId));
+    /*
+      Two wines can share a pack-agnostic key and differ only in the pack
+      digits: Arnoux-Lachaux's village Chambolle (…-03-…) and Clos des
+      Danguerins (…-02-…) are one LWIN. Where a key appears on more than one
+      line, each line matches its exact code instead.
+    */
+    const keyCounts = new Map<string, number>();
+    for (const line of input.lines) {
+      const key = lwinPakKeyOf(line.lwin18);
+      keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+    }
+    const matchKey = (lwin18: string) => {
+      const key = lwinPakKeyOf(lwin18);
+      return (keyCounts.get(key) ?? 0) > 1 ? lwin18 : key;
+    };
+
     const soldByKey = new Map<string, number>();
     for (const pick of picks) {
       const delivery = pick.orderId ? deliveries.get(pick.orderId) : undefined;
       if (delivery?.ownerId === owner.id) continue;
       const pack = Number(pick.lwin18.split('-')[2]) || 1;
-      const key = lwinPakKeyOf(pick.lwin18);
+      const key = matchKey(pick.lwin18);
       soldByKey.set(key, (soldByKey.get(key) ?? 0) + Math.abs(pick.bottles ?? pick.cases * pack));
     }
 
@@ -106,7 +123,12 @@ const adminRecordAgreedPrices = adminProcedure
       );
 
     const existing = await db
-      .select({ id: saleMandates.id, lwinKey: saleMandates.lwinKey, number: saleMandates.mandateNumber })
+      .select({
+        id: saleMandates.id,
+        lwinKey: saleMandates.lwinKey,
+        lwin18: saleMandates.lwin18,
+        number: saleMandates.mandateNumber,
+      })
       .from(saleMandates)
       .where(
         and(
@@ -115,7 +137,8 @@ const adminRecordAgreedPrices = adminProcedure
           ne(saleMandates.status, 'withdrawn'),
         ),
       );
-    const existingByKey = new Map(existing.map((row) => [row.lwinKey, row]));
+    const existingFor = (lwin18: string) =>
+      existing.find((row) => matchKey(row.lwin18) === matchKey(lwin18));
 
     // Names for lines whose wine has left entirely
     const names = await db
@@ -130,9 +153,10 @@ const adminRecordAgreedPrices = adminProcedure
 
     const plan = input.lines.map((line) => {
       const key = lwinPakKeyOf(line.lwin18);
-      const sold = Math.min(soldByKey.get(key) ?? 0, line.agreedBottles);
+      const match = matchKey(line.lwin18);
+      const sold = Math.min(soldByKey.get(match) ?? 0, line.agreedBottles);
       const remaining = line.agreedBottles - sold;
-      const rows = held.filter((row) => lwinPakKeyOf(row.lwin18) === key);
+      const rows = held.filter((row) => matchKey(row.lwin18) === match);
       const heldBottles = rows.reduce(
         (sum, row) => sum + row.quantityCases * (row.caseConfig ?? 1) + (row.openBottles ?? 0),
         0,
@@ -152,7 +176,7 @@ const adminRecordAgreedPrices = adminProcedure
         eurPerBottle: line.eurPerBottle,
         askPerBottleUsd: Math.round(line.eurPerBottle * input.eurToUsd * 100) / 100,
         status: status as 'sold' | 'partially_sold' | 'offered',
-        existingOffer: existingByKey.get(key)?.number ?? null,
+        existingOffer: existingFor(line.lwin18)?.number ?? null,
         problem: !rows[0] && !names.some((name) => lwinPakKeyOf(name.lwin18) === key)
           ? 'No wine of this code ever held for this owner'
           : remaining > heldBottles
@@ -179,7 +203,7 @@ const adminRecordAgreedPrices = adminProcedure
 
     for (const line of plan) {
       const ownerNotes = note.replace('{eur}', String(line.eurPerBottle));
-      const current = existingByKey.get(line.key);
+      const current = existingFor(line.lwin18);
       if (current) {
         await db
           .update(saleMandates)
@@ -197,7 +221,7 @@ const adminRecordAgreedPrices = adminProcedure
             mandateNumber,
             ownerId: owner.id,
             ownerName: owner.name,
-            lwin18: first?.lwin18 ?? line.lwin18,
+            lwin18: line.lwin18,
             lwinKey: line.key,
             productName: first?.productName ?? line.productName ?? line.lwin18,
             producer: first?.producer ?? null,

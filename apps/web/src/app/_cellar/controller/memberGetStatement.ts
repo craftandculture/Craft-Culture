@@ -294,7 +294,7 @@ const memberGetStatement = stockOwnerProcedure
       readLeft(from),
       readLeft(null),
       db
-        .select({ lwinKey: saleMandates.lwinKey, ask: saleMandates.askPerBottleUsd })
+        .select({ lwin18: saleMandates.lwin18, lwinKey: saleMandates.lwinKey, ask: saleMandates.askPerBottleUsd })
         .from(saleMandates)
         .where(
           and(
@@ -327,7 +327,19 @@ const memberGetStatement = stockOwnerProcedure
       carry no money. No price yet means null: shown as "price being agreed",
       never as $0.
     */
-    const askByKey = new Map(mandates.map((row) => [row.lwinKey, row.ask]));
+    /*
+      The exact code first: two wines can share the pack-agnostic key and
+      differ only in the pack digits (Arnoux-Lachaux village Chambolle and Clos
+      des Danguerins), so a price falls back to the key only when one offer
+      holds it.
+    */
+    const askByLwin = new Map(mandates.map((row) => [row.lwin18, row.ask]));
+    const offersPerKey = new Map<string, number>();
+    for (const row of mandates) offersPerKey.set(row.lwinKey, (offersPerKey.get(row.lwinKey) ?? 0) + 1);
+    const askByKey = new Map(
+      mandates.filter((row) => offersPerKey.get(row.lwinKey) === 1).map((row) => [row.lwinKey, row.ask]),
+    );
+    const askFor = (lwin18: string) => askByLwin.get(lwin18) ?? askByKey.get(lwinPakKeyOf(lwin18));
     const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
       if (isOwnDelivery || row.movementType === 'count') return null;
       if (row.reasonCode?.startsWith('stock_out:')) {
@@ -339,7 +351,7 @@ const memberGetStatement = stockOwnerProcedure
         }
         return null;
       }
-      const ask = askByKey.get(lwinPakKeyOf(row.lwin18));
+      const ask = askFor(row.lwin18);
       return ask != null ? bottles * ask : null;
     };
 
@@ -667,7 +679,7 @@ const memberGetStatement = stockOwnerProcedure
       holdings: holdings.map((row) => {
         const bottles = row.cases * (row.caseConfig ?? 1);
         // The owner's own price where set, otherwise what it cost them
-        const ask = askByKey.get(lwinPakKeyOf(row.lwin18));
+        const ask = askFor(row.lwin18);
         const perBottle = ask ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle ?? null;
 
         return {
