@@ -1,3 +1,9 @@
+## [2.0.543](https://github.com/craftandculture/Craft-Culture/compare/v2.0.542...v2.0.543) (2026-10-25)
+
+### Bug Fixes
+
+* the agreed-prices preview compares movement type as a type, not text ([15e7758](https://github.com/craftandculture/Craft-Culture/commit/15e7758d06ebe3c338db235979c9cbce24a4a705))
+
 ## [2.0.542](https://github.com/craftandculture/Craft-Culture/compare/v2.0.541...v2.0.542) (2026-10-25)
 
 ### Features
