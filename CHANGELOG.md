@@ -1,3 +1,9 @@
+## [2.0.527](https://github.com/craftandculture/Craft-Culture/compare/v2.0.526...v2.0.527) (2026-10-25)
+
+### Bug Fixes
+
+* the background-job database client also accepts the address as copied from Neon, so Trigger.dev deploys and Zoho syncs run again ([73a571e](https://github.com/craftandculture/Craft-Culture/commit/73a571e601901bf9507edbf64caf94d3b5af568d))
+
 ## [2.0.526](https://github.com/craftandculture/Craft-Culture/compare/v2.0.525...v2.0.526) (2026-10-25)
 
 ### Bug Fixes
