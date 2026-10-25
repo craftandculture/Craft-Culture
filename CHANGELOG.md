@@ -1,3 +1,9 @@
+## [2.0.519](https://github.com/craftandculture/Craft-Culture/compare/v2.0.518...v2.0.519) (2026-10-25)
+
+### Bug Fixes
+
+* take-outs are recorded as removals, env cleaning is limited to Zoho values, invoice lines are read gently, and partner viewers cannot tick shared jobs ([32b9e05](https://github.com/craftandculture/Craft-Culture/commit/32b9e05f1f78e80410bd3902508df78c25b4cba1))
+
 ## [2.0.518](https://github.com/craftandculture/Craft-Culture/compare/v2.0.517...v2.0.518) (2026-10-24)
 
 ### Bug Fixes
