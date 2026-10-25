@@ -480,7 +480,11 @@ const adminPickItem = wmsOperatorProcedure
     // one can deadlock the connection pool (same as repack). Offset so the
     // singles arrival and the pick don't take the same number.
     const movementNumber = await generateMovementNumber(0);
-    const singlesMovementNumber = await generateMovementNumber(1);
+    // Only a cracked case with bottles left over records a singles arrival
+    const singlesMovementNumber =
+      isBottlePick && pack > 1 && leftover > 0
+        ? await generateMovementNumber(1)
+        : undefined;
 
     /*
       One transaction, opened by claiming the line.
@@ -540,6 +544,7 @@ const adminPickItem = wmsOperatorProcedure
         .select({
           quantityCases: wmsStock.quantityCases,
           openBottles: wmsStock.openBottles,
+          caseConfig: wmsStock.caseConfig,
         })
         .from(wmsStock)
         .where(eq(wmsStock.id, stock.id))
@@ -549,6 +554,8 @@ const adminPickItem = wmsOperatorProcedure
         !locked ||
         // Held cases are taken without a cap, so recheck what is on the shelf
         locked.quantityCases < casesRemoved ||
+        // A Fix pack in between would make the bottle sums above wrong
+        locked.caseConfig !== stock.caseConfig ||
         (isBottlePick && locked.openBottles !== stock.openBottles)
       ) {
         throw stockChanged;
