@@ -22,6 +22,7 @@ import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
 import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
+import mergeLocationAssignments from '../utils/mergeLocationAssignments';
 import notifyOwnerOfArrival from '../utils/notifyOwnerOfArrival';
 
 /**
@@ -50,6 +51,11 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { shipmentId, lotNumber, notes } = input;
     const receivedItem = input.item;
+    // One entry per bay: a second batch into the same bay would otherwise be
+    // taken for a retry of the first below, and never reach stock
+    const locationAssignments = mergeLocationAssignments(
+      receivedItem.locationAssignments,
+    );
 
     // 1. Validate the shipment exists and get partner info
     const [shipmentResult] = await db
@@ -87,7 +93,7 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     }
 
     // 2. Validate all locations exist and build a code lookup map
-    const locationIds = receivedItem.locationAssignments.map((a) => a.locationId);
+    const locationIds = locationAssignments.map((a) => a.locationId);
     const uniqueLocationIds = [...new Set(locationIds)];
 
     const locations = await db
@@ -156,8 +162,8 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     }
 
     // 5. Precompute split info for movement notes
-    const totalReceivedCases = receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
-    const isSplit = receivedItem.locationAssignments.length > 1;
+    const totalReceivedCases = locationAssignments.reduce((sum, a) => sum + a.cases, 0);
+    const isSplit = locationAssignments.length > 1;
 
     // 6. Process each location assignment (same product, split across locations)
     const createdStock: Array<{
@@ -170,7 +176,7 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     /* Captured for the arrival notice, which is sent once the item is booked in. */
     const receivedOwnerId = shipmentItem.overrideOwnerId ?? partner.id;
 
-    for (const assignment of receivedItem.locationAssignments) {
+    for (const assignment of locationAssignments) {
       const itemLocationId = assignment.locationId;
       const assignmentCases = assignment.cases;
 

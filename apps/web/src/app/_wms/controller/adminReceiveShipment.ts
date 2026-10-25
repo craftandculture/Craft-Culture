@@ -121,6 +121,11 @@ const adminReceiveShipment = wmsOperatorProcedure
         caseLabels: Array<{ id: string; barcode: string }>;
       }> = [];
 
+      // Stock rows this request has already booked into. A second line for the
+      // same wine and bay finds the row the first line created and must add to
+      // it, not be taken for a retry of an earlier receipt
+      const bookedStockIds = new Set<string>();
+
       for (const receivedItem of items) {
         const shipmentItem = shipmentItemMap.get(receivedItem.shipmentItemId);
 
@@ -194,7 +199,9 @@ const adminReceiveShipment = wmsOperatorProcedure
         let stock: typeof wmsStock.$inferSelect;
 
         // Check if this exact shipment was already received (idempotency for retries)
-        const isRetry = existingStock?.shipmentId === shipmentId;
+        const isRetry =
+          existingStock?.shipmentId === shipmentId &&
+          !bookedStockIds.has(existingStock.id);
 
         if (existingStock && isRetry) {
           // Exact retry — use existing record without incrementing
@@ -325,6 +332,8 @@ const adminReceiveShipment = wmsOperatorProcedure
             performedAt: new Date(),
           });
         }
+
+        if (!isRetry) bookedStockIds.add(stock.id);
 
         txCreatedStock.push({
           stockId: stock.id,
