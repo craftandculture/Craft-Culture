@@ -360,9 +360,9 @@ const adminReleaseToPick = wmsOperatorProcedure
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
       // Wine held for its owner is not trade stock unless they have offered it
       // except on the owner's own delivery, which reaches here as a Zoho order quoting its PCO
-      const holds = await getCollectorStockHolds(availableStock);
+      const holds = await getCollectorStockHolds(availableStock.map((s) => ({ ...s, id: s.stockId })));
       const blocked = (s: (typeof availableStock)[number]) =>
-        holds.isHeld(s) && s.ownerId !== ownDelivery?.ownerId;
+        holds.isHeld({ ...s, id: s.stockId }) && s.ownerId !== ownDelivery?.ownerId;
       const heldForMembers = availableStock.filter(blocked);
       availableStock = availableStock.filter((s) => !blocked(s));
       availableStock = rankStockByPack(availableStock, orderedPack);

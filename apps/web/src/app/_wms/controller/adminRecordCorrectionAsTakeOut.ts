@@ -76,6 +76,9 @@ const adminRecordCorrectionAsTakeOut = wmsOperatorProcedure
       .where(eq(wmsStockMovements.id, input.movementId));
     if (!movement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Movement not found' });
 
+    if (movement.reasonCode?.startsWith('stock_out:')) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'This correction is already recorded as a take-out.' });
+    }
     const bottles = bottlesRemoved(movement);
     if (bottles <= 0) {
       throw new TRPCError({

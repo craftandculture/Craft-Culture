@@ -3687,6 +3687,30 @@ const runMigrations = async () => {
       `);
     });
 
+    /*
+      The past-outflow backfill read today's bay owner. Where ownership of that
+      wine in that bay changed after the movement, today's owner is not who
+      held it then, so the guess is withdrawn (owner unknown beats the wrong
+      owner on a statement). Count and adjust increases were never outflows.
+    */
+    await dataFix('inferred owners withdrawn where the bay changed hands later', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements" m
+        SET "from_owner_id" = NULL, "owner_inferred" = false
+        WHERE m."owner_inferred" = true
+          AND (
+            (m."movement_type" IN ('count', 'adjust') AND m."quantity_cases" >= 0 AND COALESCE(m."reason_code", '') NOT LIKE 'stock_out:%')
+            OR EXISTS (
+              SELECT 1 FROM "wms_stock_movements" t
+              WHERE t."movement_type" = 'ownership_transfer'
+                AND t."lwin18" = m."lwin18"
+                AND (t."from_location_id" = m."from_location_id" OR t."to_location_id" = m."from_location_id")
+                AND t."performed_at" > m."performed_at"
+            )
+          )
+      `);
+    });
+
     // Take-outs written positive before 25 Oct: removals are negative everywhere else
     await dataFix('take-out movements recorded as removals', async () => {
       await client.unsafe(`

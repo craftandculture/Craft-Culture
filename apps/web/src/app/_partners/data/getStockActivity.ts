@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
@@ -111,7 +111,7 @@ const getStockActivity = async ({
       pcoNumber: privateClientOrders.orderNumber,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
       customerName: zohoSalesOrders.customerName,
-      soForPco: zohoSalesOrders.privateClientOrderId,
+      soForPco: sql<string | null>`COALESCE(${zohoSalesOrders.privateClientOrderId}::text, substring(${zohoSalesOrders.referenceNumber} from 'PCO-[0-9]{4}-[0-9]+'))`,
     })
     .from(wmsStockMovements)
     .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
@@ -140,12 +140,14 @@ const getStockActivity = async ({
 
   const deliveries = await getOwnerDeliveryOwners(rows.map((row) => row.orderId));
   // C&C buying an owner's wine is a sale to C&C, not a transfer (see soldToCraftAndCulture)
-  const [cc] = await db
-    .select({ id: partners.id })
-    .from(partners)
-    .where(ilike(partners.businessName, 'craft%culture%'))
-    .limit(1);
-  const ccId = cc?.id ?? null;
+  const ccIds = new Set(
+    (
+      await db
+        .select({ id: partners.id })
+        .from(partners)
+        .where(ilike(partners.businessName, 'craft%culture%'))
+    ).map((row) => row.id),
+  );
 
   /** What happened, in the owner's words */
   const describe = (row: (typeof rows)[number]) => {
@@ -156,7 +158,7 @@ const getStockActivity = async ({
       return { title: STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock', kind: 'out' as const };
     }
     if (row.movementType === 'ownership_transfer') {
-      if (row.toOwnerId && row.toOwnerId === ccId && row.fromOwnerId === partnerId) {
+      if (row.toOwnerId && ccIds.has(row.toOwnerId) && row.fromOwnerId === partnerId) {
         return { title: 'Sold to Craft & Culture', kind: 'out' as const };
       }
       return row.toOwnerId === partnerId
@@ -240,7 +242,8 @@ const getStockActivity = async ({
         event.kind === 'out'
           ? bottleWord(bottles)
           : quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
-      bottles,
+      // A dispatch moves the bottles its pick already took: count them once
+      bottles: row.movementType === 'dispatch' ? 0 : bottles,
       orderRef: event.kind === 'out' ? (row.pcoNumber ?? row.salesOrderNumber ?? null) : null,
       // Bays mean little to an owner; kept as the small print
       detail:

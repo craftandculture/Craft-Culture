@@ -1,17 +1,10 @@
-import { and, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 
-import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
-import { partners, saleMandates } from '@/database/schema';
+import { partners, saleMandateLots, saleMandates } from '@/database/schema';
 
 /** Mandate states in which an owner's wine may be sold, or is being */
-const SELLING_STATUSES = [
-  'offered',
-  'listed',
-  'placed',
-  'partially_sold',
-  'sold',
-] as const;
+const SELLING_STATUSES = ['offered', 'listed', 'placed', 'partially_sold'] as const;
 
 /**
  * Which of these stock rows are held for their owner, and so must not go out
@@ -32,7 +25,7 @@ const SELLING_STATUSES = [
  * @returns isHeld(row), and the owner's name for the message to the picker
  */
 const getCollectorStockHolds = async (
-  rows: { ownerId: string | null; lwin18: string; notForSale: boolean | null }[],
+  rows: { id?: string; ownerId: string | null; lwin18: string; notForSale: boolean | null }[],
 ) => {
   const ownerIds = [
     ...new Set(
@@ -49,30 +42,33 @@ const getCollectorStockHolds = async (
           .select({ id: partners.id, name: partners.businessName })
           .from(partners)
           .where(inArray(partners.id, ownerIds)),
+        /*
+          The rows an open offer covers, with bottles still to sell. An offer
+          of 6 of 24 bottles unlocks those 6, not the other 18 still held.
+        */
         db
-          .select({ ownerId: saleMandates.ownerId, lwinKey: saleMandates.lwinKey })
-          .from(saleMandates)
+          .select({ stockId: saleMandateLots.stockId })
+          .from(saleMandateLots)
+          .innerJoin(saleMandates, eq(saleMandates.id, saleMandateLots.mandateId))
           .where(
             and(
               inArray(saleMandates.ownerId, ownerIds),
               inArray(saleMandates.status, [...SELLING_STATUSES]),
+              gt(saleMandateLots.bottlesRemaining, 0),
             ),
           ),
       ])
     : [[], []];
 
   const ownerNames = new Map(owners.map((row) => [row.id, row.name]));
-  const offeredKeys = new Set(
-    offered.map((row) => `${row.ownerId}|${row.lwinKey}`),
-  );
+  const offeredRows = new Set(offered.map((row) => row.stockId));
 
   const isHeld = (row: {
+    id?: string;
     ownerId: string | null;
     lwin18: string;
     notForSale: boolean | null;
-  }) =>
-    !!row.notForSale &&
-    !offeredKeys.has(`${row.ownerId}|${lwinPakKeyOf(row.lwin18)}`);
+  }) => !!row.notForSale && !(row.id && offeredRows.has(row.id));
 
   const ownerNameOf = (ownerId: string | null) =>
     (ownerId && ownerNames.get(ownerId)) ?? 'its owner';

@@ -91,7 +91,8 @@ const adminRecordAgreedPrices = adminProcedure
         and(
           eq(wmsStockMovements.fromOwnerId, owner.id),
           // Picked for orders, taken out (samples, damage), or bought by C&C: gone either way
-          sql`(${wmsStockMovements.movementType} = 'pick' OR ${wmsStockMovements.reasonCode} LIKE 'stock_out:%' OR ${soldToCraftAndCulture})`,
+          // Collected by the owner or taken for their own samples is not a sale
+          sql`(${wmsStockMovements.movementType} = 'pick' OR ${wmsStockMovements.reasonCode} IN ('stock_out:samples', 'stock_out:marketing', 'stock_out:sold_outside_zoho') OR ${soldToCraftAndCulture})`,
           sql`(${sql.join(keys.map((key) => sql`${wmsStockMovements.lwin18} LIKE ${keyPattern(key)}`), sql` OR `)})`,
         ),
       );
@@ -148,8 +149,8 @@ const adminRecordAgreedPrices = adminProcedure
           ne(saleMandates.status, 'withdrawn'),
         ),
       );
-    const existingFor = (lwin18: string) =>
-      existing.find((row) => matchKey(row.lwin18) === matchKey(lwin18));
+    // The exact wine only: two wines can share a key (Arnoux-Lachaux village and Clos des Danguerins)
+    const existingFor = (lwin18: string) => existing.find((row) => row.lwin18 === lwin18);
 
     // Names for lines whose wine has left entirely
     const names = await db

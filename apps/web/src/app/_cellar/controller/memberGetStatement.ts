@@ -277,7 +277,8 @@ const memberGetStatement = stockOwnerProcedure
         salesOrderNumber: zohoSalesOrders.salesOrderNumber,
         customerName: zohoSalesOrders.customerName,
         // A sales order fulfilling a private client's order: the distributor only delivers it
-        soForPco: zohoSalesOrders.privateClientOrderId,
+        // Linked by the sync, or (until it runs) a PCO number in the reference
+        soForPco: sql<string | null>`COALESCE(${zohoSalesOrders.privateClientOrderId}::text, substring(${zohoSalesOrders.referenceNumber} from 'PCO-[0-9]{4}-[0-9]+'))`,
         pcoNumber: privateClientOrders.orderNumber,
         orderId: wmsStockMovements.orderId,
         unitPriceUsd: wmsStockOutflows.unitPriceUsd,
@@ -327,10 +328,20 @@ const memberGetStatement = stockOwnerProcedure
             lt(consignmentSettlements.settledAt, to),
           ),
         ),
-      db
-        .select({ total: sql<number>`COALESCE(SUM(${poolSales.owedToOwnerUsd}), 0)::float` })
-        .from(poolSales)
-        .where(and(eq(poolSales.ownerId, partnerId), lt(poolSales.soldAt, to))),
+      /*
+        Earned through C&C sales: pool sales, plus settlements no pool sale
+        stands behind (a partner settlement when a member buys the wine).
+        Without the second, those were subtracted when paid but never earned.
+      */
+      db.execute<{ total: number }>(sql`
+        SELECT (
+          COALESCE((SELECT SUM(owed_to_owner_usd) FROM pool_sales
+            WHERE owner_id = ${partnerId} AND sold_at < ${to.toISOString()}::timestamp), 0)
+          + COALESCE((SELECT SUM(s.owed_to_owner) FROM consignment_settlements s
+            WHERE s.owner_id = ${partnerId} AND s.created_at < ${to.toISOString()}::timestamp
+              AND NOT EXISTS (SELECT 1 FROM pool_sales p WHERE p.settlement_id = s.id)), 0)
+        )::float AS total
+      `),
     ]);
 
     /*
@@ -355,7 +366,8 @@ const memberGetStatement = stockOwnerProcedure
     );
     const askFor = (lwin18: string) => askByLwin.get(lwin18) ?? askByKey.get(lwinPakKeyOf(lwin18));
     const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
-      if (isOwnDelivery || row.movementType === 'count') return null;
+      if (isOwnDelivery) return null;
+      // A take-out reason first: a count correction re-recorded as one keeps its type
       if (row.reasonCode?.startsWith('stock_out:')) {
         const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
         if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
@@ -365,6 +377,7 @@ const memberGetStatement = stockOwnerProcedure
         }
         return null;
       }
+      if (row.movementType === 'count') return null;
       const ask = askFor(row.lwin18);
       return ask != null ? bottles * ask : null;
     };

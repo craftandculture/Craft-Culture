@@ -339,7 +339,9 @@ const WMSMovementsPage = () => {
                             />
                           )}
                           {(movement.reasonCode === 'pack_correction' ||
-                            (movement.movementType === 'count' && movement.quantityCases < 0)) && (
+                            (movement.movementType === 'count' &&
+                              movement.quantityCases < 0 &&
+                              !movement.reasonCode?.startsWith('stock_out:'))) && (
                             <RecordCorrectionAsTakeOut movementId={movement.id} />
                           )}
                         </td>

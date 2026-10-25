@@ -17,8 +17,8 @@ const cleanDbUrl = (value: string) => {
     .trim()
     .replace(/^psql\s+/, '')
     .replace(/^DB_URL=/, '')
-    .replace(/^['"]|['"]$/g, '')
     .replace(/(\\[nrt])+$/, '')
+    .replace(/^['"]|['"]$/g, '')
     .trim();
 };
 
