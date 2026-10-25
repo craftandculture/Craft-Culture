@@ -74,6 +74,7 @@ const StatementPage = () => {
     ? {
         added: data.added.reduce((sum, row) => sum + row.bottles, 0),
         delivered: data.deliveries.reduce((sum, row) => sum + row.bottles, 0),
+        left: data.left.reduce((sum, row) => sum + row.bottles, 0),
         sold: data.sold.reduce((sum, row) => sum + row.bottles, 0),
         uae: data.holdings.reduce((sum, row) => sum + row.bottles, 0),
         uk: data.ukHoldings.reduce((sum, row) => sum + row.totalBottles, 0),
@@ -103,6 +104,13 @@ const StatementPage = () => {
           '',
         ]),
       ),
+      ...data.left.map((row) => [
+        `Left your cellar: ${row.note}`,
+        format(new Date(row.at), 'yyyy-MM-dd'),
+        [row.name, row.detail].filter(Boolean).join(' '),
+        row.bottles,
+        '',
+      ]),
       ...data.sold.map((row) => [
         'Sold',
         format(new Date(row.at), 'yyyy-MM-dd'),
@@ -223,10 +231,11 @@ const StatementPage = () => {
 
       {data && totals && (
         <>
-          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
             {[
               { label: 'Added', value: bottles(totals.added) },
               { label: 'Delivered to you', value: bottles(totals.delivered) },
+              { label: 'Left your cellar', value: bottles(totals.left) },
               { label: 'Sold', value: money(data.soldUsd) },
               { label: 'Paid to you', value: money(data.paidUsd) },
             ].map((tile) => (
@@ -274,6 +283,19 @@ const StatementPage = () => {
                 value: String(wine.bottles),
               })),
             )}
+          />
+
+          <StatementSection
+            title="Left your cellar"
+            empty="Nothing else left your cellar this month."
+            rows={data.left.map((row) => ({
+              key: row.id,
+              date: row.at,
+              name: row.name,
+              detail: row.detail,
+              note: row.note,
+              value: String(row.bottles),
+            }))}
           />
 
           <StatementSection

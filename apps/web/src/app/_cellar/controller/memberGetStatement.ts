@@ -1,6 +1,7 @@
-import { and, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, lt, ne, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import db from '@/database/client';
 import {
@@ -15,9 +16,11 @@ import {
   privateClientOrders,
   wmsStock,
   wmsStockMovements,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
+
 
 import bottleName from '../utils/bottleName';
 
@@ -62,10 +65,12 @@ const wineLine = (productName: string, lwin18: string) => {
  * - **Sold**: pool sales, at the member's asking price.
  * - **Paid to you**: settlements a monthly payment was issued for in the month.
  * - **UK arrivals**: LCB rotations placed with the member, by LCB's received date.
+ * - **Left your cellar**: bottles of theirs picked for an order (other than a
+ *   delivery to them), taken out of stock, or lost in a count. Picks record
+ *   the owner from 24 Oct 2026; earlier ones were stamped from the bay they
+ *   left where only one owner held that wine there (Index 3.0).
  *
- * Holdings are as they stand today, not at month end. Picks and dispatches do
- * not record whose wine they were, so a past month's closing position cannot
- * be rebuilt honestly from the movements, and the screen says so.
+ * Holdings are as they stand today, not at month end.
  *
  * No fees, rates or values: an active member is never shown what we charge.
  *
@@ -233,6 +238,62 @@ const memberGetStatement = stockOwnerProcedure
           )
           .orderBy(wmsStock.productName),
       ]);
+
+    /*
+      What left the member's stock this month, other than deliveries to them
+      (listed under Delivered). A collector may see where it went, so the
+      customer and order are named (trade partners never are: see
+      partnerMovementDetail).
+    */
+    const leftRows = await db
+      .select({
+        id: wmsStockMovements.id,
+        movementType: wmsStockMovements.movementType,
+        reasonCode: wmsStockMovements.reasonCode,
+        lwin18: wmsStockMovements.lwin18,
+        productName: wmsStockMovements.productName,
+        quantityCases: wmsStockMovements.quantityCases,
+        quantityBottles: wmsStockMovements.quantityBottles,
+        at: wmsStockMovements.performedAt,
+        salesOrderNumber: zohoSalesOrders.salesOrderNumber,
+        customerName: zohoSalesOrders.customerName,
+        pcoNumber: privateClientOrders.orderNumber,
+        orderKind: privateClientOrders.orderKind,
+      })
+      .from(wmsStockMovements)
+      .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
+      .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
+      .where(
+        and(
+          eq(wmsStockMovements.fromOwnerId, partnerId),
+          inMonth(wmsStockMovements.performedAt),
+          or(
+            eq(wmsStockMovements.movementType, 'pick'),
+            and(
+              eq(wmsStockMovements.movementType, 'adjust'),
+              sql`${wmsStockMovements.reasonCode} LIKE 'stock_out:%'`,
+            ),
+            and(eq(wmsStockMovements.movementType, 'count'), lt(wmsStockMovements.quantityCases, 0)),
+          ),
+          or(sql`${privateClientOrders.orderKind} IS NULL`, ne(privateClientOrders.orderKind, 'owner_delivery')),
+        ),
+      )
+      .orderBy(wmsStockMovements.performedAt);
+
+    const leftNote = (row: (typeof leftRows)[number]) => {
+      if (row.reasonCode?.startsWith('stock_out:')) {
+        const reason = row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS;
+        return STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock';
+      }
+      if (row.movementType === 'count') return 'Stock count adjustment';
+      // Only a collector is told who took it: trade partners never see counterparties
+      if (ctx.partner.type !== 'private_collector') return 'Left the warehouse on an order';
+      if (row.salesOrderNumber) {
+        return `Went to ${row.customerName ?? 'a customer'} · ${row.salesOrderNumber}`;
+      }
+      if (row.pcoNumber) return `Private client order · ${row.pcoNumber}`;
+      return 'Left the warehouse on an order';
+    };
 
     /*
       UK wine, guarded: the tables are new, and a missed migration should cost
@@ -421,6 +482,14 @@ const memberGetStatement = stockOwnerProcedure
         id,
         ...entry,
         bottles: entry.wines.reduce((sum, wine) => sum + wine.bottles, 0),
+      })),
+
+      left: leftRows.map((row) => ({
+        id: row.id,
+        at: row.at,
+        ...wineLine(row.productName, row.lwin18),
+        bottles: Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18)),
+        note: leftNote(row),
       })),
 
       sold: sold.map((row) => ({
