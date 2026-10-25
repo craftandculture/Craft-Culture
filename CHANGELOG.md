@@ -1,3 +1,9 @@
+## [2.0.528](https://github.com/craftandculture/Craft-Culture/compare/v2.0.527...v2.0.528) (2026-10-25)
+
+### Bug Fixes
+
+* taking some bottles out of a case no longer fails with a duplicate movement number ([17b65e5](https://github.com/craftandculture/Craft-Culture/commit/17b65e5055cef4a252ab6eb612826fc128b0c27b))
+
 ## [2.0.527](https://github.com/craftandculture/Craft-Culture/compare/v2.0.526...v2.0.527) (2026-10-25)
 
 ### Bug Fixes
