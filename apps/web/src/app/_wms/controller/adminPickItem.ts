@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
+import isUniqueViolation from '@/app/_logistics/utils/isUniqueViolation';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import {
@@ -490,7 +491,9 @@ const adminPickItem = wmsOperatorProcedure
         The checks above read the bay before the transaction. Two lines picked
         from the same row at once (two orders for one wine) could both pass
         them and both take the stock. The lock makes the second pick wait, and
-        anything that moved under it is caught below and rolled back.
+        anything that moved under it is caught below and rolled back. That
+        rollback only covers writes made through `tx`, so every helper below
+        must be handed `tx`, never `db`.
       */
       const stockChanged = new TRPCError({
         code: 'CONFLICT',
@@ -503,7 +506,10 @@ const adminPickItem = wmsOperatorProcedure
         .where(eq(wmsStock.id, stock.id))
         .for('update');
 
-      if (!locked || (isBottlePick && locked.openBottles !== stock.openBottles)) {
+      if (
+        !locked ||
+        (isBottlePick && locked.openBottles !== stock.openBottles)
+      ) {
         throw stockChanged;
       }
 
@@ -614,6 +620,20 @@ const adminPickItem = wmsOperatorProcedure
         .where(eq(wmsPickLists.id, pickList.id));
 
       return claimed;
+    }).catch((error: unknown) => {
+      /*
+        Movement numbers are worked out before the transaction, so two picks
+        at the same moment can draw the same one. The unique index refuses the
+        second and the whole pick rolls back; a retry draws a fresh number.
+        Say so rather than surfacing a database error.
+      */
+      if (isUniqueViolation(error)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Another pick was saved at the same moment. Try again.',
+        });
+      }
+      throw error;
     });
 
     // First line picked: tell #warehouse-activity the list is under way
