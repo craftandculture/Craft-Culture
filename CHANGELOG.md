@@ -1,3 +1,9 @@
+## [2.0.526](https://github.com/craftandculture/Craft-Culture/compare/v2.0.525...v2.0.526) (2026-10-25)
+
+### Bug Fixes
+
+* the trade-order guard follows the stock's "not for sale" flag, so consigned cellars such as Alain Brahamcha's still sell ([c40f6be](https://github.com/craftandculture/Craft-Culture/commit/c40f6bed699eff2390aa7baf91cb3f6d086fd176))
+
 ## [2.0.525](https://github.com/craftandculture/Craft-Culture/compare/v2.0.524...v2.0.525) (2026-10-25)
 
 ### Bug Fixes
