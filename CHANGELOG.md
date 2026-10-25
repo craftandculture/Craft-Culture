@@ -1,3 +1,9 @@
+## [2.0.522](https://github.com/craftandculture/Craft-Culture/compare/v2.0.521...v2.0.522) (2026-10-25)
+
+### Features
+
+* a member's monthly statement shows every bottle that left their cellar, with where it went ([6da5fc9](https://github.com/craftandculture/Craft-Culture/commit/6da5fc9aa90211a82db455db01e0978a4b5ffad1))
+
 ## [2.0.521](https://github.com/craftandculture/Craft-Culture/compare/v2.0.520...v2.0.521) (2026-10-25)
 
 ### Bug Fixes
