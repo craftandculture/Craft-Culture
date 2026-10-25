@@ -1,3 +1,9 @@
+## [2.0.520](https://github.com/craftandculture/Craft-Culture/compare/v2.0.519...v2.0.520) (2026-10-25)
+
+### Bug Fixes
+
+* Zoho syncs fail in seconds instead of grinding for 20 minutes, and never retry ([c622742](https://github.com/craftandculture/Craft-Culture/commit/c6227428b0314e1db7eafb20f5d4e0a65b950f56))
+
 ## [2.0.519](https://github.com/craftandculture/Craft-Culture/compare/v2.0.518...v2.0.519) (2026-10-25)
 
 ### Bug Fixes
