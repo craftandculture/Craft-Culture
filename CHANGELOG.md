@@ -1,3 +1,9 @@
+## [2.0.524](https://github.com/craftandculture/Craft-Culture/compare/v2.0.523...v2.0.524) (2026-10-25)
+
+### Features
+
+* staff can list every bottle that left the warehouse in a period, by owner, with the order and customer it went to ([e1f844a](https://github.com/craftandculture/Craft-Culture/commit/e1f844a8b2635aeab8dab4d43575f269a7951883))
+
 ## [2.0.523](https://github.com/craftandculture/Craft-Culture/compare/v2.0.522...v2.0.523) (2026-10-25)
 
 ### Bug Fixes
