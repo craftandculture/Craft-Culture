@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
@@ -39,7 +40,8 @@ const adminRecordAgreedPrices = adminProcedure
   .input(
     z.object({
       ownerId: z.string().uuid(),
-      eurToUsd: z.number().min(0.5).max(2),
+      /** Omit for today's rate, looked up the way shipment imports do */
+      eurToUsd: z.number().min(0.5).max(2).optional(),
       dryRun: z.boolean().default(true),
       note: z.string().trim().max(300).optional(),
       lines: z
@@ -55,6 +57,14 @@ const adminRecordAgreedPrices = adminProcedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
+    const fx = input.eurToUsd
+      ? { rate: input.eurToUsd, source: 'stated' }
+      : await resolveFxToUsd('EUR');
+    if (!fx.rate || fx.source === 'unresolved') {
+      throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Could not look up today\'s EUR rate. Give a rate instead.' });
+    }
+    const eurToUsd = fx.rate;
+
     const [owner] = await db
       .select({ id: partners.id, name: partners.businessName })
       .from(partners)
@@ -174,7 +184,7 @@ const adminRecordAgreedPrices = adminProcedure
         remainingBottles: remaining,
         heldBottles,
         eurPerBottle: line.eurPerBottle,
-        askPerBottleUsd: Math.round(line.eurPerBottle * input.eurToUsd * 100) / 100,
+        askPerBottleUsd: Math.round(line.eurPerBottle * eurToUsd * 100) / 100,
         status: status as 'sold' | 'partially_sold' | 'offered',
         existingOffer: existingFor(line.lwin18)?.number ?? null,
         problem: !rows[0] && !names.some((name) => matchKey(name.lwin18) === match)
@@ -187,7 +197,7 @@ const adminRecordAgreedPrices = adminProcedure
     });
 
     const preview = plan.map(({ rows: _rows, ...line }) => line);
-    if (input.dryRun) return { saved: false, owner: owner.name, lines: preview };
+    if (input.dryRun) return { saved: false, owner: owner.name, eurToUsd, rateSource: fx.source, lines: preview };
 
     const blocking = plan.filter((line) => line.problem?.startsWith('No wine'));
     if (blocking.length) {
@@ -199,7 +209,7 @@ const adminRecordAgreedPrices = adminProcedure
 
     const note =
       input.note ??
-      `Agreed with C&C at €${'{eur}'} per bottle, converted at €1 = $${input.eurToUsd} on ${new Date().toISOString().slice(0, 10)}`;
+      `Agreed with C&C at €${'{eur}'} per bottle, converted at €1 = $${eurToUsd} (${fx.source}) on ${new Date().toISOString().slice(0, 10)}`;
 
     for (const line of plan) {
       const ownerNotes = note.replace('{eur}', String(line.eurPerBottle));
@@ -264,7 +274,7 @@ const adminRecordAgreedPrices = adminProcedure
       });
     }
 
-    return { saved: true, owner: owner.name, lines: preview };
+    return { saved: true, owner: owner.name, eurToUsd, rateSource: fx.source, lines: preview };
   });
 
 export default adminRecordAgreedPrices;
