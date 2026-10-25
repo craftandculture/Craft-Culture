@@ -1,3 +1,9 @@
+## [2.0.559](https://github.com/craftandculture/Craft-Culture/compare/v2.0.558...v2.0.559) (2026-10-25)
+
+### Features
+
+* deliveries in progress can be folded to one line on Your cellar, and stay folded on that device ([c6e2caa](https://github.com/craftandculture/Craft-Culture/commit/c6e2caa81cdd400043f5c2cb083697f58c5b52fb))
+
 ## [2.0.558](https://github.com/craftandculture/Craft-Culture/compare/v2.0.557...v2.0.558) (2026-10-25)
 
 ### Features
