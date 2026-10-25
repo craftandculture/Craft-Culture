@@ -1,3 +1,9 @@
+## [2.0.529](https://github.com/craftandculture/Craft-Culture/compare/v2.0.528...v2.0.529) (2026-10-25)
+
+### Bug Fixes
+
+* member statements show 75cl bottles as 75cl, not 7.5L ([e3df772](https://github.com/craftandculture/Craft-Culture/commit/e3df772be78577ce7830373f961b4ef9d2ecd16c))
+
 ## [2.0.528](https://github.com/craftandculture/Craft-Culture/compare/v2.0.527...v2.0.528) (2026-10-25)
 
 ### Bug Fixes
