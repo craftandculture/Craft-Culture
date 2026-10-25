@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 
 export interface ConditionTrendProps {
   /** Six-hourly medians, oldest first */
@@ -45,6 +45,8 @@ const curve = (xy: [number, number][]) =>
  */
 const ConditionTrend = ({ points, target, unit }: ConditionTrendProps) => {
   const gradientId = useId();
+  // The point under the pointer, by index; null when not scrubbing
+  const [hover, setHover] = useState<number | null>(null);
 
   if (points.length < 4) return null;
 
@@ -64,9 +66,29 @@ const ConditionTrend = ({ points, target, unit }: ConditionTrendProps) => {
   ]);
   const line = curve(xy);
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const days = Math.max(1, Math.round(span / (24 * 60 * 60 * 1000)));
+
+  /* The nearest point to the pointer, from where it is across the chart */
+  const scrub = (event: React.PointerEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - box.left) / box.width) * WIDTH;
+    let nearest = 0;
+    xy.forEach(([px], index) => {
+      if (Math.abs(px - x) < Math.abs(xy[nearest]![0] - x)) nearest = index;
+    });
+    setHover(nearest);
+  };
+  const active = hover != null ? { point: points[hover]!, value: values[hover]!, xy: xy[hover]! } : null;
 
   return (
     <div className="mt-3">
+      <div
+        className="relative cursor-crosshair touch-none"
+        onPointerMove={scrub}
+        onPointerDown={scrub}
+        onPointerLeave={() => setHover(null)}
+        onPointerUp={(event) => event.pointerType !== 'mouse' && setHover(null)}
+      >
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
@@ -100,10 +122,45 @@ const ConditionTrend = ({ points, target, unit }: ConditionTrendProps) => {
           strokeLinecap="round"
           className="stroke-emerald-600 dark:stroke-emerald-400"
         />
+        {active && (
+          <line
+            x1={active.xy[0]}
+            x2={active.xy[0]}
+            y1="0"
+            y2={HEIGHT}
+            vectorEffect="non-scaling-stroke"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            className="stroke-text-muted"
+          />
+        )}
       </svg>
+      {active && (
+        <>
+          {/* The dot is HTML so it stays round when the chart stretches */}
+          <span
+            className="pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-emerald-600 shadow dark:border-neutral-900 dark:bg-emerald-400"
+            style={{ left: `${(active.xy[0] / WIDTH) * 100}%`, top: `${(active.xy[1] / HEIGHT) * 100}%` }}
+          />
+          <span
+            className="bg-text-primary text-surface-primary pointer-events-none absolute -top-9 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium tabular-nums shadow-lg"
+            style={{
+              left: `${(active.xy[0] / WIDTH) * 100}%`,
+              transform: `translateX(${active.xy[0] < WIDTH * 0.15 ? '0' : active.xy[0] > WIDTH * 0.85 ? '-100%' : '-50%'})`,
+            }}
+          >
+            {active.value.toFixed(1)}
+            {unit} · {format(new Date(active.point.at), 'd MMM, HH:mm')}
+          </span>
+        </>
+      )}
+      </div>
       <div className="text-text-muted mt-1 flex justify-between text-[10px] tabular-nums">
         <span>{format(new Date(first), 'd MMM')}</span>
-        <span>30-day average {average.toFixed(1)}{unit}</span>
+        <span>
+          {days}-day average {average.toFixed(1)}
+          {unit}
+        </span>
         <span>Today</span>
       </div>
     </div>
