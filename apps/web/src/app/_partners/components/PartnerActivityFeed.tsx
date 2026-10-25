@@ -59,6 +59,10 @@ const timeLabel = (value: Date | string) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/** Drops a trailing pack note, "(6x75cl)", "(1x)", "(Single)": the quantity beside it says it */
+const withoutPackNote = (name: string) =>
+  name.replace(/\s*\(\s*(\d+\s*x\s*(\d+(\.\d+)?\s*(cl|ml|l))?|single)\s*\)\s*$/i, '').trim();
+
 /** One event: icon, what happened and to what, quantity and time */
 const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
   const style =
@@ -78,7 +82,7 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-text-muted">{entry.title}</p>
-        <p className="truncate text-[14px] font-medium text-text-primary">{entry.subject}</p>
+        <p className="truncate text-[14px] font-medium text-text-primary">{withoutPackNote(entry.subject)}</p>
         {entry.detail && (
           <p className="mt-0.5 line-clamp-2 text-[12px] text-text-muted">{entry.detail}</p>
         )}
@@ -104,7 +108,14 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
  * smaller type size, so an opened order reads as its contents rather than
  * as more orders. The bay and quantity sit on one line beneath the wine.
  */
-const SubRow = ({ entry }: { entry: PartnerActivityEntry }) => {
+const SubRow = ({
+  entry,
+  groupTitle,
+}: {
+  entry: PartnerActivityEntry;
+  /** The opened group's own title, not repeated on every line under it */
+  groupTitle?: string;
+}) => {
   const quantity =
     entry.kind === 'correction' && entry.quantity && !entry.quantity.startsWith('−')
       ? `+${entry.quantity}`
@@ -113,9 +124,9 @@ const SubRow = ({ entry }: { entry: PartnerActivityEntry }) => {
   return (
     <div className="flex items-baseline gap-3 py-2 pl-3 pr-4">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-text-primary">{entry.subject}</p>
+        <p className="truncate text-[13px] text-text-primary">{withoutPackNote(entry.subject)}</p>
         <p className="text-[11.5px] text-text-muted">
-          {[entry.title, entry.detail].filter(Boolean).join(' · ')}
+          {[entry.title === groupTitle ? null : entry.title, entry.detail].filter(Boolean).join(' · ')}
         </p>
       </div>
       <span className="flex-none text-[12px] font-medium tabular-nums text-text-primary">{quantity}</span>
@@ -341,7 +352,7 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                           <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
                             <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
                               {item.entries.map((entry) => (
-                                <SubRow key={entry.id} entry={entry} />
+                                <SubRow key={entry.id} entry={entry} groupTitle={item.entries[0]?.title} />
                               ))}
                             </div>
                           </div>
