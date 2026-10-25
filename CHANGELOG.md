@@ -1,3 +1,10 @@
+## [2.0.521](https://github.com/craftandculture/Craft-Culture/compare/v2.0.520...v2.0.521) (2026-10-25)
+
+### Bug Fixes
+
+* dispatching a batch records each order line once — unpicked lines are no longer dropped and picks from a deleted pick list are not counted again ([596ce06](https://github.com/craftandculture/Craft-Culture/commit/596ce062fa14c30b8a12958ee24c477d0272926a))
+* the Zoho order sync has five minutes to finish, so a catch-up run after a pause is not cut off ([0b5b963](https://github.com/craftandculture/Craft-Culture/commit/0b5b96352be276418ebf65c3dfc557a1aab6b596))
+
 ## [2.0.520](https://github.com/craftandculture/Craft-Culture/compare/v2.0.519...v2.0.520) (2026-10-25)
 
 ### Bug Fixes
