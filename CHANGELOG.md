@@ -1,3 +1,13 @@
+## [2.0.558](https://github.com/craftandculture/Craft-Culture/compare/v2.0.557...v2.0.558) (2026-10-25)
+
+### Features
+
+* the temperature and humidity charts can be scrubbed with the mouse or a finger to read any point ([ed1e326](https://github.com/craftandculture/Craft-Culture/commit/ed1e3264abc23064f07fef91966a070b2bea44d2))
+
+### Bug Fixes
+
+* boxes ticked on a cellar application no longer show members empty "Request received" transfers, and Deliveries is easier to read ([3958311](https://github.com/craftandculture/Craft-Culture/commit/3958311d8f201a76f2283435e46d7ed33f97e507))
+
 ## [2.0.557](https://github.com/craftandculture/Craft-Culture/compare/v2.0.556...v2.0.557) (2026-10-25)
 
 ### Features
