@@ -28,6 +28,7 @@ import {
   secondaryButton,
   sectionHeading,
 } from '@/app/_logistics/components/exports/exportUi';
+import UaeArrivalCostsCard from '@/app/_logistics/components/quotes/UaeArrivalCostsCard';
 import type { QuoteRequestNextStep } from '@/app/_logistics/utils/quoteRequestNextStep';
 import type {
   logisticsQuoteRequestStatus,
@@ -381,6 +382,8 @@ const FreightQuotesPage = () => {
         />
       </div>
 
+      {!shipmentId && <UaeArrivalCostsCard />}
+
       {/* Requests: one line each — who and where, what it waits on, the best price */}
       {!shipmentId && focus !== 'standalone' && (
         <div className={card}>
@@ -475,6 +478,12 @@ const FreightQuotesPage = () => {
                             <span className="text-text-muted block text-[11px]">
                               {live.length > 1 ? `best of ${live.length}` : forwarderLabel(best.forwarderName)}
                             </span>
+                            {best.arrivalPerBottleUsd != null && best.freightPerBottleUsd != null && (
+                              <span className="text-text-muted block text-[11px] tabular-nums">
+                                Freight {best.freightPerBottleUsd.toFixed(2)} · UAE arrival{' '}
+                                {best.arrivalPerBottleUsd.toFixed(2)}
+                              </span>
+                            )}
                           </>
                         ) : (
                           <span className="text-text-muted text-xs">No quotes yet</span>

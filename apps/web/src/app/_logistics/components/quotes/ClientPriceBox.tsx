@@ -1,7 +1,7 @@
 'use client';
 
 import { IconCheck } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -33,6 +33,7 @@ const usd = (n: number) => `USD ${n.toLocaleString('en-GB', { minimumFractionDig
 const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const rateCard = useQuery(api.logistics.admin.quotes.arrivalRateCard.queryOptions());
   const quote = request.quotes.find((q) => q.id === quoteId);
   const saved = request.clientQuoteId === quoteId ? request.clientPriceUsd : null;
   const start = saved ?? request.suggestedClientPrice?.priceUsd ?? null;
@@ -86,10 +87,11 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
           ? Math.round(typed * request.bottles * 100) / 100
           : null
         : typed;
-  const cost = quote.totalUsd;
+  // Margin is on the true cost: the forwarder plus UAE customs and handling
+  const cost = quote.allInUsd;
   const margin = priceUsd != null && cost != null ? priceUsd - cost : null;
-  const others = request.quotes.filter((q) => q.id !== quote.id && q.status === 'pending' && !q.isExpired && q.totalUsd != null);
-  const cheapestOther = others.reduce<number | null>((m, q) => (m == null || q.totalUsd! < m ? q.totalUsd! : m), null);
+  const others = request.quotes.filter((q) => q.id !== quote.id && q.status === 'pending' && !q.isExpired && q.allInUsd != null);
+  const cheapestOther = others.reduce<number | null>((m, q) => (m == null || q.allInUsd! < m ? q.allInUsd! : m), null);
   const isSaved = saved != null && priceUsd != null && Math.abs(saved - priceUsd) < 0.005;
 
   return (
@@ -139,8 +141,13 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
-          <dt className="text-xs text-text-muted">Forwarder cost</dt>
+          <dt className="text-xs text-text-muted">{quote.arrivalUsd != null ? 'True cost' : 'Forwarder cost'}</dt>
           <dd className="tabular-nums">{cost != null ? usd(cost) : 'Rate unknown'}</dd>
+          {quote.arrivalUsd != null && quote.totalUsd != null && (
+            <dd className="text-[11px] tabular-nums text-text-muted">
+              Freight {usd(quote.totalUsd)} + UAE arrival {usd(quote.arrivalUsd)}
+            </dd>
+          )}
         </div>
         <div>
           <dt className="text-xs text-text-muted">Client price</dt>
@@ -163,6 +170,16 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
           </dd>
         </div>
       </dl>
+
+      {quote.arrivalUsd != null && (rateCard.data?.variables.length ?? 0) > 0 && (
+        <p className="text-xs text-text-muted">
+          Not included, only if it happens:{' '}
+          {rateCard.data?.variables
+            .map((v) => `${v.label}, AED ${v.amountAed.toLocaleString('en-GB')} per ${v.per}`)
+            .join('; ')}
+          .
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button
