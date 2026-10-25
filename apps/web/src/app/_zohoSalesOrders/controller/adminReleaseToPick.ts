@@ -10,7 +10,9 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
@@ -187,6 +189,9 @@ const adminReleaseToPick = wmsOperatorProcedure
     const shortOnRelease: string[] = [];
     let reservedCases = 0;
 
+    // A member's own delivery, raised in Zoho with the PCO as its reference
+    const ownDelivery = (await getOwnerDeliveryOwners([order.id])).get(order.id);
+
     for (const item of itemsToRelease) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
       const itemLwin18 = item.lwin18 ? normalizeLwin18(item.lwin18) : null;
@@ -202,6 +207,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         productName: string;
         caseConfig: number | null;
         ownerId: string;
+        notForSale: boolean;
       }[] = [];
 
       const stockSelect = {
@@ -214,6 +220,7 @@ const adminReleaseToPick = wmsOperatorProcedure
         productName: wmsStock.productName,
         caseConfig: wmsStock.caseConfig,
         ownerId: wmsStock.ownerId,
+        notForSale: wmsStock.notForSale,
       };
 
       // Strategy 1: Match by LWIN18, PACK-AGNOSTIC — the ordered pack and the
@@ -302,6 +309,7 @@ const adminReleaseToPick = wmsOperatorProcedure
               productName: wmsStock.productName,
               caseConfig: wmsStock.caseConfig,
               ownerId: wmsStock.ownerId,
+              notForSale: wmsStock.notForSale,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -350,6 +358,13 @@ const adminReleaseToPick = wmsOperatorProcedure
       // preview so the bay an operator was shown is the bay they're sent to.
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
+      // Wine held for its owner is not trade stock unless they have offered it
+      // except on the owner's own delivery, which reaches here as a Zoho order quoting its PCO
+      const holds = await getCollectorStockHolds(availableStock);
+      const blocked = (s: (typeof availableStock)[number]) =>
+        holds.isHeld(s) && s.ownerId !== ownDelivery?.ownerId;
+      const heldForMembers = availableStock.filter(blocked);
+      availableStock = availableStock.filter((s) => !blocked(s));
       availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Prefer a bay with enough UNRESERVED stock; fall back to one that
@@ -427,7 +442,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
-            ? 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
+            ? heldForMembers.length > 0
+              ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is held for its owner, not for sale — do not pick it`
+              : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
             : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
               : null,

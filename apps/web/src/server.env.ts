@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import cleanDbUrl from '@/utils/cleanDbUrl';
+
 const envSchema = z.object({
   NODE_ENV: z
     .union([
@@ -71,20 +73,28 @@ const rawEnvAsSet = {
 };
 
 /**
- * Every value with any trailing LITERAL escape ("\\n" as two characters)
+ * Zoho values with any trailing LITERAL escape ("\\n" as two characters)
  * removed
  *
  * Values uploaded to Vercel and Trigger.dev by script arrived with the escape
  * written out instead of interpreted. It is not whitespace, so it survives a
- * trim, and from 3 to 25 Oct 2026 it broke every Zoho sync (the organisation
- * id and every credential ended "\\n"). No real key, id or URL ends that way.
+ *  trim, and from 3 to 25 Oct 2026 it broke every Zoho sync (the organisation
+ * id and every credential ended "\\n"). Limited to ZOHO_* so no signing or
+ * encryption key is ever altered.
  */
 const rawEnv = Object.fromEntries(
   Object.entries(rawEnvAsSet).map(([key, value]) => [
     key,
-    typeof value === 'string' ? value.replace(/(\\[nrt])+$/, '') : value,
+    // Zoho values only: those are the ones known to carry it, and a signing or
+    // encryption key must never change underneath data already made with it
+    typeof value === 'string' && key.startsWith('ZOHO_') ? value.replace(/(\\[nrt])+$/, '') : value,
   ]),
 ) as typeof rawEnvAsSet;
+
+// Neon's copy button can wrap the URL in `psql '…'`; see cleanDbUrl
+if (typeof rawEnv.DB_URL === 'string') {
+  rawEnv.DB_URL = cleanDbUrl(rawEnv.DB_URL);
+}
 
 /**
  * Check if all required env vars are present

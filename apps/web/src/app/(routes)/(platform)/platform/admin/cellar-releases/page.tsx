@@ -25,6 +25,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import displayWineName from '@/app/_wms/utils/displayWineName';
+import OrderChain from '@/app/_zohoSalesOrders/components/OrderChain';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
@@ -665,7 +666,13 @@ const CellarReleasesPage = () => {
                         </>
                       )}
                     </Typography>
-                  ) : (
+                  ) : null}
+                  {request.status === 'confirmed' && (
+                    <div className="mt-2">
+                      <OrderChain releaseId={request.id} />
+                    </div>
+                  )}
+                  {request.status === 'confirmed' ? null : (
                     <>
                       {/*
                         Members often agree on WhatsApp and the Zoho order is

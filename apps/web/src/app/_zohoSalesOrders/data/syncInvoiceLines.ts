@@ -9,7 +9,7 @@ import { getInvoice } from '@/lib/zoho/invoices';
  * The list endpoint returns no lines, so each invoice is fetched once per
  * version, its lines replaced, and the version recorded. Capped per run to
  * stay inside Zoho's rate limit: the backlog fills over successive runs.
- * Failures are counted, never thrown, so the invoice sync itself is never
+ * Failures are counted and returned for the log, never thrown, so the invoice sync itself is never
  * held up by it.
  *
  * @param input.invoices - Invoices from the list, with their last-modified stamp
@@ -20,7 +20,7 @@ import { getInvoice } from '@/lib/zoho/invoices';
 const syncInvoiceLines = async ({
   invoices,
   db,
-  limit = 60,
+  limit = 20,
 }: {
   invoices: { invoiceId: string; invoiceNumber: string; lastModified: string | null }[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +46,7 @@ const syncInvoiceLines = async ({
 
   let read = 0;
   let failed = 0;
+  const errors: string[] = [];
   for (const inv of due.slice(0, limit)) {
     try {
       const detail = await getInvoice(inv.invoiceId);
@@ -93,12 +94,15 @@ const syncInvoiceLines = async ({
           });
       });
       read++;
-    } catch {
+      // Spaced out so this never competes with the order sync for Zoho's rate limit
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    } catch (error) {
       failed++;
+      errors.push(`${inv.invoiceNumber}: ${error instanceof Error ? error.message : String(error)}`.slice(0, 200));
     }
   }
 
-  return { read, failed, waiting: Math.max(0, due.length - read) };
+  return { read, failed, waiting: Math.max(0, due.length - read), errors: errors.slice(0, 5) };
 };
 
 export default syncInvoiceLines;

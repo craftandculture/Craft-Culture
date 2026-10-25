@@ -66,6 +66,9 @@ const adminAdjustStockQuantity = wmsOperatorProcedure
       quantityCases: adjustment,
       fromLocationId: adjustment < 0 ? stockRecord.locationId : null,
       toLocationId: adjustment > 0 ? stockRecord.locationId : null,
+      // Whose stock the count changed, so a shortfall shows on their statement (Index 3.0)
+      fromOwnerId: adjustment < 0 ? stockRecord.ownerId : null,
+      stockId: stockRecord.id,
       notes: `CYCLE COUNT: ${reason} (was ${oldQuantity}, now ${newQuantity})`,
       reasonCode: 'cycle_count',
       performedBy: ctx.user.id,

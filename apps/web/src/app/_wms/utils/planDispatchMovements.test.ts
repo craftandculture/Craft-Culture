@@ -27,17 +27,32 @@ describe('planDispatchMovements', () => {
     expect(out.map((m) => m.fromOwnerId)).toEqual(['crurated', 'ihab']);
   });
 
-  it('falls back to order lines only for an order with no pick on record', () => {
+  it('falls back to an order line only when that wine was not picked', () => {
     const out = planDispatchMovements({
       orderIds: ['o1', 'o2'],
       picks: [pick],
       lines: [
-        { orderId: 'o1', lwin18: pick.lwin18, productName: 'x', quantity: 2 },
+        { orderId: 'o1', lwin18: '1066306-2023-06-00750', productName: 'x', quantity: 4 },
+        { orderId: 'o1', lwin18: '1828577-2022-03-00750', productName: 'Montille', quantity: 1 },
         { orderId: 'o2', lwin18: '1032361-2023-12-00750', productName: 'Fourrier', quantity: 3 },
       ],
     });
-    expect(out).toHaveLength(2);
-    expect(out[1]).toMatchObject({ orderId: 'o2', quantityCases: 3, fromOwnerId: null });
+    expect(out).toHaveLength(3);
+    expect(out.slice(1).map((m) => m.lwin18)).toEqual(['1828577-2022-03-00750', '1032361-2023-12-00750']);
+    expect(out[2]).toMatchObject({ orderId: 'o2', quantityCases: 3, fromOwnerId: null });
+  });
+
+  it('ignores picks from a pick list deleted and picked again', () => {
+    const out = planDispatchMovements({
+      orderIds: ['o1'],
+      picks: [
+        { ...pick, performedAt: new Date('2026-10-01') },
+        { ...pick, stockId: 's9', performedAt: new Date('2026-10-05') },
+      ],
+      lines: [],
+      pickListCreatedAt: new Map([['o1', new Date('2026-10-03')]]),
+    });
+    expect(out.map((m) => m.stockId)).toEqual(['s9']);
   });
 
   it('ignores picks for orders outside the batch and empty picks', () => {

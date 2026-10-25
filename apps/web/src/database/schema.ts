@@ -4752,6 +4752,11 @@ export const wmsStockMovements = pgTable(
      * it. With from_owner_id this is what says whose bottles went out.
      */
     stockId: uuid('stock_id'),
+    /**
+     * The owner was worked out afterwards from the bay the movement left (only
+     * one owner ever held that wine there), not recorded at the time
+     */
+    ownerInferred: boolean('owner_inferred').notNull().default(false),
     lotNumber: text('lot_number'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     orderId: uuid('order_id'),
@@ -6109,6 +6114,12 @@ export const zohoSalesOrders = pgTable(
     orderDate: date('order_date', { mode: 'date' }).notNull(),
     shipmentDate: date('shipment_date', { mode: 'date' }),
     referenceNumber: text('reference_number'),
+    /**
+     * The private client order this sales order fulfils. Set by the Zoho sync
+     * (linkSalesOrdersToPcos) from the PCO's own record of the SO, or from the
+     * PCO number in Reference; read this, never the reference text.
+     */
+    privateClientOrderId: uuid('private_client_order_id'),
     subTotal: doublePrecision('sub_total').notNull(),
     total: doublePrecision('total').notNull(),
     currencyCode: text('currency_code').default('USD'),

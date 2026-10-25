@@ -1,10 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import isUniqueViolation from '@/app/_logistics/utils/isUniqueViolation';
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
 import {
+  privateClientOrders,
   wmsLocations,
   wmsPickListItems,
   wmsPickLists,
@@ -215,6 +218,39 @@ const adminPickItem = wmsOperatorProcedure
         code: 'NOT_FOUND',
         message: `No stock found at this location for ${pickListItem.productName}`,
       });
+    }
+
+    /*
+      Wine marked not for sale leaves only on its owner's own delivery or once
+      they offer it. In October 2026 a member's held bays were picked for trade
+      orders because any row of the wine was accepted. Other rows of the same
+      wine in this bay are still pickable.
+    */
+    const [pcoOrder] = await db
+      .select({ orderKind: privateClientOrders.orderKind })
+      .from(privateClientOrders)
+      .where(eq(privateClientOrders.id, pickList.orderId));
+    // A member's own delivery may come as the PCO or as a Zoho order quoting it
+    const ownDelivery = (await getOwnerDeliveryOwners([pickList.orderId])).get(
+      pickList.orderId,
+    );
+
+    if (pcoOrder?.orderKind !== 'cellar_sale') {
+      const holds = await getCollectorStockHolds(candidates);
+      const free = candidates.filter(
+        (row) => !holds.isHeld(row) || row.ownerId === ownDelivery?.ownerId,
+      );
+
+      if (free.length === 0) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            `The ${pickListItem.productName} at ${location.locationCode} belongs to ` +
+            `${holds.ownerNameOf(candidates[0]?.ownerId ?? null)} and is not for sale. ` +
+            'Do not pick it. Pick this line from another bay, or ask the office.',
+        });
+      }
+      candidates = free;
     }
 
     const packOf = (row: (typeof candidates)[number]) => row.caseConfig ?? 12;

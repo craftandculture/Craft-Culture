@@ -62,6 +62,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
+import OrderChain from '@/app/_zohoSalesOrders/components/OrderChain';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -700,6 +701,9 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* Release → PCO → Zoho order → invoice → pick → dispatch, linked */}
+        <OrderChain pcoId={order.id} />
 
         {/* The distributor's bundle SKU (City Drinks), with its source. Shown
             on unassigned orders too, so the SKU can be recorded whenever it

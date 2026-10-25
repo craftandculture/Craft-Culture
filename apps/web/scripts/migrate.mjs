@@ -3687,6 +3687,29 @@ const runMigrations = async () => {
       `);
     });
 
+    // Take-outs written positive before 25 Oct: removals are negative everywhere else
+    await dataFix('take-out movements recorded as removals', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements"
+        SET "quantity_cases" = -"quantity_cases", "quantity_bottles" = -"quantity_bottles"
+        WHERE "reason_code" LIKE 'stock_out:%' AND "quantity_cases" >= 0 AND "quantity_bottles" > 0
+      `);
+    });
+
+    /*
+      The private client order a Zoho sales order fulfils (25 Oct 2026). The
+      only link was the PCO number typed into the SO's Reference, read as text
+      wherever it mattered: SO-00225, Ihab Toma's own delivery, read as a sale
+      to City Drinks. Filled by the Zoho sync (linkSalesOrdersToPcos), which
+      also fills past orders on its first run.
+    */
+    await client.unsafe(
+      `ALTER TABLE "zoho_sales_orders" ADD COLUMN IF NOT EXISTS "private_client_order_id" uuid`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "zoho_sales_orders_pco_idx" ON "zoho_sales_orders" ("private_client_order_id")`,
+    );
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow

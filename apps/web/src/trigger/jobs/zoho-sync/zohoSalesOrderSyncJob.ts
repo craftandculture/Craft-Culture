@@ -11,6 +11,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
+import linkSalesOrdersToPcos from '@/app/_zohoSalesOrders/data/linkSalesOrdersToPcos';
 import releaseClosedOrderHolds from '@/app/_zohoSalesOrders/data/releaseClosedOrderHolds';
 import {
   zohoInvoices,
@@ -23,6 +24,11 @@ import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrder
 import triggerDb from '@/trigger/triggerDb';
 
 export const zohoSalesOrderSyncJob = schedules.task({
+  // Scheduled every few minutes: the next run is the retry. Without these the
+  // project defaults (5 attempts, 5 hours) let failing runs pile up and spend
+  // the Trigger.dev budget (25 Oct 2026).
+  retry: { maxAttempts: 1 },
+  maxDuration: 5 * 60,
   id: 'zoho-sales-order-sync',
   cron: {
     pattern: '*/2 * * * *', // Every 2 minutes
@@ -269,6 +275,16 @@ export const zohoSalesOrderSyncJob = schedules.task({
       if (drafts.active) logger.info('Draft holds refreshed', drafts);
     } catch (error) {
       logger.error('Failed to refresh draft holds', { error });
+    }
+
+    /* Which PCO each order fulfils, including ones raised by hand in Zoho */
+    try {
+      const links = await linkSalesOrdersToPcos({ db: triggerDb });
+      if (links.byPco || links.byReference || links.backToPco) {
+        logger.info('Sales orders linked to their PCOs', links);
+      }
+    } catch (error) {
+      logger.error('Failed to link sales orders to PCOs', { error });
     }
 
     logger.info('Zoho sales order sync completed', results);

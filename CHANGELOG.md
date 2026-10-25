@@ -1,3 +1,82 @@
+## [2.0.531](https://github.com/craftandculture/Craft-Culture/compare/v2.0.530...v2.0.531) (2026-10-25)
+
+### Features
+
+* releases, PCOs and Zoho sales orders are linked by stored IDs, with the whole chain shown on each and broken links flagged ([46f6d23](https://github.com/craftandculture/Craft-Culture/commit/46f6d233bd635142526a6d7ffcf76bbe3309ed51))
+
+## [2.0.530](https://github.com/craftandculture/Craft-Culture/compare/v2.0.529...v2.0.530) (2026-10-25)
+
+### Bug Fixes
+
+* a member's own delivery raised as a Zoho order is treated as their delivery, not a sale ([a3bc325](https://github.com/craftandculture/Craft-Culture/commit/a3bc32565adb6b705f4a53e2add03b7ac45cbdcc))
+
+## [2.0.529](https://github.com/craftandculture/Craft-Culture/compare/v2.0.528...v2.0.529) (2026-10-25)
+
+### Bug Fixes
+
+* member statements show 75cl bottles as 75cl, not 7.5L ([e3df772](https://github.com/craftandculture/Craft-Culture/commit/e3df772be78577ce7830373f961b4ef9d2ecd16c))
+
+## [2.0.528](https://github.com/craftandculture/Craft-Culture/compare/v2.0.527...v2.0.528) (2026-10-25)
+
+### Bug Fixes
+
+* taking some bottles out of a case no longer fails with a duplicate movement number ([17b65e5](https://github.com/craftandculture/Craft-Culture/commit/17b65e5055cef4a252ab6eb612826fc128b0c27b))
+
+## [2.0.527](https://github.com/craftandculture/Craft-Culture/compare/v2.0.526...v2.0.527) (2026-10-25)
+
+### Bug Fixes
+
+* the background-job database client also accepts the address as copied from Neon, so Trigger.dev deploys and Zoho syncs run again ([73a571e](https://github.com/craftandculture/Craft-Culture/commit/73a571e601901bf9507edbf64caf94d3b5af568d))
+
+## [2.0.526](https://github.com/craftandculture/Craft-Culture/compare/v2.0.525...v2.0.526) (2026-10-25)
+
+### Bug Fixes
+
+* the trade-order guard follows the stock's "not for sale" flag, so consigned cellars such as Alain Brahamcha's still sell ([c40f6be](https://github.com/craftandculture/Craft-Culture/commit/c40f6bed699eff2390aa7baf91cb3f6d086fd176))
+
+## [2.0.525](https://github.com/craftandculture/Craft-Culture/compare/v2.0.524...v2.0.525) (2026-10-25)
+
+### Bug Fixes
+
+* a Private Cellar member's wine can no longer be reserved, released or picked for a trade order unless they have offered it for sale ([efcf6e5](https://github.com/craftandculture/Craft-Culture/commit/efcf6e52411ad900a9f265b68002c5ee8d20b06c))
+
+## [2.0.524](https://github.com/craftandculture/Craft-Culture/compare/v2.0.523...v2.0.524) (2026-10-25)
+
+### Features
+
+* staff can list every bottle that left the warehouse in a period, by owner, with the order and customer it went to ([e1f844a](https://github.com/craftandculture/Craft-Culture/commit/e1f844a8b2635aeab8dab4d43575f269a7951883))
+
+## [2.0.523](https://github.com/craftandculture/Craft-Culture/compare/v2.0.522...v2.0.523) (2026-10-25)
+
+### Bug Fixes
+
+* background jobs accept the database address as copied from Neon, so a pasted psql snippet no longer stops them ([1d6002e](https://github.com/craftandculture/Craft-Culture/commit/1d6002e0660f1773c29986dd46f229e471980434))
+
+## [2.0.522](https://github.com/craftandculture/Craft-Culture/compare/v2.0.521...v2.0.522) (2026-10-25)
+
+### Features
+
+* a member's monthly statement shows every bottle that left their cellar, with where it went ([6da5fc9](https://github.com/craftandculture/Craft-Culture/commit/6da5fc9aa90211a82db455db01e0978a4b5ffad1))
+
+## [2.0.521](https://github.com/craftandculture/Craft-Culture/compare/v2.0.520...v2.0.521) (2026-10-25)
+
+### Bug Fixes
+
+* dispatching a batch records each order line once — unpicked lines are no longer dropped and picks from a deleted pick list are not counted again ([596ce06](https://github.com/craftandculture/Craft-Culture/commit/596ce062fa14c30b8a12958ee24c477d0272926a))
+* the Zoho order sync has five minutes to finish, so a catch-up run after a pause is not cut off ([0b5b963](https://github.com/craftandculture/Craft-Culture/commit/0b5b96352be276418ebf65c3dfc557a1aab6b596))
+
+## [2.0.520](https://github.com/craftandculture/Craft-Culture/compare/v2.0.519...v2.0.520) (2026-10-25)
+
+### Bug Fixes
+
+* Zoho syncs fail in seconds instead of grinding for 20 minutes, and never retry ([c622742](https://github.com/craftandculture/Craft-Culture/commit/c6227428b0314e1db7eafb20f5d4e0a65b950f56))
+
+## [2.0.519](https://github.com/craftandculture/Craft-Culture/compare/v2.0.518...v2.0.519) (2026-10-25)
+
+### Bug Fixes
+
+* take-outs are recorded as removals, env cleaning is limited to Zoho values, invoice lines are read gently, and partner viewers cannot tick shared jobs ([32b9e05](https://github.com/craftandculture/Craft-Culture/commit/32b9e05f1f78e80410bd3902508df78c25b4cba1))
+
 ## [2.0.518](https://github.com/craftandculture/Craft-Culture/compare/v2.0.517...v2.0.518) (2026-10-24)
 
 ### Bug Fixes
