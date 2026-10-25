@@ -1,3 +1,9 @@
+## [2.0.530](https://github.com/craftandculture/Craft-Culture/compare/v2.0.529...v2.0.530) (2026-10-25)
+
+### Bug Fixes
+
+* a member's own delivery raised as a Zoho order is treated as their delivery, not a sale ([a3bc325](https://github.com/craftandculture/Craft-Culture/commit/a3bc32565adb6b705f4a53e2add03b7ac45cbdcc))
+
 ## [2.0.529](https://github.com/craftandculture/Craft-Culture/compare/v2.0.528...v2.0.529) (2026-10-25)
 
 ### Bug Fixes
