@@ -1653,7 +1653,7 @@ const CellarPage = () => {
         </section>
       )}
 
-      <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" />
+      <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" collapsible />
 
       {isEmptyCellar ? (
         /*

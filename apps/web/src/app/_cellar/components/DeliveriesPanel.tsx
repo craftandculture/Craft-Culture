@@ -3,7 +3,7 @@
 import { IconCheck, IconChevronDown, IconTruckDelivery } from '@tabler/icons-react';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import bottleName from '@/app/_cellar/utils/bottleName';
 import collectorWineName from '@/app/_cellar/utils/collectorWineName';
@@ -18,6 +18,8 @@ export interface DeliveriesPanelProps {
   requests: Request[];
   /** Deliveries under way sit above the wine; ones already made sit below it */
   section: 'live' | 'past';
+  /** Lets the member fold live deliveries to one line; remembered on the device */
+  collapsible?: boolean;
 }
 
 /** How far a delivery has got, from the warehouse's own stages */
@@ -129,7 +131,29 @@ const PAST_SHOWN = 5;
  * left the cellar, and listing it under "Past deliveries" told a member wine
  * had gone that was still on the shelf.
  */
-const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
+const COLLAPSED_KEY = 'cc-cellar-deliveries-collapsed';
+
+const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesPanelProps) => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!collapsible) return;
+    try {
+      setCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === '1');
+    } catch {
+      // Storage blocked: start open
+    }
+  }, [collapsible]);
+
+  const toggleCollapsed = () =>
+    setCollapsed((current) => {
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, current ? '0' : '1');
+      } catch {
+        // Remembered for this visit only
+      }
+      return !current;
+    });
   const [showPast, setShowPast] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [openWines, setOpenWines] = useState<Set<string>>(new Set());
@@ -252,14 +276,53 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
     >
       {live.length > 0 && (
         <>
-          <header className="border-border-muted flex items-center gap-2 border-b px-4 py-3 sm:px-6">
-            <IconTruckDelivery size={18} className="text-text-muted" />
-            <p className="text-text-primary text-base font-semibold">In progress</p>
-            <span className="bg-surface-muted text-text-muted rounded-full px-2 text-xs font-semibold tabular-nums">
-              {live.length}
-            </span>
-          </header>
-          <ul className="divide-border-muted divide-y">{live.map(row)}</ul>
+          {(() => {
+            const heading = (
+              <>
+                <IconTruckDelivery size={18} className="text-text-muted flex-shrink-0" />
+                <p className="text-text-primary text-base font-semibold">In progress</p>
+                <span className="bg-surface-muted text-text-muted rounded-full px-2 text-xs font-semibold tabular-nums">
+                  {live.length}
+                </span>
+                {/* Folded, the line still says where the delivery is */}
+                {collapsible && collapsed && (
+                  <span className="text-text-muted min-w-0 truncate text-sm">
+                    ·{' '}
+                    {live
+                      .map((request) => DELIVERY_STAGES[stepOf(request)]?.headline)
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                )}
+              </>
+            );
+            return collapsible ? (
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-expanded={!collapsed}
+                className={`hover:bg-surface-muted/50 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:px-6 ${
+                  collapsed ? '' : 'border-border-muted border-b'
+                }`}
+              >
+                {heading}
+                <span className="text-text-muted ml-auto flex flex-shrink-0 items-center gap-1 text-sm font-medium">
+                  {collapsed ? 'Show' : 'Hide'}
+                  <IconChevronDown
+                    size={16}
+                    className={`transition-transform ${collapsed ? '' : 'rotate-180'}`}
+                  />
+                </span>
+              </button>
+            ) : (
+              <header className="border-border-muted flex items-center gap-2 border-b px-4 py-3 sm:px-6">
+                {heading}
+              </header>
+            );
+          })()}
+          {!(collapsible && collapsed) && (
+            <ul className="divide-border-muted divide-y">{live.map(row)}</ul>
+          )}
         </>
       )}
 
