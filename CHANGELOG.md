@@ -1,3 +1,13 @@
+## [2.0.538](https://github.com/craftandculture/Craft-Culture/compare/v2.0.537...v2.0.538) (2026-10-25)
+
+### Features
+
+* freight quotes into the UAE are priced all-in, with customs and handling added from a rate card ([f7d2049](https://github.com/craftandculture/Craft-Culture/commit/f7d20491d2f76470d2a75d78d3889680ade9d8bb))
+
+### Bug Fixes
+
+* the Activity feed drops pack notes from wine names and stops repeating the order's title on each wine under it ([7ed74c5](https://github.com/craftandculture/Craft-Culture/commit/7ed74c57d14529954f98f1178bf1fa4a3918be7b))
+
 ## [2.0.537](https://github.com/craftandculture/Craft-Culture/compare/v2.0.536...v2.0.537) (2026-10-25)
 
 ### Bug Fixes
