@@ -2,9 +2,9 @@ import { and, desc, eq, gt, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import soldToCraftAndCulture from '@/app/_partners/utils/soldToCraftAndCulture';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import getOwnerWineCosts from '@/app/_wms/data/getOwnerWineCosts';
-import displayWineName from '@/app/_wms/utils/displayWineName';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
@@ -28,6 +28,7 @@ import logger from '@/utils/logger';
 
 
 import bottleName from '../utils/bottleName';
+import collectorWineName from '../utils/collectorWineName';
 
 /** The UAE is four hours ahead of UTC all year, so a month starts at 20:00 UTC the day before */
 const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000;
@@ -54,7 +55,7 @@ const wineLine = (productName: string, lwin18: string) => {
     ml > 0 ? bottleName(`${ml / 10}cl`) : null,
   ].filter(Boolean);
 
-  return { name: displayWineName(productName), detail: detail.join(' · ') };
+  return { name: collectorWineName(productName), detail: detail.join(' · ') };
 };
 
 /**
@@ -252,6 +253,16 @@ const memberGetStatement = stockOwnerProcedure
       partnerMovementDetail).
     */
     // Up to the end of this month; from its start for the month's lines, from the beginning for what is owed
+    // When this cellar first held wine: its first movement in or out, or its first stock row
+    const activeRows = await db.execute<{ at: string | null }>(sql`
+      SELECT LEAST(
+        (SELECT MIN(performed_at) FROM wms_stock_movements
+          WHERE to_owner_id = ${partnerId} OR from_owner_id = ${partnerId}),
+        (SELECT MIN(created_at) FROM wms_stock WHERE owner_id = ${partnerId})
+      ) AS at
+    `);
+    const activeSince = (Array.isArray(activeRows) ? activeRows : (activeRows as { rows: { at: string | null }[] }).rows)[0];
+
     const readLeft = (since: Date | null) =>
       db
       .select({
@@ -285,6 +296,7 @@ const memberGetStatement = stockOwnerProcedure
               sql`${wmsStockMovements.reasonCode} LIKE 'stock_out:%'`,
             ),
             and(eq(wmsStockMovements.movementType, 'count'), lt(wmsStockMovements.quantityCases, 0)),
+            soldToCraftAndCulture,
           ),
         ),
       )
@@ -391,6 +403,7 @@ const memberGetStatement = stockOwnerProcedure
         return STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock';
       }
       if (row.movementType === 'count') return 'Stock count adjustment';
+      if (row.movementType === 'ownership_transfer') return 'Sold to Craft & Culture';
       // Only a collector is told who took it: trade partners never see counterparties
       if (ctx.partner.type !== 'private_collector') return 'Left the warehouse on an order';
       if (row.salesOrderNumber) {
@@ -429,6 +442,9 @@ const memberGetStatement = stockOwnerProcedure
           return { outcome: 'reimbursed' as const, groupKey: `reimbursed:${reason}`, groupLabel: rule.ownerSees, status: null };
         }
         return { outcome: 'collected' as const, groupKey: `collected:${reason}`, groupLabel: rule?.ownerSees ?? 'Taken out of stock', status: null };
+      }
+      if (row.movementType === 'ownership_transfer') {
+        return { outcome: 'sale' as const, groupKey: 'sale:cc-bought', groupLabel: 'Sold to Craft & Culture', status: null };
       }
       if (row.movementType === 'count') {
         return { outcome: 'adjustment' as const, groupKey: 'adjustment', groupLabel: 'Stock count adjustment', status: null };
@@ -551,7 +567,7 @@ const memberGetStatement = stockOwnerProcedure
         wines: [],
       };
       entry.wines.push({
-        name: displayWineName(row.productName),
+        name: collectorWineName(row.productName),
         detail: row.vintage ? String(row.vintage) : '',
         bottles: row.bottles,
       });
@@ -596,6 +612,8 @@ const memberGetStatement = stockOwnerProcedure
 
     return {
       month: input.month,
+      // The month the cellar first held wine, so the picker offers nothing earlier
+      activeSince: activeSince?.at ? new Date(activeSince.at) : null,
       periodStart: from,
       periodEnd: to,
       generatedAt: new Date(),
@@ -649,7 +667,7 @@ const memberGetStatement = stockOwnerProcedure
 
       sold: sold.map((row) => ({
         ...row,
-        productName: displayWineName(row.productName),
+        productName: collectorWineName(row.productName),
         amountUsd: round(row.amountUsd),
       })),
       soldUsd: round(sold.reduce((sum, row) => sum + row.amountUsd, 0)),
@@ -684,7 +702,7 @@ const memberGetStatement = stockOwnerProcedure
 
         return {
           ...row,
-          productName: displayWineName(row.productName),
+          productName: collectorWineName(row.productName),
           bottles,
           valueUsd: perBottle != null ? round(bottles * perBottle) : null,
           valueBasis: ask != null ? ('your price' as const) : perBottle != null ? ('cost' as const) : null,

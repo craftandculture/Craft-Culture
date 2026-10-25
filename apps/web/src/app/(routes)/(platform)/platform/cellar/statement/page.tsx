@@ -1,9 +1,17 @@
 'use client';
 
-import { IconDownload, IconPrinter } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { format, subMonths } from 'date-fns';
+import {
+  IconBottle,
+  IconCoin,
+  IconDownload,
+  IconPrinter,
+  IconTruckDelivery,
+  IconWallet,
+} from '@tabler/icons-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import StatementGroups from '@/app/_cellar/components/StatementGroups';
 import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
@@ -32,13 +40,31 @@ const KIND_NOTE = {
   added: 'Transferred to your cellar',
 } as const;
 
-/** The last twelve months, most recent complete month first */
-const monthOptions = () =>
-  Array.from({ length: 12 }, (_, index) => {
-    const date = subMonths(new Date(), index);
+/**
+ * The months a statement can be read for, newest first
+ *
+ * From the month before the cellar first held wine up to this month. Months
+ * before the account was open only ever showed empty statements.
+ */
+const monthOptions = (activeSince: Date | string | null | undefined) => {
+  const now = startOfMonth(new Date());
+  const first = activeSince
+    ? subMonths(startOfMonth(new Date(activeSince)), 1)
+    : subMonths(now, 1);
+  const options: { value: string; label: string }[] = [];
+  for (let date = now; date >= first; date = subMonths(date, 1)) {
+    options.push({ value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') });
+    if (options.length > 60) break;
+  }
+  // Never empty, even for a cellar opened this month
+  if (options.length === 0) {
+    options.push({ value: format(now, 'yyyy-MM'), label: format(now, 'MMMM yyyy') });
+  }
+  return options;
+};
 
-    return { value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') };
-  });
+/** Holdings shown before "Show all" */
+const HOLDINGS_SHOWN = 12;
 
 interface LeftRow {
   id: string;
@@ -116,20 +142,23 @@ const cell = (value: string | number) => {
  * the wine held. Printable on a single A4 column and downloadable as CSV, so a
  * collector can keep it with their own records.
  *
- * Defaults to the last complete month, because that is the one with a
- * finished story. No fees or charges appear: those are for the invoice, not
- * the cellar.
+ * Opens on this month, and offers only the months the cellar has been open
+ * (and the one before). No fees or charges appear: those are for the
+ * invoice, not the cellar.
  */
 const StatementPage = () => {
   const api = useTRPC();
-  const options = useMemo(() => monthOptions(), []);
-  const [month, setMonth] = useState(
-    options[1]?.value ?? format(new Date(), 'yyyy-MM'),
-  );
+  // This month: what a member opening the statement wants to see is now
+  const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
 
   const { data, isLoading } = useQuery({
     ...api.cellar.member.getStatement.queryOptions({ month }),
+    // Keep the page (and the month list) while the next month loads
+    placeholderData: keepPreviousData,
   });
+
+  const options = useMemo(() => monthOptions(data?.activeSince), [data?.activeSince]);
 
   const monthLabel =
     options.find((option) => option.value === month)?.label ?? month;
@@ -249,27 +278,26 @@ const StatementPage = () => {
         </p>
       </div>
 
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.18em]">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-text-muted mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]">
             C&amp;C Private Cellar · Statement
           </p>
-          <h1 className="text-text-primary mt-1 text-xl font-semibold">
-            {monthLabel}
+          <h1 className="text-text-primary text-lg font-semibold sm:text-xl">
+            {data?.memberName ?? '\u00A0'}
           </h1>
-          {data && (
-            <p className="text-text-muted mt-0.5 text-sm">
-              {data.memberName} · issued{' '}
-              {format(new Date(data.generatedAt), 'd MMMM yyyy')}
-            </p>
-          )}
+          <p className="text-text-muted mt-0.5 text-xs sm:text-sm">
+            {monthLabel}
+            {data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''}
+          </p>
         </div>
-        <div className="statement-controls flex flex-wrap items-center gap-2">
+        <div className="statement-controls grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <select
+            id="statement-month"
             value={month}
             onChange={(event) => setMonth(event.target.value)}
             aria-label="Statement month"
-            className="border-border-muted bg-surface-primary text-text-primary h-10 rounded-lg border px-3 text-sm"
+            className="border-border-muted bg-background-primary text-text-primary col-span-2 h-10 rounded-lg border px-3 text-sm sm:col-span-1"
           >
             {options.map((option) => (
               <option key={option.value} value={option.value}>
@@ -280,7 +308,8 @@ const StatementPage = () => {
           <button
             type="button"
             onClick={() => {
-              // Every order opens on paper, not only the ones tapped on screen
+              // Every order and every wine on paper, not only what was opened on screen
+              flushSync(() => setShowAllHoldings(true));
               document
                 .querySelectorAll<HTMLDetailsElement>('.statement-group')
                 .forEach((group) => {
@@ -289,7 +318,7 @@ const StatementPage = () => {
               window.print();
             }}
             disabled={!data}
-            className="border-border-muted text-text-primary inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50"
+            className="border-border-muted text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50"
           >
             <IconPrinter size={16} />
             Print
@@ -298,10 +327,10 @@ const StatementPage = () => {
             type="button"
             onClick={downloadCsv}
             disabled={!data}
-            className="bg-text-primary text-surface-primary inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
+            className="bg-text-primary text-background-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
           >
             <IconDownload size={16} />
-            Download CSV
+            CSV
           </button>
         </div>
       </div>
@@ -310,38 +339,39 @@ const StatementPage = () => {
 
       {data && totals && (
         <>
-          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          {/* The cellar home's tiles: the same look wherever a member reads numbers */}
+          <dl className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
             {[
-              { label: 'Added', value: bottles(totals.added), sub: null },
+              { icon: IconBottle, label: 'Added', value: totals.added.toLocaleString(), detail: totals.added === 1 ? 'bottle' : 'bottles' },
               {
+                icon: IconTruckDelivery,
                 label: 'Delivered to you',
-                value: bottles(totals.delivered),
-                sub: totals.onItsWay ? `${totals.onItsWay} on the way` : null,
+                value: totals.delivered.toLocaleString(),
+                detail: totals.onItsWay ? `${totals.onItsWay} on the way` : totals.delivered === 1 ? 'bottle' : 'bottles',
               },
               {
+                icon: IconCoin,
                 label: 'Sold',
                 value: money(data.soldUsd + data.soldLeftUsd),
-                sub: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
+                detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
               },
               {
+                icon: IconWallet,
                 label: 'Owed to you',
                 value: money(Math.max(0, data.owedUsd)),
-                sub: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'Paid monthly',
+                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'paid monthly',
               },
             ].map((tile) => (
               <div
                 key={tile.label}
-                className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
+                className="border-border-muted bg-background-primary rounded-xl border px-3 py-2 text-center"
               >
-                <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  {tile.label}
-                </dt>
-                <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums">
-                  {tile.value}
-                </dd>
-                {tile.sub && (
-                  <dd className="text-text-muted m-0 text-xs tabular-nums">{tile.sub}</dd>
-                )}
+                <div className="mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                  <tile.icon size={12} />
+                </div>
+                <dd className="m-0 text-lg font-bold leading-tight tabular-nums">{tile.value}</dd>
+                <dt className="text-text-muted text-[11px]">{tile.label}</dt>
+                <dd className="text-text-muted m-0 text-[10px] tabular-nums">{tile.detail}</dd>
               </div>
             ))}
           </dl>
@@ -440,13 +470,13 @@ const StatementPage = () => {
                 <thead className="bg-fill-muted/60 border-border-muted border-b">
                   <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                     <th className="px-3 py-2 text-left">Wine</th>
-                    <th className="px-3 py-2 text-left">Location</th>
+                    <th className="hidden px-3 py-2 text-left sm:table-cell">Location</th>
                     <th className="px-3 py-2 text-right">Bottles</th>
                     <th className="px-3 py-2 text-right">Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-border-muted divide-y">
-                  {data.holdings.map((row) => (
+                  {data.holdings.slice(0, showAllHoldings ? undefined : HOLDINGS_SHOWN).map((row) => (
                     <tr key={`${row.lwin18}-${row.caseConfig}`}>
                       <td className="px-3 py-2">
                         <span className="text-text-primary block font-medium">
@@ -456,9 +486,10 @@ const StatementPage = () => {
                           {[row.producer, row.vintage ?? 'NV', bottleName(row.bottleSize)]
                             .filter(Boolean)
                             .join(' · ')}
+                          <span className="sm:hidden"> · UAE</span>
                         </span>
                       </td>
-                      <td className="text-text-muted px-3 py-2 text-xs">UAE</td>
+                      <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">UAE</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.bottles}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {row.valueUsd != null ? money(row.valueUsd) : '—'}
@@ -468,7 +499,7 @@ const StatementPage = () => {
                       </td>
                     </tr>
                   ))}
-                  {data.ukHoldings.map((row, index) => (
+                  {(showAllHoldings || data.holdings.length < HOLDINGS_SHOWN ? data.ukHoldings : []).map((row, index) => (
                     <tr key={`uk-${index}`}>
                       <td className="px-3 py-2">
                         <span className="text-text-primary block font-medium">
@@ -476,9 +507,10 @@ const StatementPage = () => {
                         </span>
                         <span className="text-text-muted block text-xs">
                           {row.vintage ?? 'NV'}
+                          <span className="sm:hidden"> · United Kingdom</span>
                         </span>
                       </td>
-                      <td className="text-text-muted px-3 py-2 text-xs">United Kingdom</td>
+                      <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">United Kingdom</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.totalBottles}</td>
                       <td className="text-text-muted px-3 py-2 text-right">—</td>
                     </tr>
@@ -493,6 +525,16 @@ const StatementPage = () => {
                 </tbody>
               </table>
             </div>
+            {!showAllHoldings &&
+              data.holdings.length + data.ukHoldings.length > HOLDINGS_SHOWN && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllHoldings(true)}
+                  className="text-text-primary mt-2 text-sm font-semibold underline underline-offset-2"
+                >
+                  Show all {data.holdings.length + data.ukHoldings.length} wines
+                </button>
+              )}
           </section>
 
           <p className="text-text-muted text-xs leading-5">

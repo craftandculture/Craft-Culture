@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
+import soldToCraftAndCulture from '@/app/_partners/utils/soldToCraftAndCulture';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
@@ -89,8 +90,8 @@ const adminRecordAgreedPrices = adminProcedure
       .where(
         and(
           eq(wmsStockMovements.fromOwnerId, owner.id),
-          // Picked for orders, or taken out (samples, damage): gone either way
-          sql`(${wmsStockMovements.movementType} = 'pick' OR ${wmsStockMovements.reasonCode} LIKE 'stock_out:%')`,
+          // Picked for orders, taken out (samples, damage), or bought by C&C: gone either way
+          sql`(${wmsStockMovements.movementType} = 'pick' OR ${wmsStockMovements.reasonCode} LIKE 'stock_out:%' OR ${soldToCraftAndCulture})`,
           sql`(${sql.join(keys.map((key) => sql`${wmsStockMovements.lwin18} LIKE ${keyPattern(key)}`), sql` OR `)})`,
         ),
       );

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray } from 'drizzle-orm';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
@@ -6,6 +6,7 @@ import displayWineName from '@/app/_wms/utils/displayWineName';
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
 import db from '@/database/client';
 import {
+  partners,
   privateClientOrders,
   wmsLocations,
   wmsStockMovements,
@@ -137,6 +138,13 @@ const getStockActivity = async ({
     .limit(limit);
 
   const deliveries = await getOwnerDeliveryOwners(rows.map((row) => row.orderId));
+  // C&C buying an owner's wine is a sale to C&C, not a transfer (see soldToCraftAndCulture)
+  const [cc] = await db
+    .select({ id: partners.id })
+    .from(partners)
+    .where(ilike(partners.businessName, 'craft%culture%'))
+    .limit(1);
+  const ccId = cc?.id ?? null;
 
   /** What happened, in the owner's words */
   const describe = (row: (typeof rows)[number]) => {
@@ -147,6 +155,9 @@ const getStockActivity = async ({
       return { title: STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock', kind: 'out' as const };
     }
     if (row.movementType === 'ownership_transfer') {
+      if (row.toOwnerId && row.toOwnerId === ccId && row.fromOwnerId === partnerId) {
+        return { title: 'Sold to Craft & Culture', kind: 'out' as const };
+      }
       return row.toOwnerId === partnerId
         ? { title: isCollector ? 'Added to your cellar' : 'Transferred to you', kind: 'in' as const }
         : { title: isCollector ? 'Transferred from your cellar' : 'Transferred to another owner', kind: 'out' as const };
