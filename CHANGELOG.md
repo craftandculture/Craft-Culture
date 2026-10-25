@@ -1,3 +1,13 @@
+## [2.0.542](https://github.com/craftandculture/Craft-Culture/compare/v2.0.541...v2.0.542) (2026-10-25)
+
+### Features
+
+* member statements show what each sale is worth, what is owed, and what the cellar is worth ([fef90fe](https://github.com/craftandculture/Craft-Culture/commit/fef90feaacca03f7268ac72e28c5f81560344095))
+
+### Bug Fixes
+
+* an owner's price matches the exact wine code first, so two wines sharing a code (Arnoux-Lachaux village Chambolle and Clos des Danguerins) keep their own prices ([de7dc59](https://github.com/craftandculture/Craft-Culture/commit/de7dc595e417fd24630d02d41ddd7be7d7dced85))
+
 ## [2.0.541](https://github.com/craftandculture/Craft-Culture/compare/v2.0.540...v2.0.541) (2026-10-25)
 
 ### Features
