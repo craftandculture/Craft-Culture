@@ -111,6 +111,7 @@ const getStockActivity = async ({
       pcoNumber: privateClientOrders.orderNumber,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
       customerName: zohoSalesOrders.customerName,
+      soForPco: zohoSalesOrders.privateClientOrderId,
     })
     .from(wmsStockMovements)
     .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
@@ -167,6 +168,9 @@ const getStockActivity = async ({
       const verb = row.movementType === 'pick' ? 'Picked' : 'Dispatched';
       if (delivery && delivery.ownerId === partnerId) {
         return { title: `${verb} for your delivery`, kind: 'out' as const };
+      }
+      if (isCollector && row.salesOrderNumber && row.soForPco) {
+        return { title: `${verb} · sold to a private client`, kind: 'out' as const };
       }
       if (isCollector && row.salesOrderNumber && row.customerName) {
         return { title: `${verb} · sold to ${row.customerName}`, kind: 'out' as const };

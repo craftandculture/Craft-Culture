@@ -276,6 +276,8 @@ const memberGetStatement = stockOwnerProcedure
         at: wmsStockMovements.performedAt,
         salesOrderNumber: zohoSalesOrders.salesOrderNumber,
         customerName: zohoSalesOrders.customerName,
+        // A sales order fulfilling a private client's order: the distributor only delivers it
+        soForPco: zohoSalesOrders.privateClientOrderId,
         pcoNumber: privateClientOrders.orderNumber,
         orderId: wmsStockMovements.orderId,
         unitPriceUsd: wmsStockOutflows.unitPriceUsd,
@@ -406,6 +408,7 @@ const memberGetStatement = stockOwnerProcedure
       if (row.movementType === 'ownership_transfer') return 'Sold to Craft & Culture';
       // Only a collector is told who took it: trade partners never see counterparties
       if (ctx.partner.type !== 'private_collector') return 'Left the warehouse on an order';
+      if (row.salesOrderNumber && row.soForPco) return `Sold to a private client · ${row.salesOrderNumber}`;
       if (row.salesOrderNumber) {
         return `Went to ${row.customerName ?? 'a customer'} · ${row.salesOrderNumber}`;
       }
@@ -452,7 +455,7 @@ const memberGetStatement = stockOwnerProcedure
       const order = row.salesOrderNumber ?? row.pcoNumber ?? 'order';
       // Only a collector is told who bought it: trade partners never see counterparties
       const buyer = isCollector
-        ? row.salesOrderNumber
+        ? row.salesOrderNumber && !row.soForPco
           ? (row.customerName ?? 'a buyer')
           : 'a private client'
         : null;
