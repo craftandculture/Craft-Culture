@@ -3754,6 +3754,24 @@ const runMigrations = async () => {
       `);
     });
 
+    /*
+      The currency a member set their asking price in (26 Oct 2026). USD stays
+      the base; a price typed in EUR, GBP or AED is converted at the rate on
+      the day it was listed and that rate is kept, so a later move in the
+      exchange rate never changes what the member was promised.
+    */
+    for (const [column, type] of [
+      ['ask_currency', `text DEFAULT 'USD' NOT NULL`],
+      ['ask_per_bottle_local', 'double precision'],
+      ['ask_fx_rate', 'double precision'],
+      ['ask_fx_at', 'timestamp'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "sale_mandates" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ Sale mandate asking currency ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
 
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
-import { cellarSerif } from '@/lib/fonts/fonts';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F7F4EE',
+  themeColor: '#F6F7F5',
   viewportFit: 'cover',
 };
 
@@ -62,20 +61,11 @@ const CellarLayout = async ({ children }: React.PropsWithChildren) => {
     somewhere that has lost its own navigation.
   */
   return (
-    /*
-      The warm page and the display serif belong to the cellar alone: the font
-      variable is set on this wrapper, so titles and wine names inside can use
-      it while the rest of Index keeps Inter. Dark mode keeps its own surfaces.
-    */
-    <div
-      className={`${cellarSerif.variable} min-h-full bg-[#F7F4EE] dark:bg-background-primary`}
-    >
-      <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 pb-28 sm:px-6 sm:pt-8 md:pb-10">
-        <CellarTabs />
-        <CellarInstallCard />
-        <CellarPasskeyCard />
-        {children}
-      </div>
+    <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 pb-28 sm:px-6 sm:pt-8 md:pb-0">
+      <CellarTabs />
+      <CellarInstallCard />
+      <CellarPasskeyCard />
+      {children}
     </div>
   );
 };

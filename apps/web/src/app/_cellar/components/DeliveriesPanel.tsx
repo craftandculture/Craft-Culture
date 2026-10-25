@@ -5,9 +5,10 @@ import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
+import bottleName from '@/app/_cellar/utils/bottleName';
+import collectorWineName from '@/app/_cellar/utils/collectorWineName';
 import deliveryStage, { DELIVERY_STAGES } from '@/app/_cellar/utils/deliveryStage';
 import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
-import displayWineName from '@/app/_wms/utils/displayWineName';
 import type { AppRouter } from '@/trpc-router';
 
 type Request =
@@ -205,16 +206,25 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
         {section === 'live' && <ProgressSteps step={step} times={reachedAt(request)} />}
 
         {/*
-          The wine, quietly underneath. Name in the primary colour, vintage
-          beside it; pushed to the far edge it read as an unlabelled number.
+          The wine, one line each: the name as a collector reads it, its
+          vintage and bottle underneath, and how many on the right.
         */}
-        <div className="border-border-muted mt-4 border-t pt-3">
-          <ul className="flex flex-col gap-1.5">
+        <div className="border-border-muted mt-4 border-t pt-2">
+          <ul className="divide-border-muted/60 divide-y">
             {wines.map((item, index) => (
-              <li key={`${item.productName}-${index}`} className="flex items-baseline gap-2 text-sm">
-                <span className="text-text-primary min-w-0 truncate">{displayWineName(item.productName)}</span>
-                <span className="text-text-muted flex-shrink-0 tabular-nums">{item.vintage ?? 'NV'}</span>
-                <span className="text-text-muted flex-shrink-0 text-xs tabular-nums">
+              <li
+                key={`${item.productName}-${index}`}
+                className="flex items-center justify-between gap-4 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-text-primary truncate text-sm font-medium">
+                    {collectorWineName(item.productName)}
+                  </p>
+                  <p className="text-text-muted text-xs tabular-nums">
+                    {item.vintage ?? 'NV'} · {bottleName(item.bottleSize)}
+                  </p>
+                </div>
+                <span className="bg-surface-muted text-text-secondary flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums">
                   {item.bottles} {item.bottles === 1 ? 'bottle' : 'bottles'}
                 </span>
               </li>
@@ -225,7 +235,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
               type="button"
               onClick={() => toggleWines(request.id)}
               aria-expanded={isOpen}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 dark:text-emerald-300"
+              className="text-text-muted hover:text-text-primary mt-1 inline-flex items-center gap-1 text-xs font-semibold"
             >
               {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
               <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />

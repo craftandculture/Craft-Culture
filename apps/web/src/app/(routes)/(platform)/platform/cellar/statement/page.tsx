@@ -1,6 +1,13 @@
 'use client';
 
-import { IconDownload, IconPrinter } from '@tabler/icons-react';
+import {
+  IconCoin,
+  IconDownload,
+  IconPackageImport,
+  IconPrinter,
+  IconTag,
+  IconTruckDelivery,
+} from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
@@ -276,8 +283,7 @@ const StatementPage = () => {
 
       <CellarPageHeader
         className="statement-header mb-4"
-        eyebrow="C&C Private Cellar · Statement"
-        title={data?.memberName ?? 'Your statements'}
+                title={data?.memberName ?? 'Your statements'}
         description={`${monthLabel}${
           data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''
         }`}
@@ -336,21 +342,32 @@ const StatementPage = () => {
           {/* The cellar home's tiles: the same look wherever a member reads numbers */}
           <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
             {[
-              { label: 'Added', value: totals.added.toLocaleString(), detail: totals.added === 1 ? 'bottle' : 'bottles' },
+              {
+                label: 'Added',
+                value: totals.added.toLocaleString(),
+                detail: totals.added === 1 ? 'bottle' : 'bottles',
+                icon: IconPackageImport,
+                tone: 'blue' as const,
+              },
               {
                 label: 'Delivered to you',
                 value: totals.delivered.toLocaleString(),
                 detail: totals.onItsWay ? `${totals.onItsWay} on the way` : totals.delivered === 1 ? 'bottle' : 'bottles',
+                icon: IconTruckDelivery,
+                tone: 'violet' as const,
               },
               {
                 label: 'Sold',
                 value: money(data.soldUsd + data.soldLeftUsd),
                 detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
+                icon: IconTag,
+                tone: 'amber' as const,
               },
               {
                 label: 'Owed to you',
                 value: money(Math.max(0, data.owedUsd)),
                 detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'paid monthly',
+                icon: IconCoin,
                 tone: 'emerald' as const,
               },
             ].map((tile) => (
@@ -359,7 +376,8 @@ const StatementPage = () => {
                 label={tile.label}
                 value={tile.value}
                 detail={tile.detail}
-                tone={'tone' in tile ? tile.tone : 'plain'}
+                icon={tile.icon}
+                tone={tile.tone}
               />
             ))}
           </div>

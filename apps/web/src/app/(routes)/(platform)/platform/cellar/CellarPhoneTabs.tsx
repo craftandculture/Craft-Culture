@@ -25,9 +25,10 @@ const isOn = (pathname: string, href: string) =>
 /**
  * The member's navigation on a phone: four places within thumb reach
  *
- * Your cellar, the Cellar List, Deliveries and Invoices are what a member comes
- * back for; everything else sits under More, in a sheet from the bottom. A
- * guest the cellar is shared with sees no Invoices, as on the desktop.
+ * Your cellar, the Cellar List, Selling and Deliveries are the places a
+ * member works in; their account (statements, invoices, purchases, activity
+ * and details) sits under More, in a sheet from the bottom. A guest the cellar
+ * is shared with sees no Invoices, as on the desktop.
  *
  * Hidden from tablet width up, where the tabs across the top return.
  */
@@ -38,17 +39,18 @@ const CellarPhoneTabs = () => {
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
+  // The same split as the desktop: the four places, then the account under More
   const main = [
     { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
     { href: '/platform/cellar/available', label: 'Cellar List', icon: IconSparkles },
+    { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
     { href: '/platform/cellar/deliveries', label: 'Deliveries', icon: IconTruckDelivery },
-    ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
   ];
 
   const more = [
-    { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
-    { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
     { href: '/platform/cellar/statement', label: 'Statements', icon: IconFileText },
+    ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
+    { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
     { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
     { href: '/platform/cellar/profile', label: 'Your details', icon: IconUserCircle },
   ];
@@ -67,7 +69,7 @@ const CellarPhoneTabs = () => {
           />
           <div className="bg-background-primary absolute inset-x-0 bottom-0 rounded-t-3xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] shadow-2xl">
             <div className="mb-3 flex items-center justify-between px-1">
-              <span className="text-text-primary text-base font-semibold">More</span>
+              <span className="text-text-primary text-base font-semibold">Your account</span>
               <button
                 type="button"
                 onClick={() => setMoreOpen(false)}

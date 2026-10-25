@@ -245,7 +245,7 @@ const PurchasesPage = () => {
                         >
                           <div className="min-w-0 flex-1">
                             <p
-                              className="text-text-primary font-(family-name:--font-cellar-serif) text-lg font-semibold leading-snug sm:text-xl"
+                              className="text-text-primary text-lg font-semibold leading-snug sm:text-xl"
                               title={item.productName}
                             >
                               {displayWineName(item.productName)}

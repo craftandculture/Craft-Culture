@@ -1,6 +1,12 @@
 'use client';
 
-import { IconChevronDown, IconTag } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconChevronDown,
+  IconClock,
+  IconCoin,
+  IconTag,
+} from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
@@ -157,7 +163,7 @@ const SellingPage = () => {
                 className="border-border-muted bg-surface-primary rounded-xl border p-3 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-text-primary min-w-0 font-(family-name:--font-cellar-serif) text-lg font-semibold leading-snug">
+                  <p className="text-text-primary min-w-0 text-lg font-semibold leading-snug">
                     {displayWineName(mandate.productName, { keepVintage: true })}
                   </p>
                   <span
@@ -269,7 +275,7 @@ const SellingPage = () => {
                     className="hover:bg-fill-muted/40 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <p className="text-text-primary font-(family-name:--font-cellar-serif) text-base font-semibold leading-snug">
+                      <p className="text-text-primary text-base font-semibold leading-snug">
                         {displayWineName(mandate.productName, { keepVintage: true })}
                       </p>
                       <Typography
@@ -392,17 +398,22 @@ const SellingPage = () => {
               label: 'Bottles offered',
               value: String(openBottles),
               detail: `across ${current.length} ${current.length === 1 ? 'offer' : 'offers'}`,
+              icon: IconBottle,
+              tone: 'blue' as const,
             },
             {
               label: 'You receive if it sells',
               value: money(openValue),
               detail: 'at your asking price',
+              icon: IconCoin,
               tone: 'emerald' as const,
             },
             {
               label: 'Listed for sale',
               value: String(live.length),
               detail: live.length === 1 ? 'offer live' : 'offers live',
+              icon: IconTag,
+              tone: 'indigo' as const,
             },
             {
               label: 'Awaiting review',
@@ -410,6 +421,8 @@ const SellingPage = () => {
                 mandates.filter((mandate) => mandate.status === 'offered').length,
               ),
               detail: 'with us now',
+              icon: IconClock,
+              tone: 'amber' as const,
             },
           ].map((stat) => (
             <CellarStatTile
@@ -417,6 +430,7 @@ const SellingPage = () => {
               label={stat.label}
               value={stat.value}
               detail={stat.detail}
+              icon={stat.icon}
               tone={stat.tone}
             />
           ))}

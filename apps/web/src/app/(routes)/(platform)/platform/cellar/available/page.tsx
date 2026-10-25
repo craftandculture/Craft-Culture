@@ -1,7 +1,10 @@
 'use client';
 
 import {
+  IconBottle,
+  IconBuildingWarehouse,
   IconFilter,
+  IconGlassFull,
   IconMinus,
   IconPlus,
   IconSearch,
@@ -556,14 +559,20 @@ const AvailablePage = () => {
           <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
             <CellarStatTile
               label="Wines"
+              icon={IconGlassFull}
+              tone="indigo"
               value={filtered.length.toLocaleString('en-US')}
             />
             <CellarStatTile
               label="Bottles"
+              icon={IconBottle}
+              tone="blue"
               value={totalBottles.toLocaleString('en-US')}
             />
             <CellarStatTile
               label="Producers"
+              icon={IconBuildingWarehouse}
+              tone="violet"
               value={String(shownProducers.size)}
             />
           </div>
@@ -583,7 +592,7 @@ const AvailablePage = () => {
                   <div className="flex items-start gap-2">
                     <span className={`mt-1.5 size-2 flex-shrink-0 rounded-full ${categoryTone(wine.category)}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-text-primary font-(family-name:--font-cellar-serif) text-lg font-semibold leading-snug">
+                      <p className="text-text-primary text-lg font-semibold leading-snug">
                         {displayName(wine.product)}
                       </p>
                       <p className="text-text-muted mt-0.5 truncate text-xs">{origin(wine)}</p>
@@ -646,7 +655,7 @@ const AvailablePage = () => {
                           />
                           <div className="min-w-0">
                             <span
-                              className="text-text-primary block truncate font-(family-name:--font-cellar-serif) text-base font-semibold"
+                              className="text-text-primary block truncate text-base font-semibold"
                               title={wine.product}
                             >
                               {displayName(wine.product)}

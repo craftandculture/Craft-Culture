@@ -335,7 +335,7 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              A condition report is AED 150 per case. We inspect every bottle
+              A condition report is AED 100 per case. We inspect every bottle
               for fill level, label, capsule and closure, and report with
               photographs and written notes.
             </Typography>

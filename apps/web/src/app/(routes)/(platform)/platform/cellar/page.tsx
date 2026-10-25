@@ -3,14 +3,17 @@
 import {
   IconBottle,
   IconChevronDown,
+  IconCoin,
   IconDownload,
   IconFileText,
+  IconGlassFull,
   IconHistory,
   IconInfoCircle,
   IconReceipt,
   IconRefresh,
   IconSearch,
   IconShip,
+  IconTruck,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -1090,22 +1093,30 @@ const CellarPage = () => {
             value: collection.bottles.toLocaleString(),
             label: 'Bottles',
             detail: `${collection.cases.toLocaleString()} cases`,
+            icon: IconBottle,
+            tone: 'blue' as const,
           },
           {
             value: collection.wines.toLocaleString(),
             label: 'Wines',
             detail: `${collection.producers} producers`,
+            icon: IconGlassFull,
+            tone: 'indigo' as const,
           },
           {
             value: money(collection.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
+            icon: IconCoin,
+            tone: 'emerald' as const,
             note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
           },
           {
             value: totals.inboundBottles.toLocaleString(),
             label: 'In transit',
             detail: `${inbound.length} ${inbound.length === 1 ? 'wine' : 'wines'} on the way`,
+            icon: IconTruck,
+            tone: 'violet' as const,
           },
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
@@ -1116,6 +1127,8 @@ const CellarPage = () => {
             key={card.label}
             value={card.value}
             detail={card.detail}
+            icon={card.icon}
+            tone={card.tone}
             label={
               <span className="inline-flex items-center gap-1">
                 {card.label}

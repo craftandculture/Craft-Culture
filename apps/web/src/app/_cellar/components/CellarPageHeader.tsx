@@ -1,11 +1,11 @@
 import { twMerge } from 'tailwind-merge';
 
 export interface CellarPageHeaderProps {
-  /** The page's name, set in the cellar's display serif */
+  /** The page's name */
   title: React.ReactNode;
   /** One muted line under the title, such as a greeting or what the page is for */
   description?: React.ReactNode;
-  /** The small line above the title; the programme's name by default */
+  /** A small muted line above the title; none by default */
   eyebrow?: React.ReactNode;
   /** Buttons on the right; they stack full width on a phone */
   actions?: React.ReactNode;
@@ -15,14 +15,14 @@ export interface CellarPageHeaderProps {
 /**
  * The heading every Private Cellar page opens with
  *
- * One eyebrow, one serif title and one muted line, so moving between tabs
- * never makes the page jump. Actions sit to the right on a wide screen and
- * drop beneath the title, full width, on a phone.
+ * The same heading as Team Tasks and Stock Explorer: a plain title and one
+ * muted line, so the cellar reads as part of Index. Actions sit to the right
+ * on a wide screen and drop beneath the title, full width, on a phone.
  */
 const CellarPageHeader = ({
   title,
   description,
-  eyebrow = 'C&C Private Cellar',
+  eyebrow,
   actions,
   className = '',
 }: CellarPageHeaderProps) => {
@@ -34,16 +34,12 @@ const CellarPageHeader = ({
       )}
     >
       <div className="min-w-0">
-        {eyebrow && (
-          <p className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.18em]">
-            {eyebrow}
-          </p>
-        )}
-        <h1 className="text-text-primary mt-1 font-(family-name:--font-cellar-serif) text-3xl font-semibold leading-tight tracking-tight sm:text-[2.125rem]">
+        {eyebrow && <p className="text-text-muted mb-1 text-sm">{eyebrow}</p>}
+        <h1 className="text-text-primary text-2xl font-semibold tracking-tight">
           {title}
         </h1>
         {description && (
-          <div className="text-text-muted mt-1 max-w-2xl text-sm leading-6">
+          <div className="text-text-muted mt-0.5 max-w-2xl text-sm">
             {description}
           </div>
         )}
