@@ -97,6 +97,34 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
   );
 };
 
+/**
+ * One line inside an opened group
+ *
+ * Indented under its header on a tinted panel, with no icon disc and a
+ * smaller type size, so an opened order reads as its contents rather than
+ * as more orders. The bay and quantity sit on one line beneath the wine.
+ */
+const SubRow = ({ entry }: { entry: PartnerActivityEntry }) => {
+  const quantity =
+    entry.kind === 'correction' && entry.quantity && !entry.quantity.startsWith('−')
+      ? `+${entry.quantity}`
+      : entry.quantity;
+
+  return (
+    <div className="flex items-baseline gap-3 py-2 pl-3 pr-4">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] text-text-primary">{entry.subject}</p>
+        <p className="text-[11.5px] text-text-muted">
+          {[entry.title, entry.detail].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <span className="flex-none text-[12px] font-medium tabular-nums text-text-primary">{quantity}</span>
+      <span className="w-10 flex-none text-right text-[11px] tabular-nums text-text-muted">
+        {timeLabel(entry.at)}
+      </span>
+    </div>
+  );
+};
 
 /**
  * One feed for everything that has happened to a partner.
@@ -276,7 +304,10 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                         <button
                           type="button"
                           onClick={() => toggle(key)}
-                          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-fill-muted/30"
+                          aria-expanded={isOpen}
+                          className={`flex w-full items-start gap-3 px-4 py-3 text-left ${
+                            isOpen ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                          }`}
                         >
                           <span
                             className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${KIND_STYLE.out.disc}`}
@@ -286,7 +317,7 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-[12px] font-medium text-text-muted">
-                              Picked for an order
+                              {item.entries[0]?.title ?? 'Picked for an order'}
                             </span>
                             <span className="block text-[14px] font-medium text-text-primary">
                               {item.ref} · {plural(item.entries.length, 'wine')}
@@ -307,10 +338,12 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                           </span>
                         </button>
                         {isOpen && (
-                          <div className="divide-y divide-border-muted border-t border-border-muted bg-fill-muted/20">
-                            {item.entries.map((entry) => (
-                              <Row key={entry.id} entry={entry} />
-                            ))}
+                          <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                            <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                              {item.entries.map((entry) => (
+                                <SubRow key={entry.id} entry={entry} />
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -322,7 +355,10 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                       <button
                         type="button"
                         onClick={() => toggle(`${day}|housekeeping`)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-fill-muted/30"
+                        aria-expanded={open}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${
+                          open ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                        }`}
                       >
                         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-fill-muted text-text-muted">
                           <Icon icon={IconAdjustmentsHorizontal} size="sm" />
@@ -351,10 +387,12 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                         />
                       </button>
                       {open && (
-                        <div className="divide-y divide-border-muted bg-fill-muted/20">
-                          {housekeeping.map((entry) => (
-                            <Row key={entry.id} entry={entry} />
-                          ))}
+                        <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                          <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                            {housekeeping.map((entry) => (
+                              <SubRow key={entry.id} entry={entry} />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>
