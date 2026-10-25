@@ -1,3 +1,9 @@
+## [2.0.541](https://github.com/craftandculture/Craft-Culture/compare/v2.0.540...v2.0.541) (2026-10-25)
+
+### Features
+
+* the client price box shows the bottle price with C&C margin, beside the true cost and margin per bottle ([7bf9fdc](https://github.com/craftandculture/Craft-Culture/commit/7bf9fdc619feb7cc0de63d1dafe513a3e628b348))
+
 ## [2.0.540](https://github.com/craftandculture/Craft-Culture/compare/v2.0.539...v2.0.540) (2026-10-25)
 
 ### Bug Fixes
