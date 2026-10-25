@@ -43,7 +43,7 @@ const stamp = (date: Date) => format(date, 'd MMM, HH:mm');
   is named, or six labels would not fit.
 */
 const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }) => (
-  <ol className="mt-4 grid grid-cols-6" aria-label="Delivery progress">
+  <ol className="mt-5 grid grid-cols-6" aria-label="Delivery progress">
     {DELIVERY_STAGES.map(({ label }, index) => {
       const done = index < step || (index === step && step === DELIVERY_STAGES.length - 1);
       const current = index === step && !done;
@@ -53,7 +53,7 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
         <li key={label} className="min-w-0" aria-current={current ? 'step' : undefined}>
           <div className="flex items-center">
             <span
-              className={`flex size-4 flex-shrink-0 items-center justify-center rounded-full ${
+              className={`flex size-5 flex-shrink-0 items-center justify-center rounded-full ${
                 done
                   ? 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-black'
                   : current
@@ -61,8 +61,8 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
                     : 'bg-fill-muted'
               }`}
             >
-              {done && <IconCheck size={10} stroke={3} />}
-              {current && <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />}
+              {done && <IconCheck size={12} stroke={3} />}
+              {current && <span className="size-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />}
             </span>
             {index < DELIVERY_STAGES.length - 1 && (
               <span
@@ -73,7 +73,7 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
             )}
           </div>
           <p
-            className={`mt-1.5 truncate pr-2 text-[11px] ${
+            className={`mt-2 truncate pr-2 text-sm ${
               index === step
                 ? 'text-text-primary block font-semibold'
                 : index < step
@@ -85,7 +85,7 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
           </p>
           {time && (
             <p
-              className={`text-text-muted truncate pr-2 text-[10px] tabular-nums ${
+              className={`text-text-muted truncate pr-2 text-xs tabular-nums ${
                 index === step ? 'block' : 'hidden sm:block'
               }`}
             >
@@ -189,19 +189,19 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
     ].filter(Boolean);
 
     return (
-      <li key={request.id} className="px-4 py-4 sm:px-5">
+      <li key={request.id} className="px-4 py-5 sm:px-6">
         <div className="flex items-baseline justify-between gap-4">
-          <p className="text-text-primary text-base font-semibold">
+          <p className="text-text-primary text-lg font-semibold">
             {step === 5 && request.deliveredAt
               ? `Delivered ${format(new Date(request.deliveredAt), 'd MMMM')}`
               : stage?.headline}
           </p>
-          <span className="text-text-muted flex-shrink-0 font-mono text-[11px]">
+          <span className="text-text-muted flex-shrink-0 font-mono text-xs">
             {request.requestNumber}
             {request.orderNumber ? ` · ${request.orderNumber}` : ''}
           </span>
         </div>
-        <p className="text-text-muted mt-0.5 text-xs">{details.join(' · ')}</p>
+        <p className="text-text-muted mt-1 text-sm">{details.join(' · ')}</p>
 
         {section === 'live' && <ProgressSteps step={step} times={reachedAt(request)} />}
 
@@ -214,17 +214,17 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
             {wines.map((item, index) => (
               <li
                 key={`${item.productName}-${index}`}
-                className="flex items-center justify-between gap-4 py-2"
+                className="flex items-center justify-between gap-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="text-text-primary truncate text-sm font-medium">
+                  <p className="text-text-primary truncate text-base font-medium">
                     {collectorWineName(item.productName)}
                   </p>
-                  <p className="text-text-muted text-xs tabular-nums">
+                  <p className="text-text-muted text-sm tabular-nums">
                     {item.vintage ?? 'NV'} · {bottleName(item.bottleSize)}
                   </p>
                 </div>
-                <span className="bg-surface-muted text-text-secondary flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums">
+                <span className="bg-surface-muted text-text-secondary flex-shrink-0 rounded-full px-3 py-1 text-sm font-medium tabular-nums">
                   {item.bottles} {item.bottles === 1 ? 'bottle' : 'bottles'}
                 </span>
               </li>
@@ -235,7 +235,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
               type="button"
               onClick={() => toggleWines(request.id)}
               aria-expanded={isOpen}
-              className="text-text-muted hover:text-text-primary mt-1 inline-flex items-center gap-1 text-xs font-semibold"
+              className="text-text-muted hover:text-text-primary mt-2 inline-flex items-center gap-1 text-sm font-semibold"
             >
               {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
               <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -252,10 +252,10 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
     >
       {live.length > 0 && (
         <>
-          <header className="border-border-muted flex items-center gap-2 border-b px-4 py-2.5">
-            <IconTruckDelivery size={15} className="text-text-muted" />
-            <p className="text-text-primary text-[11px] font-semibold uppercase tracking-wider">Your deliveries</p>
-            <span className="bg-surface-muted text-text-muted rounded-full px-1.5 text-[10px] font-semibold tabular-nums">
+          <header className="border-border-muted flex items-center gap-2 border-b px-4 py-3 sm:px-6">
+            <IconTruckDelivery size={18} className="text-text-muted" />
+            <p className="text-text-primary text-base font-semibold">In progress</p>
+            <span className="bg-surface-muted text-text-muted rounded-full px-2 text-xs font-semibold tabular-nums">
               {live.length}
             </span>
           </header>
@@ -269,7 +269,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
             type="button"
             onClick={() => setShowPast((value) => !value)}
             aria-expanded={showPast}
-            className="text-text-muted hover:text-text-primary flex w-full items-center justify-between px-4 py-2.5 text-xs font-semibold"
+            className="text-text-muted hover:text-text-primary flex w-full items-center justify-between px-4 py-3 text-sm font-semibold sm:px-6"
           >
             <span>
               Past deliveries <span className="tabular-nums">({past.length})</span>
@@ -285,7 +285,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
                 <button
                   type="button"
                   onClick={() => setShowAllPast(true)}
-                  className="text-text-muted hover:text-text-primary border-border-muted w-full border-t px-4 py-2 text-xs font-semibold"
+                  className="text-text-muted hover:text-text-primary border-border-muted w-full border-t px-4 py-2.5 text-sm font-semibold"
                 >
                   Show all {past.length}
                 </button>
