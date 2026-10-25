@@ -5,6 +5,7 @@ import {
   IconDots,
   IconFileInvoice,
   IconFileText,
+  IconHistory,
   IconShoppingBag,
   IconSparkles,
   IconTag,
@@ -48,6 +49,7 @@ const CellarPhoneTabs = () => {
     { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
     { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
     { href: '/platform/cellar/statement', label: 'Statement', icon: IconFileText },
+    { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
     { href: '/platform/cellar/profile', label: 'Your details', icon: IconUserCircle },
   ];
 

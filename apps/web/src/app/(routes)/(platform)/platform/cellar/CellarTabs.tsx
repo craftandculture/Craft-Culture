@@ -2,6 +2,7 @@
 
 import {
   IconBottle,
+  IconHistory,
   IconShoppingBag,
   IconSparkles,
   IconTag,
@@ -31,6 +32,8 @@ const tabs = [
     not the catalogue it was bought from.
   */
   { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
+  // Every arrival, delivery and sale the day it happened; the statement summarises it
+  { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
 ];
 
 /**

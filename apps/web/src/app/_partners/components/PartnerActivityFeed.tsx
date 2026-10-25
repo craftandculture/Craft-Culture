@@ -59,6 +59,10 @@ const timeLabel = (value: Date | string) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/** Drops a trailing pack note, "(6x75cl)", "(1x)", "(Single)": the quantity beside it says it */
+const withoutPackNote = (name: string) =>
+  name.replace(/\s*\(\s*(\d+\s*x\s*(\d+(\.\d+)?\s*(cl|ml|l))?|single)\s*\)\s*$/i, '').trim();
+
 /** One event: icon, what happened and to what, quantity and time */
 const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
   const style =
@@ -78,7 +82,7 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-text-muted">{entry.title}</p>
-        <p className="truncate text-[14px] font-medium text-text-primary">{entry.subject}</p>
+        <p className="truncate text-[14px] font-medium text-text-primary">{withoutPackNote(entry.subject)}</p>
         {entry.detail && (
           <p className="mt-0.5 line-clamp-2 text-[12px] text-text-muted">{entry.detail}</p>
         )}
@@ -97,6 +101,41 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
   );
 };
 
+/**
+ * One line inside an opened group
+ *
+ * Indented under its header on a tinted panel, with no icon disc and a
+ * smaller type size, so an opened order reads as its contents rather than
+ * as more orders. The bay and quantity sit on one line beneath the wine.
+ */
+const SubRow = ({
+  entry,
+  groupTitle,
+}: {
+  entry: PartnerActivityEntry;
+  /** The opened group's own title, not repeated on every line under it */
+  groupTitle?: string;
+}) => {
+  const quantity =
+    entry.kind === 'correction' && entry.quantity && !entry.quantity.startsWith('−')
+      ? `+${entry.quantity}`
+      : entry.quantity;
+
+  return (
+    <div className="flex items-baseline gap-3 py-2 pl-3 pr-4">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] text-text-primary">{withoutPackNote(entry.subject)}</p>
+        <p className="text-[11.5px] text-text-muted">
+          {[entry.title === groupTitle ? null : entry.title, entry.detail].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <span className="flex-none text-[12px] font-medium tabular-nums text-text-primary">{quantity}</span>
+      <span className="w-10 flex-none text-right text-[11px] tabular-nums text-text-muted">
+        {timeLabel(entry.at)}
+      </span>
+    </div>
+  );
+};
 
 /**
  * One feed for everything that has happened to a partner.
@@ -110,8 +149,14 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
  * Each day opens with a one-line summary, so a week can be scanned without
  * reading every row.
  */
-const PartnerActivityFeed = () => {
+export interface PartnerActivityFeedProps {
+  /** A Private Cellar member's feed: their stock only, buyers named */
+  source?: 'partner' | 'cellar';
+}
+
+const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) => {
   const api = useTRPC();
+  const isCellar = source === 'cellar';
   const [streams, setStreams] = useState<Stream[]>([]);
   // Folded rows the user has opened: a day's housekeeping, or an order's picks
   const [opened, setOpened] = useState<Set<string>>(new Set());
@@ -123,12 +168,19 @@ const PartnerActivityFeed = () => {
       return next;
     });
 
-  const { data, isLoading } = useQuery(
-    api.partners.getActivity.queryOptions({
+  const partnerQuery = useQuery({
+    ...api.partners.getActivity.queryOptions({
       streams: streams.length > 0 ? streams : undefined,
       limit: 150,
     }),
-  );
+    enabled: !isCellar,
+  });
+  const cellarQuery = useQuery({
+    ...api.cellar.member.getActivity.queryOptions({ limit: 200 }),
+    enabled: isCellar,
+  });
+  const data = isCellar ? cellarQuery.data : partnerQuery.data;
+  const isLoading = isCellar ? cellarQuery.isLoading : partnerQuery.isLoading;
 
   const entries = data?.entries ?? [];
   type Entry = PartnerActivityEntry;
@@ -189,12 +241,12 @@ const PartnerActivityFeed = () => {
       .join(' · ');
   };
 
-  const summary = data?.summary;
+  const summary = !isCellar ? partnerQuery.data?.summary : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,48rem)_17rem]">
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className={`flex flex-wrap items-center gap-1.5 ${isCellar ? 'hidden' : ''}`}>
         {STREAMS.map((stream) => {
           const on = streams.includes(stream.key);
           return (
@@ -263,7 +315,10 @@ const PartnerActivityFeed = () => {
                         <button
                           type="button"
                           onClick={() => toggle(key)}
-                          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-fill-muted/30"
+                          aria-expanded={isOpen}
+                          className={`flex w-full items-start gap-3 px-4 py-3 text-left ${
+                            isOpen ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                          }`}
                         >
                           <span
                             className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${KIND_STYLE.out.disc}`}
@@ -273,7 +328,7 @@ const PartnerActivityFeed = () => {
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-[12px] font-medium text-text-muted">
-                              Picked for an order
+                              {item.entries[0]?.title ?? 'Picked for an order'}
                             </span>
                             <span className="block text-[14px] font-medium text-text-primary">
                               {item.ref} · {plural(item.entries.length, 'wine')}
@@ -294,10 +349,12 @@ const PartnerActivityFeed = () => {
                           </span>
                         </button>
                         {isOpen && (
-                          <div className="divide-y divide-border-muted border-t border-border-muted bg-fill-muted/20">
-                            {item.entries.map((entry) => (
-                              <Row key={entry.id} entry={entry} />
-                            ))}
+                          <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                            <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                              {item.entries.map((entry) => (
+                                <SubRow key={entry.id} entry={entry} groupTitle={item.entries[0]?.title} />
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -309,7 +366,10 @@ const PartnerActivityFeed = () => {
                       <button
                         type="button"
                         onClick={() => toggle(`${day}|housekeeping`)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-fill-muted/30"
+                        aria-expanded={open}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${
+                          open ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                        }`}
                       >
                         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-fill-muted text-text-muted">
                           <Icon icon={IconAdjustmentsHorizontal} size="sm" />
@@ -338,10 +398,12 @@ const PartnerActivityFeed = () => {
                         />
                       </button>
                       {open && (
-                        <div className="divide-y divide-border-muted bg-fill-muted/20">
-                          {housekeeping.map((entry) => (
-                            <Row key={entry.id} entry={entry} />
-                          ))}
+                        <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                          <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                            {housekeeping.map((entry) => (
+                              <SubRow key={entry.id} entry={entry} />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>

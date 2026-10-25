@@ -16,6 +16,8 @@ interface MoveBottlesParams {
    * transaction. Generating it inside one can deadlock the connection pool.
    */
   movementNumber?: string;
+  /** When, if not now: a take-out recorded after the event is dated when it happened */
+  performedAt?: Date;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }
@@ -54,6 +56,7 @@ const moveBottlesToSingles = async ({
   bottles,
   performedBy,
   movementNumber,
+  performedAt = new Date(),
   db,
 }: MoveBottlesParams) => {
   if (bottles <= 0) return null;
@@ -105,7 +108,7 @@ const moveBottlesToSingles = async ({
       notes: `Loose bottles from a cracked ${source.caseConfig ?? '?'}-pack of ${source.lwin18}`,
       reasonCode: 'split_case',
       performedBy,
-      performedAt: new Date(),
+      performedAt,
     });
   };
 

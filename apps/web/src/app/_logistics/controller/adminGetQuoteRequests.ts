@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, ilike, inArray, lt, or } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   logisticsForwarders,
+  logisticsQuoteLineItems,
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
@@ -11,11 +12,13 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getUaeArrivalRateCard from '../data/getUaeArrivalRateCard';
 import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
+import quoteAllInPrices from '../utils/quoteAllInPrices';
 import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
-import quoteUnitPrices from '../utils/quoteUnitPrices';
 import requestUnitCounts from '../utils/requestUnitCounts';
+import uaeArrivalCharge from '../utils/uaeArrivalCharge';
 
 /**
  * List quote requests with filtering and pagination
@@ -182,20 +185,37 @@ const adminGetQuoteRequests = adminProcedure
           .orderBy(asc(logisticsForwarders.name))
       : [];
 
+    const quoteIds = quoteRows.map((q) => q.id);
+    const [lineRows, rateCard] = await Promise.all([
+      quoteIds.length
+        ? db
+            .select({
+              quoteId: logisticsQuoteLineItems.quoteId,
+              category: logisticsQuoteLineItems.category,
+            })
+            .from(logisticsQuoteLineItems)
+            .where(inArray(logisticsQuoteLineItems.quoteId, quoteIds))
+        : [],
+      getUaeArrivalRateCard(),
+    ]);
+
     return {
       requests: items.map(({ jobBottles, ...r }) => {
         const counts = requestUnitCounts(r, jobBottles);
 
-        // Ranked in USD per 75cl, so a quote in pounds and one in dollars compare
+        // Ranked all-in (freight + UAE arrival) in USD per 75cl, so currencies compare
         const quotes = quoteRows
           .filter((q) => q.requestId === r.id)
           .map((q) => {
-            const usd = quoteTotalUsd(q);
+            const arrival = uaeArrivalCharge(
+              rateCard,
+              r,
+              lineRows.filter((l) => l.quoteId === q.id).map((l) => l.category),
+            );
 
             return {
               ...q,
-              totalUsd: usd,
-              ...quoteUnitPrices(usd, counts.bottles, counts.equivalents),
+              ...quoteAllInPrices(quoteTotalUsd(q), arrival, counts),
             };
           })
           .sort(
@@ -214,8 +234,8 @@ const adminGetQuoteRequests = adminProcedure
           recipients,
           nextStep: quoteRequestNextStep({ ...r, quotes, recipients }),
           marginUsd:
-            r.clientPriceUsd != null && chosen?.totalUsd != null
-              ? Math.round((r.clientPriceUsd - chosen.totalUsd) * 100) / 100
+            r.clientPriceUsd != null && chosen?.allInUsd != null
+              ? Math.round((r.clientPriceUsd - chosen.allInUsd) * 100) / 100
               : null,
         };
       }),

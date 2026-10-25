@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import RelabelRemainderPrompt from '@/app/_wms/components/RelabelRemainderPrompt';
+import type { RemainderToRelabel } from '@/app/_wms/components/RelabelRemainderPrompt';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import type { StockOutReason } from '@/app/_wms/constants/stockOutReasons';
 import planStockOut from '@/app/_wms/utils/planStockOut';
@@ -41,29 +43,70 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
   const [price, setPrice] = useState('');
   const [reference, setReference] = useState('');
   const [backdated, setBackdated] = useState(false);
+  // The day it actually left, when recorded afterwards
+  const [leftOn, setLeftOn] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [remainder, setRemainder] = useState<RemainderToRelabel | null>(null);
 
-  const row = locations.find((loc) => loc.stockId === stockId);
+  // "all:<owner>": every bay of one owner, never another owner's bottles
+  const allOwner = stockId.startsWith('all:') ? stockId.slice(4) : null;
+  const ownerLocations = allOwner ? locations.filter((loc) => loc.ownerName === allOwner) : [];
+  const ownersWithSeveral = [...new Set(locations.map((loc) => loc.ownerName))].filter(
+    (owner) => locations.filter((loc) => loc.ownerName === owner).length > 1,
+  );
   const pack = caseConfig ?? 12;
   const rule = STOCK_OUT_REASONS[reason];
-  const plan = row
-    ? planStockOut(
-        { quantityCases: row.quantityCases, availableCases: row.availableCases, openBottles: row.openBottles ?? 0, pack },
-        unit,
-        quantity,
-      )
-    : { ok: false as const, error: 'Choose a bay.' };
+  const freeIn = (loc: (typeof locations)[number]) =>
+    unit === 'case' ? loc.availableCases : loc.availableCases * pack + (loc.openBottles ?? 0);
+
+  /*
+    One bay, or every bay in turn: a wine split across B-04-00 and B-04-01
+    could only be taken one bay at a time. "All bays" takes from each in
+    order until the quantity is met, one record per bay.
+  */
+  const steps =
+    allOwner
+      ? (() => {
+          let left = quantity;
+          const taken: { stockId: string; quantity: number }[] = [];
+          for (const loc of ownerLocations) {
+            if (left <= 0) break;
+            const take = Math.min(freeIn(loc), left);
+            if (take > 0) taken.push({ stockId: loc.stockId, quantity: take });
+            left -= take;
+          }
+          return left > 0 ? null : taken;
+        })()
+      : [{ stockId, quantity }];
+
+  const row = locations.find((loc) => loc.stockId === stockId);
+  const totalFree = ownerLocations.reduce((sum, loc) => sum + freeIn(loc), 0);
+  const plan =
+    allOwner
+      ? steps
+        ? {
+            ok: true as const,
+            bottlesOut: unit === 'case' ? quantity * pack : quantity,
+            casesRemoved: 0,
+            leftover: 0,
+          }
+        : { ok: false as const, error: `Only ${totalFree} ${unit === 'case' ? 'case(s)' : 'bottle(s)'} free across all bays.` }
+      : row
+        ? planStockOut(
+            { quantityCases: row.quantityCases, availableCases: row.availableCases, openBottles: row.openBottles ?? 0, pack },
+            unit,
+            quantity,
+          )
+        : { ok: false as const, error: 'Choose a bay.' };
+  const ownerName = allOwner ?? row?.ownerName;
   const missing =
-    (rule.needsRecipient && !recipient.trim() ? 'Say who or what they went to. ' : '') +
-    (rule.needsPrice && (!(Number(price) > 0) || !reference.trim()) ? 'Add the price per bottle and a reference.' : '');
+    (rule.needsRecipient && !recipient.trim() ? `Fill in "${rule.detailLabel}". ` : '') +
+    (rule.needsPrice && (!(Number(price) > 0) || !reference.trim()) ? 'Add the price per bottle and a reference. ' : '') +
+    (backdated && !leftOn ? 'Add the date they left.' : '');
 
   const takeOut = useMutation(
     api.wms.admin.stock.takeOut.mutationOptions({
-      onSuccess: async (result) => {
-        toast.success(`${result.bottles} bottle(s) taken out of ${result.ownerName}'s stock. They see: ${result.ownerSees}.`);
-        await queryClient.invalidateQueries();
-        onClose();
-      },
+      // Success is reported once by submit, after every bay is done
       onError: (error) => {
         toast.error(error.message);
         setConfirming(false);
@@ -71,20 +114,50 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
     }),
   );
 
-  const submit = () =>
-    takeOut.mutate({
-      stockId,
-      unit,
-      quantity,
-      reason,
-      recipient: recipient.trim() || undefined,
-      note: note.trim() || undefined,
-      unitPriceUsd: rule.needsPrice ? Number(price) : undefined,
-      reference: rule.needsPrice ? reference.trim() : undefined,
-      backdated,
-    });
+  const submit = async () => {
+    if (!steps) return;
+    let lastResult: Awaited<ReturnType<typeof takeOut.mutateAsync>> | null = null;
+    let bottlesOut = 0;
+    for (const step of steps) {
+      // One record per bay; a failure stops the rest (onError reports it)
+      const result = await takeOut
+        .mutateAsync({
+        stockId: step.stockId,
+        unit,
+        quantity: step.quantity,
+        reason,
+        recipient: recipient.trim() || undefined,
+        note: note.trim() || undefined,
+        unitPriceUsd: rule.needsPrice ? Number(price) : undefined,
+        reference: rule.needsPrice ? reference.trim() : undefined,
+        backdated,
+        leftOn: backdated && leftOn ? leftOn : undefined,
+      })
+        .catch(() => null);
+      if (!result) return;
+      lastResult = result;
+      bottlesOut += result.bottles;
+    }
+    if (!lastResult) return;
+    toast.success(`${bottlesOut} bottle(s) taken out of ${lastResult.ownerName}'s stock. They see: ${lastResult.ownerSees}.`);
+    await queryClient.invalidateQueries();
+    if (lastResult.remainder) {
+      setRemainder({ ...lastResult.remainder, bottles: Number(lastResult.remainder.bottles) });
+      return;
+    }
+    onClose();
+  };
+
 
   const field = 'border-border-muted bg-background-primary rounded-md border px-2 py-1.5 text-sm';
+
+  if (remainder) {
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <RelabelRemainderPrompt remainder={remainder} onDone={onClose} />
+      </div>
+    );
+  }
 
   return (
     <div className="border-border-muted space-y-3 rounded-lg border bg-amber-50/60 p-3 dark:bg-amber-900/10" onClick={(e) => e.stopPropagation()}>
@@ -103,6 +176,15 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
               <option key={loc.stockId} value={loc.stockId}>
                 {loc.locationCode} · {loc.ownerName} · {loc.availableCases} free of {loc.quantityCases}
                 {loc.openBottles ? ` +${loc.openBottles} loose` : ''}
+              </option>
+            ))}
+            {ownersWithSeveral.map((owner) => (
+              <option key={`all:${owner}`} value={`all:${owner}`}>
+                All bays · {owner} ·{' '}
+                {locations
+                  .filter((loc) => loc.ownerName === owner)
+                  .reduce((sum, loc) => sum + loc.availableCases * pack + (loc.openBottles ?? 0), 0)}{' '}
+                bottles free
               </option>
             ))}
           </select>
@@ -135,8 +217,8 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium">
-          {rule.needsRecipient ? 'Went to (required)' : 'Went to'}
-          <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Event, client or person" className={field} />
+          {rule.needsRecipient ? `${rule.detailLabel} (required)` : rule.detailLabel}
+          <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder={rule.detailHint} className={field} />
         </label>
         {rule.needsPrice && (
           <>
@@ -160,11 +242,28 @@ const TakeOutOfStockPanel = ({ productName, caseConfig, locations, onClose }: Ta
         <input type="checkbox" checked={backdated} onChange={(e) => setBackdated(e.target.checked)} />
         These bottles already left earlier and are only being recorded now
       </label>
+      {backdated && (
+        <label className="flex flex-wrap items-center gap-2 text-xs font-medium">
+          Date they left
+          <input
+            id="take-out-left-on"
+            type="date"
+            value={leftOn}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setLeftOn(e.target.value)}
+            className={field}
+          />
+          <span className="text-text-muted font-normal">
+            The owner&apos;s timeline and statement show it on this day.
+          </span>
+        </label>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {plan.ok ? (
           <span>
-            {plan.bottlesOut} bottle(s) leave {row?.ownerName}&apos;s stock
+            {plan.bottlesOut} bottle(s) leave {ownerName}&apos;s stock
+            {allOwner && steps ? ` from ${steps.length} bays` : ''}
             {plan.casesRemoved > 0 && unit === 'bottle' && pack > 1 ? `, opening ${plan.casesRemoved} case(s)` : ''}
             {plan.ok && plan.leftover > 0 ? `; ${plan.leftover} go back as singles` : ''}. The owner sees: <strong>{rule.ownerSees}</strong>.
           </span>

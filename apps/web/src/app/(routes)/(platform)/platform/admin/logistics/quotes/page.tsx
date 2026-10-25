@@ -28,6 +28,7 @@ import {
   secondaryButton,
   sectionHeading,
 } from '@/app/_logistics/components/exports/exportUi';
+import UaeArrivalCostsCard from '@/app/_logistics/components/quotes/UaeArrivalCostsCard';
 import type { QuoteRequestNextStep } from '@/app/_logistics/utils/quoteRequestNextStep';
 import type {
   logisticsQuoteRequestStatus,
@@ -381,6 +382,8 @@ const FreightQuotesPage = () => {
         />
       </div>
 
+      {!shipmentId && <UaeArrivalCostsCard />}
+
       {/* Requests: one line each — who and where, what it waits on, the best price */}
       {!shipmentId && focus !== 'standalone' && (
         <div className={card}>
@@ -424,7 +427,6 @@ const FreightQuotesPage = () => {
                 const meta = [
                   r.job?.shipmentNumber,
                   r.bottles ? `${r.bottles.toLocaleString('en-GB')} btl` : r.totalCases ? `${r.totalCases} cs` : null,
-                  r.transportMode ? modeLabel[r.transportMode] : null,
                   r.recipients.length
                     ? `${quoted} of ${r.recipients.length} forwarder${r.recipients.length === 1 ? '' : 's'} quoted`
                     : null,
@@ -438,18 +440,24 @@ const FreightQuotesPage = () => {
                       className="hover:bg-surface-secondary/50 flex items-center gap-4 px-4 py-3 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-text-primary truncate text-sm font-semibold">
                             {r.clientName || 'No client'}
-                          </span>
-                          <span className="text-text-muted truncate text-sm">
-                            {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
                           </span>
                           {r.priority === 'urgent' && (
                             <span className={pillClass('red')}>Urgent</span>
                           )}
                         </div>
-                        <p className="text-text-muted mt-0.5 flex items-center gap-1.5 truncate text-xs">
+                        {/* The service on its own line, so it no longer reads as part of the client's name */}
+                        <div className="mt-1 flex items-center gap-2">
+                          {r.transportMode && (
+                            <span className={pillClass('slate')}>{modeLabel[r.transportMode]}</span>
+                          )}
+                          <span className="text-text-secondary truncate text-sm">
+                            {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
+                          </span>
+                        </div>
+                        <p className="text-text-muted mt-1 flex items-center gap-1.5 truncate text-xs">
                           <span className="font-mono">{r.requestNumber}</span>
                           {meta.map((m) => (
                             <span key={m} className="truncate">· {m}</span>
@@ -470,6 +478,12 @@ const FreightQuotesPage = () => {
                             <span className="text-text-muted block text-[11px]">
                               {live.length > 1 ? `best of ${live.length}` : forwarderLabel(best.forwarderName)}
                             </span>
+                            {best.arrivalPerBottleUsd != null && best.freightPerBottleUsd != null && (
+                              <span className="text-text-muted block text-[11px] tabular-nums">
+                                Freight {best.freightPerBottleUsd.toFixed(2)} · UAE arrival{' '}
+                                {best.arrivalPerBottleUsd.toFixed(2)}
+                              </span>
+                            )}
                           </>
                         ) : (
                           <span className="text-text-muted text-xs">No quotes yet</span>

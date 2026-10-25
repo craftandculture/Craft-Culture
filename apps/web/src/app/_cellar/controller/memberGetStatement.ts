@@ -3,7 +3,9 @@ import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
+import getOwnerWineCosts from '@/app/_wms/data/getOwnerWineCosts';
 import displayWineName from '@/app/_wms/utils/displayWineName';
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
   cellarPurchases,
@@ -15,8 +17,10 @@ import {
   lwinWines,
   poolSales,
   privateClientOrders,
+  saleMandates,
   wmsStock,
   wmsStockMovements,
+  wmsStockOutflows,
   zohoSalesOrders,
 } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
@@ -247,7 +251,9 @@ const memberGetStatement = stockOwnerProcedure
       customer and order are named (trade partners never are: see
       partnerMovementDetail).
     */
-    const leftRows = await db
+    // Up to the end of this month; from its start for the month's lines, from the beginning for what is owed
+    const readLeft = (since: Date | null) =>
+      db
       .select({
         id: wmsStockMovements.id,
         movementType: wmsStockMovements.movementType,
@@ -261,14 +267,17 @@ const memberGetStatement = stockOwnerProcedure
         customerName: zohoSalesOrders.customerName,
         pcoNumber: privateClientOrders.orderNumber,
         orderId: wmsStockMovements.orderId,
+        unitPriceUsd: wmsStockOutflows.unitPriceUsd,
       })
       .from(wmsStockMovements)
       .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
       .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
+      .leftJoin(wmsStockOutflows, eq(wmsStockOutflows.movementId, wmsStockMovements.id))
       .where(
         and(
           eq(wmsStockMovements.fromOwnerId, partnerId),
-          inMonth(wmsStockMovements.performedAt),
+          since ? gte(wmsStockMovements.performedAt, since) : undefined,
+          lt(wmsStockMovements.performedAt, to),
           or(
             eq(wmsStockMovements.movementType, 'pick'),
             and(
@@ -281,17 +290,89 @@ const memberGetStatement = stockOwnerProcedure
       )
       .orderBy(wmsStockMovements.performedAt);
 
+    const [leftRows, leftToDate, mandates, costs, [paidToDate], [poolToDate]] = await Promise.all([
+      readLeft(from),
+      readLeft(null),
+      db
+        .select({ lwin18: saleMandates.lwin18, lwinKey: saleMandates.lwinKey, ask: saleMandates.askPerBottleUsd })
+        .from(saleMandates)
+        .where(
+          and(
+            eq(saleMandates.ownerId, partnerId),
+            inArray(saleMandates.status, ['offered', 'listed', 'placed', 'partially_sold', 'sold']),
+          ),
+        ),
+      getOwnerWineCosts(partnerId),
+      db
+        .select({ total: sql<number>`COALESCE(SUM(${consignmentSettlements.owedToOwner}), 0)::float` })
+        .from(consignmentSettlements)
+        .where(
+          and(
+            eq(consignmentSettlements.ownerId, partnerId),
+            eq(consignmentSettlements.status, 'settled'),
+            lt(consignmentSettlements.settledAt, to),
+          ),
+        ),
+      db
+        .select({ total: sql<number>`COALESCE(SUM(${poolSales.owedToOwnerUsd}), 0)::float` })
+        .from(poolSales)
+        .where(and(eq(poolSales.ownerId, partnerId), lt(poolSales.soldAt, to))),
+    ]);
+
+    /*
+      What each bottle that left is worth to the owner. A sale is valued at
+      the owner's own price for that wine (their Selling offer, or the price
+      agreed with C&C and recorded there). Samples and damage are at what the
+      bottle cost them to land. Deliveries, collections and count corrections
+      carry no money. No price yet means null: shown as "price being agreed",
+      never as $0.
+    */
+    /*
+      The exact code first: two wines can share the pack-agnostic key and
+      differ only in the pack digits (Arnoux-Lachaux village Chambolle and Clos
+      des Danguerins), so a price falls back to the key only when one offer
+      holds it.
+    */
+    const askByLwin = new Map(mandates.map((row) => [row.lwin18, row.ask]));
+    const offersPerKey = new Map<string, number>();
+    for (const row of mandates) offersPerKey.set(row.lwinKey, (offersPerKey.get(row.lwinKey) ?? 0) + 1);
+    const askByKey = new Map(
+      mandates.filter((row) => offersPerKey.get(row.lwinKey) === 1).map((row) => [row.lwinKey, row.ask]),
+    );
+    const askFor = (lwin18: string) => askByLwin.get(lwin18) ?? askByKey.get(lwinPakKeyOf(lwin18));
+    const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
+      if (isOwnDelivery || row.movementType === 'count') return null;
+      if (row.reasonCode?.startsWith('stock_out:')) {
+        const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
+        if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
+        if (rule?.settlement === 'cc_landed' || rule?.settlement === 'owner_reimbursed') {
+          const landed = costs.get(lwinPakKeyOf(row.lwin18))?.landedPerBottle;
+          return landed != null ? bottles * landed : null;
+        }
+        return null;
+      }
+      const ask = askFor(row.lwin18);
+      return ask != null ? bottles * ask : null;
+    };
+
     /*
       The member's own deliveries, whether picked as the delivery order or as
       a Zoho order referencing it. Once delivered this month they are listed
       under Delivered, so are not listed twice; until then they are on their
       way to the member, not sold.
     */
-    const ownDeliveries = await getOwnerDeliveryOwners(leftRows.map((row) => row.orderId));
+    const ownDeliveries = await getOwnerDeliveryOwners(leftToDate.map((row) => row.orderId));
     const deliveryOf = (row: (typeof leftRows)[number]) => {
       const delivery = row.orderId ? ownDeliveries.get(row.orderId) : undefined;
       return delivery?.ownerId === partnerId ? delivery : undefined;
     };
+    const bottlesOfLeft = (row: (typeof leftRows)[number]) =>
+      Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18));
+    const amountOf = (row: (typeof leftRows)[number]) => {
+      const value = valueOf(row, bottlesOfLeft(row), !!deliveryOf(row));
+      return value != null ? Math.round(value * 100) / 100 : null;
+    };
+
     const leftShown = leftRows.filter((row) => {
       const delivery = deliveryOf(row);
       return !(
@@ -317,6 +398,54 @@ const memberGetStatement = stockOwnerProcedure
       }
       if (row.pcoNumber) return `Private client order · ${row.pcoNumber}`;
       return 'Left the warehouse on an order';
+    };
+
+    /*
+      What became of each bottle, and the order it went on, so the page can
+      show one line per order (a delivery, a sale to one buyer) that opens to
+      the wines, instead of every wine in a single long list.
+    */
+    const isCollector = ctx.partner.type === 'private_collector';
+    const leftOutcome = (row: (typeof leftRows)[number]) => {
+      const delivery = deliveryOf(row);
+      if (delivery) {
+        return {
+          outcome: 'delivery' as const,
+          groupKey: `delivery:${delivery.pcoNumber}`,
+          groupLabel: `Your delivery · ${delivery.pcoNumber}`,
+          status: delivery.status === 'delivered' ? 'Delivered' : 'On its way',
+        };
+      }
+      if (row.reasonCode?.startsWith('stock_out:')) {
+        const reason = row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS;
+        const rule = STOCK_OUT_REASONS[reason];
+        if (rule?.settlement === 'cc_landed') {
+          return { outcome: 'sale' as const, groupKey: 'sale:cc', groupLabel: 'Sold to Craft & Culture · samples and tastings', status: null };
+        }
+        if (rule?.settlement === 'price') {
+          return { outcome: 'sale' as const, groupKey: 'sale:direct', groupLabel: 'Sold', status: null };
+        }
+        if (rule?.settlement === 'owner_reimbursed') {
+          return { outcome: 'reimbursed' as const, groupKey: `reimbursed:${reason}`, groupLabel: rule.ownerSees, status: null };
+        }
+        return { outcome: 'collected' as const, groupKey: `collected:${reason}`, groupLabel: rule?.ownerSees ?? 'Taken out of stock', status: null };
+      }
+      if (row.movementType === 'count') {
+        return { outcome: 'adjustment' as const, groupKey: 'adjustment', groupLabel: 'Stock count adjustment', status: null };
+      }
+      const order = row.salesOrderNumber ?? row.pcoNumber ?? 'order';
+      // Only a collector is told who bought it: trade partners never see counterparties
+      const buyer = isCollector
+        ? row.salesOrderNumber
+          ? (row.customerName ?? 'a buyer')
+          : 'a private client'
+        : null;
+      return {
+        outcome: 'sale' as const,
+        groupKey: `sale:${order}`,
+        groupLabel: buyer ? `Sold to ${buyer} · ${order}` : `Sold · order ${order}`,
+        status: null,
+      };
     };
 
     /*
@@ -514,6 +643,8 @@ const memberGetStatement = stockOwnerProcedure
         ...wineLine(row.productName, row.lwin18),
         bottles: Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18)),
         note: leftNote(row),
+        ...leftOutcome(row),
+        amountUsd: amountOf(row),
       })),
 
       sold: sold.map((row) => ({
@@ -522,13 +653,43 @@ const memberGetStatement = stockOwnerProcedure
         amountUsd: round(row.amountUsd),
       })),
       soldUsd: round(sold.reduce((sum, row) => sum + row.amountUsd, 0)),
+      // Sales recorded from the warehouse this month, valued at the owner's price
+      soldLeftUsd: round(
+        leftShown
+          .filter((row) => leftOutcome(row).outcome === 'sale')
+          .reduce((sum, row) => sum + (amountOf(row) ?? 0), 0),
+      ),
+      reimbursedUsd: round(
+        leftShown
+          .filter((row) => leftOutcome(row).outcome === 'reimbursed')
+          .reduce((sum, row) => sum + (amountOf(row) ?? 0), 0),
+      ),
+      // Bottles sold with no price yet: "price being agreed", never $0
+      unpricedBottles: leftShown
+        .filter((row) => ['sale', 'reimbursed'].includes(leftOutcome(row).outcome) && amountOf(row) == null)
+        .reduce((sum, row) => sum + bottlesOfLeft(row), 0),
+      // Everything earned to the end of this month, less everything paid
+      owedUsd: round(
+        leftToDate.reduce((sum, row) => sum + (amountOf(row) ?? 0), 0) +
+          (poolToDate?.total ?? 0) -
+          (paidToDate?.total ?? 0),
+      ),
       paidUsd: round(paid.reduce((sum, row) => sum + row.amountUsd, 0)),
 
-      holdings: holdings.map((row) => ({
-        ...row,
-        productName: displayWineName(row.productName),
-        bottles: row.cases * (row.caseConfig ?? 1),
-      })),
+      holdings: holdings.map((row) => {
+        const bottles = row.cases * (row.caseConfig ?? 1);
+        // The owner's own price where set, otherwise what it cost them
+        const ask = askFor(row.lwin18);
+        const perBottle = ask ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle ?? null;
+
+        return {
+          ...row,
+          productName: displayWineName(row.productName),
+          bottles,
+          valueUsd: perBottle != null ? round(bottles * perBottle) : null,
+          valueBasis: ask != null ? ('your price' as const) : perBottle != null ? ('cost' as const) : null,
+        };
+      }),
       ukHoldings,
       ukReportedAt,
     };

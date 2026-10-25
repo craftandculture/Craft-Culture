@@ -11,12 +11,12 @@ import {
   sourceRfqPartners,
   sourceRfqs,
   users,
-  wmsLocations,
   wmsStock,
   wmsStockMovements,
-  zohoSalesOrders,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import getStockActivity from '../data/getStockActivity';
 
 
 /** The three things that happen to a partner, in one shape. */
@@ -48,41 +48,9 @@ export interface PartnerActivityEntry {
   reference: string | null;
 }
 
-/** Stock movements in a partner's words, and the kind each one is */
-const STOCK_EVENTS: Record<string, { title: string; kind: PartnerActivityEntry['kind'] }> = {
-  receive: { title: 'Received', kind: 'in' },
-  putaway: { title: 'Put away', kind: 'internal' },
-  transfer: { title: 'Moved bay', kind: 'internal' },
-  pick: { title: 'Picked for an order', kind: 'out' },
-  repack_in: { title: 'Repacked', kind: 'internal' },
-  repack_out: { title: 'Repacked', kind: 'internal' },
-  adjust: { title: 'Stock corrected', kind: 'correction' },
-  count: { title: 'Stock count correction', kind: 'correction' },
-  dispatch: { title: 'Dispatched', kind: 'out' },
-};
-
-/**
- * A movement's quantity in words
- *
- * The pack is the third segment of the code. Single-bottle stock is counted
- * in bottles — "2 cs · 2 btl" for two loose bottles read as two cases. A
- * count correction keeps its sign, so a removal reads as one.
- */
 /** Bottles a movement moved: its own count when recorded, else cases × pack */
 const bottlesOf = (lwin18: string, cases: number, bottles: number | null) =>
   Math.abs(bottles ?? cases * (Number(lwin18.split('-')[2]) || 1));
-
-const quantityOf = (lwin18: string, cases: number, bottles: number | null) => {
-  const pack = Number(lwin18.split('-')[2]) || 0;
-  const plural = (n: number, word: string) => `${n} ${word}${Math.abs(n) === 1 ? '' : 's'}`;
-  const sign = cases < 0 ? '−' : '';
-  const n = Math.abs(cases);
-
-  if (pack === 1) return `${sign}${plural(n || Math.abs(bottles ?? 0), 'bottle')}`;
-  if (n === 0 && bottles) return plural(Math.abs(bottles), 'bottle');
-  if (n === 0) return null;
-  return `${sign}${plural(n, 'case')}${bottles && bottles !== n ? ` · ${Math.abs(bottles)} btl` : ''}`;
-};
 
 /** `awaiting_client_payment` → `Awaiting client payment`. */
 const humanise = (value: string | null) =>
@@ -119,88 +87,14 @@ const partnerGetActivity = winePartnerProcedure
     const entries: PartnerActivityEntry[] = [];
 
     if (wanted.has('stock')) {
-      const scope = await partnerMovementScope(partner.id);
-
-      if (scope.ownedLwins.length > 0) {
-        const fromLocation = db
-          .select({ id: wmsLocations.id, code: wmsLocations.locationCode })
-          .from(wmsLocations)
-          .as('from_location');
-        const toLocation = db
-          .select({ id: wmsLocations.id, code: wmsLocations.locationCode })
-          .from(wmsLocations)
-          .as('to_location');
-
-        const rows = await db
-          .select({
-            id: wmsStockMovements.id,
-            movementNumber: wmsStockMovements.movementNumber,
-            movementType: wmsStockMovements.movementType,
-            lwin18: wmsStockMovements.lwin18,
-            productName: wmsStockMovements.productName,
-            quantityCases: wmsStockMovements.quantityCases,
-            quantityBottles: wmsStockMovements.quantityBottles,
-            fromLocation: fromLocation.code,
-            toLocation: toLocation.code,
-            performedAt: wmsStockMovements.performedAt,
-            // A pick records the order it was for; that is a PCO or a Zoho SO
-            pcoNumber: privateClientOrders.orderNumber,
-            salesOrderNumber: zohoSalesOrders.salesOrderNumber,
-          })
-          .from(wmsStockMovements)
-          .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
-          .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
-          .leftJoin(fromLocation, eq(wmsStockMovements.fromLocationId, fromLocation.id))
-          .leftJoin(toLocation, eq(wmsStockMovements.toLocationId, toLocation.id))
-          .where(
-            and(
-              scope.condition,
-              inArray(wmsStockMovements.movementType, [
-                'receive',
-                'putaway',
-                'transfer',
-                'pick',
-                'repack_in',
-                'repack_out',
-                'adjust',
-                'count',
-                'dispatch',
-              ]),
-            ),
-          )
-          .orderBy(desc(wmsStockMovements.performedAt))
-          .limit(input.limit);
-
-        entries.push(
-          ...rows.map((row) => {
-            const event = STOCK_EVENTS[row.movementType] ?? {
-              title: row.movementType,
-              kind: 'internal' as const,
-            };
-            return {
-              id: `stock-${row.id}`,
-              stream: 'stock' as const,
-              kind: event.kind,
-              at: row.performedAt,
-              title: event.title,
-              subject: row.productName,
-              quantity: quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
-              bottles: bottlesOf(row.lwin18, row.quantityCases, row.quantityBottles),
-              orderRef: event.kind === 'out' ? (row.pcoNumber ?? row.salesOrderNumber ?? null) : null,
-              // Bays mean little to a partner; kept as the small print
-              detail:
-                row.fromLocation && row.toLocation
-                  ? `${row.fromLocation} → ${row.toLocation}`
-                  : row.fromLocation
-                    ? `from ${row.fromLocation}`
-                    : row.toLocation
-                      ? `into ${row.toLocation}`
-                      : null,
-              reference: row.movementNumber,
-            };
-          }),
-        );
-      }
+      entries.push(
+        ...(await getStockActivity({
+          partnerId: partner.id,
+          // A trade partner is never told who bought their wine
+          isCollector: false,
+          limit: input.limit,
+        })),
+      );
     }
 
     if (wanted.has('order')) {

@@ -11,6 +11,7 @@ import adminAutoPopulateImportPrice from './controller/adminAutoPopulateImportPr
 import adminBackfillStockDetails from './controller/adminBackfillStockDetails';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
+import adminChangeTakeOutReason from './controller/adminChangeTakeOutReason';
 import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
@@ -87,6 +88,7 @@ import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
 import adminReconcileCycleCount from './controller/adminReconcileCycleCount';
 import adminReconcileStock from './controller/adminReconcileStock';
+import adminRecordCorrectionAsTakeOut from './controller/adminRecordCorrectionAsTakeOut';
 import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
@@ -227,6 +229,8 @@ const stockRouter = createTRPCRouter({
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
   takeOut: adminTakeOutOfStock,
+  changeTakeOutReason: adminChangeTakeOutReason,
+  recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,

@@ -1,3 +1,107 @@
+## [2.0.547](https://github.com/craftandculture/Craft-Culture/compare/v2.0.546...v2.0.547) (2026-10-25)
+
+### Features
+
+* a pack fix or count correction that removed bottles can be recorded as the take-out it was ([a764506](https://github.com/craftandculture/Craft-Culture/commit/a764506a44c519bc93e6ed2dd595767bc7b1be5f))
+
+## [2.0.546](https://github.com/craftandculture/Craft-Culture/compare/v2.0.545...v2.0.546) (2026-10-25)
+
+### Features
+
+* a take-out recorded after the event is dated the day the bottles left ([e416bc9](https://github.com/craftandculture/Craft-Culture/commit/e416bc9b6f58a1f12f485812e48c5bc04d9385e0))
+
+## [2.0.545](https://github.com/craftandculture/Craft-Culture/compare/v2.0.544...v2.0.545) (2026-10-25)
+
+### Features
+
+* Take out can draw from all of one owner's bays at once ([bf8d170](https://github.com/craftandculture/Craft-Culture/commit/bf8d170bc8e4315a3f838f537539538632d5da47))
+
+## [2.0.544](https://github.com/craftandculture/Craft-Culture/compare/v2.0.543...v2.0.544) (2026-10-25)
+
+### Bug Fixes
+
+* an agreed-price offer takes the name of its exact wine when two wines share a code ([07bde9d](https://github.com/craftandculture/Craft-Culture/commit/07bde9d513d81fd68f3c738b60ab5c1cc8498c52))
+
+## [2.0.543](https://github.com/craftandculture/Craft-Culture/compare/v2.0.542...v2.0.543) (2026-10-25)
+
+### Bug Fixes
+
+* the agreed-prices preview compares movement type as a type, not text ([15e7758](https://github.com/craftandculture/Craft-Culture/commit/15e7758d06ebe3c338db235979c9cbce24a4a705))
+
+## [2.0.542](https://github.com/craftandculture/Craft-Culture/compare/v2.0.541...v2.0.542) (2026-10-25)
+
+### Features
+
+* member statements show what each sale is worth, what is owed, and what the cellar is worth ([fef90fe](https://github.com/craftandculture/Craft-Culture/commit/fef90feaacca03f7268ac72e28c5f81560344095))
+
+### Bug Fixes
+
+* an owner's price matches the exact wine code first, so two wines sharing a code (Arnoux-Lachaux village Chambolle and Clos des Danguerins) keep their own prices ([de7dc59](https://github.com/craftandculture/Craft-Culture/commit/de7dc595e417fd24630d02d41ddd7be7d7dced85))
+
+## [2.0.541](https://github.com/craftandculture/Craft-Culture/compare/v2.0.540...v2.0.541) (2026-10-25)
+
+### Features
+
+* the client price box shows the bottle price with C&C margin, beside the true cost and margin per bottle ([7bf9fdc](https://github.com/craftandculture/Craft-Culture/commit/7bf9fdc619feb7cc0de63d1dafe513a3e628b348))
+
+## [2.0.540](https://github.com/craftandculture/Craft-Culture/compare/v2.0.539...v2.0.540) (2026-10-25)
+
+### Bug Fixes
+
+* the Activity feed folds a case opened during a pick or take-out into that event, counts what left in bottles, and shows clean wine names with the vintage ([ca42f70](https://github.com/craftandculture/Craft-Culture/commit/ca42f70b51af76ab6451b9f3377541c7a466546d))
+
+## [2.0.539](https://github.com/craftandculture/Craft-Culture/compare/v2.0.538...v2.0.539) (2026-10-25)
+
+### Features
+
+* the wine partner's order dashboard matches the distributor and admin layout ([c0b818e](https://github.com/craftandculture/Craft-Culture/commit/c0b818e0dcaca7cb601a83758b0594bf697c6fb6))
+
+## [2.0.538](https://github.com/craftandculture/Craft-Culture/compare/v2.0.537...v2.0.538) (2026-10-25)
+
+### Features
+
+* freight quotes into the UAE are priced all-in, with customs and handling added from a rate card ([f7d2049](https://github.com/craftandculture/Craft-Culture/commit/f7d20491d2f76470d2a75d78d3889680ade9d8bb))
+
+### Bug Fixes
+
+* the Activity feed drops pack notes from wine names and stops repeating the order's title on each wine under it ([7ed74c5](https://github.com/craftandculture/Craft-Culture/commit/7ed74c57d14529954f98f1178bf1fa4a3918be7b))
+
+## [2.0.537](https://github.com/craftandculture/Craft-Culture/compare/v2.0.536...v2.0.537) (2026-10-25)
+
+### Bug Fixes
+
+* an opened order on the Activity feed reads as its contents, not as more orders ([3448b5b](https://github.com/craftandculture/Craft-Culture/commit/3448b5bf4cbe1d703a3756ae312078c92016b352))
+
+## [2.0.536](https://github.com/craftandculture/Craft-Culture/compare/v2.0.535...v2.0.536) (2026-10-25)
+
+### Bug Fixes
+
+* freight requests list shows the client and the service on separate lines ([3bc70c1](https://github.com/craftandculture/Craft-Culture/commit/3bc70c1210d5cc857ec3418290c7adbbad39f386))
+
+## [2.0.535](https://github.com/craftandculture/Craft-Culture/compare/v2.0.534...v2.0.535) (2026-10-25)
+
+### Features
+
+* Private Cellar members get an Activity tab showing everything that has happened to their wine ([e3bc09d](https://github.com/craftandculture/Craft-Culture/commit/e3bc09de890ef4ceed52142b049ccc815955da9a))
+
+## [2.0.534](https://github.com/craftandculture/Craft-Culture/compare/v2.0.533...v2.0.534) (2026-10-25)
+
+### Bug Fixes
+
+* the member statement's holdings column reads Location, not Where ([ba1a013](https://github.com/craftandculture/Craft-Culture/commit/ba1a013d69152657b04d8c128526f12b75881fd4))
+
+## [2.0.533](https://github.com/craftandculture/Craft-Culture/compare/v2.0.532...v2.0.533) (2026-10-25)
+
+### Features
+
+* the member statement shows each delivery and each sale as one line that opens to its wines ([58de81d](https://github.com/craftandculture/Craft-Culture/commit/58de81d97f44af6cae19fe687da0448ec7eb7895))
+
+## [2.0.532](https://github.com/craftandculture/Craft-Culture/compare/v2.0.531...v2.0.532) (2026-10-25)
+
+### Features
+
+* a take-out's reason can be corrected from Movements, each reason asks the right question, and an opened case prompts for a new label ([ee6fc94](https://github.com/craftandculture/Craft-Culture/commit/ee6fc949dc7cc85c4fc7b85247c150bfa6276433))
+
 ## [2.0.531](https://github.com/craftandculture/Craft-Culture/compare/v2.0.530...v2.0.531) (2026-10-25)
 
 ### Features
