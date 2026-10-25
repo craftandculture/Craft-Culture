@@ -1,3 +1,9 @@
+## [2.0.556](https://github.com/craftandculture/Craft-Culture/compare/v2.0.555...v2.0.556) (2026-10-25)
+
+### Features
+
+* Storage and conditions shows the cold rooms' last 30 days of temperature and humidity as smooth trend lines ([f3af27f](https://github.com/craftandculture/Craft-Culture/commit/f3af27f70ca3d9cc31c23baf1f6e47c469cd2a39))
+
 ## [2.0.555](https://github.com/craftandculture/Craft-Culture/compare/v2.0.554...v2.0.555) (2026-10-25)
 
 ### Features
