@@ -1,3 +1,10 @@
+## [2.0.553](https://github.com/craftandculture/Craft-Culture/compare/v2.0.552...v2.0.553) (2026-10-25)
+
+### Features
+
+* the Private Cellar portal takes the approved look across every tab ([01896d1](https://github.com/craftandculture/Craft-Culture/commit/01896d1f95fd6a38a5264451ea4823156c5cd2f6))
+* the wine partner portal follows the house style, works on a phone, and shows errors instead of empty pages ([da1a078](https://github.com/craftandculture/Craft-Culture/commit/da1a078f527750107e9ddbfbd67ed66d947aca3a))
+
 ## [2.0.552](https://github.com/craftandculture/Craft-Culture/compare/v2.0.551...v2.0.552) (2026-10-25)
 
 ### Bug Fixes
