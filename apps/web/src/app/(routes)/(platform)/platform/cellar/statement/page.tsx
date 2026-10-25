@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { format, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
 
+import StatementGroups from '@/app/_cellar/components/StatementGroups';
+import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
 import StatementSection from '@/app/_cellar/components/StatementSection';
 import bottleName from '@/app/_cellar/utils/bottleName';
 import useTRPC from '@/lib/trpc/browser';
@@ -37,6 +39,35 @@ const monthOptions = () =>
 
     return { value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') };
   });
+
+interface LeftRow {
+  id: string;
+  at: Date | string;
+  name: string;
+  detail: string;
+  bottles: number;
+  groupKey: string;
+  groupLabel: string;
+  status: string | null;
+}
+
+/** Rows that left the cellar, one group per order or reason, oldest first */
+const groupsOf = (rows: LeftRow[]): StatementGroup[] => {
+  const groups = new Map<string, StatementGroup>();
+  for (const row of rows) {
+    const group = groups.get(row.groupKey) ?? {
+      key: row.groupKey,
+      label: row.groupLabel,
+      status: row.status,
+      date: row.at,
+      wines: [],
+    };
+    group.wines.push({ key: row.id, name: row.name, detail: row.detail, bottles: row.bottles });
+    groups.set(row.groupKey, group);
+  }
+
+  return [...groups.values()];
+};
 
 /** A CSV cell, quoted when it needs to be */
 const cell = (value: string | number) => {
@@ -74,8 +105,14 @@ const StatementPage = () => {
     ? {
         added: data.added.reduce((sum, row) => sum + row.bottles, 0),
         delivered: data.deliveries.reduce((sum, row) => sum + row.bottles, 0),
-        left: data.left.reduce((sum, row) => sum + row.bottles, 0),
-        sold: data.sold.reduce((sum, row) => sum + row.bottles, 0),
+        onItsWay: data.left
+          .filter((row) => row.outcome === 'delivery')
+          .reduce((sum, row) => sum + row.bottles, 0),
+        sold:
+          data.sold.reduce((sum, row) => sum + row.bottles, 0) +
+          data.left
+            .filter((row) => row.outcome === 'sale')
+            .reduce((sum, row) => sum + row.bottles, 0),
         uae: data.holdings.reduce((sum, row) => sum + row.bottles, 0),
         uk: data.ukHoldings.reduce((sum, row) => sum + row.totalBottles, 0),
       }
@@ -105,7 +142,7 @@ const StatementPage = () => {
         ]),
       ),
       ...data.left.map((row) => [
-        `Left your cellar: ${row.note}`,
+        row.groupLabel,
         format(new Date(row.at), 'yyyy-MM-dd'),
         [row.name, row.detail].filter(Boolean).join(' '),
         row.bottles,
@@ -208,7 +245,15 @@ const StatementPage = () => {
           </select>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => {
+              // Every order opens on paper, not only the ones tapped on screen
+              document
+                .querySelectorAll<HTMLDetailsElement>('.statement-group')
+                .forEach((group) => {
+                  group.open = true;
+                });
+              window.print();
+            }}
             disabled={!data}
             className="border-border-muted text-text-primary inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50"
           >
@@ -231,13 +276,24 @@ const StatementPage = () => {
 
       {data && totals && (
         <>
-          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
             {[
-              { label: 'Added', value: bottles(totals.added) },
-              { label: 'Delivered to you', value: bottles(totals.delivered) },
-              { label: 'Left your cellar', value: bottles(totals.left) },
-              { label: 'Sold', value: money(data.soldUsd) },
-              { label: 'Paid to you', value: money(data.paidUsd) },
+              { label: 'Added', value: bottles(totals.added), sub: null },
+              {
+                label: 'Delivered to you',
+                value: bottles(totals.delivered),
+                sub: totals.onItsWay ? `${totals.onItsWay} on the way` : null,
+              },
+              {
+                label: 'Sold',
+                value: bottles(totals.sold),
+                sub: data.soldUsd > 0 ? money(data.soldUsd) : null,
+              },
+              {
+                label: 'Paid to you',
+                value: money(data.paidUsd),
+                sub: null,
+              },
             ].map((tile) => (
               <div
                 key={tile.label}
@@ -249,9 +305,71 @@ const StatementPage = () => {
                 <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums">
                   {tile.value}
                 </dd>
+                {tile.sub && (
+                  <dd className="text-text-muted m-0 text-xs tabular-nums">{tile.sub}</dd>
+                )}
               </div>
             ))}
           </dl>
+
+          <StatementGroups
+            title="Deliveries"
+            empty="No deliveries this month."
+            groups={[
+              ...groupsOf(data.left.filter((row) => row.outcome === 'delivery')),
+              ...data.deliveries.map((delivery) => ({
+                key: delivery.id,
+                label: 'Delivered to you',
+                status: 'Delivered',
+                date: delivery.deliveredAt,
+                wines: delivery.wines.map((wine, index) => ({
+                  key: `${delivery.id}-${index}`,
+                  name: wine.name,
+                  detail: wine.detail,
+                  bottles: wine.bottles,
+                })),
+              })),
+            ]}
+          />
+
+          <StatementGroups
+            title="Sold"
+            empty="Nothing sold this month."
+            groups={[
+              ...groupsOf(data.left.filter((row) => row.outcome === 'sale')),
+              ...(data.sold.length
+                ? [
+                    {
+                      key: 'pool',
+                      label: 'Sold through Craft & Culture',
+                      date: data.sold[0]?.at ?? null,
+                      amount: money(data.soldUsd),
+                      wines: data.sold.map((row) => ({
+                        key: row.id,
+                        name: row.productName,
+                        bottles: row.bottles,
+                        amount: money(row.amountUsd),
+                      })),
+                    },
+                  ]
+                : []),
+            ]}
+            footer={
+              data.paidUsd > 0
+                ? `Paid to you this month: ${money(data.paidUsd)}`
+                : undefined
+            }
+          />
+
+          {data.left.some((row) => !['delivery', 'sale'].includes(row.outcome)) && (
+            <StatementGroups
+              title="Other changes"
+              empty=""
+              groups={groupsOf(
+                data.left.filter((row) => !['delivery', 'sale'].includes(row.outcome)),
+              )}
+            />
+          )}
 
           <StatementSection
             title="Added to your cellar"
@@ -269,51 +387,6 @@ const StatementPage = () => {
                     : KIND_NOTE[row.kind],
               value: String(row.bottles),
             }))}
-          />
-
-          <StatementSection
-            title="Delivered to you"
-            empty="No deliveries this month."
-            rows={data.deliveries.flatMap((delivery) =>
-              delivery.wines.map((wine, index) => ({
-                key: `${delivery.id}-${index}`,
-                date: delivery.deliveredAt,
-                name: wine.name,
-                detail: wine.detail,
-                value: String(wine.bottles),
-              })),
-            )}
-          />
-
-          <StatementSection
-            title="Left your cellar"
-            empty="Nothing else left your cellar this month."
-            rows={data.left.map((row) => ({
-              key: row.id,
-              date: row.at,
-              name: row.name,
-              detail: row.detail,
-              note: row.note,
-              value: String(row.bottles),
-            }))}
-          />
-
-          <StatementSection
-            title="Sold on your behalf"
-            empty="Nothing sold this month."
-            rows={data.sold.map((row) => ({
-              key: row.id,
-              date: row.at,
-              name: row.productName,
-              note: bottles(row.bottles),
-              value: money(row.amountUsd),
-            }))}
-            valueLabel="Amount"
-            footer={
-              data.paidUsd > 0
-                ? `Paid to you this month: ${money(data.paidUsd)}`
-                : undefined
-            }
           />
 
           <section className="mb-6">

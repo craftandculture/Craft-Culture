@@ -320,6 +320,54 @@ const memberGetStatement = stockOwnerProcedure
     };
 
     /*
+      What became of each bottle, and the order it went on, so the page can
+      show one line per order (a delivery, a sale to one buyer) that opens to
+      the wines, instead of every wine in a single long list.
+    */
+    const isCollector = ctx.partner.type === 'private_collector';
+    const leftOutcome = (row: (typeof leftRows)[number]) => {
+      const delivery = deliveryOf(row);
+      if (delivery) {
+        return {
+          outcome: 'delivery' as const,
+          groupKey: `delivery:${delivery.pcoNumber}`,
+          groupLabel: `Your delivery · ${delivery.pcoNumber}`,
+          status: delivery.status === 'delivered' ? 'Delivered' : 'On its way',
+        };
+      }
+      if (row.reasonCode?.startsWith('stock_out:')) {
+        const reason = row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS;
+        const rule = STOCK_OUT_REASONS[reason];
+        if (rule?.settlement === 'cc_landed') {
+          return { outcome: 'sale' as const, groupKey: 'sale:cc', groupLabel: 'Sold to Craft & Culture · samples and tastings', status: null };
+        }
+        if (rule?.settlement === 'price') {
+          return { outcome: 'sale' as const, groupKey: 'sale:direct', groupLabel: 'Sold', status: null };
+        }
+        if (rule?.settlement === 'owner_reimbursed') {
+          return { outcome: 'reimbursed' as const, groupKey: `reimbursed:${reason}`, groupLabel: rule.ownerSees, status: null };
+        }
+        return { outcome: 'collected' as const, groupKey: `collected:${reason}`, groupLabel: rule?.ownerSees ?? 'Taken out of stock', status: null };
+      }
+      if (row.movementType === 'count') {
+        return { outcome: 'adjustment' as const, groupKey: 'adjustment', groupLabel: 'Stock count adjustment', status: null };
+      }
+      const order = row.salesOrderNumber ?? row.pcoNumber ?? 'order';
+      // Only a collector is told who bought it: trade partners never see counterparties
+      const buyer = isCollector
+        ? row.salesOrderNumber
+          ? (row.customerName ?? 'a buyer')
+          : 'a private client'
+        : null;
+      return {
+        outcome: 'sale' as const,
+        groupKey: `sale:${order}`,
+        groupLabel: buyer ? `Sold to ${buyer} · ${order}` : `Sold · order ${order}`,
+        status: null,
+      };
+    };
+
+    /*
       UK wine, guarded: the tables are new, and a missed migration should cost
       the statement its UK lines rather than the whole page.
     */
@@ -514,6 +562,7 @@ const memberGetStatement = stockOwnerProcedure
         ...wineLine(row.productName, row.lwin18),
         bottles: Math.abs(row.quantityBottles ?? row.quantityCases * packOf(row.lwin18)),
         note: leftNote(row),
+        ...leftOutcome(row),
       })),
 
       sold: sold.map((row) => ({
