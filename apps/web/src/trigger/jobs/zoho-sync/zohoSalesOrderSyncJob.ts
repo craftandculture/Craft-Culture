@@ -27,7 +27,7 @@ export const zohoSalesOrderSyncJob = schedules.task({
   // project defaults (5 attempts, 5 hours) let failing runs pile up and spend
   // the Trigger.dev budget (25 Oct 2026).
   retry: { maxAttempts: 1 },
-  maxDuration: 100,
+  maxDuration: 5 * 60,
   id: 'zoho-sales-order-sync',
   cron: {
     pattern: '*/2 * * * *', // Every 2 minutes
