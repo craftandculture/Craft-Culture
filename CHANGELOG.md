@@ -1,3 +1,9 @@
+## [2.0.549](https://github.com/craftandculture/Craft-Culture/compare/v2.0.548...v2.0.549) (2026-10-25)
+
+### Features
+
+* the member statement opens on this month, offers only months the cellar has been open, and matches the cellar home ([883f9d5](https://github.com/craftandculture/Craft-Culture/commit/883f9d5a3873fd66f28648c8520399f64c542080))
+
 ## [2.0.548](https://github.com/craftandculture/Craft-Culture/compare/v2.0.547...v2.0.548) (2026-10-25)
 
 ### Features
