@@ -42,7 +42,8 @@ const packOf = (lwin18: string) => {
  */
 const wineLine = (productName: string, lwin18: string) => {
   const [, year, , size] = lwin18.split('-');
-  const ml = Number(size) * 10;
+  // The LWIN size field is millilitres: 00750 is a 75cl bottle
+  const ml = Number(size);
   const detail = [
     year && /^(19|20)\d{2}$/.test(year) ? year : null,
     ml > 0 ? bottleName(`${ml / 10}cl`) : null,
