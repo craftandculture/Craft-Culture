@@ -1,3 +1,9 @@
+## [2.0.548](https://github.com/craftandculture/Craft-Culture/compare/v2.0.547...v2.0.548) (2026-10-25)
+
+### Features
+
+* recording agreed prices converts at today's EUR rate when no rate is given, the way shipment imports look it up, and records the rate and its source ([f9a239d](https://github.com/craftandculture/Craft-Culture/commit/f9a239d24ab57c41b359ad55378037d8805bb7f6))
+
 ## [2.0.547](https://github.com/craftandculture/Craft-Culture/compare/v2.0.546...v2.0.547) (2026-10-25)
 
 ### Features
