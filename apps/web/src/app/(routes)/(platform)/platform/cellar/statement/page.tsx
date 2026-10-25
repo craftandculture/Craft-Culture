@@ -1,18 +1,14 @@
 'use client';
 
-import {
-  IconBottle,
-  IconCoin,
-  IconDownload,
-  IconPrinter,
-  IconTruckDelivery,
-  IconWallet,
-} from '@tabler/icons-react';
+import { IconDownload, IconPrinter } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import StatementGroups from '@/app/_cellar/components/StatementGroups';
 import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
 import StatementSection from '@/app/_cellar/components/StatementSection';
@@ -152,7 +148,7 @@ const StatementPage = () => {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [showAllHoldings, setShowAllHoldings] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     ...api.cellar.member.getStatement.queryOptions({ month }),
     // Keep the page (and the month list) while the next month loads
     placeholderData: keepPreviousData,
@@ -258,7 +254,7 @@ const StatementPage = () => {
       */}
       <style>
         {`@media print {
-          header, nav, footer, .statement-controls { display: none !important; }
+          header:not(.statement-header), nav, footer, .statement-controls { display: none !important; }
           body { background: #fff !important; }
           .statement { max-width: 180mm; margin: 0 auto; font-size: 11px; padding: 0; }
           .statement tr, .statement dl { break-inside: avoid; }
@@ -278,26 +274,21 @@ const StatementPage = () => {
         </p>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-text-muted mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]">
-            C&amp;C Private Cellar · Statement
-          </p>
-          <h1 className="text-text-primary text-lg font-semibold sm:text-xl">
-            {data?.memberName ?? '\u00A0'}
-          </h1>
-          <p className="text-text-muted mt-0.5 text-xs sm:text-sm">
-            {monthLabel}
-            {data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''}
-          </p>
-        </div>
+      <CellarPageHeader
+        className="statement-header mb-4"
+        eyebrow="C&C Private Cellar · Statement"
+        title={data?.memberName ?? 'Your statements'}
+        description={`${monthLabel}${
+          data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''
+        }`}
+        actions={
         <div className="statement-controls grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <select
             id="statement-month"
             value={month}
             onChange={(event) => setMonth(event.target.value)}
             aria-label="Statement month"
-            className="border-border-muted bg-background-primary text-text-primary col-span-2 h-10 rounded-lg border px-3 text-sm sm:col-span-1"
+            className="border-border-muted bg-surface-primary text-text-primary col-span-2 h-10 rounded-lg border px-3 text-sm sm:col-span-1"
           >
             {options.map((option) => (
               <option key={option.value} value={option.value}>
@@ -318,7 +309,7 @@ const StatementPage = () => {
               window.print();
             }}
             disabled={!data}
-            className="border-border-muted text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50"
+            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold shadow-sm disabled:opacity-50"
           >
             <IconPrinter size={16} />
             Print
@@ -333,48 +324,45 @@ const StatementPage = () => {
             CSV
           </button>
         </div>
-      </div>
+        }
+      />
 
-      {isLoading && <p className="text-text-muted py-6 text-sm">Loading&hellip;</p>}
+      {isLoading && <CellarState kind="loading" rows={4} />}
+
+      {isError && !data && <CellarState kind="error" />}
 
       {data && totals && (
         <>
           {/* The cellar home's tiles: the same look wherever a member reads numbers */}
-          <dl className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+          <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
             {[
-              { icon: IconBottle, label: 'Added', value: totals.added.toLocaleString(), detail: totals.added === 1 ? 'bottle' : 'bottles' },
+              { label: 'Added', value: totals.added.toLocaleString(), detail: totals.added === 1 ? 'bottle' : 'bottles' },
               {
-                icon: IconTruckDelivery,
                 label: 'Delivered to you',
                 value: totals.delivered.toLocaleString(),
                 detail: totals.onItsWay ? `${totals.onItsWay} on the way` : totals.delivered === 1 ? 'bottle' : 'bottles',
               },
               {
-                icon: IconCoin,
                 label: 'Sold',
                 value: money(data.soldUsd + data.soldLeftUsd),
                 detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
               },
               {
-                icon: IconWallet,
                 label: 'Owed to you',
                 value: money(Math.max(0, data.owedUsd)),
                 detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'paid monthly',
+                tone: 'emerald' as const,
               },
             ].map((tile) => (
-              <div
+              <CellarStatTile
                 key={tile.label}
-                className="border-border-muted bg-background-primary rounded-xl border px-3 py-2 text-center"
-              >
-                <div className="mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
-                  <tile.icon size={12} />
-                </div>
-                <dd className="m-0 text-lg font-bold leading-tight tabular-nums">{tile.value}</dd>
-                <dt className="text-text-muted text-[11px]">{tile.label}</dt>
-                <dd className="text-text-muted m-0 text-[10px] tabular-nums">{tile.detail}</dd>
-              </div>
+                label={tile.label}
+                value={tile.value}
+                detail={tile.detail}
+                tone={'tone' in tile ? tile.tone : 'plain'}
+              />
             ))}
-          </dl>
+          </div>
 
           <StatementGroups
             title="Deliveries"
@@ -465,7 +453,7 @@ const StatementPage = () => {
                 : ''}
               .
             </p>
-            <div className="border-border-muted overflow-hidden rounded-xl border">
+            <div className="border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm">
               <table className="w-full text-sm">
                 <thead className="bg-fill-muted/60 border-border-muted border-b">
                   <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
@@ -541,7 +529,7 @@ const StatementPage = () => {
             Wine in the UAE is held in bond, duty suspended, under Craft &amp;
             Culture&rsquo;s licence on your behalf. Sales are valued at your price
             for each wine. Bottles taken as samples, or damaged in our care, are
-            valued at what they cost you to land. Wine you hold is valued at your
+            valued at their original cost to you, including shipping. Wine you hold is valued at your
             price where you have set one, and otherwise at its cost. Payments are
             made monthly for sales the buyer has paid for. If anything here
             differs from your own records, please contact the cellar team.

@@ -1,7 +1,7 @@
 'use client';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import PartnerActivityFeed from '@/app/_partners/components/PartnerActivityFeed';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
  * Everything that has happened to a member's wine, in one place
@@ -12,19 +12,11 @@ import Typography from '@/app/_ui/components/Typography/Typography';
  */
 const CellarActivityPage = () => {
   return (
-    <div className="space-y-5 pb-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Activity</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-2xl">
-            Everything that has happened to your wine with us, newest first.
-            Routine handling in the warehouse, such as moving a case between
-            bays, is folded into one line per day. Open it to see each step.
-          </p>
-        </Typography>
-      </div>
+    <div className="pb-8">
+      <CellarPageHeader
+        title="Activity"
+        description="Everything that has happened to your wine with us, newest first. Routine handling in the warehouse, such as moving a case within the warehouse, is folded into one line per day. Open it to see each step."
+      />
 
       <PartnerActivityFeed source="cellar" />
     </div>

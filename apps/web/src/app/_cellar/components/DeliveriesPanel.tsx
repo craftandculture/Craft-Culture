@@ -214,9 +214,9 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
               <li key={`${item.productName}-${index}`} className="flex items-baseline gap-2 text-sm">
                 <span className="text-text-primary min-w-0 truncate">{displayWineName(item.productName)}</span>
                 <span className="text-text-muted flex-shrink-0 tabular-nums">{item.vintage ?? 'NV'}</span>
-                {item.bottles > 1 && (
-                  <span className="text-text-muted flex-shrink-0 text-xs">× {item.bottles}</span>
-                )}
+                <span className="text-text-muted flex-shrink-0 text-xs tabular-nums">
+                  {item.bottles} {item.bottles === 1 ? 'bottle' : 'bottles'}
+                </span>
               </li>
             ))}
           </ul>

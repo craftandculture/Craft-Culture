@@ -1,11 +1,8 @@
 'use client';
 
 import {
-  IconBottle,
-  IconBuildingCastle,
   IconFilter,
   IconMinus,
-  IconPackages,
   IconPlus,
   IconSearch,
   IconX,
@@ -15,6 +12,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
@@ -28,7 +28,6 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -98,7 +97,7 @@ const AvailablePage = () => {
   /* Reserving commits the member to a bank transfer, so it is reviewed first */
   const [isReviewing, setIsReviewing] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     ...api.consignment.member.browseCatalogue.queryOptions({
       search: search || undefined,
       category,
@@ -239,7 +238,7 @@ const AvailablePage = () => {
 
   const categoryTone = (category: string | null | undefined) =>
     category === 'Spirits'
-      ? 'bg-amber-500'
+      ? 'bg-violet-500'
       : category === 'RTD'
         ? 'bg-sky-500'
         : category === 'Wine'
@@ -273,7 +272,7 @@ const AvailablePage = () => {
       return (
         <a
           href="mailto:enquiries@craftculture.xyz"
-          className="text-text-muted hover:text-text-primary text-xs font-medium underline underline-offset-2"
+          className="border-border-muted text-text-primary hover:bg-surface-secondary inline-flex h-10 items-center rounded-lg border px-3 text-xs font-semibold sm:h-9"
         >
           Ask us
         </a>
@@ -285,7 +284,7 @@ const AvailablePage = () => {
         <button
           type="button"
           onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
-          className="border-border-muted text-text-primary hover:bg-text-primary hover:text-surface-primary inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold transition-colors sm:h-8"
+          className="border-border-muted text-text-primary hover:bg-text-primary hover:text-surface-primary inline-flex h-10 items-center gap-1 rounded-lg border px-3.5 text-xs font-semibold transition-colors sm:h-9"
           aria-label={`Add ${wine.caseConfig > 1 ? 'a case' : 'a bottle'} of ${wine.product}`}
         >
           <Icon icon={IconPlus} size="xs" /> Add
@@ -294,12 +293,12 @@ const AvailablePage = () => {
     }
 
     return (
-      <span className="bg-text-primary text-surface-primary inline-flex h-9 items-center rounded-lg sm:h-8">
+      <span className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg sm:h-9">
         <button
           type="button"
           aria-label={`One fewer ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           onClick={() => addCases(wine.lwin18, -1, wine.availableCases)}
-          className="flex h-full w-8 items-center justify-center rounded-l-lg hover:bg-white/10"
+          className="flex h-full w-10 items-center justify-center rounded-l-lg hover:bg-white/10 sm:w-9"
         >
           <Icon icon={IconMinus} size="xs" />
         </button>
@@ -311,7 +310,7 @@ const AvailablePage = () => {
           aria-label={`One more ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           disabled={chosen >= wine.availableCases}
           onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
-          className="flex h-full w-8 items-center justify-center rounded-r-lg hover:bg-white/10 disabled:opacity-30"
+          className="flex h-full w-10 items-center justify-center rounded-r-lg hover:bg-white/10 disabled:opacity-30 sm:w-9"
         >
           <Icon icon={IconPlus} size="xs" />
         </button>
@@ -331,23 +330,16 @@ const AvailablePage = () => {
     <div className="w-full pb-28">
       {activationSheet}
 
-      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingMd" className="block">
-            The Cellar List
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block max-w-2xl">
-            Wines held in the C&amp;C bonded warehouse, ready to add to your cellar. Prices are duty-free:
-            duty and VAT are only paid if you have wine delivered to you in the UAE.
-          </Typography>
-        </div>
-        {/*
-          One action, not a link on every row. It used to be a mailto, which
-          left the request in somebody's inbox; now it is a request the team
-          works and the member can follow.
-        */}
-        {!isViewer && <FindWineDialog />}
-      </header>
+      {/*
+        One action, not a link on every row. It used to be a mailto, which
+        left the request in somebody's inbox; now it is a request the team
+        works and the member can follow.
+      */}
+      <CellarPageHeader
+        title="The Cellar List"
+        description="Wines held in the C&C bonded warehouse, ready to add to your cellar. Prices are duty-free. Duty and VAT are only paid if you have wine delivered to you in the UAE."
+        actions={!isViewer ? <FindWineDialog /> : undefined}
+      />
 
       {isViewer && <ViewOnlyNotice />}
 
@@ -363,7 +355,7 @@ const AvailablePage = () => {
         reads as controls, then figures, then wine — three bands rather than
         one run of grey.
       */}
-      <div className="border-border-muted bg-surface-secondary/40 mb-4 rounded-xl border p-3 sm:p-4">
+      <div className="border-border-muted bg-surface-primary mb-4 rounded-xl border p-3 shadow-sm sm:p-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative md:w-80 md:flex-shrink-0">
@@ -384,8 +376,8 @@ const AvailablePage = () => {
             {[
               { id: undefined, label: 'Everything', tone: '' },
               { id: 'Wine', label: 'Wine', tone: 'bg-emerald-500' },
-              { id: 'Spirits', label: 'Spirits', tone: 'bg-amber-500' },
-              { id: 'RTD', label: 'RTD', tone: 'bg-sky-500' },
+              { id: 'Spirits', label: 'Spirits', tone: 'bg-violet-500' },
+              { id: 'RTD', label: 'Ready to drink', tone: 'bg-sky-500' },
             ].map((chip) => (
               <button
                 key={chip.label}
@@ -526,64 +518,55 @@ const AvailablePage = () => {
         )}
       </div>
 
-      {isLoading && (
-        <Typography variant="bodySm" colorRole="muted" className="block py-6">
-          Loading&hellip;
-        </Typography>
-      )}
+      {isLoading && <CellarState kind="loading" rows={5} />}
 
-      {!isLoading && filtered.length === 0 && (
-        <div className="border-border-muted rounded-xl border px-6 py-14 text-center">
-          <Typography variant="bodyMd" colorRole="muted" className="block">
-            {search || activeFilters.length > 0 ? 'Nothing matches that.' : 'Nothing available just now.'}
-          </Typography>
-        </div>
-      )}
+      {isError && <CellarState kind="error" />}
 
-      {!isLoading && filtered.length > 0 && (
-        <>
-          <dl className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
-            {[
-              {
-                label: 'Wines',
-                value: filtered.length.toLocaleString('en-US'),
-                icon: IconBottle,
-                tone: 'border-emerald-100 from-emerald-50/50 dark:border-emerald-900/50 dark:from-emerald-500/10',
-                iconTone: 'bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20',
-              },
-              {
-                label: 'Bottles',
-                value: totalBottles.toLocaleString('en-US'),
-                icon: IconPackages,
-                tone: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10',
-                iconTone: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20',
-              },
-              {
-                label: 'Producers',
-                value: String(shownProducers.size),
-                icon: IconBuildingCastle,
-                tone: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
-                iconTone: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300',
-              },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className={`flex items-center gap-3 rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 ${stat.tone}`}
+      {!isLoading && !isError && filtered.length === 0 && (
+        search || activeFilters.length > 0 ? (
+          <CellarState
+            kind="empty"
+            title="No wines match these filters."
+            action={
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setCountry('');
+                  setProducer('');
+                  setVintage('');
+                  setLimit(PAGE);
+                }}
+                className="bg-text-primary text-surface-primary h-10 rounded-lg px-4 text-sm font-semibold"
               >
-                <span
-                  className={`hidden size-9 flex-shrink-0 items-center justify-center rounded-lg sm:flex ${stat.iconTone}`}
-                >
-                  <stat.icon size={18} />
-                </span>
-                <div className="min-w-0">
-                  <dd className="text-text-primary m-0 text-lg font-bold leading-tight tabular-nums sm:text-xl">
-                    {stat.value}
-                  </dd>
-                  <dt className="text-text-muted text-[11px] font-medium">{stat.label}</dt>
-                </div>
-              </div>
-            ))}
-          </dl>
+                Clear filters
+              </button>
+            }
+          />
+        ) : (
+          <CellarState
+            kind="empty"
+            message="The Cellar List is being updated. Please check back shortly."
+          />
+        )
+      )}
+
+      {!isLoading && !isError && filtered.length > 0 && (
+        <>
+          <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+            <CellarStatTile
+              label="Wines"
+              value={filtered.length.toLocaleString('en-US')}
+            />
+            <CellarStatTile
+              label="Bottles"
+              value={totalBottles.toLocaleString('en-US')}
+            />
+            <CellarStatTile
+              label="Producers"
+              value={String(shownProducers.size)}
+            />
+          </div>
 
 
           {/* A phone gets cards: a seven-column table cannot be read at that width */}
@@ -600,7 +583,7 @@ const AvailablePage = () => {
                   <div className="flex items-start gap-2">
                     <span className={`mt-1.5 size-2 flex-shrink-0 rounded-full ${categoryTone(wine.category)}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-text-primary text-sm font-semibold leading-snug">
+                      <p className="text-text-primary font-(family-name:--font-cellar-serif) text-lg font-semibold leading-snug">
                         {displayName(wine.product)}
                       </p>
                       <p className="text-text-muted mt-0.5 truncate text-xs">{origin(wine)}</p>
@@ -616,7 +599,7 @@ const AvailablePage = () => {
                     <div>
                       <p className="text-text-primary text-base font-bold tabular-nums">
                         {money(wine.pricePerBottleUsd)}
-                        <span className="text-text-muted text-xs font-normal"> / btl</span>
+                        <span className="text-text-muted text-xs font-normal"> per bottle</span>
                       </p>
                       <p className="text-text-muted text-[11px]">{availability(wine)}</p>
                     </div>
@@ -627,7 +610,7 @@ const AvailablePage = () => {
             })}
           </ul>
 
-          <div className="border-border-muted hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
+          <div className="border-border-muted bg-surface-primary hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-surface-secondary/90 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
                 <tr className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
@@ -663,7 +646,7 @@ const AvailablePage = () => {
                           />
                           <div className="min-w-0">
                             <span
-                              className="text-text-primary block truncate text-[13.5px] font-semibold"
+                              className="text-text-primary block truncate font-(family-name:--font-cellar-serif) text-base font-semibold"
                               title={wine.product}
                             >
                               {displayName(wine.product)}
@@ -686,7 +669,7 @@ const AvailablePage = () => {
                       <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
                         <span className="text-text-primary block text-[14px] font-bold">
                           {money(wine.pricePerBottleUsd)}
-                          <span className="text-text-muted text-[11px] font-normal"> / btl</span>
+                          <span className="text-text-muted text-[11px] font-normal"> per bottle</span>
                         </span>
                         {wine.caseConfig > 1 && (
                           <span className="text-text-muted block text-[11px]">
@@ -795,8 +778,8 @@ const AvailablePage = () => {
 
           <div className="bg-surface-secondary/60 text-text-muted mt-3 space-y-1.5 rounded-xl p-3.5 text-xs leading-5">
             <p>
-              Prices are duty-free. Your wine stays in your cellar at our warehouse until you ask us to deliver it;
-              duty and VAT are only paid then.
+              Prices are duty-free. Your wine stays in your cellar at our warehouse until you ask us to deliver it.
+              Duty and VAT are only paid then.
             </p>
             <p>
               We hold it for you for 48 hours. Pay by bank transfer using the details on your Purchases page, quoting

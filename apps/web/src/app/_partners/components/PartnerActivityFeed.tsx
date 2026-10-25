@@ -64,7 +64,14 @@ const withoutPackNote = (name: string) =>
   name.replace(/\s*\(\s*(\d+\s*x\s*(\d+(\.\d+)?\s*(cl|ml|l))?|single)\s*\)\s*$/i, '').trim();
 
 /** One event: icon, what happened and to what, quantity and time */
-const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
+const Row = ({
+  entry,
+  wrapName = false,
+}: {
+  entry: PartnerActivityEntry;
+  /** Cellar members read long wine names in full over two lines rather than cut */
+  wrapName?: boolean;
+}) => {
   const style =
     entry.title === 'Dispatched' ? KIND_STYLE.dispatch : KIND_STYLE[entry.kind];
   const quantity =
@@ -82,7 +89,11 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-text-muted">{entry.title}</p>
-        <p className="truncate text-[14px] font-medium text-text-primary">{withoutPackNote(entry.subject)}</p>
+        <p
+          className={`${wrapName ? 'line-clamp-2' : 'truncate'} text-[14px] font-medium text-text-primary`}
+        >
+          {withoutPackNote(entry.subject)}
+        </p>
         {entry.detail && (
           <p className="mt-0.5 line-clamp-2 text-[12px] text-text-muted">{entry.detail}</p>
         )}
@@ -111,8 +122,11 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
 const SubRow = ({
   entry,
   groupTitle,
+  wrapName = false,
 }: {
   entry: PartnerActivityEntry;
+  /** Cellar members read long wine names in full over two lines rather than cut */
+  wrapName?: boolean;
   /** The opened group's own title, not repeated on every line under it */
   groupTitle?: string;
 }) => {
@@ -124,7 +138,9 @@ const SubRow = ({
   return (
     <div className="flex items-baseline gap-3 py-2 pl-3 pr-4">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-text-primary">{withoutPackNote(entry.subject)}</p>
+        <p className={`${wrapName ? 'line-clamp-2' : 'truncate'} text-[13px] text-text-primary`}>
+          {withoutPackNote(entry.subject)}
+        </p>
         <p className="text-[11.5px] text-text-muted">
           {[entry.title === groupTitle ? null : entry.title, entry.detail].filter(Boolean).join(' · ')}
         </p>
@@ -181,6 +197,7 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
   });
   const data = isCellar ? cellarQuery.data : partnerQuery.data;
   const isLoading = isCellar ? cellarQuery.isLoading : partnerQuery.isLoading;
+  const isCellarError = isCellar && cellarQuery.isError;
 
   const entries = data?.entries ?? [];
   type Entry = PartnerActivityEntry;
@@ -281,8 +298,18 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
 
       {isLoading ? (
         <p className="py-8 text-center text-sm text-text-muted">Loading…</p>
+      ) : isCellarError ? (
+        <p className="rounded-xl border border-border-muted bg-surface-primary px-4 py-5 text-sm text-text-muted">
+          We cannot show this just now. Please try again shortly, or contact the cellar team.
+        </p>
       ) : entries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-text-muted">Nothing recorded yet.</p>
+        isCellar ? (
+          <p className="rounded-xl border border-border-muted bg-surface-primary px-6 py-12 text-center text-sm text-text-muted">
+            No activity yet. Arrivals, deliveries and sales will appear here.
+          </p>
+        ) : (
+          <p className="py-8 text-center text-sm text-text-muted">Nothing recorded yet.</p>
+        )
       ) : (
         <div className="space-y-7">
           {Object.entries(days).map(([day, dayEntries]) => {
@@ -300,7 +327,7 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                 <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
                   {groupByOrder(main).map((item) => {
                     if (item.type === 'entry') {
-                      return <Row key={item.entry.id} entry={item.entry} />;
+                      return <Row key={item.entry.id} entry={item.entry} wrapName={isCellar} />;
                     }
                     const key = `${day}|order|${item.ref}`;
                     const isOpen = opened.has(key);
@@ -352,7 +379,12 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                           <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
                             <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
                               {item.entries.map((entry) => (
-                                <SubRow key={entry.id} entry={entry} groupTitle={item.entries[0]?.title} />
+                                <SubRow
+                                  key={entry.id}
+                                  entry={entry}
+                                  groupTitle={item.entries[0]?.title}
+                                  wrapName={isCellar}
+                                />
                               ))}
                             </div>
                           </div>
@@ -375,17 +407,17 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                           <Icon icon={IconAdjustmentsHorizontal} size="sm" />
                         </span>
                         <span className="flex-1 text-[13px] text-text-muted">
-                          Warehouse housekeeping ·{' '}
+                          {isCellar ? 'Warehouse handling' : 'Warehouse housekeeping'} ·{' '}
                           {[
                             housekeeping.filter((e) => e.kind === 'correction').length &&
                               plural(
                                 housekeeping.filter((e) => e.kind === 'correction').length,
-                                'count correction',
+                                isCellar ? 'stock check' : 'count correction',
                               ),
                             housekeeping.filter((e) => e.kind === 'internal').length &&
                               plural(
                                 housekeeping.filter((e) => e.kind === 'internal').length,
-                                'bay move',
+                                isCellar ? 'case move' : 'bay move',
                               ),
                           ]
                             .filter(Boolean)
@@ -401,7 +433,7 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
                         <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
                           <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
                             {housekeeping.map((entry) => (
-                              <SubRow key={entry.id} entry={entry} />
+                              <SubRow key={entry.id} entry={entry} wrapName={isCellar} />
                             ))}
                           </div>
                         </div>

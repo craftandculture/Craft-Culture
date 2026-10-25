@@ -6,12 +6,21 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
 import HowToPayPanel from '@/app/_cellar/components/HowToPayPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (currency: string, value: number) =>
   `${currency} ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/*
+  An invoice's reference is shown only when it reads like the member's own
+  purchase order. Our internal order numbers mean nothing to a collector.
+*/
+const clientReference = (reference: string | null | undefined) =>
+  reference && !/^(PCO|SO|INV)-/i.test(reference.trim()) ? reference : null;
 
 type MemberInvoiceStatus = 'due' | 'overdue' | 'part_paid' | 'paid';
 
@@ -47,7 +56,7 @@ const InvoicesPage = () => {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     ...api.cellar.member.getInvoices.queryOptions(),
     enabled: !isViewer,
   });
@@ -82,45 +91,37 @@ const InvoicesPage = () => {
 
   return (
     <div className="w-full pb-8">
-      <div className="mb-5">
-        <p className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.18em]">
-          C&amp;C Private Cellar · Invoices
-        </p>
-        <h1 className="text-text-primary mt-1 text-xl font-semibold">
-          Invoices
-        </h1>
-        <p className="text-text-muted mt-0.5 text-sm">
-          Your invoices from Craft &amp; Culture. Payment is due on receipt.
-        </p>
-      </div>
+      <CellarPageHeader
+        title="Invoices"
+        description="Your invoices from Craft & Culture. Payment is due on receipt."
+      />
 
       {isViewer && (
-        <p className="text-text-muted border-border-muted rounded-xl border px-4 py-3 text-sm">
-          Invoices are shown to the cellar holder.
-        </p>
+        <CellarState
+          kind="empty"
+          message="Invoices are shown to the cellar holder."
+        />
       )}
 
-      {!isViewer && isLoading && (
-        <p className="text-text-muted py-6 text-sm">Loading&hellip;</p>
-      )}
+      {!isViewer && isLoading && <CellarState kind="loading" />}
+
+      {!isViewer && isError && <CellarState kind="error" />}
 
       {data?.state === 'not_linked' && (
-        <p className="text-text-muted border-border-muted rounded-xl border px-4 py-3 text-sm">
-          Your invoices will appear here once the first one is issued.
-        </p>
+        <CellarState
+          kind="empty"
+          icon={IconReceipt}
+          title="No invoices yet"
+          message="Your invoices will appear here once the first one is issued."
+        />
       )}
 
-      {data?.state === 'unavailable' && (
-        <p className="text-text-muted border-border-muted rounded-xl border px-4 py-3 text-sm">
-          We cannot show your invoices just now. Please try again shortly, or
-          contact the cellar team.
-        </p>
-      )}
+      {data?.state === 'unavailable' && <CellarState kind="error" />}
 
       {data?.state === 'ok' && (
         <>
           {data.due.length > 0 && (
-            <section className="mb-6 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-transparent p-4 dark:border-emerald-900/50 dark:from-emerald-500/10">
+            <section className="to-surface-primary mb-6 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 p-4 shadow-sm dark:border-emerald-900/50 dark:from-emerald-500/10">
               <p className="text-text-muted text-[11px] font-semibold uppercase tracking-wider">
                 To pay
               </p>
@@ -141,17 +142,19 @@ const InvoicesPage = () => {
                     key={invoice.id}
                     className="border-border-muted bg-surface-primary rounded-lg border"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+                    <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-text-primary font-mono text-sm font-semibold">
                           {invoice.number}
                         </p>
                         <p className="text-text-muted text-xs">
                           {format(new Date(invoice.date), 'd MMM yyyy')}
-                          {invoice.reference ? ` · ${invoice.reference}` : ''}
+                          {clientReference(invoice.reference)
+                            ? ` · ${clientReference(invoice.reference)}`
+                            : ''}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <span className="text-text-primary text-sm font-semibold tabular-nums">
                           {money(invoice.currency, invoice.balance)}
                         </span>
@@ -191,15 +194,63 @@ const InvoicesPage = () => {
           )}
 
           {data.invoices.length === 0 ? (
-            <p className="text-text-muted border-border-muted rounded-xl border px-4 py-3 text-sm">
-              You have no invoices yet.
-            </p>
+            <CellarState
+              kind="empty"
+              icon={IconReceipt}
+              title="No invoices yet"
+              message="You have no invoices yet. They will appear here once issued."
+            />
           ) : (
             <section>
               <h2 className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">
                 All invoices
               </h2>
-              <div className="border-border-muted overflow-x-auto rounded-xl border">
+              {/* A phone gets one card per invoice */}
+              <ul className="space-y-2 sm:hidden">
+                {data.invoices.map((invoice) => (
+                  <li
+                    key={invoice.id}
+                    className="border-border-muted bg-surface-primary flex items-center gap-3 rounded-xl border p-3 shadow-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-primary font-mono text-sm font-semibold">
+                          {invoice.number}
+                        </span>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${STATUS_TONE[invoice.status]}`}
+                        >
+                          {STATUS_LABEL[invoice.status]}
+                        </span>
+                      </div>
+                      <p className="text-text-muted mt-0.5 text-xs">
+                        {format(new Date(invoice.date), 'd MMM yyyy')}
+                        {clientReference(invoice.reference)
+                          ? ` · ${clientReference(invoice.reference)}`
+                          : ''}
+                      </p>
+                      <p className="text-text-primary mt-1 text-sm font-semibold tabular-nums">
+                        {money(invoice.currency, invoice.total)}
+                        {invoice.status === 'part_paid' && (
+                          <span className="text-text-muted ml-1 text-xs font-normal">
+                            ({money(invoice.currency, invoice.balance)} to pay)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void download(invoice.id)}
+                      disabled={downloadingId === invoice.id}
+                      aria-label={`Download ${invoice.number}`}
+                      className="border-border-muted text-text-primary inline-flex size-10 flex-shrink-0 items-center justify-center rounded-lg border disabled:opacity-50"
+                    >
+                      <IconDownload size={18} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-border-muted bg-surface-primary hidden overflow-x-auto rounded-xl border shadow-sm sm:block">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-fill-muted/60 border-border-muted border-b">
                     <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
@@ -219,9 +270,9 @@ const InvoicesPage = () => {
                           <span className="text-text-primary block font-mono font-medium">
                             {invoice.number}
                           </span>
-                          {invoice.reference && (
+                          {clientReference(invoice.reference) && (
                             <span className="text-text-muted block text-xs">
-                              {invoice.reference}
+                              {clientReference(invoice.reference)}
                             </span>
                           )}
                         </td>

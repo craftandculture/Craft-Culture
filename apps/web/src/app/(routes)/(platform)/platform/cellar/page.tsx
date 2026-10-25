@@ -2,9 +2,7 @@
 
 import {
   IconBottle,
-  IconBuildingWarehouse,
   IconChevronDown,
-  IconCoin,
   IconDownload,
   IconFileText,
   IconHistory,
@@ -23,6 +21,9 @@ import { toast } from 'sonner';
 
 import CellarLocationStrip from '@/app/_cellar/components/CellarLocationStrip';
 import type { CellarLocation } from '@/app/_cellar/components/CellarLocationStrip';
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
 import DeliveryOptionsForm, {
@@ -203,7 +204,7 @@ const CellarPage = () => {
   });
   const [openWine, setOpenWine] = useState<string | null>(null);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
 
@@ -556,7 +557,7 @@ const CellarPage = () => {
   const hasUk = (ukData?.holdings.length ?? 0) > 0;
 
   const isUaeEmpty =
-    !isLoading && wines.length === 0 && inbound.length === 0;
+    !isLoading && !isError && wines.length === 0 && inbound.length === 0;
   const isEmptyCellar = isUaeEmpty && !hasUk;
   /*
     One collection, filtered by where it is held. The strip only appears when
@@ -904,100 +905,99 @@ const CellarPage = () => {
       .join(' · ');
   };
 
+  /* Morning until noon, afternoon until six, evening after */
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <div className="w-full pb-8">
-      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          {/*
-            The same programme the member joined, named the same way. A portal
-            that calls itself something else reads as a different product from
-            the one they were sold.
-          */}
-          <Typography
-            variant="bodyXs"
-            className="text-text-muted mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]"
-          >
-            C&amp;C Private Cellar
-          </Typography>
-          {/*
-            No page title. The tab above already says "Your cellar", and
-            repeating it cost a whole line of heading before a member saw a
-            single bottle. The member's name earns its place; the word for the
-            screen they are already on does not.
-          */}
-          <Typography variant="headingMd" className="block">
-            {data?.partner?.name ?? '\u00A0'}
-          </Typography>
-          {/*
-            Says where this member's wine actually is. A member whose wine is
-            all at our UK bond was told it was stored in the UAE warehouse.
-          */}
-          <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-            {isUaeEmpty && hasUk
-              ? 'Held in bond for you at London City Bond, Burton. Duty and VAT stay suspended while your wine is in bond.'
-              : hasUk
-                ? 'Held in bond for you in the UAE and at London City Bond in the UK. Duty and VAT are only paid when wine is delivered to you.'
-                : 'Stored duty-free in the C&C bonded warehouse. Duty and VAT are only paid when wine is delivered to you in the UAE.'}
-          </Typography>
-        </div>
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            isDisabled={isRefetching}
-          >
-            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-          </Button>
-          {/*
-            The dirham is pegged, so this converts rather than quotes a rate.
-            A member who thinks in dirhams should not have to do the sum to
-            know whether a release is worth asking for.
-          */}
-          <div className="border-border-muted flex overflow-hidden rounded-lg border">
-            {(['USD', 'AED'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setCurrency(option)}
-                aria-pressed={currency === option}
-                className={`min-h-9 px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  currency === option
-                    ? 'bg-text-primary text-surface-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
+      {/*
+        The same programme the member joined, named the same way, then a
+        greeting by name. Where the wine is held follows on its own line.
+      */}
+      <CellarPageHeader
+        title="Your private cellar"
+        description={
+          <>
+            <span className="text-text-primary block" suppressHydrationWarning>
+              {data?.partner?.name
+                ? `${greeting}, ${data.partner.name}`
+                : '\u00A0'}
+            </span>
+            {/*
+              Says where this member's wine actually is. A member whose wine is
+              all at our UK bond was told it was stored in the UAE warehouse.
+            */}
+            <span className="mt-0.5 block text-xs leading-5 sm:text-sm">
+              {isUaeEmpty && hasUk
+                ? 'Held in bond for you at London City Bond in the UK. Duty and VAT stay suspended while your wine is in bond.'
+                : hasUk
+                  ? 'Held in bond for you in the UAE and at London City Bond in the UK. Duty and VAT are only paid when wine is delivered to you.'
+                  : 'Stored duty-free in the C&C bonded warehouse. Duty and VAT are only paid when wine is delivered to you in the UAE.'}
+            </span>
+          </>
+        }
+        actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                isDisabled={isRefetching}
               >
-                {option}
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            isDisabled={!wines.length}
-          >
-            <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-          </Button>
-          {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
-          <Link
-            href="/platform/cellar/statement"
-            className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
-          >
-            <IconFileText size={14} />
-            Statements
-          </Link>
-          {!isViewer && (
-            <Link
-              href="/platform/cellar/invoices"
-              className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
-            >
-              <IconReceipt size={14} />
-              Invoices
-            </Link>
-          )}
-        </div>
-      </header>
+                <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+              </Button>
+              {/*
+                The dirham is pegged, so this converts rather than quotes a rate.
+                A member who thinks in dirhams should not have to do the sum to
+                know whether a release is worth asking for.
+              */}
+              <div className="border-border-muted bg-surface-primary flex overflow-hidden rounded-lg border">
+                {(['USD', 'AED'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setCurrency(option)}
+                    aria-pressed={currency === option}
+                    className={`min-h-9 px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      currency === option
+                        ? 'bg-text-primary text-surface-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                isDisabled={!wines.length}
+              >
+                <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
+              </Button>
+              {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
+              <Link
+                href="/platform/cellar/statement"
+                className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
+              >
+                <IconFileText size={14} />
+                Statements
+              </Link>
+              {!isViewer && (
+                <Link
+                  href="/platform/cellar/invoices"
+                  className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
+                >
+                  <IconReceipt size={14} />
+                  Invoices
+                </Link>
+              )}
+            </div>
+        }
+      />
 
       {/*
         Only what needs finishing sits above the wine. Transfers, bringing
@@ -1005,6 +1005,7 @@ const CellarPage = () => {
         reason they are here — except for a new member with nothing stored
         yet, for whom they are the whole story.
       */}
+      {isError && <CellarState kind="error" className="mb-4" />}
       {isViewer && <ViewOnlyNotice />}
       {/*
         Payment is due on receipt, so an unpaid invoice is the one figure
@@ -1062,7 +1063,7 @@ const CellarPage = () => {
             {
               key: 'uk',
               country: 'United Kingdom',
-              place: 'London City Bond, Burton',
+              place: 'London City Bond',
               bottles: (ukData?.holdings ?? []).reduce((sum, holding) => sum + holding.totalBottles, 0),
               wines: new Set((ukData?.holdings ?? []).map((holding) => `${holding.lwin18}|${holding.name}`)).size,
               valueUsd: (ukData?.holdings ?? []).reduce(
@@ -1086,83 +1087,60 @@ const CellarPage = () => {
       >
         {[
           {
-            icon: IconBottle,
             value: collection.bottles.toLocaleString(),
             label: 'Bottles',
             detail: `${collection.cases.toLocaleString()} cases`,
-            alert: false,
           },
           {
-            icon: IconBuildingWarehouse,
             value: collection.wines.toLocaleString(),
             label: 'Wines',
             detail: `${collection.producers} producers`,
-            alert: false,
           },
           {
-            icon: IconCoin,
             value: money(collection.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
             note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
-            alert: false,
           },
           {
-            icon: IconShip,
             value: totals.inboundBottles.toLocaleString(),
             label: 'In transit',
-            detail: `${inbound.length} ${inbound.length === 1 ? 'line' : 'lines'}`,
-            alert: inbound.length > 0,
+            detail: `${inbound.length} ${inbound.length === 1 ? 'wine' : 'wines'} on the way`,
           },
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
           .filter((card) => card.label !== 'In transit' || inbound.length > 0)
           .filter((card) => card.label !== 'Indicative value' || collection.indicative > 0)
           .map((card) => (
-          <div
+          <CellarStatTile
             key={card.label}
-            className={`rounded-xl border px-3 py-2 text-center ${
-              card.alert
-                ? 'border-amber-200 bg-amber-50/50'
-                : 'border-border-muted bg-background-primary'
-            }`}
-          >
-            <div
-              className={`mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md ${
-                card.alert
-                  ? 'bg-amber-100 text-amber-600'
-                  : 'bg-emerald-50 text-emerald-600'
-              }`}
-            >
-              <card.icon size={12} />
-            </div>
-            <div className="text-lg font-bold leading-tight tabular-nums">
-              {card.value}
-            </div>
-            <div className="text-text-muted inline-flex items-center gap-1 text-[11px]">
-              {card.label}
-              {'note' in card && card.note && (
-                <Tooltip>
-                  <TooltipTrigger aria-label={`About ${card.label.toLowerCase()}`}>
-                    <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-[240px] text-left lg:max-w-[240px]">
-                    <Typography variant="bodyXs">{card.note}</Typography>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <div className="text-text-muted text-[10px]">{card.detail}</div>
-          </div>
+            value={card.value}
+            detail={card.detail}
+            label={
+              <span className="inline-flex items-center gap-1">
+                {card.label}
+                {'note' in card && card.note && (
+                  <Tooltip>
+                    <TooltipTrigger aria-label={`About ${card.label.toLowerCase()}`}>
+                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[240px] text-left lg:max-w-[240px]">
+                      <Typography variant="bodyXs">{card.note}</Typography>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </span>
+            }
+          />
         ))}
       </div>
       )}
 
 
       {inbound.length > 0 && (
-        <section className="border-border-muted mb-5 rounded-xl border">
+        <section className="border-border-muted bg-surface-primary mb-5 rounded-xl border shadow-sm">
           <div className="border-border-muted flex items-center gap-2 border-b px-3 py-2.5">
-            <Icon icon={IconShip} size="sm" className="text-amber-500" />
+            <Icon icon={IconShip} size="sm" className="text-text-muted" />
             <Typography variant="labelSm" className="font-semibold">
               On its way
             </Typography>
@@ -1181,7 +1159,8 @@ const CellarPage = () => {
                   colorRole="muted"
                   className="flex-shrink-0 tabular-nums"
                 >
-                  {line.totalBottles ?? 0} btl
+                  {line.totalBottles ?? 0}{' '}
+                  {(line.totalBottles ?? 0) === 1 ? 'bottle' : 'bottles'}
                   {line.eta
                     ? ` · due ${format(new Date(line.eta), 'MMM yyyy')}`
                     : ''}
@@ -1694,25 +1673,20 @@ const CellarPage = () => {
           an empty table said so four times; one card says it once and points
           somewhere useful.
         */
-        <div className="border-border-muted rounded-xl border bg-gradient-to-b from-slate-50/70 to-transparent px-6 py-12 text-center dark:from-slate-500/10">
-          <span className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-500/20">
-            <IconBottle size={20} />
-          </span>
-          <p className="text-text-primary text-base font-semibold">
-            Your cellar is empty for now
-          </p>
-          <p className="text-text-muted mx-auto mt-1 max-w-md text-sm leading-6">
-            Your wines will appear here as soon as they arrive in our warehouse. In the
-            meantime, you can browse what we hold today, or tell us about wine
-            you would like to bring in.
-          </p>
-          <Link
-            href="/platform/cellar/available"
-            className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
-          >
-            Browse The Cellar List
-          </Link>
-        </div>
+        <CellarState
+          kind="empty"
+          icon={IconBottle}
+          title="Your cellar is empty for now"
+          message="Your wines will appear here as soon as they arrive in our warehouse. In the meantime, you can browse what we hold today, or tell us about wine you would like to bring in."
+          action={
+            <Link
+              href="/platform/cellar/available"
+              className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
+            >
+              Browse The Cellar List
+            </Link>
+          }
+        />
       ) : (
         <>
       {/*
@@ -2449,7 +2423,7 @@ const CellarPage = () => {
                               className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
                             >
                               <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-slate-400 align-middle" />
-                              Held in the United Kingdom · London City Bond, Burton
+                              Held in the United Kingdom · London City Bond
                             </Typography>
                             <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
                               <table className="w-auto text-xs">

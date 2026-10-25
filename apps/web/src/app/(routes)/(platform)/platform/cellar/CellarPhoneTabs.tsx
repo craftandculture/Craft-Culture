@@ -25,7 +25,7 @@ const isOn = (pathname: string, href: string) =>
 /**
  * The member's navigation on a phone: four places within thumb reach
  *
- * Your cellar, The Cellar List, Deliveries and Invoices are what a member comes
+ * Your cellar, the Cellar List, Deliveries and Invoices are what a member comes
  * back for; everything else sits under More, in a sheet from the bottom. A
  * guest the cellar is shared with sees no Invoices, as on the desktop.
  *
@@ -39,8 +39,8 @@ const CellarPhoneTabs = () => {
   useEffect(() => setMoreOpen(false), [pathname]);
 
   const main = [
-    { href: '/platform/cellar', label: 'My Cellar', icon: IconBottle },
-    { href: '/platform/cellar/available', label: 'C&C Cellar', icon: IconSparkles },
+    { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
+    { href: '/platform/cellar/available', label: 'Cellar List', icon: IconSparkles },
     { href: '/platform/cellar/deliveries', label: 'Deliveries', icon: IconTruckDelivery },
     ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
   ];
@@ -48,7 +48,7 @@ const CellarPhoneTabs = () => {
   const more = [
     { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
     { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
-    { href: '/platform/cellar/statement', label: 'Statement', icon: IconFileText },
+    { href: '/platform/cellar/statement', label: 'Statements', icon: IconFileText },
     { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
     { href: '/platform/cellar/profile', label: 'Your details', icon: IconUserCircle },
   ];
