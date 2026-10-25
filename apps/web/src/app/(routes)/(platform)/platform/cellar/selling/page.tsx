@@ -420,7 +420,7 @@ const SellingPage = () => {
     <div className="w-full pb-8">
       <CellarPageHeader
         title="Selling"
-        description="Wine you have asked us to sell on your behalf. You receive your asking price in full. Our commission is added on top and never deducted from it."
+        description="Wine you have offered for sale through Craft & Culture. You receive your asking price in full; our commission is added to it, never deducted."
       />
 
       {!isLoading && !isError && current.length > 0 && (

@@ -31,7 +31,7 @@ const DeliveriesPage = () => {
     <div className="flex w-full flex-col gap-4 pb-8">
       <CellarPageHeader
         title="Deliveries"
-        description="Wine on its way to you, and deliveries already made. To request one, open a wine in Your cellar."
+        description="Deliveries in progress and those already completed. To arrange a new delivery, choose the wines in Your cellar."
         className="mb-1"
       />
 

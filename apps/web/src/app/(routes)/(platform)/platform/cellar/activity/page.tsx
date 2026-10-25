@@ -15,7 +15,7 @@ const CellarActivityPage = () => {
     <div className="pb-8">
       <CellarPageHeader
         title="Activity"
-        description="Everything that has happened to your wine with us, newest first. Routine handling in the warehouse, such as moving a case within the warehouse, is folded into one line per day. Open it to see each step."
+        description="A complete record of your wine with us: every arrival, delivery and sale, newest first. Routine warehouse handling is grouped into a single line for each day."
       />
 
       <PartnerActivityFeed source="cellar" />

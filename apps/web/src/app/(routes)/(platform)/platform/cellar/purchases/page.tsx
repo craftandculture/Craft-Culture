@@ -155,7 +155,7 @@ const PurchasesPage = () => {
     <div className="w-full pb-8">
       <CellarPageHeader
         title="Purchases"
-        description="Wine you have bought from us. It is stored duty-free in our bonded warehouse and added to your cellar once your payment is confirmed."
+        description="Wine you have bought through Craft & Culture. It is held in bond and added to your cellar once your payment is confirmed."
       />
 
       {isLoading && <CellarState kind="loading" />}

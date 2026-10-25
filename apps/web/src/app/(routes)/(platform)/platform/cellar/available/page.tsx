@@ -340,7 +340,7 @@ const AvailablePage = () => {
       */}
       <CellarPageHeader
         title="The Cellar List"
-        description="Wines held in the C&C bonded warehouse, ready to add to your cellar. Prices are duty-free. Duty and VAT are only paid if you have wine delivered to you in the UAE."
+        description="Wines held in our bonded warehouse, available to add to your cellar. Prices are in bond; duty and VAT apply only to wine delivered to you in the UAE."
         actions={!isViewer ? <FindWineDialog /> : undefined}
       />
 

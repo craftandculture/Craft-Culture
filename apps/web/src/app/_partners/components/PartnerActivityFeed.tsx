@@ -7,6 +7,7 @@ import {
   IconFileText,
   IconPackageExport,
   IconPackageImport,
+  IconSearch,
   IconTruckDelivery,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -165,6 +166,25 @@ const SubRow = ({
  * Each day opens with a one-line summary, so a week can be scanned without
  * reading every row.
  */
+type Topic = 'all' | 'arrivals' | 'deliveries' | 'sales' | 'other' | 'handling' | 'orders';
+
+/** Which filter an event belongs to, read from its kind and how it is worded */
+const topicOf = (entry: PartnerActivityEntry): Exclude<Topic, 'all'> => {
+  if (entry.kind === 'in') return 'arrivals';
+  if (entry.kind === 'internal' || entry.kind === 'correction') return 'handling';
+  if (entry.kind === 'update') return 'orders';
+  if (/delivery|delivered|collected/i.test(entry.title)) return 'deliveries';
+  if (/damaged|lost|transferred|adjust/i.test(entry.title)) return 'other';
+  return 'sales';
+};
+
+const PERIODS = [
+  { key: 7, label: '7 days' },
+  { key: 30, label: '30 days' },
+  { key: 90, label: '90 days' },
+  { key: 0, label: 'All time' },
+] as const;
+
 export interface PartnerActivityFeedProps {
   /** A Private Cellar member's feed: their stock only, buyers named */
   source?: 'partner' | 'cellar';
@@ -174,6 +194,9 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
   const api = useTRPC();
   const isCellar = source === 'cellar';
   const [streams, setStreams] = useState<Stream[]>([]);
+  const [topic, setTopic] = useState<Topic>('all');
+  const [search, setSearch] = useState('');
+  const [periodDays, setPeriodDays] = useState<number>(0);
   // Folded rows the user has opened: a day's housekeeping, or an order's picks
   const [opened, setOpened] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
@@ -199,8 +222,34 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
   const isLoading = isCellar ? cellarQuery.isLoading : partnerQuery.isLoading;
   const isCellarError = isCellar && cellarQuery.isError;
 
-  const entries = data?.entries ?? [];
+  const allEntries = data?.entries ?? [];
   type Entry = PartnerActivityEntry;
+
+  /* The period and search narrow first, so each topic's count is what that pill would show */
+  const since = periodDays ? Date.now() - periodDays * 24 * 60 * 60 * 1000 : 0;
+  const needle = search.trim().toLowerCase();
+  const inScope = allEntries.filter(
+    (entry) =>
+      new Date(entry.at).getTime() >= since &&
+      (!needle ||
+        [entry.subject, entry.title, entry.orderRef, entry.reference, entry.detail]
+          .filter(Boolean)
+          .some((text) => text!.toLowerCase().includes(needle))),
+  );
+  const topicCount = (key: Exclude<Topic, 'all'>) =>
+    inScope.filter((entry) => topicOf(entry) === key).length;
+  const topics: { key: Topic; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: inScope.length },
+    { key: 'arrivals', label: isCellar ? 'Arrivals' : 'Received', count: topicCount('arrivals') },
+    { key: 'deliveries', label: 'Deliveries', count: topicCount('deliveries') },
+    { key: 'sales', label: 'Sales', count: topicCount('sales') },
+    { key: 'other', label: 'Damage and transfers', count: topicCount('other') },
+    { key: 'orders', label: 'Order updates', count: topicCount('orders') },
+    { key: 'handling', label: 'Warehouse handling', count: topicCount('handling') },
+  ];
+  const entries =
+    topic === 'all' ? inScope : inScope.filter((entry) => topicOf(entry) === topic);
+  const isFiltered = topic !== 'all' || needle !== '' || periodDays !== 0;
 
   // Day headings in the order the entries arrive, which is already newest-first.
   const days = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
@@ -263,6 +312,70 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,48rem)_17rem]">
     <div className="space-y-5">
+      {/* Filters, as on Team Tasks: search, then pills that say how many each holds */}
+      {allEntries.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <IconSearch className="text-text-muted absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search wine or order number"
+                className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-muted h-10 w-full rounded-xl border pl-9 pr-3 text-sm shadow-sm focus:outline-none"
+              />
+            </div>
+            <select
+              value={periodDays}
+              onChange={(event) => setPeriodDays(Number(event.target.value))}
+              aria-label="Period"
+              className="border-border-muted bg-surface-primary text-text-primary h-10 rounded-xl border px-3 text-sm shadow-sm"
+            >
+              {PERIODS.map((period) => (
+                <option key={period.key} value={period.key}>
+                  {period.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {topics
+              .filter((item) => item.key === 'all' || item.key === topic || item.count > 0)
+              .map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setTopic(item.key)}
+                  aria-pressed={topic === item.key}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                    topic === item.key
+                      ? 'bg-text-primary text-surface-primary'
+                      : 'bg-surface-muted text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {item.label}
+                  <span className={`ml-1.5 tabular-nums ${topic === item.key ? 'opacity-70' : 'text-text-muted'}`}>
+                    {item.count}
+                  </span>
+                </button>
+              ))}
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTopic('all');
+                  setSearch('');
+                  setPeriodDays(0);
+                }}
+                className="text-text-muted shrink-0 px-2 text-[12px] underline-offset-2 hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={`flex flex-wrap items-center gap-1.5 ${isCellar ? 'hidden' : ''}`}>
         {STREAMS.map((stream) => {
           const on = streams.includes(stream.key);
@@ -301,6 +414,10 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
       ) : isCellarError ? (
         <p className="rounded-xl border border-border-muted bg-surface-primary px-4 py-5 text-sm text-text-muted">
           We cannot show this just now. Please try again shortly, or contact the cellar team.
+        </p>
+      ) : entries.length === 0 && isFiltered ? (
+        <p className="rounded-xl border border-border-muted bg-surface-primary px-6 py-10 text-center text-sm text-text-muted">
+          Nothing matches these filters.
         </p>
       ) : entries.length === 0 ? (
         isCellar ? (
