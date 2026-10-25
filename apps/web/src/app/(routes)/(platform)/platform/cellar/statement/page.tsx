@@ -405,7 +405,7 @@ const StatementPage = () => {
                 <thead className="bg-fill-muted/60 border-border-muted border-b">
                   <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                     <th className="px-3 py-2 text-left">Wine</th>
-                    <th className="px-3 py-2 text-left">Where</th>
+                    <th className="px-3 py-2 text-left">Location</th>
                     <th className="px-3 py-2 text-right">Bottles</th>
                   </tr>
                 </thead>
