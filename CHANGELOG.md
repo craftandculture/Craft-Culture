@@ -1,3 +1,9 @@
+## [2.0.540](https://github.com/craftandculture/Craft-Culture/compare/v2.0.539...v2.0.540) (2026-10-25)
+
+### Bug Fixes
+
+* the Activity feed folds a case opened during a pick or take-out into that event, counts what left in bottles, and shows clean wine names with the vintage ([ca42f70](https://github.com/craftandculture/Craft-Culture/commit/ca42f70b51af76ab6451b9f3377541c7a466546d))
+
 ## [2.0.539](https://github.com/craftandculture/Craft-Culture/compare/v2.0.538...v2.0.539) (2026-10-25)
 
 ### Features
