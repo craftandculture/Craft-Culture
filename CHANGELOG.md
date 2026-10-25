@@ -1,3 +1,10 @@
+## [2.0.551](https://github.com/craftandculture/Craft-Culture/compare/v2.0.550...v2.0.551) (2026-10-25)
+
+### Bug Fixes
+
+* Private Cellar payment panels in emerald, no teal on Your details, clean wine names on Selling and sale proceeds, no dash in the withdrawal message ([296e322](https://github.com/craftandculture/Craft-Culture/commit/296e322f4cca2f2aa1a645f08a8175e9df028deb))
+* wine partners no longer receive distributor names, C&C notes, other owners' costs or staff names ([12600b3](https://github.com/craftandculture/Craft-Culture/commit/12600b3971e9b8e3a37a7a277695927a0652a1f3))
+
 ## [2.0.550](https://github.com/craftandculture/Craft-Culture/compare/v2.0.549...v2.0.550) (2026-10-25)
 
 ### Bug Fixes
