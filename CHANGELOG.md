@@ -1,3 +1,9 @@
+## [2.0.533](https://github.com/craftandculture/Craft-Culture/compare/v2.0.532...v2.0.533) (2026-10-25)
+
+### Features
+
+* the member statement shows each delivery and each sale as one line that opens to its wines ([58de81d](https://github.com/craftandculture/Craft-Culture/commit/58de81d97f44af6cae19fe687da0448ec7eb7895))
+
 ## [2.0.532](https://github.com/craftandculture/Craft-Culture/compare/v2.0.531...v2.0.532) (2026-10-25)
 
 ### Features
