@@ -90,6 +90,21 @@ const rawEnv = Object.fromEntries(
 ) as typeof rawEnvAsSet;
 
 /**
+ * The database URL as pasted from Neon, reduced to the bare URL: Neon's copy
+ * button can include `psql '…'` and quotes, and a pasted value can carry
+ * whitespace or a literal "\\n". On 25 Oct 2026 such a paste into Trigger.dev
+ * stopped every background job with "Invalid URL".
+ */
+if (typeof rawEnv.DB_URL === 'string') {
+  rawEnv.DB_URL = rawEnv.DB_URL.trim()
+    .replace(/^psql\s+/, '')
+    .replace(/^DB_URL=/, '')
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/(\\[nrt])+$/, '')
+    .trim();
+}
+
+/**
  * Check if all required env vars are present
  * Skip validation during build when env vars aren't available
  */
