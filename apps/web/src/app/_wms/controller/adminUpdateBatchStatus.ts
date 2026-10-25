@@ -8,6 +8,7 @@ import {
   privateClientOrders,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  wmsPickLists,
   wmsStockMovements,
   zohoSalesOrderItems,
   zohoSalesOrders,
@@ -159,6 +160,7 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
               quantityBottles: wmsStockMovements.quantityBottles,
               fromOwnerId: wmsStockMovements.fromOwnerId,
               stockId: wmsStockMovements.stockId,
+              performedAt: wmsStockMovements.performedAt,
             })
             .from(wmsStockMovements)
             .where(
@@ -168,10 +170,23 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
               ),
             );
 
+          // When each order's current pick list began: earlier picks belong to a deleted list
+          const lists = await db
+            .select({ orderId: wmsPickLists.orderId, createdAt: wmsPickLists.createdAt })
+            .from(wmsPickLists)
+            .where(inArray(wmsPickLists.orderId, orderIds));
+          const pickListCreatedAt = new Map<string, Date>();
+          for (const list of lists) {
+            if (!list.orderId) continue;
+            const seen = pickListCreatedAt.get(list.orderId);
+            if (!seen || list.createdAt > seen) pickListCreatedAt.set(list.orderId, list.createdAt);
+          }
+
           const movements = planDispatchMovements({
             orderIds,
             picks,
             lines: [...zohoItems, ...pcoItems],
+            pickListCreatedAt,
           });
 
           // Build order number lookup
