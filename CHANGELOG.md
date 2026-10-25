@@ -1,3 +1,9 @@
+## [2.0.537](https://github.com/craftandculture/Craft-Culture/compare/v2.0.536...v2.0.537) (2026-10-25)
+
+### Bug Fixes
+
+* an opened order on the Activity feed reads as its contents, not as more orders ([3448b5b](https://github.com/craftandculture/Craft-Culture/commit/3448b5bf4cbe1d703a3756ae312078c92016b352))
+
 ## [2.0.536](https://github.com/craftandculture/Craft-Culture/compare/v2.0.535...v2.0.536) (2026-10-25)
 
 ### Bug Fixes
