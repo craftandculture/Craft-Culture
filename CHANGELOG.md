@@ -1,3 +1,9 @@
+## [2.0.557](https://github.com/craftandculture/Craft-Culture/compare/v2.0.556...v2.0.557) (2026-10-25)
+
+### Features
+
+* Activity can be filtered by search, period and type (arrivals, deliveries, sales, damage and transfers, warehouse handling), and cellar page introductions are reworded ([4efe744](https://github.com/craftandculture/Craft-Culture/commit/4efe7444c461f6e4cab8dc2edee895e181b0aab0))
+
 ## [2.0.556](https://github.com/craftandculture/Craft-Culture/compare/v2.0.555...v2.0.556) (2026-10-25)
 
 ### Features
