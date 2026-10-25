@@ -1,3 +1,9 @@
+## [2.0.550](https://github.com/craftandculture/Craft-Culture/compare/v2.0.549...v2.0.550) (2026-10-25)
+
+### Bug Fixes
+
+* a member's wine sold to a private client through a distributor reads as sold to a private client, not to the distributor ([08cf957](https://github.com/craftandculture/Craft-Culture/commit/08cf95711bfb0f932c538d7df1e42d813528187e))
+
 ## [2.0.549](https://github.com/craftandculture/Craft-Culture/compare/v2.0.548...v2.0.549) (2026-10-25)
 
 ### Features
