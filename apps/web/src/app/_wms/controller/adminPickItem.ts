@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
@@ -228,13 +229,16 @@ const adminPickItem = wmsOperatorProcedure
       .select({ orderKind: privateClientOrders.orderKind })
       .from(privateClientOrders)
       .where(eq(privateClientOrders.id, pickList.orderId));
-    const ownersOwnOrder =
-      pcoOrder?.orderKind === 'owner_delivery' ||
-      pcoOrder?.orderKind === 'cellar_sale';
+    // A member's own delivery may come as the PCO or as a Zoho order quoting it
+    const ownDelivery = (await getOwnerDeliveryOwners([pickList.orderId])).get(
+      pickList.orderId,
+    );
 
-    if (!ownersOwnOrder) {
+    if (pcoOrder?.orderKind !== 'cellar_sale') {
       const holds = await getCollectorStockHolds(candidates);
-      const free = candidates.filter((row) => !holds.isHeld(row));
+      const free = candidates.filter(
+        (row) => !holds.isHeld(row) || row.ownerId === ownDelivery?.ownerId,
+      );
 
       if (free.length === 0) {
         throw new TRPCError({

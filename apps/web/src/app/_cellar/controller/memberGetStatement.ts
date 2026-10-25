@@ -1,6 +1,7 @@
-import { and, desc, eq, gt, gte, inArray, lt, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import db from '@/database/client';
@@ -259,7 +260,7 @@ const memberGetStatement = stockOwnerProcedure
         salesOrderNumber: zohoSalesOrders.salesOrderNumber,
         customerName: zohoSalesOrders.customerName,
         pcoNumber: privateClientOrders.orderNumber,
-        orderKind: privateClientOrders.orderKind,
+        orderId: wmsStockMovements.orderId,
       })
       .from(wmsStockMovements)
       .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
@@ -276,12 +277,34 @@ const memberGetStatement = stockOwnerProcedure
             ),
             and(eq(wmsStockMovements.movementType, 'count'), lt(wmsStockMovements.quantityCases, 0)),
           ),
-          or(sql`${privateClientOrders.orderKind} IS NULL`, ne(privateClientOrders.orderKind, 'owner_delivery')),
         ),
       )
       .orderBy(wmsStockMovements.performedAt);
 
+    /*
+      The member's own deliveries, whether picked as the delivery order or as
+      a Zoho order referencing it. Once delivered this month they are listed
+      under Delivered, so are not listed twice; until then they are on their
+      way to the member, not sold.
+    */
+    const ownDeliveries = await getOwnerDeliveryOwners(leftRows.map((row) => row.orderId));
+    const deliveryOf = (row: (typeof leftRows)[number]) => {
+      const delivery = row.orderId ? ownDeliveries.get(row.orderId) : undefined;
+      return delivery?.ownerId === partnerId ? delivery : undefined;
+    };
+    const leftShown = leftRows.filter((row) => {
+      const delivery = deliveryOf(row);
+      return !(
+        delivery?.status === 'delivered' &&
+        delivery.deliveredAt &&
+        delivery.deliveredAt >= from &&
+        delivery.deliveredAt < to
+      );
+    });
+
     const leftNote = (row: (typeof leftRows)[number]) => {
+      const delivery = deliveryOf(row);
+      if (delivery) return `Your delivery · ${delivery.pcoNumber}`;
       if (row.reasonCode?.startsWith('stock_out:')) {
         const reason = row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS;
         return STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock';
@@ -485,7 +508,7 @@ const memberGetStatement = stockOwnerProcedure
         bottles: entry.wines.reduce((sum, wine) => sum + wine.bottles, 0),
       })),
 
-      left: leftRows.map((row) => ({
+      left: leftShown.map((row) => ({
         id: row.id,
         at: row.at,
         ...wineLine(row.productName, row.lwin18),

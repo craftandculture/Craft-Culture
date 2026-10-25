@@ -1,6 +1,7 @@
 import { and, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import db from '@/database/client';
@@ -87,6 +88,7 @@ const adminGetOwnerOutflows = adminProcedure
           customerName: zohoSalesOrders.customerName,
           pcoNumber: privateClientOrders.orderNumber,
           orderKind: privateClientOrders.orderKind,
+          orderId: wmsStockMovements.orderId,
         })
         .from(wmsStockMovements)
         .innerJoin(partners, eq(wmsStockMovements.fromOwnerId, partners.id))
@@ -124,6 +126,7 @@ const adminGetOwnerOutflows = adminProcedure
     ]);
 
     const holds = await getCollectorStockHolds(rows);
+    const ownDeliveries = await getOwnerDeliveryOwners(rows.map((row) => row.orderId));
 
     const lines = rows.map((row) => {
       const bottles = Math.abs(
@@ -134,8 +137,13 @@ const adminGetOwnerOutflows = adminProcedure
             'stock_out:'.length,
           ) as keyof typeof STOCK_OUT_REASONS)
         : null;
+      const delivery = row.orderId ? ownDeliveries.get(row.orderId) : undefined;
+      const ownDelivery = delivery?.ownerId === row.ownerId;
       const unoffered =
-        row.movementType === 'pick' && !!row.salesOrderNumber && holds.isHeld(row);
+        row.movementType === 'pick' &&
+        !!row.salesOrderNumber &&
+        !ownDelivery &&
+        holds.isHeld(row);
 
       return {
         id: row.id,
@@ -152,7 +160,9 @@ const adminGetOwnerOutflows = adminProcedure
           ? (STOCK_OUT_REASONS[stockOut]?.label ?? 'Taken out of stock')
           : row.movementType === 'count'
             ? 'Stock count shortfall'
-            : 'Picked for an order',
+            : ownDelivery
+              ? `Owner's own delivery · ${delivery?.pcoNumber}`
+              : 'Picked for an order',
         order: row.salesOrderNumber ?? row.pcoNumber,
         orderKind: row.orderKind,
         customer: row.customerName,

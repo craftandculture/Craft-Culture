@@ -10,6 +10,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -188,6 +189,9 @@ const adminReleaseToPick = wmsOperatorProcedure
     const shortOnRelease: string[] = [];
     let reservedCases = 0;
 
+    // A member's own delivery, raised in Zoho with the PCO as its reference
+    const ownDelivery = (await getOwnerDeliveryOwners([order.id])).get(order.id);
+
     for (const item of itemsToRelease) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
       const itemLwin18 = item.lwin18 ? normalizeLwin18(item.lwin18) : null;
@@ -355,9 +359,12 @@ const adminReleaseToPick = wmsOperatorProcedure
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
       // Wine held for its owner is not trade stock unless they have offered it
+      // except on the owner's own delivery, which reaches here as a Zoho order quoting its PCO
       const holds = await getCollectorStockHolds(availableStock);
-      const heldForMembers = availableStock.filter((s) => holds.isHeld(s));
-      availableStock = availableStock.filter((s) => !holds.isHeld(s));
+      const blocked = (s: (typeof availableStock)[number]) =>
+        holds.isHeld(s) && s.ownerId !== ownDelivery?.ownerId;
+      const heldForMembers = availableStock.filter(blocked);
+      availableStock = availableStock.filter((s) => !blocked(s));
       availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Prefer a bay with enough UNRESERVED stock; fall back to one that
