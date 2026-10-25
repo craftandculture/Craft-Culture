@@ -484,6 +484,29 @@ const adminPickItem = wmsOperatorProcedure
         });
       }
 
+      /*
+        Hold the stock row until this pick commits.
+
+        The checks above read the bay before the transaction. Two lines picked
+        from the same row at once (two orders for one wine) could both pass
+        them and both take the stock. The lock makes the second pick wait, and
+        anything that moved under it is caught below and rolled back.
+      */
+      const stockChanged = new TRPCError({
+        code: 'CONFLICT',
+        message: `The stock at ${location.locationCode} changed while this was being picked. Try again.`,
+      });
+
+      const [locked] = await tx
+        .select({ openBottles: wmsStock.openBottles })
+        .from(wmsStock)
+        .where(eq(wmsStock.id, stock.id))
+        .for('update');
+
+      if (!locked || (isBottlePick && locked.openBottles !== stock.openBottles)) {
+        throw stockChanged;
+      }
+
       if (isBottlePick) {
         /*
           Cracking a reserved case goes through the same conversion a whole-case
@@ -496,12 +519,13 @@ const adminPickItem = wmsOperatorProcedure
           behind bays reading as held with nothing holding them.
         */
         if (casesRemoved > 0) {
-          await convertReservationToPick({
+          const converted = await convertReservationToPick({
             stockId: stock.id,
             orderId: pickList.orderId ?? '',
             quantityCases: casesRemoved,
             db: tx,
           });
+          if (converted.totalPicked < casesRemoved) throw stockChanged;
         }
 
         await tx
@@ -543,12 +567,14 @@ const adminPickItem = wmsOperatorProcedure
           (casesRemoved > 0 ? `, cracked ${casesRemoved} case(s)` : '') +
           (singlesId ? `; ${leftover} single bottle(s) back on the shelf` : '');
       } else {
-        await convertReservationToPick({
+        const converted = await convertReservationToPick({
           stockId: stock.id,
           orderId: pickList.orderId ?? '',
           quantityCases: pickedQuantity,
           db: tx,
         });
+        // Fewer cases came off than were checked for: someone got there first
+        if (converted.totalPicked < pickedQuantity) throw stockChanged;
       }
 
       // Record movement
