@@ -107,7 +107,7 @@ const PartnerDashboard = () => {
           onClick={() => refetch()}
           isDisabled={isRefetching}
         >
-          {isRefetching ? 'Loading...' : 'Try Again'}
+          {isRefetching ? 'Loading...' : 'Try again'}
         </Button>
       </div>
     );
@@ -153,7 +153,7 @@ const PartnerDashboard = () => {
           </Link>
           <Link href={ORDERS}>
             <Button size="sm" variant="outline" className="gap-1.5">
-              All orders ({kpis.totalOrders})
+              Active orders ({kpis.totalOrders})
             </Button>
           </Link>
           <Link href="/docs/pco-flows">
@@ -185,9 +185,9 @@ const PartnerDashboard = () => {
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-border-muted bg-fill-primary px-5 py-3">
         {[
           { label: 'Active orders', value: String(kpis.totalOrders) },
-          { label: 'This month', value: `${kpis.monthlyOrders} orders · ${kpis.monthlyCases} cases` },
-          { label: 'Value this month', value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed) },
-          { label: 'Total value', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
+          { label: 'Last 30 days', value: `${kpis.monthlyOrders} orders · ${kpis.monthlyCases} cases` },
+          { label: 'Value, last 30 days', value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed) },
+          { label: 'Value in progress', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
           { label: 'Clients', value: `${kpis.totalClients} · ${kpis.verifiedClients} verified` },
         ].map((stat) => (
           <div key={stat.label} className="flex items-baseline gap-2">
@@ -244,7 +244,7 @@ const PartnerDashboard = () => {
                           {stage.label}
                         </Typography>
                       </span>
-                      <Typography variant="bodyXs" colorRole="muted" className="hidden truncate xl:block">
+                      <Typography variant="bodyXs" colorRole="muted" className="hidden truncate sm:block">
                         {stage.owner}
                       </Typography>
                     </div>
