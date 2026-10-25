@@ -19,6 +19,7 @@
  *   displayWineName('Dom Pérignon P2 2006 0.75L 12.5%abv'); // 'Dom Pérignon P2'
  *
  * @param name - The stored product name
+ * @param options.keepVintage - Leave the vintage on, where nothing else shows it
  * @returns The name alone
  */
 const TRAILING_FACTS = [
@@ -30,10 +31,12 @@ const TRAILING_FACTS = [
 ];
 
 /* Repeated until nothing more comes off: names stack them, "2023 0.75L 13.5%abv (1x75cl)" */
-const displayWineName = (name: string) => {
+const displayWineName = (name: string, options: { keepVintage?: boolean } = {}) => {
+  // Where no column shows the vintage (a timeline), it stays in the name
+  const facts = options.keepVintage ? TRAILING_FACTS.slice(0, 3) : TRAILING_FACTS;
   let current = name.trim();
   for (;;) {
-    const next = TRAILING_FACTS.reduce((text, pattern) => text.replace(pattern, ''), current).trim();
+    const next = facts.reduce((text, pattern) => text.replace(pattern, ''), current).trim();
     if (next === current) return current;
     current = next;
   }

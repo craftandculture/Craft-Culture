@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
 import db from '@/database/client';
 import {
@@ -166,8 +167,51 @@ const getStockActivity = async ({
     return base;
   };
 
-  return rows.map((row) => {
+  /*
+    Opening a case to take some bottles re-records the rest as singles: a
+    repack in the same bay at the same moment. That is part of the pick or
+    take-out, not something else that happened to the wine, so it is folded
+    into that event ("case opened, 1 bottle stays") rather than listed.
+  */
+  const wineKey = (lwin18: string) => lwin18.split('-').slice(0, 2).join('-');
+  const outflows = rows.filter(
+    (row) => row.movementType === 'pick' || row.reasonCode?.startsWith('stock_out:'),
+  );
+  const leftBehind = new Map<string, number>();
+  const folded = new Set<string>();
+  for (const row of rows) {
+    if (row.movementType !== 'repack_in' && row.movementType !== 'repack_out') continue;
+    const bay = row.movementType === 'repack_in' ? row.toLocation : row.fromLocation;
+    const parent = outflows.find(
+      (out) =>
+        wineKey(out.lwin18) === wineKey(row.lwin18) &&
+        out.fromLocation === bay &&
+        Math.abs(out.performedAt.getTime() - row.performedAt.getTime()) <= 3 * 60 * 1000,
+    );
+    if (!parent) continue;
+    folded.add(row.id);
+    if (row.movementType === 'repack_in') {
+      leftBehind.set(
+        parent.id,
+        (leftBehind.get(parent.id) ?? 0) + bottlesOf(row.lwin18, row.quantityCases, row.quantityBottles),
+      );
+    }
+  }
+
+  const bottleWord = (n: number) => `${n} ${n === 1 ? 'bottle' : 'bottles'}`;
+
+  return rows.filter((row) => !folded.has(row.id)).map((row) => {
     const event = describe(row);
+    const bottles = bottlesOf(row.lwin18, row.quantityCases, row.quantityBottles);
+    const left = leftBehind.get(row.id);
+    const where =
+      row.fromLocation && row.toLocation
+        ? `${row.fromLocation} → ${row.toLocation}`
+        : row.fromLocation
+          ? `from ${row.fromLocation}`
+          : row.toLocation
+            ? `into ${row.toLocation}`
+            : null;
 
     return {
       id: `stock-${row.id}`,
@@ -175,19 +219,24 @@ const getStockActivity = async ({
       kind: event.kind,
       at: row.performedAt,
       title: event.title,
-      subject: row.productName,
-      quantity: quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
-      bottles: bottlesOf(row.lwin18, row.quantityCases, row.quantityBottles),
+      subject: displayWineName(row.productName, { keepVintage: true }),
+      // What left is counted as the owner counts it, in bottles
+      quantity:
+        event.kind === 'out'
+          ? bottleWord(bottles)
+          : quantityOf(row.lwin18, row.quantityCases, row.quantityBottles),
+      bottles,
       orderRef: event.kind === 'out' ? (row.pcoNumber ?? row.salesOrderNumber ?? null) : null,
       // Bays mean little to an owner; kept as the small print
       detail:
-        row.fromLocation && row.toLocation
-          ? `${row.fromLocation} → ${row.toLocation}`
-          : row.fromLocation
-            ? `from ${row.fromLocation}`
-            : row.toLocation
-              ? `into ${row.toLocation}`
-              : null,
+        [
+          where,
+          left
+            ? `case opened, ${bottleWord(left)} ${left === 1 ? 'stays' : 'stay'} in your ${isCollector ? 'cellar' : 'stock'}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || null,
       reference: row.movementNumber,
     };
   });

@@ -15,3 +15,13 @@ describe('displayWineName', () => {
     expect(displayWineName(raw)).toBe(shown);
   });
 });
+
+describe('displayWineName with keepVintage', () => {
+  it.each([
+    ['Theo Dancer Bourgogne Aligote 2023 0.75L 12.5%abv', 'Theo Dancer Bourgogne Aligote 2023'],
+    ["Anne Gros Chambolle Musigny 'Combe D’Orveaux' (1x) 2023 (1x75cl)", "Anne Gros Chambolle Musigny 'Combe D’Orveaux' (1x) 2023"],
+    ['Numanthia, Numanthia, Toro DO 2016 (6x75cl)', 'Numanthia, Numanthia, Toro DO 2016'],
+  ])('shows %s as %s', (raw, shown) => {
+    expect(displayWineName(raw, { keepVintage: true })).toBe(shown);
+  });
+});
