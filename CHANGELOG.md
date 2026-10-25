@@ -1,3 +1,9 @@
+## [2.0.523](https://github.com/craftandculture/Craft-Culture/compare/v2.0.522...v2.0.523) (2026-10-25)
+
+### Bug Fixes
+
+* background jobs accept the database address as copied from Neon, so a pasted psql snippet no longer stops them ([1d6002e](https://github.com/craftandculture/Craft-Culture/commit/1d6002e0660f1773c29986dd46f229e471980434))
+
 ## [2.0.522](https://github.com/craftandculture/Craft-Culture/compare/v2.0.521...v2.0.522) (2026-10-25)
 
 ### Features
