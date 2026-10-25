@@ -3687,6 +3687,15 @@ const runMigrations = async () => {
       `);
     });
 
+    // Take-outs written positive before 25 Oct: removals are negative everywhere else
+    await dataFix('take-out movements recorded as removals', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements"
+        SET "quantity_cases" = -"quantity_cases", "quantity_bottles" = -"quantity_bottles"
+        WHERE "reason_code" LIKE 'stock_out:%' AND "quantity_cases" >= 0 AND "quantity_bottles" > 0
+      `);
+    });
+
     await dataFix('consignment owners linked to their partner accounts', async () => {
       await client.unsafe(`
         UPDATE "cons_owners" ow

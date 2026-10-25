@@ -91,8 +91,9 @@ const adminTakeOutOfStock = wmsOperatorProcedure
           movementType: 'adjust',
           lwin18: stock.lwin18,
           productName: stock.productName,
-          quantityCases: plan.casesRemoved,
-          quantityBottles: plan.bottlesOut,
+          // Negative, like every other removal: the ledger tools sum adjustments as signed
+          quantityCases: -plan.casesRemoved,
+          quantityBottles: -plan.bottlesOut,
           fromLocationId: stock.locationId,
           fromOwnerId: stock.ownerId,
           stockId: stock.id,
