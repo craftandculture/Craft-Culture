@@ -110,8 +110,14 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
  * Each day opens with a one-line summary, so a week can be scanned without
  * reading every row.
  */
-const PartnerActivityFeed = () => {
+export interface PartnerActivityFeedProps {
+  /** A Private Cellar member's feed: their stock only, buyers named */
+  source?: 'partner' | 'cellar';
+}
+
+const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) => {
   const api = useTRPC();
+  const isCellar = source === 'cellar';
   const [streams, setStreams] = useState<Stream[]>([]);
   // Folded rows the user has opened: a day's housekeeping, or an order's picks
   const [opened, setOpened] = useState<Set<string>>(new Set());
@@ -123,12 +129,19 @@ const PartnerActivityFeed = () => {
       return next;
     });
 
-  const { data, isLoading } = useQuery(
-    api.partners.getActivity.queryOptions({
+  const partnerQuery = useQuery({
+    ...api.partners.getActivity.queryOptions({
       streams: streams.length > 0 ? streams : undefined,
       limit: 150,
     }),
-  );
+    enabled: !isCellar,
+  });
+  const cellarQuery = useQuery({
+    ...api.cellar.member.getActivity.queryOptions({ limit: 200 }),
+    enabled: isCellar,
+  });
+  const data = isCellar ? cellarQuery.data : partnerQuery.data;
+  const isLoading = isCellar ? cellarQuery.isLoading : partnerQuery.isLoading;
 
   const entries = data?.entries ?? [];
   type Entry = PartnerActivityEntry;
@@ -189,12 +202,12 @@ const PartnerActivityFeed = () => {
       .join(' · ');
   };
 
-  const summary = data?.summary;
+  const summary = !isCellar ? partnerQuery.data?.summary : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,48rem)_17rem]">
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className={`flex flex-wrap items-center gap-1.5 ${isCellar ? 'hidden' : ''}`}>
         {STREAMS.map((stream) => {
           const on = streams.includes(stream.key);
           return (
