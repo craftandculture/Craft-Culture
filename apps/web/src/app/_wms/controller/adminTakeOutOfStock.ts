@@ -79,11 +79,13 @@ const adminTakeOutOfStock = wmsOperatorProcedure
         })
         .where(eq(wmsStock.id, stock.id));
 
-      if (opensCases && plan.leftover > 0) {
+      const leavesSingles = opensCases && plan.leftover > 0;
+      if (leavesSingles) {
         await moveBottlesToSingles({ sourceStockId: stock.id, bottles: plan.leftover, performedBy: ctx.user.id, db: tx });
       }
 
-      const movementNumber = await generateMovementNumber();
+      // The singles' movement is not yet committed, so the generator cannot see its number
+      const movementNumber = await generateMovementNumber(leavesSingles ? 1 : 0);
       const [movement] = await tx
         .insert(wmsStockMovements)
         .values({
