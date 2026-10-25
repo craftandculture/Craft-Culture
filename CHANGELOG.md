@@ -1,3 +1,9 @@
+## [2.0.544](https://github.com/craftandculture/Craft-Culture/compare/v2.0.543...v2.0.544) (2026-10-25)
+
+### Bug Fixes
+
+* an agreed-price offer takes the name of its exact wine when two wines share a code ([07bde9d](https://github.com/craftandculture/Craft-Culture/commit/07bde9d513d81fd68f3c738b60ab5c1cc8498c52))
+
 ## [2.0.543](https://github.com/craftandculture/Craft-Culture/compare/v2.0.542...v2.0.543) (2026-10-25)
 
 ### Bug Fixes
