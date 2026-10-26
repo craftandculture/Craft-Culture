@@ -1,3 +1,9 @@
+## [2.0.581](https://github.com/craftandculture/Craft-Culture/compare/v2.0.580...v2.0.581) (2026-10-26)
+
+### Bug Fixes
+
+* the Craft & Culture logo keeps its size in the top bar beside the longer menu ([5205f99](https://github.com/craftandculture/Craft-Culture/commit/5205f99146e1d57f4abe25f9146b7f38b0f49641))
+
 ## [2.0.580](https://github.com/craftandculture/Craft-Culture/compare/v2.0.579...v2.0.580) (2026-10-26)
 
 ### Features
