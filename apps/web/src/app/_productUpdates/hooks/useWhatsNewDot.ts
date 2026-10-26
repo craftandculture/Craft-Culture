@@ -19,7 +19,7 @@ const useWhatsNewDot = () => {
     refetchInterval: 5 * 60_000,
   });
 
-  return { enabled: data?.enabled ?? false, hasNew: (data?.count ?? 0) > 0 };
+  return { enabled: data?.enabled ?? false, count: data?.count ?? 0, hasNew: (data?.count ?? 0) > 0 };
 };
 
 export default useWhatsNewDot;
