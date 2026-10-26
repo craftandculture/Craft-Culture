@@ -4,6 +4,8 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconFileText,
   IconLoader2,
   IconRefresh,
@@ -474,7 +476,9 @@ const DispatchWizardPage = () => {
                                 {order.lines.length > 0 ? (
                                   <button
                                     type="button"
-                                    className="ml-auto text-[11px] font-medium text-text-muted underline-offset-2 hover:text-text-primary hover:underline"
+                                    /* A plain grey "3 items" read as a label, not a
+                                       control, so the contents looked gone. */
+                                    className="ml-auto inline-flex items-center gap-1 rounded-full border border-border-muted bg-surface-primary px-2.5 py-1 text-xs font-medium text-text-primary shadow-sm hover:bg-surface-secondary"
                                     onClick={(e) => {
                                       // The card itself toggles selection, so
                                       // opening the contents must not also tick it.
@@ -486,7 +490,11 @@ const DispatchWizardPage = () => {
                                   >
                                     {expandedOrderId === order.id
                                       ? 'Hide items'
-                                      : `${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`}
+                                      : `Show ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`}
+                                    <Icon
+                                      icon={expandedOrderId === order.id ? IconChevronUp : IconChevronDown}
+                                      size="sm"
+                                    />
                                   </button>
                                 ) : null}
                               </div>
