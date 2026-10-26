@@ -1,4 +1,7 @@
+'use client';
+
 import { IconClipboardList } from '@tabler/icons-react';
+import { useState } from 'react';
 
 /** Two letters for a client with no logo, e.g. "JMK Trading LLC" → "JT" */
 const initials = (name: string) =>
@@ -25,12 +28,20 @@ const ClientMark = ({
   size?: 'sm' | 'md';
 }) => {
   const box = size === 'sm' ? 'size-9 text-xs' : 'size-11 text-sm';
-  return logoUrl ? (
+  // A stored logo whose file has gone (Intagulf's did) falls back to initials
+  // rather than showing the browser's broken-image icon.
+  const [failed, setFailed] = useState(false);
+  return logoUrl && !failed ? (
     <span
       className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
-      <img src={logoUrl} alt={name ?? ''} className="max-h-full max-w-full object-contain" />
+      <img
+        src={logoUrl}
+        alt={name ?? ''}
+        className="max-h-full max-w-full object-contain"
+        onError={() => setFailed(true)}
+      />
     </span>
   ) : (
     <span
