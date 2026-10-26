@@ -1,3 +1,9 @@
+## [2.0.561](https://github.com/craftandculture/Craft-Culture/compare/v2.0.560...v2.0.561) (2026-10-26)
+
+### Features
+
+* partner and delivery notes on a PCO can be edited or deleted, with the old text kept in the activity log ([e968013](https://github.com/craftandculture/Craft-Culture/commit/e9680134839904aee9631fe2a35c7d01f4cbba80))
+
 ## [2.0.560](https://github.com/craftandculture/Craft-Culture/compare/v2.0.559...v2.0.560) (2026-10-26)
 
 ### Bug Fixes
