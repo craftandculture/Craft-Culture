@@ -1,3 +1,9 @@
+## [2.0.570](https://github.com/craftandculture/Craft-Culture/compare/v2.0.569...v2.0.570) (2026-10-26)
+
+### Features
+
+* a cellar tab says "New" for two weeks after a feature or improvement reaches it, and What's New marks each update on its timeline in the colour of its tag ([9408862](https://github.com/craftandculture/Craft-Culture/commit/94088629733e2e2a550667e4b881dd835743fae5))
+
 ## [2.0.569](https://github.com/craftandculture/Craft-Culture/compare/v2.0.568...v2.0.569) (2026-10-26)
 
 ### Improvements
