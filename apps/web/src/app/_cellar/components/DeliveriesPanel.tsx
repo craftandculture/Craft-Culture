@@ -108,7 +108,7 @@ const isFinished = (request: Request) =>
   in one line, five catalogue names with their sizes and strengths could not
   be read; one wine per line, three at a time, can.
 */
-const WINES_SHOWN = 3;
+const WINES_SHOWN = 6;
 
 /** "5 wines · 6 bottles", the delivery at a glance */
 const summaryOf = (request: Request) => {
@@ -230,25 +230,30 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
         {section === 'live' && <ProgressSteps step={step} times={reachedAt(request)} />}
 
         {/*
-          The wine, one line each: the name as a collector reads it, its
-          vintage and bottle underneath, and how many on the right.
+          The wine in a compact grid, so a delivery of thirty bottles stays on
+          one screen: the name as a collector reads it, its vintage and bottle
+          underneath, and how many on the right. Two columns on a laptop,
+          three on a wide screen, one on a phone.
         */}
-        <div className="border-border-muted mt-4 border-t pt-2">
-          <ul className="divide-border-muted/60 divide-y">
+        <div className="border-border-muted mt-4 border-t pt-1">
+          <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
             {wines.map((item, index) => (
               <li
                 key={`${item.productName}-${index}`}
-                className="flex items-center justify-between gap-4 py-3"
+                className="border-border-muted/60 flex min-w-0 items-center justify-between gap-3 border-b py-2.5"
               >
                 <div className="min-w-0">
-                  <p className="text-text-primary truncate text-base font-medium">
+                  <p
+                    className="text-text-primary truncate text-sm font-medium"
+                    title={collectorWineName(item.productName)}
+                  >
                     {collectorWineName(item.productName)}
                   </p>
-                  <p className="text-text-muted text-sm tabular-nums">
+                  <p className="text-text-muted text-xs tabular-nums">
                     {item.vintage ?? 'NV'} · {bottleName(item.bottleSize)}
                   </p>
                 </div>
-                <span className="bg-surface-muted text-text-secondary flex-shrink-0 rounded-full px-3 py-1 text-sm font-medium tabular-nums">
+                <span className="text-text-secondary flex-shrink-0 text-xs font-semibold whitespace-nowrap tabular-nums">
                   {item.bottles} {item.bottles === 1 ? 'bottle' : 'bottles'}
                 </span>
               </li>
@@ -259,7 +264,7 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
               type="button"
               onClick={() => toggleWines(request.id)}
               aria-expanded={isOpen}
-              className="text-text-muted hover:text-text-primary mt-2 inline-flex items-center gap-1 text-sm font-semibold"
+              className="text-text-muted hover:text-text-primary mt-3 inline-flex items-center gap-1 text-sm font-semibold"
             >
               {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
               <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
