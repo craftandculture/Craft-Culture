@@ -120,7 +120,7 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
           {updates.length === 0 ? 'Updates to your private cellar will appear here.' : 'No updates match your search.'}
         </p>
       ) : (
-        <div className="rounded-2xl bg-black/[0.035] p-3 sm:p-6 dark:bg-white/[0.03]">
+        <div className="rounded-2xl bg-black/[0.025] p-3 sm:p-5 dark:bg-white/[0.02]">
         <div className="relative ml-1.5 border-l-2 border-black/[0.08] pl-5 sm:pl-7 dark:border-white/10">
           {days.map((day) => (
             <section key={day.label} className="mb-7 last:mb-0">

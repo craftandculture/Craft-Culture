@@ -14,8 +14,7 @@ import linkLabelFor from '../utils/linkLabelFor';
 const BANNER_DAYS = 21;
 
 /**
- * "New in your private cellar": the latest feature, announced where the
- * member lands
+ * A one-line note of the latest feature, where the member lands
  *
  * Taken from What's New, so it needs no upkeep: the newest published feature
  * or improvement that points to a screen, for three weeks. It goes once the
@@ -60,47 +59,37 @@ const WhatsNewBanner = () => {
   };
 
   return (
-    <section className="relative mb-5 overflow-hidden rounded-2xl bg-neutral-950 px-5 py-5 text-white sm:px-7 sm:py-6 dark:border dark:border-emerald-500/20 dark:bg-emerald-950/40">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 right-10 size-64 rounded-full bg-emerald-500/20 blur-3xl"
-      />
+    <section className="mb-4 flex items-center gap-3 rounded-xl bg-neutral-950 py-2.5 pr-2 pl-4 text-white dark:border dark:border-emerald-500/20 dark:bg-emerald-950/40">
+      <span className="size-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+      <p className="min-w-0 flex-1 truncate text-sm">
+        <span className="font-semibold text-emerald-300">New</span>
+        <span className="mx-2 text-white/30">·</span>
+        <span className="font-medium">{latest.title}</span>
+      </p>
+      {latest.linkPath && (
+        <Link
+          href={latest.linkPath}
+          onClick={close}
+          className="hidden shrink-0 items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold hover:bg-white/20 sm:inline-flex"
+        >
+          {linkLabelFor(latest.linkPath)}
+          <IconArrowRight size={13} />
+        </Link>
+      )}
+      <Link
+        href="/platform/cellar/whats-new"
+        className="shrink-0 px-1 text-xs font-semibold text-white/60 hover:text-white"
+      >
+        All updates
+      </Link>
       <button
         type="button"
         onClick={close}
         aria-label="Close"
-        className="absolute top-3 right-3 grid size-8 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+        className="grid size-7 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
       >
-        <IconX size={16} />
+        <IconX size={14} />
       </button>
-      <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
-        <div className="min-w-0 pr-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] font-semibold tracking-[0.12em] text-white/80 uppercase">
-            <span className="size-1.5 rounded-full bg-emerald-400" />
-            New in your private cellar
-          </span>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight text-balance sm:text-2xl">{latest.title}</h2>
-          <p className="mt-1.5 max-w-2xl text-sm text-white/70">{latest.body}</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-3">
-          {latest.linkPath && (
-            <Link
-              href={latest.linkPath}
-              onClick={close}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-sm font-semibold text-neutral-950 hover:bg-emerald-50"
-            >
-              {linkLabelFor(latest.linkPath)}
-              <IconArrowRight size={16} />
-            </Link>
-          )}
-          <Link
-            href="/platform/cellar/whats-new"
-            className="text-sm font-semibold text-white/70 underline-offset-4 hover:text-white hover:underline"
-          >
-            All updates
-          </Link>
-        </div>
-      </div>
     </section>
   );
 };

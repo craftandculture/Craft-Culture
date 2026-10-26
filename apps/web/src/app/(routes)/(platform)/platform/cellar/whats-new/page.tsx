@@ -58,7 +58,7 @@ const CellarWhatsNewPage = () => {
     : 0;
 
   return (
-    <div className="mx-auto w-full max-w-3xl pb-8">
+    <div className="w-full max-w-3xl pb-8">
       <WhatsNewHero
         newCount={newCount}
         counts={{

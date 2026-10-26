@@ -144,7 +144,7 @@ const AvailablePage = () => {
     const rows = wines.filter(
       (wine) =>
         (!onlyRecent || isRecentlyAdded(wine.addedAt)) &&
-        (!region || (wine.region ?? wine.country) === region) &&
+        (!region || (wine.region ?? wine.country)?.trim() === region) &&
         (!country || wine.country === country) &&
         (!producer || wine.producer === producer) &&
         (!vintage || String(wine.vintage) === vintage),
@@ -168,7 +168,7 @@ const AvailablePage = () => {
   const regions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const wine of wines) {
-      const name = wine.region ?? wine.country;
+      const name = (wine.region ?? wine.country)?.trim();
       if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name]) => name);
@@ -590,10 +590,13 @@ const AvailablePage = () => {
                     type="button"
                     aria-pressed={active}
                     onClick={() => setRegion(active ? '' : name)}
-                    className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-semibold whitespace-nowrap transition ${regionTone(name)} ${
-                      active ? 'ring-text-primary ring-2 ring-offset-2' : region ? 'opacity-45 hover:opacity-80' : 'hover:opacity-90'
+                    className={`flex h-8 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-colors ${
+                      active
+                        ? 'border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950'
+                        : 'border-border-muted text-text-secondary hover:text-text-primary hover:border-border-primary bg-transparent'
                     }`}
                   >
+                    <span className={`size-2 rounded-full ${regionTone(name)}`} aria-hidden />
                     {name}
                   </button>
                 );
@@ -601,16 +604,20 @@ const AvailablePage = () => {
             </div>
           )}
 
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-            {/* What has arrived this week leads, and filters the list to it */}
+          <div
+            className={`mb-4 grid gap-2 sm:gap-3 ${recentCount > 0 || onlyRecent ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}
+          >
+            {/* What has arrived this week leads, and filters the list to it; nothing to show, no tile */}
+            {(recentCount > 0 || onlyRecent) && (
             <CellarStatTile
               label={onlyRecent ? 'Showing recently added' : 'Added this week'}
               icon={IconSparkles}
               tone="emerald"
               value={String(recentCount)}
-              onClick={recentCount > 0 || onlyRecent ? () => setOnlyRecent((on) => !on) : undefined}
+              onClick={() => setOnlyRecent((on) => !on)}
               isActive={onlyRecent}
             />
+            )}
             <CellarStatTile
               label="Wines"
               icon={IconGlassFull}

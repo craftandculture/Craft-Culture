@@ -67,10 +67,10 @@ const UpdateCard = ({ type, title, body, linkPath, isNew, highlight, preview }: 
         <Link
           href={preview ? '#' : linkPath}
           onClick={preview ? (e) => e.preventDefault() : undefined}
-          className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-neutral-950 px-4 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          className="mt-2.5 inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-300"
         >
           {label}
-          <IconArrowRight size={14} />
+          <IconArrowRight size={15} />
         </Link>
       )}
     </article>
