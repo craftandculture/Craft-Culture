@@ -19,6 +19,7 @@ import type { ExportDocument } from '../schemas/exportDocumentSchema';
 import { exportOpSchema } from '../schemas/exportOpSchema';
 import applyExportOps from '../utils/applyExportOps';
 import buildExportLines from '../utils/buildExportLines';
+import declareOrigins from '../utils/declareOrigins';
 import estimateGrossWeight from '../utils/estimateGrossWeight';
 
 /**
@@ -85,7 +86,6 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
       );
 
   const today = new Date().toISOString().slice(0, 10);
-  const origins = [...new Set(lines.flatMap((l) => l.origin.split(' / ')).filter(Boolean))];
 
   let document: ExportDocument = {
     header: {
@@ -114,9 +114,7 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
     lines,
     extraColumns: [],
     notes: [],
-    declaration: origins.length
-      ? `${DEFAULT_DECLARATION} The goods are of ${origins.join(', ')} origin.`
-      : DEFAULT_DECLARATION,
+    declaration: declareOrigins(DEFAULT_DECLARATION, lines),
   };
 
   const ruleResults: { text: string; applied: boolean; error?: string }[] = [];
