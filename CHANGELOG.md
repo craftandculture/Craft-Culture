@@ -1,3 +1,9 @@
+## [2.0.565](https://github.com/craftandculture/Craft-Culture/compare/v2.0.564...v2.0.565) (2026-10-26)
+
+### Features
+
+* What's New for Private Cellar members, drafted by the AI from each release and published by staff ([b43be09](https://github.com/craftandculture/Craft-Culture/commit/b43be09f3dffe89f765e580ddbedb3503576e2d7))
+
 ## [2.0.564](https://github.com/craftandculture/Craft-Culture/compare/v2.0.563...v2.0.564) (2026-10-26)
 
 ### Bug Fixes
