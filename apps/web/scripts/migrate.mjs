@@ -3805,6 +3805,45 @@ const runMigrations = async () => {
     );
     console.log('✅ What\'s New ready');
 
+    /*
+      Private Cellar member emails (26 Oct 2026). Every member email is queued
+      here first and sent by the member-emails cron in the switch's mode (off,
+      shadow or live), so nothing reaches a member until Kevin turns it on.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "member_email_outbox" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "dedupe_key" text NOT NULL UNIQUE,
+        "kind" text NOT NULL,
+        "entity_id" text NOT NULL,
+        "partner_id" uuid,
+        "recipient_user_id" uuid,
+        "recipient_email" text NOT NULL,
+        "recipient_name" text NOT NULL,
+        "template" text NOT NULL,
+        "data" jsonb NOT NULL,
+        "is_action" boolean DEFAULT false NOT NULL,
+        "is_mergeable" boolean DEFAULT false NOT NULL,
+        "send_at" timestamp NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "merged_into" uuid,
+        "sent_mode" text,
+        "sent_to" text,
+        "sent_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "member_email_outbox" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "member_email_outbox_due_idx" ON "member_email_outbox" ("status", "send_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "member_email_outbox_recipient_idx" ON "member_email_outbox" ("recipient_user_id", "send_at")`,
+    );
+    console.log('✅ Member email outbox ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

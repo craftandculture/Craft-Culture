@@ -100,6 +100,22 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
   const { orderId, orderNumber, partnerId, type } = params;
 
   try {
+    /*
+      A Private Cellar member's delivery runs through these same order
+      screens, but these notices are written for the trade ("delivered to
+      your client") and link to screens a collector cannot open. Members hear
+      about their deliveries from the cellar's own notices and emails instead.
+    */
+    const [owner] = await db
+      .select({ type: partners.type })
+      .from(partners)
+      .where(eq(partners.id, partnerId));
+
+    if (owner?.type === 'private_collector') {
+      logger.info('Skipped trade order notice for a cellar member', { partnerId, orderId, type });
+      return;
+    }
+
     // Get all partner members
     const members = await db
       .select({

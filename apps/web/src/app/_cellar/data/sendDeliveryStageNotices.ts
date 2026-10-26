@@ -23,6 +23,7 @@ import {
 import serverConfig from '@/server.config';
 
 import getPartnerUserIds from './getPartnerUserIds';
+import { queueDeliveryCollected } from './queueCellarEmails';
 import deliveryStage, { DELIVERY_STAGES } from '../utils/deliveryStage';
 
 /**
@@ -141,6 +142,16 @@ const sendDeliveryStageNotices = async () => {
     }
 
     if (recipients.length > 0) notified += 1;
+
+    /*
+      The member's one delivery email: the wine has left the bonded warehouse.
+      Queued at Collected, or at Out for delivery when a run skipped Collected;
+      the outbox's dedupe key keeps it to one however often this runs. A
+      delivery first seen as Delivered gets no email: it would arrive late.
+    */
+    if (stage === 3 || stage === 4) {
+      await queueDeliveryCollected({ partnerId: row.partnerId, requestId: row.id, requestNumber: row.requestNumber, stage });
+    }
   }
 
   return { checked: rows.length, notified };

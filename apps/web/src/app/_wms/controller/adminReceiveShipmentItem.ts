@@ -397,6 +397,8 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       cases: casesReceived,
       bottles: casesReceived * actualBottlesPerCase,
       shipmentNumber: shipment.shipmentNumber,
+      stockId: createdStock[0]?.stockId ?? null,
+      lwin18,
     });
 
     return {

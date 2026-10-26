@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { cellarReleaseRequests } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import { queueDeliveryCancelled } from '../data/queueCellarEmails';
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
 
 /**
@@ -141,6 +142,13 @@ const adminQuoteRelease = staffAdminProcedure
         .then(([row]) => {
           if (!row) throw changedMeanwhile();
         });
+
+      await queueDeliveryCancelled({
+        partnerId: request.partnerId,
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        adminNotes: input.adminNotes,
+      });
 
       return { status: 'cancelled' as const };
     }

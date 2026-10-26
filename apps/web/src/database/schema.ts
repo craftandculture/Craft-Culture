@@ -8416,3 +8416,52 @@ export const productUpdates = pgTable(
 ).enableRLS();
 
 export type ProductUpdate = typeof productUpdates.$inferSelect;
+
+/**
+ * Private Cellar member emails, one row per email per recipient
+ *
+ * An event queues a row; the member-emails cron sends it when it is due, in
+ * the mode the switch is set to: off (nothing sent, the row is marked
+ * suppressed), shadow (sent to the team inbox, marked shadowed) or live (sent
+ * to the member). The unique dedupe key means an event seen twice never
+ * queues twice. Mergeable updates due at the same slot go out as one email;
+ * the others are marked merged into it.
+ */
+export const memberEmailOutbox = pgTable(
+  'member_email_outbox',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** `${recipientUserId}:${kind}:${entityId}` */
+    dedupeKey: text('dedupe_key').notNull().unique(),
+    kind: text('kind').notNull(),
+    entityId: text('entity_id').notNull(),
+    partnerId: uuid('partner_id'),
+    recipientUserId: uuid('recipient_user_id'),
+    recipientEmail: text('recipient_email').notNull(),
+    recipientName: text('recipient_name').notNull(),
+    template: text('template').notNull(),
+    /** The Loops data variables, the wine list included */
+    data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    /** Asks the member to act, so it is never held back by the daily cap */
+    isAction: boolean('is_action').notNull().default(false),
+    isMergeable: boolean('is_mergeable').notNull().default(false),
+    sendAt: timestamp('send_at', { mode: 'date' }).notNull(),
+    status: text('status')
+      .$type<'pending' | 'sent' | 'shadowed' | 'suppressed' | 'merged' | 'failed'>()
+      .notNull()
+      .default('pending'),
+    mergedInto: uuid('merged_into'),
+    /** The switch position when it went, and the address it actually went to */
+    sentMode: text('sent_mode'),
+    sentTo: text('sent_to'),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    error: text('error'),
+    ...timestamps,
+  },
+  (table) => [
+    index('member_email_outbox_due_idx').on(table.status, table.sendAt),
+    index('member_email_outbox_recipient_idx').on(table.recipientUserId, table.sendAt),
+  ],
+).enableRLS();
+
+export type MemberEmailOutboxRow = typeof memberEmailOutbox.$inferSelect;
