@@ -151,6 +151,8 @@ export const users = pgTable('users', {
     disabledTypes?: string[];
     adminDisabledTypes?: string[];
   }>(),
+  /** When this person last opened What's New; later updates show as new */
+  whatsNewSeenAt: timestamp('whats_new_seen_at', { mode: 'date' }),
 
   // Better Auth admin plugin fields
   banned: boolean('banned').default(false),
@@ -8373,3 +8375,44 @@ export const zohoInvoiceLineSync = pgTable('zoho_invoice_line_sync', {
   zohoSalesorderNumber: text('zoho_salesorder_number'),
   syncedAt: timestamp('synced_at', { mode: 'date' }).notNull().defaultNow(),
 });
+
+/**
+ * What's New: an update to the platform, written for members
+ *
+ * Drafted by the AI from a release's changelog items (sourceRef = the commit
+ * hash, so a release read twice never drafts twice), and only shown to
+ * members once someone presses Publish. Audiences use account kinds:
+ * `collector` is the Private Cellar, `wine_partner` the trade portal.
+ */
+export const productUpdates = pgTable(
+  'product_updates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type').$type<'feature' | 'improvement' | 'fix'>().notNull(),
+    audiences: text('audiences')
+      .array()
+      .$type<('collector' | 'wine_partner')[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    /** A member screen the update points to, from the allowed list only */
+    linkPath: text('link_path'),
+    status: text('status')
+      .$type<'draft' | 'published' | 'skipped'>()
+      .notNull()
+      .default('draft'),
+    publishedAt: timestamp('published_at', { mode: 'date' }),
+    releaseVersion: text('release_version'),
+    sourceRef: text('source_ref').unique(),
+    /** The changelog line and staff notes the draft was written from */
+    sourceText: text('source_text'),
+    /** Why the AI judged it internal, for items it skipped */
+    skippedReason: text('skipped_reason'),
+    createdBy: uuid('created_by'),
+    ...timestamps,
+  },
+  (table) => [index('product_updates_status_idx').on(table.status, table.publishedAt)],
+).enableRLS();
+
+export type ProductUpdate = typeof productUpdates.$inferSelect;

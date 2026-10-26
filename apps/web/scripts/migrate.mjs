@@ -3772,6 +3772,39 @@ const runMigrations = async () => {
     }
     console.log('✅ Sale mandate asking currency ready');
 
+    /*
+      What's New for members (26 Oct 2026). Updates are drafted by the AI from
+      each release and published by staff; a member's last visit is one
+      timestamp on their user, which is all "new since your last visit" needs.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "product_updates" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "type" text NOT NULL,
+        "audiences" text[] DEFAULT '{}'::text[] NOT NULL,
+        "title" text NOT NULL,
+        "body" text DEFAULT '' NOT NULL,
+        "link_path" text,
+        "status" text DEFAULT 'draft' NOT NULL,
+        "published_at" timestamp,
+        "release_version" text,
+        "source_ref" text UNIQUE,
+        "source_text" text,
+        "skipped_reason" text,
+        "created_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "product_updates" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "product_updates_status_idx" ON "product_updates" ("status", "published_at")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "whats_new_seen_at" timestamp`,
+    );
+    console.log('✅ What\'s New ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

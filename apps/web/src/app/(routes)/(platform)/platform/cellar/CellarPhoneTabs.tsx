@@ -8,6 +8,7 @@ import {
   IconHistory,
   IconShoppingBag,
   IconSparkles,
+  IconStars,
   IconTag,
   IconTruckDelivery,
   IconUserCircle,
@@ -18,6 +19,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
+import useWhatsNewDot from '@/app/_productUpdates/hooks/useWhatsNewDot';
 
 const isOn = (pathname: string, href: string) =>
   href === '/platform/cellar' ? pathname === href : pathname.startsWith(href);
@@ -35,6 +37,7 @@ const isOn = (pathname: string, href: string) =>
 const CellarPhoneTabs = () => {
   const pathname = usePathname();
   const isViewer = useIsCellarViewer();
+  const whatsNew = useWhatsNewDot();
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => setMoreOpen(false), [pathname]);
@@ -53,7 +56,11 @@ const CellarPhoneTabs = () => {
     { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
     { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
     { href: '/platform/cellar/profile', label: 'Your details', icon: IconUserCircle },
+    ...(whatsNew.enabled ? [{ href: '/platform/cellar/whats-new', label: 'What’s New', icon: IconStars }] : []),
   ];
+
+  // The bottom bar stays at four places; a dot on More says something is new
+  const moreDot = whatsNew.hasNew && !isOn(pathname, '/platform/cellar/whats-new');
 
   const moreActive = more.some((item) => isOn(pathname, item.href));
 
@@ -88,6 +95,9 @@ const CellarPhoneTabs = () => {
                   >
                     <item.icon size={20} className="text-text-muted" />
                     {item.label}
+                    {moreDot && item.href === '/platform/cellar/whats-new' && (
+                      <span className="ml-auto size-2 rounded-full bg-emerald-500" aria-label="New updates" />
+                    )}
                   </Link>
                 </li>
               ))}
@@ -124,7 +134,15 @@ const CellarPhoneTabs = () => {
               moreActive ? 'text-text-primary font-semibold' : 'text-text-muted'
             }`}
           >
-            <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
+            <span className="relative">
+              <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
+              {moreDot && (
+                <span
+                  className="border-background-primary absolute -top-0.5 -right-1 size-2 rounded-full border bg-emerald-500"
+                  aria-label="New updates"
+                />
+              )}
+            </span>
             More
           </button>
         </div>

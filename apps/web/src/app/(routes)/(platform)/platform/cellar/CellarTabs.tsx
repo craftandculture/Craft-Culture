@@ -7,6 +7,7 @@ import {
   IconHistory,
   IconShoppingBag,
   IconSparkles,
+  IconStars,
   IconTag,
   IconTruckDelivery,
   IconUserCircle,
@@ -17,6 +18,7 @@ import { usePathname } from 'next/navigation';
 
 import accessLevels from '@/app/_cellar/constants/accessLevels';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
+import useWhatsNewDot from '@/app/_productUpdates/hooks/useWhatsNewDot';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -69,6 +71,14 @@ const accountLinks = [
   },
 ];
 
+/** Shown once staff switch it on; carries a dot while there is something new */
+const whatsNewLink = {
+  href: '/platform/cellar/whats-new',
+  label: 'What’s New',
+  icon: IconStars,
+  holderOnly: false,
+};
+
 const isOn = (pathname: string, href: string) =>
   href === '/platform/cellar' ? pathname === href : pathname.startsWith(href);
 
@@ -86,6 +96,7 @@ const CellarTabs = () => {
   const pathname = usePathname();
   const api = useTRPC();
   const isViewer = useIsCellarViewer();
+  const whatsNew = useWhatsNewDot();
 
   /*
     Someone the cellar is shared with is told so on every page, so a spouse
@@ -140,10 +151,11 @@ const CellarTabs = () => {
           })}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1 pb-2">
-          {accountLinks
+          {[...accountLinks, ...(whatsNew.enabled ? [whatsNewLink] : [])]
             .filter((link) => !(isViewer && link.holderOnly))
             .map((link) => {
               const active = isOn(pathname, link.href);
+              const dot = link === whatsNewLink && whatsNew.hasNew && !active;
               return (
                 <Link
                   key={link.href}
@@ -157,6 +169,9 @@ const CellarTabs = () => {
                 >
                   <link.icon size={14} />
                   {link.label}
+                  {dot && (
+                    <span className="size-1.5 rounded-full bg-emerald-500" aria-label="New updates" />
+                  )}
                 </Link>
               );
             })}

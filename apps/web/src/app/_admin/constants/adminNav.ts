@@ -120,6 +120,7 @@ const adminNav: AdminNavSection[] = [
       { label: 'Member Payouts', href: '/platform/admin/payouts' },
       { label: 'Cellar Releases', href: '/platform/admin/cellar-releases' },
       { label: 'Release Rates', href: '/platform/admin/cellar-rates' },
+      { label: 'Member Updates', href: '/platform/admin/member-updates', staffOnly: true },
     ],
   },
   {
