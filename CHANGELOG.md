@@ -1,3 +1,9 @@
+## [2.0.574](https://github.com/craftandculture/Craft-Culture/compare/v2.0.573...v2.0.574) (2026-10-26)
+
+### Improvements
+
+* a delivery's wines sit in a compact two or three column grid, showing six before "Show all", so a thirty-bottle delivery fits on one screen ([69b5811](https://github.com/craftandculture/Craft-Culture/commit/69b58118cfbc0b6a15d227d7c7443ee4fc7405dc))
+
 ## [2.0.573](https://github.com/craftandculture/Craft-Culture/compare/v2.0.572...v2.0.573) (2026-10-26)
 
 ### Improvements
