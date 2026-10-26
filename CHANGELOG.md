@@ -1,3 +1,9 @@
+## [2.0.576](https://github.com/craftandculture/Craft-Culture/compare/v2.0.575...v2.0.576) (2026-10-26)
+
+### Improvements
+
+* the dispatch wizard shows each customer's and distributor's logo, with cleaner order cards and a step indicator that renders ([2622bc0](https://github.com/craftandculture/Craft-Culture/commit/2622bc0ab06471cc24efa625137448077906fb84))
+
 ## [2.0.575](https://github.com/craftandculture/Craft-Culture/compare/v2.0.574...v2.0.575) (2026-10-26)
 
 ### Improvements
