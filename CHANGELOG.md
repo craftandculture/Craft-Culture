@@ -1,3 +1,14 @@
+## [2.0.577](https://github.com/craftandculture/Craft-Culture/compare/v2.0.576...v2.0.577) (2026-10-26)
+
+### Improvements
+
+* bigger customer and distributor logos in the dispatch wizard ([e64dbd7](https://github.com/craftandculture/Craft-Culture/commit/e64dbd7a2995a3a11df46e7c8eae57dbd973d31c))
+
+### Bug Fixes
+
+* a partner logo that no longer loads falls back to the partner's initials instead of a broken image ([668bce8](https://github.com/craftandculture/Craft-Culture/commit/668bce8215c258756137f4cb539eb0c0ea45668a))
+* each dispatch order card has a clear Show items button again ([c990c7a](https://github.com/craftandculture/Craft-Culture/commit/c990c7a1178779dd50a53cd53cd316e990238218))
+
 ## [2.0.576](https://github.com/craftandculture/Craft-Culture/compare/v2.0.575...v2.0.576) (2026-10-26)
 
 ### Improvements
