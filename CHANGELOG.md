@@ -1,3 +1,9 @@
+## [2.0.571](https://github.com/craftandculture/Craft-Culture/compare/v2.0.570...v2.0.571) (2026-10-26)
+
+### Features
+
+* Your cellar announces the latest new feature in a banner, The Cellar List marks wines added this week and colours its regions, and Deliveries and Selling open with how it works in three steps ([c6e8285](https://github.com/craftandculture/Craft-Culture/commit/c6e8285bae3e142182353ce4de341c74f4170430))
+
 ## [2.0.570](https://github.com/craftandculture/Craft-Culture/compare/v2.0.569...v2.0.570) (2026-10-26)
 
 ### Features
