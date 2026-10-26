@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -16,14 +16,14 @@ import { transferStockSchema } from '../schemas/transferSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
- * Transfer stock (multiple cases) between locations
- * Used when moving stock from one bin to another
+ * Transfer stock (multiple cases) between locations, e.g. moving stock from one
+ * bin to another
  *
  * @example
  *   await trpcClient.wms.admin.operations.transferStock.mutate({
- *     stockId: "uuid",
+ *     stockId: 'uuid',
  *     quantityCases: 5,
- *     toLocationId: "uuid"
+ *     toLocationId: 'uuid',
  *   });
  */
 const adminTransferStock = wmsOperatorProcedure
@@ -32,7 +32,10 @@ const adminTransferStock = wmsOperatorProcedure
     const { stockId, quantityCases, toLocationId, notes } = input;
 
     // 1. Get the source stock record
-    const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
+    const [sourceStock] = await db
+      .select()
+      .from(wmsStock)
+      .where(eq(wmsStock.id, stockId));
 
     if (!sourceStock) {
       throw new TRPCError({
@@ -90,18 +93,33 @@ const adminTransferStock = wmsOperatorProcedure
       });
     }
 
-    // 6. Update source stock (decrease quantity)
-    const newSourceQuantity = sourceStock.quantityCases - quantityCases;
-    const newSourceAvailable = sourceStock.availableCases - quantityCases;
-
-    await db
+    // 6. Update source stock (decrease quantity). Relative to the row as it is
+    // now, so a pick or transfer on the same row at the same moment is not
+    // overwritten, and refused if those cases have gone meanwhile.
+    const [updatedSource] = await db
       .update(wmsStock)
       .set({
-        quantityCases: newSourceQuantity,
-        availableCases: newSourceAvailable,
+        quantityCases: sql`${wmsStock.quantityCases} - ${quantityCases}`,
+        availableCases: sql`${wmsStock.availableCases} - ${quantityCases}`,
         updatedAt: new Date(),
       })
-      .where(eq(wmsStock.id, stockId));
+      .where(
+        and(
+          eq(wmsStock.id, stockId),
+          gte(wmsStock.availableCases, quantityCases),
+        ),
+      )
+      .returning({ quantityCases: wmsStock.quantityCases });
+
+    if (!updatedSource) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'These cases changed while you were moving them. Scan the bay again and retry.',
+      });
+    }
+
+    const newSourceQuantity = updatedSource.quantityCases;
 
     // 7. Check if destination already has this stock (same LWIN, lot, owner)
     const [existingDestStock] = await db
@@ -125,8 +143,8 @@ const adminTransferStock = wmsOperatorProcedure
       await db
         .update(wmsStock)
         .set({
-          quantityCases: existingDestStock.quantityCases + quantityCases,
-          availableCases: existingDestStock.availableCases + quantityCases,
+          quantityCases: sql`${wmsStock.quantityCases} + ${quantityCases}`,
+          availableCases: sql`${wmsStock.availableCases} + ${quantityCases}`,
           updatedAt: new Date(),
         })
         .where(eq(wmsStock.id, existingDestStock.id));
@@ -154,7 +172,8 @@ const adminTransferStock = wmsOperatorProcedure
           salesArrangement: sourceStock.salesArrangement,
           // Moving wine to another bay does not make it ours to sell.
           notForSale: sourceStock.notForSale,
-          consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
+          consignmentCommissionPercent:
+            sourceStock.consignmentCommissionPercent,
           category: sourceStock.category,
           expiryDate: sourceStock.expiryDate,
           isPerishable: sourceStock.isPerishable,
@@ -193,29 +212,41 @@ const adminTransferStock = wmsOperatorProcedure
       updatedBarcodes.push(caseLabel.barcode);
     }
 
-    // 9. Update pending pick list items that reference the old location
-    const pendingPickItems = await db
-      .select({ id: wmsPickListItems.id })
-      .from(wmsPickListItems)
-      .innerJoin(wmsPickLists, eq(wmsPickLists.id, wmsPickListItems.pickListId))
-      .where(
-        and(
-          eq(wmsPickListItems.lwin18, sourceStock.lwin18),
-          eq(wmsPickListItems.suggestedLocationId, sourceStock.locationId),
-          eq(wmsPickListItems.isPicked, false),
-          inArray(wmsPickLists.status, ['pending', 'in_progress']),
-        ),
-      );
+    // 9. Send open pick lines to the new bay, but only lines picking from this
+    // exact stock row (same owner), and only once the row is empty. A transfer
+    // moves unreserved cases, so while the row still holds cases the cases held
+    // for those lines are still in the old bay.
+    if (newSourceQuantity <= 0) {
+      const pendingPickItems = await db
+        .select({ id: wmsPickListItems.id })
+        .from(wmsPickListItems)
+        .innerJoin(
+          wmsPickLists,
+          eq(wmsPickLists.id, wmsPickListItems.pickListId),
+        )
+        .where(
+          and(
+            eq(wmsPickListItems.suggestedStockId, stockId),
+            eq(wmsPickListItems.isPicked, false),
+            inArray(wmsPickLists.status, ['pending', 'in_progress']),
+          ),
+        );
 
-    for (const item of pendingPickItems) {
-      await db
-        .update(wmsPickListItems)
-        .set({
-          suggestedLocationId: toLocationId,
-          suggestedStockId: destStockId,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsPickListItems.id, item.id));
+      if (pendingPickItems.length > 0) {
+        await db
+          .update(wmsPickListItems)
+          .set({
+            suggestedLocationId: toLocationId,
+            suggestedStockId: destStockId,
+            updatedAt: new Date(),
+          })
+          .where(
+            inArray(
+              wmsPickListItems.id,
+              pendingPickItems.map((item) => item.id),
+            ),
+          );
+      }
     }
 
     // 10. Create movement record
@@ -231,7 +262,9 @@ const adminTransferStock = wmsOperatorProcedure
       lotNumber: sourceStock.lotNumber,
       shipmentId: sourceStock.shipmentId,
       scannedBarcodes: updatedBarcodes,
-      notes: notes ?? `Transfer from ${fromLocation.locationCode} to ${toLocation.locationCode}`,
+      notes:
+        notes ??
+        `Transfer from ${fromLocation.locationCode} to ${toLocation.locationCode}`,
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
