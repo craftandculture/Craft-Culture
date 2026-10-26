@@ -1,3 +1,9 @@
+## [2.0.564](https://github.com/craftandculture/Craft-Culture/compare/v2.0.563...v2.0.564) (2026-10-26)
+
+### Bug Fixes
+
+* a cellar release quote no longer adds a repack charge by itself; staff add it when the repack is actually being done ([947a75e](https://github.com/craftandculture/Craft-Culture/commit/947a75e58e49d66813fcebe16d09ba4f7bf8ee70))
+
 ## [2.0.563](https://github.com/craftandculture/Craft-Culture/compare/v2.0.562...v2.0.563) (2026-10-26)
 
 ### Features
