@@ -631,6 +631,8 @@ const AdminPrivateOrdersPage = () => {
                                     width={24}
                                     height={24}
                                     className="h-6 w-6 shrink-0 rounded object-contain"
+                                    // Logos are pasted from anywhere; the optimiser only serves allow-listed hosts
+                                    unoptimized
                                   />
                                 ) : (
                                   <Icon icon={IconBuilding} size="sm" className="shrink-0 text-text-muted" />
@@ -803,8 +805,8 @@ const AdminPrivateOrdersPage = () => {
                         className="cursor-pointer space-y-3"
                         onClick={() => toggleExpanded(order.id)}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-3">
                             <span onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 aria-label={`Select ${order.orderNumber}`}
@@ -823,23 +825,24 @@ const AdminPrivateOrdersPage = () => {
                                 alt={order.partner?.businessName ?? 'Partner'}
                                 width={32}
                                 height={32}
-                                className="h-8 w-8 rounded-lg object-contain"
+                                className="h-8 w-8 shrink-0 rounded-lg object-contain"
+                                unoptimized
                               />
                             ) : (
                               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
                                 <Icon icon={IconBuilding} size="sm" className="text-text-muted" />
                               </div>
                             )}
-                            <div>
-                              <Typography variant="bodySm" className="font-medium">
+                            <div className="min-w-0">
+                              <Typography variant="bodySm" className="whitespace-nowrap font-medium">
                                 {order.orderNumber}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted">
+                              <Typography variant="bodyXs" colorRole="muted" className="truncate">
                                 {order.partner?.businessName ?? 'Unknown Partner'}
                               </Typography>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
+                          <div className="flex shrink-0 flex-col items-end gap-1 whitespace-nowrap">
                             <PrivateOrderStatusBadge status={order.status} />
                             {order.invoicing && <InvoicingBadge invoicing={order.invoicing} />}
                           </div>

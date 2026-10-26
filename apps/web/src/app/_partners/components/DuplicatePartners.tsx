@@ -152,6 +152,14 @@ const DuplicatePartners = () => {
                           record.status,
                         ].join(' · ')}
                       </span>
+                      {record.stillReferencedBy && (
+                        <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-400">
+                          Still referenced by{' '}
+                          {record.stillReferencedBy
+                            .map((ref) => `${ref.table} (${ref.rows})`)
+                            .join(', ')}
+                        </span>
+                      )}
                     </span>
                   </label>
                 ))}

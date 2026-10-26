@@ -17,6 +17,13 @@ export interface DuplicatePartnerRecord {
   stockCases: number;
   shipments: number;
   hasPricingSettings: boolean;
+  /**
+   * For a retired record: the tables still pointing at it, and how many rows.
+   * The holdings above only cover stock, shipments and margins, so without
+   * this a retired record read "0 cases · 0 shipments · no margins" while
+   * being flagged — which looked like a false alarm and hid the real cause.
+   */
+  stillReferencedBy?: { table: string; rows: number }[];
 }
 
 export interface DuplicatePartnerGroup {
@@ -127,7 +134,7 @@ const partnersFindDuplicates = adminProcedure.query(async () => {
     const targets = await partnerReferenceColumns();
 
     for (const record of retired) {
-      let held = 0;
+      const held: { table: string; rows: number }[] = [];
 
       for (const target of targets) {
         const [row] = await db.execute<{ n: number }>(sql`
@@ -136,12 +143,12 @@ const partnersFindDuplicates = adminProcedure.query(async () => {
            WHERE ${sql.raw(`"${target.column}"`)} = ${record.id}
         `);
 
-        held += Number(row?.n ?? 0);
-
-        if (held > 0) break;
+        const rows = Number(row?.n ?? 0);
+        if (rows > 0) held.push({ table: target.table, rows });
       }
 
-      if (held === 0) emptyRetired.add(record.id);
+      if (held.length === 0) emptyRetired.add(record.id);
+      else record.stillReferencedBy = held;
     }
   }
 
