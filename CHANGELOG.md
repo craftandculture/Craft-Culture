@@ -1,3 +1,9 @@
+## [2.0.575](https://github.com/craftandculture/Craft-Culture/compare/v2.0.574...v2.0.575) (2026-10-26)
+
+### Improvements
+
+* each delivery in progress is its own card with a tinted header, its step shown as "Step 4 of 6", details as small chips, a stronger progress line and its wines on soft tiles ([cd1b9eb](https://github.com/craftandculture/Craft-Culture/commit/cd1b9eb8fddb3fea45ae3fbe728a9325a3c0e230))
+
 ## [2.0.574](https://github.com/craftandculture/Craft-Culture/compare/v2.0.573...v2.0.574) (2026-10-26)
 
 ### Improvements
