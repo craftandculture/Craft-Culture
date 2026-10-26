@@ -175,8 +175,7 @@ describe('buildExportLines, replaying the hand-built export invoices', () => {
     expect(check).toMatchObject({ level: 'error', lineIds: [first.id] });
     expect(check?.message).toContain('United Kingdom');
 
-    // Any edit now names every origin on the lines, even one whose text
-    // still leaves the United Kingdom out
+    // The next edit names the UK even though its text leaves it out
     const fixed = applyExportOps(edited, [
       { op: 'setDeclaration', text: 'The goods are of France, Italy origin.' },
     ]);
