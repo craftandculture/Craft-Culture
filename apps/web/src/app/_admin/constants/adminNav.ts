@@ -1,5 +1,6 @@
 import {
   IconBinoculars,
+  IconBottle,
   IconBuildingWarehouse,
   IconCoin,
   IconDatabaseSearch,
@@ -114,35 +115,52 @@ const adminNav: AdminNavSection[] = [
       { label: 'Distributors', href: '/platform/admin/partners' },
       { label: 'Wine Partners', href: '/platform/admin/wine-partners' },
       { label: 'Collectors', href: '/platform/admin/collectors' },
-      { label: 'Cellar Members', href: '/platform/admin/cellar-members' },
+    ],
+  },
+  /*
+    The Private Cellar programme is run day to day as its own thing, and as
+    eight more tabs under Partners it made a thirteen-tab bar that ran off the
+    edge of a laptop screen with Member Updates and Member Emails out of sight.
+  */
+  {
+    key: 'cellar',
+    label: 'Cellar',
+    href: '/platform/admin/cellar-members',
+    icon: IconBottle,
+    inTopNav: true,
+    forOperators: false,
+    links: [
+      { label: 'Members', href: '/platform/admin/cellar-members' },
       { label: 'Consignment', href: '/platform/admin/consignment' },
-      { label: 'Cellar Purchases', href: '/platform/admin/cellar-purchases' },
-      { label: 'Member Payouts', href: '/platform/admin/payouts' },
-      { label: 'Cellar Releases', href: '/platform/admin/cellar-releases' },
-      { label: 'Release Rates', href: '/platform/admin/cellar-rates' },
-      { label: 'Member Updates', href: '/platform/admin/member-updates', staffOnly: true },
-      { label: 'Member Emails', href: '/platform/admin/member-emails', staffOnly: true },
+      { label: 'Purchases', href: '/platform/admin/cellar-purchases' },
+      { label: 'Releases', href: '/platform/admin/cellar-releases' },
+      { label: 'Payouts', href: '/platform/admin/payouts' },
+      // The page holds the UK bond tariff and the payment accounts, not release prices
+      { label: 'Rates & Accounts', href: '/platform/admin/cellar-rates' },
+      { label: 'Updates', href: '/platform/admin/member-updates', staffOnly: true },
+      { label: 'Emails', href: '/platform/admin/member-emails', staffOnly: true },
     ],
   },
   {
     key: 'finance',
     label: 'Finance',
-    href: '/platform/admin/commissions',
+    // Opens on the screen used daily; Commissions (B2C reps) has been empty for months
+    href: '/platform/admin/pricing-manager',
     icon: IconCoin,
     inTopNav: true,
     forOperators: false,
     links: [
-      { label: 'Commissions', href: '/platform/admin/commissions' },
-      { label: 'Pricing', href: '/platform/admin/pricing' },
       { label: 'Pricing Manager', href: '/platform/admin/pricing-manager' },
-      { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
-      { label: 'Wine Labs', href: '/platform/admin/wine-labs', staffOnly: true },
+      { label: 'Daily Sales', href: '/platform/admin/daily-sales', staffOnly: true },
+      { label: 'Distribution', href: '/platform/admin/distribution' },
       { label: 'Quote Builder', href: '/platform/admin/quote-builder' },
       { label: 'Client LPOs', href: '/platform/admin/lpo' },
-      { label: 'Distribution', href: '/platform/admin/distribution' },
-      { label: 'Daily Sales', href: '/platform/admin/daily-sales', staffOnly: true },
       // Triangulation stays until Crurated's figures agree in both
       { label: 'Triangulation', href: '/platform/admin/triangulation' },
+      { label: 'Wine Labs', href: '/platform/admin/wine-labs', staffOnly: true },
+      { label: 'Pricing Settings', href: '/platform/admin/pricing' },
+      { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
+      { label: 'Commissions', href: '/platform/admin/commissions' },
     ],
   },
   {
