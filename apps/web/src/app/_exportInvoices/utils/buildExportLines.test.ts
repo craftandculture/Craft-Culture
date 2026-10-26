@@ -161,15 +161,25 @@ describe('buildExportLines, replaying the hand-built export invoices', () => {
     if (!first) throw new Error('fixture lines missing');
     // A version saved before edits rewrote the origin sentence
     const edited = {
-      ...applyExportOps(doc, [{ op: 'setLine', lineId: first.id, field: 'origin', value: 'United Kingdom' }]),
+      ...applyExportOps(doc, [
+        {
+          op: 'setLine',
+          lineId: first.id,
+          field: 'origin',
+          value: 'United Kingdom',
+        },
+      ]),
       declaration: 'The goods are of France, Italy origin.',
     };
     const check = validateExportDocument(edited).find((c) => c.code === 'undeclared_origin');
     expect(check).toMatchObject({ level: 'error', lineIds: [first.id] });
     expect(check?.message).toContain('United Kingdom');
 
-    // Any edit now names every origin on the lines
-    const fixed = applyExportOps(edited, [{ op: 'setDeclaration', text: 'The goods are of France, Italy origin.' }]);
+    // Any edit now names every origin on the lines, even one whose text
+    // still leaves the United Kingdom out
+    const fixed = applyExportOps(edited, [
+      { op: 'setDeclaration', text: 'The goods are of France, Italy origin.' },
+    ]);
     expect(fixed.declaration).toContain('United Kingdom');
     expect(validateExportDocument(fixed).some((c) => c.code === 'undeclared_origin')).toBe(false);
   });
