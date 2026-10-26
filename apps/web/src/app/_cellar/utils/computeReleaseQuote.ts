@@ -3,9 +3,7 @@ import { eq, isNull, or } from 'drizzle-orm';
 import db from '@/database/client';
 import { cellarReleaseRates } from '@/database/schema';
 
-import priceFromRateCard, {
-  type ReleasePricing,
-} from './priceFromRateCard';
+import priceFromRateCard, { type ReleasePricing } from './priceFromRateCard';
 
 export interface ReleaseLine {
   bottles: number;
@@ -17,6 +15,12 @@ export interface ReleaseLine {
 export interface ReleaseQuote extends ReleasePricing {
   /** False when no rates are configured and the figures are all zero */
   priced: boolean;
+  /*
+    What repacking would add, offered rather than charged. The figures above
+    carry no repack: staff add it when the work is actually being done, or it
+    kept coming back after being deleted.
+  */
+  repackOffer: { cases: number; repackUsd: number; vatUsd: number };
 }
 
 /**
@@ -25,12 +29,12 @@ export interface ReleaseQuote extends ReleasePricing {
  * Four things are charged: what the state takes (duty), what the work costs
  * (clearance, transfer, the drive), what the licensed partner delivering it
  * takes, and what C&C earns. The last two are kept apart in the result so a
- * release can be reported on, even though the member sees them folded into
- * two lines and a service fee.
+ * release can be reported on, even though the member sees them folded into two
+ * lines and a service fee.
  *
  * Cases are derived from bottles rather than taken as given: a member asking
- * for three bottles out of a six-pack is still a case being opened, handled
- * and carried, and charging them for half a case of work would be wrong in the
+ * for three bottles out of a six-pack is still a case being opened, handled and
+ * carried, and charging them for half a case of work would be wrong in the
  * other direction.
  *
  * Falls back to the house default when a member has no rates of their own, so
@@ -67,7 +71,8 @@ const computeReleaseQuote = async (
   const bottles = lines.reduce((sum, line) => sum + line.bottles, 0);
 
   const cases = lines.reduce(
-    (sum, line) => sum + Math.ceil(line.bottles / Math.max(1, line.caseConfig ?? 1)),
+    (sum, line) =>
+      sum + Math.ceil(line.bottles / Math.max(1, line.caseConfig ?? 1)),
     0,
   );
 
@@ -102,12 +107,32 @@ const computeReleaseQuote = async (
       serviceFeeUsd: 0,
       totalUsd: 0,
       priced: false,
+      repackOffer: { cases: repackCases, repackUsd: 0, vatUsd: 0 },
     };
   }
 
+  const withoutRepack = priceFromRateCard(rate, {
+    bottles,
+    cases,
+    repackCases: 0,
+    goodsValueUsd,
+  });
+  const withRepack = priceFromRateCard(rate, {
+    bottles,
+    cases,
+    repackCases,
+    goodsValueUsd,
+  });
+
   return {
-    ...priceFromRateCard(rate, { bottles, cases, repackCases, goodsValueUsd }),
+    ...withoutRepack,
     priced: true,
+    repackOffer: {
+      cases: repackCases,
+      repackUsd: withRepack.repackUsd,
+      vatUsd:
+        Math.round((withRepack.vatUsd - withoutRepack.vatUsd) * 100) / 100,
+    },
   };
 };
 

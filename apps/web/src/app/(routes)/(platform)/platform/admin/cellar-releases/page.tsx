@@ -853,9 +853,12 @@ const CellarReleasesPage = () => {
                               },
                               {
                                 label: 'Repack',
-                                note: `${request.suggested.repackCases} ${request.suggested.repackCases === 1 ? 'case' : 'cases'} opened`,
-                                value: request.suggested.repackUsd,
-                                muted: request.suggested.repackUsd === 0,
+                                note:
+                                  Number(form.repack) > 0
+                                    ? 'added to this quote'
+                                    : 'not charged',
+                                value: Number(form.repack) || 0,
+                                muted: !(Number(form.repack) > 0),
                               },
                             ].map((line) => (
                               <div
@@ -878,6 +881,78 @@ const CellarReleasesPage = () => {
                               </div>
                             ))}
                           </dl>
+
+                          {/*
+                            Repack is offered, never added by itself. The rate
+                            card used to put it in every time the request
+                            opened, so deleting it did not stick.
+                          */}
+                          {request.suggested.repackOffer.cases > 0 && (
+                            <div className="border-border-muted flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {request.suggested.repackOffer.cases}{' '}
+                                {request.suggested.repackOffer.cases === 1
+                                  ? 'case'
+                                  : 'cases'}{' '}
+                                would be opened. Repack at the rate card is $
+                                {request.suggested.repackOffer.repackUsd.toFixed(
+                                  2,
+                                )}{' '}
+                                plus $
+                                {request.suggested.repackOffer.vatUsd.toFixed(
+                                  2,
+                                )}{' '}
+                                VAT.
+                              </Typography>
+                              {Number(form.repack) > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsOverridden(true);
+                                    setForm((current) => ({
+                                      ...current,
+                                      repack: '0',
+                                      clearance: String(
+                                        Math.round(
+                                          ((Number(current.clearance) || 0) -
+                                            request.suggested.repackOffer
+                                              .vatUsd) *
+                                            100,
+                                        ) / 100,
+                                      ),
+                                    }));
+                                  }}
+                                  className="text-text-muted text-xs font-medium hover:text-red-700"
+                                >
+                                  Remove repack
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsOverridden(true);
+                                    setForm((current) => ({
+                                      ...current,
+                                      repack: String(
+                                        request.suggested.repackOffer.repackUsd,
+                                      ),
+                                      clearance: String(
+                                        Math.round(
+                                          ((Number(current.clearance) || 0) +
+                                            request.suggested.repackOffer
+                                              .vatUsd) *
+                                            100,
+                                        ) / 100,
+                                      ),
+                                    }));
+                                  }}
+                                  className="text-text-brand text-xs font-semibold hover:underline"
+                                >
+                                  Add repack
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                           <div className="border-border-muted bg-fill-muted/40 flex items-baseline justify-between gap-3 border-t px-4 py-2">
                             <Typography
@@ -1033,7 +1108,10 @@ const CellarReleasesPage = () => {
                               deliveryCostUsd: Number(form.delivery) || 0,
                               serviceFeeUsd: Number(form.service) || 0,
                               repackCostUsd: Number(form.repack) || 0,
-                              repackCases: request.suggested?.repackCases ?? 0,
+                              repackCases:
+                                Number(form.repack) > 0
+                                  ? (request.suggested?.repackOffer.cases ?? 0)
+                                  : 0,
                               additionalChargeUsd: Number(form.extra) || 0,
                               additionalChargeLabel:
                                 form.extraLabel || undefined,
