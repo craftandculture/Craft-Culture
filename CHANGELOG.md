@@ -1,3 +1,17 @@
+## [2.0.580](https://github.com/craftandculture/Craft-Culture/compare/v2.0.579...v2.0.580) (2026-10-26)
+
+### Features
+
+* Private Cellar has its own Cellar menu, and Finance opens on Pricing Manager ([5db47aa](https://github.com/craftandculture/Craft-Culture/commit/5db47aaebc9ab9a9c183eeb3f172591f02055364))
+* the Users screen shows who needs approving or linking, each person's access and who they act for, and works on a phone ([5339bdb](https://github.com/craftandculture/Craft-Culture/commit/5339bdb76cefc7a026bd1bc1cb126d889105ef8a))
+
+### Bug Fixes
+
+* a user created with a capital in their email no longer becomes a second account ([b92df2f](https://github.com/craftandculture/Craft-Culture/commit/b92df2fdcdffe7d1485be7d980c1950b9efe4455))
+* partner logos load on the orders list, Home says when briefings are old, and Zoho Sales hides finished holds ([2df8523](https://github.com/craftandculture/Craft-Culture/commit/2df8523712548b9a5ff2636db362c6b6eb42b4d2))
+* the logistics dashboard counts shipments on the way the same way the Shipments list does ([177326f](https://github.com/craftandculture/Craft-Culture/commit/177326fce73501da4dc4d663205eea875d12e2d6))
+* wine partner and collector cards ask before deactivating, and keep delete in a menu ([f959371](https://github.com/craftandculture/Craft-Culture/commit/f959371078ae1abf432d0bcf6f1533eb906fb2f3))
+
 ## [2.0.579](https://github.com/craftandculture/Craft-Culture/compare/v2.0.578...v2.0.579) (2026-10-26)
 
 ### Improvements
