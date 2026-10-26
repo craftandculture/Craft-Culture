@@ -25,15 +25,16 @@ const ClientMark = ({
 }: {
   logoUrl: string | null | undefined;
   name: string | null | undefined;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
 }) => {
-  const box = size === 'sm' ? 'size-9 text-xs' : 'size-11 text-sm';
+  const box =
+    size === 'sm' ? 'size-9 text-xs' : size === 'lg' ? 'size-16 text-base' : 'size-11 text-sm';
   // A stored logo whose file has gone (Intagulf's did) falls back to initials
   // rather than showing the browser's broken-image icon.
   const [failed, setFailed] = useState(false);
   return logoUrl && !failed ? (
     <span
-      className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted`}
+      className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1.5 ring-1 ring-border-muted`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
       <img
