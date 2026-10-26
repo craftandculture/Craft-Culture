@@ -1,3 +1,9 @@
+## [2.0.578](https://github.com/craftandculture/Craft-Culture/compare/v2.0.577...v2.0.578) (2026-10-26)
+
+### Improvements
+
+* each dispatch batch shows its distributor's logo ([49a17f1](https://github.com/craftandculture/Craft-Culture/commit/49a17f1e63d153b213721aabe4bdf98c22d0c4e1))
+
 ## [2.0.577](https://github.com/craftandculture/Craft-Culture/compare/v2.0.576...v2.0.577) (2026-10-26)
 
 ### Improvements
