@@ -1,3 +1,9 @@
+## [2.0.572](https://github.com/craftandculture/Craft-Culture/compare/v2.0.571...v2.0.572) (2026-10-26)
+
+### Bug Fixes
+
+* the Private Cellar is calmer: "New" only on up to two tabs a member has not seen, a one-line feature note, plain What's New heading, and quiet region pills on The Cellar List ([a4c402a](https://github.com/craftandculture/Craft-Culture/commit/a4c402a01480c45f56cf11bf474c6d1fb3023336))
+
 ## [2.0.571](https://github.com/craftandculture/Craft-Culture/compare/v2.0.570...v2.0.571) (2026-10-26)
 
 ### Features
