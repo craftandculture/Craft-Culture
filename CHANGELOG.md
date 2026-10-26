@@ -1,3 +1,10 @@
+## [2.0.562](https://github.com/craftandculture/Craft-Culture/compare/v2.0.561...v2.0.562) (2026-10-26)
+
+### Bug Fixes
+
+* error reports no longer go to the former developer's Sentry account ([9d16f3c](https://github.com/craftandculture/Craft-Culture/commit/9d16f3c661484e25f9acfeb8997c12f00c8eb5f5))
+* pricing percentages such as a 4.8976% margin can be keyed to four decimal places, and the PCO breakdown shows them in full instead of rounding to 4.9 ([c05fd1c](https://github.com/craftandculture/Craft-Culture/commit/c05fd1caf831e15d1fa7d8a7ab0179a3845dd922))
+
 ## [2.0.561](https://github.com/craftandculture/Craft-Culture/compare/v2.0.560...v2.0.561) (2026-10-26)
 
 ### Features
