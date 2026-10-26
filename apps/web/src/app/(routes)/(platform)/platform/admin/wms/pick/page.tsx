@@ -21,35 +21,10 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
-
-/** Two letters for a client with no logo, e.g. "JMK Trading LLC" → "JT" */
-const initials = (name: string) =>
-  name
-    .replace(/\b(llc|l\.l\.c|fze|fz-llc|ltd|co)\b\.?/gi, '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('');
-
-/**
- * The square at the start of a pick card: the partner's logo when there is
- * one, otherwise the client's initials, so each order is told apart at a glance
- */
-const ClientMark = ({ logoUrl, name }: { logoUrl: string | null; name: string | null }) =>
-  logoUrl ? (
-    <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted">
-      {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
-      <img src={logoUrl} alt={name ?? ''} className="max-h-full max-w-full object-contain" />
-    </span>
-  ) : (
-    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-fill-secondary text-sm font-semibold text-text-muted">
-      {name ? initials(name) || '?' : <IconClipboardList className="h-5 w-5" />}
-    </span>
-  );
 
 /**
  * WMS Pick Lists - List and manage order pick lists
