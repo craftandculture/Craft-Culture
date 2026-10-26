@@ -1,3 +1,9 @@
+## [2.0.560](https://github.com/craftandculture/Craft-Culture/compare/v2.0.559...v2.0.560) (2026-10-26)
+
+### Bug Fixes
+
+* an export invoice's declaration now names every country of origin, including ones typed in after the draft was built ([8cdcdc9](https://github.com/craftandculture/Craft-Culture/commit/8cdcdc939b5c666016b8b11ebcdab55064fc1436))
+
 ## [2.0.559](https://github.com/craftandculture/Craft-Culture/compare/v2.0.558...v2.0.559) (2026-10-25)
 
 ### Features
