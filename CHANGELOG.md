@@ -1,3 +1,9 @@
+## [2.0.573](https://github.com/craftandculture/Craft-Culture/compare/v2.0.572...v2.0.573) (2026-10-26)
+
+### Improvements
+
+* The Cellar List is now called the C&C Cellar List throughout the Private Cellar ([330f3d3](https://github.com/craftandculture/Craft-Culture/commit/330f3d377634bf0c4fb6cc825cdf058e843072fd))
+
 ## [2.0.572](https://github.com/craftandculture/Craft-Culture/compare/v2.0.571...v2.0.572) (2026-10-26)
 
 ### Bug Fixes
