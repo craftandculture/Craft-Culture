@@ -1,3 +1,9 @@
+## [2.0.566](https://github.com/craftandculture/Craft-Culture/compare/v2.0.565...v2.0.566) (2026-10-26)
+
+### Features
+
+* **cellar:** Private Cellar member emails, behind an off, shadow and live switch ([dcbd130](https://github.com/craftandculture/Craft-Culture/commit/dcbd1308d071ebe3fee38681a3040fa99fef0620))
+
 ## [2.0.565](https://github.com/craftandculture/Craft-Culture/compare/v2.0.564...v2.0.565) (2026-10-26)
 
 ### Features
