@@ -1,6 +1,14 @@
 'use client';
 
-import { IconCheck, IconChevronDown, IconTruckDelivery } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconCalendar,
+  IconCheck,
+  IconChevronDown,
+  IconGift,
+  IconHome,
+  IconTruckDelivery,
+} from '@tabler/icons-react';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
@@ -45,7 +53,7 @@ const stamp = (date: Date) => format(date, 'd MMM, HH:mm');
   is named, or six labels would not fit.
 */
 const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }) => (
-  <ol className="mt-5 grid grid-cols-6" aria-label="Delivery progress">
+  <ol className="grid grid-cols-6" aria-label="Delivery progress">
     {DELIVERY_STAGES.map(({ label }, index) => {
       const done = index < step || (index === step && step === DELIVERY_STAGES.length - 1);
       const current = index === step && !done;
@@ -55,11 +63,11 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
         <li key={label} className="min-w-0" aria-current={current ? 'step' : undefined}>
           <div className="flex items-center">
             <span
-              className={`flex size-5 flex-shrink-0 items-center justify-center rounded-full ${
+              className={`flex size-6 flex-shrink-0 items-center justify-center rounded-full ${
                 done
                   ? 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-black'
                   : current
-                    ? 'bg-surface-primary ring-2 ring-emerald-600 dark:ring-emerald-400'
+                    ? 'bg-surface-primary ring-2 ring-emerald-600 shadow-[0_0_0_6px_rgba(16,185,129,0.15)] dark:ring-emerald-400'
                     : 'bg-fill-muted'
               }`}
             >
@@ -68,16 +76,16 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
             </span>
             {index < DELIVERY_STAGES.length - 1 && (
               <span
-                className={`mx-1 h-0.5 flex-1 rounded-full ${
+                className={`mx-1.5 h-1 flex-1 rounded-full ${
                   index < step ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-fill-muted'
                 }`}
               />
             )}
           </div>
           <p
-            className={`mt-2 truncate pr-2 text-sm ${
+            className={`mt-2.5 truncate pr-2 text-[13px] ${
               index === step
-                ? 'text-text-primary block font-semibold'
+                ? 'block font-semibold text-emerald-700 dark:text-emerald-300'
                 : index < step
                   ? 'text-text-secondary hidden sm:block'
                   : 'text-text-muted hidden sm:block'
@@ -87,7 +95,7 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
           </p>
           {time && (
             <p
-              className={`text-text-muted truncate pr-2 text-xs tabular-nums ${
+              className={`text-text-muted truncate pr-2 text-[11px] tabular-nums ${
                 index === step ? 'block' : 'hidden sm:block'
               }`}
             >
@@ -206,28 +214,62 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
     const step = stepOf(request);
     const stage = DELIVERY_STAGES[step];
     const details = [
-      summaryOf(request),
-      recipient,
-      when,
-      preferred ? `You asked for ${preferred}` : null,
-    ].filter(Boolean);
+      { icon: IconBottle, text: summaryOf(request) },
+      recipient && { icon: request.delivery?.isGift ? IconGift : IconHome, text: recipient },
+      when && { icon: IconCalendar, text: when },
+      preferred && { icon: IconCalendar, text: `You asked for ${preferred}` },
+    ].filter(Boolean) as { icon: typeof IconBottle; text: string }[];
+    const isLive = section === 'live';
 
     return (
-      <li key={request.id} className="px-4 py-5 sm:px-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="text-text-primary text-lg font-semibold">
-            {step === 5 && request.deliveredAt
-              ? `Delivered ${format(new Date(request.deliveredAt), 'd MMMM')}`
-              : stage?.headline}
-          </p>
-          <span className="text-text-muted flex-shrink-0 font-mono text-xs">
-            {request.requestNumber}
-            {request.orderNumber ? ` · ${request.orderNumber}` : ''}
-          </span>
+      <li
+        key={request.id}
+        className={
+          isLive
+            ? 'bg-background-primary overflow-hidden rounded-xl border border-black/[0.07] shadow-sm dark:border-white/10 dark:bg-white/[0.03]'
+            : 'px-4 py-5 sm:px-6'
+        }
+      >
+        <div
+          className={
+            isLive
+              ? 'border-border-muted border-b bg-gradient-to-r from-emerald-50/80 to-transparent px-4 py-4 sm:px-5 dark:from-emerald-500/[0.08]'
+              : ''
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <p className="text-text-primary text-lg font-semibold">
+                {step === 5 && request.deliveredAt
+                  ? `Delivered ${format(new Date(request.deliveredAt), 'd MMMM')}`
+                  : stage?.headline}
+              </p>
+              {isLive && (
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums dark:bg-emerald-500">
+                  Step {step + 1} of {DELIVERY_STAGES.length}
+                </span>
+              )}
+            </div>
+            <span className="text-text-muted flex-shrink-0 font-mono text-[11px]">
+              {request.requestNumber}
+              {request.orderNumber ? ` · ${request.orderNumber}` : ''}
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {details.map((detail) => (
+              <span
+                key={detail.text}
+                className="bg-background-primary/80 text-text-secondary inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] px-2.5 py-1 text-xs font-medium dark:border-white/10 dark:bg-white/[0.04]"
+              >
+                <detail.icon size={13} className="text-text-muted" />
+                {detail.text}
+              </span>
+            ))}
+          </div>
         </div>
-        <p className="text-text-muted mt-1 text-sm">{details.join(' · ')}</p>
 
-        {section === 'live' && <ProgressSteps step={step} times={reachedAt(request)} />}
+        <div className={isLive ? 'px-4 pt-5 pb-4 sm:px-5' : ''}>
+        {isLive && <ProgressSteps step={step} times={reachedAt(request)} />}
 
         {/*
           The wine in a compact grid, so a delivery of thirty bottles stays on
@@ -235,12 +277,13 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
           underneath, and how many on the right. Two columns on a laptop,
           three on a wide screen, one on a phone.
         */}
-        <div className="border-border-muted mt-4 border-t pt-1">
-          <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
+        <div className={isLive ? 'mt-5' : 'mt-4'}>
+          <p className="text-text-muted mb-2 text-[11px] font-semibold tracking-[0.1em] uppercase">In this delivery</p>
+          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {wines.map((item, index) => (
               <li
                 key={`${item.productName}-${index}`}
-                className="border-border-muted/60 flex min-w-0 items-center justify-between gap-3 border-b py-2.5"
+                className="bg-surface-muted/60 flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2.5 dark:bg-white/[0.04]"
               >
                 <div className="min-w-0">
                   <p
@@ -270,6 +313,7 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
               <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
+        </div>
         </div>
       </li>
     );
@@ -326,7 +370,7 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
             );
           })()}
           {!(collapsible && collapsed) && (
-            <ul className="divide-border-muted divide-y">{live.map(row)}</ul>
+            <ul className="bg-surface-muted/40 flex flex-col gap-4 p-3 sm:p-4 dark:bg-transparent">{live.map(row)}</ul>
           )}
         </>
       )}
