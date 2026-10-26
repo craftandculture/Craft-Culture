@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminDraftNow from './controller/adminDraftNow';
 import adminList from './controller/adminList';
+import adminPublishReady from './controller/adminPublishReady';
 import adminSave from './controller/adminSave';
 import adminSetEnabled from './controller/adminSetEnabled';
 import adminSetStatus from './controller/adminSetStatus';
@@ -14,10 +15,11 @@ const productUpdatesRouter = createTRPCRouter({
   listForMe,
   unseenCount,
   markSeen,
-  // Staff: AI drafts are reviewed here; nothing reaches a member unpublished
+  // Staff: AI drafts publish themselves after a hold unless the copy check flags them
   adminList,
   adminSave,
   adminSetStatus,
+  adminPublishReady,
   adminDraftNow,
   adminSetEnabled,
 });

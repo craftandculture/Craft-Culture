@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import autoPublishDrafts from '@/app/_productUpdates/data/autoPublishDrafts';
 import draftPendingUpdates from '@/app/_productUpdates/data/draftPendingUpdates';
 import isCronAuthorised from '@/lib/cron/isCronAuthorised';
 import logger from '@/utils/logger';
@@ -10,10 +11,10 @@ export const maxDuration = 300;
 /**
  * What's New drafting, on Vercel's schedule
  *
- * Reads the changelog items this build carries that the AI has not read yet,
- * and saves drafts for staff to review. Never publishes. Runs hourly, so the
- * drafts for a release are waiting within the hour of it deploying; with
- * nothing new it is one small query.
+ * Publishes the AI drafts that have waited a day and pass the copy check,
+ * then reads the changelog items this build carries that the AI has not read
+ * yet. Runs hourly, so a release is drafted within the hour of deploying and
+ * reaches members a day later unless staff stop it.
  */
 export const GET = async (request: Request) => {
   if (!isCronAuthorised(request)) {
@@ -21,7 +22,11 @@ export const GET = async (request: Request) => {
   }
 
   try {
-    return NextResponse.json(await draftPendingUpdates());
+    // Publish yesterday's drafts first, so a slow drafting run never delays them
+    const published = await autoPublishDrafts();
+    const drafted = await draftPendingUpdates();
+
+    return NextResponse.json({ ...published, ...drafted });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 

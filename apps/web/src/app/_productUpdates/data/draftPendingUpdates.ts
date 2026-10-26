@@ -13,9 +13,10 @@ const PARALLEL = 3;
  * Read the changelog items not yet read, and save what the AI made of them
  *
  * Member-facing items become drafts; the rest are saved as skipped with the
- * AI's reason, so staff can see and overrule each decision. Nothing is ever
- * published here. Bounded per run so a long backlog finishes over several
- * runs rather than timing out; an item the AI did not answer stays pending.
+ * AI's reason, so staff can see and overrule each decision. Drafts publish
+ * themselves a day later (autoPublishDrafts); nothing is published here.
+ * Bounded per run so a long backlog finishes over several runs rather than
+ * timing out; an item the AI did not answer stays pending.
  *
  * @param maxItems - The most items to read in this run
  * @returns How many were drafted and skipped, and how many still wait

@@ -19,6 +19,7 @@ import UpdateCard from './UpdateCard';
 import UpdateEditDialog, { type UpdateDraft } from './UpdateEditDialog';
 import UpdateTypeTag from './UpdateTypeTag';
 import WhatsNewTimeline from './WhatsNewTimeline';
+import { AUTO_PUBLISH_FROM_DATE, AUTO_PUBLISH_HOLD_HOURS } from '../constants/autoPublish';
 
 type Row = inferRouterOutputs<AppRouter>['productUpdates']['adminList']['updates'][number];
 type Tab = 'draft' | 'published' | 'skipped' | 'preview';
@@ -30,6 +31,17 @@ const TILES: { key: Exclude<Tab, 'preview'>; label: string; tint: string }[] = [
   { key: 'published', label: 'Live to members', tint: 'bg-emerald-50 dark:bg-emerald-500/10' },
   { key: 'skipped', label: 'Not for members', tint: 'bg-fill-muted' },
 ];
+
+/**
+ * When an AI draft will publish itself, or null when it waits for a person:
+ * written by hand, part of the launch backlog, or flagged by the copy check
+ */
+const publishesAt = (row: Row) => {
+  if (row.status !== 'draft' || row.createdBy || row.flags.length > 0) return null;
+  if (new Date(row.createdAt) < new Date(`${AUTO_PUBLISH_FROM_DATE}T00:00:00Z`)) return null;
+
+  return new Date(new Date(row.updatedAt).getTime() + AUTO_PUBLISH_HOLD_HOURS * 3_600_000);
+};
 
 const smallButton = 'border-border-muted hover:bg-fill-muted rounded-lg border px-3 py-1.5 text-xs font-semibold';
 const primaryButton = 'bg-text-primary text-surface-primary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40';
@@ -50,6 +62,7 @@ const MemberUpdatesAdmin = () => {
   const [publishing, setPublishing] = useState<Row | null>(null);
   const [previewing, setPreviewing] = useState<Row | null>(null);
   const [confirmVisibility, setConfirmVisibility] = useState(false);
+  const [confirmPublishReady, setConfirmPublishReady] = useState(false);
 
   const { data, isLoading } = useQuery(api.productUpdates.adminList.queryOptions());
   const refresh = () => queryClient.invalidateQueries({ queryKey: api.productUpdates.adminList.queryKey() });
@@ -95,6 +108,18 @@ const MemberUpdatesAdmin = () => {
     onError,
   });
 
+  const publishReady = useMutation({
+    ...api.productUpdates.adminPublishReady.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        `${result.published} published${result.held > 0 ? `, ${result.held} held for their wording` : ''}`,
+      );
+      setConfirmPublishReady(false);
+      void refresh();
+    },
+    onError,
+  });
+
   const setEnabled = useMutation({
     ...api.productUpdates.adminSetEnabled.mutationOptions(),
     onSuccess: (result) => {
@@ -108,6 +133,7 @@ const MemberUpdatesAdmin = () => {
   const rows = data?.updates ?? [];
   const live = rows.filter((r) => r.status === 'published' && r.audiences.includes('collector'));
   const shown = tab === 'preview' ? [] : rows.filter((r) => r.status === tab);
+  const readyCount = rows.filter((r) => r.status === 'draft' && r.flags.length === 0).length;
 
   const toDraft = (row: Row): UpdateDraft => ({
     id: row.id,
@@ -125,7 +151,8 @@ const MemberUpdatesAdmin = () => {
         <div>
           <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Member Updates</h1>
           <p className="text-text-muted mt-0.5 max-w-2xl text-sm">
-            What&rsquo;s New for members. The AI drafts an update from each release; review the wording, then publish.
+            What&rsquo;s New for members. The AI drafts an update from each release, and it publishes itself a day
+            later unless you edit or discard it. Drafts the copy check flags wait for you.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -140,6 +167,14 @@ const MemberUpdatesAdmin = () => {
               : data?.pendingCount
                 ? `Read new releases (${data.pendingCount})`
                 : 'All releases read'}
+          </button>
+          <button
+            type="button"
+            className={smallButton}
+            disabled={readyCount === 0}
+            onClick={() => setConfirmPublishReady(true)}
+          >
+            Publish all ready ({readyCount})
           </button>
           <button
             type="button"
@@ -222,7 +257,9 @@ const MemberUpdatesAdmin = () => {
         </div>
       ) : shown.length === 0 ? (
         <p className="border-border-muted text-text-muted rounded-xl border px-4 py-8 text-center text-sm">
-          {tab === 'draft' ? 'All drafts reviewed. New drafts arrive within the hour of each release.' : 'Nothing here.'}
+          {tab === 'draft'
+            ? 'No drafts waiting. New drafts arrive within the hour of each release.'
+            : 'Nothing here.'}
         </p>
       ) : (
         <div className="border-border-muted bg-background-primary divide-border-muted divide-y rounded-xl border">
@@ -245,6 +282,16 @@ const MemberUpdatesAdmin = () => {
                   <p className="text-text-muted mt-1 text-xs italic">{row.skippedReason}</p>
                 ) : (
                   row.body && <p className="text-text-muted mt-1 text-sm">{row.body}</p>
+                )}
+                {publishesAt(row) && (
+                  <p className="text-text-muted mt-2 text-xs">
+                    Publishes itself{' '}
+                    {(publishesAt(row) as Date).toLocaleString('en-GB', {
+                      weekday: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 )}
                 {row.flags.length > 0 && (
                   <p className="mt-2 inline-flex rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-800 dark:bg-orange-500/10 dark:text-orange-300">
@@ -377,6 +424,31 @@ const MemberUpdatesAdmin = () => {
               onClick={() => publishing && setStatus.mutate({ id: publishing.id, status: 'published' })}
             >
               Publish
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmPublishReady} onOpenChange={setConfirmPublishReady}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Publish {readyCount} drafts?</DialogTitle>
+            <DialogDescription>
+              Every draft that passes the copy check goes live to its members now. Drafts with a copy check warning
+              stay here for you.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" className={smallButton} onClick={() => setConfirmPublishReady(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={primaryButton}
+              disabled={publishReady.isPending}
+              onClick={() => publishReady.mutate()}
+            >
+              Publish {readyCount}
             </button>
           </DialogFooter>
         </DialogContent>
