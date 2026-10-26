@@ -1,3 +1,9 @@
+## [2.0.569](https://github.com/craftandculture/Craft-Culture/compare/v2.0.568...v2.0.569) (2026-10-26)
+
+### Improvements
+
+* What's New opens with a dark header and sits its updates on a tinted panel, with stronger tags and green timeline markers, in light and dark mode ([b21ba6d](https://github.com/craftandculture/Craft-Culture/commit/b21ba6dd68900535252363abddaff2bd57ab6105))
+
 ## [2.0.568](https://github.com/craftandculture/Craft-Culture/compare/v2.0.567...v2.0.568) (2026-10-26)
 
 ### Improvements
