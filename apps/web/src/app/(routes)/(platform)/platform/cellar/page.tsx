@@ -42,6 +42,7 @@ import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useCellarCurrency from '@/app/_cellar/hooks/useCellarCurrency';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
+import WhatsNewBanner from '@/app/_productUpdates/components/WhatsNewBanner';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -1652,6 +1653,8 @@ const CellarPage = () => {
           </div>
         </section>
       )}
+
+      <WhatsNewBanner />
 
       <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" collapsible />
 

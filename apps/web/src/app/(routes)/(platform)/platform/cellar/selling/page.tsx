@@ -16,6 +16,7 @@ import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import CellarState from '@/app/_cellar/components/CellarState';
 import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import FirstStepsCard from '@/app/_cellar/components/FirstStepsCard';
 import SaleProceedsPanel from '@/app/_cellar/components/SaleProceedsPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
@@ -476,13 +477,31 @@ const SellingPage = () => {
       {isError && <CellarState kind="error" className="mt-6" />}
 
       {!isLoading && !isError && mandates.length === 0 && (
-        <CellarState
-          kind="empty"
-          icon={IconTag}
-          title="Nothing offered for sale"
-          message="Choose wines in your cellar and press Sell to offer them."
-          className="mt-6"
-        />
+        <div className="mt-6">
+          <FirstStepsCard
+            eyebrow="Selling from your cellar"
+            title="Offer wine from your collection"
+            message="Your wine stays in our bonded warehouse until it sells, and you decide the price."
+            steps={[
+              {
+                icon: IconBottle,
+                title: 'Choose your wines',
+                text: 'In your cellar, select the wines and press Sell.',
+              },
+              {
+                icon: IconTag,
+                title: 'Set your price',
+                text: 'Name your asking price in USD, EUR, GBP or AED. We review the offer with you.',
+              },
+              {
+                icon: IconCoin,
+                title: 'Paid when it sells',
+                text: 'Nothing leaves your cellar until it is sold, and the proceeds are paid to you.',
+              },
+            ]}
+            action={{ href: '/platform/cellar', label: 'Choose wines in your cellar' }}
+          />
+        </div>
       )}
 
       {!isLoading && current.length > 0 && renderOffers(current)}

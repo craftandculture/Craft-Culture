@@ -8,6 +8,7 @@ import {
   IconMinus,
   IconPlus,
   IconSearch,
+  IconSparkles,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -18,9 +19,12 @@ import { toast } from 'sonner';
 import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import CellarState from '@/app/_cellar/components/CellarState';
 import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
+import RecentlyAddedTag from '@/app/_cellar/components/RecentlyAddedTag';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
+import isRecentlyAdded from '@/app/_cellar/utils/isRecentlyAdded';
+import regionTone from '@/app/_cellar/utils/regionTone';
 import FindWineDialog from '@/app/_cellarSourcing/components/FindWineDialog';
 import MemberSourcingPanel from '@/app/_cellarSourcing/components/MemberSourcingPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
@@ -87,9 +91,11 @@ const AvailablePage = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | undefined>('Wine');
   const [country, setCountry] = useState('');
+  const [region, setRegion] = useState('');
   const [producer, setProducer] = useState('');
   const [vintage, setVintage] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
+  const [onlyRecent, setOnlyRecent] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(PAGE);
   /*
@@ -137,6 +143,8 @@ const AvailablePage = () => {
   const filtered = useMemo(() => {
     const rows = wines.filter(
       (wine) =>
+        (!onlyRecent || isRecentlyAdded(wine.addedAt)) &&
+        (!region || (wine.region ?? wine.country) === region) &&
         (!country || wine.country === country) &&
         (!producer || wine.producer === producer) &&
         (!vintage || String(wine.vintage) === vintage),
@@ -154,7 +162,19 @@ const AvailablePage = () => {
     });
 
     return sorted;
-  }, [wines, country, producer, vintage, sort]);
+  }, [wines, region, country, producer, vintage, sort, onlyRecent]);
+
+  /* The regions most of the list comes from, as coloured pills to scan by */
+  const regions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const wine of wines) {
+      const name = wine.region ?? wine.country;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name]) => name);
+  }, [wines]);
+
+  const recentCount = useMemo(() => wines.filter((wine) => isRecentlyAdded(wine.addedAt)).length, [wines]);
 
   const shown = filtered.slice(0, limit);
 
@@ -186,6 +206,7 @@ const AvailablePage = () => {
   );
 
   const activeFilters = [
+    region && { label: region, clear: () => setRegion('') },
     country && { label: country, clear: () => setCountry('') },
     producer && { label: producer, clear: () => setProducer('') },
     vintage && { label: vintage, clear: () => setVintage('') },
@@ -509,6 +530,7 @@ const AvailablePage = () => {
             <button
               type="button"
               onClick={() => {
+                setRegion('');
                 setCountry('');
                 setProducer('');
                 setVintage('');
@@ -535,6 +557,7 @@ const AvailablePage = () => {
                 type="button"
                 onClick={() => {
                   setSearch('');
+                  setRegion('');
                   setCountry('');
                   setProducer('');
                   setVintage('');
@@ -556,7 +579,38 @@ const AvailablePage = () => {
 
       {!isLoading && !isError && filtered.length > 0 && (
         <>
-          <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+          {regions.length > 1 && (
+            <div className="-mx-3 mb-4 flex items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+              <span className="text-text-muted shrink-0 text-xs font-semibold">Regions</span>
+              {regions.map((name) => {
+                const active = region === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setRegion(active ? '' : name)}
+                    className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-semibold whitespace-nowrap transition ${regionTone(name)} ${
+                      active ? 'ring-text-primary ring-2 ring-offset-2' : region ? 'opacity-45 hover:opacity-80' : 'hover:opacity-90'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            {/* What has arrived this week leads, and filters the list to it */}
+            <CellarStatTile
+              label={onlyRecent ? 'Showing recently added' : 'Added this week'}
+              icon={IconSparkles}
+              tone="emerald"
+              value={String(recentCount)}
+              onClick={recentCount > 0 || onlyRecent ? () => setOnlyRecent((on) => !on) : undefined}
+              isActive={onlyRecent}
+            />
             <CellarStatTile
               label="Wines"
               icon={IconGlassFull}
@@ -585,8 +639,12 @@ const AvailablePage = () => {
               return (
                 <li
                   key={`${wine.lwin18}-${wine.vintage ?? ''}`}
-                  className={`bg-surface-primary rounded-xl border p-3 shadow-sm ${
-                    isChosen ? 'border-text-primary' : 'border-border-muted'
+                  className={`rounded-xl border p-3 shadow-sm ${
+                    isChosen
+                      ? 'bg-surface-primary border-text-primary'
+                      : isRecentlyAdded(wine.addedAt)
+                        ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-500/[0.07]'
+                        : 'bg-surface-primary border-border-muted'
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -597,6 +655,7 @@ const AvailablePage = () => {
                       </p>
                       <p className="text-text-muted mt-0.5 truncate text-xs">{origin(wine)}</p>
                       <div className="mt-2 flex flex-wrap gap-1">
+                        {isRecentlyAdded(wine.addedAt) && <RecentlyAddedTag />}
                         <span className={pill}>{wine.vintage ?? 'NV'}</span>
                         <span className={pill}>
                           {bottleName(wine.bottleSize)}
@@ -640,7 +699,9 @@ const AvailablePage = () => {
                       className={`group transition-colors ${
                         isChosen
                           ? 'bg-emerald-50/50 shadow-[inset_3px_0_0] shadow-emerald-500 dark:bg-emerald-500/10'
-                          : 'hover:bg-fill-muted/40'
+                          : isRecentlyAdded(wine.addedAt)
+                            ? 'bg-emerald-50/40 hover:bg-emerald-50/70 dark:bg-emerald-500/[0.06]'
+                            : 'hover:bg-fill-muted/40'
                       }`}
                     >
                       <td className="max-w-0 px-4 py-3">
@@ -660,7 +721,10 @@ const AvailablePage = () => {
                             >
                               {displayName(wine.product)}
                             </span>
-                            <span className="text-text-muted block truncate text-xs">{origin(wine) || '—'}</span>
+                            <span className="text-text-muted flex items-center gap-2 truncate text-xs">
+                              {isRecentlyAdded(wine.addedAt) && <RecentlyAddedTag />}
+                              <span className="truncate">{origin(wine) || '—'}</span>
+                            </span>
                           </div>
                         </div>
                       </td>

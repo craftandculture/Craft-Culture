@@ -1,12 +1,13 @@
 'use client';
 
-import { IconArrowRight, IconTruckDelivery } from '@tabler/icons-react';
+import { IconArrowRight, IconBottle, IconPackage, IconTruckDelivery } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import CellarState from '@/app/_cellar/components/CellarState';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
+import FirstStepsCard from '@/app/_cellar/components/FirstStepsCard';
 import useTRPC from '@/lib/trpc/browser';
 
 /** Requests still being arranged; accepted ones are shown by the panel itself */
@@ -55,19 +56,28 @@ const DeliveriesPage = () => {
       ) : isError ? (
         <CellarState kind="error" />
       ) : accepted.length === 0 && arranging.length === 0 ? (
-        <CellarState
-          kind="empty"
-          icon={IconTruckDelivery}
-          title="No deliveries yet"
-          message="When you request a delivery from your cellar, you can follow it here until it reaches you."
-          action={
-            <Link
-              href="/platform/cellar"
-              className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
-            >
-              Go to your cellar
-            </Link>
-          }
+        <FirstStepsCard
+          eyebrow="Your first delivery"
+          title="Bring your wine home"
+          message="Choose the bottles you would like in your cellar and we will arrange the rest. You can follow every delivery here until it reaches you."
+          steps={[
+            {
+              icon: IconBottle,
+              title: 'Choose your wines',
+              text: 'In your cellar, select the bottles and press Request delivery.',
+            },
+            {
+              icon: IconPackage,
+              title: 'We prepare them',
+              text: 'You approve the final cost, then we prepare your wine in our bonded warehouse.',
+            },
+            {
+              icon: IconTruckDelivery,
+              title: 'Delivered to you',
+              text: 'City Drinks contacts you to agree a time and brings your wine to your door.',
+            },
+          ]}
+          action={{ href: '/platform/cellar', label: 'Choose wines in your cellar' }}
         />
       ) : (
         <>

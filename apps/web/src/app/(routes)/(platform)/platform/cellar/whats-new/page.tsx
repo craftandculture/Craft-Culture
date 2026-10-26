@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 
 import WhatsNewHero from '@/app/_productUpdates/components/WhatsNewHero';
 import WhatsNewTimeline from '@/app/_productUpdates/components/WhatsNewTimeline';
+import BANNER_STORAGE_KEY from '@/app/_productUpdates/constants/bannerStorageKey';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -42,6 +43,13 @@ const CellarWhatsNewPage = () => {
     if (!recorded.current) {
       recorded.current = true;
       markSeen();
+      // Reading the updates here retires the newest one's banner on Your cellar
+      const newest = data.updates.find((u) => u.type !== 'fix' && u.linkPath);
+      try {
+        if (newest) window.localStorage.setItem(BANNER_STORAGE_KEY, newest.id);
+      } catch {
+        // Storage refused: the banner can still be closed by hand
+      }
     }
   }, [data, markSeen, router]);
 
