@@ -18,6 +18,7 @@ import type { AppRouter } from '@/trpc-router';
 import UpdateCard from './UpdateCard';
 import UpdateEditDialog, { type UpdateDraft } from './UpdateEditDialog';
 import UpdateTypeTag from './UpdateTypeTag';
+import WhatsNewHero from './WhatsNewHero';
 import WhatsNewTimeline from './WhatsNewTimeline';
 import { AUTO_PUBLISH_FROM_DATE, AUTO_PUBLISH_HOLD_HOURS } from '../constants/autoPublish';
 
@@ -247,12 +248,15 @@ const MemberUpdatesAdmin = () => {
       {isLoading ? (
         <div className="bg-fill-muted h-40 animate-pulse rounded-xl" />
       ) : tab === 'preview' ? (
-        <div className="border-border-muted bg-background-primary max-w-3xl rounded-xl border p-4 sm:p-6">
-          <p className="text-text-muted mb-1 text-sm">Updates</p>
-          <h2 className="text-text-primary mb-1 text-2xl font-semibold tracking-tight">
-            What&rsquo;s New in your Private Cellar
-          </h2>
-          <p className="text-text-muted mb-5 text-sm">Every improvement to your private cellar, in one place.</p>
+        <div className="max-w-4xl">
+          <WhatsNewHero
+            newCount={0}
+            counts={{
+              feature: live.filter((r) => r.type === 'feature').length,
+              improvement: live.filter((r) => r.type === 'improvement').length,
+              fix: live.filter((r) => r.type === 'fix').length,
+            }}
+          />
           <WhatsNewTimeline updates={live.map((r) => ({ ...r, date: r.createdAt }))} seenAt={null} preview />
         </div>
       ) : shown.length === 0 ? (

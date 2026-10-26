@@ -45,14 +45,14 @@ const UpdateCard = ({ type, title, body, linkPath, isNew, highlight, preview }: 
 
   return (
     <article
-      className={`bg-background-primary rounded-xl border px-4 py-4 sm:px-5 ${
-        isNew ? 'border-emerald-300 dark:border-emerald-800' : 'border-border-muted'
+      className={`bg-background-primary rounded-xl border px-4 py-4 dark:bg-white/[0.045] dark:shadow-none shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 ${
+        isNew ? 'border-emerald-400 ring-1 ring-emerald-400/30 dark:border-emerald-700' : 'border-black/[0.08] dark:border-white/10'
       }`}
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <UpdateTypeTag type={type} />
         {isNew && (
-          <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-emerald-700 uppercase dark:bg-emerald-500/10 dark:text-emerald-300">
+          <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-white uppercase">
             New
           </span>
         )}
@@ -67,7 +67,7 @@ const UpdateCard = ({ type, title, body, linkPath, isNew, highlight, preview }: 
         <Link
           href={preview ? '#' : linkPath}
           onClick={preview ? (e) => e.preventDefault() : undefined}
-          className="border-border-muted text-text-primary hover:bg-fill-muted mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold"
+          className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-neutral-950 px-4 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
         >
           {label}
           <IconArrowRight size={14} />

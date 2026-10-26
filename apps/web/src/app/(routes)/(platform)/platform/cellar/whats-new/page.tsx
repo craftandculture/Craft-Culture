@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
-import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import WhatsNewHero from '@/app/_productUpdates/components/WhatsNewHero';
 import WhatsNewTimeline from '@/app/_productUpdates/components/WhatsNewTimeline';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -51,22 +51,15 @@ const CellarWhatsNewPage = () => {
 
   return (
     <div className="pb-8">
-      <CellarPageHeader
-        eyebrow="Updates"
-        title="What’s New in your Private Cellar"
-        description={
-          <>
-            Every improvement to your private cellar, in one place.
-            {newCount > 0 && (
-              <span className="font-semibold text-emerald-700 dark:text-emerald-300">
-                {' '}
-                {newCount} new since your last visit.
-              </span>
-            )}
-          </>
-        }
+      <WhatsNewHero
+        newCount={newCount}
+        counts={{
+          feature: data?.updates.filter((u) => u.type === 'feature').length ?? 0,
+          improvement: data?.updates.filter((u) => u.type === 'improvement').length ?? 0,
+          fix: data?.updates.filter((u) => u.type === 'fix').length ?? 0,
+        }}
       />
-      <div className="max-w-3xl">
+      <div className="max-w-4xl">
         {isLoading || !data?.enabled ? (
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (

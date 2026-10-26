@@ -72,7 +72,7 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
   return (
     <div>
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <label className="border-border-muted bg-background-primary flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-full border px-4">
+        <label className="border-border-primary bg-background-primary flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-full border px-4 shadow-sm">
           <IconSearch size={16} className="text-text-muted shrink-0" />
           <input
             type="search"
@@ -94,8 +94,8 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
                 onClick={() => setFilter(f.key)}
                 className={`flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold whitespace-nowrap transition-colors ${
                   active
-                    ? 'bg-text-primary text-surface-primary border-text-primary'
-                    : 'border-border-muted bg-background-primary text-text-primary hover:bg-fill-muted'
+                    ? 'border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950'
+                    : 'border-transparent bg-black/[0.05] text-text-primary hover:bg-black/[0.09] dark:bg-white/[0.07] dark:hover:bg-white/[0.12]'
                 }`}
               >
                 {f.label}
@@ -113,11 +113,12 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
           {updates.length === 0 ? 'Updates to your private cellar will appear here.' : 'No updates match your search.'}
         </p>
       ) : (
-        <div className="border-border-muted relative ml-1.5 border-l pl-5 sm:pl-7">
+        <div className="rounded-2xl bg-black/[0.035] p-3 sm:p-6 dark:bg-white/[0.03]">
+        <div className="relative ml-1.5 border-l-2 border-emerald-200 pl-5 sm:pl-7 dark:border-emerald-900/60">
           {days.map((day) => (
             <section key={day.label} className="mb-7 last:mb-0">
-              <h2 className="text-text-muted relative mb-3 text-xs font-semibold tracking-wider uppercase">
-                <span className="bg-border-primary absolute top-1 -left-[25px] size-2 rounded-[2px] sm:-left-[33px]" />
+              <h2 className="text-text-secondary relative mb-3 text-xs font-semibold tracking-wider uppercase">
+                <span className="absolute top-0.5 -left-[27px] size-3 rounded-full border-2 border-emerald-500 bg-white sm:-left-[35px] dark:bg-neutral-950" />
                 {day.label}
               </h2>
               <div className="flex flex-col gap-3">
@@ -136,6 +137,7 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
               </div>
             </section>
           ))}
+        </div>
         </div>
       )}
     </div>

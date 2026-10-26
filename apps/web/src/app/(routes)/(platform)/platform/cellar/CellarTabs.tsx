@@ -125,7 +125,7 @@ const CellarTabs = () => {
       )}
       <nav className="border-border-muted mb-6 hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b pb-4 md:flex">
         {/* The four places, as one control: the page you are on is solid */}
-        <div className="bg-surface-muted flex gap-1 rounded-full p-1">
+        <div className="flex gap-1 rounded-full border border-black/[0.06] bg-black/[0.05] p-1 dark:border-white/10 dark:bg-white/[0.06]">
           {coreTabs.map((tab) => {
             const active = isOn(pathname, tab.href);
             return (
@@ -135,8 +135,8 @@ const CellarTabs = () => {
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm transition-all ${
                   active
-                    ? 'bg-text-primary text-surface-primary font-semibold shadow-sm'
-                    : 'text-text-secondary hover:bg-background-primary hover:text-text-primary font-medium'
+                    ? 'bg-neutral-950 font-semibold text-white shadow-sm dark:bg-white dark:text-neutral-950'
+                    : 'text-text-secondary hover:bg-background-primary hover:text-text-primary font-medium hover:shadow-sm'
                 }`}
               >
                 <Icon icon={tab.icon} size="sm" />

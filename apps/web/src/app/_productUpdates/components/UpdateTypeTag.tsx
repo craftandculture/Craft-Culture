@@ -12,9 +12,9 @@ export const UPDATE_TYPE_LABELS: Record<ProductUpdateType, string> = {
 };
 
 const STYLES: Record<ProductUpdateType, string> = {
-  feature: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
-  improvement: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300',
-  fix: 'bg-fill-muted text-text-secondary',
+  feature: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
+  improvement: 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300',
+  fix: 'bg-slate-200/70 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300',
 };
 
 /** The tinted label on an update: New feature, Improvement or Fix */
