@@ -1,3 +1,9 @@
+## [2.0.563](https://github.com/craftandculture/Craft-Culture/compare/v2.0.562...v2.0.563) (2026-10-26)
+
+### Features
+
+* a PCO's margins and tax rates can be overridden for that order alone, from its Pricing Breakdown ([8ffb3f6](https://github.com/craftandculture/Craft-Culture/commit/8ffb3f664fb9d855dfb618ea48cf461f25940594))
+
 ## [2.0.562](https://github.com/craftandculture/Craft-Culture/compare/v2.0.561...v2.0.562) (2026-10-26)
 
 ### Bug Fixes
