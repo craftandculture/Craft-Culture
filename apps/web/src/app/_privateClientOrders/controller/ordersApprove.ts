@@ -13,6 +13,7 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import { MANUAL_PRICING_NOTE } from './adminSetPricing';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const lineItemStockSchema = z.object({
@@ -151,14 +152,21 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
     where: { orderId },
   });
 
-  if (existingOverride) {
+  /*
+    Rates someone set on this order by hand are kept: approving with standard
+    pricing used to overwrite them with the partner's or global rates.
+  */
+  const keepManual =
+    existingOverride?.notes === MANUAL_PRICING_NOTE && pricingType !== 'bespoke';
+
+  if (existingOverride && !keepManual) {
     await db
       .update(orderPricingOverrides)
       .set({
         ...effectivePricing,
       })
       .where(eq(orderPricingOverrides.id, existingOverride.id));
-  } else {
+  } else if (!existingOverride) {
     await db.insert(orderPricingOverrides).values({
       orderId,
       ...effectivePricing,

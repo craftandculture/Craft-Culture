@@ -24,6 +24,7 @@ import adminRecordManualInvoice from './controller/adminRecordManualInvoice';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminResetItemInvoicing from './controller/adminResetItemInvoicing';
 import adminSetDistributorSku from './controller/adminSetDistributorSku';
+import adminSetPricing from './controller/adminSetPricing';
 import adminSetSubscriptionBox from './controller/adminSetSubscriptionBox';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
@@ -137,6 +138,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminBulkAssignDistributor,
   adminBulkUpdateStockStatus,
   adminMatchStockLwins,
+  adminSetPricing,
   adminUpdateItem,
   adminUpdateNotes,
   adminRemoveItem,

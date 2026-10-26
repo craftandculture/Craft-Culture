@@ -246,6 +246,23 @@ const AdminPrivateOrderDetailPage = () => {
     }),
   );
 
+  /* This order's own rates while they are being overridden, as typed */
+  const [rateDraft, setRateDraft] = useState<Record<
+    'ccMarginPercent' | 'importDutyPercent' | 'transferCostPercent' | 'distributorMarginPercent' | 'vatPercent',
+    string
+  > | null>(null);
+
+  const { mutate: setRates, isPending: isSavingRates } = useMutation(
+    api.privateClientOrders.adminSetPricing.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.mode === 'standard' ? 'Back on standard rates' : 'Rates saved and totals recalculated');
+        setRateDraft(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to save rates'),
+    }),
+  );
+
   /* The note being edited, and its draft text */
   const [editingNote, setEditingNote] = useState<{
     key: 'partnerNotes' | 'deliveryNotes';
@@ -1463,9 +1480,113 @@ const AdminPrivateOrderDetailPage = () => {
           {/* Order Summary - Full Breakdown for Admin */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Pricing Breakdown ({currency})
-              </Typography>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <Typography variant="labelSm" colorRole="muted">
+                  Pricing Breakdown ({currency})
+                </Typography>
+                {!rateDraft && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const v = order.pricingVariables;
+                      setRateDraft({
+                        ccMarginPercent: String(v?.ccMarginPercent ?? ''),
+                        importDutyPercent: String(v?.importDutyPercent ?? ''),
+                        transferCostPercent: String(v?.transferCostPercent ?? ''),
+                        distributorMarginPercent: String(v?.distributorMarginPercent ?? ''),
+                        vatPercent: String(v?.vatPercent ?? ''),
+                      });
+                    }}
+                    className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+                  >
+                    <Icon icon={IconEdit} size="xs" />
+                    Override rates
+                  </button>
+                )}
+              </div>
+              {order.hasPricingOverride && !rateDraft && (
+                <p className="mb-2 w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                  Custom rates for this order
+                </p>
+              )}
+              {/*
+                Rates for this order alone. The pricing variables in admin stay
+                the default; this is for the order that needs different figures.
+              */}
+              {rateDraft && (
+                <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-border-muted p-2">
+                  {(
+                    [
+                      ['ccMarginPercent', 'C&C margin'],
+                      ['importDutyPercent', 'Import duty'],
+                      ['transferCostPercent', 'Transfer'],
+                      ['distributorMarginPercent', 'Distributor'],
+                      ['vatPercent', 'VAT'],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-text-muted">{label}</span>
+                      <span className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          step="any"
+                          min={0}
+                          max={100}
+                          value={rateDraft[key]}
+                          onChange={(event) => setRateDraft({ ...rateDraft, [key]: event.target.value })}
+                          className="h-7 w-24 text-right text-xs"
+                        />
+                        %
+                      </span>
+                    </label>
+                  ))}
+                  {order.zohoSalesOrderId && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                      {order.zohoSalesOrderNumber ?? 'The Zoho order'} is already raised — update its prices in Zoho too.
+                    </p>
+                  )}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      isDisabled={
+                        isSavingRates ||
+                        Object.values(rateDraft).some((value) => value.trim() === '' || Number.isNaN(Number(value)))
+                      }
+                      onClick={() =>
+                        setRates({
+                          mode: 'override',
+                          orderId,
+                          ccMarginPercent: Number(rateDraft.ccMarginPercent),
+                          importDutyPercent: Number(rateDraft.importDutyPercent),
+                          transferCostPercent: Number(rateDraft.transferCostPercent),
+                          distributorMarginPercent: Number(rateDraft.distributorMarginPercent),
+                          vatPercent: Number(rateDraft.vatPercent),
+                        })
+                      }
+                    >
+                      <Icon icon={IconCheck} size="sm" />
+                      Save and recalculate
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setRateDraft(null)}>
+                      Cancel
+                    </Button>
+                    {order.hasPricingOverride && (
+                      <button
+                        type="button"
+                        disabled={isSavingRates}
+                        onClick={() => {
+                          if (window.confirm(`Put ${order.orderNumber} back on the standard pricing variables?`)) {
+                            setRates({ mode: 'standard', orderId });
+                          }
+                        }}
+                        className="text-text-muted ml-auto text-xs font-medium hover:text-text-primary disabled:opacity-40"
+                      >
+                        Use standard rates
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               {(() => {
                 // Calculate derived values for full breakdown
                 const lineItemsTotal = order.items?.reduce(
@@ -1488,12 +1609,23 @@ const AdminPrivateOrderDetailPage = () => {
                 const transferPct = landedDutyFree > 0 ? ((transferUsd / landedDutyFree) * 100) : 0.75;
                 const distPct = afterDistributor > 0 ? ((1 - dutyPaidLanded / afterDistributor) * 100) : 7.5;
                 const vatPct = afterDistributor > 0 ? ((vatUsd / afterDistributor) * 100) : 5;
+                /*
+                  Each rate as the order is priced at it. Worked back out of the
+                  rounded totals they read 4.8978, 7.5006, 4.9994; the rate is
+                  only shown that way when the order was priced at a different
+                  one, and then to two places.
+                */
+                const rates = order.pricingVariables;
+                const shown = (configured: number | null | undefined, derived: number) =>
+                  configured != null && Math.abs(configured - derived) < 0.01
+                    ? configured
+                    : Math.round(derived * 100) / 100;
+                const shownMarginPct = shown(rates?.ccMarginPercent, ccMarginPct);
+                const shownDutyPct = shown(rates?.importDutyPercent, dutyPct);
+                const shownTransferPct = shown(rates?.transferCostPercent, transferPct);
+                const shownDistPct = shown(rates?.distributorMarginPercent, distPct);
+                const shownVatPct = shown(rates?.vatPercent, vatPct);
                 // Up to four places: a margin keyed as 4.8976 must not read as 4.9
-                /* The configured margin, unless the order was priced at a different one */
-                const shownMarginPct =
-                  order.ccMarginPercent != null && Math.abs(order.ccMarginPercent - ccMarginPct) < 0.01
-                    ? order.ccMarginPercent
-                    : ccMarginPct;
                 const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
 
                 return (
@@ -1516,11 +1648,11 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Duties & Transfer */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Import Duty ({fmtPct(dutyPct)}%)</span>
+                      <span className="pl-2">+ Import Duty ({fmtPct(shownDutyPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(dutyUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Transfer ({fmtPct(transferPct)}%)</span>
+                      <span className="pl-2">+ Transfer ({fmtPct(shownTransferPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(transferUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1532,7 +1664,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Distributor Margin */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Distributor ({fmtPct(distPct)}%)</span>
+                      <span className="pl-2">+ Distributor ({fmtPct(shownDistPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(distributorMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1544,7 +1676,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* VAT & Total */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ VAT ({fmtPct(vatPct)}%)</span>
+                      <span className="pl-2">+ VAT ({fmtPct(shownVatPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(vatUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-sm pt-1">

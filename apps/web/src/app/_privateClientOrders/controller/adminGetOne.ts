@@ -2,7 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { getOrderPCOVariables } from '@/app/_pricing/data/getOrderPricingOverrides';
+import {
+  getOrderPCOVariables,
+  getOrderPricingOverrides,
+} from '@/app/_pricing/data/getOrderPricingOverrides';
 import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
 import db from '@/database/client';
 import {
@@ -154,6 +157,16 @@ const adminGetOne = wmsOperatorProcedure
       ...orderResult.order,
       cellarRelease: cellarRelease ?? null,
       ccMarginPercent: pricingVariables?.ccMarginPercent ?? null,
+      /* Every rate the order is priced at, and whether they are its own */
+      pricingVariables,
+      /* Rates set for this order alone, rather than a snapshot of standard ones */
+      hasPricingOverride: await getOrderPricingOverrides(input.id)
+        .then(
+          (row) =>
+            row?.notes === 'Set on the order' ||
+            row?.notes === 'Bespoke pricing set during approval',
+        )
+        .catch(() => false),
       partner: orderResult.partner,
       distributor,
       feedBundle,
