@@ -1,3 +1,9 @@
+## [2.0.567](https://github.com/craftandculture/Craft-Culture/compare/v2.0.566...v2.0.567) (2026-10-26)
+
+### Features
+
+* What's New drafts publish themselves a day after the AI writes them, unless edited, discarded or flagged by the copy check ([9f1e294](https://github.com/craftandculture/Craft-Culture/commit/9f1e294ce972fdb17c5cdaf35281e3f8bf681fa1))
+
 ## [2.0.566](https://github.com/craftandculture/Craft-Culture/compare/v2.0.565...v2.0.566) (2026-10-26)
 
 ### Features
