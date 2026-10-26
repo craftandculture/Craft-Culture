@@ -7,7 +7,6 @@ import {
   IconPackageExport,
   IconPlus,
   IconRefresh,
-  IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -20,6 +19,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'draft' | 'picking' | 'staged' | 'dispatched' | 'delivered';
@@ -204,9 +204,11 @@ const WMSDispatchBatchesPage = () => {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/10">
-                            <Icon icon={IconTruck} size="md" className="text-text-brand" />
-                          </div>
+                          <ClientMark
+                            logoUrl={batch.distributorLogoUrl}
+                            name={batch.distributorName}
+                            size="lg"
+                          />
                           <div>
                             <div className="mb-1 flex items-center gap-2">
                               <Typography variant="bodySm" className="font-semibold">
