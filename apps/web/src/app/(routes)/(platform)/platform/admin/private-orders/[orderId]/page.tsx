@@ -1488,7 +1488,13 @@ const AdminPrivateOrderDetailPage = () => {
                 const transferPct = landedDutyFree > 0 ? ((transferUsd / landedDutyFree) * 100) : 0.75;
                 const distPct = afterDistributor > 0 ? ((1 - dutyPaidLanded / afterDistributor) * 100) : 7.5;
                 const vatPct = afterDistributor > 0 ? ((vatUsd / afterDistributor) * 100) : 5;
-                const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+                // Up to four places: a margin keyed as 4.8976 must not read as 4.9
+                /* The configured margin, unless the order was priced at a different one */
+                const shownMarginPct =
+                  order.ccMarginPercent != null && Math.abs(order.ccMarginPercent - ccMarginPct) < 0.01
+                    ? order.ccMarginPercent
+                    : ccMarginPct;
+                const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
 
                 return (
                   <div className="space-y-1 text-xs">
@@ -1498,7 +1504,7 @@ const AdminPrivateOrderDetailPage = () => {
                       <span>{formatCurrencyValue(getAmount(lineItemsTotal), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ C&C Margin ({fmtPct(ccMarginPct)}%)</span>
+                      <span className="pl-2">+ C&C Margin ({fmtPct(shownMarginPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(ccMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">

@@ -212,7 +212,7 @@ const PartnerBespokePricingTable = () => {
               <Input
                 id="new-cc-margin"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="2.5"
                 value={newForm.ccMarginPercent}
                 onChange={(e) => setNewForm({ ...newForm, ccMarginPercent: e.target.value })}
@@ -228,7 +228,7 @@ const PartnerBespokePricingTable = () => {
               <Input
                 id="new-import-duty"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="20"
                 value={newForm.importDutyPercent}
                 onChange={(e) => setNewForm({ ...newForm, importDutyPercent: e.target.value })}
@@ -244,7 +244,7 @@ const PartnerBespokePricingTable = () => {
               <Input
                 id="new-transfer-cost"
                 type="number"
-                step="0.01"
+                step="any"
                 placeholder="0.75"
                 value={newForm.transferCostPercent}
                 onChange={(e) => setNewForm({ ...newForm, transferCostPercent: e.target.value })}
@@ -260,7 +260,7 @@ const PartnerBespokePricingTable = () => {
               <Input
                 id="new-distributor-margin"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="7.5"
                 value={newForm.distributorMarginPercent}
                 onChange={(e) => setNewForm({ ...newForm, distributorMarginPercent: e.target.value })}
@@ -276,7 +276,7 @@ const PartnerBespokePricingTable = () => {
               <Input
                 id="new-vat"
                 type="number"
-                step="0.1"
+                step="any"
                 placeholder="5"
                 value={newForm.vatPercent}
                 onChange={(e) => setNewForm({ ...newForm, vatPercent: e.target.value })}
