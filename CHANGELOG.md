@@ -1,3 +1,9 @@
+## [2.0.579](https://github.com/craftandculture/Craft-Culture/compare/v2.0.578...v2.0.579) (2026-10-26)
+
+### Improvements
+
+* bigger client logos on every pick screen — the pick lists, the release queue and the open pick, which now also names the client ([efe505e](https://github.com/craftandculture/Craft-Culture/commit/efe505ed7f691520d6a8a6a4e6131898ae91455a))
+
 ## [2.0.578](https://github.com/craftandculture/Craft-Culture/compare/v2.0.577...v2.0.578) (2026-10-26)
 
 ### Improvements
