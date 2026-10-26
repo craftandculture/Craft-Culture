@@ -1,3 +1,9 @@
+## [2.0.568](https://github.com/craftandculture/Craft-Culture/compare/v2.0.567...v2.0.568) (2026-10-26)
+
+### Improvements
+
+* the Private Cellar menu gives its four places a solid tab control, keeps the account links quiet, and makes What's New stand out in green with a count of new updates ([f22b947](https://github.com/craftandculture/Craft-Culture/commit/f22b947d23e03b9d062883851d673ccca059c1b4))
+
 ## [2.0.567](https://github.com/craftandculture/Craft-Culture/compare/v2.0.566...v2.0.567) (2026-10-26)
 
 ### Features
