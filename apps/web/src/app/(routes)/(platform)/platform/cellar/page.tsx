@@ -1674,7 +1674,7 @@ const CellarPage = () => {
               href="/platform/cellar/available"
               className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
             >
-              Browse The Cellar List
+              Browse the C&C Cellar List
             </Link>
           }
         />

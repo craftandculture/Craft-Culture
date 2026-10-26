@@ -360,7 +360,7 @@ const AvailablePage = () => {
         works and the member can follow.
       */}
       <CellarPageHeader
-        title="The Cellar List"
+        title="C&C Cellar List"
         description="Wines held in our bonded warehouse, available to add to your cellar. Prices are in bond; duty and VAT apply only to wine delivered to you in the UAE."
         actions={!isViewer ? <FindWineDialog /> : undefined}
       />
@@ -572,7 +572,7 @@ const AvailablePage = () => {
         ) : (
           <CellarState
             kind="empty"
-            message="The Cellar List is being updated. Please check back shortly."
+            message="The C&C Cellar List is being updated. Please check back shortly."
           />
         )
       )}

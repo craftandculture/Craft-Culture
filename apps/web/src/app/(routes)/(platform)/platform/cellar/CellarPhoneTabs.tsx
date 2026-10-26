@@ -27,7 +27,7 @@ const isOn = (pathname: string, href: string) =>
 /**
  * The member's navigation on a phone: four places within thumb reach
  *
- * Your cellar, the Cellar List, Selling and Deliveries are the places a
+ * Your cellar, the C&C Cellar List, Selling and Deliveries are the places a
  * member works in; their account (statements, invoices, purchases, activity
  * and details) sits under More, in a sheet from the bottom. A guest the cellar
  * is shared with sees no Invoices, as on the desktop.
@@ -45,7 +45,7 @@ const CellarPhoneTabs = () => {
   // The same split as the desktop: the four places, then the account under More
   const main = [
     { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
-    { href: '/platform/cellar/available', label: 'Cellar List', icon: IconSparkles },
+    { href: '/platform/cellar/available', label: 'C&C List', icon: IconSparkles },
     { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
     { href: '/platform/cellar/deliveries', label: 'Deliveries', icon: IconTruckDelivery },
   ];

@@ -167,13 +167,13 @@ const PurchasesPage = () => {
           kind="empty"
           icon={IconShoppingBag}
           title="No purchases yet"
-          message="Wines you reserve from The Cellar List will appear here, with how to pay for them."
+          message="Wines you reserve from the C&C Cellar List will appear here, with how to pay for them."
           action={
             <Link
               href="/platform/cellar/available"
               className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
             >
-              Browse The Cellar List
+              Browse the C&C Cellar List
             </Link>
           }
         />

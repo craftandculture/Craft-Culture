@@ -39,7 +39,7 @@ const coreTabs = [
   */
   {
     href: '/platform/cellar/available',
-    label: 'The Cellar List',
+    label: 'C&C Cellar List',
     icon: IconSparkles,
   },
 ];

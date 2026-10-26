@@ -8,7 +8,7 @@ describe('describeDelegateAction', () => {
       'requested a delivery',
     );
     expect(describeDelegateAction('consignment.member.createPurchase')).toBe(
-      'reserved wine from The Cellar List',
+      'reserved wine from the C&C Cellar List',
     );
   });
 

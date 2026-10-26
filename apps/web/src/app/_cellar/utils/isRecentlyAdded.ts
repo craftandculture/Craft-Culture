@@ -1,4 +1,4 @@
-/** How long a wine counts as recently added to The Cellar List */
+/** How long a wine counts as recently added to the C&C Cellar List */
 const RECENT_DAYS = 7;
 
 /**
