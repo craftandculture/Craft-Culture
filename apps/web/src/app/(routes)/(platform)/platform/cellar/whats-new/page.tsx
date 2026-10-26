@@ -50,7 +50,7 @@ const CellarWhatsNewPage = () => {
     : 0;
 
   return (
-    <div className="pb-8">
+    <div className="mx-auto w-full max-w-3xl pb-8">
       <WhatsNewHero
         newCount={newCount}
         counts={{
@@ -59,7 +59,7 @@ const CellarWhatsNewPage = () => {
           fix: data?.updates.filter((u) => u.type === 'fix').length ?? 0,
         }}
       />
-      <div className="max-w-4xl">
+      <div>
         {isLoading || !data?.enabled ? (
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (

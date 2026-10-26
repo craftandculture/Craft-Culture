@@ -248,7 +248,7 @@ const MemberUpdatesAdmin = () => {
       {isLoading ? (
         <div className="bg-fill-muted h-40 animate-pulse rounded-xl" />
       ) : tab === 'preview' ? (
-        <div className="max-w-4xl">
+        <div className="mx-auto max-w-3xl">
           <WhatsNewHero
             newCount={0}
             counts={{

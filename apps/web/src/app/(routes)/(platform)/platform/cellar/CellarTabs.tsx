@@ -141,6 +141,9 @@ const CellarTabs = () => {
               >
                 <Icon icon={tab.icon} size="sm" />
                 {tab.label}
+                {whatsNew.isNewScreen(tab.href) && (
+                  <span className={`rounded-full px-1.5 text-[10px] leading-4 font-semibold tracking-wide uppercase ${active ? 'bg-emerald-400 text-neutral-950' : 'bg-emerald-600 text-white'}`}>New</span>
+                )}
               </Link>
             );
           })}
@@ -164,6 +167,11 @@ const CellarTabs = () => {
                 >
                   <link.icon size={14} />
                   {link.label}
+                  {whatsNew.isNewScreen(link.href) && (
+                    <span className="rounded-full bg-emerald-600 px-1.5 text-[10px] leading-4 font-semibold tracking-wide text-white uppercase">
+                      New
+                    </span>
+                  )}
                 </Link>
               );
             })}

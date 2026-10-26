@@ -28,6 +28,13 @@ const FILTERS: { key: 'all' | ProductUpdateType; label: string }[] = [
   { key: 'fix', label: 'Fixes' },
 ];
 
+/** The rail marker beside each update, coloured as its tag is */
+const MARKER: Record<ProductUpdateType, string> = {
+  feature: 'border-emerald-500',
+  improvement: 'border-amber-500',
+  fix: 'border-slate-400',
+};
+
 const dayLabel = (date: Date) =>
   date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -114,17 +121,21 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
         </p>
       ) : (
         <div className="rounded-2xl bg-black/[0.035] p-3 sm:p-6 dark:bg-white/[0.03]">
-        <div className="relative ml-1.5 border-l-2 border-emerald-200 pl-5 sm:pl-7 dark:border-emerald-900/60">
+        <div className="relative ml-1.5 border-l-2 border-black/[0.08] pl-5 sm:pl-7 dark:border-white/10">
           {days.map((day) => (
             <section key={day.label} className="mb-7 last:mb-0">
               <h2 className="text-text-secondary relative mb-3 text-xs font-semibold tracking-wider uppercase">
-                <span className="absolute top-0.5 -left-[27px] size-3 rounded-full border-2 border-emerald-500 bg-white sm:-left-[35px] dark:bg-neutral-950" />
+                <span className="absolute top-1 -left-[25px] size-2 rounded-[2px] bg-neutral-400 sm:-left-[33px] dark:bg-neutral-500" />
                 {day.label}
               </h2>
               <div className="flex flex-col gap-3">
                 {day.items.map((update) => (
+                  <div key={update.id} className="relative">
+                    <span
+                      aria-hidden
+                      className={`absolute top-6 -left-[27px] size-3 rounded-full border-2 bg-white sm:-left-[35px] dark:bg-neutral-950 ${MARKER[update.type]}`}
+                    />
                   <UpdateCard
-                    key={update.id}
                     type={update.type}
                     title={update.title}
                     body={update.body}
@@ -133,6 +144,7 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
                     highlight={query}
                     preview={preview}
                   />
+                  </div>
                 ))}
               </div>
             </section>

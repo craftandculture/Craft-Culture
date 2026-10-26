@@ -63,6 +63,7 @@ const CellarPhoneTabs = () => {
   const moreDot = whatsNew.hasNew && !isOn(pathname, '/platform/cellar/whats-new');
 
   const moreActive = more.some((item) => isOn(pathname, item.href));
+  const moreHasNew = more.some((item) => whatsNew.isNewScreen(item.href));
 
   return (
     <>
@@ -98,6 +99,11 @@ const CellarPhoneTabs = () => {
                     {moreDot && item.href === '/platform/cellar/whats-new' && (
                       <span className="ml-auto size-2 rounded-full bg-emerald-500" aria-label="New updates" />
                     )}
+                    {whatsNew.isNewScreen(item.href) && (
+                      <span className="ml-auto rounded-full bg-emerald-600 px-1.5 text-[10px] leading-4 font-semibold tracking-wide text-white uppercase">
+                        New
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}
@@ -122,7 +128,15 @@ const CellarPhoneTabs = () => {
                   active ? 'text-text-primary font-semibold' : 'text-text-muted'
                 }`}
               >
-                <item.icon size={20} stroke={active ? 2.1 : 1.6} />
+                <span className="relative">
+                  <item.icon size={20} stroke={active ? 2.1 : 1.6} />
+                  {whatsNew.isNewScreen(item.href) && !active && (
+                    <span
+                      className="border-background-primary absolute -top-0.5 -right-1 size-2 rounded-full border bg-emerald-500"
+                      aria-label="New"
+                    />
+                  )}
+                </span>
                 {item.label}
               </Link>
             );
@@ -136,7 +150,7 @@ const CellarPhoneTabs = () => {
           >
             <span className="relative">
               <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
-              {moreDot && (
+              {(moreDot || moreHasNew) && (
                 <span
                   className="border-background-primary absolute -top-0.5 -right-1 size-2 rounded-full border bg-emerald-500"
                   aria-label="New updates"
