@@ -246,6 +246,23 @@ const AdminPrivateOrderDetailPage = () => {
     }),
   );
 
+  /* The note being edited, and its draft text */
+  const [editingNote, setEditingNote] = useState<{
+    key: 'partnerNotes' | 'deliveryNotes';
+    text: string;
+  } | null>(null);
+
+  const { mutate: saveNotes, isPending: isSavingNotes } = useMutation(
+    api.privateClientOrders.adminUpdateNotes.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.changed ? 'Notes saved' : 'Nothing changed');
+        setEditingNote(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to save notes'),
+    }),
+  );
+
   // Update item mutation
   const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
     api.privateClientOrders.adminUpdateItem.mutationOptions({
@@ -1902,31 +1919,90 @@ const AdminPrivateOrderDetailPage = () => {
         </Card>
         )}
 
-        {/* Notes - if present */}
-        {(order.partnerNotes || order.deliveryNotes) && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {order.partnerNotes && (
-                  <div>
-                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
-                      Partner Notes
+        {/*
+          Notes, editable. They were fixed once the order was raised, so a
+          note that had gone out of date stayed on the order for good. The old
+          text is kept in the activity log.
+        */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  { key: 'partnerNotes', label: 'Partner Notes', value: order.partnerNotes },
+                  { key: 'deliveryNotes', label: 'Delivery Notes', value: order.deliveryNotes },
+                ] as const
+              ).map(({ key, label, value }) => (
+                <div key={key}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <Typography variant="labelSm" colorRole="muted">
+                      {label}
                     </Typography>
-                    <Typography variant="bodySm">{order.partnerNotes}</Typography>
+                    {editingNote?.key !== key && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingNote({ key, text: value ?? '' })}
+                          className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+                        >
+                          <Icon icon={value ? IconEdit : IconPlus} size="xs" />
+                          {value ? 'Edit' : 'Add'}
+                        </button>
+                        {value && (
+                          <button
+                            type="button"
+                            disabled={isSavingNotes}
+                            onClick={() => {
+                              if (window.confirm(`Delete the ${label.toLowerCase()} on ${order.orderNumber}?`)) {
+                                saveNotes({ orderId: order.id, [key]: '' });
+                              }
+                            }}
+                            className="text-text-muted inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium hover:text-red-700 disabled:opacity-40"
+                          >
+                            <Icon icon={IconTrash} size="xs" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-                {order.deliveryNotes && (
-                  <div>
-                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
-                      Delivery Notes
+                  {editingNote?.key === key ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={editingNote.text}
+                        onChange={(event) => setEditingNote({ key, text: event.target.value })}
+                        rows={5}
+                        autoFocus
+                        className="border-border-muted bg-surface-primary text-text-primary focus:border-border-brand w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          isDisabled={isSavingNotes}
+                          onClick={() => saveNotes({ orderId: order.id, [key]: editingNote.text })}
+                        >
+                          <Icon icon={IconCheck} size="sm" />
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingNote(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : value ? (
+                    <Typography variant="bodySm" className="whitespace-pre-line">
+                      {value}
                     </Typography>
-                    <Typography variant="bodySm">{order.deliveryNotes}</Typography>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  ) : (
+                    <Typography variant="bodySm" colorRole="muted">
+                      None
+                    </Typography>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Activity Log - Full timeline with filters */}
         <Card>
