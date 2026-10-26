@@ -86,7 +86,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             <Link
               href={access.home}
               // The logo artwork is a padded square taller than the bar; clip it so the link stops at the bar's edge
-              className="flex h-14 items-center overflow-hidden transition-opacity duration-200 hover:opacity-80"
+              className="flex h-14 shrink-0 items-center overflow-hidden transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>

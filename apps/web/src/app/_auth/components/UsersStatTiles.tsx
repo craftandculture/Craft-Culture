@@ -38,7 +38,7 @@ const TILES: {
   iconTone: string;
   valueTone?: string;
 }[] = [
-  { key: 'pending', count: 'pending', label: 'Awaiting approval', sub: 'Signed up, cannot see anything yet', icon: IconClockHour4, tone: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10', iconTone: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20', valueTone: 'text-amber-600' },
+  { key: 'pending', count: 'pending', label: 'Awaiting approval', sub: 'Signed up, waiting on us', icon: IconClockHour4, tone: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10', iconTone: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20', valueTone: 'text-amber-600' },
   { key: 'unlinked', count: 'unlinked', label: 'Not linked', sub: 'Account with no organisation', icon: IconLinkOff, tone: 'border-red-100 from-red-50/50 dark:border-red-900/50 dark:from-red-500/10', iconTone: 'bg-red-100/70 text-red-500 dark:bg-red-500/20', valueTone: 'text-red-600' },
   { key: 'team', count: 'team', label: 'C&C team', sub: 'Admins and warehouse', icon: IconShieldCheck, tone: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10', iconTone: 'bg-slate-100 text-slate-500 dark:bg-slate-500/20' },
   { key: 'partners', count: 'partnerAccounts', label: 'Partner accounts', sub: 'Wine partners and collectors', icon: IconBuildingStore, tone: 'border-emerald-100 from-emerald-50/50 dark:border-emerald-900/50 dark:from-emerald-500/10', iconTone: 'bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20' },
