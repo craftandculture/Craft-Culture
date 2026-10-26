@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
     reactCompiler: true,
     authInterrupts: true,
   },
-  allowedDevOrigins: ['jasper.ngrok.app'],
   poweredByHeader: false,
   /*
     Baseline security headers. Framing is limited to our own origin (the WMS
@@ -134,8 +133,11 @@ export default process.env.NODE_ENV === 'development'
       // For all available options, see:
       // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-      org: 'byont-ventures',
-      project: 'craft-and-culture',
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+
+      // Source maps upload only once a Craft & Culture Sentry org is configured
+      sourcemaps: { disable: !process.env.SENTRY_ORG },
 
       // Only print logs for uploading source maps in CI
       silent: !process.env.CI,
