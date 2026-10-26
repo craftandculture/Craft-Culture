@@ -24,6 +24,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import PickOrderLines from '@/app/_wms/components/PickOrderLines';
 import WhereIsOrder from '@/app/_wms/components/WhereIsOrder';
 import isPickableZohoStatus from '@/app/_zohoSalesOrders/utils/isPickableZohoStatus';
@@ -463,6 +464,8 @@ const NewPickListPage = () => {
                         >
                           {isSelected && <IconCheck className="h-4 w-4" />}
                         </div>
+
+                        <ClientMark logoUrl={order.customerLogoUrl} name={order.customerName} size="lg" />
 
                         {/* Order info */}
                         <div className="min-w-0 flex-1">

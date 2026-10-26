@@ -26,6 +26,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import RelabelRemainderPrompt from '@/app/_wms/components/RelabelRemainderPrompt';
 import type { RemainderToRelabel } from '@/app/_wms/components/RelabelRemainderPrompt';
@@ -519,7 +520,15 @@ const WMSPickListDetailPage = () => {
             <Icon icon={IconArrowLeft} size="sm" />
           </Button>
         </Link>
+        {data.customerName ? (
+          <ClientMark logoUrl={data.customerLogoUrl} name={data.customerName} size="lg" />
+        ) : null}
         <div className="min-w-0 flex-1">
+          {data.customerName ? (
+            <div className="truncate text-sm font-semibold text-text-primary">
+              {data.customerName}
+            </div>
+          ) : null}
           <div className="flex items-center gap-2">
             <Typography variant="headingSm" className="truncate">
               {data.pickListNumber}

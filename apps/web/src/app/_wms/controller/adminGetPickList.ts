@@ -51,6 +51,16 @@ const adminGetPickList = wmsOperatorProcedure
         // drives the "re-sync pick" prompt on the pick screen.
         soModifiedAfterRelease: zohoSalesOrders.soModifiedAfterRelease,
         soModifiedAt: zohoSalesOrders.soModifiedAt,
+        // Who the pick is for, with their partner logo, so the picker sees the client
+        customerName: zohoSalesOrders.customerName,
+        customerLogoUrl: sql<string | null>`(
+          SELECT p.logo_url FROM partners p
+          WHERE p.logo_url IS NOT NULL
+            AND (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}
+              OR lower(p.business_name) = lower(${zohoSalesOrders.customerName}))
+          ORDER BY (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}) DESC NULLS LAST
+          LIMIT 1
+        )`,
       })
       .from(wmsPickLists)
       .leftJoin(users, eq(wmsPickLists.assignedTo, users.id))
