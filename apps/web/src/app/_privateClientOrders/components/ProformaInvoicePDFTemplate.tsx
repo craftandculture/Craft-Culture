@@ -349,6 +349,8 @@ export interface ProformaInvoicePDFTemplateProps {
     distributorCostPerCaseUsd?: number | null;
     pricePerCaseUsd?: number | null;
     totalUsd?: number | null;
+    /** Priced as part of a subscription box, so no price of its own */
+    inBox?: boolean;
   }>;
   partner?: {
     businessName: string;
@@ -513,13 +515,19 @@ const ProformaInvoicePDFTemplate = ({
                     { style: styles.colClientTotal, usd: item.totalUsd, per: false, bold: true },
                   ].map((cell, at) => (
                     <View key={at} style={cell.style}>
-                      <Text style={cell.bold ? styles.priceMainBold : styles.priceMain}>
-                        {formatAed(cell.usd)}
-                      </Text>
-                      <Text style={styles.priceSub}>
-                        {formatUsd(cell.usd)}
-                        {cell.per ? ` /${line.unit}` : ''}
-                      </Text>
+                      {item.inBox ? (
+                        <Text style={styles.priceSub}>In box</Text>
+                      ) : (
+                        <>
+                          <Text style={cell.bold ? styles.priceMainBold : styles.priceMain}>
+                            {formatAed(cell.usd)}
+                          </Text>
+                          <Text style={styles.priceSub}>
+                            {formatUsd(cell.usd)}
+                            {cell.per ? ` /${line.unit}` : ''}
+                          </Text>
+                        </>
+                      )}
                     </View>
                   ))}
                 </View>

@@ -923,6 +923,8 @@ const DistributorOrderDetailPage = () => {
               (() => {
                 // Each line's share of the client price, worked out on the server
                 const orderTotal = order.totalUsd ?? 0;
+                // A subscription box is priced as a whole, not wine by wine
+                const isBox = order.items.some((item) => item.inBox);
 
                 return (
                   <>
@@ -945,14 +947,18 @@ const DistributorOrderDetailPage = () => {
                                 </Typography>
                               </div>
                               <Typography variant="bodySm" className="flex-shrink-0 font-semibold">
-                                {formatPrice(getAmount(clientTotal), currency)}
+                                {item.inBox ? 'In box' : formatPrice(getAmount(clientTotal), currency)}
                               </Typography>
                             </div>
                             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
                               <span className="font-medium text-text-primary">{line.qty}</span>
                               <span>{line.pack}</span>
-                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
-                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                              {!item.inBox && (
+                                <>
+                                  <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
+                                  <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -995,23 +1001,33 @@ const DistributorOrderDetailPage = () => {
                                     {line.isSingle ? line.pack : `${line.pack} · ${line.bottles} btl`}
                                   </Typography>
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" colorRole="muted">
-                                    {formatPrice(getAmount(distributorCostPerCase), currency)}
-                                    <span className="text-xs"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm">
-                                    {formatPrice(getAmount(clientPricePerCase), currency)}
-                                    <span className="text-xs text-text-muted"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" className="font-semibold">
-                                    {formatPrice(getAmount(clientTotal), currency)}
-                                  </Typography>
-                                </td>
+                                {item.inBox ? (
+                                  <td className="whitespace-nowrap px-4 py-3.5 text-right" colSpan={3}>
+                                    <Typography variant="bodySm" colorRole="muted">
+                                      In box
+                                    </Typography>
+                                  </td>
+                                ) : (
+                                  <>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" colorRole="muted">
+                                        {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                        <span className="text-xs"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm">
+                                        {formatPrice(getAmount(clientPricePerCase), currency)}
+                                        <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" className="font-semibold">
+                                        {formatPrice(getAmount(clientTotal), currency)}
+                                      </Typography>
+                                    </td>
+                                  </>
+                                )}
                               </tr>
                             );
                           })}
@@ -1020,7 +1036,7 @@ const DistributorOrderDetailPage = () => {
                           <tr>
                             <td className="px-4 py-3.5">
                               <Typography variant="bodySm" className="font-semibold">
-                                Total
+                                {isBox ? 'Box price' : 'Total'}
                               </Typography>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3.5" colSpan={3}>

@@ -15,6 +15,8 @@ export type DistributorOrderItem<T extends Partial<PrivateClientOrderItem>> =
     clientPricePerCaseUsd: number;
     /** What the client pays for the line, all in */
     clientTotalUsd: number;
+    /** The order is priced as one box, so the line has no price of its own */
+    inBox: boolean;
   };
 
 /**
@@ -56,6 +58,9 @@ const distributorItemView = <
 
   const round2 = (value: number) => Math.round(value * 100) / 100;
 
+  // A subscription box carries one price for the order and none on its lines
+  const inBox = linesValue === 0 && clientTotal > 0;
+
   return items.map((item) => {
     const {
       pricePerCaseUsd: _partnerPrice,
@@ -74,6 +79,7 @@ const distributorItemView = <
       clientPricePerCaseUsd:
         quantity > 0 ? round2(lineClientTotal / quantity) : 0,
       clientTotalUsd: round2(lineClientTotal),
+      inBox,
     } as DistributorOrderItem<T>;
   });
 };

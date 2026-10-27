@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
           distributorCostPerCaseUsd: item.distributorCostPerCaseUsd,
           pricePerCaseUsd: item.clientPricePerCaseUsd,
           totalUsd: item.clientTotalUsd,
+        inBox: item.inBox,
         })),
       };
     });
