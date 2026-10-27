@@ -24,9 +24,9 @@ import { setZohoCleanedSchema } from '../schemas/triangulationSchemas';
 const adminSetZohoCleaned = adminProcedure
   .input(setZohoCleanedSchema)
   .mutation(async ({ input }) => {
-    const [updated] = await client<{ wCode: string }[]>`
+    const [updated] = await client<{ wCode: string | null }[]>`
       UPDATE tri_skus
-      SET zoho_cleaned_at = ${input.cleaned ? new Date() : null},
+      SET zoho_cleaned_at = ${input.cleaned ? client`NOW()` : client`NULL`},
           updated_at = NOW()
       WHERE id = ${input.skuId}
       RETURNING w_code AS "wCode"

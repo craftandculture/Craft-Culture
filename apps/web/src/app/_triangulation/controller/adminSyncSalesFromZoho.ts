@@ -107,8 +107,16 @@ const adminSyncSalesFromZoho = adminProcedure
         so.customer_name AS "customerName"
       FROM zoho_sales_order_items it
       JOIN zoho_sales_orders so ON so.id = it.sales_order_id
-      LEFT JOIN zoho_invoices inv
-        ON inv.reference_number = so.salesorder_number
+      -- One invoice per order at most. A plain LEFT JOIN repeated every line
+      -- of an order once per invoice referencing it (a part-invoiced order,
+      -- a re-issue), so the same bottles were counted twice.
+      LEFT JOIN LATERAL (
+        SELECT zi.id, zi.invoice_date
+        FROM zoho_invoices zi
+        WHERE zi.reference_number = so.salesorder_number
+        ORDER BY zi.invoice_date NULLS LAST, zi.id
+        LIMIT 1
+      ) inv ON TRUE
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
@@ -140,7 +148,6 @@ const adminSyncSalesFromZoho = adminProcedure
              so.zoho_status AS "zohoStatus",
              so.order_date::text AS "orderDate"
       FROM zoho_sales_orders so
-      LEFT JOIN zoho_invoices inv ON inv.reference_number = so.salesorder_number
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
           WHERE POSITION(
@@ -150,7 +157,10 @@ const adminSyncSalesFromZoho = adminProcedure
         AND so.status IS DISTINCT FROM 'cancelled'
         AND so.invoice_number IS NULL
         AND so.zoho_status NOT ILIKE '%invoiced%'
-        AND inv.id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM zoho_invoices zi
+          WHERE zi.reference_number = so.salesorder_number
+        )
       ORDER BY so.order_date DESC
       LIMIT 50
     `;
@@ -171,40 +181,6 @@ const adminSyncSalesFromZoho = adminProcedure
           (customers.length > 0
             ? ` Invoiced customers: ${customers.map((row) => row.customerName).join(', ')}.`
             : ''),
-      });
-    }
-
-    // The invoice feed describes the same sales from the better source, so
-    // the two must never both be present.
-    await client`
-      DELETE FROM tri_imports
-      WHERE kind = 'cc_sales_to_cd'
-        AND source_ref IN ('zoho-sales', 'zoho-invoices')
-      AND programme_id = ${programmeId}
-    `;
-
-    const [created] = await client<{ id: string }[]>`
-      INSERT INTO tri_imports (
-        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
-        as_of_date, notes, uploaded_by, committed_at
-      )
-      VALUES (
-        ${programmeId},
-        NULL, 'cc_sales_to_cd', 'committed',
-        ${`Zoho invoiced orders — ${customerMatch}`}, 'zoho-sales', 'zoho',
-        ${asOfDate},
-        ${'Synced live from Zoho sales orders. Each line keeps its invoice date.'},
-        ${ctx.user.id}, NOW()
-      )
-      RETURNING id
-    `;
-
-    const importId = created?.id;
-
-    if (!importId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create the Zoho sales feed',
       });
     }
 
@@ -276,7 +252,6 @@ const adminSyncSalesFromZoho = adminProcedure
       const pack = isBottles ? 1 : (resolved?.pack ?? fromSibling ?? 1);
 
       return {
-        import_id: importId,
         // The SKU is the LWIN, which the mapper resolves against tri_skus.lwin18
         raw_code: row.sku ?? row.lwin18,
         normalized_code: normalizeCode(row.sku ?? row.lwin18),
@@ -293,7 +268,44 @@ const adminSyncSalesFromZoho = adminProcedure
       };
     });
 
-    await insertRows(
+    // Swap the feed in one step: the old one only goes once the new one is
+    // fully written and mapped.
+    const { importId, totals } = await client.begin(async (sql) => {
+      // The invoice feed describes the same sales from the better source, so
+      // the two must never both be present.
+      await sql`
+        DELETE FROM tri_imports
+        WHERE kind = 'cc_sales_to_cd'
+          AND source_ref IN ('zoho-sales', 'zoho-invoices')
+          AND programme_id = ${programmeId}
+      `;
+
+      const [created] = await sql<{ id: string }[]>`
+        INSERT INTO tri_imports (
+          programme_id, period_id, kind, status, file_name, source_ref, alias_source,
+          as_of_date, notes, uploaded_by, committed_at
+        )
+        VALUES (
+          ${programmeId},
+          NULL, 'cc_sales_to_cd', 'committed',
+          ${`Zoho invoiced orders — ${customerMatch}`}, 'zoho-sales', 'zoho',
+          ${asOfDate},
+          ${'Synced live from Zoho sales orders. Each line keeps its invoice date.'},
+          ${ctx.user.id}, NOW()
+        )
+        RETURNING id
+      `;
+
+      const newImportId = created?.id;
+
+      if (!newImportId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create the Zoho sales feed',
+        });
+      }
+
+      await insertRows(
       'tri_import_lines',
       [
         'import_id',
@@ -310,10 +322,15 @@ const adminSyncSalesFromZoho = adminProcedure
         'doc_date',
         'status',
       ],
-      lines,
-    );
+      lines.map((line) => ({ ...line, import_id: newImportId })),
+      { sql },
+      );
 
-    const totals = await mapImportLines(importId, 'zoho');
+      return {
+        importId: newImportId,
+        totals: await mapImportLines(newImportId, 'zoho', sql),
+      };
+    });
 
     return {
       importId,

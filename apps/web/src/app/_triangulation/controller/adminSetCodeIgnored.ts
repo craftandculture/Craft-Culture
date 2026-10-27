@@ -1,6 +1,7 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import editableLinesInProgramme from '../data/editableLinesInProgramme';
 import { setCodeIgnoredSchema } from '../schemas/triangulationSchemas';
 
 /**
@@ -22,7 +23,7 @@ import { setCodeIgnoredSchema } from '../schemas/triangulationSchemas';
 const adminSetCodeIgnored = adminProcedure
   .input(setCodeIgnoredSchema)
   .mutation(async ({ input }) => {
-    const { normalizedCode, ignore } = input;
+    const { normalizedCode, ignore, programmeId } = input;
 
     const updated = await client<{ id: string }[]>`
       UPDATE tri_import_lines
@@ -31,6 +32,8 @@ const adminSetCodeIgnored = adminProcedure
           updated_at = NOW()
       WHERE normalized_code = ${normalizedCode}
         AND status = ${ignore ? 'unmapped' : 'ignored'}
+        -- This client's lines only, and never a locked period's
+        AND ${editableLinesInProgramme(programmeId)}
       RETURNING id
     `;
 

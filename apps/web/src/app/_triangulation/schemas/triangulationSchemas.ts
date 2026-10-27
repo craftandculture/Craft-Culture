@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { uuidLike } from '../utils/programmeId';
+import { programmeIdSchema, uuidLike } from '../utils/programmeId';
 
 export const triImportKindSchema = z.enum([
   'cc_opening',
@@ -197,6 +197,8 @@ export const fixZohoItemSchema = z.object({
 });
 
 export const autoMapSchema = z.object({
+  /** Whose queue and registry this runs over. Defaults to Crurated. */
+  programmeId: programmeIdSchema,
   /** Report what would be mapped without writing anything */
   dryRun: z.boolean().default(false),
 });
@@ -209,6 +211,8 @@ export const mergeSkusSchema = z.object({
 });
 
 export const setCodeIgnoredSchema = z.object({
+  /** Whose lines the code is changed on. Defaults to Crurated. */
+  programmeId: programmeIdSchema,
   normalizedCode: z.string().min(1),
   /** True to exclude the code as not this reconciliation's stock */
   ignore: z.boolean(),
@@ -240,7 +244,10 @@ export const skuLedgerSchema = z.object({
 });
 
 export const seedSkusFromWmsSchema = z.object({
-  ownerName: z.string().min(1).max(200).default('Crurated'),
+  /** Whose registry to seed. Defaults to Crurated. */
+  programmeId: programmeIdSchema,
+  /** Only used when the programme has no WMS owner configured */
+  ownerName: z.string().max(200).optional(),
 });
 
 export const extractPackingListSchema = z.object({
@@ -264,7 +271,8 @@ export const syncSalesFromZohoSchema = z.object({
 
 export const syncCountFromWmsSchema = z.object({
   programmeId: uuidLike.optional().nullable(),
-  ownerName: z.string().min(1).max(200).default('Crurated'),
+  /** Only used when the programme has no WMS owner configured */
+  ownerName: z.string().max(200).optional(),
   periodId: z.string().uuid().nullable().optional(),
   /** Snapshot date; defaults to today on the server when omitted */
   asOfDate: isoDateSchema.optional(),

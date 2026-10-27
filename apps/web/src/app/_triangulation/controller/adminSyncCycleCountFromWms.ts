@@ -3,8 +3,8 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import insertRows from '../data/insertRows';
-import mapImportLines from '../data/mapImportLines';
+import resolveWmsOwner from '../data/resolveWmsOwner';
+import swapFeedImport from '../data/swapFeedImport';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
 import resolveProgrammeId from '../utils/programmeId';
@@ -35,7 +35,9 @@ const adminSyncCycleCountFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
     const programmeId = resolveProgrammeId(input.programmeId);
-    const { ownerName, periodId } = input;
+    const { periodId } = input;
+    // The programme's configured owner, not whatever the browser sent
+    const ownerName = await resolveWmsOwner(programmeId, input.ownerName);
     const upTo = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
     const tokens = tokenizeMatch(ownerName);
@@ -88,9 +90,8 @@ const adminSyncCycleCountFromWms = adminProcedure
         AND ci.counted_quantity IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(st.owner_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(st.owner_name, '')), '[^A-Z0-9]+')))
         )
       GROUP BY ci.lwin18
       HAVING SUM(ci.counted_quantity) > 0
@@ -117,43 +118,25 @@ const adminSyncCycleCountFromWms = adminProcedure
       });
     }
 
-    await client`
-      DELETE FROM tri_imports
-      WHERE kind = 'cc_count'
-        AND source_ref = 'wms-cycle-count'
-        AND as_of_date = ${countDate}
-      AND programme_id = ${programmeId}
-    `;
-
-    const [created] = await client<{ id: string }[]>`
-      INSERT INTO tri_imports (
-        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
-        as_of_date, notes, uploaded_by, committed_at
-      )
-      VALUES (
-        ${programmeId},
-        ${periodId ?? null}, 'cc_count', 'committed',
-        ${`WMS cycle count — ${countDate}`}, 'wms-cycle-count', 'crurated',
-        ${countDate},
-        ${'Physical count synced from the WMS cycle count. Counted cases converted at each LWIN pack size.'},
-        ${ctx.user.id}, NOW()
-      )
-      RETURNING id
-    `;
-
-    const importId = created?.id;
-
-    if (!importId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create the cycle count snapshot',
-      });
-    }
-
-    await insertRows(
-      'tri_import_lines',
-      [
-        'import_id',
+    const { importId, totals } = await swapFeedImport({
+      programmeId,
+      replaces: {
+        kind: 'cc_count',
+        sourceRefs: ['wms-cycle-count'],
+        asOfDate: countDate,
+      },
+      create: {
+        periodId: periodId ?? null,
+        kind: 'cc_count',
+        fileName: `WMS cycle count — ${countDate}`,
+        sourceRef: 'wms-cycle-count',
+        aliasSource: 'crurated',
+        asOfDate: countDate,
+        notes:
+          'Physical count synced from the WMS cycle count. Counted cases converted at each LWIN pack size.',
+        uploadedBy: ctx.user.id,
+      },
+      columns: [
         'raw_code',
         'normalized_code',
         'raw_description',
@@ -163,8 +146,7 @@ const adminSyncCycleCountFromWms = adminProcedure
         'quantity_bottles',
         'status',
       ],
-      rows.map((row) => ({
-        import_id: importId,
+      rows: rows.map((row) => ({
         raw_code: row.lwin18,
         normalized_code: normalizeCode(row.lwin18),
         raw_description: row.productName,
@@ -174,9 +156,7 @@ const adminSyncCycleCountFromWms = adminProcedure
         quantity_bottles: row.bottles,
         status: 'unmapped',
       })),
-    );
-
-    const totals = await mapImportLines(importId, 'crurated');
+    });
 
     return {
       importId,
