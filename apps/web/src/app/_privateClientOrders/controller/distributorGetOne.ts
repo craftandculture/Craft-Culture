@@ -1,7 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import {
+  STAFF_ONLY_ACTIVITY_ACTIONS,
+  partnerSafeActivity,
+} from '@/app/_privateClientOrders/utils/staffOnlyActivity';
 import db from '@/database/client';
 import {
   partners,
@@ -106,7 +110,9 @@ const distributorGetOne = distributorProcedure
         and(
           eq(privateClientOrderActivityLogs.orderId, input.id),
           // C&C-only notes never reach the partner or distributor
-          ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+          notInArray(privateClientOrderActivityLogs.action, [
+              ...STAFF_ONLY_ACTIVITY_ACTIONS,
+            ]),
         ),
       )
       .orderBy(privateClientOrderActivityLogs.createdAt);
@@ -130,7 +136,7 @@ const distributorGetOne = distributorProcedure
       distributor,
       items,
       activityLogs: activityLogs.map((row) => ({
-        ...row.log,
+        ...partnerSafeActivity(row.log),
         user: row.user,
         partner: row.partner,
       })),

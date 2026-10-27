@@ -1,4 +1,3 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -7,7 +6,6 @@ import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations'
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
-import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
@@ -62,7 +60,7 @@ const adminUpdateStatus = wmsOperatorProcedure
 
     const previousStatus = order.status;
 
-    // Checked before the update: client_paid also triggers the Zoho invoice
+    // Checked before the update: the distributor SKU must exist once paid
     if (status === 'client_paid' && previousStatus !== 'client_paid') {
       await assertDistributorSku(orderId);
     }
@@ -176,12 +174,11 @@ const adminUpdateStatus = wmsOperatorProcedure
       });
     }
 
-    // Trigger Zoho invoice creation when client pays
-    if (status === 'client_paid') {
-      await tasks.trigger<typeof zohoCreateInvoiceJob>('zoho-create-invoice', {
-        orderId,
-      });
-    }
+    /*
+      No Zoho invoice is raised here. PCOs are invoiced by hand, line by line,
+      once delivered (Manual invoicing), and the zoho-create-invoice job never
+      produced a valid invoice, so switching it on would now double-invoice.
+    */
 
     return updated;
   });

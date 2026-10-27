@@ -1,6 +1,7 @@
-import { and, desc, eq, gte, inArray, ne, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, notInArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { STAFF_ONLY_ACTIVITY_ACTIONS } from '@/app/_privateClientOrders/utils/staffOnlyActivity';
 import inOurWarehouse from '@/app/_wms/utils/inOurWarehouse';
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
 import db from '@/database/client';
@@ -121,7 +122,9 @@ const partnerGetActivity = winePartnerProcedure
           and(
             eq(privateClientOrders.partnerId, partner.id),
             // C&C-only notes never reach the partner
-            ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+            notInArray(privateClientOrderActivityLogs.action, [
+              ...STAFF_ONLY_ACTIVITY_ACTIONS,
+            ]),
           ),
         )
         .orderBy(desc(privateClientOrderActivityLogs.createdAt))

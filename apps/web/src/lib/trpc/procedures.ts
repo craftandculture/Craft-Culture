@@ -64,13 +64,17 @@ export const approvedProcedure = protectedProcedure.use(({ ctx, next }) => {
 /**
  * Admin procedure
  *
- * Only accessible to users with admin role.
- * Verifies the user is authenticated and has admin role.
+ * An admin on the C&C team: admin role AND a C&C email address. Role alone is
+ * not enough — an admin login handed to a partner would otherwise reach every
+ * client's data, costs and the user screens, where it could change a staff
+ * member's email and sign in as them.
  *
  * @see https://trpc.io/docs/procedures
  */
 export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  ctx.accessControl(() => ctx.user.role === 'admin');
+  ctx.accessControl(
+    () => ctx.user.role === 'admin' && isTeamMember(ctx.user),
+  );
 
   return await next({ ctx });
 });
@@ -78,14 +82,14 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 /**
  * WMS Operator procedure
  *
- * Accessible to users with admin or wms_operator role.
- * Use for WMS, Stock Explorer, and PCO endpoints that warehouse operators need.
+ * C&C staff with the admin or wms_operator role (a C&C email address is
+ * required, as for adminProcedure). Use for WMS, Stock Explorer, and PCO
+ * endpoints that warehouse operators need. Anything that changes prices,
+ * ownership or deletes stock belongs on adminProcedure instead.
  */
 export const wmsOperatorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    ctx.accessControl(
-      () => ctx.user.role === 'admin' || ctx.user.role === 'wms_operator',
-    );
+    ctx.accessControl(() => isTeamMember(ctx.user));
 
     return await next({ ctx });
   },

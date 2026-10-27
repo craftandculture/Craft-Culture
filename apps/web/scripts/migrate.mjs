@@ -33,9 +33,43 @@ const runMigrations = async () => {
    * @param label - What the backfill does, for the log
    * @param run - Async thunk performing the work
    */
+  /*
+    Which backfills have already run, so each runs once.
+
+    This script runs on every deploy, and without a record a backfill re-ran
+    every time: it re-released pricing staff had withdrawn, put back pricing
+    releases on the retired C&C partner, and reset rates set deliberately
+    since. On the deploy that creates the ledger every backfill has already
+    run many times, so that deploy only records them.
+  */
+  let fixLedger = null;
+
+  const loadFixLedger = async () => {
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "data_fix_runs" (
+        "label" text PRIMARY KEY,
+        "ran_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    const rows = await client`SELECT "label" FROM "data_fix_runs"`;
+
+    return { done: new Set(rows.map((row) => row.label)), seeding: rows.length === 0 };
+  };
+
   const dataFix = async (label, run) => {
+    fixLedger ??= await loadFixLedger();
+
+    if (fixLedger.done.has(label)) return;
+
+    if (fixLedger.seeding) {
+      await client`INSERT INTO "data_fix_runs" ("label") VALUES (${label}) ON CONFLICT DO NOTHING`;
+      console.log(`⏭️  ${label} (already applied, recorded)`);
+      return;
+    }
+
     try {
       await run();
+      await client`INSERT INTO "data_fix_runs" ("label") VALUES (${label}) ON CONFLICT DO NOTHING`;
       console.log(`✅ ${label}`);
     } catch (error) {
       dataFixFailures.push(label);
@@ -716,12 +750,14 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "input_profile" text NOT NULL DEFAULT 'warehouse'`,
     );
-    await client.unsafe(`
+    await dataFix('tri_programmes other than Crurated read as consignment', () =>
+      client.unsafe(`
       UPDATE "tri_programmes"
       SET "input_profile" = 'consignment'
       WHERE "id" <> '${CRURATED_PROGRAMME_ID}'
         AND "input_profile" = 'warehouse'
-    `);
+    `),
+    );
     console.log('✅ tri_programmes input_profile ready');
 
     /*
@@ -778,11 +814,13 @@ const runMigrations = async () => {
       nothing the sync was called with an empty customer and failed schema
       validation in front of the user.
     */
-    await client.unsafe(`
+    await dataFix('tri_programmes Zoho customer defaulted to CD General', () =>
+      client.unsafe(`
       UPDATE "tri_programmes"
       SET "zoho_customer_match" = 'CD General'
       WHERE COALESCE("zoho_customer_match", '') = ''
-    `);
+    `),
+    );
     console.log('✅ tri_programmes Zoho customer ready');
 
     /*
@@ -1326,8 +1364,10 @@ const runMigrations = async () => {
       Guarded on 0 so it seeds an unconfigured card and never overwrites a rate
       somebody has since set deliberately.
     */
-    await client.unsafe(
+    await dataFix('repack fee seeded at 6.81', () =>
+      client.unsafe(
       `UPDATE "cellar_release_rates" SET "repack_per_case" = 6.81 WHERE "repack_per_case" = 0`,
+    ),
     );
     console.log('✅ repack fee ready');
 

@@ -3,7 +3,7 @@ import { and, eq, ne, sql } from 'drizzle-orm';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
-import { users } from '@/database/schema';
+import { sessions, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import adminChangeEmailSchema from '../schemas/adminChangeEmailSchema';
@@ -89,6 +89,12 @@ const usersAdminChangeEmail = adminProcedure
         message: 'Failed to update user email',
       });
     }
+
+    /*
+      Sign the account out everywhere. Staff access follows the email address,
+      so a session opened under the old one must not carry over to the new.
+    */
+    await db.delete(sessions).where(eq(sessions.userId, userId));
 
     // Log the email change
     await logAdminActivity({

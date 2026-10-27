@@ -1,4 +1,3 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -11,7 +10,6 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
-import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 
 import assertDistributorSku from '../utils/assertDistributorSku';
 import ensureClientVerified from '../utils/ensureClientVerified';
@@ -196,12 +194,11 @@ const distributorUpdateStatus = distributorProcedure
       notes,
     });
 
-    // Trigger Zoho invoice creation when client pays
-    if (status === 'client_paid') {
-      await tasks.trigger<typeof zohoCreateInvoiceJob>('zoho-create-invoice', {
-        orderId,
-      });
-    }
+    /*
+      No Zoho invoice is raised here. PCOs are invoiced by hand, line by line,
+      once delivered (Manual invoicing), and the zoho-create-invoice job never
+      produced a valid invoice, so switching it on would now double-invoice.
+    */
 
     return updatedOrder;
   });

@@ -98,6 +98,8 @@ const CellarReleasesPage = () => {
   const api = useTRPC();
   const [status, setStatus] = useState<StatusFilter>('open');
   const [openId, setOpenId] = useState<string | null>(null);
+  /* Opened from a link: load its figures once its row arrives. */
+  const [seedFromLink, setSeedFromLink] = useState(false);
 
   /* Arrived from a PCO's "From cellar release" link: show that request open. */
   useEffect(() => {
@@ -105,6 +107,7 @@ const CellarReleasesPage = () => {
     if (!id) return;
     setStatus('all');
     setOpenId(id);
+    setSeedFromLink(true);
   }, []);
   const [form, setForm] = useState({
     clearance: '',
@@ -132,6 +135,16 @@ const CellarReleasesPage = () => {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.cellar.admin.getReleases.queryOptions({ status }),
   });
+
+  /* A linked request has no row click to load its figures; without this it quotes $0. */
+  useEffect(() => {
+    if (!seedFromLink || !openId || !data) return;
+    const request = data.requests.find((row) => row.id === openId);
+    if (!request) return;
+    setSeedFromLink(false);
+    setIsOverridden(false);
+    setForm(formFromRequest(request));
+  }, [seedFromLink, openId, data]);
 
   const { mutate: decide, isPending } = useMutation(
     api.cellar.admin.quoteRelease.mutationOptions({
