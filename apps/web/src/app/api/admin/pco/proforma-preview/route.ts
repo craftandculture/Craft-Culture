@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partners, privateClientOrderItems } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -17,9 +18,9 @@ import logger from '@/utils/logger';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin user
+    // C&C admins only: the preview shows the partner's own prices
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== 'admin' || !isTeamMember(user)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

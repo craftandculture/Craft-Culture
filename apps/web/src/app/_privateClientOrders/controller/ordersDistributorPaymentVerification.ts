@@ -12,6 +12,7 @@ import {
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import assertDistributorSku from '../utils/assertDistributorSku';
+import distributorOrderView from '../utils/distributorOrderView';
 
 const distributorPaymentVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -101,7 +102,8 @@ const ordersDistributorPaymentVerification = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersDistributorPaymentVerification;

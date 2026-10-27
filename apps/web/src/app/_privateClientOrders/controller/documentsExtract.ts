@@ -6,6 +6,9 @@ import db from '@/database/client';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 
+import { type PcoDocumentType, UPLOADABLE_DOCUMENT_TYPES } from '../utils/documentAccess';
+import resolveOrderParty from '../utils/resolveOrderParty';
+
 const extractDocumentSchema = z.object({
   documentId: z.string().uuid(),
 });
@@ -44,24 +47,17 @@ const documentsExtract = approvedProcedure.input(extractDocumentSchema).mutation
     });
   }
 
-  // Check access - must be admin, partner member, or distributor member
-  const isAdmin = user.role === 'admin';
+  /*
+    C&C staff, or a party to the order (not view-only) re-reading a kind of
+    document that is theirs: a distributor never touches the partner's invoice.
+  */
+  const { party, canWrite } = await resolveOrderParty(user, order);
 
-  // Check if user is a member of the partner who owns this order
-  const isPartner =
-    order.partnerId &&
-    (await db.query.partnerMembers.findFirst({
-      where: { userId: user.id, partnerId: order.partnerId },
-    }));
-
-  // Check if user is a member of the distributor assigned to this order
-  const isDistributor =
-    order.distributorId &&
-    (await db.query.partnerMembers.findFirst({
-      where: { userId: user.id, partnerId: order.distributorId },
-    }));
-
-  if (!isAdmin && !isPartner && !isDistributor) {
+  if (
+    !party ||
+    !canWrite ||
+    !UPLOADABLE_DOCUMENT_TYPES[party].includes(document.documentType as PcoDocumentType)
+  ) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'You do not have access to this document',

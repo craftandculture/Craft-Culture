@@ -1,10 +1,13 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+
+import partnerOrderView from '../utils/partnerOrderView';
+import resolveOrderParty from '../utils/resolveOrderParty';
 
 const cancelOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -41,33 +44,18 @@ const ordersCancel = approvedProcedure.input(cancelOrderSchema).mutation(async (
     });
   }
 
-  // Check if user is admin
-  const isAdmin = user.role === 'admin';
+  // C&C staff, or a member of the wine partner who placed it (not view-only)
+  const { party, canWrite } = await resolveOrderParty(user, order);
+  const isAdmin = party === 'staff';
+  const partnerId = party === 'partner' ? order.partnerId : null;
 
-  // Check if user is the partner who owns this order
-  let isOwningPartner = false;
-  let partnerId: string | null = null;
-
-  if (!isAdmin && order.partnerId) {
-    // Check if user is a member of the partner who owns this order
-    const membership = await db.query.partnerMembers.findFirst({
-      where: {
-        userId: user.id,
-        partnerId: order.partnerId,
-      },
-    });
-
-    if (membership) {
-      isOwningPartner = true;
-      partnerId = order.partnerId;
-    }
-  }
-
-  // Validate permissions
-  if (!isAdmin && !isOwningPartner) {
+  if (!isAdmin && (party !== 'partner' || !canWrite)) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'You do not have permission to cancel this order',
+      message:
+        party === 'partner'
+          ? 'You have view-only access to this account. Ask its owner to change your access.'
+          : 'You do not have permission to cancel this order',
     });
   }
 
@@ -93,7 +81,7 @@ const ordersCancel = approvedProcedure.input(cancelOrderSchema).mutation(async (
   const previousStatus = order.status;
   const newStatus = 'cancelled';
 
-  // Update order status
+  // Update order status, unless someone else changed it a moment ago
   const [updatedOrder] = await db
     .update(privateClientOrders)
     .set({
@@ -103,8 +91,15 @@ const ordersCancel = approvedProcedure.input(cancelOrderSchema).mutation(async (
       cancellationReason: reason,
       updatedAt: new Date(),
     })
-    .where(eq(privateClientOrders.id, orderId))
+    .where(and(eq(privateClientOrders.id, orderId), eq(privateClientOrders.status, previousStatus)))
     .returning();
+
+  if (!updatedOrder) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'The order changed while you were cancelling it. Refresh and try again.',
+    });
+  }
 
   // Log the activity
   await db.insert(privateClientOrderActivityLogs).values({
@@ -117,7 +112,7 @@ const ordersCancel = approvedProcedure.input(cancelOrderSchema).mutation(async (
     notes: reason,
   });
 
-  return updatedOrder;
+  return isAdmin ? updatedOrder : partnerOrderView(updatedOrder);
 });
 
 export default ordersCancel;

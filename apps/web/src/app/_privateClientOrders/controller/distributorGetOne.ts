@@ -17,6 +17,8 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import { DISTRIBUTOR_VISIBLE_STATUSES } from '../constants';
+import distributorItemView from '../utils/distributorItemView';
 import distributorOrderView from '../utils/distributorOrderView';
 
 /**
@@ -54,24 +56,7 @@ const distributorGetOne = distributorProcedure
           eq(privateClientOrders.id, input.id),
           eq(privateClientOrders.distributorId, partnerId),
           // Only show orders that are past CC approval
-          inArray(privateClientOrders.status, [
-            'cc_approved',
-            'awaiting_partner_verification',
-            'awaiting_distributor_verification',
-            'verification_suspended',
-            'awaiting_client_payment',
-            'client_paid',
-            'scheduling_delivery',
-            'delivery_scheduled',
-            'awaiting_distributor_payment',
-            'distributor_paid',
-            'awaiting_partner_payment',
-            'partner_paid',
-            'stock_in_transit',
-            'with_distributor',
-            'out_for_delivery',
-            'delivered',
-          ]),
+          inArray(privateClientOrders.status, [...DISTRIBUTOR_VISIBLE_STATUSES]),
         ),
       );
 
@@ -132,9 +117,24 @@ const distributorGetOne = distributorProcedure
     return {
       ...distributorOrderView(orderResult.order),
       partner: orderResult.partner,
-      client: orderResult.client,
+      /*
+        The City Drinks account details on a client are City Drinks' own
+        record, so only a distributor that verifies clients is sent them.
+      */
+      client: orderResult.client
+        ? distributor?.requiresClientVerification
+          ? orderResult.client
+          : {
+              id: orderResult.client.id,
+              name: orderResult.client.name,
+              cityDrinksVerifiedAt: null,
+              cityDrinksAccountName: null,
+              cityDrinksPhone: null,
+            }
+        : null,
       distributor,
-      items,
+      // Without the partner's own prices, which would show C&C's margin
+      items: distributorItemView(items, orderResult.order),
       activityLogs: activityLogs.map((row) => ({
         ...partnerSafeActivity(row.log),
         user: row.user,
