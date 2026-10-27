@@ -245,6 +245,60 @@ const PhonePriceField = ({
   );
 };
 
+/**
+ * A blanket margin % typed straight into a price column's header
+ *
+ * In Bond and PC each carry their own, so changing one never looks like it
+ * changes the other. Clicks stay inside, so a sortable header does not sort.
+ */
+const HeaderPctInput = ({
+  value,
+  onChange,
+  onCommit,
+  title,
+  tone,
+  allowEmpty = false,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+  onCommit: () => void;
+  title: string;
+  tone: 'blue' | 'violet';
+  allowEmpty?: boolean;
+}) => (
+  <label
+    title={title}
+    onClick={(e) => e.stopPropagation()}
+    className={`flex items-center gap-0.5 rounded border px-1 py-0.5 text-[10px] font-semibold normal-case ${
+      tone === 'blue'
+        ? 'border-blue-200 bg-blue-50 text-blue-700'
+        : 'border-violet-200 bg-violet-50 text-violet-700'
+    }`}
+  >
+    <input
+      type="number"
+      min="0"
+      max="99"
+      step="0.1"
+      placeholder="—"
+      value={value ?? ''}
+      onChange={(e) =>
+        onChange(
+          e.target.value === '' && allowEmpty
+            ? null
+            : Math.max(0, Number(e.target.value) || 0),
+        )
+      }
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      }}
+      className="w-10 bg-transparent text-right tabular-nums focus:outline-none"
+    />
+    %
+  </label>
+);
+
 const PriceCell = ({
   value,
   onSave,
@@ -1373,6 +1427,9 @@ const PricingManagerPage = () => {
   const owners = 'owners' in (ownerData ?? {})
     ? (ownerData as { owners: Array<{ ownerId: string; ownerName: string | null; totalCases: number }> }).owners
     : [];
+  const ownerName = ownerId
+    ? (owners.find((o) => o.ownerId === ownerId)?.ownerName ?? null)
+    : null;
 
   // Query
   const queryInput = useMemo(
@@ -2057,35 +2114,6 @@ const PricingManagerPage = () => {
         </select>
 
 
-        {/* Global rates (when no owner selected) */}
-        {!ownerId && (
-          <>
-            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-              <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={inBondMarkupPct}
-                onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
-                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-              <span className="whitespace-nowrap text-xs text-text-muted">PC&nbsp;%</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="—"
-                value={pcMarginPct || ''}
-                onChange={(e) => setPcMarginPct(Math.max(0, Number(e.target.value) || 0))}
-                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-              />
-            </div>
-          </>
-        )}
-
         <button
           type="button"
           onClick={() => setShowBands(true)}
@@ -2101,47 +2129,6 @@ const PricingManagerPage = () => {
             ownerName={owners.find((o) => o.ownerId === ownerId)?.ownerName ?? null}
             onClose={() => setShowBands(false)}
           />
-        )}
-
-        {/* Per-owner rates (when an owner is selected) — saved to that owner */}
-        {ownerId && (
-          <div className="flex items-center gap-3 rounded-lg border border-violet-300 bg-violet-50/50 px-3 py-2">
-            <span className="whitespace-nowrap text-xs font-medium text-violet-700">
-              {owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'Owner'} rates
-            </span>
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
-              In-Bond&nbsp;%
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={ownerDraft.inbondPct}
-                onChange={(e) =>
-                  setOwnerDraft((d) => ({ ...d, inbondPct: Math.max(0, Number(e.target.value) || 0) }))
-                }
-                onBlur={() => saveOwnerSettings(ownerDraft)}
-                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
-              />
-            </label>
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
-              PC&nbsp;%
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="—"
-                value={ownerDraft.pcPct ?? ''}
-                onChange={(e) =>
-                  setOwnerDraft((d) => ({
-                    ...d,
-                    pcPct: e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0),
-                  }))
-                }
-                onBlur={() => saveOwnerSettings(ownerDraft)}
-                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
-              />
-            </label>
-          </div>
         )}
 
         {/* Apply Margin — start of the actions cluster, pushed to the right so
@@ -2735,14 +2722,19 @@ const PricingManagerPage = () => {
                           header or a panel that appears when an owner is
                           picked — neither of which reads as "change the
                           margin". Make it a button that says so. */}
-                      <button
-                        type="button"
-                        onClick={() => setShowBands(true)}
-                        title="Set the margin tiers"
-                        className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
-                      >
-                        {ownerId ? `${effInbondPct}% ▾` : 'set margins ▾'}
-                      </button>
+                      {/* The blanket In Bond rate sits on its own column, apart
+                          from PC: PC stays put while the In Bond rate moves */}
+                      <HeaderPctInput
+                        tone="blue"
+                        title={ownerId ? `${ownerName ?? 'Owner'} In Bond margin %` : 'In Bond margin % for all wines'}
+                        value={ownerId ? ownerDraft.inbondPct : inBondMarkupPct}
+                        onChange={(v) =>
+                          ownerId
+                            ? setOwnerDraft((d) => ({ ...d, inbondPct: v ?? 0 }))
+                            : setInBondMarkupPct(v ?? 0)
+                        }
+                        onCommit={() => ownerId && saveOwnerSettings(ownerDraft)}
+                      />
                       <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − margin). The margin comes from the tiers (by landed cost), an owner's own rate, or a per-wine override." />
                     </span>
                   </th>
@@ -2758,17 +2750,18 @@ const PricingManagerPage = () => {
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowBands(true);
-                        }}
-                        title="Set the margin tiers"
-                        className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100"
-                      >
-                        set margins ▾
-                      </button>
+                      <HeaderPctInput
+                        tone="violet"
+                        allowEmpty
+                        title={ownerId ? `${ownerName ?? 'Owner'} PC margin %` : 'PC margin % for all wines (empty keeps stored prices)'}
+                        value={ownerId ? ownerDraft.pcPct : pcMarginPct || null}
+                        onChange={(v) =>
+                          ownerId
+                            ? setOwnerDraft((d) => ({ ...d, pcPct: v }))
+                            : setPcMarginPct(v ?? 0)
+                        }
+                        onCommit={() => ownerId && saveOwnerSettings(ownerDraft)}
+                      />
                       <HeaderInfo text="Private Client price = Landed / (1 − PC margin), taken over landed cost in its own right rather than stacked on the B2B price. Click a cell to type a fixed price instead." />
                     </span>
                   </th>
