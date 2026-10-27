@@ -7,7 +7,6 @@ import {
   IconDatabase,
   IconPrinter,
   IconRefresh,
-  IconServer,
   IconWifi,
   IconX,
 } from '@tabler/icons-react';
@@ -21,7 +20,6 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import { useLocalServer } from '@/app/_wms/providers/LocalServerProvider';
 import { usePrinterContext } from '@/app/_wms/providers/PrinterProvider';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -79,7 +77,6 @@ const WMSHealthPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { printers, printerStatus } = usePrinterContext();
-  const { isAvailable: nucAvailable, baseUrl: nucUrl } = useLocalServer();
   const [isOnline, setIsOnline] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -120,12 +117,10 @@ const WMSHealthPage = () => {
   const enabledPrinters = printers.filter((p) => p.enabled);
   const dbOk = dbHealth?.status === 'connected';
   const zohoOk = zohoHealth?.status === 'connected';
-  const nucOk = nucAvailable;
 
   const issueCount =
     (dbOk ? 0 : 1) +
     (zohoOk ? 0 : 1) +
-    (nucOk ? 0 : 1) +
     (isOnline ? 0 : 1) +
     (enabledPrinters.length - onlinePrinters.length);
 
@@ -234,36 +229,6 @@ const WMSHealthPage = () => {
                   <Typography variant="bodyXs" className="text-red-600 break-all">
                     {dbHealth.error}
                   </Typography>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Local Server (NUC) */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icon icon={IconServer} size="md" className="text-text-muted" />
-                  <Typography variant="headingSm">Local Server</Typography>
-                </div>
-                <StatusDot status={nucOk ? 'green' : 'red'} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodySm" colorRole="muted">Status</Typography>
-                  <div className="flex items-center gap-1.5">
-                    <Icon icon={nucOk ? IconCheck : IconX} size="xs" className={nucOk ? 'text-emerald-600' : 'text-red-600'} />
-                    <Typography variant="bodySm" className={nucOk ? 'text-emerald-600' : 'text-red-600'}>
-                      {nucOk ? 'Available' : 'Unavailable'}
-                    </Typography>
-                  </div>
-                </div>
-                {nucUrl && (
-                  <div className="flex items-center justify-between">
-                    <Typography variant="bodySm" colorRole="muted">URL</Typography>
-                    <Typography variant="bodyXs" className="font-mono text-text-muted">{nucUrl}</Typography>
-                  </div>
                 )}
               </div>
             </CardContent>
