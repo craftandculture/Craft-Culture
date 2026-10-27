@@ -1,3 +1,9 @@
+## [2.1.0](https://github.com/craftandculture/Craft-Culture/compare/v2.0.612...v2.1.0) (2026-10-27)
+
+### Features
+
+* **release:** Index 2.1 ([e5c6f53](https://github.com/craftandculture/Craft-Culture/commit/e5c6f53edc0a0f96b77a7df224107b1075a82547))
+
 ## [2.0.612](https://github.com/craftandculture/Craft-Culture/compare/v2.0.611...v2.0.612) (2026-10-27)
 
 ### Features
