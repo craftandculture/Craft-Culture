@@ -550,7 +550,7 @@ const OverrideCell = ({
   );
 };
 
-// ─── Margin Cell (bespoke per-line margin % over landed — Spirits/RTD) ─────────
+// ─── Margin Cell (per-line margin %; the price follows) ─────────────────────────
 
 const MarginEditCell = ({
   value,
@@ -971,24 +971,6 @@ const KpiCard = ({
       )}
     </Card>
   );
-};
-
-// ─── Margin Dot ───────────────────────────────────────────────────────────────
-
-const MarginDot = ({
-  margin,
-  good = 20,
-  ok = 10,
-}: {
-  margin: number | null;
-  good?: number;
-  ok?: number;
-}) => {
-  if (margin == null)
-    return <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />;
-  if (margin >= good) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />;
-  if (margin >= ok) return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
-  return <span className="inline-block h-2 w-2 rounded-full bg-red-500" />;
 };
 
 // ─── Header Info (hover tooltip on a small ⓘ icon) ────────────────────────────
@@ -1686,16 +1668,6 @@ const PricingManagerPage = () => {
       toast.success('PC price updated');
     },
     onError: () => toast.error('Failed to update PC price'),
-  });
-
-  const setSellMarginMut = useMutation({
-    ...api.wms.admin.stock.pricing.setSellMargin.mutationOptions(),
-    retry: 2,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
-      toast.success('Margin updated');
-    },
-    onError: () => toast.error('Failed to update margin'),
   });
 
   const setOwnerPricingMut = useMutation({
@@ -2941,8 +2913,20 @@ const PricingManagerPage = () => {
                     // the toolbar default — otherwise saving one changed the
                     // stored value and nothing on screen, which reads as the
                     // save having failed.
+                    /*
+                      Spirits and RTD are priced like wine: In Bond % over
+                      landed, then PC % over In Bond, which is what the price
+                      list has always published. A margin set on a spirit
+                      before that (its old single "bespoke" margin) is kept as
+                      its In Bond margin until one is typed.
+                    */
+                    const isSpiritOrRtd =
+                      product.category === 'Spirits' || product.category === 'RTD';
+                    const bespokeMargin =
+                      (product as { sellMarginPct?: number | null }).sellMarginPct ?? null;
                     const lineB2bPct =
-                      (product as { b2bMarginPct?: number | null }).b2bMarginPct ?? null;
+                      (product as { b2bMarginPct?: number | null }).b2bMarginPct ??
+                      (isSpiritOrRtd ? bespokeMargin : null);
                     const linePcPct =
                       (product as { pcMarginPct?: number | null }).pcMarginPct ?? null;
                     const rowInbondPct =
@@ -2961,55 +2945,28 @@ const PricingManagerPage = () => {
                     const landed = hasCost
                       ? (importPrice ?? 0) + rowLogistics + rowTransfer + (costOverride ?? 0)
                       : null;
-                    // Spirits & RTD are priced solely by a bespoke per-line margin
-                    // over landed — the global in-bond/PC % never applies to them.
-                    const isSpiritOrRtd =
-                      product.category === 'Spirits' || product.category === 'RTD';
-                    const bespokeMargin =
-                      (product as { sellMarginPct?: number | null }).sellMarginPct ?? null;
-
                     const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
                     const storedOwnerPrice =
                       ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
 
-                    let inBondPrice: number | null;
-                    let sellPrice: number | null;
-                    let isSuggestedPc: boolean;
-                    let hasOwnerPrice: boolean;
-                    let margin: number | null;
-
-                    if (isSpiritOrRtd) {
-                      // One sell price: sell = landed / (1 - margin/100); no B2B/PC split
-                      const bespokeSell =
-                        bespokeMargin != null && landed != null && bespokeMargin < 100
-                          ? landed / (1 - bespokeMargin / 100)
-                          : product.sellingPricePerBottle;
-                      sellPrice = bespokeSell;
-                      inBondPrice = bespokeSell;
-                      isSuggestedPc = false;
-                      hasOwnerPrice = false;
-                      margin = bespokeMargin;
-                    } else {
-                      inBondPrice =
-                        landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
-                      // PC precedence: an ACTIVE PC% drives the price and beats stored prices;
-                      // else stored owner price, then default. PC is a margin on the IN-BOND
-                      // price (which already reflects the override via landed).
-                      const computedPc =
-                        rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
-                          ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
-                          : null;
-                      sellPrice =
-                        computedPc != null
-                          ? computedPc
-                          : (storedOwnerPrice ?? product.sellingPricePerBottle);
-                      isSuggestedPc = computedPc != null;
-                      hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
-                      // Margin measured against the in-bond (B2B) price
-                      margin = calcMargin(inBondPrice, sellPrice);
-                    }
+                    const inBondPrice =
+                      landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
+                    // PC precedence: an ACTIVE PC% drives the price and beats stored prices;
+                    // else stored owner price, then default. PC is a margin on the IN-BOND
+                    // price (which already reflects the override via landed).
+                    const computedPc =
+                      rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
+                        ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
+                        : null;
+                    const sellPrice =
+                      computedPc != null
+                        ? computedPc
+                        : (storedOwnerPrice ?? product.sellingPricePerBottle);
+                    const isSuggestedPc = computedPc != null;
+                    const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
+                    // Margin measured against the in-bond (B2B) price
+                    const margin = calcMargin(inBondPrice, sellPrice);
                     const marginPerBottle =
-                      !isSpiritOrRtd &&
                       inBondPrice &&
                       sellPrice &&
                       inBondPrice > 0 &&
@@ -3026,15 +2983,10 @@ const PricingManagerPage = () => {
                     // Margin the green column shows, per the header toggle.
                     // 'ibLanded' = In-Bond vs Landed (B2B margin over cost, varies
                     // by owner); 'pcIb' = the existing PC-vs-In-Bond margin.
-                    // Spirits/RTD keep their single bespoke margin either way.
-                    const displayMargin = isSpiritOrRtd
-                      ? margin
-                      : marginBasis === 'pcIb'
-                        ? margin
-                        : calcMargin(landed, inBondPrice);
-                    const displayMarginPerBottle = isSpiritOrRtd
-                      ? marginPerBottle
-                      : marginBasis === 'pcIb'
+                    const displayMargin =
+                      marginBasis === 'pcIb' ? margin : calcMargin(landed, inBondPrice);
+                    const displayMarginPerBottle =
+                      marginBasis === 'pcIb'
                         ? marginPerBottle
                         : inBondPrice != null && landed != null && inBondPrice > 0
                           ? inBondPrice - landed
@@ -3085,26 +3037,6 @@ const PricingManagerPage = () => {
                     // The two prices a phone can change too; one definition for both layouts.
                     // In bond: the margin the typed price implies is what gets stored.
                     const saveInBond = (price: number) => {
-                      /*
-                        Spirits and RTD have one price, driven by their own
-                        bespoke margin. Saving the wine B2B margin here changed
-                        nothing they read, so the typed price never stuck.
-                        With no cost, or a price at or under cost, there is no
-                        margin to store, so the price itself is kept.
-                      */
-                      if (isSpiritOrRtd) {
-                        const rounded = Math.round(price * 100) / 100;
-                        const pct =
-                          landed != null && landed > 0 && rounded > landed
-                            ? Math.min(99.9, Math.max(0.1, Number((((rounded - landed) / rounded) * 100).toFixed(2))))
-                            : null;
-                        setSellMarginMut.mutate({
-                          lwin18: product.lwin18,
-                          sellMarginPct: pct,
-                          sellingPricePerBottle: rounded,
-                        });
-                        return;
-                      }
                       if (landed == null || landed <= 0) {
                         toast.error('This wine has no landed cost yet, so an In Bond price cannot be set. Add the cost first.');
                         return;
@@ -3122,11 +3054,6 @@ const PricingManagerPage = () => {
                           : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
                         : null;
                     const savePc = (v: number) => {
-                      // Spirits and RTD: the PC price is the same single price
-                      if (isSpiritOrRtd && !ownerId) {
-                        saveInBond(v);
-                        return;
-                      }
                       if (ownerId) {
                         setOwnerPricingMut.mutate({
                           lwin18: product.lwin18,
@@ -3475,45 +3402,18 @@ const PricingManagerPage = () => {
                             It was read-only for wine, so the only way to move a
                             price was a cost override, which is the wrong lever:
                             it falsifies the cost to reach a price. */}
-                        {!isSpiritOrRtd ? (
-                          <MarginEditCell
-                            value={displayMargin}
-                            tdClassName="border-l-2 border-emerald-300"
-                            onSave={(pct) =>
-                              setLineMarginsMut.mutate({
-                                lwin18s: [product.lwin18],
-                                ...(marginBasis === 'pcIb'
-                                  ? { pcMarginPct: pct }
-                                  : { b2bMarginPct: pct }),
-                              })
-                            }
-                          />
-                        ) : isSpiritOrRtd && !isInbound ? (
-                          <MarginEditCell
-                            value={bespokeMargin}
-                            tdClassName="border-l-2 border-emerald-300"
-                            onSave={(pct) => {
-                              const sell =
-                                landed != null && pct < 100
-                                  ? Math.round((landed / (1 - pct / 100)) * 100) / 100
-                                  : null;
-                              setSellMarginMut.mutate({
-                                lwin18: product.lwin18,
-                                sellMarginPct: pct,
-                                sellingPricePerBottle: sell,
-                              });
-                            }}
-                          />
-                        ) : (
-                          <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-1.5 tabular-nums">
-                              <MarginDot margin={displayMargin} good={marginGood} ok={marginOk} />
-                              <span className={marginColor}>
-                                {displayMargin != null ? `${displayMargin.toFixed(1)}%` : '—'}
-                              </span>
-                            </div>
-                          </td>
-                        )}
+                        <MarginEditCell
+                          value={displayMargin}
+                          tdClassName="border-l-2 border-emerald-300"
+                          onSave={(pct) =>
+                            setLineMarginsMut.mutate({
+                              lwin18s: [product.lwin18],
+                              ...(marginBasis === 'pcIb'
+                                ? { pcMarginPct: pct }
+                                : { b2bMarginPct: pct }),
+                            })
+                          }
+                        />
 
                         {/* Profit — money, in both units the wine is sold in */}
                         <td className="px-3 py-2.5 text-right">
@@ -3694,7 +3594,7 @@ const PricingManagerPage = () => {
                                   ? `Last sold at $${lastSold.pricePerBottle.toFixed(2)}/btl · ${lastSold.tier === 'PC' ? 'Private Client' : 'B2B'} · ${lastSold.ref}`
                                   : 'No recorded sale yet for this wine.'}
                               </p>
-                              {!isSpiritOrRtd && landed != null && landed > 0 ? (
+                              {landed != null && landed > 0 ? (
                                 <PhonePriceField label="In bond per bottle (USD)" value={inBondPrice} onSave={saveInBond} hint={inBondHint} />
                               ) : null}
                               <PhonePriceField label="Private client per bottle (USD)" value={sellPrice} onSave={savePc} />
