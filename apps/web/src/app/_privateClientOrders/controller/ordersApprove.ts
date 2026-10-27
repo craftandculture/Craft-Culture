@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getPartnerPricingOverrides from '@/app/_pricing/data/getPartnerPricingOverrides';
@@ -11,10 +11,11 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { MANUAL_PRICING_NOTE } from './adminSetPricing';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 const lineItemStockSchema = z.object({
   itemId: z.string().uuid(),
@@ -22,12 +23,16 @@ const lineItemStockSchema = z.object({
   stockExpectedAt: z.date().optional(),
 });
 
+// A margin is taken off the price (price ÷ (1 − margin)), so 100% would divide by zero
+const marginPercent = z.number().min(0).lt(100);
+const ratePercent = z.number().min(0).max(100);
+
 const bespokePricingSchema = z.object({
-  ccMarginPercent: z.number().optional(),
-  importDutyPercent: z.number().optional(),
-  transferCostPercent: z.number().optional(),
-  distributorMarginPercent: z.number().optional(),
-  vatPercent: z.number().optional(),
+  ccMarginPercent: marginPercent.optional(),
+  importDutyPercent: ratePercent.optional(),
+  transferCostPercent: ratePercent.optional(),
+  distributorMarginPercent: marginPercent.optional(),
+  vatPercent: ratePercent.optional(),
 });
 
 const approveOrderSchema = z.object({
@@ -48,7 +53,7 @@ const approveOrderSchema = z.object({
  * - CC_INVENTORY items are marked as 'confirmed' (ready in warehouse)
  * - PARTNER_AIRFREIGHT items are marked as 'pending' with an expected arrival date
  */
-const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
+const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
   const { orderId, notes, lineItems, pricingType, bespokePricing } = input;
   const { user } = ctx;
 
@@ -76,6 +81,28 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
   const previousStatus = order.status;
   const newStatus = 'cc_approved';
 
+  // Every line named must be on this order
+  if (lineItems && lineItems.length > 0) {
+    const ownLines = await db
+      .select({ id: privateClientOrderItems.id })
+      .from(privateClientOrderItems)
+      .where(
+        and(
+          eq(privateClientOrderItems.orderId, orderId),
+          inArray(
+            privateClientOrderItems.id,
+            lineItems.map((item) => item.itemId),
+          ),
+        ),
+      );
+    if (ownLines.length !== new Set(lineItems.map((item) => item.itemId)).size) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Some of those lines are not on this order',
+      });
+    }
+  }
+
   // Update line items with stock source and status if provided
   if (lineItems && lineItems.length > 0) {
     for (const item of lineItems) {
@@ -94,7 +121,13 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
           stockExpectedAt: item.stockExpectedAt ?? null,
           updatedAt: new Date(),
         })
-        .where(eq(privateClientOrderItems.id, item.itemId));
+        // Only this order's own lines
+        .where(
+          and(
+            eq(privateClientOrderItems.id, item.itemId),
+            eq(privateClientOrderItems.orderId, orderId),
+          ),
+        );
     }
   }
 
@@ -116,8 +149,8 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
    * here, so that one system owns the decrement.
    */
 
-  // Update order status
-  const [updatedOrder] = await db
+  // Update order status, only if it is still awaiting approval (no double approval)
+  const [approvedOrder] = await db
     .update(privateClientOrders)
     .set({
       status: newStatus,
@@ -125,28 +158,56 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
       ccApprovedBy: user.id,
       updatedAt: new Date(),
     })
-    .where(eq(privateClientOrders.id, orderId))
+    .where(
+      and(
+        eq(privateClientOrders.id, orderId),
+        inArray(privateClientOrders.status, ['submitted', 'under_cc_review']),
+      ),
+    )
     .returning();
 
-  // Snapshot pricing variables onto the order so future config changes don't affect it
-  // Resolution: bespoke (manual) → partner override → global defaults
-  let effectivePricing;
-  if (pricingType === 'bespoke' && bespokePricing) {
-    effectivePricing = bespokePricing;
-  } else {
-    const globalVars = await getPCOVariables();
-    const partnerOverride = order.partnerId
-      ? await getPartnerPricingOverrides(order.partnerId)
-      : null;
-
-    effectivePricing = {
-      ccMarginPercent: partnerOverride?.ccMarginPercent ?? globalVars.ccMarginPercent,
-      importDutyPercent: partnerOverride?.importDutyPercent ?? globalVars.importDutyPercent,
-      transferCostPercent: partnerOverride?.transferCostPercent ?? globalVars.transferCostPercent,
-      distributorMarginPercent: partnerOverride?.distributorMarginPercent ?? globalVars.distributorMarginPercent,
-      vatPercent: partnerOverride?.vatPercent ?? globalVars.vatPercent,
-    };
+  if (!approvedOrder) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This order has already been approved or has changed. Refresh and try again.',
+    });
   }
+
+  let updatedOrder = approvedOrder;
+
+  // Snapshot pricing variables onto the order so future config changes don't affect it
+  // Resolution, field by field: bespoke (manual) → partner override → global defaults
+  const globalVars = await getPCOVariables();
+  const partnerOverride = order.partnerId
+    ? await getPartnerPricingOverrides(order.partnerId)
+    : null;
+
+  const standardPricing = {
+    ccMarginPercent: partnerOverride?.ccMarginPercent ?? globalVars.ccMarginPercent,
+    importDutyPercent: partnerOverride?.importDutyPercent ?? globalVars.importDutyPercent,
+    transferCostPercent: partnerOverride?.transferCostPercent ?? globalVars.transferCostPercent,
+    distributorMarginPercent: partnerOverride?.distributorMarginPercent ?? globalVars.distributorMarginPercent,
+    vatPercent: partnerOverride?.vatPercent ?? globalVars.vatPercent,
+  };
+
+  const bespoke = pricingType === 'bespoke' ? bespokePricing : undefined;
+  const isBespoke = !!bespoke;
+
+  /*
+    A figure left out of the bespoke rates used to be stored as null, and a
+    null later fell back to the global rate even where the partner has its
+    own. Each one left out now takes the partner's rate, then the global.
+  */
+  const effectivePricing = bespoke
+    ? {
+        ccMarginPercent: bespoke.ccMarginPercent ?? standardPricing.ccMarginPercent,
+        importDutyPercent: bespoke.importDutyPercent ?? standardPricing.importDutyPercent,
+        transferCostPercent: bespoke.transferCostPercent ?? standardPricing.transferCostPercent,
+        distributorMarginPercent:
+          bespoke.distributorMarginPercent ?? standardPricing.distributorMarginPercent,
+        vatPercent: bespoke.vatPercent ?? standardPricing.vatPercent,
+      }
+    : standardPricing;
 
   const existingOverride = await db.query.orderPricingOverrides.findFirst({
     where: { orderId },
@@ -177,6 +238,19 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
     });
   }
 
+  /*
+    Bespoke rates change the client price, so the order's totals are worked
+    out again from them now. Without this the order kept the totals from the
+    old rates, and the Zoho sales order raised from it disagreed with them.
+  */
+  if (isBespoke) {
+    await recalculateOrderTotals(orderId);
+    const refreshed = await db.query.privateClientOrders.findFirst({
+      where: { id: orderId },
+    });
+    if (refreshed) updatedOrder = refreshed;
+  }
+
   // Log the activity
   await db.insert(privateClientOrderActivityLogs).values({
     orderId,
@@ -199,10 +273,10 @@ const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(as
   if (order.partnerId) {
     await notifyPartnerOfOrderUpdate({
       orderId,
-      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      orderNumber: updatedOrder.orderNumber ?? order.orderNumber ?? orderId,
       partnerId: order.partnerId,
       type: 'approved',
-      totalAmount: order.totalUsd ?? 0,
+      totalAmount: updatedOrder.totalUsd ?? 0,
       clientName: order.clientName ?? 'Client',
     });
   }

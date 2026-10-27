@@ -22,6 +22,7 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import type { PcoStage } from '@/app/_privateClientOrders/constants';
 import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
 import { savePcoListOrder } from '@/app/_privateClientOrders/utils/pcoListOrder';
+import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -228,6 +229,13 @@ const AdminPrivateOrdersPage = () => {
   const orders = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
 
+  /*
+    Bulk actions apply only to ticked orders still in the list on screen. A
+    tick used to survive a change of filter, so an action could reach orders
+    nobody could see any more.
+  */
+  const visibleSelected = orders.filter((o) => selected.has(o.id)).map((o) => o.id);
+
   // An order's Previous and Next buttons step through this list as shown
   useEffect(() => {
     if (!data) return;
@@ -244,9 +252,21 @@ const AdminPrivateOrdersPage = () => {
   const unassignedCount = unassigned?.meta.totalCount ?? 0;
   const draftCount = drafts?.meta.totalCount ?? 0;
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setUpdatingId(orderId);
-    updateStatus({ orderId, status: newStatus });
+  // A status change is never one click: routine steps are confirmed, and a
+  // jump outside the normal steps is confirmed as a correction
+  const handleStatusChange = (
+    order: { id: string; orderNumber: string | null; status: OrderStatus },
+    newStatus: OrderStatus,
+  ) => {
+    if (newStatus === order.status) return;
+    const label = statusOptions.find((opt) => opt.value === newStatus)?.label ?? newStatus;
+    const routine = isRoutinePcoTransition(order.status, newStatus);
+    const question = routine
+      ? `Change ${order.orderNumber ?? 'this order'} to "${label}"?`
+      : `Moving ${order.orderNumber ?? 'this order'} to "${label}" skips or reverses the normal steps. Make this correction?`;
+    if (!window.confirm(question)) return;
+    setUpdatingId(order.id);
+    updateStatus({ orderId: order.id, status: newStatus, override: routine ? undefined : true });
   };
 
   const toggleExpanded = (orderId: string) => {
@@ -706,7 +726,7 @@ const AdminPrivateOrdersPage = () => {
                                     <Select
                                       value={order.status}
                                       onValueChange={(v) =>
-                                        handleStatusChange(order.id, v as OrderStatus)
+                                        handleStatusChange(order, v as OrderStatus)
                                       }
                                       disabled={isThisUpdating}
                                     >
@@ -896,7 +916,7 @@ const AdminPrivateOrdersPage = () => {
                             </Typography>
                             <Select
                               value={order.status}
-                              onValueChange={(v) => handleStatusChange(order.id, v as OrderStatus)}
+                              onValueChange={(v) => handleStatusChange(order, v as OrderStatus)}
                               disabled={isThisUpdating}
                             >
                               <SelectTrigger className="w-full">
@@ -955,11 +975,11 @@ const AdminPrivateOrdersPage = () => {
       </div>
     
       {/* Bulk actions for the ticked orders */}
-      {selected.size > 0 && (
+      {visibleSelected.length > 0 && (
         <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
           <div className="flex w-full max-w-4xl flex-wrap items-center gap-3 rounded-xl border border-border-primary bg-fill-primary px-4 py-3 shadow-lg">
             <Typography variant="bodySm" className="font-medium">
-              {selected.size} selected
+              {visibleSelected.length} selected
             </Typography>
 
             <div className="flex items-center gap-2">
@@ -981,7 +1001,7 @@ const AdminPrivateOrdersPage = () => {
                 disabled={!bulkDistributorId || bulkAssign.isPending}
                 onClick={() =>
                   bulkAssign.mutate({
-                    orderIds: [...selected],
+                    orderIds: visibleSelected,
                     distributorId: bulkDistributorId,
                   })
                 }
@@ -1017,7 +1037,7 @@ const AdminPrivateOrdersPage = () => {
                 disabled={!bulkStockStatus || bulkStock.isPending}
                 onClick={() =>
                   bulkStock.mutate({
-                    orderIds: [...selected],
+                    orderIds: visibleSelected,
                     stockStatus: bulkStockStatus as
                       | 'confirmed'
                       | 'in_transit_to_cc'

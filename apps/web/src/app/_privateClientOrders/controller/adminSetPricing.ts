@@ -8,11 +8,14 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrders,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 const percent = z.number().min(0).max(100);
+
+// A margin is taken off the price (price ÷ (1 − margin)), so 100% would divide by zero
+const marginPercent = z.number().min(0).lt(100, 'A margin must be below 100%');
 
 /** Marks an override set by hand, so approval does not replace it with standard rates */
 export const MANUAL_PRICING_NOTE = 'Set on the order';
@@ -26,16 +29,16 @@ export const MANUAL_PRICING_NOTE = 'Set on the order';
  * recalculated from the new figures straight away. The figures before the
  * change go into the activity log.
  */
-const adminSetPricing = wmsOperatorProcedure
+const adminSetPricing = adminProcedure
   .input(
     z.discriminatedUnion('mode', [
       z.object({
         mode: z.literal('override'),
         orderId: z.string().uuid(),
-        ccMarginPercent: percent,
+        ccMarginPercent: marginPercent,
         importDutyPercent: percent,
         transferCostPercent: percent,
-        distributorMarginPercent: percent,
+        distributorMarginPercent: marginPercent,
         vatPercent: percent,
       }),
       z.object({ mode: z.literal('standard'), orderId: z.string().uuid() }),

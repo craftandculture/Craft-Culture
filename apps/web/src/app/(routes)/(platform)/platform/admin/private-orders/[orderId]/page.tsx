@@ -45,6 +45,7 @@ import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/Subscri
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
 import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
+import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
 import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -433,9 +434,18 @@ const AdminPrivateOrderDetailPage = () => {
     },
   });
 
+  // A status change is never one click: routine steps are confirmed, and a
+  // jump outside the normal steps is confirmed as a correction
   const handleStatusChange = (newStatus: OrderStatus) => {
+    if (!order || newStatus === order.status) return;
+    const label = statusOptions.find((opt) => opt.value === newStatus)?.label ?? newStatus;
+    const routine = isRoutinePcoTransition(order.status, newStatus);
+    const question = routine
+      ? `Change this order to "${label}"?`
+      : `Moving this order to "${label}" skips or reverses the normal steps. Make this correction?`;
+    if (!window.confirm(question)) return;
     setIsUpdating(true);
-    updateStatus({ orderId, status: newStatus });
+    updateStatus({ orderId, status: newStatus, override: routine ? undefined : true });
   };
 
   const handleDistributorAssign = (distributorId: string) => {
@@ -463,6 +473,15 @@ const AdminPrivateOrderDetailPage = () => {
 
   const handleSaveItem = () => {
     if (!editingItem) return;
+    // A cleared price field reads as 0; never save a line at no price by accident
+    if (!Number.isFinite(editingItem.pricePerCaseUsd) || editingItem.pricePerCaseUsd <= 0) {
+      toast.error('Price must be greater than 0');
+      return;
+    }
+    if (!Number.isFinite(editingItem.quantity) || editingItem.quantity < 1) {
+      toast.error('Quantity must be at least 1');
+      return;
+    }
     updateItem({
       itemId: editingItem.id,
       productName: editingItem.productName,
