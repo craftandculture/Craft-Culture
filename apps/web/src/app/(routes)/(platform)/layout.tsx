@@ -78,7 +78,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
       )}
       <header className="border-border-primary sticky top-0 z-50 bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4 border-b border-border-primary">
-          <div className="flex items-center gap-3 lg:gap-6">
+          {/* min-w-0: the menu takes only the room left beside the icons, never runs under them */}
+          <div className="flex min-w-0 flex-1 items-center gap-3 lg:gap-6">
             <PlatformMobileNav
               user={{ role: user.role, customerType: user.customerType, partner: user.partner }}
               isStaff={isStaff(user)}
@@ -91,7 +92,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             {/* From lg up; below it the menu drawer carries every link */}
-            <nav className="hidden items-center gap-2 lg:flex">
+            <nav className="hidden min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden">
               {/* Quotes section - hidden for wine partners and admins (admins have it in section tabs) */}
               {access.can.raiseQuotes && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
@@ -247,7 +248,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {(user.role === 'admin' || user.role === 'wms_operator') && <AdminTopNav userRole={user.role} />}
             </nav>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {(user.role === 'admin' || user.role === 'wms_operator') && <CommandPaletteButton />}
             <NotificationBell />
             {user.role === 'admin' && (

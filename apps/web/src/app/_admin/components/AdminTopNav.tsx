@@ -34,9 +34,9 @@ const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
 
   const visibleItems = visibleAdminNav({ role: userRole }).filter((item) => item.inTopNav);
 
-  // From lg up; below it the phone menu takes over. Icons only from xl, so ten labels fit a 1024px laptop
+  // From lg up; below it the phone menu takes over. Icons only from 2xl, so ten labels fit a laptop; past that the bar scrolls rather than overlapping the bell
   return (
-    <nav className="hidden items-center gap-0.5 lg:flex xl:gap-1">
+    <nav className="flex shrink-0 items-center gap-0.5 xl:gap-1">
       {visibleItems.map((item) => {
         const isActive = currentSection === item.key;
 
@@ -50,7 +50,7 @@ const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
                 : 'text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
             }`}
           >
-            <Icon icon={item.icon} size="sm" className={`hidden xl:block ${isActive ? 'text-text-brand' : ''}`} />
+            <Icon icon={item.icon} size="sm" className={`hidden 2xl:block ${isActive ? 'text-text-brand' : ''}`} />
             <span>{item.label}</span>
             {item.key === 'tasks' && taskCount && taskCount.open > 0 && (
               <span
