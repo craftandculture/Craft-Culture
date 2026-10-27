@@ -33,6 +33,7 @@ const itemUpdateCaseConfig = adminProcedure
       .select({
         item: pricingItems,
         calculationVariables: pricingSessions.calculationVariables,
+        columnMapping: pricingSessions.columnMapping,
       })
       .from(pricingItems)
       .innerJoin(pricingSessions, eq(pricingItems.sessionId, pricingSessions.id))
@@ -54,12 +55,18 @@ const itemUpdateCaseConfig = adminProcedure
     }
 
     const variables = item.calculationVariables as CalculationVariables;
+    const sourcePriceType =
+      ((item.columnMapping as Record<string, string> | null)?.__sourcePriceType as
+        | 'bottle'
+        | 'case'
+        | undefined) ?? 'case';
 
     // Recalculate prices with new case config
     const recalculated = recalculateItemPrices({
       ukInBondPrice: item.item.ukInBondPrice,
       inputCurrency: item.item.inputCurrency,
       caseConfig,
+      sourcePriceType,
     }, variables);
 
     // Update item

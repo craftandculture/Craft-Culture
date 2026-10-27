@@ -1,3 +1,5 @@
+import { TRPCError } from '@trpc/server';
+
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -14,14 +16,23 @@ const adminSetPeriodStatus = adminProcedure
   .mutation(async ({ input, ctx }) => {
     const { periodId, status } = input;
 
-    await client`
+    // The time is taken in SQL rather than bound as a JS Date, which the
+    // raw client does not reliably serialise (the lock could fail to save).
+    const locking = status === 'locked';
+
+    const updated = await client<{ id: string }[]>`
       UPDATE tri_periods
       SET status = ${status},
-          locked_at = ${status === 'locked' ? new Date() : null},
-          locked_by = ${status === 'locked' ? ctx.user.id : null},
+          locked_at = ${locking ? client`NOW()` : client`NULL`},
+          locked_by = ${locking ? ctx.user.id : null},
           updated_at = NOW()
       WHERE id = ${periodId}
+      RETURNING id
     `;
+
+    if (updated.length === 0) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Period not found' });
+    }
 
     return { periodId, status };
   });

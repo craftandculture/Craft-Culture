@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (value: number) =>
@@ -151,7 +152,7 @@ const SaleProceedsPanel = () => {
                           >
                             <span className="min-w-0">
                               <span className="block text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                                {sale.productName}
+                                {displayWineName(sale.productName, { keepVintage: true })}
                               </span>
                               <span className="text-text-muted block text-xs">
                                 {bottles(sale.bottles)} at{' '}

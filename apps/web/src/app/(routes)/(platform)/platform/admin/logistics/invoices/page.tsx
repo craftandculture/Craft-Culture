@@ -23,11 +23,16 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 const formatCurrency = (amount: number, currency: string) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
+  // A code Intl does not know would throw and blank the page
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 };
 
 const formatDate = (date: Date | null | undefined) => {
@@ -72,7 +77,14 @@ const InvoicesPage = () => {
     },
   });
 
-  const totalOpen = invoices?.reduce((sum, inv) => sum + (inv.status === 'open' ? inv.openAmount : 0), 0) ?? 0;
+  // Open amounts are totalled per currency: adding euros to dollars gives a figure in neither
+  const openByCurrency = new Map<string, number>();
+  for (const inv of invoices ?? []) {
+    if (inv.status !== 'open' || !inv.openAmount) continue;
+    const code = (inv.currencyCode || 'USD').toUpperCase();
+    openByCurrency.set(code, (openByCurrency.get(code) ?? 0) + inv.openAmount);
+  }
+  const openTotals = [...openByCurrency.entries()];
   const totalOverdue = invoices?.filter((inv) => inv.status === 'overdue').length ?? 0;
 
   if (isLoading) {
@@ -126,7 +138,9 @@ const InvoicesPage = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <Typography variant="headingMd" className="text-blue-600">
-                {formatCurrency(totalOpen, 'USD')}
+                {openTotals.length === 0
+                  ? formatCurrency(0, 'USD')
+                  : openTotals.map(([code, amount]) => formatCurrency(amount, code)).join(' · ')}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">Open</Typography>
             </CardContent>
@@ -236,7 +250,7 @@ const InvoicesPage = () => {
                                 <span>{formatDate(invoice.paidAt)}</span>
                               </div>
                             )}
-                            {invoice.paidAmount && invoice.paidAmount > 0 && (
+                            {invoice.paidAmount != null && invoice.paidAmount > 0 && (
                               <div className="flex justify-between text-sm">
                                 <span className="text-text-muted">Paid Amount</span>
                                 <span>{formatCurrency(invoice.paidAmount, invoice.currencyCode)}</span>

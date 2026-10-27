@@ -92,7 +92,21 @@ const partnerDashboard = winePartnerProcedure.query(
   // Get recent 8 orders
   const recentOrders = await db
     .select({
-      order: privateClientOrders,
+      /*
+        Only what the dashboard shows. The whole row sent C&C notes, the
+        distributor, its verification and payment notes and our logistics
+        cost to the partner's browser.
+      */
+      order: {
+        id: privateClientOrders.id,
+        orderNumber: privateClientOrders.orderNumber,
+        status: privateClientOrders.status,
+        clientName: privateClientOrders.clientName,
+        caseCount: privateClientOrders.caseCount,
+        totalUsd: privateClientOrders.totalUsd,
+        totalAed: privateClientOrders.totalAed,
+        createdAt: privateClientOrders.createdAt,
+      },
       client: {
         id: privateClientContacts.id,
         cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,

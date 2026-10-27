@@ -151,6 +151,8 @@ export const users = pgTable('users', {
     disabledTypes?: string[];
     adminDisabledTypes?: string[];
   }>(),
+  /** When this person last opened What's New; later updates show as new */
+  whatsNewSeenAt: timestamp('whats_new_seen_at', { mode: 'date' }),
 
   // Better Auth admin plugin fields
   banned: boolean('banned').default(false),
@@ -178,7 +180,7 @@ export const sessions = pgTable('sessions', {
   /** If set, this session is an impersonation - the admin who started it */
   impersonatedBy: uuid('impersonated_by').references(() => users.id),
   ...timestamps,
-});
+}, (table) => [index('sessions_user_id_idx').on(table.userId)]);
 // Note: No RLS on sessions - managed by Better Auth
 
 export type Session = typeof sessions.$inferSelect;
@@ -204,7 +206,7 @@ export const accounts = pgTable('accounts', {
   idToken: text('id_token'),
   password: text('password'),
   ...timestamps,
-});
+}, (table) => [index('accounts_user_id_idx').on(table.userId)]);
 // Note: No RLS on accounts - managed by Better Auth
 
 export const verifications = pgTable('verifications', {
@@ -233,7 +235,7 @@ export const passkeys = pgTable('passkeys', {
   transports: text('transports').notNull(),
   aaguid: text('aaguid'),
   ...timestamps,
-});
+}, (table) => [index('passkeys_user_id_idx').on(table.userId)]);
 // Note: No RLS on passkeys - managed by Better Auth
 
 export const products = pgTable(
@@ -288,7 +290,7 @@ export const productOffers = pgTable('product_offers', {
   unitSize: text('unit_size').notNull(),
   availableQuantity: integer('available_quantity').notNull(),
   ...timestamps,
-}).enableRLS();
+}, (table) => [index('product_offers_product_id_idx').on(table.productId)]).enableRLS();
 
 export const adminActivityLogs = pgTable(
   'admin_activity_logs',
@@ -759,6 +761,25 @@ export const partnerApiRequestLogs = pgTable(
   ],
 ).enableRLS();
 
+/**
+ * Requests per API key per one-minute window, counted with one atomic
+ * upsert so concurrent requests cannot all slip under the limit
+ */
+export const partnerApiRateLimits = pgTable(
+  'partner_api_rate_limits',
+  {
+    apiKeyId: uuid('api_key_id').notNull(),
+    windowStart: timestamp('window_start').notNull(),
+    requestCount: integer('request_count').notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex('partner_api_rate_limits_key_window_idx').on(
+      table.apiKeyId,
+      table.windowStart,
+    ),
+  ],
+).enableRLS();
+
 // ============================================================================
 // Notifications
 // ============================================================================
@@ -1110,6 +1131,14 @@ export const privateClientOrders = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     orderNumber: text('order_number').notNull().unique(),
+
+    /**
+     * What the order's bottles become on the owner's statement (Index 3.0):
+     * client_sale (sold to a private client), owner_delivery (a cellar
+     * member's own wine delivered to them, not a sale), partner_samples
+     * (the partner's own samples or entertaining, not a sale), cellar_sale.
+     */
+    orderKind: text('order_kind').notNull().default('client_sale'),
 
     // Partner who created the order (wine partner) - nullable for admin-created orders
     partnerId: uuid('partner_id').references(() => partners.id, {
@@ -1967,6 +1996,9 @@ export const sourceRfqPartners = pgTable(
     // Count of quotes submitted
     quoteCount: integer('quote_count').notNull().default(0),
 
+    // Set when the one deadline reminder for this RFQ has been sent
+    deadlineReminderSentAt: timestamp('deadline_reminder_sent_at', { mode: 'date' }),
+
     ...timestamps,
   },
   (table) => [
@@ -2773,6 +2805,10 @@ export const sourceSupplierOrders = pgTable(
     viewedAt: timestamp('viewed_at', { mode: 'date' }),
     confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
     confirmedBy: uuid('confirmed_by'), // Partner user (no FK as might be external)
+
+    // Confirmation reminders (capped by the reminder job)
+    reminderCount: integer('reminder_count').notNull().default(0),
+    lastReminderAt: timestamp('last_reminder_at', { mode: 'date' }),
 
     // Shipping
     shippedAt: timestamp('shipped_at', { mode: 'date' }),
@@ -4738,12 +4774,28 @@ export const wmsStockMovements = pgTable(
     toLocationId: uuid('to_location_id').references(() => wmsLocations.id),
     fromOwnerId: uuid('from_owner_id').references(() => partners.id),
     toOwnerId: uuid('to_owner_id').references(() => partners.id),
+    /**
+     * The stock row a pick or dispatch drew from (Index 3.0). No foreign key:
+     * an emptied row can be deleted, and the record of what left must outlive
+     * it. With from_owner_id this is what says whose bottles went out.
+     */
+    stockId: uuid('stock_id'),
+    /**
+     * The owner was worked out afterwards from the bay the movement left (only
+     * one owner ever held that wine there), not recorded at the time
+     */
+    ownerInferred: boolean('owner_inferred').notNull().default(false),
     lotNumber: text('lot_number'),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
     orderId: uuid('order_id'),
     scannedBarcodes: jsonb('scanned_barcodes').$type<string[]>(),
     notes: text('notes'),
     reasonCode: text('reason_code'),
+    /**
+     * Set by a write the client may retry (receiving a line). A retry finds
+     * its own earlier movement by this key and changes nothing.
+     */
+    idempotencyKey: text('idempotency_key'),
     performedBy: uuid('performed_by')
       .references(() => users.id)
       .notNull(),
@@ -4751,9 +4803,12 @@ export const wmsStockMovements = pgTable(
     ...timestamps,
   },
   (table) => [
+    uniqueIndex('wms_stock_movements_idempotency_key_unique').on(table.idempotencyKey),
     index('wms_stock_movements_movement_type_idx').on(table.movementType),
     index('wms_stock_movements_lwin18_idx').on(table.lwin18),
     index('wms_stock_movements_performed_at_idx').on(table.performedAt),
+    index('wms_stock_movements_from_location_id_idx').on(table.fromLocationId),
+    index('wms_stock_movements_to_location_id_idx').on(table.toLocationId),
   ],
 );
 
@@ -4797,6 +4852,7 @@ export const wmsStockReservations = pgTable(
     index('wms_stock_reservations_order_item_id_idx').on(table.orderItemId),
     index('wms_stock_reservations_status_idx').on(table.status),
     index('wms_stock_reservations_order_type_idx').on(table.orderType),
+    index('wms_stock_reservations_owner_id_idx').on(table.ownerId),
   ],
 );
 
@@ -5031,6 +5087,8 @@ export const wmsPickListItems = pgTable(
     suggestedLocationId: uuid('suggested_location_id').references(() => wmsLocations.id),
     suggestedStockId: uuid('suggested_stock_id').references(() => wmsStock.id),
     pickedFromLocationId: uuid('picked_from_location_id').references(() => wmsLocations.id),
+    /** The stock row actually picked from, so the owner is known (Index 3.0) */
+    pickedStockId: uuid('picked_stock_id'),
     pickedQuantity: integer('picked_quantity'),
     pickedAt: timestamp('picked_at', { mode: 'date' }),
     pickedBy: uuid('picked_by').references(() => users.id),
@@ -5038,7 +5096,11 @@ export const wmsPickListItems = pgTable(
     notes: text('notes'),
     ...timestamps,
   },
-  (table) => [index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId)],
+  (table) => [
+    index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId),
+    index('wms_pick_list_items_suggested_stock_id_idx').on(table.suggestedStockId),
+    index('wms_pick_list_items_suggested_location_id_idx').on(table.suggestedLocationId),
+  ],
 );
 
 export type WmsPickListItem = typeof wmsPickListItems.$inferSelect;
@@ -5530,6 +5592,17 @@ export const saleMandates = pgTable(
       while they are setting it, rather than deducted from it afterwards.
     */
     askPerBottleUsd: doublePrecision('ask_per_bottle_usd').notNull(),
+    /*
+      The currency the member typed their price in. USD is the base and what
+      everything is settled in; a price set in EUR, GBP or AED is converted at
+      the rate on the day it was listed, and that rate is kept here so a later
+      move in the exchange rate never changes what the member was promised.
+    */
+    askCurrency: text('ask_currency').notNull().default('USD'),
+    askPerBottleLocal: doublePrecision('ask_per_bottle_local'),
+    /** USD per one unit of askCurrency, on askFxAt */
+    askFxRate: doublePrecision('ask_fx_rate'),
+    askFxAt: timestamp('ask_fx_at', { mode: 'date' }),
 
     status: saleMandateStatus('status').notNull().default('draft'),
     expiresAt: timestamp('expires_at', { mode: 'date' }),
@@ -6093,6 +6166,12 @@ export const zohoSalesOrders = pgTable(
     orderDate: date('order_date', { mode: 'date' }).notNull(),
     shipmentDate: date('shipment_date', { mode: 'date' }),
     referenceNumber: text('reference_number'),
+    /**
+     * The private client order this sales order fulfils. Set by the Zoho sync
+     * (linkSalesOrdersToPcos) from the PCO's own record of the SO, or from the
+     * PCO number in Reference; read this, never the reference text.
+     */
+    privateClientOrderId: uuid('private_client_order_id'),
     subTotal: doublePrecision('sub_total').notNull(),
     total: doublePrecision('total').notNull(),
     currencyCode: text('currency_code').default('USD'),
@@ -6121,6 +6200,7 @@ export const zohoSalesOrders = pgTable(
     index('zoho_sales_orders_status_idx').on(table.status),
     index('zoho_sales_orders_customer_idx').on(table.zohoCustomerId),
     index('zoho_sales_orders_dispatch_batch_idx').on(table.dispatchBatchId),
+    index('zoho_sales_orders_pick_list_id_idx').on(table.pickListId),
   ],
 );
 
@@ -8206,3 +8286,252 @@ export const cellarAccessGrants = pgTable(
 );
 
 export type CellarAccessGrant = typeof cellarAccessGrants.$inferSelect;
+
+/**
+ * Wine Labs answers, one row per wine and vintage (LWIN11)
+ *
+ * Every screen that wants a Wine Labs fact reads it here, so a credit is
+ * spent once per wine rather than once per page view. Nothing here is ever
+ * copied onto our own records: the match is a suggestion for staff to confirm
+ * and the price is retail, duty-paid, in USD, never our in-bond price.
+ */
+export const winelabsWines = pgTable('winelabs_wines', {
+  lwin11: text('lwin11').primaryKey(),
+  ourLwin7: text('our_lwin7').notNull(),
+  ourName: text('our_name').notNull(),
+  /** agrees | different | not_found | internal_known | error */
+  matchStatus: text('match_status').notNull(),
+  wlLwin7: text('wl_lwin7'),
+  wlLwin: text('wl_lwin'),
+  wlId: text('wl_id'),
+  wlDisplayName: text('wl_display_name'),
+  info: jsonb('info').$type<Record<string, unknown>>(),
+  drinkFrom: integer('drink_from'),
+  drinkTo: integer('drink_to'),
+  infoFetchedAt: timestamp('info_fetched_at', { mode: 'date' }),
+  price: jsonb('price').$type<Record<string, unknown>>(),
+  priceMedianUsd: doublePrecision('price_median_usd'),
+  priceCount: integer('price_count'),
+  priceFetchedAt: timestamp('price_fetched_at', { mode: 'date' }),
+  matchedAt: timestamp('matched_at', { mode: 'date' }).notNull().defaultNow(),
+  ...timestamps,
+});
+
+export type WinelabsWine = typeof winelabsWines.$inferSelect;
+
+/**
+ * Each Wine Labs call and the credits it cost, so a month's spend can be
+ * shown and capped
+ */
+export const winelabsCalls = pgTable(
+  'winelabs_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    endpoint: text('endpoint').notNull(),
+    credits: integer('credits').notNull(),
+    status: integer('status').notNull(),
+    error: text('error'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('winelabs_calls_created_at_idx').on(table.createdAt)],
+);
+
+/**
+ * London in-bond market for a 75cl bottle of each wine and vintage we hold,
+ * from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not
+ * Liv-ex), in USD per bottle
+ *
+ * A snapshot, refreshed a batch at a time, so screens read it without
+ * spending credits. A London price is a check on ours, never a price we set:
+ * our UAE in-bond price carries freight to Dubai that London's does not.
+ */
+export const winelabsMarket = pgTable('winelabs_market', {
+  lwin11: text('lwin11').primaryKey(),
+  lwin7: text('lwin7').notNull(),
+  vintage: text('vintage').notNull(),
+  /** priced | unlisted | checking */
+  status: text('status').notNull(),
+  bidUsd: doublePrecision('bid_usd'),
+  askUsd: doublePrecision('ask_usd'),
+  lastUsd: doublePrecision('last_usd'),
+  lastTradedAt: timestamp('last_traded_at', { mode: 'date' }),
+  bids: integer('bids').notNull().default(0),
+  asks: integer('asks').notNull().default(0),
+  trades: integer('trades').notNull().default(0),
+  venues: text('venues').array().notNull().default(sql`'{}'::text[]`),
+  checkedAt: timestamp('checked_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+export type WinelabsMarket = typeof winelabsMarket.$inferSelect;
+
+/**
+ * Bottles taken out of stock by hand, and why (Index 3.0)
+ *
+ * One row beside each "take out of stock" movement: samples, marketing,
+ * breakage, loss, collected by the owner, sold outside Zoho. The movement
+ * moves the stock; this says where it went and how the owner is settled, so
+ * the bottles show on their statement instead of vanishing from it.
+ */
+export const wmsStockOutflows = pgTable(
+  'wms_stock_outflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    movementId: uuid('movement_id').notNull(),
+    stockId: uuid('stock_id').notNull(),
+    ownerId: uuid('owner_id').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    bottles: integer('bottles').notNull(),
+    /** One of STOCK_OUT_REASONS */
+    reason: text('reason').notNull(),
+    /** cc_landed | owner_reimbursed | price | not_a_sale | write_off */
+    settlement: text('settlement').notNull(),
+    recipient: text('recipient'),
+    note: text('note'),
+    unitPriceUsd: doublePrecision('unit_price_usd'),
+    reference: text('reference'),
+    /** Entered after the fact, from the "gone but still showing" clean-up */
+    backdated: boolean('backdated').notNull().default(false),
+    performedBy: uuid('performed_by').notNull(),
+    performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('wms_stock_outflows_owner_idx').on(table.ownerId, table.performedAt)],
+);
+
+export type WmsStockOutflow = typeof wmsStockOutflows.$inferSelect;
+
+/**
+ * Zoho invoice lines (Index 3.0)
+ *
+ * Each line of a synced invoice, with the sales order line it was raised
+ * from, so a bottle that left the warehouse can be tied to the line it was
+ * billed on. Filled by the invoice sync for invoices that are new or changed.
+ */
+export const zohoInvoiceLineItems = pgTable(
+  'zoho_invoice_line_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoInvoiceId: text('zoho_invoice_id').notNull(),
+    invoiceNumber: text('invoice_number').notNull(),
+    zohoLineItemId: text('zoho_line_item_id'),
+    lineOrder: integer('line_order').notNull(),
+    /** Header rows (CONSIGNMENT_MIX owner headings) come back as lines too */
+    itemType: text('item_type'),
+    zohoItemId: text('zoho_item_id'),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    quantity: doublePrecision('quantity').notNull(),
+    unit: text('unit'),
+    rate: doublePrecision('rate').notNull(),
+    itemTotal: doublePrecision('item_total'),
+    zohoSalesorderId: text('zoho_salesorder_id'),
+    zohoSalesorderItemId: text('zoho_salesorder_item_id'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('zoho_invoice_line_items_invoice_idx').on(table.zohoInvoiceId),
+    index('zoho_invoice_line_items_sku_idx').on(table.sku),
+  ],
+);
+
+/** Which version of each Zoho invoice's lines has been read */
+export const zohoInvoiceLineSync = pgTable('zoho_invoice_line_sync', {
+  zohoInvoiceId: text('zoho_invoice_id').primaryKey(),
+  lastModified: text('last_modified'),
+  zohoSalesorderId: text('zoho_salesorder_id'),
+  zohoSalesorderNumber: text('zoho_salesorder_number'),
+  syncedAt: timestamp('synced_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+/**
+ * What's New: an update to the platform, written for members
+ *
+ * Drafted by the AI from a release's changelog items (sourceRef = the commit
+ * hash, so a release read twice never drafts twice), and only shown to
+ * members once someone presses Publish. Audiences use account kinds:
+ * `collector` is the Private Cellar, `wine_partner` the trade portal.
+ */
+export const productUpdates = pgTable(
+  'product_updates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type').$type<'feature' | 'improvement' | 'fix'>().notNull(),
+    audiences: text('audiences')
+      .array()
+      .$type<('collector' | 'wine_partner')[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    /** A member screen the update points to, from the allowed list only */
+    linkPath: text('link_path'),
+    status: text('status')
+      .$type<'draft' | 'published' | 'skipped'>()
+      .notNull()
+      .default('draft'),
+    publishedAt: timestamp('published_at', { mode: 'date' }),
+    releaseVersion: text('release_version'),
+    sourceRef: text('source_ref').unique(),
+    /** The changelog line and staff notes the draft was written from */
+    sourceText: text('source_text'),
+    /** Why the AI judged it internal, for items it skipped */
+    skippedReason: text('skipped_reason'),
+    createdBy: uuid('created_by'),
+    ...timestamps,
+  },
+  (table) => [index('product_updates_status_idx').on(table.status, table.publishedAt)],
+).enableRLS();
+
+export type ProductUpdate = typeof productUpdates.$inferSelect;
+
+/**
+ * Private Cellar member emails, one row per email per recipient
+ *
+ * An event queues a row; the member-emails cron sends it when it is due, in
+ * the mode the switch is set to: off (nothing sent, the row is marked
+ * suppressed), shadow (sent to the team inbox, marked shadowed) or live (sent
+ * to the member). The unique dedupe key means an event seen twice never
+ * queues twice. Mergeable updates due at the same slot go out as one email;
+ * the others are marked merged into it.
+ */
+export const memberEmailOutbox = pgTable(
+  'member_email_outbox',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** `${recipientUserId}:${kind}:${entityId}` */
+    dedupeKey: text('dedupe_key').notNull().unique(),
+    kind: text('kind').notNull(),
+    entityId: text('entity_id').notNull(),
+    partnerId: uuid('partner_id'),
+    recipientUserId: uuid('recipient_user_id'),
+    recipientEmail: text('recipient_email').notNull(),
+    recipientName: text('recipient_name').notNull(),
+    template: text('template').notNull(),
+    /** The Loops data variables, the wine list included */
+    data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    /** Asks the member to act, so it is never held back by the daily cap */
+    isAction: boolean('is_action').notNull().default(false),
+    isMergeable: boolean('is_mergeable').notNull().default(false),
+    sendAt: timestamp('send_at', { mode: 'date' }).notNull(),
+    status: text('status')
+      .$type<
+        'pending' | 'sending' | 'sent' | 'shadowed' | 'suppressed' | 'merged' | 'failed'
+      >()
+      .notNull()
+      .default('pending'),
+    mergedInto: uuid('merged_into'),
+    /** The switch position when it went, and the address it actually went to */
+    sentMode: text('sent_mode'),
+    sentTo: text('sent_to'),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    error: text('error'),
+    ...timestamps,
+  },
+  (table) => [
+    index('member_email_outbox_due_idx').on(table.status, table.sendAt),
+    index('member_email_outbox_recipient_idx').on(table.recipientUserId, table.sendAt),
+  ],
+).enableRLS();
+
+export type MemberEmailOutboxRow = typeof memberEmailOutbox.$inferSelect;

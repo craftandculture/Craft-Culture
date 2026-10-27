@@ -1,11 +1,14 @@
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partners, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
+
+import maskEmail from './maskEmail';
 
 /**
  * Loops template ID for admin order submission notification
@@ -71,18 +74,21 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
     });
 
     // Get all admin users for email
-    const adminUsers = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-      })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // C&C staff only (admin role and a C&C address), never a partner login
+    const adminUsers = (
+      await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter((admin) => isTeamMember(admin));
 
     logger.info('PCO: Found admin users for notification', {
       count: adminUsers.length,
-      emails: adminUsers.map((a) => a.email),
     });
 
     // Send email to each admin
@@ -107,20 +113,20 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
 
           logger.info('PCO: Sending email via Loops', {
             templateId: ADMIN_TEMPLATE_ID,
-            email: admin.email,
+            email: maskEmail(admin.email),
             payload: JSON.stringify(emailPayload),
           });
 
           const result = await loops.sendTransactionalEmail(emailPayload);
 
           logger.info('PCO: Loops email result', {
-            email: admin.email,
+            email: maskEmail(admin.email),
             result: JSON.stringify(result),
             success: result?.success,
           });
         } catch (error) {
           logger.error('PCO: Failed to send email via Loops', {
-            email: admin.email,
+            email: maskEmail(admin.email),
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
           });

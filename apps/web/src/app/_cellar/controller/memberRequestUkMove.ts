@@ -72,7 +72,7 @@ const memberRequestUkMove = stockOwnerProcedure
 
     await assertActivated(partnerId);
 
-    const create = () =>
+    const create = (attempt: number) =>
       db.transaction(async (tx) => {
         await tx.execute(
           sql`SELECT pg_advisory_xact_lock(hashtext(${`uk-move:${partnerId}`}))`,
@@ -168,7 +168,7 @@ const memberRequestUkMove = stockOwnerProcedure
 
         const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
 
-        const moveNumber = await generateUkMoveNumber();
+        const moveNumber = await generateUkMoveNumber(tx, attempt);
 
         const [move] = await tx
           .insert(cellarUkMoves)
@@ -218,7 +218,7 @@ const memberRequestUkMove = stockOwnerProcedure
 
     for (let attempt = 0; attempt < 3 && !move; attempt += 1) {
       try {
-        move = await create();
+        move = await create(attempt);
       } catch (error) {
         if (!isMoveNumberClash(error) || attempt === 2) throw error;
       }

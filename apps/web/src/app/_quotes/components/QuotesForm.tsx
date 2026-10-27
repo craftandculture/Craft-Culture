@@ -517,61 +517,36 @@ const QuotesForm = () => {
     }, 300000); // 5 minutes
 
     try {
-      // Fetch all products on-demand (not upfront)
-      const allProductsData = await trpcClient.products.getMany.query({
-        limit: 10000,
-      });
+      // Fetch the catalogue page by page (the server caps each page)
+      const allProducts: Product[] = [];
+      let cursor: number | undefined = 0;
 
-      if (allProductsData.data.length === 0) {
+      while (cursor !== undefined) {
+        const page = await trpcClient.products.getMany.query({
+          cursor,
+          limit: 500,
+        });
+        allProducts.push(...(page.data as Product[]));
+        cursor = page.meta.nextCursor;
+      }
+
+      if (allProducts.length === 0) {
         alert('No products available to download.');
         return;
       }
 
-      // Filter products with offers
-      const productsWithOffers = allProductsData.data.filter(
-        (product) => product.productOffers && product.productOffers.length > 0,
+      // Only wines with a priced offer: the export lists the UAE in-bond sell
+      // price, and a wine whose price could not be worked out is left out
+      // rather than listed at the supplier's cost
+      const productsWithOffers = allProducts.filter(
+        (product) => (product.productOffers?.[0]?.inBondPriceUsd ?? 0) > 0,
       );
 
-      // Create line items for pricing calculation (1 case per product)
-      const lineItemsForQuote = productsWithOffers.map((product) => ({
-        productId: product.id,
-        offerId: product.productOffers![0]!.id,
-        quantity: 1,
-      }));
-
-      // Process in smaller batches (20 items) sequentially to avoid timeout
-      const batchSize = 20;
-      const priceMap = new Map<string, number>();
-
-      for (let i = 0; i < lineItemsForQuote.length; i += batchSize) {
-        const batch = lineItemsForQuote.slice(i, i + batchSize);
-
-        try {
-          const quoteData = await trpcClient.quotes.get.query({
-            lineItems: batch,
-          });
-
-          // Store calculated prices
-          for (const lineItem of quoteData.lineItems) {
-            priceMap.set(lineItem.productId, lineItem.lineItemTotalUsd);
-          }
-
-          // Small delay between batches to avoid overwhelming server
-          if (i + batchSize < lineItemsForQuote.length) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-        } catch {
-          // Continue with next batch even if one fails
-        }
-      }
-
-      // Prepare inventory items with calculated prices
       const inventoryItems = productsWithOffers.map((product) => {
         const offer = product.productOffers![0];
         const unitCount = offer?.unitCount ?? 1;
 
-        // Use calculated UAE in-bond price, fallback to base price if calculation failed
-        const pricePerCaseUsd = priceMap.get(product.id) ?? offer?.price ?? 0;
+        const pricePerCaseUsd = offer?.inBondPriceUsd ?? 0;
         const pricePerBottleUsd = pricePerCaseUsd / unitCount;
 
         return {

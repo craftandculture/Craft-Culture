@@ -12,6 +12,7 @@ import {
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import checkStockReadiness from '../utils/checkStockReadiness';
+import distributorOrderView from '../utils/distributorOrderView';
 
 const markInTransitSchema = z.object({
   orderId: z.string().uuid(),
@@ -114,7 +115,8 @@ const ordersMarkInTransit = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersMarkInTransit;

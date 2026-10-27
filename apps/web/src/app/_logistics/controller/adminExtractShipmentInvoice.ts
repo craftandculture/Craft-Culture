@@ -1,27 +1,24 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { generateObject } from 'ai';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns } from 'drizzle-orm';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
-import { logisticsDocuments, logisticsShipmentCostLines } from '@/database/schema';
+import {
+  logisticsDocuments,
+  logisticsShipmentActivityLogs,
+  logisticsShipmentCostLines,
+  users,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import isFetchableLogisticsFileUrl from '../utils/isFetchableLogisticsFileUrl';
+import resolveFxToUsd from '../utils/resolveFxToUsd';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
-
-/** USD-pegged currencies convert at a fixed rate; others need the LLM's rate. */
-const PEGGED: Record<string, number> = {
-  USD: 1,
-  AED: 0.2723,
-  SAR: 0.2667,
-  QAR: 0.2747,
-  BHD: 2.6539,
-  OMR: 2.6008,
-};
 
 const CATEGORIES = [
   'freight',
@@ -42,10 +39,6 @@ const extractedSchema = z.object({
     .describe(
       '3-letter ISO 4217 code of the amounts (USD, DKK, EUR, GBP, AED, SEK, NOK...). Infer from symbols/words: kr→DKK/SEK/NOK, £→GBP, €→EUR, AED/Dhs→AED, $→USD. Always return your best guess — never "unknown".',
     ),
-  fxToUsd: z
-    .number()
-    .optional()
-    .describe('Approximate rate to convert the currency to USD (1 if already USD).'),
   vendor: z.string().optional().describe('The forwarder / vendor / issuer name on the invoice'),
   charges: z
     .array(
@@ -66,6 +59,14 @@ const extractedSchema = z.object({
  * Parse an uploaded logistics invoice on a shipment and fill its cost-breakdown
  * fields — the single-shipment equivalent of the group invoice parser. Then
  * recompute landed cost so logistics/bottle is available immediately.
+ *
+ * Only documents filed by C&C staff or by the system (Hillebrand sync) are
+ * read: a document a partner uploaded is skipped and reported, so nothing an
+ * outside party wrote becomes a cost line without staff entering it. The rate
+ * to USD is never taken from the model; a currency with no rate is skipped
+ * and reported rather than converted at a guess. Each document's old lines are
+ * replaced in one transaction, and every write is recorded in the shipment's
+ * activity log.
  */
 const adminExtractShipmentInvoice = adminProcedure
   .input(z.object({ shipmentId: z.string().uuid(), documentId: z.string().uuid().optional() }))
@@ -85,13 +86,36 @@ const adminExtractShipmentInvoice = adminProcedure
     // document that has none.
     const LOGISTICS_TYPES = /gac|shipping|freight|customs|clearance|delivery_note|bill_of_lading|airway/i;
     const docs = await db
-      .select()
+      .select({
+        ...getTableColumns(logisticsDocuments),
+        uploaderRole: users.role,
+        uploaderEmail: users.email,
+      })
       .from(logisticsDocuments)
+      .leftJoin(users, eq(users.id, logisticsDocuments.uploadedBy))
       .where(eq(logisticsDocuments.shipmentId, input.shipmentId))
       .orderBy(desc(logisticsDocuments.createdAt));
-    const targetDocs = input.documentId
+
+    // Staff or system uploads only (system imports have no uploader)
+    const isTrusted = (d: (typeof docs)[number]) =>
+      !d.uploadedBy ||
+      isTeamMember(
+        d.uploaderRole && d.uploaderEmail ? { role: d.uploaderRole, email: d.uploaderEmail } : null,
+      );
+
+    const candidates = input.documentId
       ? docs.filter((d) => d.id === input.documentId)
       : docs.filter((d) => LOGISTICS_TYPES.test(d.documentType));
+    const skippedPartnerDocuments = candidates.filter((d) => !isTrusted(d)).map((d) => d.fileName);
+    const targetDocs = candidates.filter(isTrusted);
+
+    if (input.documentId && candidates.length > 0 && targetDocs.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'This document was uploaded by a partner, so it is not read automatically. Check it and add the charges by hand.',
+      });
+    }
     if (targetDocs.length === 0) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -112,7 +136,7 @@ const adminExtractShipmentInvoice = adminProcedure
       const fileRes = await fetch(fileUrl);
       if (!fileRes.ok) return null;
       const buffer = Buffer.from(await fileRes.arrayBuffer());
-      const instruction = 'Extract every logistics charge, the currency and (if not USD) the FX to USD.';
+      const instruction = 'Extract every logistics charge and the currency.';
       if ((mimeType ?? '').startsWith('image/')) {
         const result = await generateObject({
           model: anthropic('claude-sonnet-4-6'),
@@ -165,30 +189,6 @@ const adminExtractShipmentInvoice = adminProcedure
       return result.object;
     };
 
-    // Resolve any currency to USD: pegged → fixed rate; else a live FX lookup;
-    // else the model's rate; else unresolved (kept at 1 and flagged).
-    const fxCache = new Map<string, number>();
-    const resolveFx = async (cur: string, llmFx?: number) => {
-      if (cur === 'USD') return { fx: 1, resolved: true };
-      if (PEGGED[cur] != null) return { fx: PEGGED[cur], resolved: true };
-      if (fxCache.has(cur)) return { fx: fxCache.get(cur) as number, resolved: true };
-      try {
-        const res = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(cur)}`);
-        if (res.ok) {
-          const data = (await res.json()) as { rates?: Record<string, number> };
-          const rate = data.rates?.USD;
-          if (typeof rate === 'number' && rate > 0) {
-            fxCache.set(cur, rate);
-            return { fx: rate, resolved: true };
-          }
-        }
-      } catch {
-        // fall through to model rate / unresolved
-      }
-      if (llmFx && llmFx > 0) return { fx: llmFx, resolved: true };
-      return { fx: 1, resolved: false };
-    };
-
     const round2 = (n: number) => Math.round(n * 100) / 100;
     let chargeCount = 0;
     let totalLogisticsUsd = 0;
@@ -200,48 +200,79 @@ const adminExtractShipmentInvoice = adminProcedure
       try {
         object = await parseOne(d.fileUrl, d.mimeType);
       } catch (error) {
+        logger.error('Failed to parse logistics invoice', {
+          documentId: d.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to parse ${d.fileName}: ${error instanceof Error ? error.message : 'unknown'}`,
+          message: `Failed to parse ${d.fileName}. Try again, or add the charges by hand.`,
         });
       }
       if (!object) continue;
       const cur = (object.currency ?? 'USD').toUpperCase();
-      const { fx, resolved } = await resolveFx(cur, object.fxToUsd);
       currencies.add(cur);
-      if (!resolved) unresolved.add(cur);
 
-      // Re-extracting a document replaces its previous ledger lines.
-      await db
-        .delete(logisticsShipmentCostLines)
-        .where(
-          and(
-            eq(logisticsShipmentCostLines.shipmentId, input.shipmentId),
-            eq(logisticsShipmentCostLines.sourceDocument, d.fileName),
-          ),
-        );
+      // The rate comes from the pegged table or the rate service, never the model
+      const fx = await resolveFxToUsd(cur);
+      if (fx.source === 'unresolved') {
+        unresolved.add(cur);
+        continue;
+      }
 
       const rows = object.charges
         .filter((c) => (c.amount || 0) > 0)
-        .map((c) => {
-          const amountUsd = round2((c.amount || 0) * fx);
-          totalLogisticsUsd += amountUsd;
-          chargeCount += 1;
-          return {
-            shipmentId: input.shipmentId,
-            category: c.category,
-            description: c.description,
-            amount: c.amount || 0,
+        .map((c) => ({
+          shipmentId: input.shipmentId,
+          category: c.category,
+          description: c.description,
+          amount: c.amount || 0,
+          currency: cur,
+          fxToUsd: fx.rate,
+          amountUsd: round2((c.amount || 0) * fx.rate),
+          invoiceRef: d.documentNumber ?? null,
+          vendor: object?.vendor ?? null,
+          sourceDocument: d.fileName,
+          createdBy: ctx.user.id,
+        }));
+      const documentUsd = round2(rows.reduce((sum, r) => sum + r.amountUsd, 0));
+
+      // Re-extracting a document replaces its previous ledger lines, all or nothing
+      await db.transaction(async (tx) => {
+        const removed = await tx
+          .delete(logisticsShipmentCostLines)
+          .where(
+            and(
+              eq(logisticsShipmentCostLines.shipmentId, input.shipmentId),
+              eq(logisticsShipmentCostLines.sourceDocument, d.fileName),
+            ),
+          )
+          .returning({ id: logisticsShipmentCostLines.id });
+
+        if (rows.length > 0) await tx.insert(logisticsShipmentCostLines).values(rows);
+
+        await tx.insert(logisticsShipmentActivityLogs).values({
+          shipmentId: input.shipmentId,
+          userId: ctx.user.id,
+          action: 'invoice_charges_extracted',
+          metadata: {
+            documentId: d.id,
+            documentType: d.documentType,
+            fileName: d.fileName,
             currency: cur,
-            fxToUsd: fx,
-            amountUsd,
-            invoiceRef: d.documentNumber ?? null,
-            vendor: object?.vendor ?? null,
-            sourceDocument: d.fileName,
-            createdBy: ctx.user.id,
-          };
+            fxToUsd: fx.rate,
+            fxSource: fx.source,
+            linesReplaced: removed.length,
+            linesWritten: rows.length,
+            totalUsd: documentUsd,
+            lines: rows.map((r) => ({ category: r.category, description: r.description, amount: r.amount })),
+          },
+          notes: `${rows.length} charge line(s) read from ${d.fileName}, ${cur} at ${fx.rate} (${fx.source}), USD ${documentUsd}`,
         });
-      if (rows.length > 0) await db.insert(logisticsShipmentCostLines).values(rows);
+      });
+
+      totalLogisticsUsd += documentUsd;
+      chargeCount += rows.length;
     }
 
     // Sync the 8 cost fields from the ledger + recompute landed cost.
@@ -253,6 +284,7 @@ const adminExtractShipmentInvoice = adminProcedure
       totalLogisticsUsd: round2(totalLogisticsUsd),
       chargeCount,
       documentsParsed: targetDocs.length,
+      skippedPartnerDocuments,
     };
   });
 

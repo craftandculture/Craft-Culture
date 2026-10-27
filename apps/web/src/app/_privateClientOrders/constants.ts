@@ -72,7 +72,12 @@ export const PCO_STAGES = {
     'awaiting_distributor_verification',
     'verification_suspended',
   ],
-  payment: ['awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
+  payment: [
+    'awaiting_client_payment',
+    'awaiting_payment_verification',
+    'client_paid',
+    'awaiting_distributor_payment',
+  ],
   fulfilment: [
     'distributor_paid',
     'awaiting_partner_payment',
@@ -101,6 +106,8 @@ export const DISTRIBUTOR_VISIBLE_STATUSES = [
   'awaiting_distributor_verification',
   'verification_suspended',
   'awaiting_client_payment',
+  // The partner says the client has paid; the distributor confirms it
+  'awaiting_payment_verification',
   'client_paid',
   'awaiting_distributor_payment',
   'distributor_paid',
@@ -126,7 +133,12 @@ export const DISTRIBUTOR_STAGES = {
     'awaiting_distributor_verification',
     'verification_suspended',
   ],
-  payment: ['awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
+  payment: [
+    'awaiting_client_payment',
+    'awaiting_payment_verification',
+    'client_paid',
+    'awaiting_distributor_payment',
+  ],
   inbound: ['distributor_paid', 'awaiting_partner_payment', 'partner_paid', 'stock_in_transit'],
   delivery: ['with_distributor', 'scheduling_delivery', 'delivery_scheduled', 'out_for_delivery'],
   delivered: ['delivered'],
@@ -148,7 +160,7 @@ export const DISTRIBUTOR_QUEUES = {
   clientPayment: {
     label: 'Client payment',
     hint: 'Confirm when paid',
-    statuses: ['awaiting_client_payment'],
+    statuses: ['awaiting_client_payment', 'awaiting_payment_verification'],
   },
   payCc: {
     label: 'Pay C&C',

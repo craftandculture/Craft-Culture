@@ -100,10 +100,12 @@ const statusIcons: Record<QuoteStatus, typeof IconClock> = {
 };
 
 const formatCurrency = (amount: number, currency = 'USD') => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
+  // A code Intl does not know (a typo, "Dhs") would throw and blank the page
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 };
 
 const formatDate = (date: Date | null | undefined) => {
@@ -358,7 +360,13 @@ const QuoteDetailPage = () => {
                   >
                     <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
                   </Button>
-                  <button type="button" className={primaryButton} onClick={openAcceptPanel}>
+                  <button
+                    type="button"
+                    className={`${primaryButton} disabled:cursor-not-allowed disabled:opacity-50`}
+                    onClick={openAcceptPanel}
+                    // The server refuses an expired quote; the button says so first
+                    disabled={!!quote.validUntil && new Date(quote.validUntil).getTime() < Date.now()}
+                  >
                     <IconCheck size={16} /> Accept quote
                   </button>
                 </div>

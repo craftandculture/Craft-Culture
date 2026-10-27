@@ -5,7 +5,6 @@ import { z } from 'zod';
 import db from '@/database/client';
 import {
   partners,
-  sourceCustomerPos,
   sourceSupplierOrderItems,
   sourceSupplierOrders,
 } from '@/database/schema';
@@ -56,16 +55,6 @@ const adminExportSupplierOrderExcel = adminProcedure
       .where(eq(partners.id, supplierOrder.partnerId))
       .limit(1);
 
-    // Get customer PO details
-    const [customerPo] = await db
-      .select({
-        ccPoNumber: sourceCustomerPos.ccPoNumber,
-        customerCompany: sourceCustomerPos.customerCompany,
-      })
-      .from(sourceCustomerPos)
-      .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId))
-      .limit(1);
-
     // Get order items
     const items = await db
       .select()
@@ -77,8 +66,6 @@ const adminExportSupplierOrderExcel = adminProcedure
     const excelData = {
       orderNumber: supplierOrder.orderNumber,
       partnerName: partner?.businessName || 'Unknown Partner',
-      customerPoNumber: customerPo?.ccPoNumber,
-      customerCompany: customerPo?.customerCompany,
       createdAt: supplierOrder.createdAt,
       items: items.map((item) => ({
         productName: item.productName,

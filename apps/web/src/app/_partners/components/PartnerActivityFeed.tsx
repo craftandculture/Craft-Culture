@@ -7,6 +7,7 @@ import {
   IconFileText,
   IconPackageExport,
   IconPackageImport,
+  IconSearch,
   IconTruckDelivery,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -59,8 +60,19 @@ const timeLabel = (value: Date | string) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/** Drops a trailing pack note, "(6x75cl)", "(1x)", "(Single)": the quantity beside it says it */
+const withoutPackNote = (name: string) =>
+  name.replace(/\s*\(\s*(\d+\s*x\s*(\d+(\.\d+)?\s*(cl|ml|l))?|single)\s*\)\s*$/i, '').trim();
+
 /** One event: icon, what happened and to what, quantity and time */
-const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
+const Row = ({
+  entry,
+  wrapName = false,
+}: {
+  entry: PartnerActivityEntry;
+  /** Cellar members read long wine names in full over two lines rather than cut */
+  wrapName?: boolean;
+}) => {
   const style =
     entry.title === 'Dispatched' ? KIND_STYLE.dispatch : KIND_STYLE[entry.kind];
   const quantity =
@@ -78,7 +90,11 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-text-muted">{entry.title}</p>
-        <p className="truncate text-[14px] font-medium text-text-primary">{entry.subject}</p>
+        <p
+          className={`${wrapName ? 'line-clamp-2' : 'truncate'} text-[14px] font-medium text-text-primary`}
+        >
+          {withoutPackNote(entry.subject)}
+        </p>
         {entry.detail && (
           <p className="mt-0.5 line-clamp-2 text-[12px] text-text-muted">{entry.detail}</p>
         )}
@@ -97,6 +113,46 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
   );
 };
 
+/**
+ * One line inside an opened group
+ *
+ * Indented under its header on a tinted panel, with no icon disc and a
+ * smaller type size, so an opened order reads as its contents rather than
+ * as more orders. The bay and quantity sit on one line beneath the wine.
+ */
+const SubRow = ({
+  entry,
+  groupTitle,
+  wrapName = false,
+}: {
+  entry: PartnerActivityEntry;
+  /** Cellar members read long wine names in full over two lines rather than cut */
+  wrapName?: boolean;
+  /** The opened group's own title, not repeated on every line under it */
+  groupTitle?: string;
+}) => {
+  const quantity =
+    entry.kind === 'correction' && entry.quantity && !entry.quantity.startsWith('−')
+      ? `+${entry.quantity}`
+      : entry.quantity;
+
+  return (
+    <div className="flex items-baseline gap-3 py-2 pl-3 pr-4">
+      <div className="min-w-0 flex-1">
+        <p className={`${wrapName ? 'line-clamp-2' : 'truncate'} text-[13px] text-text-primary`}>
+          {withoutPackNote(entry.subject)}
+        </p>
+        <p className="text-[11.5px] text-text-muted">
+          {[entry.title === groupTitle ? null : entry.title, entry.detail].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <span className="flex-none text-[12px] font-medium tabular-nums text-text-primary">{quantity}</span>
+      <span className="w-10 flex-none text-right text-[11px] tabular-nums text-text-muted">
+        {timeLabel(entry.at)}
+      </span>
+    </div>
+  );
+};
 
 /**
  * One feed for everything that has happened to a partner.
@@ -110,9 +166,37 @@ const Row = ({ entry }: { entry: PartnerActivityEntry }) => {
  * Each day opens with a one-line summary, so a week can be scanned without
  * reading every row.
  */
-const PartnerActivityFeed = () => {
+type Topic = 'all' | 'arrivals' | 'deliveries' | 'sales' | 'other' | 'handling' | 'orders';
+
+/** Which filter an event belongs to, read from its kind and how it is worded */
+const topicOf = (entry: PartnerActivityEntry): Exclude<Topic, 'all'> => {
+  if (entry.kind === 'in') return 'arrivals';
+  if (entry.kind === 'internal' || entry.kind === 'correction') return 'handling';
+  if (entry.kind === 'update') return 'orders';
+  if (/delivery|delivered|collected/i.test(entry.title)) return 'deliveries';
+  if (/damaged|lost|transferred|adjust/i.test(entry.title)) return 'other';
+  return 'sales';
+};
+
+const PERIODS = [
+  { key: 7, label: '7 days' },
+  { key: 30, label: '30 days' },
+  { key: 90, label: '90 days' },
+  { key: 0, label: 'All time' },
+] as const;
+
+export interface PartnerActivityFeedProps {
+  /** A Private Cellar member's feed: their stock only, buyers named */
+  source?: 'partner' | 'cellar';
+}
+
+const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) => {
   const api = useTRPC();
+  const isCellar = source === 'cellar';
   const [streams, setStreams] = useState<Stream[]>([]);
+  const [topic, setTopic] = useState<Topic>('all');
+  const [search, setSearch] = useState('');
+  const [periodDays, setPeriodDays] = useState<number>(0);
   // Folded rows the user has opened: a day's housekeeping, or an order's picks
   const [opened, setOpened] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
@@ -123,15 +207,49 @@ const PartnerActivityFeed = () => {
       return next;
     });
 
-  const { data, isLoading } = useQuery(
-    api.partners.getActivity.queryOptions({
+  const partnerQuery = useQuery({
+    ...api.partners.getActivity.queryOptions({
       streams: streams.length > 0 ? streams : undefined,
       limit: 150,
     }),
-  );
+    enabled: !isCellar,
+  });
+  const cellarQuery = useQuery({
+    ...api.cellar.member.getActivity.queryOptions({ limit: 200 }),
+    enabled: isCellar,
+  });
+  const data = isCellar ? cellarQuery.data : partnerQuery.data;
+  const isLoading = isCellar ? cellarQuery.isLoading : partnerQuery.isLoading;
+  const isCellarError = isCellar && cellarQuery.isError;
 
-  const entries = data?.entries ?? [];
+  const allEntries = data?.entries ?? [];
   type Entry = PartnerActivityEntry;
+
+  /* The period and search narrow first, so each topic's count is what that pill would show */
+  const since = periodDays ? Date.now() - periodDays * 24 * 60 * 60 * 1000 : 0;
+  const needle = search.trim().toLowerCase();
+  const inScope = allEntries.filter(
+    (entry) =>
+      new Date(entry.at).getTime() >= since &&
+      (!needle ||
+        [entry.subject, entry.title, entry.orderRef, entry.reference, entry.detail]
+          .filter(Boolean)
+          .some((text) => text!.toLowerCase().includes(needle))),
+  );
+  const topicCount = (key: Exclude<Topic, 'all'>) =>
+    inScope.filter((entry) => topicOf(entry) === key).length;
+  const topics: { key: Topic; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: inScope.length },
+    { key: 'arrivals', label: isCellar ? 'Arrivals' : 'Received', count: topicCount('arrivals') },
+    { key: 'deliveries', label: 'Deliveries', count: topicCount('deliveries') },
+    { key: 'sales', label: 'Sales', count: topicCount('sales') },
+    { key: 'other', label: 'Damage and transfers', count: topicCount('other') },
+    { key: 'orders', label: 'Order updates', count: topicCount('orders') },
+    { key: 'handling', label: 'Warehouse handling', count: topicCount('handling') },
+  ];
+  const entries =
+    topic === 'all' ? inScope : inScope.filter((entry) => topicOf(entry) === topic);
+  const isFiltered = topic !== 'all' || needle !== '' || periodDays !== 0;
 
   // Day headings in the order the entries arrive, which is already newest-first.
   const days = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
@@ -189,12 +307,76 @@ const PartnerActivityFeed = () => {
       .join(' · ');
   };
 
-  const summary = data?.summary;
+  const summary = !isCellar ? partnerQuery.data?.summary : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,48rem)_17rem]">
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* Filters, as on Team Tasks: search, then pills that say how many each holds */}
+      {allEntries.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <IconSearch className="text-text-muted absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search wine or order number"
+                className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-muted h-10 w-full rounded-xl border pl-9 pr-3 text-sm shadow-sm focus:outline-none"
+              />
+            </div>
+            <select
+              value={periodDays}
+              onChange={(event) => setPeriodDays(Number(event.target.value))}
+              aria-label="Period"
+              className="border-border-muted bg-surface-primary text-text-primary h-10 rounded-xl border px-3 text-sm shadow-sm"
+            >
+              {PERIODS.map((period) => (
+                <option key={period.key} value={period.key}>
+                  {period.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {topics
+              .filter((item) => item.key === 'all' || item.key === topic || item.count > 0)
+              .map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setTopic(item.key)}
+                  aria-pressed={topic === item.key}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                    topic === item.key
+                      ? 'bg-text-primary text-surface-primary'
+                      : 'bg-surface-muted text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {item.label}
+                  <span className={`ml-1.5 tabular-nums ${topic === item.key ? 'opacity-70' : 'text-text-muted'}`}>
+                    {item.count}
+                  </span>
+                </button>
+              ))}
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTopic('all');
+                  setSearch('');
+                  setPeriodDays(0);
+                }}
+                className="text-text-muted shrink-0 px-2 text-[12px] underline-offset-2 hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className={`flex flex-wrap items-center gap-1.5 ${isCellar ? 'hidden' : ''}`}>
         {STREAMS.map((stream) => {
           const on = streams.includes(stream.key);
           return (
@@ -229,8 +411,22 @@ const PartnerActivityFeed = () => {
 
       {isLoading ? (
         <p className="py-8 text-center text-sm text-text-muted">Loading…</p>
+      ) : isCellarError ? (
+        <p className="rounded-xl border border-border-muted bg-surface-primary px-4 py-5 text-sm text-text-muted">
+          We cannot show this just now. Please try again shortly, or contact the cellar team.
+        </p>
+      ) : entries.length === 0 && isFiltered ? (
+        <p className="rounded-xl border border-border-muted bg-surface-primary px-6 py-10 text-center text-sm text-text-muted">
+          Nothing matches these filters.
+        </p>
       ) : entries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-text-muted">Nothing recorded yet.</p>
+        isCellar ? (
+          <p className="rounded-xl border border-border-muted bg-surface-primary px-6 py-12 text-center text-sm text-text-muted">
+            No activity yet. Arrivals, deliveries and sales will appear here.
+          </p>
+        ) : (
+          <p className="py-8 text-center text-sm text-text-muted">Nothing recorded yet.</p>
+        )
       ) : (
         <div className="space-y-7">
           {Object.entries(days).map(([day, dayEntries]) => {
@@ -248,7 +444,7 @@ const PartnerActivityFeed = () => {
                 <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-fill-primary">
                   {groupByOrder(main).map((item) => {
                     if (item.type === 'entry') {
-                      return <Row key={item.entry.id} entry={item.entry} />;
+                      return <Row key={item.entry.id} entry={item.entry} wrapName={isCellar} />;
                     }
                     const key = `${day}|order|${item.ref}`;
                     const isOpen = opened.has(key);
@@ -263,7 +459,10 @@ const PartnerActivityFeed = () => {
                         <button
                           type="button"
                           onClick={() => toggle(key)}
-                          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-fill-muted/30"
+                          aria-expanded={isOpen}
+                          className={`flex w-full items-start gap-3 px-4 py-3 text-left ${
+                            isOpen ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                          }`}
                         >
                           <span
                             className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${KIND_STYLE.out.disc}`}
@@ -273,7 +472,7 @@ const PartnerActivityFeed = () => {
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-[12px] font-medium text-text-muted">
-                              Picked for an order
+                              {item.entries[0]?.title ?? 'Picked for an order'}
                             </span>
                             <span className="block text-[14px] font-medium text-text-primary">
                               {item.ref} · {plural(item.entries.length, 'wine')}
@@ -294,10 +493,17 @@ const PartnerActivityFeed = () => {
                           </span>
                         </button>
                         {isOpen && (
-                          <div className="divide-y divide-border-muted border-t border-border-muted bg-fill-muted/20">
-                            {item.entries.map((entry) => (
-                              <Row key={entry.id} entry={entry} />
-                            ))}
+                          <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                            <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                              {item.entries.map((entry) => (
+                                <SubRow
+                                  key={entry.id}
+                                  entry={entry}
+                                  groupTitle={item.entries[0]?.title}
+                                  wrapName={isCellar}
+                                />
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -309,23 +515,26 @@ const PartnerActivityFeed = () => {
                       <button
                         type="button"
                         onClick={() => toggle(`${day}|housekeeping`)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-fill-muted/30"
+                        aria-expanded={open}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${
+                          open ? 'bg-fill-muted/50' : 'hover:bg-fill-muted/30'
+                        }`}
                       >
                         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-fill-muted text-text-muted">
                           <Icon icon={IconAdjustmentsHorizontal} size="sm" />
                         </span>
                         <span className="flex-1 text-[13px] text-text-muted">
-                          Warehouse housekeeping ·{' '}
+                          {isCellar ? 'Warehouse handling' : 'Warehouse housekeeping'} ·{' '}
                           {[
                             housekeeping.filter((e) => e.kind === 'correction').length &&
                               plural(
                                 housekeeping.filter((e) => e.kind === 'correction').length,
-                                'count correction',
+                                isCellar ? 'stock check' : 'count correction',
                               ),
                             housekeeping.filter((e) => e.kind === 'internal').length &&
                               plural(
                                 housekeeping.filter((e) => e.kind === 'internal').length,
-                                'bay move',
+                                isCellar ? 'case move' : 'bay move',
                               ),
                           ]
                             .filter(Boolean)
@@ -338,10 +547,12 @@ const PartnerActivityFeed = () => {
                         />
                       </button>
                       {open && (
-                        <div className="divide-y divide-border-muted bg-fill-muted/20">
-                          {housekeeping.map((entry) => (
-                            <Row key={entry.id} entry={entry} />
-                          ))}
+                        <div className="bg-fill-muted/50 px-4 pb-3 pt-1">
+                          <div className="divide-y divide-border-muted border-l-2 border-text-primary/25 ml-3.5">
+                            {housekeeping.map((entry) => (
+                              <SubRow key={entry.id} entry={entry} wrapName={isCellar} />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>

@@ -130,6 +130,7 @@ const recalcGroupLandedCost = async (
   let totalFreight = 0;
   let isStale = false;
   const landedByShipment = new Map<string, number>();
+  const itemWrites: { id: string; next: { freightAllocated: number; landedCostTotal: number; landedCostPerBottle: number } }[] = [];
 
   for (const item of items) {
     const bottles = itemBottles(item);
@@ -170,10 +171,7 @@ const recalcGroupLandedCost = async (
       continue;
     }
 
-    await db
-      .update(logisticsShipmentItems)
-      .set({ ...next, updatedAt: new Date() })
-      .where(eq(logisticsShipmentItems.id, item.id));
+    itemWrites.push({ id: item.id, next });
   }
 
   const totalCases = items.reduce((s, i) => s + (i.cases ?? 0), 0);
@@ -188,27 +186,38 @@ const recalcGroupLandedCost = async (
 
   if (dryRun) return { isStale, ...totals };
 
-  // Keep each member shipment's header landed cost in step with its share.
-  for (const shipment of shipments) {
-    await db
-      .update(logisticsShipments)
+  // Items, member shipments and the group header are written together, so a
+  // failure part-way never leaves some bottles on the old allocation
+  await db.transaction(async (tx) => {
+    for (const write of itemWrites) {
+      await tx
+        .update(logisticsShipmentItems)
+        .set({ ...write.next, updatedAt: new Date() })
+        .where(eq(logisticsShipmentItems.id, write.id));
+    }
+
+    // Keep each member shipment's header landed cost in step with its share.
+    for (const shipment of shipments) {
+      await tx
+        .update(logisticsShipments)
+        .set({
+          totalLandedCostUsd: round2(landedByShipment.get(shipment.id) ?? 0),
+          updatedAt: new Date(),
+        })
+        .where(eq(logisticsShipments.id, shipment.id));
+    }
+
+    await tx
+      .update(logisticsShipmentGroups)
       .set({
-        totalLandedCostUsd: round2(landedByShipment.get(shipment.id) ?? 0),
+        totalLandedCostUsd: round2(totalProductCost + totalFreight),
+        totalBottles,
+        totalCases,
+        allocatedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(logisticsShipments.id, shipment.id));
-  }
-
-  await db
-    .update(logisticsShipmentGroups)
-    .set({
-      totalLandedCostUsd: round2(totalProductCost + totalFreight),
-      totalBottles,
-      totalCases,
-      allocatedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(logisticsShipmentGroups.id, group.id));
+      .where(eq(logisticsShipmentGroups.id, group.id));
+  });
 
   return { isStale: false, ...totals };
 };

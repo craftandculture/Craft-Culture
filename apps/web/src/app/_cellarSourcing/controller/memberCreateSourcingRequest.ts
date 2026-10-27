@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarSourcingRequests } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import notifySourcingUpdate from '../data/notifySourcingUpdate';
 import generateSourcingNumber from '../utils/generateSourcingNumber';
@@ -21,7 +21,7 @@ const MAX_OPEN_REQUESTS = 10;
  * @example
  *   await trpcClient.cellarSourcing.member.createRequest.mutate({ wineName: 'Rousseau Chambertin', bottles: 6, holdAt: 'uae' });
  */
-const memberCreateSourcingRequest = stockOwnerProcedure
+const memberCreateSourcingRequest = collectorProcedure
   .input(
     z.object({
       lwin: z.string().trim().max(20).optional(),
@@ -60,7 +60,7 @@ const memberCreateSourcingRequest = stockOwnerProcedure
     let created: { id: string; requestNumber: string } | undefined;
 
     for (let attempt = 0; attempt < 3 && !created; attempt += 1) {
-      const requestNumber = await generateSourcingNumber();
+      const requestNumber = await generateSourcingNumber(db, attempt);
       try {
         const [row] = await db
           .insert(cellarSourcingRequests)

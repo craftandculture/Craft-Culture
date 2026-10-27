@@ -4,7 +4,6 @@ import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
-import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -48,27 +47,16 @@ const notifyUserOfPOConfirmation = async (quote: Quote) => {
       },
     });
 
-    try {
-      // TODO: Create template in Loops with ID 'quote-po-confirmed'
-      await loops.sendTransactionalEmail({
-        transactionalId: 'quote-po-confirmed',
-        email: quoteOwner.email,
-        dataVariables: {
-          userName: quoteOwner.name,
-          quoteName: quote.name,
-          quoteId: quote.id,
-          poNumber: quote.poNumber || 'N/A',
-          totalUsd: quote.totalUsd.toFixed(2),
-          poConfirmationNotes: quote.poConfirmationNotes || 'No additional notes',
-          confirmedDate: new Date().toLocaleDateString(),
-          quoteUrl,
-        },
-      });
-
-      logger.dev(`Sent PO confirmation notification to user: ${quoteOwner.email}`);
-    } catch (error) {
-      logger.error(`Failed to send PO confirmation notification to user ${quoteOwner.email}:`, error);
-    }
+    /*
+      No Loops template exists for this email yet ('quote-po-confirmed' was a
+      placeholder id, so every send failed quietly). The customer still gets
+      the in-app notification above; the email is skipped, loudly, until a
+      real template id is set here.
+    */
+    logger.error(
+      'PO confirmation email skipped: no Loops template is set up for it (in-app notification sent)',
+      { quoteId: quote.id },
+    );
   } catch (error) {
     logger.error('Failed to notify user of PO confirmation:', error);
   }

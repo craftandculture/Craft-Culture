@@ -3,8 +3,8 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import insertRows from '../data/insertRows';
-import mapImportLines from '../data/mapImportLines';
+import resolveWmsOwner from '../data/resolveWmsOwner';
+import swapFeedImport from '../data/swapFeedImport';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
 import resolveProgrammeId from '../utils/programmeId';
@@ -38,8 +38,18 @@ const adminSyncReceiptsFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
     const programmeId = resolveProgrammeId(input.programmeId);
-    const { ownerName } = input;
+    // The programme's configured owner, not whatever the browser sent
+    const ownerName = await resolveWmsOwner(programmeId, input.ownerName);
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
+    const tokens = tokenizeMatch(ownerName);
+
+    // No tokens would match every owner's receipts
+    if (tokens.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Owner name must contain at least one letter or number',
+      });
+    }
 
     // The movements ledger carries no pack size, so it comes from the stock
     // record for the same LWIN — the same join the WMS itself relies on.
@@ -64,10 +74,9 @@ const adminSyncReceiptsFromWms = adminProcedure
       ) st ON TRUE
       WHERE m.movement_type = 'receive'
         AND NOT EXISTS (
-          SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(p.business_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(p.business_name, '')), '[^A-Z0-9]+')))
         )
         AND m.quantity_cases <> 0
       ORDER BY m.performed_at
@@ -80,9 +89,13 @@ const adminSyncReceiptsFromWms = adminProcedure
     // would also abort a Refresh All that has other feeds still to run.
     if (rows.length === 0) {
       await client`
-        DELETE FROM tri_imports
-        WHERE kind = 'cc_opening' AND source_ref = 'wms-receipts'
-        AND programme_id = ${programmeId}
+        DELETE FROM tri_imports i
+        WHERE i.kind = 'cc_opening' AND i.source_ref = 'wms-receipts'
+          AND i.programme_id = ${programmeId}
+          AND NOT EXISTS (
+            SELECT 1 FROM tri_periods p
+            WHERE p.id = i.period_id AND p.status = 'locked'
+          )
       `;
 
       const [baseline] = await client<{ uploads: number; bottles: number }[]>`
@@ -93,6 +106,7 @@ const adminSyncReceiptsFromWms = adminProcedure
         LEFT JOIN tri_import_lines l ON l.import_id = i.id AND l.status = 'mapped'
         WHERE i.kind = 'cc_opening'
           AND i.status = 'committed'
+          AND i.programme_id = ${programmeId}
           AND i.source_ref IS DISTINCT FROM 'wms-receipts'
       `;
 
@@ -109,41 +123,21 @@ const adminSyncReceiptsFromWms = adminProcedure
       };
     }
 
-    await client`
-      DELETE FROM tri_imports
-      WHERE kind = 'cc_opening' AND source_ref = 'wms-receipts'
-      AND programme_id = ${programmeId}
-    `;
-
-    const [created] = await client<{ id: string }[]>`
-      INSERT INTO tri_imports (
-        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
-        as_of_date, notes, uploaded_by, committed_at
-      )
-      VALUES (
-        ${programmeId},
-        NULL, 'cc_opening', 'committed',
-        ${`WMS receipts — ${ownerName}`}, 'wms-receipts', 'crurated',
-        ${asOfDate},
-        ${'Synced live from the WMS receiving ledger. Each line keeps its own receipt date.'},
-        ${ctx.user.id}, NOW()
-      )
-      RETURNING id
-    `;
-
-    const importId = created?.id;
-
-    if (!importId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create the receipts feed',
-      });
-    }
-
-    await insertRows(
-      'tri_import_lines',
-      [
-        'import_id',
+    const { importId, totals } = await swapFeedImport({
+      programmeId,
+      replaces: { kind: 'cc_opening', sourceRefs: ['wms-receipts'] },
+      create: {
+        periodId: null,
+        kind: 'cc_opening',
+        fileName: `WMS receipts — ${ownerName}`,
+        sourceRef: 'wms-receipts',
+        aliasSource: 'crurated',
+        asOfDate,
+        notes:
+          'Synced live from the WMS receiving ledger. Each line keeps its own receipt date.',
+        uploadedBy: ctx.user.id,
+      },
+      columns: [
         'raw_code',
         'normalized_code',
         'raw_description',
@@ -156,8 +150,7 @@ const adminSyncReceiptsFromWms = adminProcedure
         'doc_date',
         'status',
       ],
-      rows.map((row) => ({
-        import_id: importId,
+      rows: rows.map((row) => ({
         raw_code: row.code,
         normalized_code: normalizeCode(row.code),
         raw_description: row.productName,
@@ -170,9 +163,7 @@ const adminSyncReceiptsFromWms = adminProcedure
         doc_date: row.movedAt,
         status: 'unmapped',
       })),
-    );
-
-    const totals = await mapImportLines(importId, 'crurated');
+    });
 
     return {
       importId,

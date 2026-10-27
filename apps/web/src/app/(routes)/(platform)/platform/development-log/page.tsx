@@ -1,12 +1,25 @@
 import { IconHistory } from '@tabler/icons-react';
+import { redirect } from 'next/navigation';
 
+import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import parseChangelog from '@/utils/parseChangelog';
 
 import VersionEntry from './VersionEntry';
 
-const DevelopmentLogPage = () => {
+/**
+ * Internal release history. The changelog names partners and pricing work, so
+ * it is for the C&C team only.
+ */
+const DevelopmentLogPage = async () => {
+  const user = await getUserOrRedirect();
+
+  if (!isTeamMember(user)) {
+    redirect('/platform');
+  }
+
   const versions = parseChangelog();
 
   return (

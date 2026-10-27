@@ -5,15 +5,30 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
+import distributorOrderView from '../utils/distributorOrderView';
 import ensureClientVerified from '../utils/ensureClientVerified';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+
 
 const markDeliveredSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
-  signature: z.string().optional(), // Base64 signature or URL
-  photo: z.string().optional(), // Photo proof URL
+  // Shown as an image to C&C and the partner, so only a file uploaded to our
+  // own storage (or an inline image) is accepted, never an outside address
+  signature: z
+    .string()
+    .refine((value) => isVercelBlobUrl(value) || /^data:image\/(png|jpeg|webp);base64,/.test(value), {
+      message: 'The signature must be an uploaded image',
+    })
+    .optional(),
+  photo: z
+    .string()
+    .refine((value) => isVercelBlobUrl(value), {
+      message: 'The delivery photo must be uploaded first',
+    })
+    .optional(),
 });
 
 /**
@@ -103,7 +118,8 @@ const ordersMarkDelivered = distributorProcedure
       });
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersMarkDelivered;

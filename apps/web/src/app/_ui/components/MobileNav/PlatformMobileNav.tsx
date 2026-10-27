@@ -51,6 +51,7 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
           ? [
               { href: '/platform/partner/movements', label: 'Movements' },
               { href: '/platform/partner/activity', label: 'Activity' },
+              { href: '/platform/partner/logistics', label: 'Shipments' },
             ]
           : []),
       ],

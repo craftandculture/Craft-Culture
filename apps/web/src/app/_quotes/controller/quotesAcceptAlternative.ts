@@ -4,9 +4,11 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import logger from '@/utils/logger';
 
 import acceptAlternativeSchema from '../schemas/acceptAlternativeSchema';
+import sumQuoteTotalUsd from '../utils/sumQuoteTotalUsd';
 
 /**
  * Accept an alternative product suggestion
@@ -81,6 +83,7 @@ const quotesAcceptAlternative = approvedProcedure
           };
         }>;
         adminAdjustments?: unknown;
+        fulfilledOocItems?: Array<{ lineItemTotalUsd?: number }>;
       }) || {};
 
       const lineItems = quoteData.lineItems || [];
@@ -125,10 +128,10 @@ const quotesAcceptAlternative = approvedProcedure
         const updatedLineItems = [...lineItems];
         updatedLineItems[lineItemIndex] = updatedLineItem;
 
-        const newTotalUsd = updatedLineItems.reduce(
-          (sum, item) => sum + item.lineItemTotalUsd,
-          0,
-        );
+        const newTotalUsd = sumQuoteTotalUsd({
+          lineItems: updatedLineItems,
+          fulfilledOocItems: quoteData.fulfilledOocItems,
+        });
 
         const [updatedQuote] = await db
           .update(quotes)
@@ -138,7 +141,7 @@ const quotesAcceptAlternative = approvedProcedure
               lineItems: updatedLineItems,
             },
             totalUsd: newTotalUsd,
-            totalAed: newTotalUsd * 3.67,
+            totalAed: convertUsdToAed(newTotalUsd),
           })
           .where(eq(quotes.id, quoteId))
           .returning();
@@ -187,10 +190,10 @@ const quotesAcceptAlternative = approvedProcedure
       updatedLineItems[lineItemIndex] = updatedLineItem;
 
       // Recalculate total
-      const newTotalUsd = updatedLineItems.reduce(
-        (sum, item) => sum + item.lineItemTotalUsd,
-        0,
-      );
+      const newTotalUsd = sumQuoteTotalUsd({
+        lineItems: updatedLineItems,
+        fulfilledOocItems: quoteData.fulfilledOocItems,
+      });
 
       // Update quote
       const [updatedQuote] = await db
@@ -201,7 +204,7 @@ const quotesAcceptAlternative = approvedProcedure
             lineItems: updatedLineItems,
           },
           totalUsd: newTotalUsd,
-          totalAed: newTotalUsd * 3.67, // AED exchange rate
+          totalAed: convertUsdToAed(newTotalUsd), // AED exchange rate
         })
         .where(eq(quotes.id, quoteId))
         .returning();

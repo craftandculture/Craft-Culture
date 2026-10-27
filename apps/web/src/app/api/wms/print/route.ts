@@ -3,7 +3,14 @@ import net from 'node:net';
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { WMS_DEVICE_COOKIE, WMS_DEVICE_HEADER } from '@/lib/wms/deviceTokenCookie';
 import serverConfig from '@/server.config';
+
+/** Device token from the header or the httpOnly cookie middleware sets; never the URL */
+const presentedDeviceToken = (request: NextRequest) =>
+  request.headers.get(WMS_DEVICE_HEADER) ?? request.cookies.get(WMS_DEVICE_COOKIE)?.value ?? null;
+
+const NO_REFERRER = { 'Referrer-Policy': 'no-referrer' };
 
 /** Constant-time comparison of a supplied device token against the configured one. */
 const isValidDeviceToken = (supplied: string | null | undefined) => {
@@ -55,16 +62,17 @@ const sendToPrinter = (host: string, port: number, data: string) => {
  * This bypasses JavaScript issues by returning the ZPL as a standard HTTP file download.
  * Enterprise Browser handles this reliably.
  *
- * Usage: /api/wms/print?zpl=base64encodedZPL&device_token=xxx
+ * Usage: /api/wms/print?zpl=base64encodedZPL, with the device cookie or an
+ * x-device-token header
  */
 export const GET = async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
-  const deviceToken = searchParams.get('device_token');
+  const deviceToken = presentedDeviceToken(request);
   const zplParam = searchParams.get('zpl'); // direct ZPL content (base64 encoded)
 
   // Validate device token (constant-time)
   if (!isValidDeviceToken(deviceToken)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_REFERRER });
   }
 
   let zpl = '';
@@ -86,6 +94,7 @@ export const GET = async (request: NextRequest) => {
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Disposition': `attachment; filename="labels-${Date.now()}.zpl"`,
+      ...NO_REFERRER,
     },
   });
 };
@@ -104,10 +113,10 @@ export const POST = async (request: NextRequest) => {
   const body = (await request.json()) as { zpl?: string; device_token?: string };
   const { zpl } = body;
 
-  // Require the same device token as GET (from query or body) before opening a
-  // socket to the internal printer — otherwise any caller could send raw ZPL.
-  const deviceToken =
-    request.nextUrl.searchParams.get('device_token') ?? body.device_token ?? null;
+  // Require the same device token as GET (header, cookie or body) before
+  // opening a socket to the internal printer — otherwise any caller could send
+  // raw ZPL.
+  const deviceToken = presentedDeviceToken(request) ?? body.device_token ?? null;
   if (!isValidDeviceToken(deviceToken)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

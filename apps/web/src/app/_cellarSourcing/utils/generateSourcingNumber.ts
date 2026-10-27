@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { cellarSourcingRequests } from '@/database/schema';
 
@@ -12,23 +13,11 @@ import { cellarSourcingRequests } from '@/database/schema';
  * @example
  *   await generateSourcingNumber(); // 'SRC-2026-0003'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped request reference
  */
-const generateSourcingNumber = async () => {
-  const prefix = `SRC-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ requestNumber: cellarSourcingRequests.requestNumber })
-    .from(cellarSourcingRequests)
-    .where(like(cellarSourcingRequests.requestNumber, `${prefix}%`))
-    .orderBy(desc(cellarSourcingRequests.requestNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.requestNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateSourcingNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, cellarSourcingRequests, cellarSourcingRequests.requestNumber, 'SRC', offset);
 
 export default generateSourcingNumber;

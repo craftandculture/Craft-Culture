@@ -1,34 +1,21 @@
-import { desc, sql } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsPickLists } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Generate a unique pick list number in format: PL-YYYY-NNNN
- * Example: PL-2026-0001
+ * Generate the next pick list number (PL-YYYY-NNNN)
  *
- * @returns The generated pick list number
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_pick_list_number_seq sequence.
+ *
+ * @example
+ *   const number = await generatePickListNumber(tx); // "PL-2026-0042"
  */
-const generatePickListNumber = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `PL-${year}-`;
-
-  // Get the last pick list number for this year
-  const [lastPickList] = await db
-    .select({ pickListNumber: wmsPickLists.pickListNumber })
-    .from(wmsPickLists)
-    .where(sql`${wmsPickLists.pickListNumber} LIKE ${prefix + '%'}`)
-    .orderBy(desc(wmsPickLists.pickListNumber))
-    .limit(1);
-
-  let sequence = 1;
-
-  if (lastPickList?.pickListNumber) {
-    const lastSequence = parseInt(lastPickList.pickListNumber.split('-')[2] ?? '0', 10);
-    sequence = lastSequence + 1;
-  }
-
-  return `${prefix}${sequence.toString().padStart(4, '0')}`;
-};
+const generatePickListNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'PL',
+    table: 'wms_pick_lists',
+    column: 'pick_list_number',
+    sequence: 'wms_pick_list_number_seq',
+  });
 
 export default generatePickListNumber;

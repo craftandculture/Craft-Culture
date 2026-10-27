@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { saleMandates } from '@/database/schema';
 
@@ -15,23 +16,11 @@ import { saleMandates } from '@/database/schema';
  * @example
  *   await generateMandateNumber(); // 'MND-2026-0007'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped mandate reference
  */
-const generateMandateNumber = async () => {
-  const prefix = `MND-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ mandateNumber: saleMandates.mandateNumber })
-    .from(saleMandates)
-    .where(like(saleMandates.mandateNumber, `${prefix}%`))
-    .orderBy(desc(saleMandates.mandateNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.mandateNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateMandateNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, saleMandates, saleMandates.mandateNumber, 'MND', offset);
 
 export default generateMandateNumber;

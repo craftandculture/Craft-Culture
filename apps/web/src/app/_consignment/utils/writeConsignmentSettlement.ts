@@ -1,11 +1,13 @@
 import { eq } from 'drizzle-orm';
 
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import type db from '@/database/client';
 import {
   consignmentSettlementItems,
   consignmentSettlements,
   poolSales,
 } from '@/database/schema';
+
 
 import generateSettlementNumber from './generateSettlementNumber';
 
@@ -50,38 +52,42 @@ const writeConsignmentSettlement = async ({
   sale,
   paidAt = null,
 }: WriteSettlementParams) => {
-  const settlementNumber = await generateSettlementNumber(tx);
-
-  const [settlement] = await tx
-    .insert(consignmentSettlements)
-    .values({
-      settlementNumber,
-      /*
-        The sale stands in for the order. These columns are NOT NULL and were
-        written for a world where every settlement came from a sales order;
-        a distributor's monthly report has no order in our system at all.
-      */
-      orderId: sale.id,
-      orderNumber: sale.saleNumber,
-      ownerId: sale.ownerId,
-      ownerName: sale.ownerName,
-      saleAmount: sale.saleTotalUsd,
-      commissionPercent: sale.commissionPct,
-      commissionAmount: sale.commissionUsd,
-      owedToOwner: sale.owedToOwnerUsd,
-      currency: 'USD',
-      /*
-        payment_received, not settled. Settled means the member has the money,
-        which happens on a payout run and not before.
-      */
-      status: paidAt ? 'payment_received' : 'pending',
-      invoicePaidAt: paidAt,
-      source: sale.source,
-    })
-    .returning({
-      id: consignmentSettlements.id,
-      settlementNumber: consignmentSettlements.settlementNumber,
-    });
+  // Numbered inside the transaction, and retried on a clash
+  const settlement = await withNumberRetry((attempt) =>
+    tx.transaction(async (savepoint) => {
+      const [row] = await savepoint
+        .insert(consignmentSettlements)
+        .values({
+          settlementNumber: await generateSettlementNumber(savepoint, attempt),
+          /*
+            The sale stands in for the order. These columns are NOT NULL and were
+            written for a world where every settlement came from a sales order;
+            a distributor's monthly report has no order in our system at all.
+          */
+          orderId: sale.id,
+          orderNumber: sale.saleNumber,
+          ownerId: sale.ownerId,
+          ownerName: sale.ownerName,
+          saleAmount: sale.saleTotalUsd,
+          commissionPercent: sale.commissionPct,
+          commissionAmount: sale.commissionUsd,
+          owedToOwner: sale.owedToOwnerUsd,
+          currency: 'USD',
+          /*
+            payment_received, not settled. Settled means the member has the money,
+            which happens on a payout run and not before.
+          */
+          status: paidAt ? 'payment_received' : 'pending',
+          invoicePaidAt: paidAt,
+          source: sale.source,
+        })
+        .returning({
+          id: consignmentSettlements.id,
+          settlementNumber: consignmentSettlements.settlementNumber,
+        });
+      return row;
+    }),
+  );
 
   if (!settlement) throw new Error('Could not write the settlement');
 

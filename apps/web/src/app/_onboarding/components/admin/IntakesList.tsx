@@ -15,6 +15,7 @@ import intakeRoutes from '../../constants/intakeRoutes';
 import type { IntakeStage } from '../../constants/intakeStages';
 import wineSources from '../../constants/wineSources';
 import intakeStagesFor from '../../utils/intakeStagesFor';
+import isUnconfirmedIntake from '../../utils/isUnconfirmedIntake';
 
 const selectClass =
   'border-border-muted bg-surface-primary text-text-primary h-9 w-full rounded-lg border px-2 text-xs font-semibold sm:w-auto';
@@ -84,6 +85,11 @@ const IntakesList = () => {
                   {memberName}
                   {memberCode && <span className="text-text-muted font-mono font-normal"> {memberCode}</span>} · {wineSources.find((source) => source.value === intake.source)?.label ?? intake.source}
                 </p>
+                {isUnconfirmedIntake(intake) && (
+                  <p className="mt-0.5 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                    From the application, no details yet · hidden from the member until you confirm or move it on
+                  </p>
+                )}
                 <p className="text-text-muted text-xs">
                   {[
                     intake.holderName,
@@ -119,6 +125,17 @@ const IntakesList = () => {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
+                {isUnconfirmedIntake(intake) && (
+                  <button
+                    type="button"
+                    disabled={setStage.isPending}
+                    onClick={() => setStage.mutate({ intakeId: intake.id, stage: 'closed' })}
+                    title="Nothing to transfer: close it without telling the member"
+                    className="border-border-muted text-text-primary hover:bg-fill-muted inline-flex h-9 items-center rounded-lg border px-3 text-xs font-semibold"
+                  >
+                    Close
+                  </button>
+                )}
                 {isTransfer && !shipment && shipments.length === 0 && (
                   /* Every inbound shipment is received or cancelled, so there is nothing to link yet */
                   <span className="flex items-center gap-2">

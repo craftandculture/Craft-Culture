@@ -16,6 +16,8 @@ export interface PhoneWine {
   bottleSize: string | null;
   caseConfig: number | null;
   totalCases: number;
+  /** Loose bottles from an opened case */
+  openBottles?: number | null;
   region?: string | null;
   country?: string | null;
   locations: { stockId: string; receivedAt: Date | string | null }[];
@@ -64,7 +66,8 @@ const bottleName = (size: string | null) => {
 };
 
 const ukBottles = (wine: PhoneWine) => (wine.uk ?? []).reduce((sum, line) => sum + line.bottles, 0);
-const uaeBottles = (wine: PhoneWine) => wine.totalCases * (wine.caseConfig ?? 1);
+const uaeBottles = (wine: PhoneWine) =>
+  wine.totalCases * (wine.caseConfig ?? 1) + (wine.openBottles ?? 0);
 
 const formatOf = (wine: PhoneWine) => {
   const pack = wine.caseConfig ?? 1;

@@ -1,5 +1,6 @@
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, ne, sql } from 'drizzle-orm';
 
+import getCellarRole from '@/app/_cellar/data/getCellarRole';
 import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
 import {
@@ -10,6 +11,8 @@ import {
   partnerMembers,
   partners,
 } from '@/database/schema';
+
+import assertApplicationHolder from './assertApplicationHolder';
 
 interface EnsureApplicantCellarParams {
   application: CellarApplication;
@@ -24,7 +27,7 @@ interface EnsureApplicantCellarParams {
  *
  * In order, so one person never ends up with two cellars:
  * 1. the one already on the application;
- * 2. a collector this user is already a member of;
+ * 2. a collector this user already HOLDS (owner, not a shared-access delegate);
  * 3. a collector on file under the same email (created by an admin before the
  *    person ever signed in) — the email is proven by the magic link, so this
  *    is the same person;
@@ -41,18 +44,39 @@ const ensureApplicantCellar = async ({
   email,
   status,
 }: EnsureApplicantCellarParams) => {
-  if (application.partnerId) return application.partnerId;
+  if (application.partnerId) {
+    await assertApplicationHolder(application, userId);
+    return application.partnerId;
+  }
 
-  const [member] = await db
+  /*
+    Only a cellar this person HOLDS. Someone a cellar has been shared with is
+    a member of it too (as a manager or viewer, or with access since revoked),
+    and reusing that membership attached their application to the holder's
+    cellar — so their answers overwrote the holder's profile and Emirates ID.
+  */
+  const owned = await db
     .select({ partnerId: partners.id })
     .from(partnerMembers)
     .innerJoin(partners, eq(partners.id, partnerMembers.partnerId))
     .where(
-      and(eq(partnerMembers.userId, userId), eq(partners.type, 'private_collector')),
+      and(
+        eq(partnerMembers.userId, userId),
+        eq(partnerMembers.role, 'owner'),
+        eq(partners.type, 'private_collector'),
+      ),
     )
-    .limit(1);
+    .orderBy(asc(partnerMembers.createdAt), asc(partners.id));
 
-  const [byEmail] = member
+  let member: { partnerId: string } | undefined;
+  for (const candidate of owned) {
+    if ((await getCellarRole(candidate.partnerId, userId)) === 'holder') {
+      member = candidate;
+      break;
+    }
+  }
+
+  const emailMatches = member
     ? []
     : await db
         .select({ partnerId: partners.id })
@@ -63,7 +87,31 @@ const ensureApplicantCellar = async ({
             sql`lower(${partners.businessEmail}) = ${email.toLowerCase()}`,
           ),
         )
-        .limit(1);
+        .orderBy(asc(partners.createdAt), asc(partners.id));
+
+  // The same rule for a cellar found by email: never one shared with them
+  let byEmail: { partnerId: string } | undefined;
+  for (const candidate of emailMatches) {
+    if ((await getCellarRole(candidate.partnerId, userId)) === 'holder') {
+      byEmail = candidate;
+      break;
+    }
+  }
+
+  // Already a member of the cellar found by email (in some role): no new link
+  const [existingLink] =
+    !member && byEmail
+      ? await db
+          .select({ role: partnerMembers.role })
+          .from(partnerMembers)
+          .where(
+            and(
+              eq(partnerMembers.userId, userId),
+              eq(partnerMembers.partnerId, byEmail.partnerId),
+            ),
+          )
+          .limit(1)
+      : [];
 
   const name = application.fullName?.trim() || email;
 
@@ -91,7 +139,7 @@ const ensureApplicantCellar = async ({
       await tx.insert(cellarMemberships).values({ partnerId: id }).onConflictDoNothing();
     }
 
-    if (!member) {
+    if (!member && !existingLink) {
       await tx
         .insert(partnerMembers)
         .values({ partnerId: id, userId, role: 'owner', addedBy: userId });

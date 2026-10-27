@@ -11,6 +11,8 @@ interface MoveBottlesParams {
   bottles: number;
   /** Who cracked the case — the movement needs an author. */
   performedBy: string;
+  /** When, if not now: a take-out recorded after the event is dated when it happened */
+  performedAt?: Date;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }
@@ -47,6 +49,7 @@ const moveBottlesToSingles = async ({
   sourceStockId,
   bottles,
   performedBy,
+  performedAt = new Date(),
   db,
 }: MoveBottlesParams) => {
   if (bottles <= 0) return null;
@@ -76,6 +79,8 @@ const moveBottlesToSingles = async ({
         eq(wmsStock.locationId, source.locationId),
         eq(wmsStock.lwin18, singlesLwin18),
         eq(wmsStock.ownerId, source.ownerId),
+        // A held case's bottles never join a listed singles row
+        eq(wmsStock.notForSale, source.notForSale),
         source.lotNumber === null
           ? isNull(wmsStock.lotNumber)
           : eq(wmsStock.lotNumber, source.lotNumber),
@@ -86,7 +91,7 @@ const moveBottlesToSingles = async ({
   // "orphan" stock record — and the reconciliation's auto-fix DELETES those.
   const recordArrival = async () => {
     await db.insert(wmsStockMovements).values({
-      movementNumber: await generateMovementNumber(),
+      movementNumber: await generateMovementNumber(db),
       movementType: 'repack_in' as const,
       lwin18: singlesLwin18,
       productName: singlesName,
@@ -98,7 +103,7 @@ const moveBottlesToSingles = async ({
       notes: `Loose bottles from a cracked ${source.caseConfig ?? '?'}-pack of ${source.lwin18}`,
       reasonCode: 'split_case',
       performedBy,
-      performedAt: new Date(),
+      performedAt,
     });
   };
 

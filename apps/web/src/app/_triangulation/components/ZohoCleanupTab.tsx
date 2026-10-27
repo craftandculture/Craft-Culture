@@ -454,7 +454,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
                 colorRole="muted"
                 variant="outline"
                 isDisabled={backfill.isPending}
-                onClick={() => backfill.mutate({ dryRun: true })}
+                onClick={() => backfill.mutate({ programmeId, dryRun: true })}
               >
                 Check first
               </Button>
@@ -483,7 +483,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
                 colorRole="muted"
                 variant="outline"
                 isDisabled={backfill.isPending}
-                onClick={() => backfill.mutate({ dryRun: false })}
+                onClick={() => backfill.mutate({ programmeId, dryRun: false })}
               >
                 <IconWand className="mr-1 size-4" />
                 {backfill.isPending
@@ -1451,6 +1451,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
                                       isDisabled={unmapCode.isPending}
                                       onClick={() =>
                                         unmapCode.mutate({
+                                          programmeId,
                                           normalizedCode: code.normalizedCode,
                                         })
                                       }

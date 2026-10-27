@@ -84,10 +84,26 @@ const WMSStockPage = () => {
   const { mutate: syncToZoho, isPending: isSyncing } = useMutation({
     ...api.wms.admin.stock.syncToZoho.mutationOptions(),
     onSuccess: (data) => {
+      /*
+        Always a preview first. One tap used to write a stock adjustment
+        straight into Zoho; now it shows what would change and asks.
+      */
       if (data.dryRun) {
-        toast.info(
-          `Dry run: ${data.summary.adjusted} items would be adjusted, ${data.summary.matched} already match`,
-        );
+        if (data.summary.adjusted === 0) {
+          toast.info(`All ${data.summary.matched} items already match Zoho. Nothing to change.`);
+        } else if (
+          window.confirm(
+            `Zoho stock will be adjusted for ${data.summary.adjusted} item(s) to match the warehouse.\n` +
+              `${data.summary.matched} already match` +
+              (data.summary.notFound > 0
+                ? `, ${data.summary.notFound} have no Zoho item with the same SKU and are left alone`
+                : '') +
+              '.\n\nAdjust Zoho now?',
+          )
+        ) {
+          syncToZoho({ dryRun: false });
+        }
+        return;
       } else if (data.summary.adjusted > 0) {
         toast.success(
           `Synced ${data.summary.adjusted} items to Zoho. ${data.summary.matched} already matched.`,
@@ -134,7 +150,7 @@ const WMSStockPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => syncToZoho({ dryRun: false })}
+                onClick={() => syncToZoho({ dryRun: true })}
                 disabled={isSyncing}
               >
                 <ButtonContent iconLeft={isSyncing ? IconLoader2 : IconCloudUpload}>

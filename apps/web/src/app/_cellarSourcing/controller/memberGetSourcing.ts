@@ -25,6 +25,15 @@ const OFFER_VISIBLE = ['offer_sent', 'accepted', 'declined'];
  *   const { requests, allocations } = await trpcClient.cellarSourcing.member.get.query();
  */
 const memberGetSourcing = stockOwnerProcedure.query(async ({ ctx }) => {
+  /*
+    Sourcing and allocations are Private Cellar features, priced for members.
+    A trade wine partner sees the same Available page, so it gets an empty
+    panel rather than an error — every action is refused on the server.
+  */
+  if (ctx.partner.type !== 'private_collector') {
+    return { requests: [], allocations: [] };
+  }
+
   try {
     const now = new Date();
 

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
@@ -9,7 +9,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z
   .object({
-    email: z.string().email().optional(),
+    // Stored lower-case: an address typed with a capital made a second account (Jon@ vs jon@)
+    email: z.string().trim().toLowerCase().email().optional(),
     name: z.string().min(1),
     customerType: z.enum(['b2b', 'b2c', 'private_clients']),
     role: z.enum(['user', 'admin', 'wms_operator']).default('user'),
@@ -51,7 +52,7 @@ const usersAdminCreate = adminProcedure
       const [existingUser] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, email))
+        .where(sql`lower(${users.email}) = ${email}`)
         .limit(1);
 
       if (existingUser) {

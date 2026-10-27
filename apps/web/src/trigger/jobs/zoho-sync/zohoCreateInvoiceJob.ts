@@ -125,8 +125,8 @@ export const zohoCreateInvoiceJob = task({
       line_items: items.map((item) => ({
         name: item.productName,
         description: `${item.vintage ?? ''} ${item.productName}`.trim(),
-        quantity: item.quantityCases,
-        rate: item.totalUsd / item.quantityCases,
+        quantity: item.quantity,
+        rate: item.quantity > 0 ? item.totalUsd / item.quantity : 0,
       })),
       notes: `Order ${order.orderNumber}`,
     });

@@ -852,7 +852,9 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
                           Account Holder
                         </Typography>
                         <Typography variant="bodySm">
-                          {(user.bankDetails as Record<string, string>).accountHolder || '-'}
+                          {(user.bankDetails as Record<string, string>).accountName ||
+                            (user.bankDetails as Record<string, string>).accountHolder ||
+                            '-'}
                         </Typography>
                       </div>
                     </div>

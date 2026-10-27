@@ -236,7 +236,9 @@ const compareOrderDocuments = ({
   /* The client's LPO number on our documents */
   if (lpo?.number) {
     const n = lpo.number.replace(/^0+/, '');
-    const carries = (ref: string | null) => !!ref && new RegExp(`(^|\\D)0*${n}(\\D|$)`).test(ref);
+    // An LPO number may hold characters a pattern treats as special (".", "(", "+")
+    const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const carries = (ref: string | null) => !!ref && new RegExp(`(^|\\D)0*${escaped}(\\D|$)`).test(ref);
     if (salesOrder && !carries(salesOrder.reference)) {
       add('warning', 'LPO_REF_MISSING', docLabel(salesOrder), 'Reference', `Reference reads "${salesOrder.reference || 'nothing'}"; it should carry LPO ${lpo.number}`);
     }

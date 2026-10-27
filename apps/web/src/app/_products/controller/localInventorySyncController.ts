@@ -133,11 +133,6 @@ const localInventorySyncController = async () => {
           })
           .returning();
 
-        // Track externalIds for orphan cleanup
-        processedExternalIds.push(
-          ...batch.map((item) => `local:${item.lwin18}:row${item.rowNumber}`)
-        );
-
         // Map row-specific LWIN18 to product ID
         const lwin18Map = new Map(
           upsertedProducts.map((product) => [product.lwin18, product.id]),
@@ -173,6 +168,11 @@ const localInventorySyncController = async () => {
             ]),
           });
 
+        // Track externalIds for orphan cleanup, only once the batch is saved
+        processedExternalIds.push(
+          ...batch.map((item) => `local:${item.lwin18}:row${item.rowNumber}`)
+        );
+
         // Update stats (rough approximation - some may be updates)
         stats.productsCreated += upsertedProducts.length;
         stats.offersCreated += batch.length;
@@ -185,17 +185,32 @@ const localInventorySyncController = async () => {
 
     // 5. Delete orphaned local_inventory offers
     // (offers that exist in DB but not in current sheet)
+    //
+    // Skipped when any batch failed: the failed rows would look orphaned and
+    // their live offers would be deleted from the catalogue.
+    if (stats.errors.length > 0) {
+      logger.error('Local inventory sync had failed batches; not deleting any offers', {
+        errors: stats.errors,
+      });
+      stats.errors.push(
+        'Some rows failed to sync, so no offers were removed. Fix the errors and run the sync again.',
+      );
+
+      return stats;
+    }
 
     // Get all existing local_inventory offers
     const existingOffers = await db.query.productOffers.findMany({
       where: {
         source: 'local_inventory',
       },
+      columns: { id: true, externalId: true },
     });
 
     // Find offers to delete (exist in DB but not in current sync)
+    const processed = new Set(processedExternalIds);
     const offersToDelete = existingOffers
-      .filter((offer) => !processedExternalIds.includes(offer.externalId))
+      .filter((offer) => !processed.has(offer.externalId))
       .map((offer) => offer.id);
 
     if (offersToDelete.length > 0) {

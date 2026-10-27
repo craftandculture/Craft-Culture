@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
@@ -53,7 +53,7 @@ const usersActivateTestUser = adminProcedure
     const [emailInUse] = await db
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.email, normalizedEmail), ne(users.id, userId)))
+      .where(and(sql`lower(${users.email}) = ${normalizedEmail}`, ne(users.id, userId)))
       .limit(1);
 
     if (emailInUse) {

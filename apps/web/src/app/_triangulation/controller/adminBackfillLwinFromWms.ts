@@ -2,6 +2,7 @@ import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import resolveWmsOwner from '../data/resolveWmsOwner';
 import { autoMapSchema } from '../schemas/triangulationSchemas';
 import tokenizeMatch from '../utils/tokenizeMatch';
 import wineIdentity from '../utils/wineIdentity';
@@ -43,12 +44,14 @@ interface WmsCandidate {
 const adminBackfillLwinFromWms = adminProcedure
   .input(autoMapSchema)
   .mutation(async ({ input }) => {
-    const { dryRun } = input;
+    const { dryRun, programmeId } = input;
+    // The client's own WMS owner; Crurated's is the historical default
+    const ownerName = (await resolveWmsOwner(programmeId)) || 'Crurated';
 
     const skus = await client<
       {
         id: string;
-        wCode: string;
+        wCode: string | null;
         productName: string;
         vintage: number | null;
         bottleSize: string | null;
@@ -57,7 +60,8 @@ const adminBackfillLwinFromWms = adminProcedure
       SELECT id, w_code AS "wCode", product_name AS "productName",
              vintage, bottle_size AS "bottleSize"
       FROM tri_skus
-      WHERE lwin18 IS NULL OR TRIM(lwin18) = ''
+      WHERE programme_id = ${programmeId}
+        AND (lwin18 IS NULL OR TRIM(lwin18) = '')
     `;
 
     if (skus.length === 0) {
@@ -74,10 +78,9 @@ const adminBackfillLwinFromWms = adminProcedure
       WHERE s.lwin18 IS NOT NULL
         AND TRIM(s.lwin18) <> ''
         AND NOT EXISTS (
-          SELECT 1 FROM UNNEST(${tokenizeMatch('Crurated')}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]+')))
         )
       ORDER BY s.lwin18, s.received_at DESC NULLS LAST
     `;
@@ -109,10 +112,12 @@ const adminBackfillLwinFromWms = adminProcedure
       }
     }
 
-    const filled: { wCode: string; lwin18: string; how: string }[] = [];
+    const filled: { wCode: string | null; lwin18: string; how: string }[] = [];
 
     for (const sku of skus) {
-      const fromCode = byCode.get(normalize(sku.wCode));
+      // A SKU with no W code (every LWIN-identified client) has nothing to
+      // look up by code
+      const fromCode = sku.wCode ? byCode.get(normalize(sku.wCode)) : undefined;
 
       // Only when exactly one wine in the WMS has that identity: two means a
       // guess, and a wrong LWIN here renames a Zoho item to another wine.

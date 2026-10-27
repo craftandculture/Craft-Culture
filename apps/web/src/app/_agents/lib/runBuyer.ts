@@ -170,13 +170,18 @@ const runBuyer = async () => {
       pcoSalesHistory,
       monthlyRevenue,
     ] = await Promise.all([
-      // 2a. Velocity: dispatch + pick movements in last 30 days
+      // 2a. Velocity: cases out in the last 30 days. A case is usually picked
+      // and then dispatched, so adding the two counted it twice; the larger
+      // of the two totals is the cases that actually left.
       db.execute<{
         lwin18: string;
         totalDispatched: number;
       }>(sql`
         SELECT lwin18,
-               SUM(quantity_cases) AS "totalDispatched"
+               GREATEST(
+                 COALESCE(SUM(ABS(quantity_cases)) FILTER (WHERE movement_type = 'pick'), 0),
+                 COALESCE(SUM(ABS(quantity_cases)) FILTER (WHERE movement_type = 'dispatch'), 0)
+               ) AS "totalDispatched"
         FROM wms_stock_movements
         WHERE movement_type IN ('dispatch', 'pick')
           AND performed_at > ${thirtyDaysAgo.toISOString()}

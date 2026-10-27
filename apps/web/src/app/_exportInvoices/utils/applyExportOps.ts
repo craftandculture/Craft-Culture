@@ -1,3 +1,4 @@
+import declareOrigins from './declareOrigins';
 import estimateGrossWeight from './estimateGrossWeight';
 import roundMoney from './roundMoney';
 import type { ExportDocument, ExportLine } from '../schemas/exportDocumentSchema';
@@ -206,6 +207,8 @@ const applyExportOps = (doc: ExportDocument, ops: ExportOp[]) => {
       }
     }
   }
+
+  next.declaration = declareOrigins(next.declaration, next.lines);
 
   return next;
 };

@@ -73,6 +73,35 @@ const memberWithdrawMandate = stockOwnerProcedure
 
     await db.transaction(async (tx) => {
       /*
+        The status first, and only from the status read above. A sale or a
+        staff decision landing in the same moment would otherwise be
+        overwritten by "withdrawn" — with the wine sold and the hold restored.
+      */
+      const [withdrawn] = await tx
+        .update(saleMandates)
+        .set({
+          status: 'withdrawn',
+          withdrawnAt: new Date(),
+          withdrawnBy: ctx.user.id,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(saleMandates.id, mandate.id),
+            eq(saleMandates.status, mandate.status),
+          ),
+        )
+        .returning({ id: saleMandates.id });
+
+      if (!withdrawn) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'This offer has just changed. Refresh the page to see where it stands.',
+        });
+      }
+
+      /*
         Grouped so one statement restores every parcel that was held, and
         another every parcel that was already sellable — rather than a query per
         lot, and rather than assuming they were all the same.
@@ -118,15 +147,6 @@ const memberWithdrawMandate = stockOwnerProcedure
           );
       }
 
-      await tx
-        .update(saleMandates)
-        .set({
-          status: 'withdrawn',
-          withdrawnAt: new Date(),
-          withdrawnBy: ctx.user.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(saleMandates.id, mandate.id));
     });
 
     return { mandateNumber: mandate.mandateNumber };

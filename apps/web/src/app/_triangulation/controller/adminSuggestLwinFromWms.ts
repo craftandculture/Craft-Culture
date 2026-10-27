@@ -84,9 +84,8 @@ const adminSuggestLwinFromWms = adminProcedure.query(async () => {
         AND TRIM(s.lwin18) <> ''
         AND NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokenizeMatch('Crurated')}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]+')))
         )
       GROUP BY s.lwin18
     )

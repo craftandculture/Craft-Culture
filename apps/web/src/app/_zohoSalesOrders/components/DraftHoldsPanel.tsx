@@ -79,6 +79,7 @@ const DraftHoldsPanel = () => {
     onError: (e) => toast.error(e.message),
   });
   const [confirmRelease, setConfirmRelease] = useState<string | null>(null);
+  const [showFinished, setShowFinished] = useState(false);
 
   const active = (holds ?? []).filter((h) => h.status === 'active');
   const recent = (holds ?? []).filter((h) => h.status !== 'active');
@@ -120,9 +121,14 @@ const DraftHoldsPanel = () => {
         </form>
       </div>
 
-      {[...active, ...recent].length > 0 ? (
+      {/*
+        Finished holds are history. Listed in full they pushed the orders this
+        screen is for below the fold — fifteen "confirmed" rows above the list
+        on a normal day — so only live holds show until asked.
+      */}
+      {active.length > 0 || (showFinished && recent.length > 0) ? (
         <ul className="mt-3 divide-y divide-border-muted rounded-lg border border-border-muted">
-          {[...active, ...recent].map((h) => {
+          {[...active, ...(showFinished ? recent : [])].map((h) => {
             const casesHeld = h.lines.reduce((s, l) => s + l.casesHeld, 0);
             return (
               <li key={h.id} className="px-3 py-2.5">
@@ -187,6 +193,15 @@ const DraftHoldsPanel = () => {
           })}
         </ul>
       ) : null}
+      {recent.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowFinished((v) => !v)}
+          className="mt-2 text-xs font-medium text-text-muted hover:text-text-primary"
+        >
+          {showFinished ? 'Hide finished holds' : `Show ${recent.length} finished hold${recent.length === 1 ? '' : 's'}`}
+        </button>
+      )}
     </section>
   );
 };

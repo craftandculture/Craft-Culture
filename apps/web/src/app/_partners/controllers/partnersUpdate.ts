@@ -38,23 +38,27 @@ const partnersUpdate = adminProcedure
     if (updateData.businessName !== undefined)
       updates.businessName = updateData.businessName;
     if (updateData.businessAddress !== undefined)
-      updates.businessAddress = updateData.businessAddress;
+      updates.businessAddress = updateData.businessAddress || null;
     if (updateData.deliveryAddress !== undefined)
       updates.deliveryAddress = updateData.deliveryAddress || null;
     if (updateData.deliveryInstructions !== undefined)
       updates.deliveryInstructions = updateData.deliveryInstructions || null;
     if (updateData.businessPhone !== undefined)
-      updates.businessPhone = updateData.businessPhone;
+      updates.businessPhone = updateData.businessPhone || null;
     if (updateData.businessEmail !== undefined)
       updates.businessEmail = updateData.businessEmail || null;
-    if (updateData.taxId !== undefined) updates.taxId = updateData.taxId;
+    if (updateData.taxId !== undefined) updates.taxId = updateData.taxId || null;
     if (updateData.commissionRate !== undefined)
       updates.commissionRate = updateData.commissionRate;
-    if (updateData.notes !== undefined) updates.notes = updateData.notes;
+    if (updateData.notes !== undefined) updates.notes = updateData.notes || null;
     if (updateData.logoUrl !== undefined)
       updates.logoUrl = updateData.logoUrl || null;
     if (updateData.paymentDetails !== undefined)
-      updates.paymentDetails = updateData.paymentDetails;
+      updates.paymentDetails =
+        updateData.paymentDetails &&
+        Object.values(updateData.paymentDetails).some(Boolean)
+          ? updateData.paymentDetails
+          : null;
     if (updateData.logisticsCostPerCase !== undefined)
       updates.logisticsCostPerCase = updateData.logisticsCostPerCase;
     if (updateData.pcoDutyRate !== undefined)

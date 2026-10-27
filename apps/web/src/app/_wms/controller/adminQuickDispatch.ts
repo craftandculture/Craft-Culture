@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
-import { and, eq, gt, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import announceDispatch from '@/app/_wms/data/announceDispatch';
@@ -12,8 +12,11 @@ import {
   wmsDeliveryNotes,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  wmsPickListItems,
+  wmsPickLists,
   wmsStock,
   wmsStockMovements,
+  wmsStockReservations,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -23,6 +26,7 @@ import convertReservationToPick from '../utils/convertReservationToPick';
 import generateBatchNumber from '../utils/generateBatchNumber';
 import generateDeliveryNoteNumber from '../utils/generateDeliveryNoteNumber';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
 import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
 
 /**
@@ -55,10 +59,16 @@ const adminQuickDispatch = wmsOperatorProcedure
         .min(1),
       generateDeliveryNote: z.boolean().default(true),
       notes: z.string().optional(),
+      /*
+        Yes to shipping lines that did not leave the shelf through a scan: lines
+        on a pick list nobody scanned, or wine the shelf does not hold. Without
+        it those are listed back and nothing is dispatched.
+      */
+      confirmUnpicked: z.boolean().default(false),
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const { distributorId, orderIds, generateDeliveryNote, notes } = input;
+    const { distributorId, orderIds, generateDeliveryNote, notes, confirmUnpicked } = input;
 
     // Get distributor info
     const [distributor] = await db
@@ -77,330 +87,510 @@ const adminQuickDispatch = wmsOperatorProcedure
     }
 
     // Split order IDs by type
-    const zohoOrderIds = orderIds
-      .filter((o) => o.type === 'zoho')
-      .map((o) => o.id);
-    const pcoOrderIds = orderIds
-      .filter((o) => o.type === 'pco')
-      .map((o) => o.id);
+    const zohoOrderIds = [
+      ...new Set(orderIds.filter((o) => o.type === 'zoho').map((o) => o.id)),
+    ];
+    const pcoOrderIds = [
+      ...new Set(orderIds.filter((o) => o.type === 'pco').map((o) => o.id)),
+    ];
 
-    // Generate batch number and create batch
-    const batchNumber = await generateBatchNumber();
     const now = new Date();
 
-    const [batch] = await db
-      .insert(wmsDispatchBatches)
-      .values({
-        batchNumber,
-        distributorId,
-        distributorName: distributor.name,
-        status: 'dispatched',
-        orderCount: orderIds.length,
-        totalCases: 0,
-        dispatchedAt: now,
-        dispatchedBy: ctx.user.id,
-        notes: notes ?? null,
-      })
-      .returning();
+    /*
+      Everything in one transaction with the orders locked. Before, a double
+      tap made two batches and took the stock off the shelf twice; an order
+      half-way through its pick list was treated as fully picked; a PCO that
+      had been picked was decremented again; and a member's held wine could
+      be drawn for somebody else's PCO.
+    */
+    const { batch, updatedBatch, batchNumber, batchOrderInserts, totalCases } =
+      await db.transaction(async (tx) => {
+        const zohoRows =
+          zohoOrderIds.length > 0
+            ? await tx
+                .select({
+                  id: zohoSalesOrders.id,
+                  salesOrderNumber: zohoSalesOrders.salesOrderNumber,
+                  status: zohoSalesOrders.status,
+                  dispatchBatchId: zohoSalesOrders.dispatchBatchId,
+                })
+                .from(zohoSalesOrders)
+                .where(inArray(zohoSalesOrders.id, zohoOrderIds))
+                .for('update')
+            : [];
 
-    if (!batch) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create dispatch batch',
-      });
-    }
+        const pcoRows =
+          pcoOrderIds.length > 0
+            ? await tx
+                .select({
+                  id: privateClientOrders.id,
+                  orderNumber: privateClientOrders.orderNumber,
+                  partnerId: privateClientOrders.partnerId,
+                })
+                .from(privateClientOrders)
+                .where(inArray(privateClientOrders.id, pcoOrderIds))
+                .for('update')
+            : [];
 
-    const batchId = batch.id;
-    let totalCases = 0;
-    const batchOrderInserts: Array<{
-      batchId: string;
-      orderId: string;
-      orderNumber: string;
-    }> = [];
-    // Orders already picked (via a pick list) have had their stock decremented
-    // already — Quick Dispatch must NOT decrement them again (that double-picks).
-    const alreadyPickedZohoIds = new Set<string>();
-
-    // Process Zoho orders
-    if (zohoOrderIds.length > 0) {
-      const zohoRows = await db
-        .select({
-          id: zohoSalesOrders.id,
-          salesOrderNumber: zohoSalesOrders.salesOrderNumber,
-          status: zohoSalesOrders.status,
-        })
-        .from(zohoSalesOrders)
-        .where(inArray(zohoSalesOrders.id, zohoOrderIds));
-
-      // Capture the PRE-dispatch status: anything already through picking has had
-      // its stock decremented, so it must be dispatch-only (no re-decrement).
-      for (const r of zohoRows) {
-        if (
-          ['picking', 'picked', 'dispatched', 'delivered'].includes(r.status ?? '')
-        ) {
-          alreadyPickedZohoIds.add(r.id);
+        // Already on a dispatch batch: a retry or a second tap. Never twice.
+        const alreadyDispatched = [
+          ...zohoRows
+            .filter(
+              (row) =>
+                row.dispatchBatchId ||
+                ['dispatched', 'delivered'].includes(row.status ?? ''),
+            )
+            .map((row) => row.salesOrderNumber),
+        ];
+        if (pcoRows.length > 0) {
+          const onBatch = await tx
+            .select({ orderId: wmsDispatchBatchOrders.orderId })
+            .from(wmsDispatchBatchOrders)
+            .where(
+              inArray(
+                wmsDispatchBatchOrders.orderId,
+                pcoRows.map((row) => row.id),
+              ),
+            );
+          const onBatchIds = new Set(onBatch.map((row) => row.orderId));
+          alreadyDispatched.push(
+            ...pcoRows.filter((row) => onBatchIds.has(row.id)).map((row) => row.orderNumber),
+          );
         }
-      }
 
-      if (zohoRows.length > 0) {
-        // Update Zoho orders
-        await db
-          .update(zohoSalesOrders)
-          .set({
-            dispatchBatchId: batchId,
+        if (alreadyDispatched.length > 0) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Already dispatched: ${alreadyDispatched.join(', ')}. Refresh the list.`,
+          });
+        }
+
+        // Where each order is in picking. Lines scanned on a pick list have
+        // already left their bay; lines not yet scanned have not.
+        const allIds = [...zohoRows.map((row) => row.id), ...pcoRows.map((row) => row.id)];
+        const pickLists =
+          allIds.length > 0
+            ? await tx
+                .select({
+                  id: wmsPickLists.id,
+                  orderId: wmsPickLists.orderId,
+                  status: wmsPickLists.status,
+                  pickListNumber: wmsPickLists.pickListNumber,
+                })
+                .from(wmsPickLists)
+                .where(
+                  and(
+                    inArray(wmsPickLists.orderId, allIds),
+                    ne(wmsPickLists.status, 'cancelled'),
+                  ),
+                )
+                .for('update')
+            : [];
+
+        const openLists = pickLists.filter((list) => list.status !== 'completed');
+        const completedOrderIds = new Set(
+          pickLists.filter((list) => list.status === 'completed').map((list) => list.orderId),
+        );
+
+        const unpickedLines =
+          openLists.length > 0
+            ? await tx
+                .select({
+                  id: wmsPickListItems.id,
+                  pickListId: wmsPickListItems.pickListId,
+                  lwin18: wmsPickListItems.lwin18,
+                  productName: wmsPickListItems.productName,
+                  quantityCases: wmsPickListItems.quantityCases,
+                  quantityBottles: wmsPickListItems.quantityBottles,
+                })
+                .from(wmsPickListItems)
+                .where(
+                  and(
+                    inArray(
+                      wmsPickListItems.pickListId,
+                      openLists.map((list) => list.id),
+                    ),
+                    sql`${wmsPickListItems.isPicked} IS NOT TRUE`,
+                  ),
+                )
+                .for('update')
+            : [];
+
+        const problems: string[] = [];
+
+        if (unpickedLines.length > 0 && !confirmUnpicked) {
+          const lists = openLists
+            .filter((list) => unpickedLines.some((line) => line.pickListId === list.id))
+            .map((list) => list.pickListNumber);
+          problems.push(
+            `${unpickedLines.length} line(s) on ${lists.join(', ')} have not been scanned`,
+          );
+        }
+
+        const batchNumber = await generateBatchNumber(tx);
+
+        const [batch] = await tx
+          .insert(wmsDispatchBatches)
+          .values({
+            batchNumber,
+            distributorId,
+            distributorName: distributor.name,
             status: 'dispatched',
-            updatedAt: now,
+            orderCount: orderIds.length,
+            totalCases: 0,
+            dispatchedAt: now,
+            dispatchedBy: ctx.user.id,
+            notes: notes ?? null,
           })
-          .where(
-            inArray(
-              zohoSalesOrders.id,
-              zohoRows.map((o) => o.id),
-            ),
-          );
+          .returning();
 
-        // Calculate cases
-        const [casesResult] = await db
-          .select({
-            total: sql<number>`COALESCE(SUM(${zohoSalesOrderItems.quantity}), 0)::int`,
-          })
-          .from(zohoSalesOrderItems)
-          .where(
-            inArray(
-              zohoSalesOrderItems.salesOrderId,
-              zohoRows.map((o) => o.id),
-            ),
-          );
-
-        totalCases += casesResult?.total ?? 0;
-
-        for (const row of zohoRows) {
-          batchOrderInserts.push({
-            batchId,
-            orderId: row.id,
-            orderNumber: row.salesOrderNumber,
+        if (!batch) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to create dispatch batch',
           });
         }
-      }
-    }
 
-    // Process PCO orders
-    if (pcoOrderIds.length > 0) {
-      const pcoRows = await db
-        .select({
-          id: privateClientOrders.id,
-          orderNumber: privateClientOrders.orderNumber,
-        })
-        .from(privateClientOrders)
-        .where(inArray(privateClientOrders.id, pcoOrderIds));
+        const batchId = batch.id;
+        let totalCases = 0;
+        const batchOrderInserts: Array<{
+          batchId: string;
+          orderId: string;
+          orderNumber: string;
+        }> = [];
 
-      if (pcoRows.length > 0) {
-        // Update PCO order status
-        await db
-          .update(privateClientOrders)
-          .set({
-            status: 'stock_in_transit',
-            updatedAt: now,
-          })
-          .where(
-            inArray(
-              privateClientOrders.id,
-              pcoRows.map((o) => o.id),
-            ),
-          );
+        /*
+          Take one line's wine off the shelf.
 
-        // Calculate cases
-        const [casesResult] = await db
-          .select({
-            total: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantity}), 0)::int`,
-          })
-          .from(privateClientOrderItems)
-          .where(
-            inArray(
-              privateClientOrderItems.orderId,
-              pcoRows.map((o) => o.id),
-            ),
-          );
+          Cases reserved for this order come first, then stock that is for sale
+          (the order's own partner first, for a PCO). Held wine is never drawn
+          unless it was reserved for this very order. A line ordered by the
+          bottle draws only single-bottle rows: cracking a case is done on the
+          pick list, which relabels what is left — here it would take a whole
+          case for every bottle.
+        */
+        const drawLine = async ({
+          orderId,
+          orderNumber,
+          lwin,
+          productName,
+          quantity,
+          isBottleLine,
+          pack,
+          preferOwnerId,
+          allowPrefix,
+        }: {
+          orderId: string;
+          orderNumber: string;
+          lwin: string;
+          productName: string;
+          quantity: number;
+          isBottleLine: boolean;
+          pack: number | null;
+          preferOwnerId: string | null;
+          allowPrefix: boolean;
+        }) => {
+          const singlesPattern = isBottleLine ? lwinPackAgnosticPattern(lwin) : null;
+          const match = singlesPattern
+            ? like(wmsStock.lwin18, singlesPattern)
+            : eq(wmsStock.lwin18, lwin);
 
-        totalCases += casesResult?.total ?? 0;
-
-        for (const row of pcoRows) {
-          batchOrderInserts.push({
-            batchId,
-            orderId: row.id,
-            orderNumber: row.orderNumber,
-          });
-        }
-      }
-    }
-
-    // Insert batch order records
-    if (batchOrderInserts.length > 0) {
-      await db.insert(wmsDispatchBatchOrders).values(batchOrderInserts);
-    }
-
-    // Decrement stock — Quick Dispatch skips picking so stock must be decremented here
-    for (const orderRef of orderIds) {
-      if (orderRef.type === 'zoho') {
-        // Already picked via a pick list → stock is decremented; dispatch only.
-        if (alreadyPickedZohoIds.has(orderRef.id)) continue;
-        const items = await db
-          .select({
-            lwin18: zohoSalesOrderItems.lwin18,
-            sku: zohoSalesOrderItems.sku,
-            name: zohoSalesOrderItems.name,
-            quantity: zohoSalesOrderItems.quantity,
-          })
-          .from(zohoSalesOrderItems)
-          .where(eq(zohoSalesOrderItems.salesOrderId, orderRef.id));
-
-        for (const item of items) {
-          const lwin = item.lwin18 ?? item.sku;
-          if (!lwin || item.quantity <= 0) continue;
-
-          /*
-            Stock held for its owner is never dispatchable, whatever an order
-            says.
-
-            This matched on the wine and a positive case count and nothing
-            else, so a quick dispatch would draw down a member's cellar to fill
-            somebody else's order — the one consumption path in the warehouse
-            that did not honour the hold. Every other route (reservation,
-            picking, the catalogue, quote lines) already excludes it, which is
-            what made the gap easy to miss and expensive to find.
-          */
-          const stockRecords = await db
-            .select({
-              id: wmsStock.id,
-              quantityCases: wmsStock.quantityCases,
-            })
-            .from(wmsStock)
-            .where(
-              and(
-                eq(wmsStock.lwin18, lwin),
-                gt(wmsStock.quantityCases, 0),
-                eq(wmsStock.notForSale, false),
-              ),
-            );
-
-          let remaining = item.quantity;
-          for (const stock of stockRecords) {
-            if (remaining <= 0) break;
-            const toPick = Math.min(remaining, stock.quantityCases);
-
-            const result = await convertReservationToPick({
-              stockId: stock.id,
-              orderId: orderRef.id,
-              quantityCases: toPick,
-              db,
-            });
-
-            remaining -= result.totalPicked;
-          }
-
-          const picked = item.quantity - remaining;
-          if (picked > 0) {
-            const movementNumber = await generateMovementNumber();
-            await db.insert(wmsStockMovements).values({
-              movementNumber,
-              movementType: 'pick',
-              lwin18: lwin,
-              productName: item.name,
-              quantityCases: picked,
-              orderId: orderRef.id,
-              notes: `Quick dispatch ${batchNumber}`,
-              performedBy: ctx.user.id,
-              performedAt: now,
-            });
-          }
-        }
-      } else {
-        // PCO order
-        const items = await db
-          .select({
-            lwin: privateClientOrderItems.lwin,
-            productName: privateClientOrderItems.productName,
-            quantity: privateClientOrderItems.quantity,
-          })
-          .from(privateClientOrderItems)
-          .where(eq(privateClientOrderItems.orderId, orderRef.id));
-
-        for (const item of items) {
-          if (!item.lwin || item.quantity <= 0) continue;
-
-          // Exact LWIN match first
-          let stockRecords = await db
-            .select({
-              id: wmsStock.id,
-              quantityCases: wmsStock.quantityCases,
-            })
-            .from(wmsStock)
-            .where(
-              and(
-                eq(wmsStock.lwin18, item.lwin),
-                gt(wmsStock.quantityCases, 0),
-              ),
-            );
-
-          // Prefix match for short LWINs
-          if (stockRecords.length === 0) {
-            stockRecords = await db
+          const select = (where: ReturnType<typeof and>) =>
+            tx
               .select({
                 id: wmsStock.id,
                 quantityCases: wmsStock.quantityCases,
+                ownerId: wmsStock.ownerId,
+                notForSale: wmsStock.notForSale,
+                caseConfig: wmsStock.caseConfig,
               })
               .from(wmsStock)
-              .where(
-                and(
-                  like(wmsStock.lwin18, `${item.lwin}%`),
-                  gt(wmsStock.quantityCases, 0),
-                ),
-              );
+              .where(where)
+              .for('update');
+
+          let rows = await select(and(match, gt(wmsStock.quantityCases, 0)));
+          if (rows.length === 0 && allowPrefix && !singlesPattern) {
+            rows = await select(
+              and(like(wmsStock.lwin18, `${lwin}%`), gt(wmsStock.quantityCases, 0)),
+            );
           }
 
-          let remaining = item.quantity;
-          for (const stock of stockRecords) {
+          const reservedHere = new Set(
+            (
+              await tx
+                .select({ stockId: wmsStockReservations.stockId })
+                .from(wmsStockReservations)
+                .where(
+                  and(
+                    eq(wmsStockReservations.orderId, orderId),
+                    eq(wmsStockReservations.status, 'active'),
+                  ),
+                )
+            ).map((row) => row.stockId),
+          );
+
+          const usable = rows
+            .filter((row) => reservedHere.has(row.id) || !row.notForSale)
+            .filter((row) =>
+              isBottleLine
+                ? (row.caseConfig ?? 12) === 1
+                : !pack || pack <= 1 || row.caseConfig == null || row.caseConfig === pack,
+            )
+            .sort((left, right) => {
+              const rank = (row: (typeof rows)[number]) =>
+                (reservedHere.has(row.id) ? 0 : 2) +
+                (preferOwnerId && row.ownerId === preferOwnerId ? 0 : 1);
+              return rank(left) - rank(right);
+            });
+
+          let remaining = quantity;
+          for (const stock of usable) {
             if (remaining <= 0) break;
             const toPick = Math.min(remaining, stock.quantityCases);
 
             const result = await convertReservationToPick({
               stockId: stock.id,
-              orderId: orderRef.id,
+              orderId,
               quantityCases: toPick,
-              db,
+              db: tx,
             });
 
             remaining -= result.totalPicked;
+
+            // One movement per row drawn, so each owner's bottles are accounted for (Index 3.0)
+            if (result.totalPicked > 0) {
+              await tx.insert(wmsStockMovements).values({
+                movementNumber: await generateMovementNumber(tx),
+                movementType: 'pick',
+                lwin18: lwin,
+                productName,
+                quantityCases: result.totalPicked,
+                quantityBottles: result.totalPicked * (stock.caseConfig ?? 1),
+                fromOwnerId: stock.ownerId,
+                stockId: stock.id,
+                orderId,
+                notes: `Quick dispatch ${batchNumber}`,
+                performedBy: ctx.user.id,
+                performedAt: now,
+              });
+            }
           }
 
-          const picked = item.quantity - remaining;
-          if (picked > 0) {
-            const movementNumber = await generateMovementNumber();
-            await db.insert(wmsStockMovements).values({
-              movementNumber,
-              movementType: 'pick',
-              lwin18: item.lwin,
-              productName: item.productName,
-              quantityCases: picked,
-              orderId: orderRef.id,
-              notes: `Quick dispatch ${batchNumber}`,
-              performedBy: ctx.user.id,
-              performedAt: now,
+          if (remaining > 0) {
+            problems.push(
+              `${orderNumber}: ${remaining} ${isBottleLine ? 'bottle(s)' : 'case(s)'} of ${productName} not found on the shelf` +
+                (isBottleLine ? ' as single bottles (pick it on a pick list to open a case)' : ''),
+            );
+          }
+        };
+
+        // Lines on an open pick list that nobody scanned: only with a yes
+        if (confirmUnpicked) {
+          for (const line of unpickedLines) {
+            const list = openLists.find((entry) => entry.id === line.pickListId);
+            const isBottleLine = line.quantityBottles != null;
+            await drawLine({
+              orderId: list?.orderId ?? '',
+              orderNumber: list?.pickListNumber ?? '',
+              lwin: line.lwin18,
+              productName: line.productName,
+              quantity: isBottleLine ? (line.quantityBottles ?? 0) : line.quantityCases,
+              isBottleLine,
+              pack: null,
+              preferOwnerId: null,
+              allowPrefix: false,
             });
+            await tx
+              .update(wmsPickListItems)
+              .set({
+                isPicked: true,
+                pickedQuantity: isBottleLine ? line.quantityBottles : line.quantityCases,
+                pickedAt: now,
+                pickedBy: ctx.user.id,
+                notes: `Shipped by quick dispatch ${batchNumber} without a scan`,
+                updatedAt: now,
+              })
+              .where(eq(wmsPickListItems.id, line.id));
+          }
+          for (const list of openLists) {
+            await tx
+              .update(wmsPickLists)
+              .set({
+                status: 'completed',
+                completedAt: now,
+                completedBy: ctx.user.id,
+                updatedAt: now,
+              })
+              .where(eq(wmsPickLists.id, list.id));
           }
         }
-      }
-    }
 
-    // Update batch totals
-    const [updatedBatch] = await db
-      .update(wmsDispatchBatches)
-      .set({
-        orderCount: batchOrderInserts.length,
-        totalCases,
-        updatedAt: now,
-      })
-      .where(eq(wmsDispatchBatches.id, batchId))
-      .returning();
+        const pickListOrderIds = new Set(pickLists.map((list) => list.orderId));
+
+        // Zoho orders
+        if (zohoRows.length > 0) {
+          await tx
+            .update(zohoSalesOrders)
+            .set({
+              dispatchBatchId: batchId,
+              status: 'dispatched',
+              updatedAt: now,
+            })
+            .where(
+              inArray(
+                zohoSalesOrders.id,
+                zohoRows.map((o) => o.id),
+              ),
+            );
+
+          const [casesResult] = await tx
+            .select({
+              total: sql<number>`COALESCE(SUM(${zohoSalesOrderItems.quantity}), 0)::int`,
+            })
+            .from(zohoSalesOrderItems)
+            .where(
+              inArray(
+                zohoSalesOrderItems.salesOrderId,
+                zohoRows.map((o) => o.id),
+              ),
+            );
+
+          totalCases += casesResult?.total ?? 0;
+
+          for (const row of zohoRows) {
+            batchOrderInserts.push({
+              batchId,
+              orderId: row.id,
+              orderNumber: row.salesOrderNumber,
+            });
+
+            // Picked on a pick list (complete or not) or marked picked: the
+            // scanned lines already left the bay. Only an order that never
+            // went to picking is taken off the shelf here.
+            if (pickListOrderIds.has(row.id) || row.status === 'picked') continue;
+
+            const items = await tx
+              .select({
+                lwin18: zohoSalesOrderItems.lwin18,
+                sku: zohoSalesOrderItems.sku,
+                name: zohoSalesOrderItems.name,
+                quantity: zohoSalesOrderItems.quantity,
+                unit: zohoSalesOrderItems.unit,
+              })
+              .from(zohoSalesOrderItems)
+              .where(eq(zohoSalesOrderItems.salesOrderId, row.id));
+
+            for (const item of items) {
+              const lwin = item.lwin18 ?? item.sku;
+              if (!lwin || item.quantity <= 0) continue;
+              await drawLine({
+                orderId: row.id,
+                orderNumber: row.salesOrderNumber,
+                lwin,
+                productName: item.name,
+                quantity: item.quantity,
+                isBottleLine: /^bottle/i.test((item.unit ?? '').trim()),
+                pack: null,
+                preferOwnerId: null,
+                allowPrefix: false,
+              });
+            }
+          }
+        }
+
+        // PCO orders
+        if (pcoRows.length > 0) {
+          await tx
+            .update(privateClientOrders)
+            .set({
+              status: 'stock_in_transit',
+              updatedAt: now,
+            })
+            .where(
+              inArray(
+                privateClientOrders.id,
+                pcoRows.map((o) => o.id),
+              ),
+            );
+
+          const [casesResult] = await tx
+            .select({
+              total: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantity}), 0)::int`,
+            })
+            .from(privateClientOrderItems)
+            .where(
+              inArray(
+                privateClientOrderItems.orderId,
+                pcoRows.map((o) => o.id),
+              ),
+            );
+
+          totalCases += casesResult?.total ?? 0;
+
+          for (const row of pcoRows) {
+            batchOrderInserts.push({
+              batchId,
+              orderId: row.id,
+              orderNumber: row.orderNumber,
+            });
+
+            // Picked on a pick list: its scanned lines already left the bay
+            if (pickListOrderIds.has(row.id) || completedOrderIds.has(row.id)) continue;
+
+            const items = await tx
+              .select({
+                lwin: privateClientOrderItems.lwin,
+                productName: privateClientOrderItems.productName,
+                quantity: privateClientOrderItems.quantity,
+                caseConfig: privateClientOrderItems.caseConfig,
+              })
+              .from(privateClientOrderItems)
+              .where(eq(privateClientOrderItems.orderId, row.id));
+
+            for (const item of items) {
+              if (!item.lwin || item.quantity <= 0) continue;
+              await drawLine({
+                orderId: row.id,
+                orderNumber: row.orderNumber,
+                lwin: item.lwin,
+                productName: item.productName,
+                quantity: item.quantity,
+                // A single-bottle line is caseConfig 1: its quantity is bottles
+                isBottleLine: item.caseConfig === 1,
+                pack: item.caseConfig ?? null,
+                preferOwnerId: row.partnerId ?? null,
+                allowPrefix: true,
+              });
+            }
+          }
+        }
+
+        // Anything that would ship without leaving the shelf needs a yes
+        if (problems.length > 0 && !confirmUnpicked) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: `Check before dispatching: ${problems.join('; ')}.`,
+          });
+        }
+
+        if (batchOrderInserts.length > 0) {
+          await tx.insert(wmsDispatchBatchOrders).values(batchOrderInserts);
+        }
+
+        const [updatedBatch] = await tx
+          .update(wmsDispatchBatches)
+          .set({
+            orderCount: batchOrderInserts.length,
+            totalCases,
+            updatedAt: now,
+          })
+          .where(eq(wmsDispatchBatches.id, batchId))
+          .returning();
+
+        return { batch, updatedBatch, batchNumber, batchOrderInserts, totalCases };
+      });
+
+    const batchId = batch.id;
 
     // Generate delivery note if requested
     let deliveryNote: { pdfUrl: string; deliveryNoteNumber: string } | null =

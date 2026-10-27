@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { z } from 'zod';
 
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
@@ -13,6 +13,7 @@ import logger from '@/utils/logger';
 
 
 import generateOrderNumber from './generateOrderNumber';
+import nextPcoOrderNumber from './nextPcoOrderNumber';
 import recalculateOrderTotals from './recalculateOrderTotals';
 import type cloneOrderSchema from '../schemas/cloneOrderSchema';
 
@@ -146,23 +147,13 @@ const cloneOrderForClients = async (
     seen.add(key);
   }
 
-  const year = new Date().getFullYear();
-  const yearStart = `PCO-${year}-`;
-
   let created: { id: string; orderNumber: string; clientName: string }[];
 
   try {
     created = await db.transaction(async (tx) => {
-      const [last] = await tx
-        .select({ orderNumber: privateClientOrders.orderNumber })
-        .from(privateClientOrders)
-        .where(sql`${privateClientOrders.orderNumber} LIKE ${yearStart + '%'}`)
-        .orderBy(sql`${privateClientOrders.orderNumber} DESC`)
-        .limit(1);
-
-      let sequence = last?.orderNumber
-        ? parseInt(last.orderNumber.split('-')[2] ?? '0', 10) || 0
-        : 0;
+      // Numbered under the same lock as every other new order, then in sequence
+      const { sequence: first } = await nextPcoOrderNumber(tx);
+      let sequence = first - 1;
 
       const out = [];
       for (const client of resolved) {

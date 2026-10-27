@@ -230,9 +230,18 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
+  /*
+    The autosave reads the latest state when it fires, not the state of the
+    render that scheduled it. Called straight after setReceivedItems, the old
+    closure saved the map from before the change, so an added wine or a
+    commit could be missing from the draft and come back wrong on reload.
+  */
+  const latestDraftRef = useRef({ receivedItems, notes, lotNumber });
+  latestDraftRef.current = { receivedItems, notes, lotNumber };
+
   // Save draft (debounced)
   const saveDraft = useCallback(() => {
-    if (receivedItems.size === 0) return;
+    if (latestDraftRef.current.receivedItems.size === 0 && receivedItems.size === 0) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -241,7 +250,9 @@ const WMSReceiveShipmentPage = () => {
     setIsSaving(true);
 
     saveTimeoutRef.current = setTimeout(() => {
-      const items = Array.from(receivedItems.values()).map((item) => ({
+      const { receivedItems: latestItems, notes: latestNotes, lotNumber: latestLot } =
+        latestDraftRef.current;
+      const items = Array.from(latestItems.values()).map((item) => ({
         id: item.id,
         shipmentItemId: item.shipmentItemId,
         baseItemId: item.baseItemId,
@@ -262,7 +273,7 @@ const WMSReceiveShipmentPage = () => {
         isCommitted: item.isCommitted,
         committedAt: item.committedAt,
         locationAssignments: item.locationAssignments,
-        lotNumber: lotNumber || undefined,
+        lotNumber: latestLot || undefined,
         locationId: item.locationAssignments[0]?.locationId,
         notes: item.notes,
         photos: item.photos,
@@ -271,10 +282,10 @@ const WMSReceiveShipmentPage = () => {
       saveDraftMutate({
         shipmentId,
         items,
-        notes: notes || undefined,
+        notes: latestNotes || undefined,
       });
     }, 1000);
-  }, [receivedItems, notes, lotNumber, shipmentId, saveDraftMutate]);
+  }, [receivedItems, shipmentId, saveDraftMutate]);
 
   // Get current item - defined early so it can be used in effects
   const getCurrentItem = useCallback((): ReceivedItem | undefined => {
@@ -312,7 +323,12 @@ const WMSReceiveShipmentPage = () => {
         }
         loadedItems.set(item.id, {
           ...item,
-          ...(live
+          /*
+            An added wine is not a logistics line. It carries the first line's
+            id only because the commit schema needs one, so refreshing it from
+            that line turned the added wine into the shipment's first wine.
+          */
+          ...(live && !item.isAddedItem
             ? {
                 productName: live.productName,
                 producer: live.producer,
@@ -413,7 +429,16 @@ const WMSReceiveShipmentPage = () => {
   }, [shipment?.items, savedDraft, initialized, draftLoading]);
 
   // Reset pending cases when product changes
+  /*
+    Only when the operator moves to a different product. getCurrentItem
+    changes on every edit to receivedItems (a count, a label printed, the
+    autosave), and resetting on each of those wiped the bay just scanned.
+  */
+  const currentItemKey = `${currentProductIndex}:${getCurrentItem()?.id ?? ''}`;
+  const lastResetKeyRef = useRef<string | null>(null);
   useEffect(() => {
+    if (lastResetKeyRef.current === currentItemKey) return;
+    lastResetKeyRef.current = currentItemKey;
     const currentItem = getCurrentItem();
     if (currentItem) {
       const assignedCases = currentItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
@@ -425,7 +450,7 @@ const WMSReceiveShipmentPage = () => {
     setPrintError(null);
     setPalletLabelQty(1);
     setReprintQty({});
-  }, [currentProductIndex, getCurrentItem]);
+  }, [currentItemKey, getCurrentItem]);
 
   // Cleanup
   useEffect(() => {
@@ -764,6 +789,8 @@ const WMSReceiveShipmentPage = () => {
         shipmentId,
         lotNumber: currentLotNumber,
         notes: currentItem.notes,
+        // One receipt per line: a resend after a dropped connection is not booked twice
+        idempotencyKey: `receive:${shipmentId}:${currentItem.id}`,
         // Enriched context for NUC local server
         shipmentNumber: shipment?.shipmentNumber,
         shipmentType: shipment?.type,

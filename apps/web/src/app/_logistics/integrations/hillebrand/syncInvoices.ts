@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsInvoiceShipments, logisticsInvoices, logisticsShipments } from '@/database/schema';
@@ -98,7 +98,7 @@ const syncHillebrandInvoices = async (): Promise<SyncResult> => {
       try {
         // Check if we already have this invoice
         const [existing] = await db
-          .select({ id: logisticsInvoices.id })
+          .select({ id: logisticsInvoices.id, paidAt: logisticsInvoices.paidAt })
           .from(logisticsInvoices)
           .where(eq(logisticsInvoices.hillebrandInvoiceId, hInvoice.id))
           .limit(1);
@@ -121,7 +121,8 @@ const syncHillebrandInvoices = async (): Promise<SyncResult> => {
           totalAmount: hInvoice.totalAmount,
           openAmount: hInvoice.openAmount,
           paidAmount: hInvoice.totalAmount - hInvoice.openAmount,
-          paidAt: hInvoice.invoiceStatus === 'paid' ? new Date() : null,
+          // The first sync that sees it paid records when; later syncs keep that date
+          paidAt: hInvoice.invoiceStatus === 'paid' ? (existing?.paidAt ?? new Date()) : null,
         };
 
         let invoiceId: string;
@@ -165,11 +166,16 @@ const syncHillebrandInvoices = async (): Promise<SyncResult> => {
             const ourShipmentId = shipmentMap.get(shipmentRef.id);
 
             if (ourShipmentId) {
-              // Check if link already exists
+              // Check if this invoice is already linked to this shipment (one invoice can cover several)
               const [existingLink] = await db
                 .select({ id: logisticsInvoiceShipments.id })
                 .from(logisticsInvoiceShipments)
-                .where(eq(logisticsInvoiceShipments.invoiceId, invoiceId))
+                .where(
+                  and(
+                    eq(logisticsInvoiceShipments.invoiceId, invoiceId),
+                    eq(logisticsInvoiceShipments.shipmentId, ourShipmentId),
+                  ),
+                )
                 .limit(1);
 
               if (!existingLink) {
@@ -192,7 +198,7 @@ const syncHillebrandInvoices = async (): Promise<SyncResult> => {
         });
         logger.error('Error syncing Hillebrand invoice', {
           hillebrandId: hInvoice.id,
-          error,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }

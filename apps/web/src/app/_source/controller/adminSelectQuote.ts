@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { sourceRfqItems, sourceRfqQuotes, sourceRfqs } from '@/database/schema';
@@ -28,6 +28,7 @@ const adminSelectQuote = adminProcedure
       .select({
         quote: sourceRfqQuotes,
         rfqId: sourceRfqItems.rfqId,
+        currentPrimaryQuoteId: sourceRfqItems.selectedQuoteId,
         rfqStatus: sourceRfqs.status,
       })
       .from(sourceRfqQuotes)
@@ -94,16 +95,22 @@ const adminSelectQuote = adminProcedure
         )
       );
 
-    // Calculate total price from all selected quotes
-    const totalPrice = selectedQuotes.reduce(
-      (sum, q) => sum + (q.costPricePerCaseUsd ?? 0),
-      0
-    );
+    // The primary selection is the quote the final quote prices from
+    // (adminGenerateFinalQuote joins on selectedQuoteId). Keep the existing
+    // primary while it is still selected; otherwise the quote just picked;
+    // otherwise any remaining selection. The item's price is that one quote's
+    // price per case, never the sum of every selected quote.
+    const primaryQuote =
+      selectedQuotes.find((q) => q.id === quoteResult.currentPrimaryQuoteId) ??
+      selectedQuotes.find((q) => q.id === quoteId) ??
+      selectedQuotes[0] ??
+      null;
+    const primaryPrice = primaryQuote?.costPricePerCaseUsd ?? null;
 
     // Update item status based on selections
     const now = new Date();
     const hasSelections = selectedQuotes.length > 0;
-    const primaryQuoteId = selectedQuotes[0]?.id ?? null;
+    const primaryQuoteId = primaryQuote?.id ?? null;
 
     const [updatedItem] = await db
       .update(sourceRfqItems)
@@ -112,8 +119,8 @@ const adminSelectQuote = adminProcedure
         selectedAt: hasSelections ? now : null,
         selectedBy: hasSelections ? user.id : null,
         status: hasSelections ? 'selected' : 'quoted',
-        calculatedPriceUsd: hasSelections ? totalPrice : null,
-        finalPriceUsd: hasSelections ? totalPrice : null,
+        calculatedPriceUsd: hasSelections ? primaryPrice : null,
+        finalPriceUsd: hasSelections ? primaryPrice : null,
         priceAdjustedBy: null,
       })
       .where(eq(sourceRfqItems.id, itemId))
@@ -123,7 +130,12 @@ const adminSelectQuote = adminProcedure
     await db
       .update(sourceRfqs)
       .set({ status: 'selecting' })
-      .where(eq(sourceRfqs.id, quoteResult.rfqId));
+      .where(
+        and(
+          eq(sourceRfqs.id, quoteResult.rfqId),
+          inArray(sourceRfqs.status, ['sent', 'collecting', 'comparing']),
+        ),
+      );
 
     return {
       ...updatedItem,

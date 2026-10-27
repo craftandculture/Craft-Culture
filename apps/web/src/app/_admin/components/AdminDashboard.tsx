@@ -24,14 +24,15 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from '../../_privateClientOrders/components/PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
 
-/** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
+/** Default UAE exchange rate for AED/USD conversion: the peg */
+const DEFAULT_EXCHANGE_RATE = USD_TO_AED;
 
 /**
  * AdminDashboard displays an overview of all private client orders

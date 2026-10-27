@@ -30,24 +30,6 @@ const HILLEBRAND_PASSWORD = process.env.HILLEBRAND_PASSWORD;
  * Get a new access token using password grant
  */
 const getNewAccessToken = async (): Promise<string> => {
-  // Debug: Log credential presence and lengths (not values)
-  logger.info('Hillebrand auth debug', {
-    hasClientId: !!HILLEBRAND_CLIENT_ID,
-    clientIdLength: HILLEBRAND_CLIENT_ID?.length,
-    clientIdTrimmed: HILLEBRAND_CLIENT_ID?.trim().length,
-    hasClientSecret: !!HILLEBRAND_CLIENT_SECRET,
-    clientSecretLength: HILLEBRAND_CLIENT_SECRET?.length,
-    clientSecretTrimmed: HILLEBRAND_CLIENT_SECRET?.trim().length,
-    hasUsername: !!HILLEBRAND_USERNAME,
-    usernameLength: HILLEBRAND_USERNAME?.length,
-    usernameTrimmed: HILLEBRAND_USERNAME?.trim().length,
-    usernameValue: HILLEBRAND_USERNAME?.trim(),
-    hasPassword: !!HILLEBRAND_PASSWORD,
-    passwordLength: HILLEBRAND_PASSWORD?.length,
-    passwordTrimmed: HILLEBRAND_PASSWORD?.trim().length,
-    tokenUrl: HILLEBRAND_TOKEN_URL,
-  });
-
   if (!HILLEBRAND_CLIENT_ID || !HILLEBRAND_CLIENT_SECRET || !HILLEBRAND_USERNAME || !HILLEBRAND_PASSWORD) {
     throw new Error('Hillebrand credentials not configured');
   }
@@ -75,8 +57,8 @@ const getNewAccessToken = async (): Promise<string> => {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Failed to get Hillebrand token', { status: response.status, error: errorText, tokenUrl: HILLEBRAND_TOKEN_URL });
+    // The response body can echo the request; log only the status
+    logger.error('Failed to get Hillebrand token', { status: response.status });
     throw new Error(`Failed to authenticate with Hillebrand: ${response.status}`);
   }
 
@@ -180,8 +162,8 @@ const hillebrandFetch = async <T>(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Hillebrand API error', { endpoint, status: response.status, error: errorText });
+    const errorText = (await response.text()).slice(0, 200);
+    logger.error('Hillebrand API error', { endpoint, status: response.status });
     throw new Error(`Hillebrand API error: ${response.status} - ${errorText}`);
   }
 

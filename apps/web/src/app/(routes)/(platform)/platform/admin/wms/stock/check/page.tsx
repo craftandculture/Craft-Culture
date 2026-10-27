@@ -385,8 +385,8 @@ const StockCheckPage = () => {
       setEditingItem(null);
       setAdjustmentReason('');
       // Refetch stock data
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'operations', 'getStockAtLocation'] });
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock', 'getByProduct'] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'operations', 'getStockAtLocation']] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock', 'getByProduct']] });
     },
     onError: (error) => {
       toast.error(`Failed to update: ${error.message}`);

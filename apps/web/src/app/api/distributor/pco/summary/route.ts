@@ -2,7 +2,9 @@ import { eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import distributorItemView from '@/app/_privateClientOrders/utils/distributorItemView';
 import renderOrderSummaryPDF from '@/app/_privateClientOrders/utils/renderOrderSummaryPDF';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partners, privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
     // member sees ONLY orders assigned to a distributor they belong to — never
     // orders they merely bundled into the request. (Admins see all requested.)
     let orders = ordersResult;
-    if (user.role !== 'admin') {
+    if (!isTeamMember(user)) {
       const memberships = await db.query.partnerMembers.findMany({
         where: {
           userId: user.id,
@@ -103,13 +105,9 @@ export async function GET(request: NextRequest) {
     const ordersData = orders.map((order) => {
       const items = lineItemsByOrder.get(order.id) ?? [];
       const usdToAedRate = order.usdToAedRate ?? 3.6725;
-      const totalSupplierCost = items.reduce((sum, item) => sum + item.totalUsd, 0);
       const orderTotal = order.totalUsd ?? 0;
-
-      const calculateClientPrice = (supplierTotal: number) => {
-        if (totalSupplierCost === 0) return 0;
-        return (supplierTotal / totalSupplierCost) * orderTotal;
-      };
+      // Each line's share of the distributor cost and client price, never the partner's price
+      const visibleItems = distributorItemView(items, order);
 
       return {
         orderNumber: order.orderNumber ?? order.id,
@@ -118,23 +116,18 @@ export async function GET(request: NextRequest) {
         createdAt: order.createdAt,
         totalUsd: orderTotal,
         usdToAedRate,
-        lineItems: items.map((item) => {
-          const clientTotal = calculateClientPrice(item.totalUsd);
-          const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-          const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
-
-          return {
-            productName: item.productName ?? 'Unknown Product',
-            producer: item.producer,
-            vintage: item.vintage,
-            region: item.region,
-            bottleSize: item.bottleSize,
-            quantity: item.quantity ?? 0,
-            distributorCostPerCaseUsd: distributorCostPerCase,
-            pricePerCaseUsd: clientPricePerCase,
-            totalUsd: clientTotal,
-          };
-        }),
+        lineItems: visibleItems.map((item) => ({
+          productName: item.productName ?? 'Unknown Product',
+          producer: item.producer,
+          vintage: item.vintage,
+          region: item.region,
+          bottleSize: item.bottleSize,
+          quantity: item.quantity ?? 0,
+          distributorCostPerCaseUsd: item.distributorCostPerCaseUsd,
+          pricePerCaseUsd: item.clientPricePerCaseUsd,
+          totalUsd: item.clientTotalUsd,
+        inBox: item.inBox,
+        })),
       };
     });
 

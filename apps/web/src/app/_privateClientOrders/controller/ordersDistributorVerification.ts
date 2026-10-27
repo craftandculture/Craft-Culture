@@ -7,7 +7,9 @@ import type { PrivateClientOrder } from '@/database/schema';
 import { privateClientContacts, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import distributorOrderView from '../utils/distributorOrderView';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+
 
 const distributorVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -137,7 +139,8 @@ const ordersDistributorVerification = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersDistributorVerification;

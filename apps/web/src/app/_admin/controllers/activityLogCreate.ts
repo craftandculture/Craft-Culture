@@ -19,8 +19,13 @@ const activityLogCreate = async (
 
   // Extract IP and User Agent from request headers
   const headersList = await headers();
-  const ipAddress = headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip');
-  const userAgent = headersList.get('user-agent');
+  // Vercel sets x-real-ip to the connecting client and overwrites
+  // x-forwarded-for, so prefer x-real-ip and only take the first hop otherwise
+  const ipAddress =
+    headersList.get('x-real-ip')?.trim() ||
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    null;
+  const userAgent = headersList.get('user-agent')?.slice(0, 500) ?? null;
 
   await logUserActivity({
     userId: user.id,
@@ -28,8 +33,8 @@ const activityLogCreate = async (
     entityType: input.entityType,
     entityId: input.entityId,
     metadata: input.metadata,
-    ipAddress: ipAddress ?? null,
-    userAgent: userAgent ?? null,
+    ipAddress,
+    userAgent,
   });
 
   return { success: true };

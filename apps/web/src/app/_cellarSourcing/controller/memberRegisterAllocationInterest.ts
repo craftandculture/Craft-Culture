@@ -7,7 +7,7 @@ import {
   cellarAllocationInterests,
   cellarAllocations,
 } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import notifyAllocationUpdate from '../data/notifyAllocationUpdate';
 
@@ -22,7 +22,7 @@ import notifyAllocationUpdate from '../data/notifyAllocationUpdate';
  * @example
  *   await trpcClient.cellarSourcing.member.registerInterest.mutate({ allocationId, cases: 2 });
  */
-const memberRegisterAllocationInterest = stockOwnerProcedure
+const memberRegisterAllocationInterest = collectorProcedure
   .input(
     z.object({
       allocationId: z.string().uuid(),
@@ -54,10 +54,19 @@ const memberRegisterAllocationInterest = stockOwnerProcedure
       allocation.maxCasesPerMember ?? allocation.totalCases,
     );
 
+    /*
+      The per-member limit may be quoted — it is part of the offer — but the
+      size of the whole allocation is not: a member sees what they may ask
+      for, never how much there is in total.
+    */
     if (input.cases > cap) {
+      const perMember = allocation.maxCasesPerMember;
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: `You can ask for up to ${cap} ${cap === 1 ? 'case' : 'cases'}.`,
+        message:
+          perMember !== null && perMember <= allocation.totalCases
+            ? `You can ask for up to ${perMember} ${perMember === 1 ? 'case' : 'cases'}.`
+            : 'That is more than we can offer on this wine. Please ask for fewer cases.',
       });
     }
 

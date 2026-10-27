@@ -1,4 +1,4 @@
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setSellMarginSchema } from '../schemas/pricingManagerSchema';
 import writeProductPricing from '../utils/writeProductPricing';
@@ -16,7 +16,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  * @param sellMarginPct - Bespoke margin % over landed, or null to clear
  * @param sellingPricePerBottle - Derived selling price, or null to clear
  */
-const adminSetSellMargin = wmsOperatorProcedure
+const adminSetSellMargin = adminProcedure
   .input(setSellMarginSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, sellMarginPct, sellingPricePerBottle } = input;

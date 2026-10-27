@@ -1,7 +1,10 @@
+import { TRPCError } from '@trpc/server';
+
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import insertRows from '../data/insertRows';
+import resolveWmsOwner from '../data/resolveWmsOwner';
 import { seedSkusFromWmsSchema } from '../schemas/triangulationSchemas';
 import tokenizeMatch from '../utils/tokenizeMatch';
 
@@ -18,7 +21,18 @@ import tokenizeMatch from '../utils/tokenizeMatch';
 const adminSeedSkusFromWms = adminProcedure
   .input(seedSkusFromWmsSchema)
   .mutation(async ({ input }) => {
-    const { ownerName } = input;
+    const programmeId = input.programmeId;
+    // The programme's configured owner, not whatever the browser sent
+    const ownerName = await resolveWmsOwner(programmeId, input.ownerName);
+    const tokens = tokenizeMatch(ownerName);
+
+    // No tokens would match every owner's stock
+    if (tokens.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Set the WMS owner for this client before seeding from the warehouse',
+      });
+    }
 
     const candidates = await client<
       {
@@ -43,10 +57,9 @@ const adminSeedSkusFromWms = adminProcedure
       WHERE s.supplier_sku IS NOT NULL
         AND TRIM(s.supplier_sku) <> ''
         AND NOT EXISTS (
-          SELECT 1 FROM UNNEST(${tokenizeMatch(ownerName)}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]+')))
         )
       ORDER BY s.supplier_sku, s.received_at DESC NULLS LAST
     `;
@@ -64,6 +77,8 @@ const adminSeedSkusFromWms = adminProcedure
       bottle_size: candidate.bottleSize ?? '750ml',
       case_config: candidate.caseConfig && candidate.caseConfig > 0 ? candidate.caseConfig : 6,
       owner_name: ownerName,
+      // The client the wines are seeded for, never the column default
+      programme_id: programmeId,
     }));
 
     const inserted = await insertRows<{ id: string }>(
@@ -77,6 +92,7 @@ const adminSeedSkusFromWms = adminProcedure
         'bottle_size',
         'case_config',
         'owner_name',
+        'programme_id',
       ],
       rows,
       { onConflict: '(programme_id, w_code) DO NOTHING', returning: 'id' },

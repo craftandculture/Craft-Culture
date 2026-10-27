@@ -2,8 +2,14 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import {
+  getOrderPCOVariables,
+  getOrderPricingOverrides,
+} from '@/app/_pricing/data/getOrderPricingOverrides';
+import { getPCOVariables } from '@/app/_pricing/data/getPricingConfig';
 import db from '@/database/client';
 import {
+  cellarReleaseRequests,
   partners,
   privateClientContacts,
   privateClientOrderActivityLogs,
@@ -120,8 +126,47 @@ const adminGetOne = wmsOperatorProcedure
       .where(eq(privateClientOrderActivityLogs.orderId, input.id))
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
+    /*
+      The Private Cellar release this order delivers, if any. The wine is the
+      member's own, so the team needs to see that before invoicing it.
+    */
+    const [cellarRelease] = await db
+      .select({
+        id: cellarReleaseRequests.id,
+        requestNumber: cellarReleaseRequests.requestNumber,
+        totalCostUsd: cellarReleaseRequests.totalCostUsd,
+      })
+      .from(cellarReleaseRequests)
+      .where(eq(cellarReleaseRequests.privateClientOrderId, input.id))
+      .limit(1);
+
+    /*
+      The C&C margin as configured for this order. Working it back out of the
+      rounded totals gave 4.8978 for a margin keyed as 4.8976.
+    */
+    const globalVariables = await getPCOVariables().catch(() => null);
+    const pricingVariables = globalVariables
+      ? await getOrderPCOVariables(
+          input.id,
+          orderResult.order.partnerId ?? null,
+          globalVariables,
+        ).catch(() => null)
+      : null;
+
     return {
       ...orderResult.order,
+      cellarRelease: cellarRelease ?? null,
+      ccMarginPercent: pricingVariables?.ccMarginPercent ?? null,
+      /* Every rate the order is priced at, and whether they are its own */
+      pricingVariables,
+      /* Rates set for this order alone, rather than a snapshot of standard ones */
+      hasPricingOverride: await getOrderPricingOverrides(input.id)
+        .then(
+          (row) =>
+            row?.notes === 'Set on the order' ||
+            row?.notes === 'Bespoke pricing set during approval',
+        )
+        .catch(() => false),
       partner: orderResult.partner,
       distributor,
       feedBundle,

@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { cellarUkMoves } from '@/database/schema';
 
@@ -12,23 +13,11 @@ import { cellarUkMoves } from '@/database/schema';
  * @example
  *   await generateUkMoveNumber(); // 'UKM-2026-0001'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped reference
  */
-const generateUkMoveNumber = async () => {
-  const prefix = `UKM-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ moveNumber: cellarUkMoves.moveNumber })
-    .from(cellarUkMoves)
-    .where(like(cellarUkMoves.moveNumber, `${prefix}%`))
-    .orderBy(desc(cellarUkMoves.moveNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.moveNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateUkMoveNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, cellarUkMoves, cellarUkMoves.moveNumber, 'UKM', offset);
 
 export default generateUkMoveNumber;

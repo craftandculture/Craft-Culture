@@ -2,7 +2,7 @@ import { asc, eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPricingBands } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingBandsSchema } from '../schemas/pricingBandSchema';
 
@@ -16,7 +16,7 @@ import { getPricingBandsSchema } from '../schemas/pricingBandSchema';
  *   await trpcClient.wms.admin.stock.pricing.getBands.query({});
  *   // [{ minLandedPerBottle: 0, maxLandedPerBottle: 50, b2bMarginPct: 30, pcMarginPct: 45 }, …]
  */
-const adminGetPricingBands = wmsOperatorProcedure
+const adminGetPricingBands = adminProcedure
   .input(getPricingBandsSchema)
   .query(async ({ input }) => {
     const ownerId = input?.ownerId ?? null;

@@ -1,7 +1,12 @@
+import { inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getCatalogueRows from '@/app/_wms/data/getCatalogueRows';
+import db from '@/database/client';
+import { wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
+import tryCatch from '@/utils/tryCatch';
 
 /**
  * Everything a member can buy
@@ -37,6 +42,32 @@ const memberBrowseCatalogue = stockOwnerProcedure
       category: input?.category,
     });
 
+    /*
+      When each wine first reached the warehouse, so the list can mark what
+      is new to it. Read on its own rather than added to the catalogue query,
+      which the price list shares and which has emptied before when changed.
+    */
+    const lwins = [...new Set(rows.map((row) => row.lwin18))];
+    const [arrivals, arrivalsError] = await tryCatch(async () =>
+      lwins.length > 0
+        ? db
+            .select({
+              lwin18: wmsStock.lwin18,
+              firstArrivedAt: sql<string>`MIN(COALESCE(${wmsStock.receivedAt}, ${wmsStock.createdAt}))::text`,
+            })
+            .from(wmsStock)
+            .where(inArray(wmsStock.lwin18, lwins))
+            .groupBy(wmsStock.lwin18)
+        : [],
+    );
+
+    // The list matters more than its "Recently added" tags: never fail it for them
+    if (arrivalsError) {
+      logger.error('Cellar List arrival dates failed', { error: arrivalsError.message });
+    }
+
+    const arrivedAt = new Map((arrivals ?? []).map((row) => [row.lwin18, row.firstArrivedAt]));
+
     return {
       wines: rows.map((row) => ({
         lwin18: row.lwin18,
@@ -52,6 +83,7 @@ const memberBrowseCatalogue = stockOwnerProcedure
         availableCases: row.availableCases,
         pricePerBottleUsd: row.ibPerBottle,
         pricePerCaseUsd: row.ibPerCase,
+        addedAt: arrivedAt.get(row.lwin18) ?? null,
       })),
     };
   });

@@ -7,13 +7,14 @@
  * sync backfills the invoice_number column onto the order).
  */
 
-import { desc, eq, gt, inArray, or } from 'drizzle-orm';
+import { desc, eq, gt, inArray, isNotNull, or } from 'drizzle-orm';
 
 import readOrderedPack from '@/app/_wms/utils/readOrderedPack';
 import resolveRepackFromStock from '@/app/_wms/utils/resolveRepackFromStock';
 import type { RepackStockRow } from '@/app/_wms/utils/resolveRepackFromStock';
 import db from '@/database/client';
 import {
+  partners,
   wmsLocations,
   wmsStock,
   zohoInvoices,
@@ -87,6 +88,23 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         .where(or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)))
     : [];
 
+  // Partner logos for the order cards, loaded once and matched in memory: on
+  // the Zoho contact first, else on the business name (as the pick list does).
+  const logoPartners = await db
+    .select({
+      zohoContactId: partners.zohoContactId,
+      businessName: partners.businessName,
+      logoUrl: partners.logoUrl,
+    })
+    .from(partners)
+    .where(isNotNull(partners.logoUrl));
+  const logoByContact = new Map(
+    logoPartners.filter((p) => p.zohoContactId).map((p) => [p.zohoContactId, p.logoUrl]),
+  );
+  const logoByName = new Map(
+    logoPartners.map((p) => [p.businessName.toLowerCase(), p.logoUrl]),
+  );
+
   // Fetch item counts for each order
   const ordersWithItems = await Promise.all(
     orders.map(async (order) => {
@@ -137,6 +155,10 @@ const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
         ...order,
         invoiceNumber: order.invoiceNumber ?? linkedInvoice?.invoiceNumber ?? null,
         invoiceStatus: linkedInvoice?.invoiceStatus ?? null,
+        customerLogoUrl:
+          (order.zohoCustomerId ? logoByContact.get(order.zohoCustomerId) : undefined) ??
+          (order.customerName ? logoByName.get(order.customerName.toLowerCase()) : undefined) ??
+          null,
         itemCount: items.length,
         totalQuantity: cases,
         bottleCount,

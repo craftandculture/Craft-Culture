@@ -5,7 +5,7 @@ import { z } from 'zod';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 const adminResetSchema = z.object({
   orderId: z.string().uuid(),
@@ -26,7 +26,7 @@ const adminResetSchema = z.object({
  * - awaiting_distributor_verification: Skip to distributor verification
  * - awaiting_client_payment: Skip verification entirely, proceed to payment
  */
-const ordersAdminResetVerification = wmsOperatorProcedure
+const ordersAdminResetVerification = adminProcedure
   .input(adminResetSchema)
   .mutation(async ({ input, ctx }) => {
     const { orderId, targetStatus, notes } = input;

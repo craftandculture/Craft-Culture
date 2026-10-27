@@ -134,8 +134,8 @@ const adminDissolvePallet = wmsOperatorProcedure
       quantityBottles: 0,
       fromLocationId: pallet.locationId,
       toLocationId,
-      ownerId: pallet.ownerId,
-      ownerName: pallet.ownerName,
+      // Whose pallet: the ledger has no owner_id/owner_name columns
+      fromOwnerId: pallet.ownerId,
       performedBy: ctx.user.id,
       notes: `Pallet ${pallet.palletCode} dissolved, ${casesCount} cases moved to ${toLocation.locationCode}${reason ? `: ${reason}` : ''}`,
       scannedBarcodes,

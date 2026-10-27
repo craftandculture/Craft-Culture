@@ -364,7 +364,7 @@ const AddItemModal = ({
             <textarea
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
-              placeholder="Internal notes for this item (shown to partners)..."
+              placeholder="Internal notes for this item (not shown to suppliers)..."
               rows={2}
               className="w-full rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-sm"
             />

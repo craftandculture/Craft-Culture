@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
 
-import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
+import getCraftCultureOwnerIds from '@/app/_partners/data/getCraftCultureOwnerIds';
 import lwinPakKey from '@/app/_wms/utils/lwinPakKey';
 import onPriceListConditions from '@/app/_wms/utils/onPriceListConditions';
 import db from '@/database/client';
@@ -182,8 +182,9 @@ const allocateParcels = async (
     C&C's own stock first, because it settles to nobody. Then a partner's
     consignment, settled at its landed cost. Members' offers last, oldest first.
   */
+  const houseIds = await getCraftCultureOwnerIds(executor);
   const rank = (row: (typeof sellable)[number]) =>
-    lotByStock.has(row.id) ? 2 : isCraftCultureOwner(row.ownerName) ? 0 : 1;
+    lotByStock.has(row.id) ? 2 : row.ownerId && houseIds.has(row.ownerId) ? 0 : 1;
 
   const ordered = [...sellable].sort((a, b) => {
     const aLot = lotByStock.get(a.id);

@@ -1,5 +1,7 @@
 import { client } from '@/database/client';
 
+import type { SqlClient } from './sqlClient';
+
 /**
  * Recompute the canonical bottle figure for every line of an import
  *
@@ -12,8 +14,11 @@ import { client } from '@/database/client';
  *
  * @param importId - The import whose lines should be recalculated
  */
-const recalculateLineBottles = async (importId: string) => {
-  await client`
+const recalculateLineBottles = async (
+  importId: string,
+  sql: SqlClient = client,
+) => {
+  await sql`
     UPDATE tri_import_lines l
     SET quantity_bottles = CASE
           WHEN l.unit = 'case' THEN l.quantity * COALESCE(

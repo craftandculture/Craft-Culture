@@ -11,9 +11,11 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getUaeArrivalRateCard from '../data/getUaeArrivalRateCard';
+import quoteAllInPrices from '../utils/quoteAllInPrices';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
-import quoteUnitPrices from '../utils/quoteUnitPrices';
 import requestUnitCounts from '../utils/requestUnitCounts';
+import uaeArrivalCharge from '../utils/uaeArrivalCharge';
 
 const compareQuotesSchema = z.object({
   quoteIds: z.array(z.string().uuid()).min(2).max(5),
@@ -70,6 +72,8 @@ const adminCompareQuotes = adminProcedure
             id: logisticsQuoteRequests.id,
             totalBottles: logisticsQuoteRequests.totalBottles,
             total75clEquivalents: logisticsQuoteRequests.total75clEquivalents,
+            destinationCountry: logisticsQuoteRequests.destinationCountry,
+            transportMode: logisticsQuoteRequests.transportMode,
             shipmentBottles: logisticsShipments.totalBottles,
           })
           .from(logisticsQuoteRequests)
@@ -80,37 +84,42 @@ const adminCompareQuotes = adminProcedure
           .where(inArray(logisticsQuoteRequests.id, requestIds))
       : [];
 
+    const rateCard = await getUaeArrivalRateCard();
+
     // Build comparison data, every total also in USD so currencies compare
     const quotesWithItems = quotes.map((quote) => {
-      const usd = quoteTotalUsd(quote);
       const request = requests.find((r) => r.id === quote.requestId);
       const counts = request
         ? requestUnitCounts(request, request.shipmentBottles)
         : null;
+      const items = lineItemsByQuote.get(quote.id) || [];
+      const arrival = uaeArrivalCharge(
+        rateCard,
+        request ?? quote,
+        items.map((i) => i.category),
+      );
 
       return {
         ...quote,
-        totalUsd: usd,
-        ...quoteUnitPrices(
-          usd,
-          counts?.bottles ?? null,
-          counts?.equivalents ?? null,
-        ),
-        lineItems: lineItemsByQuote.get(quote.id) || [],
+        ...quoteAllInPrices(quoteTotalUsd(quote), arrival, {
+          bottles: counts?.bottles ?? null,
+          equivalents: counts?.equivalents ?? null,
+        }),
+        lineItems: items,
       };
     });
 
     // Metrics are in USD when every quote converts; otherwise in the quotes' own figures, flagged
-    const allInUsd = quotesWithItems.every((q) => q.totalUsd != null);
+    const everyInUsd = quotesWithItems.every((q) => q.totalUsd != null);
     const priceOf = (q: (typeof quotesWithItems)[number]) =>
-      allInUsd ? q.totalUsd! : q.totalPrice;
+      everyInUsd ? q.allInUsd! : q.totalPrice;
     const prices = quotesWithItems.map(priceOf);
     const transitDays = quotes
       .map((q) => q.transitDays)
       .filter((d): d is number => d !== null);
 
     const comparison = {
-      currency: allInUsd ? 'USD' : null,
+      currency: everyInUsd ? 'USD' : null,
       lowestPrice: Math.min(...prices),
       highestPrice: Math.max(...prices),
       averagePrice: prices.reduce((a, b) => a + b, 0) / prices.length,
@@ -137,7 +146,15 @@ const adminCompareQuotes = adminProcedure
     // Build category comparison
     const categoryComparison: Record<
       string,
-      Array<{ quoteId: string; forwarder: string; amount: number | null }>
+      Array<{
+        quoteId: string;
+        forwarder: string;
+        /** In the quote's own currency */
+        amount: number | null;
+        currency: string;
+        /** The same amount in USD at the quote's rate, for ranking across currencies */
+        amountUsd: number | null;
+      }>
     > = {};
 
     for (const category of allCategories) {
@@ -150,10 +167,15 @@ const adminCompareQuotes = adminProcedure
             ? categoryItems.reduce((sum, item) => sum + item.total, 0)
             : null;
 
+        const rate = quote.currency.toUpperCase() === 'USD' ? 1 : quote.fxToUsd;
+
         return {
           quoteId: quote.id,
           forwarder: quote.forwarderName,
           amount: totalForCategory,
+          currency: quote.currency,
+          amountUsd:
+            totalForCategory != null && rate ? Math.round(totalForCategory * rate * 100) / 100 : null,
         };
       });
     }

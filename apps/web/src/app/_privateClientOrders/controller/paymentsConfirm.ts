@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
@@ -10,6 +10,9 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+
+import partnerOrderView from '../utils/partnerOrderView';
+import resolveOrderParty from '../utils/resolveOrderParty';
 
 const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
@@ -39,17 +42,10 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
     });
   }
 
-  // Check access - must be admin or relevant party
-  const isAdmin = user.role === 'admin';
-
-  // Check if user is a member of the partner that owns this order
-  const [userPartnerMembership] = await db
-    .select({ partnerId: partnerMembers.partnerId })
-    .from(partnerMembers)
-    .where(eq(partnerMembers.userId, user.id))
-    .limit(1);
-
-  const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
+  // C&C staff, or a member of the wine partner who placed it (not view-only)
+  const { party, canWrite } = await resolveOrderParty(user, order);
+  const isAdmin = party === 'staff';
+  const isPartner = party === 'partner' && canWrite;
 
   // Validate permissions based on payment stage
   if (paymentStage === 'client') {
@@ -145,12 +141,19 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       break;
   }
 
-  // Update order
+  // Update order, unless it moved on while this was being confirmed
   const [updatedOrder] = await db
     .update(privateClientOrders)
     .set(updateData)
-    .where(eq(privateClientOrders.id, orderId))
+    .where(and(eq(privateClientOrders.id, orderId), eq(privateClientOrders.status, order.status)))
     .returning();
+
+  if (!updatedOrder) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'The order changed while you were confirming this payment. Refresh and try again.',
+    });
+  }
 
   // Log activity and send notifications for client payment confirmation
   if (paymentStage === 'client' && updatedOrder) {
@@ -195,7 +198,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
     }
   }
 
-  return updatedOrder;
+  return isAdmin ? updatedOrder : partnerOrderView(updatedOrder);
 });
 
 export default paymentsConfirm;

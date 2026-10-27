@@ -1,9 +1,8 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { consignmentSettlements } from '@/database/schema';
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Next settlement number for the year
@@ -18,23 +17,11 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * member) could never be confirmed.
  *
  * @param executor - The open transaction, or the shared connection
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped settlement reference
  */
-const generateSettlementNumber = async (executor: Tx | typeof db = db) => {
-  const prefix = `STL-${new Date().getFullYear()}-`;
-
-  const [latest] = await executor
-    .select({ settlementNumber: consignmentSettlements.settlementNumber })
-    .from(consignmentSettlements)
-    .where(like(consignmentSettlements.settlementNumber, `${prefix}%`))
-    .orderBy(desc(consignmentSettlements.settlementNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.settlementNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateSettlementNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, consignmentSettlements, consignmentSettlements.settlementNumber, 'STL', offset);
 
 export default generateSettlementNumber;

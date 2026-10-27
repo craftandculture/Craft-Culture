@@ -20,6 +20,7 @@ import pricingRouter from '@/app/_pricing/router';
 import pricingCalcRouter from '@/app/_pricingCalculator/router';
 import privateClientContactsRouter from '@/app/_privateClientContacts/router';
 import privateClientOrdersRouter from '@/app/_privateClientOrders/router';
+import productUpdatesRouter from '@/app/_productUpdates/router';
 import quotesRouter from '@/app/_quotes/router';
 import salesQuotesRouter from '@/app/_salesQuotes/router';
 import settingsRouter from '@/app/_settings/router';
@@ -59,6 +60,7 @@ export const appRouter = createTRPCRouter({
   quotes: quotesRouter,
   salesQuotes: salesQuotesRouter,
   teamTasks: teamTasksRouter,
+  productUpdates: productUpdatesRouter,
   source: sourceRouter,
   triangulation: triangulationRouter,
   warehouse: warehouseRouter,

@@ -15,11 +15,15 @@ import matchesSecret from '@/utils/matchesSecret';
  * Usage: GET /api/auth/device?token=YOUR_DEVICE_TOKEN, or send the token in an
  * `x-device-token` header (preferred: it stays out of URLs and logs)
  *
+ * The query form stays because the TC27 opens this from a bookmark and cannot
+ * add headers. Every response sets Referrer-Policy: no-referrer and the
+ * success path redirects at once, so the token does not travel any further.
+ *
  * The device token and user email must be configured in:
  * - WMS_DEVICE_TOKEN: A secure random token
  * - WMS_DEVICE_USER_EMAIL: The email of the user to authenticate as
  */
-export const GET = async (request: NextRequest) => {
+const handleDeviceAuth = async (request: NextRequest) => {
   const url = new URL(request.url);
   const token = request.headers.get('x-device-token') ?? url.searchParams.get('token');
 
@@ -135,6 +139,12 @@ export const GET = async (request: NextRequest) => {
       { status: 500 },
     );
   }
+};
+
+export const GET = async (request: NextRequest) => {
+  const response = await handleDeviceAuth(request);
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  return response;
 };
 
 export default GET;

@@ -32,6 +32,10 @@ const adminGetDispatchBatches = wmsOperatorProcedure
         status: wmsDispatchBatches.status,
         distributorId: wmsDispatchBatches.distributorId,
         distributorName: wmsDispatchBatches.distributorName,
+        // The distributor's logo, so a batch is recognised before it is read
+        distributorLogoUrl: sql<string | null>`(
+          SELECT p.logo_url FROM partners p WHERE p.id = ${wmsDispatchBatches.distributorId}
+        )`,
         orderCount: wmsDispatchBatches.orderCount,
         totalCases: wmsDispatchBatches.totalCases,
         palletCount: wmsDispatchBatches.palletCount,

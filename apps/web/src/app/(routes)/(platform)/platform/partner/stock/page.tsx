@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  IconArrowDown,
-  IconArrowUp,
+  IconAlertCircle,
+  IconArrowRight,
   IconChevronDown,
   IconChevronRight,
   IconCircleCheck,
@@ -20,6 +20,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
@@ -30,43 +31,11 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import PartnerMovementsPanel from '@/app/_wms/components/PartnerMovementsPanel';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage';
 type SortOrder = 'asc' | 'desc';
-
-interface MovementBadgeProps {
-  type: string;
-  isInbound: boolean;
-  qty: number;
-}
-
-/** Badge for movement type with directional quantity */
-const MovementBadge = ({ type, isInbound, qty }: MovementBadgeProps) => {
-  const config: Record<string, { label: string; bg: string; text: string }> = {
-    receive: { label: 'Received', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-    pick: { label: 'Picked', bg: 'bg-amber-50', text: 'text-amber-700' },
-    dispatch: { label: 'Dispatched', bg: 'bg-blue-50', text: 'text-blue-700' },
-    transfer: { label: 'Transferred', bg: 'bg-surface-muted', text: 'text-text-secondary' },
-    adjust: { label: 'Adjusted', bg: 'bg-purple-50', text: 'text-purple-700' },
-    count: { label: 'Counted', bg: 'bg-surface-muted', text: 'text-text-secondary' },
-    repack_in: { label: 'Repack In', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-    repack_out: { label: 'Repack Out', bg: 'bg-amber-50', text: 'text-amber-700' },
-  };
-
-  const { label, bg, text } = config[type] ?? { label: type, bg: 'bg-surface-muted', text: 'text-text-secondary' };
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${bg} ${text}`}>
-        {label}
-      </span>
-      <span className={`text-sm font-semibold tabular-nums ${isInbound ? 'text-emerald-600' : 'text-amber-600'}`}>
-        {isInbound ? '+' : '-'}{qty}
-      </span>
-    </div>
-  );
-};
 
 /** Skeleton loading row */
 const SkeletonRow = () => (
@@ -92,36 +61,21 @@ const SkeletonCard = () => (
   </div>
 );
 
-/** Status pill badge with colored background */
+/** Status pill for how many cases are left */
 const StatusIndicator = ({ cases }: { cases: number }) => {
-  if (cases === 0) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
-        <span className="h-1.5 w-1.5 rounded-full bg-border-muted" />
-        Out
-      </span>
-    );
-  }
-  if (cases === 1) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-        Final
-      </span>
-    );
-  }
-  if (cases <= 2) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-        Low
-      </span>
-    );
-  }
+  const config =
+    cases === 0
+      ? { label: 'None left', pill: 'bg-surface-muted text-text-muted ring-border-muted', dot: 'bg-border-muted' }
+      : cases === 1
+        ? { label: 'Last case', pill: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/60', dot: 'bg-red-500' }
+        : cases <= 2
+          ? { label: 'Low', pill: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60', dot: 'bg-amber-500' }
+          : { label: 'Good', pill: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60', dot: 'bg-emerald-500' };
+
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-      Good
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${config.pill}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
+      {config.label}
     </span>
   );
 };
@@ -139,7 +93,7 @@ const PartnerStockPage = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
 
@@ -193,10 +147,6 @@ const PartnerStockPage = () => {
     });
   }, []);
 
-  const isInbound = useCallback((movement: { toOwnerId: string | null; fromOwnerId: string | null }) => {
-    return movement.toOwnerId === data?.partner.id;
-  }, [data?.partner.id]);
-
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -220,7 +170,7 @@ const PartnerStockPage = () => {
   const handleExportCSV = () => {
     if (!data?.products) return;
 
-    const headers = ['Product', 'Producer', 'LWIN-18', 'Vintage', 'Pack', 'Total Cases', 'Available', 'Reserved'];
+    const headers = ['Product', 'Producer', 'LWIN-18', 'Vintage', 'Pack', 'Total Cases', 'Available'];
     const rows = data.products.map((p) => [
       `"${(p.productName ?? '').replace(/"/g, '""')}"`,
       `"${(p.producer ?? '').replace(/"/g, '""')}"`,
@@ -229,7 +179,6 @@ const PartnerStockPage = () => {
       `${p.caseConfig}x${p.bottleSize}`,
       p.totalCases,
       p.availableCases,
-      p.reservedCases,
     ]);
 
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -285,8 +234,8 @@ const PartnerStockPage = () => {
         {data?.summary && (
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
             {/* What you hold */}
-            <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100/70 text-blue-500">
+            <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary dark:border-blue-900/40 dark:from-blue-950/30 px-3 py-3 text-center shadow-sm">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100/70 text-blue-500 dark:bg-blue-900/40 dark:text-blue-300">
                 <IconTags size={14} />
               </div>
               <div className="text-xl font-bold leading-tight">
@@ -300,11 +249,11 @@ const PartnerStockPage = () => {
             </div>
 
             {/* Which way it is going */}
-            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-amber-500">
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary dark:border-amber-900/40 dark:from-amber-950/30 px-3 py-3 text-center shadow-sm">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-amber-500 dark:bg-amber-900/40 dark:text-amber-300">
                 <IconPackage size={14} />
               </div>
-              <div className="text-xl font-bold leading-tight text-amber-600">
+              <div className="text-xl font-bold leading-tight text-amber-600 dark:text-amber-400">
                 {data.summary.casesPickedLast30.toLocaleString()}
               </div>
               <div className="text-[11px] text-text-muted">picked, 30 days</div>
@@ -316,13 +265,13 @@ const PartnerStockPage = () => {
             </div>
 
             {/* What needs attention — same thresholds as the row badges */}
-            <div className="rounded-xl border border-red-100 bg-gradient-to-b from-red-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+            <div className="rounded-xl border border-red-100 bg-gradient-to-b from-red-50/40 to-background-primary dark:border-red-900/40 dark:from-red-950/30 px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.runningLow > 0 ? 'bg-red-100/70 text-red-500' : 'bg-surface-muted text-text-muted'
+                data.summary.runningLow > 0 ? 'bg-red-100/70 text-red-500 dark:bg-red-900/40 dark:text-red-300' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconCircleCheck size={14} />
               </div>
-              <div className={`text-xl font-bold leading-tight ${data.summary.runningLow > 0 ? 'text-red-600' : ''}`}>
+              <div className={`text-xl font-bold leading-tight ${data.summary.runningLow > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
                 {data.summary.runningLow}
               </div>
               <div className="text-[11px] text-text-muted">running low</div>
@@ -332,13 +281,13 @@ const PartnerStockPage = () => {
             </div>
 
             {/* What is coming */}
-            <div className="rounded-xl border border-violet-100 bg-gradient-to-b from-violet-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+            <div className="rounded-xl border border-violet-100 bg-gradient-to-b from-violet-50/40 to-background-primary dark:border-violet-900/40 dark:from-violet-950/30 px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.inboundCases > 0 ? 'bg-violet-100/70 text-violet-500' : 'bg-surface-muted text-text-muted'
+                data.summary.inboundCases > 0 ? 'bg-violet-100/70 text-violet-500 dark:bg-violet-900/40 dark:text-violet-300' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconTruck size={14} />
               </div>
-              <div className={`text-xl font-bold leading-tight ${data.summary.inboundCases > 0 ? 'text-violet-600' : ''}`}>
+              <div className={`text-xl font-bold leading-tight ${data.summary.inboundCases > 0 ? 'text-violet-600 dark:text-violet-400' : ''}`}>
                 {data.summary.inboundCases.toLocaleString()}
               </div>
               <div className="text-[11px] text-text-muted">arriving</div>
@@ -350,8 +299,8 @@ const PartnerStockPage = () => {
             </div>
 
             {/* What it cost — not what it is worth */}
-            <div className="col-span-2 rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-3 text-center shadow-sm lg:col-span-1">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100/70 text-emerald-500">
+            <div className="col-span-2 rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary dark:border-emerald-900/40 dark:from-emerald-950/30 px-3 py-3 text-center shadow-sm lg:col-span-1">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100/70 text-emerald-500 dark:bg-emerald-900/40 dark:text-emerald-300">
                 <IconLock size={14} />
               </div>
               <div className="text-xl font-bold leading-tight">
@@ -367,6 +316,31 @@ const PartnerStockPage = () => {
           </div>
         )}
 
+        {isError && !data && (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-border-muted bg-surface-primary px-4 py-12 text-center shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+              <IconAlertCircle size={22} />
+            </div>
+            <Typography variant="bodySm" className="font-medium">
+              Your stock could not be loaded
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Please try again. If it keeps failing, contact C&C.
+            </Typography>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              <IconRefresh size={14} />
+              {isFetching ? 'Loading…' : 'Try again'}
+            </button>
+          </div>
+        )}
+
+        {!(isError && !data) && (
+        <>
         {/* Search */}
         <Input
           placeholder="Search by product name, producer, LWIN, or vintage..."
@@ -404,9 +378,6 @@ const PartnerStockPage = () => {
             filteredProducts.map((product) => {
               const key = rowKey(product);
               const isExpanded = expandedProducts.has(key);
-              const availPct = product.totalCases > 0
-                ? Math.round((product.availableCases / product.totalCases) * 100)
-                : 0;
 
               return (
                 <div
@@ -429,7 +400,7 @@ const PartnerStockPage = () => {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-text-primary leading-tight">
-                            {product.productName}
+                            {displayWineName(product.productName ?? '', { keepVintage: true })}
                           </div>
                           {product.producer && (
                             <div className="mt-0.5 text-xs text-text-muted">{product.producer}</div>
@@ -442,38 +413,19 @@ const PartnerStockPage = () => {
                         <span className="text-border-muted">|</span>
                         <span>{product.caseConfig}x{product.bottleSize}</span>
                         <span className="text-border-muted">|</span>
-                        <span>{product.locationCount} loc</span>
+                        <span>{product.locationCount} {product.locationCount === 1 ? 'location' : 'locations'}</span>
                       </div>
 
                       {/* Mini stats row */}
-                      <div className="mt-2.5 grid grid-cols-3 gap-2">
+                      <div className="mt-2.5 grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-surface-muted/60 px-2.5 py-1.5 text-center">
                           <div className="text-sm font-bold tabular-nums">{product.totalCases}</div>
-                          <div className="text-[10px] text-text-muted">Total</div>
+                          <div className="text-[10px] text-text-muted">Cases</div>
                         </div>
-                        <div className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-center">
-                          <div className="text-sm font-bold tabular-nums text-emerald-600">{product.availableCases}</div>
-                          <div className="text-[10px] text-emerald-600/70">Avail</div>
+                        <div className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-center dark:bg-emerald-950/30">
+                          <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{product.availableCases}</div>
+                          <div className="text-[10px] text-emerald-700/70 dark:text-emerald-300/70">Available</div>
                         </div>
-                        <div className={`rounded-lg px-2.5 py-1.5 text-center ${product.reservedCases > 0 ? 'bg-amber-50' : 'bg-surface-muted/60'}`}>
-                          <div className={`text-sm font-bold tabular-nums ${product.reservedCases > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
-                            {product.reservedCases}
-                          </div>
-                          <div className={`text-[10px] ${product.reservedCases > 0 ? 'text-amber-600/70' : 'text-text-muted'}`}>Rsrvd</div>
-                        </div>
-                      </div>
-
-                      {/* Availability bar */}
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-border-muted/40">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              availPct >= 75 ? 'bg-emerald-500' : availPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${availPct}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] tabular-nums text-text-muted">{availPct}%</span>
                       </div>
                     </div>
                   </button>
@@ -502,7 +454,7 @@ const PartnerStockPage = () => {
                                 </div>
                                 <div className="flex items-center gap-3 text-sm">
                                   <span className="font-semibold tabular-nums">{loc.quantityCases}</span>
-                                  <span className="text-emerald-600 tabular-nums">{loc.availableCases}</span>
+                                  <span className="tabular-nums text-emerald-700 dark:text-emerald-300">{loc.availableCases}</span>
                                 </div>
                               </div>
                             ))}
@@ -579,9 +531,6 @@ const PartnerStockPage = () => {
                     <th className="px-4 py-3 text-right">
                       <Typography variant="labelSm">Available</Typography>
                     </th>
-                    <th className="px-4 py-3 text-right">
-                      <Typography variant="labelSm">Reserved</Typography>
-                    </th>
                     <th className="hidden px-4 py-3 text-center lg:table-cell">
                       <Typography variant="labelSm">Locations</Typography>
                     </th>
@@ -614,15 +563,12 @@ const PartnerStockPage = () => {
                     filteredProducts.map((product) => {
                       const key = rowKey(product);
                       const isExpanded = expandedProducts.has(key);
-                              const availPct = product.totalCases > 0
-                        ? Math.round((product.availableCases / product.totalCases) * 100)
-                        : 0;
 
                       return (
                         <Fragment key={key}>
                           {/* Product Row */}
                           <tr
-                            className="cursor-pointer border-b border-border-muted transition-colors even:bg-surface-muted/20 hover:bg-surface-muted/60"
+                            className="cursor-pointer border-b border-border-muted transition-colors hover:bg-surface-secondary/50"
                             onClick={() => toggleProduct(key)}
                           >
                             <td className="px-2 py-3 text-center">
@@ -635,7 +581,7 @@ const PartnerStockPage = () => {
                             <td className="px-4 py-3">
                               <div>
                                 <Typography variant="bodySm" className="font-medium">
-                                  {product.productName}
+                                  {displayWineName(product.productName ?? '', { keepVintage: true })}
                                 </Typography>
                                 {product.producer && (
                                   <Typography variant="bodyXs" colorRole="muted">
@@ -665,30 +611,9 @@ const PartnerStockPage = () => {
                               </Typography>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Typography variant="bodySm" className="font-medium tabular-nums text-emerald-600">
-                                  {product.availableCases}
-                                </Typography>
-                                <div className="h-2 w-14 overflow-hidden rounded-full bg-border-muted/40">
-                                  <div
-                                    className={`h-full rounded-full transition-all ${
-                                      availPct >= 75 ? 'bg-emerald-500' : availPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${availPct}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {product.reservedCases > 0 ? (
-                                <Typography variant="bodySm" className="font-medium tabular-nums text-amber-600">
-                                  {product.reservedCases}
-                                </Typography>
-                              ) : (
-                                <Typography variant="bodySm" colorRole="muted">
-                                  —
-                                </Typography>
-                              )}
+                              <Typography variant="bodySm" className="font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
+                                {product.availableCases}
+                              </Typography>
                             </td>
                             <td className="hidden px-4 py-3 text-center lg:table-cell">
                               <Typography variant="bodySm" colorRole="muted">
@@ -723,66 +648,39 @@ const PartnerStockPage = () => {
                                                 <Typography variant="labelSm">Qty</Typography>
                                               </th>
                                               <th className="px-3 py-2 text-right">
-                                                <Typography variant="labelSm">Avail</Typography>
+                                                <Typography variant="labelSm">Available</Typography>
                                               </th>
                                               <th className="px-3 py-2 text-left">
                                                 <Typography variant="labelSm">Lot</Typography>
                                               </th>
-                                              <th className="hidden px-3 py-2 text-left lg:table-cell">
-                                                <Typography variant="labelSm">Expiry</Typography>
-                                              </th>
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {product.locations.map((loc, idx) => {
-                                              const locAvailPct = loc.quantityCases > 0
-                                                ? Math.round((loc.availableCases / loc.quantityCases) * 100)
-                                                : 0;
-                                              return (
-                                                <tr
-                                                  key={`${loc.locationId}-${idx}`}
-                                                  className="border-b border-border-muted/50 last:border-0"
-                                                >
-                                                  <td className="px-3 py-2">
-                                                    <LocationBadge locationCode={loc.locationCode} size="sm" />
-                                                  </td>
-                                                  <td className="px-3 py-2 text-right">
-                                                    <span className="font-medium tabular-nums text-sm">
-                                                      {loc.quantityCases}
-                                                    </span>
-                                                  </td>
-                                                  <td className="px-3 py-2 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                      <span className="text-sm tabular-nums text-emerald-600">
-                                                        {loc.availableCases}
-                                                      </span>
-                                                      <div className="h-2 w-10 overflow-hidden rounded-full bg-border-muted/40">
-                                                        <div
-                                                          className={`h-full rounded-full ${
-                                                            locAvailPct >= 75 ? 'bg-emerald-500' : locAvailPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
-                                                          }`}
-                                                          style={{ width: `${locAvailPct}%` }}
-                                                        />
-                                                      </div>
-                                                    </div>
-                                                  </td>
-                                                  <td className="px-3 py-2">
-                                                    <span className="text-xs font-mono text-text-muted">
-                                                      {loc.lotNumber ?? '—'}
-                                                    </span>
-                                                  </td>
-                                                  <td className="hidden px-3 py-2 lg:table-cell">
-                                                    {loc.expiryDate ? (
-                                                      <span className="text-xs text-amber-600">
-                                                        {new Date(loc.expiryDate).toLocaleDateString()}
-                                                      </span>
-                                                    ) : (
-                                                      <span className="text-xs text-text-muted">—</span>
-                                                    )}
-                                                  </td>
-                                                </tr>
-                                              );
-                                            })}
+                                            {product.locations.map((loc, idx) => (
+                                              <tr
+                                                key={`${loc.locationId}-${idx}`}
+                                                className="border-b border-border-muted/50 last:border-0"
+                                              >
+                                                <td className="px-3 py-2">
+                                                  <LocationBadge locationCode={loc.locationCode} size="sm" />
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                  <span className="text-sm font-medium tabular-nums">
+                                                    {loc.quantityCases}
+                                                  </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                  <span className="text-sm tabular-nums text-emerald-700 dark:text-emerald-300">
+                                                    {loc.availableCases}
+                                                  </span>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <span className="font-mono text-xs text-text-muted">
+                                                    {loc.lotNumber ?? '—'}
+                                                  </span>
+                                                </td>
+                                              </tr>
+                                            ))}
                                           </tbody>
                                         </table>
                                       </div>
@@ -815,57 +713,24 @@ const PartnerStockPage = () => {
           </div>
         </div>
 
-        {/* ─── Recent Activity ────────────────────────────────────── */}
-        {data?.recentMovements && data.recentMovements.length > 0 && (
-          <div>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-50 text-cyan-500">
-                <IconClock size={13} />
-              </div>
-              <Typography variant="headingSm">Recent Activity</Typography>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm">
-              <div className="divide-y divide-border-muted">
-                {data.recentMovements.slice(0, 10).map((m) => (
-                  <div key={m.id} className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-surface-muted/40">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isInbound(m) ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                        <Icon
-                          icon={isInbound(m) ? IconArrowDown : IconArrowUp}
-                          size="sm"
-                          className={isInbound(m) ? 'text-emerald-600' : 'text-amber-600'}
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-text-primary">
-                          {m.productName}
-                        </div>
-                        <div className="text-xs text-text-muted">
-                          {format(new Date(m.performedAt), 'dd MMM yyyy, HH:mm')}
-                          {m.notes && ` — ${m.notes}`}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 pl-3">
-                      <MovementBadge
-                        type={m.movementType}
-                        isInbound={isInbound(m)}
-                        qty={m.quantityCases}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        </>
         )}
 
-        {/* Last Updated */}
-        {data?.products?.length ? (
-          <div className="text-center text-xs text-text-muted">
-            Last updated {formatDistanceToNow(new Date(), { addSuffix: true })}
-          </div>
-        ) : null}
+        {/* Full history lives on the Activity page */}
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <Link
+            href="/platform/partner/activity"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-text-primary hover:underline"
+          >
+            View all activity
+            <IconArrowRight size={14} />
+          </Link>
+          {data?.products?.length && dataUpdatedAt ? (
+            <span className="text-xs text-text-muted">
+              Last updated {formatDistanceToNow(new Date(dataUpdatedAt), { addSuffix: true })}
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

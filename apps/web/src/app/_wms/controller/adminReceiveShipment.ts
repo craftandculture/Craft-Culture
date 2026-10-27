@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
@@ -7,7 +7,6 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   partners,
-  wmsCaseLabels,
   wmsLocations,
   wmsStock,
   wmsStockMovements,
@@ -17,7 +16,7 @@ import { findOrCreateWineItem } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
 
 import { receiveShipmentSchema } from '../schemas/receiveSchema';
-import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
+import claimCaseLabels from '../utils/claimCaseLabels';
 import generateLotNumber from '../utils/generateLotNumber';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -121,10 +120,22 @@ const adminReceiveShipment = wmsOperatorProcedure
         caseLabels: Array<{ id: string; barcode: string }>;
       }> = [];
 
-      // Stock rows this request has already booked into. A second line for the
-      // same wine and bay finds the row the first line created and must add to
-      // it, not be taken for a retry of an earlier receipt
-      const bookedStockIds = new Set<string>();
+      /*
+        The shipment row is locked and must not already be received. A second
+        tap or a resend used to book the whole shipment in again.
+      */
+      const [locked] = await tx
+        .select({ status: logisticsShipments.status })
+        .from(logisticsShipments)
+        .where(eq(logisticsShipments.id, shipmentId))
+        .for('update');
+
+      if (locked?.status === 'delivered') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Shipment ${shipment.shipmentNumber} has already been received.`,
+        });
+      }
 
       for (const receivedItem of items) {
         const shipmentItem = shipmentItemMap.get(receivedItem.shipmentItemId);
@@ -145,14 +156,16 @@ const adminReceiveShipment = wmsOperatorProcedure
         const actualBottleSizeMl = receivedItem.receivedBottleSizeMl ?? shipmentItem.bottleSizeMl ?? 750;
 
         // For added items, use the explicit product info if provided, otherwise fall back to shipment item
+        // An added wine never borrows the blanks of the line it is filed under
+        const line = receivedItem.isAddedItem ? null : shipmentItem;
         const productName = receivedItem.productName ?? shipmentItem.productName;
-        const producer = receivedItem.producer ?? shipmentItem.producer;
-        const vintage = receivedItem.vintage ?? shipmentItem.vintage;
+        const producer = receivedItem.producer ?? line?.producer ?? null;
+        const vintage = receivedItem.vintage ?? line?.vintage ?? null;
         // Supplier SKU comes from shipment item, or can be overridden
-        const supplierSku = receivedItem.supplierSku ?? shipmentItem.supplierSku;
+        const supplierSku = receivedItem.supplierSku ?? line?.supplierSku ?? null;
         // Customs data for Zoho sync
-        const hsCode = receivedItem.hsCode ?? shipmentItem.hsCode;
-        const countryOfOrigin = receivedItem.countryOfOrigin ?? shipmentItem.countryOfOrigin;
+        const hsCode = receivedItem.hsCode ?? line?.hsCode ?? null;
+        const countryOfOrigin = receivedItem.countryOfOrigin ?? line?.countryOfOrigin ?? null;
 
         // Determine LWIN-18 for this product:
         // 1. If receiver specified an LWIN (from lookup or using supplier SKU), use it
@@ -193,20 +206,21 @@ const adminReceiveShipment = wmsOperatorProcedure
               eq(wmsStock.lwin18, lwin18),
               eq(wmsStock.locationId, itemLocationId),
               eq(wmsStock.ownerId, resolvedOwnerId),
+              // Held wine never merges into a listed row
+              eq(wmsStock.notForSale, shipmentItem.notForSale ?? shipment.notForSale),
             ),
-          );
+          )
+          .limit(1)
+          .for('update');
 
         let stock: typeof wmsStock.$inferSelect;
 
-        // Check if this exact shipment was already received (idempotency for retries)
-        const isRetry =
-          existingStock?.shipmentId === shipmentId &&
-          !bookedStockIds.has(existingStock.id);
-
-        if (existingStock && isRetry) {
-          // Exact retry — use existing record without incrementing
-          stock = existingStock;
-        } else if (existingStock) {
+        /*
+          Never treated as a retry: the shipment lock above already refuses a
+          second receipt, and the old "same shipment in this bay = retry" rule
+          dropped the second of two lines of one wine into one bay.
+        */
+        if (existingStock) {
           // Same product/location/owner from a different source — increment qty
           const [updatedStock] = await tx
             .update(wmsStock)
@@ -251,69 +265,18 @@ const adminReceiveShipment = wmsOperatorProcedure
           stock = newStock;
         }
 
-        // Advisory lock on LWIN18 to prevent duplicate barcode sequences
-        const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
+        // This shipment's printed labels first, then new ones
+        const caseLabels = await claimCaseLabels(tx, {
+          lwin18,
+          productName,
+          lotNumber,
+          shipmentId,
+          locationId: itemLocationId,
+          count: receivedItem.receivedCases,
+        });
 
-        // Check for existing case labels with this barcode prefix
-        // Labels may have been created during the print step
-        const barcodePrefix = `CASE-${lwin18}-`;
-        const existingLabels = await tx
-          .select({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode })
-          .from(wmsCaseLabels)
-          .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
-
-        const caseLabels: Array<{ id: string; barcode: string }> = [];
-
-        // If labels already exist for this LWIN18, use them
-        if (existingLabels.length >= receivedItem.receivedCases) {
-          // Use existing labels (already created during print step)
-          caseLabels.push(...existingLabels.slice(0, receivedItem.receivedCases));
-        } else {
-          // Some or no labels exist - find max sequence and create remaining
-          let maxSeq = 0;
-          for (const label of existingLabels) {
-            const match = label.barcode.match(/(\d+)$/);
-            if (match) {
-              const seq = parseInt(match[1], 10);
-              if (seq > maxSeq) maxSeq = seq;
-            }
-          }
-
-          // Use existing labels first
-          caseLabels.push(...existingLabels);
-
-          // Create remaining labels needed
-          const labelsNeeded = receivedItem.receivedCases - existingLabels.length;
-          let created = 0;
-          while (created < labelsNeeded) {
-            maxSeq++;
-            const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
-
-            const inserted = await tx
-              .insert(wmsCaseLabels)
-              .values({
-                barcode,
-                lwin18,
-                productName,
-                lotNumber,
-                shipmentId,
-                currentLocationId: itemLocationId,
-                isActive: true,
-              })
-              .onConflictDoNothing({ target: wmsCaseLabels.barcode })
-              .returning();
-
-            if (inserted.length > 0) {
-              caseLabels.push({ id: inserted[0].id, barcode: inserted[0].barcode });
-              created++;
-            }
-          }
-        }
-
-        // Create movement record (skip only for exact retries)
-        if (!isRetry) {
-          const movementNumber = await generateMovementNumber();
+        {
+          const movementNumber = await generateMovementNumber(tx);
           await tx.insert(wmsStockMovements).values({
             movementNumber,
             movementType: 'receive',
@@ -324,6 +287,7 @@ const adminReceiveShipment = wmsOperatorProcedure
             toLocationId: itemLocationId,
             /* Whose wine arrived, so a member's statement can list it */
             toOwnerId: resolvedOwnerId,
+            stockId: stock.id,
             lotNumber,
             shipmentId,
             scannedBarcodes: caseLabels.map((l) => l.barcode),
@@ -332,8 +296,6 @@ const adminReceiveShipment = wmsOperatorProcedure
             performedAt: new Date(),
           });
         }
-
-        if (!isRetry) bookedStockIds.add(stock.id);
 
         txCreatedStock.push({
           stockId: stock.id,

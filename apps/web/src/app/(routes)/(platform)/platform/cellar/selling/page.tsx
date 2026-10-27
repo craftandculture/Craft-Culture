@@ -1,12 +1,22 @@
 'use client';
 
-import { IconChevronDown, IconTag } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconChevronDown,
+  IconClock,
+  IconCoin,
+  IconTag,
+} from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import FirstStepsCard from '@/app/_cellar/components/FirstStepsCard';
 import SaleProceedsPanel from '@/app/_cellar/components/SaleProceedsPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
@@ -14,7 +24,39 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
+
+/*
+  One figure, not a range. Wine lists at one number, and what varies behind
+  it is our commission, 2.5% or 5% depending on who buys, which never changes
+  what the member receives.
+*/
+const listedPrice = (askPerBottleUsd: number) =>
+  askPerBottleUsd /
+  (1 - Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100);
+
+/**
+ * "Set as €180 · €1 = $1.1203 on 26 Oct", for a price typed in another currency
+ *
+ * USD is what the member is owed; this says where the figure came from, at
+ * the rate fixed on the day they listed.
+ */
+const setInLine = (mandate: {
+  askCurrency: string;
+  askPerBottleLocal: number | null;
+  askFxRate: number | null;
+  askFxAt: Date | string | null;
+}) => {
+  if (mandate.askCurrency === 'USD' || !mandate.askPerBottleLocal || !mandate.askFxRate) return null;
+  const local = mandate.askPerBottleLocal.toLocaleString('en-US', {
+    style: 'currency',
+    currency: mandate.askCurrency,
+    maximumFractionDigits: 2,
+  });
+  const on = mandate.askFxAt ? ` on ${format(new Date(mandate.askFxAt), 'd MMM yyyy')}` : '';
+  return `Set as ${local} · 1 ${mandate.askCurrency} = $${mandate.askFxRate.toFixed(4)}${on}`;
+};
 
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', {
@@ -30,7 +72,7 @@ const money = (value: number) =>
 */
 const STATES: Record<
   string,
-  { label: string; tone: 'held' | 'live' | 'gone'; detail: string }
+  { label: string; tone: 'held' | 'live' | 'sold'; detail: string }
 > = {
   offered: {
     label: 'With us for review',
@@ -44,15 +86,15 @@ const STATES: Record<
   },
   placed: {
     label: 'With a distributor',
-    tone: 'gone',
+    tone: 'held',
     detail: 'Delivered to a licensed distributor and on sale. It can no longer be withdrawn.',
   },
   partially_sold: {
     label: 'Part sold',
-    tone: 'gone',
+    tone: 'held',
     detail: 'Some has sold. The rest is still on offer.',
   },
-  sold: { label: 'Sold', tone: 'gone', detail: 'Paid to you in the next monthly payment.' },
+  sold: { label: 'Sold', tone: 'sold', detail: 'Paid to you in the next monthly payment.' },
   withdrawn: { label: 'Withdrawn', tone: 'held', detail: 'Back in your cellar.' },
   expired: { label: 'Expired', tone: 'held', detail: 'Back in your cellar.' },
   draft: {
@@ -62,10 +104,15 @@ const STATES: Record<
   },
 };
 
+/*
+  Emerald only once the wine has sold: that is the moment that means money
+  for the member. Everything still in progress reads in slate, never amber,
+  which in the cellar is kept for something due.
+*/
 const TONES = {
-  held: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300',
-  live: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
-  gone: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900',
+  held: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/20 dark:text-slate-300 dark:ring-slate-700',
+  live: 'bg-slate-100 text-slate-800 ring-1 ring-inset ring-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:ring-slate-600',
+  sold: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
 };
 
 /**
@@ -81,14 +128,14 @@ const SellingPage = () => {
   const isViewer = useIsCellarViewer();
   const [showPast, setShowPast] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     ...api.consignment.member.getMandates.queryOptions(),
   });
 
   const { mutate: withdraw, isPending } = useMutation(
     api.consignment.member.withdrawMandate.mutationOptions({
       onSuccess: (result) => {
-        toast.success(`${result.mandateNumber} withdrawn — it is back in your cellar.`);
+        toast.success(`${result.mandateNumber} withdrawn. It is back in your cellar.`);
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -123,7 +170,7 @@ const SellingPage = () => {
   const renderOffers = (rows: typeof mandates) => (
     <>
       {/* A phone gets one card per offer: a seven-column table cannot be read at that width */}
-        <ul className="space-y-2 sm:hidden">
+        <ul className="space-y-2 md:hidden">
           {rows.map((mandate) => {
             const state = STATES[mandate.status] ?? {
               label: mandate.status,
@@ -139,8 +186,8 @@ const SellingPage = () => {
                 className="border-border-muted bg-surface-primary rounded-xl border p-3 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-text-primary min-w-0 text-sm font-semibold leading-snug">
-                    {mandate.productName}
+                  <p className="text-text-primary min-w-0 text-lg font-semibold leading-snug">
+                    {displayWineName(mandate.productName, { keepVintage: true })}
                   </p>
                   <span
                     className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONES[state.tone]}`}
@@ -154,7 +201,7 @@ const SellingPage = () => {
                     ? ` · offered ${formatDistanceToNowStrict(new Date(mandate.offeredAt), { addSuffix: true })}`
                     : ''}
                 </p>
-                <dl className="border-border-muted mt-3 grid grid-cols-3 gap-2 border-t pt-3 text-xs">
+                <dl className="border-border-muted mt-3 grid grid-cols-3 gap-2 border-t pt-3 text-xs sm:grid-cols-4">
                   <div>
                     <dt className="text-text-muted">Bottles</dt>
                     <dd className="text-text-primary m-0 font-semibold tabular-nums">
@@ -167,6 +214,23 @@ const SellingPage = () => {
                     <dt className="text-text-muted">Your price</dt>
                     <dd className="text-text-primary m-0 font-semibold tabular-nums">
                       {money(mandate.askPerBottleUsd)}
+                      <span className="text-text-muted block text-[11px] font-normal">
+                        per bottle
+                      </span>
+                      {setInLine(mandate) && (
+                        <span className="text-text-muted block text-[11px] font-normal">
+                          {setInLine(mandate)}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="hidden sm:block">
+                    <dt className="text-text-muted">Buyer pays</dt>
+                    <dd className="text-text-primary m-0 font-semibold tabular-nums">
+                      {money(listedPrice(mandate.askPerBottleUsd))}
+                      <span className="text-text-muted block text-[11px] font-normal">
+                        listed price
+                      </span>
                     </dd>
                   </div>
                   <div>
@@ -197,7 +261,7 @@ const SellingPage = () => {
                     <button
                       type="button"
                       disabled={isPending}
-                      className="border-border-muted text-text-primary mt-3 h-10 w-full rounded-lg border text-sm font-semibold disabled:opacity-50"
+                      className="border-border-muted text-text-primary mt-3 h-10 w-full rounded-lg border text-sm font-semibold disabled:opacity-50 sm:w-auto sm:px-5"
                     >
                       Withdraw
                     </button>
@@ -208,7 +272,7 @@ const SellingPage = () => {
           })}
         </ul>
 
-        <div className="border-border-muted hidden overflow-x-auto rounded-xl border shadow-sm sm:block sm:max-h-[68vh] sm:overflow-auto">
+        <div className="border-border-muted bg-surface-primary hidden overflow-x-auto rounded-xl border shadow-sm md:block md:max-h-[68vh] md:overflow-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
               <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
@@ -239,9 +303,9 @@ const SellingPage = () => {
                     className="hover:bg-fill-muted/40 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <Typography variant="bodySm" className="font-medium">
-                        {mandate.productName}
-                      </Typography>
+                      <p className="text-text-primary text-base font-semibold leading-snug">
+                        {displayWineName(mandate.productName, { keepVintage: true })}
+                      </p>
                       <Typography
                         variant="bodyXs"
                         colorRole="muted"
@@ -267,6 +331,11 @@ const SellingPage = () => {
                       <span className="text-text-muted block text-[11px]">
                         per bottle
                       </span>
+                      {setInLine(mandate) && (
+                        <span className="text-text-muted block text-[11px]">
+                          {setInLine(mandate)}
+                        </span>
+                      )}
                     </td>
                     {/*
                       The margin, disclosed rather than discovered. A member who
@@ -282,15 +351,7 @@ const SellingPage = () => {
                       member receives.
                     */}
                     <td className="text-text-muted px-3 py-3 text-right tabular-nums">
-                      {money(
-                        mandate.askPerBottleUsd /
-                          (1 -
-                            Math.max(
-                              COMMISSION_RATES.trade,
-                              COMMISSION_RATES.collector,
-                            ) /
-                              100),
-                      )}
+                      {money(listedPrice(mandate.askPerBottleUsd))}
                       <span className="text-text-muted block text-[11px]">
                         listed price
                       </span>
@@ -343,7 +404,7 @@ const SellingPage = () => {
                           {mandate.status === 'placed' ||
                           mandate.status === 'partially_sold'
                             ? 'Cannot be withdrawn'
-                            : '—'}
+                            : ''}
                         </Typography>
                       )}
                     </td>
@@ -358,39 +419,34 @@ const SellingPage = () => {
 
   return (
     <div className="w-full pb-8">
-      {/*
-        headingMd, like the cellar and Available now. Three tabs had three
-        different heading sizes, so moving between them made the page look like
-        it was jumping.
-      */}
-      <div className="mb-4">
-        <Typography variant="headingMd" className="block">
-          Selling
-        </Typography>
-        <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-          Wine you have asked us to sell on your behalf. You receive your
-          asking price in full. Our commission is added on top and never
-          deducted from it.
-        </Typography>
-      </div>
+      <CellarPageHeader
+        title="Selling"
+        description="Wine you have offered for sale through Craft & Culture. You receive your asking price in full; our commission is added to it, never deducted."
+      />
 
-      {!isLoading && current.length > 0 && (
-        <dl className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+      {!isLoading && !isError && current.length > 0 && (
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           {[
             {
               label: 'Bottles offered',
               value: String(openBottles),
               detail: `across ${current.length} ${current.length === 1 ? 'offer' : 'offers'}`,
+              icon: IconBottle,
+              tone: 'blue' as const,
             },
             {
               label: 'You receive if it sells',
               value: money(openValue),
               detail: 'at your asking price',
+              icon: IconCoin,
+              tone: 'emerald' as const,
             },
             {
               label: 'Listed for sale',
               value: String(live.length),
               detail: live.length === 1 ? 'offer live' : 'offers live',
+              icon: IconTag,
+              tone: 'indigo' as const,
             },
             {
               label: 'Awaiting review',
@@ -398,41 +454,53 @@ const SellingPage = () => {
                 mandates.filter((mandate) => mandate.status === 'offered').length,
               ),
               detail: 'with us now',
+              icon: IconClock,
+              tone: 'amber' as const,
             },
           ].map((stat) => (
-            <div
+            <CellarStatTile
               key={stat.label}
-              className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
-            >
-              <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                {stat.label}
-              </dt>
-              <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums sm:text-xl">
-                {stat.value}
-              </dd>
-              <dd className="text-text-muted m-0 text-[11px]">{stat.detail}</dd>
-            </div>
+              label={stat.label}
+              value={stat.value}
+              detail={stat.detail}
+              icon={stat.icon}
+              tone={stat.tone}
+            />
           ))}
-        </dl>
+        </div>
       )}
 
       <SaleProceedsPanel />
 
-      {isLoading && (
-        <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
-          Loading&hellip;
-        </Typography>
-      )}
+      {isLoading && <CellarState kind="loading" className="mt-6" />}
 
-      {!isLoading && mandates.length === 0 && (
-        <div className="border-border-muted mt-6 rounded-xl border px-6 py-14 text-center">
-          <Icon icon={IconTag} size="lg" className="text-text-muted mx-auto mb-3" />
-          <Typography variant="bodyMd" colorRole="muted" className="block">
-            Nothing offered for sale.
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted" className="mt-1 block">
-            Choose wines in your cellar and press Sell to offer them.
-          </Typography>
+      {isError && <CellarState kind="error" className="mt-6" />}
+
+      {!isLoading && !isError && mandates.length === 0 && (
+        <div className="mt-6">
+          <FirstStepsCard
+            eyebrow="Selling from your cellar"
+            title="Offer wine from your collection"
+            message="Your wine stays in our bonded warehouse until it sells, and you decide the price."
+            steps={[
+              {
+                icon: IconBottle,
+                title: 'Choose your wines',
+                text: 'In your cellar, select the wines and press Sell.',
+              },
+              {
+                icon: IconTag,
+                title: 'Set your price',
+                text: 'Name your asking price in USD, EUR, GBP or AED. We review the offer with you.',
+              },
+              {
+                icon: IconCoin,
+                title: 'Paid when it sells',
+                text: 'Nothing leaves your cellar until it is sold, and the proceeds are paid to you.',
+              },
+            ]}
+            action={{ href: '/platform/cellar', label: 'Choose wines in your cellar' }}
+          />
         </div>
       )}
 

@@ -43,6 +43,18 @@ const adminGetStockOverview = wmsOperatorProcedure
       THEN ${landedExpr} / (1 - COALESCE(${wmsOwnerPricingSettings.inbondMarginPct}, 0) / 100.0) / (1 - ${wmsOwnerPricingSettings.pcMarginPct} / 100.0)
       ELSE COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, ${wmsProductPricing.sellingPricePerBottle}, 0)
     END)`;
+    /*
+      One pricing row per stock row. Pricing is matched pack-agnostically, so
+      a wine priced under both its 6- and 12-pack codes joined twice and every
+      value and case total for it counted double. The row for the exact code
+      wins, then the most recently updated.
+    */
+    const onePricingRow = sql`${wmsProductPricing.id} = (
+      SELECT pp.id FROM wms_product_pricing pp
+       WHERE ${lwinPakKey(sql`pp.lwin18`)} = ${lwinPakKey(wmsStock.lwin18)}
+       ORDER BY (pp.lwin18 = ${wmsStock.lwin18}) DESC, pp.updated_at DESC
+       LIMIT 1
+    )`;
     // Loose bottles from cracked cases count too — see wms/WMS.md.
     const btl = sql`(${wmsStock.quantityCases} * ${wmsStock.caseConfig} + COALESCE(${wmsStock.openBottles}, 0))`;
 
@@ -177,7 +189,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           pricedProducts: sql<number>`COUNT(DISTINCT CASE WHEN ${impFb} > 0 THEN ${wmsStock.lwin18} END)::int`,
         })
         .from(wmsStock)
-        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
+        .leftJoin(wmsProductPricing, onePricingRow)
         .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
         .leftJoin(
           wmsOwnerPricing,
@@ -197,7 +209,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           cases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         })
         .from(wmsStock)
-        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
+        .leftJoin(wmsProductPricing, onePricingRow)
         .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
         .leftJoin(
           wmsOwnerPricing,
@@ -222,7 +234,7 @@ const adminGetStockOverview = wmsOperatorProcedure
           products: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
         })
         .from(wmsStock)
-        .leftJoin(wmsProductPricing, sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`)
+        .leftJoin(wmsProductPricing, onePricingRow)
         .leftJoin(wmsOwnerPricingSettings, eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId))
         .leftJoin(
           wmsOwnerPricing,

@@ -12,17 +12,15 @@ import PartnerMovementsPanel from '@/app/_wms/components/PartnerMovementsPanel';
  */
 const PartnerMovementsPage = () => {
   return (
-    <main className="container space-y-5 py-8">
+    <main className="container mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <Typography variant="headingLg" asChild>
           <h1>Movements</h1>
         </Typography>
         <Typography variant="bodySm" colorRole="muted" asChild>
           <p className="mt-1 max-w-2xl">
-            Everything that has happened to your stock in the C&amp;C bonded
-            warehouse — received, put away, moved between bays, picked,
-            repacked, counted and dispatched. Wine that has been fully depleted
-            appears here even though it has left your stock list.
+            Every receipt, pick and dispatch of your wine at the C&amp;C bonded
+            warehouse, including wines no longer in stock.
           </p>
         </Typography>
       </div>

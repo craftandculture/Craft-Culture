@@ -7,8 +7,9 @@ import { privateClientContacts, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import buildOrderClientPatch, {
-  OPEN_ORDER_STATUSES,
+  PRE_APPROVAL_ORDER_STATUSES,
 } from '../utils/clientDetailCascade';
+import { changesClientIdentity } from '../utils/clientIdentity';
 
 const updateSchema = z.object({
   id: z.string().uuid(),
@@ -64,6 +65,16 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
   if (data.paymentNotes !== undefined) updateData.paymentNotes = data.paymentNotes || null;
   if (data.notes !== undefined) updateData.notes = data.notes || null;
 
+  /*
+    The distributor verified this person. A new name, phone or email is
+    someone it has not verified, so the verification goes with the change and
+    the next order waits for it again.
+  */
+  if (existing.cityDrinksVerifiedAt && changesClientIdentity(existing, data)) {
+    updateData.cityDrinksVerifiedAt = null;
+    updateData.cityDrinksVerifiedBy = null;
+  }
+
   const [updated] = await db
     .update(privateClientContacts)
     .set(updateData)
@@ -71,8 +82,9 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
     .returning();
 
   /*
-    Bring the order's own copy of the client details with it, so the
-    distributor portal is not delivering against an old number.
+    Bring the order's own copy of the client details with it, on this
+    partner's orders that C&C has not yet approved. Approved orders are past
+    the point a partner can change who they are for: C&C corrects those.
 
     Both this and `adminUpdate` decide what cascades in one place. They drifted
     before: this path omitted the address entirely, and rewrote EVERY order
@@ -88,7 +100,9 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
       .where(
         and(
           eq(privateClientOrders.clientId, id),
-          inArray(privateClientOrders.status, OPEN_ORDER_STATUSES),
+          // This partner's own orders, and only those C&C has not approved yet
+          eq(privateClientOrders.partnerId, partnerId),
+          inArray(privateClientOrders.status, PRE_APPROVAL_ORDER_STATUSES),
         ),
       );
   }

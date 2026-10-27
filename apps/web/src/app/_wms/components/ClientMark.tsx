@@ -1,0 +1,56 @@
+'use client';
+
+import { IconClipboardList } from '@tabler/icons-react';
+import { useState } from 'react';
+
+/** Two letters for a client with no logo, e.g. "JMK Trading LLC" → "JT" */
+const initials = (name: string) =>
+  name
+    .replace(/\b(llc|l\.l\.c|fze|fzco|fz-llc|ltd|co)\b\.?/gi, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+/**
+ * The square at the start of an order or partner row: the partner's logo when
+ * there is one, otherwise the client's initials, so each order is told apart
+ * at a glance. Shared by the pick list and the dispatch wizard.
+ */
+const ClientMark = ({
+  logoUrl,
+  name,
+  size = 'md',
+}: {
+  logoUrl: string | null | undefined;
+  name: string | null | undefined;
+  size?: 'sm' | 'md' | 'lg';
+}) => {
+  const box =
+    size === 'sm' ? 'size-9 text-xs' : size === 'lg' ? 'size-16 text-base' : 'size-11 text-sm';
+  // A stored logo whose file has gone (Intagulf's did) falls back to initials
+  // rather than showing the browser's broken-image icon.
+  const [failed, setFailed] = useState(false);
+  return logoUrl && !failed ? (
+    <span
+      className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1.5 ring-1 ring-border-muted`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
+      <img
+        src={logoUrl}
+        alt={name ?? ''}
+        className="max-h-full max-w-full object-contain"
+        onError={() => setFailed(true)}
+      />
+    </span>
+  ) : (
+    <span
+      className={`flex ${box} shrink-0 items-center justify-center rounded-lg bg-fill-secondary font-semibold text-text-muted`}
+    >
+      {name ? initials(name) || '?' : <IconClipboardList className="h-5 w-5" />}
+    </span>
+  );
+};
+
+export default ClientMark;

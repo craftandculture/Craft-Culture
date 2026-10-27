@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
@@ -10,6 +10,8 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+
+import distributorOrderView from '../utils/distributorOrderView';
 
 const logContactAttemptSchema = z.object({
   orderId: z.string().uuid(),
@@ -65,23 +67,32 @@ const ordersLogContactAttempt = distributorProcedure
       notes,
     };
 
-    // Get existing attempts or initialize empty array
-    const existingAttempts = (order.deliveryContactAttempts as Array<{
-      attemptedAt: string;
-      attemptedBy: string;
-      notes: string;
-    }>) ?? [];
-
-    // Update order with new contact attempt
+    /*
+      Appended in the database and only while the order is still where it was
+      read. Two attempts logged together used to each rewrite the list from
+      their own copy (one was lost), and an attempt logged just as the delivery
+      was scheduled put the order back to "scheduling delivery".
+    */
     const [updatedOrder] = await db
       .update(privateClientOrders)
       .set({
         status: 'scheduling_delivery',
-        deliveryContactAttempts: [...existingAttempts, newAttempt],
+        deliveryContactAttempts: sql`COALESCE(${privateClientOrders.deliveryContactAttempts}, '[]'::jsonb) || ${JSON.stringify([newAttempt])}::jsonb`,
         updatedAt: now,
       })
-      .where(eq(privateClientOrders.id, orderId))
+      .where(and(eq(privateClientOrders.id, orderId), eq(privateClientOrders.status, order.status)))
       .returning();
+
+    if (!updatedOrder) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'The order changed while you were logging this. Refresh and try again.',
+      });
+    }
+
+    const attemptNumber = Array.isArray(updatedOrder.deliveryContactAttempts)
+      ? updatedOrder.deliveryContactAttempts.length
+      : 1;
 
     // Log the activity
     await db.insert(privateClientOrderActivityLogs).values({
@@ -92,7 +103,7 @@ const ordersLogContactAttempt = distributorProcedure
       previousStatus: order.status,
       newStatus: 'scheduling_delivery',
       notes: `Contact attempt: ${notes}`,
-      metadata: { attemptNumber: existingAttempts.length + 1 },
+      metadata: { attemptNumber },
     });
 
     // Notify partner about the contact attempt
@@ -116,7 +127,8 @@ const ordersLogContactAttempt = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersLogContactAttempt;

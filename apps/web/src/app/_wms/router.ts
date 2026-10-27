@@ -1,3 +1,4 @@
+import getLondonInBond from '@/app/_winelabs/controller/getLondonInBond';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddBay from './controller/adminAddBay';
@@ -11,7 +12,7 @@ import adminAutoPopulateImportPrice from './controller/adminAutoPopulateImportPr
 import adminBackfillStockDetails from './controller/adminBackfillStockDetails';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
-import adminClearAllStock from './controller/adminClearAllStock';
+import adminChangeTakeOutReason from './controller/adminChangeTakeOutReason';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCorrectPackConfig from './controller/adminCorrectPackConfig';
@@ -22,7 +23,6 @@ import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePallet from './controller/adminCreatePallet';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
-import adminDeduplicateStock from './controller/adminDeduplicateStock';
 import adminDeleteBay from './controller/adminDeleteBay';
 import adminDeletePickList from './controller/adminDeletePickList';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
@@ -51,6 +51,7 @@ import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
 import adminGetOrderReservations from './controller/adminGetOrderReservations';
+import adminGetOwnerOutflows from './controller/adminGetOwnerOutflows';
 import adminGetOwnerPricing from './controller/adminGetOwnerPricing';
 import adminGetOwnerPricingSettings from './controller/adminGetOwnerPricingSettings';
 import adminGetPallet from './controller/adminGetPallet';
@@ -86,6 +87,7 @@ import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
 import adminReconcileCycleCount from './controller/adminReconcileCycleCount';
 import adminReconcileStock from './controller/adminReconcileStock';
+import adminRecordCorrectionAsTakeOut from './controller/adminRecordCorrectionAsTakeOut';
 import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
@@ -117,6 +119,7 @@ import adminSetStockForSale from './controller/adminSetStockForSale';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
+import adminTakeOutOfStock from './controller/adminTakeOutOfStock';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUnsealPallet from './controller/adminUnsealPallet';
@@ -190,6 +193,8 @@ const stockPricingRouter = createTRPCRouter({
   setSellMargin: adminSetSellMargin,
   setOwnerPricing: adminSetOwnerPricing,
   getOwnerPricing: adminGetOwnerPricing,
+  // London in-bond market beside In Bond, from the Wine Labs snapshot
+  getLondonInBond,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
   getBands: adminGetPricingBands,
@@ -209,11 +214,12 @@ const stockRouter = createTRPCRouter({
   getByOwner: adminGetStockByOwner,
   getInbound: adminGetInboundStock,
   getMovements: adminGetMovementHistory,
+  // Who each outflow belonged to, and where it went: the statement check
+  getOwnerOutflows: adminGetOwnerOutflows,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
   lookalikes: adminGetStockLookalikes,
-  deduplicate: adminDeduplicateStock,
   getAll: adminGetAllStockRecords,
   reconcile: adminReconcileStock,
   deleteRecord: adminDeleteStockRecord,
@@ -222,12 +228,14 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
+  takeOut: adminTakeOutOfStock,
+  changeTakeOutReason: adminChangeTakeOutReason,
+  recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,
   findPackMismatches: adminFindPackMismatches,
   syncToZoho: adminSyncStockToZoho,
-  clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,
   updateProductName: adminUpdateProductName,
   pricing: stockPricingRouter,
