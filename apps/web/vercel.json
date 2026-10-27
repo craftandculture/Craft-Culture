@@ -44,6 +44,54 @@
     {
       "path": "/api/cron/member-emails",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/zoho-orders",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/zoho-invoices",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/zoho-payments",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/cellar-holds",
+      "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/outlet-stock",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/document-expiry",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/agents?agent=scout",
+      "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/agents?agent=concierge",
+      "schedule": "10 2 * * 1"
+    },
+    {
+      "path": "/api/cron/agents?agent=storyteller",
+      "schedule": "20 2 * * 1"
+    },
+    {
+      "path": "/api/cron/agents?agent=buyer",
+      "schedule": "30 2 * * 1"
+    },
+    {
+      "path": "/api/cron/agents?agent=pricer",
+      "schedule": "40 2 * * 1"
+    },
+    {
+      "path": "/api/cron/agents?agent=advisor",
+      "schedule": "50 2 * * 1"
     }
   ]
 }

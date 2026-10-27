@@ -72,10 +72,21 @@ const documentsExtract = approvedProcedure.input(extractDocumentSchema).mutation
     });
   }
 
-  // Trigger extraction job
-  const handle = await tasks.trigger<typeof extractDocumentJob>('extract-document', {
-    documentId,
-  });
+  /*
+    Document reading ran on Trigger.dev, which was switched off in October
+    2026 to save cost. Say so, rather than fail with an error nobody can read.
+  */
+  let handle: Awaited<ReturnType<typeof tasks.trigger>>;
+  try {
+    handle = await tasks.trigger<typeof extractDocumentJob>('extract-document', {
+      documentId,
+    });
+  } catch {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Automatic document reading is switched off. Enter the details by hand.',
+    });
+  }
 
   return {
     success: true,
