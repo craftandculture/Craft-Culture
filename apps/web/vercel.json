@@ -46,6 +46,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/cron/order-emails",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/zoho-orders",
       "schedule": "*/5 * * * *"
     },

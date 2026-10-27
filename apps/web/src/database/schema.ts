@@ -8535,3 +8535,47 @@ export const memberEmailOutbox = pgTable(
 ).enableRLS();
 
 export type MemberEmailOutboxRow = typeof memberEmailOutbox.$inferSelect;
+
+/**
+ * Order emails to wine partners and distributors, waiting to be sent
+ *
+ * Each row is one email to one address about one order event (an activity-log
+ * row). The order-emails cron writes them from the activity log and sends what
+ * is due; events for the same recipient and order that arrive together are
+ * sent as one email describing where the order stands now.
+ */
+export const orderEmailOutbox = pgTable(
+  'order_email_outbox',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** `${recipientEmail}:${activityLogId}` */
+    dedupeKey: text('dedupe_key').notNull().unique(),
+    orderId: uuid('order_id').notNull(),
+    activityLogId: uuid('activity_log_id').notNull(),
+    audience: text('audience').$type<'partner' | 'distributor'>().notNull(),
+    event: text('event').notNull(),
+    recipientEmail: text('recipient_email').notNull(),
+    recipientName: text('recipient_name').notNull(),
+    /** The Loops data variables for the orderUpdate template */
+    data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    /** Asks the recipient to act; wins over updates when events combine */
+    isAction: boolean('is_action').notNull().default(false),
+    sendAt: timestamp('send_at', { mode: 'date' }).notNull(),
+    status: text('status')
+      .$type<'pending' | 'sending' | 'sent' | 'shadowed' | 'suppressed' | 'merged' | 'failed'>()
+      .notNull()
+      .default('pending'),
+    mergedInto: uuid('merged_into'),
+    sentMode: text('sent_mode'),
+    sentTo: text('sent_to'),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    error: text('error'),
+    ...timestamps,
+  },
+  (table) => [
+    index('order_email_outbox_due_idx').on(table.status, table.sendAt),
+    index('order_email_outbox_order_idx').on(table.orderId),
+  ],
+).enableRLS();
+
+export type OrderEmailOutboxRow = typeof orderEmailOutbox.$inferSelect;

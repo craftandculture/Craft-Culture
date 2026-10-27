@@ -4035,6 +4035,39 @@ const runMigrations = async () => {
     );
     console.log('✅ Member email outbox ready');
 
+    /* Order emails to wine partners and distributors (order-emails cron) */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "order_email_outbox" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "dedupe_key" text NOT NULL UNIQUE,
+        "order_id" uuid NOT NULL,
+        "activity_log_id" uuid NOT NULL,
+        "audience" text NOT NULL,
+        "event" text NOT NULL,
+        "recipient_email" text NOT NULL,
+        "recipient_name" text NOT NULL,
+        "data" jsonb NOT NULL,
+        "is_action" boolean DEFAULT false NOT NULL,
+        "send_at" timestamp NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "merged_into" uuid,
+        "sent_mode" text,
+        "sent_to" text,
+        "sent_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "order_email_outbox" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "order_email_outbox_due_idx" ON "order_email_outbox" ("status", "send_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "order_email_outbox_order_idx" ON "order_email_outbox" ("order_id")`,
+    );
+    console.log('✅ Order email outbox ready');
+
     /*
       Private Cellar orders are raised under C&C, not under the member.
 

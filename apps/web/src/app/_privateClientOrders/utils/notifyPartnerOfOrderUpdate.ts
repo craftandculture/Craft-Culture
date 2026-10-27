@@ -8,6 +8,7 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
 import maskEmail from './maskEmail';
+import isLegacyOrderEmailOn from '../data/isLegacyOrderEmailOn';
 
 /**
  * Loops template IDs for partner notifications
@@ -156,6 +157,9 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
       : undefined;
 
     // Send notifications to each member
+    // Once the new order emails are live they replace these; in-app notices stay
+    const sendLegacyEmail = await isLegacyOrderEmailOn();
+
     for (const member of members) {
       // Create in-app notification
       await createNotification({
@@ -184,7 +188,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
         .from(users)
         .where(eq(users.id, member.userId));
 
-      if (user?.email) {
+      if (sendLegacyEmail && user?.email) {
         try {
           const emailPayload = {
             transactionalId: PARTNER_TEMPLATE_IDS[type],
@@ -225,7 +229,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
     }
 
     // Also send to business email if different from member emails
-    if (partner?.businessEmail) {
+    if (sendLegacyEmail && partner?.businessEmail) {
       const memberEmails = await Promise.all(
         members.map(async (m) => {
           const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));

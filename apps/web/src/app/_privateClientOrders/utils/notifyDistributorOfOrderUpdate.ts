@@ -8,6 +8,7 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
 import maskEmail from './maskEmail';
+import isLegacyOrderEmailOn from '../data/isLegacyOrderEmailOn';
 
 /**
  * Loops template IDs for distributor notifications
@@ -125,6 +126,9 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       : undefined;
 
     // Send notifications to each member
+    // Once the new order emails are live they replace these; in-app notices stay
+    const sendLegacyEmail = await isLegacyOrderEmailOn();
+
     for (const member of members) {
       // Create in-app notification
       await createNotification({
@@ -153,7 +157,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
         .from(users)
         .where(eq(users.id, member.userId));
 
-      if (user?.email) {
+      if (sendLegacyEmail && user?.email) {
         try {
           logger.info('PCO: Sending distributor email via Loops', {
             templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
@@ -194,7 +198,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
     }
 
     // Also send to business email if different from member emails
-    if (distributor?.businessEmail) {
+    if (sendLegacyEmail && distributor?.businessEmail) {
       const memberEmails = await Promise.all(
         members.map(async (m) => {
           const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));

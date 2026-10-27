@@ -67,6 +67,7 @@ const adminNav: AdminNavSection[] = [
       { label: 'Order Check', href: '/platform/admin/order-check' },
       { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
       { label: 'Source', href: '/platform/admin/source' },
+      { label: 'Order Emails', href: '/platform/admin/order-emails', staffOnly: true },
     ],
   },
   {

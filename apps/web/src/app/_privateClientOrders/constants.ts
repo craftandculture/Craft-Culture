@@ -180,3 +180,10 @@ export const DISTRIBUTOR_QUEUES = {
 } as const;
 
 export type DistributorQueue = keyof typeof DISTRIBUTOR_QUEUES;
+
+/**
+ * Loops transactional id for "Order update (all PCO emails)", the one template
+ * every order email to partners and distributors is sent with. Its copy,
+ * progress, wines and details are written by buildOrderEmail.
+ */
+export const ORDER_EMAIL_TEMPLATE_ID = 'cmvqn73i502sf0jzhynk8f1m8';
