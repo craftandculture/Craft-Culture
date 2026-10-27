@@ -98,11 +98,12 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }:
 
   return (
     <div className="flex flex-col gap-2">
-      <ol className="flex flex-wrap items-stretch gap-1.5">
+      {/* Wraps on a phone; on a desktop every step shares one row, however many there are */}
+      <ol className="flex flex-wrap items-stretch gap-1.5 lg:flex-nowrap">
         {steps.map((step, index) => (
-          <li key={step.key} className="flex items-center gap-1.5">
+          <li key={step.key} className="flex items-center gap-1.5 lg:min-w-0 lg:flex-1">
             <div
-              className={`flex min-w-[7rem] flex-col rounded-lg border px-2.5 py-1.5 ${
+              className={`flex min-w-[7rem] flex-col rounded-lg border px-2.5 py-1.5 lg:w-full lg:min-w-0 ${
                 step.done
                   ? 'border-border-primary bg-fill-primary'
                   : step.reference
@@ -110,7 +111,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }:
                     : 'border-border-muted border-dashed'
               }`}
             >
-              <span className="text-text-muted flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
+              <span className="text-text-muted flex items-center gap-1 truncate text-[10px] font-semibold tracking-wide uppercase">
                 {step.done && <Icon icon={IconCheck} size="xs" />}
                 {step.label}
               </span>
@@ -133,7 +134,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }:
                 </span>
               )}
               {(step.status || step.at) && (
-                <span className="text-text-muted text-[11px]">
+                <span className="text-text-muted truncate text-[11px]">
                   {[
                     step.status?.replace(/_/g, ' '),
                     step.at ? format(new Date(step.at), 'd MMM') : null,
