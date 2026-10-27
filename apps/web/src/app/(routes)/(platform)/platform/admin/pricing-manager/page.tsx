@@ -2597,7 +2597,7 @@ const PricingManagerPage = () => {
               without each one knowing about the setting.
             */}
             <style>{`
-              .pm-compact > tbody > tr > td { padding-top: 5px; padding-bottom: 5px; }
+              .pm-compact > tbody > tr > td { padding-top: 3px; padding-bottom: 3px; font-size: 13px; line-height: 20px; }
               .pm-compact .pm-sub, .pm-compact .pm-meta { display: none; }
               .pm-compact .pm-product { min-width: 340px; }
               .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 420px; }
