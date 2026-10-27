@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import renderQuote from '@/app/_salesQuotes/template/renderQuote';
+import formatQuoteDate from '@/app/_salesQuotes/utils/formatQuoteDate';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { salesQuotes } from '@/database/schema';
 import tryCatch from '@/utils/tryCatch';
@@ -50,12 +52,38 @@ export const GET = async (
 
   const isPublished = quote.status === 'published';
 
-  if (!isPublished) {
-    const [user] = await tryCatch(getCurrentUser());
+  // Today in the UAE, as yyyy-MM-dd, to compare with the date-only validUntil
+  const todayUae = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dubai',
+  }).format(new Date());
+  const validUntil = quote.validUntil ? String(quote.validUntil).slice(0, 10) : null;
+  const isExpired = validUntil !== null && validUntil < todayUae;
 
-    // deliberately a 404 rather than a 403: an unpublished slug should look
-    // like it does not exist
-    if (user?.role !== 'admin') return notFound();
+  let isStaff = false;
+
+  if (!isPublished || isExpired) {
+    const [user] = await tryCatch(getCurrentUser());
+    isStaff = user?.role === 'admin' && isTeamMember(user);
+  }
+
+  // deliberately a 404 rather than a 403: an unpublished slug should look
+  // like it does not exist
+  if (!isPublished && !isStaff) return notFound();
+
+  // An expired offer is no longer open to the client; staff can still proof it
+  if (isExpired && !isStaff) {
+    return new Response(
+      `This quotation expired on ${formatQuoteDate(validUntil)}. ` +
+        'Please contact your Craft & Culture representative for an updated offer.',
+      {
+        status: 410,
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'private, no-store',
+          'x-robots-tag': 'noindex, nofollow',
+        },
+      },
+    );
   }
 
   const html = renderQuote({
@@ -75,11 +103,10 @@ export const GET = async (
     status: 200,
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      // prices are snapshotted onto the quote, so a short edge cache is safe for
-      // a published link; drafts are per-admin and must never be cached
-      'cache-control': isPublished
-        ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
-        : 'private, no-store',
+      // Never cached at the edge: a quote that is unpublished, edited or past
+      // its validity date must stop showing immediately, and a shared cache
+      // kept serving the old prices for up to six minutes
+      'cache-control': 'private, no-store',
       // the template already carries a noindex meta tag; belt and braces
       'x-robots-tag': 'noindex, nofollow',
     },
