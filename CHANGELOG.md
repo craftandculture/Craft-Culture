@@ -1,3 +1,9 @@
+## [2.0.601](https://github.com/craftandculture/Craft-Culture/compare/v2.0.600...v2.0.601) (2026-10-27)
+
+### Bug Fixes
+
+* the warehouse health page no longer reports the retired local server as a fault ([7412191](https://github.com/craftandculture/Craft-Culture/commit/7412191a2dda14279525686260a1fd4153bfadc8))
+
 ## [2.0.600](https://github.com/craftandculture/Craft-Culture/compare/v2.0.599...v2.0.600) (2026-10-27)
 
 ### Bug Fixes
