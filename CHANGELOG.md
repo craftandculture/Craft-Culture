@@ -1,3 +1,9 @@
+## [2.0.596](https://github.com/craftandculture/Craft-Culture/compare/v2.0.595...v2.0.596) (2026-10-27)
+
+### Bug Fixes
+
+* payment proofs, customer POs and private order documents are now stored privately and only open for people allowed to see them ([7601669](https://github.com/craftandculture/Craft-Culture/commit/76016694c2cbec86a0d70db8881cfc5b1e16ae88))
+
 ## [2.0.595](https://github.com/craftandculture/Craft-Culture/compare/v2.0.594...v2.0.595) (2026-10-27)
 
 ### Bug Fixes
