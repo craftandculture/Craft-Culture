@@ -44,11 +44,13 @@ const updatePartnerSchema = z.object({
   // Branding
   logoUrl: z.string().url().refine(isHttpsUrl, 'Must be an https:// link').optional().or(z.literal('')),
   // Payment configuration (partner can have both bank transfer AND payment link)
-  paymentDetails: paymentDetailsSchema.optional(),
+  /** null clears every payment method */
+  paymentDetails: paymentDetailsSchema.nullable().optional(),
   // PCO pricing settings
-  logisticsCostPerCase: z.number().min(0).optional(),
-  pcoDutyRate: z.number().min(0).max(1).optional(),
-  pcoVatRate: z.number().min(0).max(1).optional(),
+  /** null clears the partner's own figure, so the global default applies */
+  logisticsCostPerCase: z.number().min(0).nullable().optional(),
+  pcoDutyRate: z.number().min(0).max(1).nullable().optional(),
+  pcoVatRate: z.number().min(0).max(1).nullable().optional(),
   // Finance email for proforma invoices (distributors only)
   financeEmail: z.string().email().optional().or(z.literal('')),
 });

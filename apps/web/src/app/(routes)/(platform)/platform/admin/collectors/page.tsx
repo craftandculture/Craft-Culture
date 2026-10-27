@@ -172,16 +172,17 @@ const CollectorsPage = () => {
   const handleSavePartner = () => {
     if (!editingPartner) return;
 
+    // Sent as typed: a field emptied in the form is cleared, not ignored
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
-      businessAddress: editingPartner.businessAddress || undefined,
+      businessAddress: editingPartner.businessAddress,
       deliveryAddress: editingPartner.deliveryAddress,
       deliveryInstructions: editingPartner.deliveryInstructions,
-      businessPhone: editingPartner.businessPhone || undefined,
-      businessEmail: editingPartner.businessEmail || undefined,
-      taxId: editingPartner.taxId || undefined,
-      logoUrl: editingPartner.logoUrl || undefined,
+      businessPhone: editingPartner.businessPhone,
+      businessEmail: editingPartner.businessEmail,
+      taxId: editingPartner.taxId,
+      logoUrl: editingPartner.logoUrl,
     });
   };
 

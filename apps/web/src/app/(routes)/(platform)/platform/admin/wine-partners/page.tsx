@@ -156,14 +156,15 @@ const WinePartnersPage = () => {
   const handleSavePartner = () => {
     if (!editingPartner) return;
 
+    // Sent as typed: a field emptied in the form is cleared, not ignored
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
-      businessAddress: editingPartner.businessAddress || undefined,
-      businessPhone: editingPartner.businessPhone || undefined,
-      businessEmail: editingPartner.businessEmail || undefined,
-      taxId: editingPartner.taxId || undefined,
-      logoUrl: editingPartner.logoUrl || undefined,
+      businessAddress: editingPartner.businessAddress,
+      businessPhone: editingPartner.businessPhone,
+      businessEmail: editingPartner.businessEmail,
+      taxId: editingPartner.taxId,
+      logoUrl: editingPartner.logoUrl,
     });
   };
 

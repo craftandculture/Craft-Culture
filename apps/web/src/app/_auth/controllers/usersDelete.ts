@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import z from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
@@ -49,6 +49,30 @@ const usersDelete = adminProcedure
         code: 'NOT_FOUND',
         message: 'User not found',
       });
+    }
+
+    /*
+      Never the last staff admin. With no admin left nobody could approve,
+      manage or restore accounts from the app.
+    */
+    if (user.role === 'admin') {
+      const [others] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, 'admin'),
+            ne(users.id, userId),
+            sql`lower(${users.email}) LIKE '%@craftculture.xyz'`,
+          ),
+        );
+
+      if (Number(others?.n ?? 0) === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This is the last admin account and cannot be deleted.',
+        });
+      }
     }
 
     // Most columns pointing at a user have no ON DELETE rule, so the delete

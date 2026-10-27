@@ -22,34 +22,33 @@ const usersRemovePartner = adminProcedure
   .mutation(async ({ input }) => {
     const { userId, partnerType } = input;
 
-    // Get all partners of the specified type
-    const partnersOfType = await db
-      .select({ id: partners.id })
-      .from(partners)
-      .where(eq(partners.type, partnerType));
-
-    const partnerIds = partnersOfType.map((p) => p.id);
-
-    // Remove only memberships for this partner type
-    if (partnerIds.length > 0) {
-      await db
+    // One transaction, so the membership and the legacy link go together
+    await db.transaction(async (tx) => {
+      // Remove only memberships for this partner type
+      await tx
         .delete(partnerMembers)
         .where(
           and(
             eq(partnerMembers.userId, userId),
-            inArray(partnerMembers.partnerId, partnerIds),
+            inArray(
+              partnerMembers.partnerId,
+              tx
+                .select({ id: partners.id })
+                .from(partners)
+                .where(eq(partners.type, partnerType)),
+            ),
           ),
         );
-    }
 
-    // Also clear the legacy user.partnerId field when removing a stock-owning
-    // partner, matching what assignment does.
-    if (isStockOwnerPartnerType(partnerType)) {
-      await db
-        .update(users)
-        .set({ partnerId: null })
-        .where(eq(users.id, userId));
-    }
+      // Also clear the legacy user.partnerId field when removing a
+      // stock-owning partner, matching what assignment does.
+      if (isStockOwnerPartnerType(partnerType)) {
+        await tx
+          .update(users)
+          .set({ partnerId: null })
+          .where(eq(users.id, userId));
+      }
+    });
 
     return { success: true };
   });

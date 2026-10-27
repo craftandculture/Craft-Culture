@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import STOCK_OUT_REASONS from '@/app/_wms/constants/stockOutReasons';
@@ -6,13 +6,13 @@ import displayWineName from '@/app/_wms/utils/displayWineName';
 import partnerMovementScope from '@/app/_wms/utils/partnerMovementScope';
 import db from '@/database/client';
 import {
-  partners,
   privateClientOrders,
   wmsLocations,
   wmsStockMovements,
   zohoSalesOrders,
 } from '@/database/schema';
 
+import getCraftCultureOwnerIds from './getCraftCultureOwnerIds';
 import type { PartnerActivityEntry } from '../controllers/partnerGetActivity';
 
 /** Stock movements in an owner's words, and the kind each one is */
@@ -140,14 +140,7 @@ const getStockActivity = async ({
 
   const deliveries = await getOwnerDeliveryOwners(rows.map((row) => row.orderId));
   // C&C buying an owner's wine is a sale to C&C, not a transfer (see soldToCraftAndCulture)
-  const ccIds = new Set(
-    (
-      await db
-        .select({ id: partners.id })
-        .from(partners)
-        .where(ilike(partners.businessName, 'craft%culture%'))
-    ).map((row) => row.id),
-  );
+  const ccIds = await getCraftCultureOwnerIds();
 
   /** What happened, in the owner's words */
   const describe = (row: (typeof rows)[number]) => {
