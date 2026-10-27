@@ -1,3 +1,9 @@
+## [2.0.583](https://github.com/craftandculture/Craft-Culture/compare/v2.0.582...v2.0.583) (2026-10-27)
+
+### Bug Fixes
+
+* the top menu no longer runs under the notification bell and settings on a narrower or zoomed window ([2a432bb](https://github.com/craftandculture/Craft-Culture/commit/2a432bbff5825e2939af9d9f025fe9c9275c533a))
+
 ## [2.0.582](https://github.com/craftandculture/Craft-Culture/compare/v2.0.581...v2.0.582) (2026-10-27)
 
 ### Bug Fixes
