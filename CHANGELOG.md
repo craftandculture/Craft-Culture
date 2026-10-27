@@ -1,3 +1,9 @@
+## [2.0.600](https://github.com/craftandculture/Craft-Culture/compare/v2.0.599...v2.0.600) (2026-10-27)
+
+### Bug Fixes
+
+* warehouse scanners no longer use the local NUC server; every scan goes to the Index directly ([bf831e6](https://github.com/craftandculture/Craft-Culture/commit/bf831e6c9d39b7acecfac4367ca67c301e71e7a8))
+
 ## [2.0.599](https://github.com/craftandculture/Craft-Culture/compare/v2.0.598...v2.0.599) (2026-10-27)
 
 ### Bug Fixes
