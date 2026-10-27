@@ -1,3 +1,9 @@
+## [2.0.607](https://github.com/craftandculture/Craft-Culture/compare/v2.0.606...v2.0.607) (2026-10-27)
+
+### Features
+
+* Stock Explorer can export the Inbound view to Excel ([cfa66fa](https://github.com/craftandculture/Craft-Culture/commit/cfa66faea0e12c6604570ce391ee812373beeb97))
+
 ## [2.0.606](https://github.com/craftandculture/Craft-Culture/compare/v2.0.605...v2.0.606) (2026-10-27)
 
 ### Features
