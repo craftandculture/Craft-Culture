@@ -1,3 +1,9 @@
+## [2.0.584](https://github.com/craftandculture/Craft-Culture/compare/v2.0.583...v2.0.584) (2026-10-27)
+
+### Bug Fixes
+
+* Private Cellar orders show C&C as the partner, not the member ([97d6fac](https://github.com/craftandculture/Craft-Culture/commit/97d6faca2ff8cd1adf71a20816924b5debdbaaa6))
+
 ## [2.0.583](https://github.com/craftandculture/Craft-Culture/compare/v2.0.582...v2.0.583) (2026-10-27)
 
 ### Bug Fixes
