@@ -6,7 +6,7 @@
  */
 
 import { logger, schedules } from '@trigger.dev/sdk';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import syncInvoiceLines from '@/app/_zohoSalesOrders/data/syncInvoiceLines';
 import pruneZohoInvoices from '@/app/_zohoSalesOrders/utils/pruneZohoInvoices';
@@ -56,6 +56,16 @@ export const zohoInvoiceSyncJob = schedules.task({
           );
         }
 
+        // One read per page for which invoices are already held, not one per invoice
+        const pageIds = result.invoices.map((inv) => inv.invoice_id);
+        const heldRows = pageIds.length
+          ? await triggerDb
+              .select({ id: zohoInvoices.id, zohoInvoiceId: zohoInvoices.zohoInvoiceId })
+              .from(zohoInvoices)
+              .where(inArray(zohoInvoices.zohoInvoiceId, pageIds))
+          : [];
+        const heldByZohoId = new Map(heldRows.map((row) => [row.zohoInvoiceId, row.id]));
+
         for (const inv of result.invoices) {
           seenIds.add(inv.invoice_id);
           if (inv.status === 'void') voidIds.add(inv.invoice_id);
@@ -67,11 +77,8 @@ export const zohoInvoiceSyncJob = schedules.task({
           });
 
           try {
-            const [existing] = await triggerDb
-              .select({ id: zohoInvoices.id })
-              .from(zohoInvoices)
-              .where(eq(zohoInvoices.zohoInvoiceId, inv.invoice_id))
-              .limit(1);
+            const existingId = heldByZohoId.get(inv.invoice_id);
+            const existing = existingId ? { id: existingId } : undefined;
 
             const now = new Date();
 
@@ -99,7 +106,7 @@ export const zohoInvoiceSyncJob = schedules.task({
                 .where(eq(zohoInvoices.id, existing.id));
               results.updated++;
             } else {
-              await triggerDb.insert(zohoInvoices).values({
+              const [created] = await triggerDb.insert(zohoInvoices).values({
                 zohoInvoiceId: inv.invoice_id,
                 invoiceNumber: inv.invoice_number,
                 zohoCustomerId: inv.customer_id,
@@ -117,7 +124,8 @@ export const zohoInvoiceSyncJob = schedules.task({
                 balance: inv.balance ?? 0,
                 currencyCode: inv.currency_code,
                 lastSyncAt: now,
-              });
+              }).returning({ id: zohoInvoices.id });
+              if (created) heldByZohoId.set(inv.invoice_id, created.id);
               results.created++;
             }
             consecutiveFailures = 0;

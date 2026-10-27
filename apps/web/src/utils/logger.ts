@@ -1,8 +1,8 @@
 /**
  * Development-only logging utility
  *
- * Provides conditional logging that only outputs in development mode.
- * Errors are always logged regardless of environment.
+ * Debug output only in development. Warnings, info and errors are always
+ * logged: a warning dropped in production is a problem nobody hears about.
  *
  * @example
  *   logger.dev('Debug info', { data });
@@ -20,12 +20,10 @@ const logger = {
   },
 
   /**
-   * Log warnings (development only)
+   * Log warnings (always logged)
    */
   warn: (...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(...args);
-    }
+    console.warn(...args);
   },
 
   /**

@@ -163,7 +163,10 @@ const NotificationBell = () => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 10000,
+    // Every 30s while the tab is visible; paused in a background tab and
+    // refreshed on return
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     staleTime: 5000,
   });

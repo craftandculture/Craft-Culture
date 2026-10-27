@@ -96,18 +96,37 @@ if (typeof rawEnv.DB_URL === 'string') {
   rawEnv.DB_URL = cleanDbUrl(rawEnv.DB_URL);
 }
 
+const REQUIRED_ENV_VARS = [
+  'BETTER_AUTH_SECRET',
+  'DB_URL',
+  'ENCRYPTION_KEY',
+  'LOOPS_API_KEY',
+] as const;
+
+const missingRequiredEnvVars = () => REQUIRED_ENV_VARS.filter((key) => !rawEnv[key]);
+
 /**
  * Check if all required env vars are present
  * Skip validation during build when env vars aren't available
  */
-const hasRequiredEnvVars = () => {
-  return !!(
-    rawEnv.BETTER_AUTH_SECRET &&
-    rawEnv.DB_URL &&
-    rawEnv.ENCRYPTION_KEY &&
-    rawEnv.LOOPS_API_KEY
+const hasRequiredEnvVars = () => missingRequiredEnvVars().length === 0;
+
+/*
+  The build runs without secrets, so validation is skipped there. But a live
+  production deployment missing one must fail loudly rather than limp on:
+  without LOOPS_API_KEY, for instance, the mock client was used and no email
+  (magic links included) was ever sent, silently. Only the Vercel production
+  runtime throws; the build phase, previews, local and Trigger.dev do not.
+*/
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+const isVercelProductionRuntime =
+  process.env.VERCEL_ENV === 'production' && !isBuildPhase;
+
+if (isVercelProductionRuntime && !hasRequiredEnvVars()) {
+  throw new Error(
+    `Missing required server environment variables: ${missingRequiredEnvVars().join(', ')}`,
   );
-};
+}
 
 /**
  * Server environment variables

@@ -8,10 +8,25 @@ import {
   zohoInvoices,
   zohoSalesOrders,
 } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-/** USD to AED peg rate */
-const USD_TO_AED = 3.6725;
+/**
+ * Today's calendar date in Dubai. The server runs in UTC, so between
+ * midnight and 4am Dubai time "this month" and "this year" were a day behind.
+ */
+const dubaiToday = (now: Date) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dubai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const part = (type: 'year' | 'month' | 'day') =>
+    Number(parts.find((p) => p.type === type)?.value);
+
+  return { year: part('year'), month: part('month') - 1, day: part('day') };
+};
 
 /** Invoice statuses that represent real revenue (exclude draft/void) */
 const revenueStatuses = ['sent', 'viewed', 'overdue', 'paid', 'partially_paid'];
@@ -46,15 +61,22 @@ const activeStatuses = [
 const adminGetMorningView = adminProcedure.query(async () => {
   const now = new Date();
 
+  /*
+    Boundaries are Dubai calendar dates. Invoice dates are stored as the
+    invoice's calendar day at 00:00 UTC (Zoho sends a plain date), so each
+    boundary is that calendar day at 00:00 UTC.
+  */
+  const today = dubaiToday(now);
+
   // Calendar month boundaries
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const thisMonthStart = new Date(Date.UTC(today.year, today.month, 1));
+  const lastMonthStart = new Date(Date.UTC(today.year, today.month - 1, 1));
   const lastMonthEnd = thisMonthStart;
 
-  // Calendar year boundaries (compare same period YTD)
-  const thisYearStart = new Date(now.getFullYear(), 0, 1);
-  const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-  const lastYearEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  // Calendar year boundaries (compare the same period last year, today included)
+  const thisYearStart = new Date(Date.UTC(today.year, 0, 1));
+  const lastYearStart = new Date(Date.UTC(today.year - 1, 0, 1));
+  const lastYearEnd = new Date(Date.UTC(today.year - 1, today.month, today.day + 1));
 
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
