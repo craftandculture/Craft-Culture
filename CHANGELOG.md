@@ -1,3 +1,9 @@
+## [2.0.610](https://github.com/craftandculture/Craft-Culture/compare/v2.0.609...v2.0.610) (2026-10-27)
+
+### Bug Fixes
+
+* a confirmed release whose order was deleted can be linked to the order now carrying it, so the warehouse can pick the member's bottles ([1103641](https://github.com/craftandculture/Craft-Culture/commit/11036410a73057cd709df32d779e1144842cf272))
+
 ## [2.0.609](https://github.com/craftandculture/Craft-Culture/compare/v2.0.608...v2.0.609) (2026-10-27)
 
 ### Features
