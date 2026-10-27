@@ -17,21 +17,30 @@ export interface ClaimCaseLabelsParams {
 }
 
 /**
- * The case labels for cases being received: the ones already printed for
- * THIS shipment that no earlier receipt has used, topped up with new ones.
+ * The case labels for cases being received: the ones already printed for THIS
+ * shipment that no earlier receipt has used, topped up with new ones.
  *
  * Receiving used to take any label of the wine, so the second shipment of a
- * wine was booked in against the first shipment's barcodes — two physical
- * cases answering to one scan. Must run inside the receiving transaction.
+ * wine was booked in against the first shipment's barcodes — two physical cases
+ * answering to one scan. Must run inside the receiving transaction.
  *
  * @returns One label per case
  */
 const claimCaseLabels = async (
   tx: Tx,
-  { lwin18, productName, lotNumber, shipmentId, locationId, count }: ClaimCaseLabelsParams,
+  {
+    lwin18,
+    productName,
+    lotNumber,
+    shipmentId,
+    locationId,
+    count,
+  }: ClaimCaseLabelsParams,
 ) => {
   // One receiver numbering a wine's labels at a time
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`case_labels_${lwin18}`}))`);
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${`case_labels_${lwin18}`}))`,
+  );
 
   const barcodePrefix = `CASE-${lwin18}-`;
 

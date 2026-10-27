@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
@@ -85,8 +85,24 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
     const [updated] = await db
       .update(wmsDispatchBatches)
       .set(updateData)
-      .where(eq(wmsDispatchBatches.id, batchId))
+      // Only from the status just checked: a second tap found the batch already
+      // moved on and wrote the dispatch movements a second time
+      .where(
+        and(
+          eq(wmsDispatchBatches.id, batchId),
+          batch.status === null
+            ? isNull(wmsDispatchBatches.status)
+            : eq(wmsDispatchBatches.status, batch.status),
+        ),
+      )
       .returning();
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This batch was updated a moment ago. Refresh to see its status.',
+      });
+    }
 
     // Update order statuses based on batch status
     if (status === 'dispatched' || status === 'delivered') {

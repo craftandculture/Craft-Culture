@@ -1,11 +1,11 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { wmsStock } from '@/database/schema';
+import { partners, wmsStock } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { createInventoryAdjustment } from '@/lib/zoho/inventoryAdjustments';
-import { getAllItems, searchItems } from '@/lib/zoho/items';
+import { getAllItems } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
 
 /**
@@ -20,22 +20,36 @@ import logger from '@/utils/logger';
 const adminSyncStockToZoho = adminProcedure
   .input(
     z.object({
-      dryRun: z.boolean().default(false), // If true, only report what would change
+      // Report only, unless the caller has seen the preview and says go
+      dryRun: z.boolean().default(true),
     }),
   )
   .mutation(async ({ input }) => {
     const { dryRun } = input;
 
     // Get WMS stock grouped by lwin18 (total across all locations)
+    /*
+      One line per code (grouping by name too gave two lines, and two
+      adjustments, for one item whose rows were named differently), and only
+      stock that is ours to sell: wine held for its owner and members' cellar
+      stock are not Zoho inventory.
+    */
     const wmsStockByProduct = await db
       .select({
         lwin18: wmsStock.lwin18,
-        productName: wmsStock.productName,
-        totalCases: sql<number>`SUM(${wmsStock.quantityCases})`.as('totalCases'),
+        productName: sql<string>`MAX(${wmsStock.productName})`,
+        totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`.as('totalCases'),
       })
       .from(wmsStock)
-      .where(sql`${wmsStock.quantityCases} > 0`)
-      .groupBy(wmsStock.lwin18, wmsStock.productName);
+      .leftJoin(partners, eq(partners.id, wmsStock.ownerId))
+      .where(
+        and(
+          sql`${wmsStock.quantityCases} > 0`,
+          eq(wmsStock.notForSale, false),
+          sql`${partners.type} IS DISTINCT FROM 'private_collector'`,
+        ),
+      )
+      .groupBy(wmsStock.lwin18);
 
     logger.info('[SyncStockToZoho] WMS products found:', {
       count: wmsStockByProduct.length,
@@ -75,28 +89,13 @@ const adminSyncStockToZoho = adminProcedure
     for (const wmsProduct of wmsStockByProduct) {
       const { lwin18, productName, totalCases } = wmsProduct;
 
-      // Try to find Zoho item by exact SKU match
-      let zohoItem = zohoItemsBySku.get(lwin18);
-
-      // If not found by exact match, try LWIN-11 prefix match
-      if (!zohoItem && lwin18.length >= 11) {
-        const lwin11Prefix = lwin18.substring(0, 11);
-        zohoItem = zohoItems.find((item) => item.sku?.startsWith(lwin11Prefix));
-      }
-
-      // If still not found, try search by name
-      if (!zohoItem) {
-        try {
-          const searchResults = await searchItems(productName);
-          zohoItem = searchResults.find(
-            (item) =>
-              item.name.toLowerCase() === productName.toLowerCase() ||
-              item.name.includes(productName.split(' ')[0]),
-          );
-        } catch {
-          // Search failed, continue without match
-        }
-      }
+      /*
+      Exact SKU only. The old fallbacks matched any item sharing the first
+      11 characters (another vintage or pack of the wine) or a name search on
+      the first word, and then overwrote that item's stock.
+    */
+      const zohoItem =
+        zohoItemsBySku.get(lwin18) ?? zohoItemsBySku.get(lwin18.replace(/-/g, ''));
 
       if (!zohoItem) {
         results.push({

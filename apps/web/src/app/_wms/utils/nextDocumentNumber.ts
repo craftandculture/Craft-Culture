@@ -10,7 +10,7 @@ export type DbExecutor = typeof db | Tx;
 export interface NextDocumentNumberParams {
   /** Run on the caller's transaction so rows it has not committed yet count */
   executor?: DbExecutor;
-  /** e.g. 'MOV' — the number reads MOV-2026-0042 */
+  /** E.g. 'MOV' — the number reads MOV-2026-0042 */
   code: string;
   /** Table and column that hold the numbers (fixed identifiers, never input) */
   table: string;
@@ -37,16 +37,16 @@ const rowsOf = (result: unknown) =>
  * Hand out the next WMS document number (MOV-, PL-, RPK-, CC-, …).
  *
  * The old generators each read "the last number" with the global client and
- * added one. Two scans at the same moment got the same number and one failed
- * on the unique index; inside a transaction the read could not see the
+ * added one. Two scans at the same moment got the same number and one failed on
+ * the unique index; inside a transaction the read could not see the
  * transaction's own rows, so a second movement in the same transaction always
  * collided (multi-line pool purchases could never confirm); and the text sort
  * put MOV-2026-9999 above MOV-2026-10000.
  *
  * Now: a Postgres sequence (one per document type, seeded from the highest
  * number in use) gives every caller a distinct number with no race. If the
- * sequence does not exist yet — migrations have not run — it falls back to
- * the numeric maximum read on the caller's executor, serialised by a
+ * sequence does not exist yet — migrations have not run — it falls back to the
+ * numeric maximum read on the caller's executor, serialised by a
  * transaction-scoped advisory lock.
  *
  * Numbers keep counting across a new year rather than restarting at 0001.

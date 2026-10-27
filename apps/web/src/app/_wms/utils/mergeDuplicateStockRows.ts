@@ -30,9 +30,9 @@ export interface MergedDuplicate {
  * another's.
  *
  * Merging adds the cases, reservations and open bottles of the extra rows to
- * the oldest row, re-points everything that referenced the extra rows, and
- * then removes them, each group in its own transaction. Nothing is lost: the
- * total in the bay is the same before and after, so no ledger entry is needed.
+ * the oldest row, re-points everything that referenced the extra rows, and then
+ * removes them, each group in its own transaction. Nothing is lost: the total
+ * in the bay is the same before and after, so no ledger entry is needed.
  *
  * @returns The groups merged, and the wines whose merge was rolled back
  */
@@ -47,7 +47,8 @@ const mergeDuplicateStockRows = async () => {
     `),
   );
 
-  if (groups.length === 0) return { merged: [] as MergedDuplicate[], skipped: [] as string[] };
+  if (groups.length === 0)
+    return { merged: [] as MergedDuplicate[], skipped: [] as string[] };
 
   // Every column anywhere that points at a wms_stock row
   const references = rowsOf(
@@ -71,35 +72,36 @@ const mergeDuplicateStockRows = async () => {
     const [keepId, ...extraIds] = ids;
     if (!keepId || extraIds.length === 0) continue;
 
-    const merge = () => db.transaction(async (tx) => {
-      const rows = await tx
-        .select()
-        .from(wmsStock)
-        .where(inArray(wmsStock.id, ids))
-        .for('update');
+    const merge = () =>
+      db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(wmsStock)
+          .where(inArray(wmsStock.id, ids))
+          .for('update');
 
-      const keep = rows.find((row) => row.id === keepId);
-      const extras = rows.filter((row) => row.id !== keepId);
-      if (!keep || extras.length === 0) return null;
+        const keep = rows.find((row) => row.id === keepId);
+        const extras = rows.filter((row) => row.id !== keepId);
+        if (!keep || extras.length === 0) return null;
 
-      // Still one parcel? Another change may have landed since the scan.
-      const sameParcel = extras.every(
-        (row) =>
-          row.ownerId === keep.ownerId &&
-          row.lwin18 === keep.lwin18 &&
-          row.locationId === keep.locationId &&
-          row.shipmentId === keep.shipmentId &&
-          row.notForSale === keep.notForSale,
-      );
-      if (!sameParcel) return null;
+        // Still one parcel? Another change may have landed since the scan.
+        const sameParcel = extras.every(
+          (row) =>
+            row.ownerId === keep.ownerId &&
+            row.lwin18 === keep.lwin18 &&
+            row.locationId === keep.locationId &&
+            row.shipmentId === keep.shipmentId &&
+            row.notForSale === keep.notForSale,
+        );
+        if (!sameParcel) return null;
 
-      const sum = (pick: (row: (typeof rows)[number]) => number) =>
-        rows.reduce((total, row) => total + pick(row), 0);
+        const sum = (pick: (row: (typeof rows)[number]) => number) =>
+          rows.reduce((total, row) => total + pick(row), 0);
 
-      const extraIdList = extras.map((row) => row.id);
+        const extraIdList = extras.map((row) => row.id);
 
-      for (const ref of references) {
-        await tx.execute(sql`
+        for (const ref of references) {
+          await tx.execute(sql`
           UPDATE ${sql.identifier(ref.table)}
              SET ${sql.identifier(ref.column)} = ${keepId}::uuid
            WHERE ${sql.identifier(ref.column)} IN (${sql.join(
@@ -107,31 +109,31 @@ const mergeDuplicateStockRows = async () => {
              sql`, `,
            )})
         `);
-      }
+        }
 
-      await tx
-        .update(wmsStock)
-        .set({
-          quantityCases: sum((row) => row.quantityCases),
-          reservedCases: sum((row) => row.reservedCases),
-          availableCases: sum((row) => row.availableCases),
-          openBottles: sum((row) => row.openBottles),
-          updatedAt: new Date(),
-        })
-        .where(inArray(wmsStock.id, [keepId]));
+        await tx
+          .update(wmsStock)
+          .set({
+            quantityCases: sum((row) => row.quantityCases),
+            reservedCases: sum((row) => row.reservedCases),
+            availableCases: sum((row) => row.availableCases),
+            openBottles: sum((row) => row.openBottles),
+            updatedAt: new Date(),
+          })
+          .where(inArray(wmsStock.id, [keepId]));
 
-      await tx.delete(wmsStock).where(inArray(wmsStock.id, extraIdList));
+        await tx.delete(wmsStock).where(inArray(wmsStock.id, extraIdList));
 
-      return {
-        lwin18: keep.lwin18,
-        productName: keep.productName,
-        ownerName: keep.ownerName,
-        keptId: keepId,
-        mergedIds: extraIdList,
-        casesBefore: keep.quantityCases,
-        casesAfter: sum((row) => row.quantityCases),
-      };
-    });
+        return {
+          lwin18: keep.lwin18,
+          productName: keep.productName,
+          ownerName: keep.ownerName,
+          keptId: keepId,
+          mergedIds: extraIdList,
+          casesBefore: keep.quantityCases,
+          casesAfter: sum((row) => row.quantityCases),
+        };
+      });
 
     try {
       const outcome = await merge();
@@ -140,7 +142,11 @@ const mergeDuplicateStockRows = async () => {
       // One group that cannot merge cleanly (a clash on a referencing table)
       // rolls back alone and is left for a person; the others still merge.
       skipped.push(String(group.lwin18));
-      console.error('[WMS] Could not merge duplicate stock rows', group.lwin18, error);
+      console.error(
+        '[WMS] Could not merge duplicate stock rows',
+        group.lwin18,
+        error,
+      );
     }
   }
 
