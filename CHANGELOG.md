@@ -1,3 +1,9 @@
+## [2.0.604](https://github.com/craftandculture/Craft-Culture/compare/v2.0.603...v2.0.604) (2026-10-27)
+
+### Bug Fixes
+
+* spirits and RTD in the Pricing Manager take the In Bond % and PC %, so their In Bond, PC price and margin now calculate ([f612a0d](https://github.com/craftandculture/Craft-Culture/commit/f612a0d502a5e73d9969da9939fb0fa3913880b1))
+
 ## [2.0.603](https://github.com/craftandculture/Craft-Culture/compare/v2.0.602...v2.0.603) (2026-10-27)
 
 ### Features
