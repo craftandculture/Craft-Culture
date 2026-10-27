@@ -1,3 +1,9 @@
+## [2.0.611](https://github.com/craftandculture/Craft-Culture/compare/v2.0.610...v2.0.611) (2026-10-27)
+
+### Bug Fixes
+
+* a single-bottle pick line can be picked from a 2- or 3-bottle case, cracking it and shelving the rest ([bfefbdd](https://github.com/craftandculture/Craft-Culture/commit/bfefbdd321cfe04434e6d2df4c0473cc4a198079))
+
 ## [2.0.610](https://github.com/craftandculture/Craft-Culture/compare/v2.0.609...v2.0.610) (2026-10-27)
 
 ### Bug Fixes
