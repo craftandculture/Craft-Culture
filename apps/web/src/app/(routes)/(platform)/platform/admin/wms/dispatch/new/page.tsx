@@ -129,6 +129,20 @@ const DispatchWizardPage = () => {
       void queryClient.invalidateQueries();
       router.push(`/platform/admin/wms/dispatch/${data.batch.id}`);
     },
+    /*
+      The server refuses to ship lines that never left the shelf through a
+      scan (unscanned pick list lines, wine it cannot find) until someone says
+      yes. Ask, and only then send it again with the yes.
+    */
+    onError: (error, variables) => {
+      if (
+        error.data?.code === 'PRECONDITION_FAILED' &&
+        !variables.confirmUnpicked &&
+        window.confirm(`${error.message}\n\nDispatch anyway?`)
+      ) {
+        dispatchMutation.mutate({ ...variables, confirmUnpicked: true });
+      }
+    },
   });
 
   // Build combined order list

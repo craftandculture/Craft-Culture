@@ -11,7 +11,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { eq, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -111,11 +111,32 @@ const adminReverseRepack = wmsOperatorProcedure
 
     // Pre-generate movement numbers before the transaction (Neon pool safety).
     const moveNumbers: string[] = [];
-    for (let i = 0; i < 1 + targets.length; i++) {
-      moveNumbers.push(await generateMovementNumber(i));
+    for (let count = 0; count < 1 + targets.length; count++) {
+      moveNumbers.push(await generateMovementNumber());
     }
 
     return await db.transaction(async (tx) => {
+      /*
+        0. Claim the reversal first. Two taps used to both pass the
+        "already reversed" check above and restore the source pack twice.
+      */
+      const claimed = await tx
+        .update(wmsRepacks)
+        .set({
+          reversedAt: new Date(),
+          reversedBy: ctx.user.id,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(wmsRepacks.id, repack.id), isNull(wmsRepacks.reversedAt)))
+        .returning({ id: wmsRepacks.id });
+
+      if (claimed.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Repack ${repackNumber} has already been reversed`,
+        });
+      }
+
       // 1. Restore the source pack
       await tx
         .update(wmsStock)
@@ -129,14 +150,23 @@ const adminReverseRepack = wmsOperatorProcedure
       // 2. Remove the split target pack(s)
       for (const t of targets) {
         if (!t.stockId) continue;
-        await tx
+        const removed = await tx
           .update(wmsStock)
           .set({
             quantityCases: sql`${wmsStock.quantityCases} - ${t.qty}`,
             availableCases: sql`${wmsStock.availableCases} - ${t.qty}`,
             updatedAt: new Date(),
           })
-          .where(eq(wmsStock.id, t.stockId));
+          // Still intact at the moment of writing, not just when checked above
+          .where(and(eq(wmsStock.id, t.stockId), sql`${wmsStock.availableCases} >= ${t.qty}`))
+          .returning({ id: wmsStock.id });
+
+        if (removed.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Cannot reverse ${repackNumber} — the ${t.config}-pack has been picked, moved or reserved since. Adjust the stock manually.`,
+          });
+        }
       }
 
       // 3. Flip the labels back: reactivate source, void targets
@@ -185,16 +215,6 @@ const adminReverseRepack = wmsOperatorProcedure
         });
         idx++;
       }
-
-      // 5. Mark the repack reversed
-      await tx
-        .update(wmsRepacks)
-        .set({
-          reversedAt: new Date(),
-          reversedBy: ctx.user.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsRepacks.id, repack.id));
 
       return {
         success: true,

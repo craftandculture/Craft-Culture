@@ -79,6 +79,8 @@ const moveBottlesToSingles = async ({
         eq(wmsStock.locationId, source.locationId),
         eq(wmsStock.lwin18, singlesLwin18),
         eq(wmsStock.ownerId, source.ownerId),
+        // A held case's bottles never join a listed singles row
+        eq(wmsStock.notForSale, source.notForSale),
         source.lotNumber === null
           ? isNull(wmsStock.lotNumber)
           : eq(wmsStock.lotNumber, source.lotNumber),
@@ -89,7 +91,7 @@ const moveBottlesToSingles = async ({
   // "orphan" stock record — and the reconciliation's auto-fix DELETES those.
   const recordArrival = async () => {
     await db.insert(wmsStockMovements).values({
-      movementNumber: await generateMovementNumber(),
+      movementNumber: await generateMovementNumber(db),
       movementType: 'repack_in' as const,
       lwin18: singlesLwin18,
       productName: singlesName,

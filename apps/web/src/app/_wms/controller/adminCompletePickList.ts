@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
@@ -76,8 +76,16 @@ const adminCompletePickList = wmsOperatorProcedure
         notes: notes ? (pickList.notes ? `${pickList.notes}\n${notes}` : notes) : pickList.notes,
         updatedAt: new Date(),
       })
-      .where(eq(wmsPickLists.id, pickListId))
+      // Only once: a second tap finds it already completed and stops here
+      .where(and(eq(wmsPickLists.id, pickListId), ne(wmsPickLists.status, 'completed')))
       .returning();
+
+    if (!completed) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Pick list already completed',
+      });
+    }
 
     /*
       Hand back anything this order still holds.
@@ -93,12 +101,19 @@ const adminCompletePickList = wmsOperatorProcedure
       active is a leftover, not a promise.
     */
     if (pickList.orderId) {
-      await releaseStockReservations({
-        orderId: pickList.orderId,
-        orderType: 'zoho',
-        reason: `Pick list ${pickList.pickListNumber} completed`,
-        db,
-      });
+      /*
+        Both kinds: a pick list is for a Zoho order or a PCO, and the id says
+        which. Releasing 'zoho' only left every PCO's leftover holds active
+        after the order had shipped.
+      */
+      for (const orderType of ['zoho', 'pco'] as const) {
+        await releaseStockReservations({
+          orderId: pickList.orderId,
+          orderType,
+          reason: `Pick list ${pickList.pickListNumber} completed`,
+          db,
+        });
+      }
     }
 
     // Update linked Zoho Sales Order status to 'picked' if this is a Zoho order

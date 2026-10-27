@@ -4791,6 +4791,11 @@ export const wmsStockMovements = pgTable(
     scannedBarcodes: jsonb('scanned_barcodes').$type<string[]>(),
     notes: text('notes'),
     reasonCode: text('reason_code'),
+    /**
+     * Set by a write the client may retry (receiving a line). A retry finds
+     * its own earlier movement by this key and changes nothing.
+     */
+    idempotencyKey: text('idempotency_key'),
     performedBy: uuid('performed_by')
       .references(() => users.id)
       .notNull(),
@@ -4798,6 +4803,7 @@ export const wmsStockMovements = pgTable(
     ...timestamps,
   },
   (table) => [
+    uniqueIndex('wms_stock_movements_idempotency_key_unique').on(table.idempotencyKey),
     index('wms_stock_movements_movement_type_idx').on(table.movementType),
     index('wms_stock_movements_lwin18_idx').on(table.lwin18),
     index('wms_stock_movements_performed_at_idx').on(table.performedAt),

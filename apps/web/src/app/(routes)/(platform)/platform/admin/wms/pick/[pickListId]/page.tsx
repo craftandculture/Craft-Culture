@@ -1049,7 +1049,13 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="outline"
                 className="h-10 w-10 text-lg"
-                onClick={() => setPickedQuantity((prev) => prev + 1)}
+                // Capped at the line: the server refuses more than the line asks for
+                onClick={() =>
+                  setPickedQuantity((prev) =>
+                    Math.min(pickingItem?.quantityNeeded ?? prev + 1, prev + 1),
+                  )
+                }
+                disabled={pickedQuantity >= (pickingItem?.quantityNeeded ?? Infinity)}
               >
                 +
               </Button>

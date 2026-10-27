@@ -3923,6 +3923,45 @@ const runMigrations = async () => {
     console.log('✅ Platform audit fixes ready');
 
     /*
+      WMS document number sequences (27 Oct 2026). Movement, pick list, repack,
+      cycle count, dispatch batch, delivery note and partner request numbers
+      come from these, so two scans at once can no longer take the same number.
+      Re-seeded every deploy to at least the highest number already in use.
+    */
+    for (const [seq, table, column, code] of [
+      ['wms_movement_number_seq', 'wms_stock_movements', 'movement_number', 'MOV'],
+      ['wms_pick_list_number_seq', 'wms_pick_lists', 'pick_list_number', 'PL'],
+      ['wms_repack_number_seq', 'wms_repacks', 'repack_number', 'RPK'],
+      ['wms_count_number_seq', 'wms_cycle_counts', 'count_number', 'CC'],
+      ['wms_batch_number_seq', 'wms_dispatch_batches', 'batch_number', 'BATCH'],
+      ['wms_delivery_note_number_seq', 'wms_delivery_notes', 'delivery_note_number', 'DN'],
+      ['wms_request_number_seq', 'wms_partner_requests', 'request_number', 'REQ'],
+    ]) {
+      await client.unsafe(`CREATE SEQUENCE IF NOT EXISTS "${seq}"`);
+      await client.unsafe(`
+        SELECT setval('${seq}', GREATEST(
+          COALESCE((SELECT MAX(substring("${column}" FROM '^${code}-[0-9]{4}-([0-9]+)$')::bigint) FROM "${table}"), 0),
+          (SELECT CASE WHEN is_called THEN last_value ELSE 0 END FROM "${seq}"),
+          1
+        ), true)
+      `);
+    }
+    console.log('✅ WMS number sequences ready');
+
+    /*
+      Retry-safe receiving (27 Oct 2026): a receipt carries a key, and a
+      resent request finds its own movement instead of booking the cases in
+      again. NULL for every other movement, so the unique index is safe.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "idempotency_key" text`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_stock_movements_idempotency_key_unique" ON "wms_stock_movements" ("idempotency_key")`,
+    );
+    console.log('✅ WMS receive idempotency ready');
+
+    /*
       Private Cellar member emails (26 Oct 2026). Every member email is queued
       here first and sent by the member-emails cron in the switch's mode (off,
       shadow or live), so nothing reaches a member until Kevin turns it on.

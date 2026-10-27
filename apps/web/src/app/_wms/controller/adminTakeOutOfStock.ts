@@ -103,8 +103,8 @@ const adminTakeOutOfStock = wmsOperatorProcedure
         ? await moveBottlesToSingles({ sourceStockId: stock.id, bottles: plan.leftover, performedBy: ctx.user.id, performedAt, db: tx })
         : null;
 
-      // The singles' movement is not yet committed, so the generator cannot see its number
-      const movementNumber = await generateMovementNumber(leavesSingles ? 1 : 0);
+      // On the transaction, so the singles movement just written is seen
+      const movementNumber = await generateMovementNumber(tx);
       const [movement] = await tx
         .insert(wmsStockMovements)
         .values({
