@@ -1,3 +1,9 @@
+## [2.0.597](https://github.com/craftandculture/Craft-Culture/compare/v2.0.596...v2.0.597) (2026-10-27)
+
+### Bug Fixes
+
+* shipment papers, export invoices, delivery notes, freight quotes, photos and Team Task files are now stored privately ([ecabc98](https://github.com/craftandculture/Craft-Culture/commit/ecabc98f5a8ea7ee5b59af132e68f2bde900e4c1))
+
 ## [2.0.596](https://github.com/craftandculture/Craft-Culture/compare/v2.0.595...v2.0.596) (2026-10-27)
 
 ### Bug Fixes
