@@ -4,6 +4,8 @@ import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
+import computeQuoteCommissions from '../utils/computeQuoteCommissions';
+
 /**
  * Get commission summary for the current B2C user
  *
@@ -36,6 +38,8 @@ const commissionsGetSummary = approvedProcedure.query(async ({ ctx: { user } }) 
   // Get all commission-earning quotes for this user
   const commissionQuotes = await db
     .select({
+      id: quotes.id,
+      lineItems: quotes.lineItems,
       quoteData: quotes.quoteData,
       commissionPaidOutAt: quotes.commissionPaidOutAt,
     })
@@ -51,9 +55,11 @@ const commissionsGetSummary = approvedProcedure.query(async ({ ctx: { user } }) 
   let pendingPayout = 0;
   let paidOut = 0;
 
+  // Worked out on the server, not the figure each quote was saved with
+  const commissions = await computeQuoteCommissions(commissionQuotes);
+
   for (const quote of commissionQuotes) {
-    const quoteData = quote.quoteData as { totalCommissionUsd?: number } | null;
-    const commission = quoteData?.totalCommissionUsd ?? 0;
+    const commission = commissions.get(quote.id)?.commissionUsd ?? 0;
 
     totalEarned += commission;
 

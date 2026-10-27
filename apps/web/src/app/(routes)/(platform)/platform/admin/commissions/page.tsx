@@ -243,6 +243,11 @@ const CommissionsPage = () => {
                               <Typography variant="bodySm" className="font-semibold text-fill-brand">
                                 {formatPrice(item.commissionAmount, 'USD')}
                               </Typography>
+                              {!item.commissionVerified && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Some lines could not be priced: check before paying
+                                </Typography>
+                              )}
                             </td>
                             <td className="px-6 py-4">
                               <span
@@ -429,9 +434,16 @@ const CommissionsPage = () => {
                               </Typography>
                             </div>
                           </div>
-                          <Typography variant="bodySm" className="font-semibold text-fill-brand">
-                            {formatPrice(item.commissionAmount, 'USD')}
-                          </Typography>
+                          <div className="text-right">
+                            <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                              {formatPrice(item.commissionAmount, 'USD')}
+                            </Typography>
+                            {!item.commissionVerified && (
+                              <Typography variant="bodyXs" colorRole="muted">
+                                Check before paying
+                              </Typography>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between">

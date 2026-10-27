@@ -5,6 +5,8 @@ import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
+import computeQuoteCommissions from '../utils/computeQuoteCommissions';
+
 const commissionsGetDetailsSchema = z.object({
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0),
@@ -45,6 +47,7 @@ const commissionsGetDetails = approvedProcedure
         name: quotes.name,
         status: quotes.status,
         totalUsd: quotes.totalUsd,
+        lineItems: quotes.lineItems,
         quoteData: quotes.quoteData,
         createdAt: quotes.createdAt,
         paidAt: quotes.paidAt,
@@ -64,14 +67,16 @@ const commissionsGetDetails = approvedProcedure
       .offset(cursor);
 
     const hasMore = commissionQuotes.length > limit;
-    const data = commissionQuotes.slice(0, limit).map((quote) => {
-      const quoteData = quote.quoteData as { totalCommissionUsd?: number } | null;
+    const page = commissionQuotes.slice(0, limit);
+    // Worked out on the server, not the figure each quote was saved with
+    const commissions = await computeQuoteCommissions(page);
+    const data = page.map((quote) => {
       return {
         id: quote.id,
         name: quote.name,
         status: quote.status,
         orderTotal: quote.totalUsd,
-        commissionEarned: quoteData?.totalCommissionUsd ?? 0,
+        commissionEarned: commissions.get(quote.id)?.commissionUsd ?? 0,
         createdAt: quote.createdAt,
         paidAt: quote.paidAt,
         commissionPaidOutAt: quote.commissionPaidOutAt,

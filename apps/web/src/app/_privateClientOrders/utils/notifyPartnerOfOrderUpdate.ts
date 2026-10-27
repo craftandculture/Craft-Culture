@@ -7,6 +7,8 @@ import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+import maskEmail from './maskEmail';
+
 /**
  * Loops template IDs for partner notifications
  */
@@ -215,7 +217,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
             error: error instanceof Error ? error.message : String(error),
           }));
           logger.error('PCO: Failed to send partner email via Loops', {
-            email: user.email,
+            email: maskEmail(user.email),
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -236,7 +238,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
           logger.info('PCO: Sending partner business email via Loops', {
             templateId: PARTNER_TEMPLATE_IDS[type],
             type,
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
           });
 
           const result = await loops.sendTransactionalEmail({
@@ -259,13 +261,13 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
           });
 
           logger.info('PCO: Partner business email result', {
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
             result: JSON.stringify(result),
             success: result?.success,
           });
         } catch (error) {
           logger.error('PCO: Failed to send partner business email via Loops', {
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
             error: error instanceof Error ? error.message : String(error),
           });
         }
