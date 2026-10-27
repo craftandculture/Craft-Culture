@@ -29,7 +29,9 @@ const declareOrigins = (declaration: string, lines: ExportLine[]) => {
     ),
   ];
   const rest = declaration.replace(ORIGIN_SENTENCE, '').trim();
-  return origins.length ? `${rest} The goods are of ${origins.join(', ')} origin.` : rest;
+  if (!origins.length) return rest;
+  const sentence = `The goods are of ${origins.join(', ')} origin.`;
+  return rest ? `${rest} ${sentence}` : sentence;
 };
 
 export default declareOrigins;

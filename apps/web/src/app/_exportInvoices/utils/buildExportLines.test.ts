@@ -155,7 +155,7 @@ describe('buildExportLines, replaying the hand-built export invoices', () => {
       amount: Math.round(perBottle * 3 * 4 * 100) / 100,
     });
   });
-  it('refuses a declaration that leaves out an origin on the lines (EXP-2026-0046)', () => {
+  it('names an origin typed onto a line in the declaration (EXP-2026-0046)', () => {
     const doc = toDoc(exp0041 as ExportInvoiceInput[]);
     const [first] = doc.lines;
     if (!first) throw new Error('fixture lines missing');
@@ -163,13 +163,20 @@ describe('buildExportLines, replaying the hand-built export invoices', () => {
       { op: 'setLine', lineId: first.id, field: 'origin', value: 'United Kingdom' },
       { op: 'setDeclaration', text: 'The goods are of France, Italy origin.' },
     ]);
-    const check = validateExportDocument(edited).find((c) => c.code === 'undeclared_origin');
+    expect(edited.declaration).toBe('The goods are of United Kingdom origin.');
+    expect(validateExportDocument(edited).some((c) => c.code === 'undeclared_origin')).toBe(false);
+  });
+  it('refuses a stored declaration that leaves out an origin on the lines', () => {
+    const doc = toDoc(exp0041 as ExportInvoiceInput[]);
+    const [first] = doc.lines;
+    if (!first) throw new Error('fixture lines missing');
+    const stale = {
+      ...doc,
+      lines: doc.lines.map((l) => (l.id === first.id ? { ...l, origin: 'United Kingdom' } : l)),
+      declaration: 'The goods are of France, Italy origin.',
+    } as ExportDocument;
+    const check = validateExportDocument(stale).find((c) => c.code === 'undeclared_origin');
     expect(check).toMatchObject({ level: 'error', lineIds: [first.id] });
     expect(check?.message).toContain('United Kingdom');
-
-    const fixed = applyExportOps(edited, [
-      { op: 'setDeclaration', text: 'The goods are of France, Italy, United Kingdom origin.' },
-    ]);
-    expect(validateExportDocument(fixed).some((c) => c.code === 'undeclared_origin')).toBe(false);
   });
 });
