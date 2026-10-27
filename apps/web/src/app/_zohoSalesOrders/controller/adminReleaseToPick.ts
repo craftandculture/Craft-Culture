@@ -183,6 +183,44 @@ const adminReleaseToPick = wmsOperatorProcedure
       })
       .returning();
 
+    /*
+      A double press (or two people releasing at once) both pass the "no open
+      pick list" check above and each create one. Now that ours is in the
+      table, look again: if another open list for this order was created
+      first, ours is withdrawn before any line or reservation is made.
+    */
+    if (!pickList) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The pick list could not be created. Try again.',
+      });
+    }
+
+    {
+      const openLists = await db
+        .select({ id: wmsPickLists.id, createdAt: wmsPickLists.createdAt })
+        .from(wmsPickLists)
+        .where(
+          and(
+            eq(wmsPickLists.orderId, salesOrderId),
+            inArray(wmsPickLists.status, ['pending', 'in_progress']),
+          ),
+        );
+
+      const first = openLists.sort(
+        (a, b) =>
+          (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) || a.id.localeCompare(b.id),
+      )[0];
+
+      if (first && first.id !== pickList.id) {
+        await db.delete(wmsPickLists).where(eq(wmsPickLists.id, pickList.id));
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This order has just been released by someone else. Refresh to see its pick list.',
+        });
+      }
+    }
+
     // Create pick list items with suggested locations
     const pickListItems = [];
     const unresolvedItems: string[] = [];
