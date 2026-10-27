@@ -119,4 +119,20 @@ describe('syncExistingSalesOrder', () => {
 
     expect(stampedAt(updates)).toBe(-1);
   });
+
+  it('does not flag a released order that was never stamped when its lines match', async () => {
+    const { db, updates } = fakeDb({ zohoLastModifiedTime: null });
+
+    const result = await syncExistingSalesOrder({
+      existing: { id: 'o1', status: 'picking' },
+      zohoOrder,
+      db,
+    });
+
+    expect(result.outcome).toBe('unchanged');
+    expect(
+      updates.some((values) => 'soModifiedAfterRelease' in values),
+    ).toBe(false);
+    expect(stampedAt(updates)).toBe(updates.length - 1);
+  });
 });

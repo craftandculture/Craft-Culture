@@ -280,9 +280,11 @@ const syncExistingSalesOrder = async ({
   // Zoho reporting a newer last-modified time is enough on its own. A forced
   // pass on an order Zoho says is unchanged must prove the lines moved before
   // flagging, so a routine force-refresh doesn't mark every released pick for
-  // review.
+  // review. An order never stamped (its first hold failed, then it was
+  // released before the retry) has no time to compare, so it too must prove
+  // the lines moved.
   const zohoReportsChange =
-    !(current?.zohoLastModifiedTime instanceof Date) ||
+    current?.zohoLastModifiedTime instanceof Date &&
     current.zohoLastModifiedTime.getTime() !== zohoModifiedAt.getTime();
 
   const shouldFlag =
