@@ -36,6 +36,7 @@ const DayEntry = ({ day, isLatest = false }: DayEntryProps) => {
     day.firstVersion === day.lastVersion
       ? `v${day.lastVersion}`
       : `v${day.firstVersion} – v${day.lastVersion}`;
+  const milestone = [day.firstVersion, day.lastVersion].find((v) => v.endsWith('.0'));
 
   return (
     <div>
@@ -51,9 +52,16 @@ const DayEntry = ({ day, isLatest = false }: DayEntryProps) => {
         />
 
         <div className="min-w-0 flex-1">
-          <Typography variant="bodySm" className="font-semibold">
-            {formatDate(day.date)}
-          </Typography>
+          <div className="flex items-center gap-2">
+            <Typography variant="bodySm" className="font-semibold">
+              {formatDate(day.date)}
+            </Typography>
+            {milestone && (
+              <span className="rounded-full border border-border-primary px-2 py-0.5 font-mono text-[10px] text-text-secondary">
+                Version {milestone.replace(/\.0$/, '')}
+              </span>
+            )}
+          </div>
           <Typography variant="bodyXs" colorRole="muted" className="font-mono">
             {range} · {day.releaseCount} {day.releaseCount === 1 ? 'release' : 'releases'}
           </Typography>
