@@ -26,6 +26,10 @@
       "schedule": "0 4 * * 1-5"
     },
     {
+      "path": "/api/cron/ops-checks",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/end-of-day",
       "schedule": "0 14 * * 1-5"
     },

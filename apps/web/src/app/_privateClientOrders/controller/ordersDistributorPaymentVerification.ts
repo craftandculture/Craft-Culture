@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
+import postPaymentVerified from '@/app/_teamTasks/data/postPaymentVerified';
 import db from '@/database/client';
 import {
   partnerMembers,
@@ -101,6 +102,9 @@ const ordersDistributorPaymentVerification = distributorProcedure
         });
       }
     }
+
+    // The team books the delivery as soon as payment is confirmed
+    if (updatedOrder) await postPaymentVerified(updatedOrder);
 
     // Without C&C's own notes and its payment to the partner
     return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;

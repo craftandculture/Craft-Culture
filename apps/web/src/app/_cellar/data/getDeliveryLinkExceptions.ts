@@ -3,6 +3,14 @@ import { sql } from 'drizzle-orm';
 import { PCO_NUMBER_PATTERN } from '@/app/_zohoSalesOrders/data/linkSalesOrdersToPcos';
 import db from '@/database/client';
 
+/** Which broken link a row is, so each can go to the person who mends it */
+export type DeliveryLinkExceptionKind =
+  | 'no_order'
+  | 'no_sales_order'
+  | 'unknown_pco_reference'
+  | 'wrong_owner_pick'
+  | 'bills_wine';
+
 /**
  * Member deliveries whose paperwork does not join up
  *
@@ -25,12 +33,13 @@ import db from '@/database/client';
 const getDeliveryLinkExceptions = async () => {
   const rows = await db.execute<{
     id: string;
+    kind: DeliveryLinkExceptionKind;
     title: string;
     detail: string;
     since: Date | string | null;
   }>(sql`
     -- Accepted, but no order raised
-    SELECT r.id::text, p.business_name || ' · ' || r.request_number AS title,
+    SELECT r.id::text, 'no_order' AS kind, p.business_name || ' · ' || r.request_number AS title,
            'Accepted with no order raised: Confirm for member, or raise the PCO' AS detail,
            r.confirmed_at AS since
     FROM cellar_release_requests r
@@ -42,7 +51,7 @@ const getDeliveryLinkExceptions = async () => {
     UNION ALL
 
     -- An order raised, but no Zoho sales order behind it
-    SELECT r.id::text, p.business_name || ' · ' || r.request_number,
+    SELECT r.id::text, 'no_sales_order', p.business_name || ' · ' || r.request_number,
            pco.order_number || ' has no Zoho sales order linked: Link to sales order',
            pco.created_at
     FROM cellar_release_requests r
@@ -58,7 +67,7 @@ const getDeliveryLinkExceptions = async () => {
     UNION ALL
 
     -- A Zoho order quoting a PCO number nothing has
-    SELECT so.id::text, so.salesorder_number || ' · ' || so.customer_name,
+    SELECT so.id::text, 'unknown_pco_reference', so.salesorder_number || ' · ' || so.customer_name,
            'Reference "' || so.reference_number || '" matches no PCO: correct it in Zoho, or Link to sales order',
            so.created_at
     FROM zoho_sales_orders so
@@ -72,7 +81,7 @@ const getDeliveryLinkExceptions = async () => {
     UNION ALL
 
     -- A delivery picked from another owner's bottles
-    SELECT r.id::text, p.business_name || ' · ' || r.request_number,
+    SELECT r.id::text, 'wrong_owner_pick', p.business_name || ' · ' || r.request_number,
            sum(abs(coalesce(m.quantity_bottles, m.quantity_cases)))::int
              || ' bottle(s) picked from ' || string_agg(DISTINCT o.business_name, ', ')
              || ' for this delivery: check the pick',
@@ -91,7 +100,7 @@ const getDeliveryLinkExceptions = async () => {
     UNION ALL
 
     -- A delivery order charging for wine the member already owns
-    SELECT r.id::text, p.business_name || ' · ' || r.request_number,
+    SELECT r.id::text, 'bills_wine', p.business_name || ' · ' || r.request_number,
            pco.order_number || ' bills $' || round(sum(i.total_usd)::numeric, 2)
              || ' for the wine: a delivery bills duty, VAT and fees only',
            pco.created_at
@@ -109,6 +118,7 @@ const getDeliveryLinkExceptions = async () => {
   return [...list]
     .map((row) => ({
       id: row.id,
+      kind: row.kind,
       title: row.title,
       detail: row.detail,
       since: row.since ? new Date(row.since) : null,

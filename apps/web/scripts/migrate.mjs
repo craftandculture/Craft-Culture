@@ -4068,6 +4068,25 @@ const runMigrations = async () => {
     );
     console.log('✅ Order email outbox ready');
 
+    /* Ops checks: one row per problem found, tied to its Team Tasks part */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "ops_check_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "check_key" text NOT NULL,
+        "record_key" text NOT NULL,
+        "task_id" uuid REFERENCES "team_tasks"("id") ON DELETE SET NULL,
+        "part_id" uuid REFERENCES "team_task_parts"("id") ON DELETE SET NULL,
+        "cleared_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "ops_check_items" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "ops_check_items_check_record_idx" ON "ops_check_items" ("check_key", "record_key")`,
+    );
+    console.log('✅ Ops check items ready');
+
     /*
       Private Cellar orders are raised under C&C, not under the member.
 

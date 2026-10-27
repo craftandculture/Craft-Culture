@@ -7689,6 +7689,32 @@ export const teamTaskEvents = pgTable(
 );
 
 /**
+ * One problem an ops check found, and the Team Tasks part that tracks it
+ *
+ * Each check (a PCO with no CD SKU, a shipment past its ETA) keeps one job
+ * open while it finds anything; each record it finds is a part on that job.
+ * This row ties the record to its part, so the next run adds nothing twice and
+ * ticks the part itself once the record is put right. Kept apart from the task
+ * tables so a missed migration stops only the checks, never the task list.
+ */
+export const opsCheckItems = pgTable(
+  'ops_check_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Which check found it, e.g. pco_no_cd_sku */
+    checkKey: text('check_key').notNull(),
+    /** The record it is about: a PCO, shipment or release id */
+    recordKey: text('record_key').notNull(),
+    taskId: uuid('task_id').references(() => teamTasks.id, { onDelete: 'set null' }),
+    partId: uuid('part_id').references(() => teamTaskParts.id, { onDelete: 'set null' }),
+    /** When the check stopped finding it; null while the problem stands */
+    clearedAt: timestamp('cleared_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('ops_check_items_check_record_idx').on(table.checkKey, table.recordKey)],
+);
+
+/**
  * A team member's Slack member ID, so #tasks posts can @mention them.
  * Kept apart from `users` so a missed migration cannot break every user read.
  */
