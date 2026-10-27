@@ -1,3 +1,9 @@
+## [2.0.606](https://github.com/craftandculture/Craft-Culture/compare/v2.0.605...v2.0.606) (2026-10-27)
+
+### Features
+
+* cellar invitations are emailed from the approved Invitation template ([cab4420](https://github.com/craftandculture/Craft-Culture/commit/cab44205058d2f8a5cab64b5a5bcefcaf3aabbe0))
+
 ## [2.0.605](https://github.com/craftandculture/Craft-Culture/compare/v2.0.604...v2.0.605) (2026-10-27)
 
 ### Features
