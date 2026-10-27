@@ -1,3 +1,9 @@
+## [2.0.595](https://github.com/craftandculture/Craft-Culture/compare/v2.0.594...v2.0.595) (2026-10-27)
+
+### Bug Fixes
+
+* stock held for an order voided or deleted in Zoho is released on each sync again ([6956cae](https://github.com/craftandculture/Craft-Culture/commit/6956cae7da94112e63787eb2275e1af3c1075a5d))
+
 ## [2.0.594](https://github.com/craftandculture/Craft-Culture/compare/v2.0.593...v2.0.594) (2026-10-27)
 
 ### Bug Fixes
