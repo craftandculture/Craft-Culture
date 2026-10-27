@@ -1,0 +1,163 @@
+import { and, eq, inArray, lt } from 'drizzle-orm';
+
+import createNotification from '@/app/_notifications/utils/createNotification';
+import db from '@/database/client';
+import {
+  cellarPurchaseItems,
+  cellarPurchases,
+  partnerMembers,
+  partners,
+  wmsStockReservations,
+} from '@/database/schema';
+import logger from '@/utils/logger';
+
+/**
+ * Release purchases whose 48 hours ran out
+ *
+ * A reservation that never lapses is worse than no reservation at all. The wine
+ * stays off the catalogue, `transferStockOwnership` keeps refusing to move it,
+ * and nothing on any screen explains why — so an abandoned basket quietly
+ * removes stock from sale for good.
+ *
+ * Purchases where the member has said they paid are deliberately left alone.
+ * The hold exists to protect them while we check the bank, and expiring one
+ * under somebody who has sent money is the worst outcome this job could produce.
+ * Those surface in the admin queue instead, where a person decides.
+ *
+ * Hourly rather than to the minute: the window is two days, so an hour either
+ * side is not worth the scheduler traffic.
+ */
+/**
+ * Release Private Cellar holds that have passed their expiry
+ *
+ * Ran hourly on Trigger.dev; since Trigger.dev was switched off in October
+ * 2026 a Vercel cron calls this instead, on the same schedule.
+ */
+const expireCellarReservations = async () => {
+  const now = new Date();
+
+  const lapsed = await db
+    .select({
+      id: cellarPurchases.id,
+      purchaseNumber: cellarPurchases.purchaseNumber,
+      buyerPartnerId: cellarPurchases.buyerPartnerId,
+      totalUsd: cellarPurchases.totalUsd,
+    })
+    .from(cellarPurchases)
+    .where(
+      and(
+        eq(cellarPurchases.status, 'reserved'),
+        lt(cellarPurchases.reservedUntil, now),
+      ),
+    )
+    .limit(200);
+
+  if (lapsed.length === 0) {
+    logger.info('No cellar reservations to expire');
+
+    return { expired: 0 };
+  }
+
+  let expired = 0;
+
+  for (const purchase of lapsed) {
+    /*
+      Closed first, and only if it is still merely reserved. A member who
+      marks the transfer sent in the same moment keeps their purchase and its
+      holds; releasing first and checking second left them marked paid with
+      nothing held.
+    */
+    const [closed] = await db
+      .update(cellarPurchases)
+      .set({ status: 'expired', updatedAt: now })
+      .where(
+        and(
+          eq(cellarPurchases.id, purchase.id),
+          eq(cellarPurchases.status, 'reserved'),
+        ),
+      )
+      .returning({ id: cellarPurchases.id });
+
+    if (!closed) continue;
+
+    expired += 1;
+
+    const items = await db
+      .select({ reservationId: cellarPurchaseItems.reservationId })
+      .from(cellarPurchaseItems)
+      .where(eq(cellarPurchaseItems.purchaseId, purchase.id));
+
+    const reservationIds = items
+      .map((item) => item.reservationId)
+      .filter(Boolean) as string[];
+
+    if (reservationIds.length > 0) {
+      await db
+        .update(wmsStockReservations)
+        .set({
+          status: 'released',
+          releasedAt: now,
+          releaseReason: `${purchase.purchaseNumber} expired unpaid`,
+        })
+        .where(
+          and(
+            inArray(wmsStockReservations.id, reservationIds),
+            /* Only ones still live, so a re-run cannot rewrite history. */
+            eq(wmsStockReservations.status, 'active'),
+          ),
+        );
+    }
+
+    /*
+      Told, not silently dropped. A member who sent the transfer late needs to
+      know the hold went, rather than discovering it when the wine is gone.
+
+      Everyone attached to the account, the same way a mandate notifies —
+      a partner can be an owner, a membership, or both.
+    */
+    const [owner] = await db
+      .select({ userId: partners.userId })
+      .from(partners)
+      .where(eq(partners.id, purchase.buyerPartnerId))
+      .limit(1);
+
+    const members = await db
+      .select({ userId: partnerMembers.userId })
+      .from(partnerMembers)
+      .where(eq(partnerMembers.partnerId, purchase.buyerPartnerId));
+
+    const recipients = [
+      ...new Set(
+        [...members.map((member) => member.userId), owner?.userId].filter(
+          Boolean,
+        ) as string[],
+      ),
+    ];
+
+    for (const userId of recipients) {
+      /* A notification that fails must not leave the hold in place. */
+      await createNotification({
+        userId,
+        type: 'cellar_purchase_expired',
+        title: `${purchase.purchaseNumber} has expired`,
+        message:
+          'We did not see your transfer within 48 hours, so the wine has gone back on the list. You can order it again if it is still there.',
+        actionUrl: '/platform/cellar/purchases',
+      }).catch((error) =>
+        logger.error('Could not notify an expired cellar purchase', {
+          purchaseNumber: purchase.purchaseNumber,
+          error,
+        }),
+      );
+    }
+
+    logger.info('Expired a cellar purchase', {
+      purchaseNumber: purchase.purchaseNumber,
+      reservations: reservationIds.length,
+    });
+  }
+
+  return { expired };
+};
+
+export default expireCellarReservations;

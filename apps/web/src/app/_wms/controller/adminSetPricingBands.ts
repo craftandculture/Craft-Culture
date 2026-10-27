@@ -2,7 +2,7 @@ import { eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPricingBands } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setPricingBandsSchema } from '../schemas/pricingBandSchema';
 
@@ -23,7 +23,7 @@ import { setPricingBandsSchema } from '../schemas/pricingBandSchema';
  *     bands: [{ ownerId: null, minLandedPerBottle: 0, maxLandedPerBottle: 50, b2bMarginPct: 30, pcMarginPct: 45 }],
  *   });
  */
-const adminSetPricingBands = wmsOperatorProcedure
+const adminSetPricingBands = adminProcedure
   .input(setPricingBandsSchema)
   .mutation(async ({ input, ctx }) => {
     const { ownerId, bands } = input;

@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, eq, exists, notInArray, sql } from 'drizzle-orm';
 
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import isZohoOrderGone from '@/app/_zohoSalesOrders/utils/isZohoOrderGone';
@@ -46,21 +46,35 @@ const releaseClosedOrderHolds = async ({
     zohoSalesOrderId: string;
     salesOrderNumber: string;
   }[] = await db
-    .selectDistinct({
+    /*
+      EXISTS rather than a join with DISTINCT: Postgres refuses SELECT DISTINCT
+      with ORDER BY random(), so this step threw on every sync from 21 Oct and
+      orders voided in Zoho kept their stock held (the error was caught and
+      logged, so nothing on screen showed it).
+    */
+    .select({
       id: zohoSalesOrders.id,
       zohoSalesOrderId: zohoSalesOrders.zohoSalesOrderId,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
     })
     .from(zohoSalesOrders)
-    .innerJoin(
-      wmsStockReservations,
+    .where(
       and(
-        eq(wmsStockReservations.orderId, zohoSalesOrders.id),
-        eq(wmsStockReservations.orderType, 'zoho'),
-        eq(wmsStockReservations.status, 'active'),
+        notInArray(zohoSalesOrders.zohoSalesOrderId, seenZohoIds),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(wmsStockReservations)
+            .where(
+              and(
+                eq(wmsStockReservations.orderId, zohoSalesOrders.id),
+                eq(wmsStockReservations.orderType, 'zoho'),
+                eq(wmsStockReservations.status, 'active'),
+              ),
+            ),
+        ),
       ),
     )
-    .where(notInArray(zohoSalesOrders.zohoSalesOrderId, seenZohoIds))
     .orderBy(sql`random()`)
     .limit(MAX_CHECKED);
 

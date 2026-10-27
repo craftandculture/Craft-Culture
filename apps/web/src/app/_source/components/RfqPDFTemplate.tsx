@@ -257,6 +257,7 @@ export interface RfqPDFTemplateProps {
     caseConfig?: string | number | null;
     lwin?: string | null;
     quantity: number;
+    quantityUnit?: 'cases' | 'bottles';
     pricePerCase: number;
     lineTotal: number;
     isAlternative: boolean;
@@ -278,6 +279,7 @@ export interface RfqPDFTemplateProps {
     producer?: string | null;
     vintage?: string | null;
     quantity?: number | null;
+    quantityUnit?: string | null;
   }>;
 }
 
@@ -406,7 +408,7 @@ const RfqPDFTemplate = ({
                     )}
                   </View>
                   <Text style={styles.colQuantity}>
-                    {item.quantity} {item.quantity === 1 ? 'cs' : 'cs'}
+                    {item.quantity} {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
                   </Text>
                   <Text style={styles.colPrice}>{formatPrice(item.pricePerCase)}</Text>
                   <Text style={styles.colTotal}>{formatPrice(item.lineTotal)}</Text>
@@ -434,7 +436,9 @@ const RfqPDFTemplate = ({
               <Text key={index} style={styles.unquotedItem}>
                 • {item.productName}
                 {item.vintage ? ` (${item.vintage})` : ''}
-                {item.quantity ? ` - ${item.quantity} cases` : ''}
+                {item.quantity
+                  ? ` - ${item.quantity} ${item.quantityUnit === 'bottles' ? 'bottles' : 'cases'}`
+                  : ''}
               </Text>
             ))}
           </View>

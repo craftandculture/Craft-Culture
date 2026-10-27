@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -54,78 +54,93 @@ const adminReconcileCycleCount = wmsOperatorProcedure
       adjustments.map((a) => [a.itemId, a.approved]),
     );
 
-    // Get all items with discrepancies
-    const items = await db
-      .select()
-      .from(wmsCycleCountItems)
-      .where(eq(wmsCycleCountItems.cycleCountId, countId));
-
-    let adjustedCount = 0;
-
-    for (const item of items) {
-      if (item.discrepancy === null || item.discrepancy === 0) continue;
-
-      const approved = approvalMap.get(item.id);
-      if (!approved) continue;
-
-      // Get the stock record
-      if (!item.stockId) continue;
-
-      const [stockRecord] = await db
-        .select()
-        .from(wmsStock)
-        .where(eq(wmsStock.id, item.stockId));
-
-      if (!stockRecord) continue;
-
-      const newQuantity = item.countedQuantity ?? 0;
-      const oldQuantity = stockRecord.quantityCases;
-      const adjustment = newQuantity - oldQuantity;
-
-      if (adjustment === 0) continue;
-
-      // Create audit movement
-      const movementNumber = await generateMovementNumber();
-      await db.insert(wmsStockMovements).values({
-        movementNumber,
-        movementType: 'count',
-        lwin18: stockRecord.lwin18,
-        productName: stockRecord.productName,
-        quantityCases: adjustment,
-        fromLocationId: adjustment < 0 ? stockRecord.locationId : null,
-        toLocationId: adjustment > 0 ? stockRecord.locationId : null,
-        notes: `CYCLE COUNT ${cycleCount.countNumber}: was ${oldQuantity}, now ${newQuantity}`,
-        reasonCode: 'cycle_count',
-        performedBy: ctx.user.id,
-        performedAt: new Date(),
-      });
-
-      // Update stock
-      const newAvailable = Math.max(
-        0,
-        newQuantity - (stockRecord.reservedCases ?? 0),
-      );
-
-      await db
-        .update(wmsStock)
+    /*
+      One transaction, and the count is claimed first so reconciling twice
+      cannot apply the adjustments twice.
+    */
+    const { adjustedCount, items } = await db.transaction(async (tx) => {
+      const claimed = await tx
+        .update(wmsCycleCounts)
         .set({
-          quantityCases: newQuantity,
-          availableCases: newAvailable,
+          status: 'reconciled',
           updatedAt: new Date(),
         })
-        .where(eq(wmsStock.id, item.stockId));
+        .where(and(eq(wmsCycleCounts.id, countId), eq(wmsCycleCounts.status, 'completed')))
+        .returning({ id: wmsCycleCounts.id });
 
-      adjustedCount++;
-    }
+      if (claimed.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This count has already been reconciled.',
+        });
+      }
 
-    // Mark count as reconciled
-    await db
-      .update(wmsCycleCounts)
-      .set({
-        status: 'reconciled',
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsCycleCounts.id, countId));
+      const items = await tx
+        .select()
+        .from(wmsCycleCountItems)
+        .where(eq(wmsCycleCountItems.cycleCountId, countId));
+
+      let adjustedCount = 0;
+
+      for (const item of items) {
+        if (item.discrepancy === null || item.discrepancy === 0) continue;
+
+        const approved = approvalMap.get(item.id);
+        if (!approved) continue;
+
+        if (!item.stockId) continue;
+
+        const [stockRecord] = await tx
+          .select()
+          .from(wmsStock)
+          .where(eq(wmsStock.id, item.stockId))
+          .for('update');
+
+        if (!stockRecord) continue;
+
+        /*
+          Apply what the count found (counted minus expected), not the counted
+          figure itself. Setting the row to the count wiped out anything picked
+          or received between counting the bay and reconciling it.
+        */
+        const oldQuantity = stockRecord.quantityCases;
+        const newQuantity = Math.max(0, oldQuantity + item.discrepancy);
+        const adjustment = newQuantity - oldQuantity;
+
+        if (adjustment === 0) continue;
+
+        const movementNumber = await generateMovementNumber(tx);
+        await tx.insert(wmsStockMovements).values({
+          movementNumber,
+          movementType: 'count',
+          lwin18: stockRecord.lwin18,
+          productName: stockRecord.productName,
+          quantityCases: adjustment,
+          fromLocationId: adjustment < 0 ? stockRecord.locationId : null,
+          toLocationId: adjustment > 0 ? stockRecord.locationId : null,
+          // Whose stock the count changed, as a manual count records it
+          fromOwnerId: adjustment < 0 ? stockRecord.ownerId : null,
+          stockId: stockRecord.id,
+          notes: `CYCLE COUNT ${cycleCount.countNumber}: counted ${item.countedQuantity ?? 0} against ${item.expectedQuantity} expected; row ${oldQuantity} → ${newQuantity}`,
+          reasonCode: 'cycle_count',
+          performedBy: ctx.user.id,
+          performedAt: new Date(),
+        });
+
+        await tx
+          .update(wmsStock)
+          .set({
+            quantityCases: newQuantity,
+            availableCases: Math.max(0, newQuantity - (stockRecord.reservedCases ?? 0)),
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsStock.id, item.stockId));
+
+        adjustedCount++;
+      }
+
+      return { adjustedCount, items };
+    });
 
     return {
       success: true,

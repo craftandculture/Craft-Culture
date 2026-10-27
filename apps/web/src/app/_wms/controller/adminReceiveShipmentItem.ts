@@ -8,7 +8,6 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   partners,
-  wmsCaseLabels,
   wmsLocations,
   wmsStock,
   wmsStockMovements,
@@ -18,7 +17,7 @@ import { findOrCreateWineItem } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
 
 import receiveSingleItemSchema from '../schemas/receiveSingleItemSchema';
-import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
+import claimCaseLabels from '../utils/claimCaseLabels';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
 import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
@@ -122,14 +121,20 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     }
 
     // 4. Resolve product details
-    const actualBottlesPerCase = receivedItem.receivedBottlesPerCase ?? shipmentItem.bottlesPerCase ?? 12;
-    const actualBottleSizeMl = receivedItem.receivedBottleSizeMl ?? shipmentItem.bottleSizeMl ?? 750;
+    /*
+      A wine added on the dock is not the logistics line it is filed under —
+      the screen sends the first line's id only because one is required. Its
+      blanks stay blank rather than being filled from that other wine.
+    */
+    const line = receivedItem.isAddedItem ? null : shipmentItem;
+    const actualBottlesPerCase = receivedItem.receivedBottlesPerCase ?? line?.bottlesPerCase ?? 12;
+    const actualBottleSizeMl = receivedItem.receivedBottleSizeMl ?? line?.bottleSizeMl ?? 750;
     const productName = receivedItem.productName ?? shipmentItem.productName;
-    const producer = receivedItem.producer ?? shipmentItem.producer;
-    const vintage = receivedItem.vintage ?? shipmentItem.vintage;
-    const supplierSku = receivedItem.supplierSku ?? shipmentItem.supplierSku;
-    const hsCode = receivedItem.hsCode ?? shipmentItem.hsCode;
-    const countryOfOrigin = receivedItem.countryOfOrigin ?? shipmentItem.countryOfOrigin;
+    const producer = receivedItem.producer ?? line?.producer ?? null;
+    const vintage = receivedItem.vintage ?? line?.vintage ?? null;
+    const supplierSku = receivedItem.supplierSku ?? line?.supplierSku ?? null;
+    const hsCode = receivedItem.hsCode ?? line?.hsCode ?? null;
+    const countryOfOrigin = receivedItem.countryOfOrigin ?? line?.countryOfOrigin ?? null;
 
     // Determine LWIN-18 — normalize to the canonical dashed form so a raw
     // 18-digit supplier LWIN (e.g. Cult Wines) matches the existing dashed
@@ -160,156 +165,150 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
     const isSplit = receivedItem.locationAssignments.length > 1;
 
     // 6. Process each location assignment (same product, split across locations)
-    const createdStock: Array<{
-      stockId: string;
-      locationId: string;
-      cases: number;
-      caseLabels: Array<{ id: string; barcode: string }>;
-    }> = [];
-
     /* Captured for the arrival notice, which is sent once the item is booked in. */
     const receivedOwnerId = shipmentItem.overrideOwnerId ?? partner.id;
+    const notForSale = (line?.notForSale ?? null) ?? shipment.notForSale;
+    const idempotencyKey = input.idempotencyKey ?? null;
 
-    for (const assignment of receivedItem.locationAssignments) {
-      const itemLocationId = assignment.locationId;
-      const assignmentCases = assignment.cases;
+    /*
+      One transaction for the whole line. A retry of the same line (same key)
+      finds its own movements and returns what was booked the first time.
+      Before, any receipt to a bay already holding this shipment's wine was
+      taken for a retry, so a second line of the same wine was silently
+      dropped, while a genuine retry into a bay holding older stock was
+      booked in twice.
+    */
+    const { createdStock, isRetry } = await db.transaction(async (tx) => {
+      const created: Array<{
+        stockId: string;
+        locationId: string;
+        cases: number;
+        caseLabels: Array<{ id: string; barcode: string }>;
+      }> = [];
 
-      // Check for existing stock at this location with same LWIN18 and owner
-      const resolvedOwnerId = receivedOwnerId;
-      const [existingStock] = await db
-        .select()
-        .from(wmsStock)
-        .where(
-          and(
-            eq(wmsStock.lwin18, lwin18),
-            eq(wmsStock.locationId, itemLocationId),
-            eq(wmsStock.ownerId, resolvedOwnerId),
-          ),
-        );
+      if (idempotencyKey) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${idempotencyKey}))`);
 
-      let stock: typeof wmsStock.$inferSelect;
-
-      // Check if this exact shipment was already received (idempotency for retries)
-      const isRetry = existingStock?.shipmentId === shipmentId;
-
-      if (existingStock && isRetry) {
-        // Exact retry — use existing record without incrementing
-        stock = existingStock;
-      } else if (existingStock) {
-        // Same product/location/owner from a different source — increment qty
-        const [updatedStock] = await db
-          .update(wmsStock)
-          .set({
-            quantityCases: sql`${wmsStock.quantityCases} + ${assignmentCases}`,
-            availableCases: sql`${wmsStock.availableCases} + ${assignmentCases}`,
-            // This row already holds stock from another shipment, so its BOE is
-            // only unambiguous while it has none — never overwrite an existing one
-            reExportBoeNumber:
-              existingStock.reExportBoeNumber ?? shipment.reExportBoeNumber,
-            updatedAt: new Date(),
+        const earlier = await tx
+          .select({
+            idempotencyKey: wmsStockMovements.idempotencyKey,
+            toLocationId: wmsStockMovements.toLocationId,
+            quantityCases: wmsStockMovements.quantityCases,
+            scannedBarcodes: wmsStockMovements.scannedBarcodes,
+            stockId: wmsStockMovements.stockId,
           })
-          .where(eq(wmsStock.id, existingStock.id))
-          .returning();
-        stock = updatedStock;
-      } else {
-        const [newStock] = await db
-          .insert(wmsStock)
-          .values({
-            locationId: itemLocationId,
-            ownerId: resolvedOwnerId,
-            ownerName: shipmentItem.overrideOwnerName ?? partner.businessName,
-            lwin18,
-            supplierSku,
-            productName,
-            producer,
-            vintage,
-            bottleSize: `${actualBottleSizeMl / 10}cl`,
-            caseConfig: actualBottlesPerCase,
-            quantityCases: assignmentCases,
-            reservedCases: 0,
-            availableCases: assignmentCases,
-            lotNumber,
-            receivedAt: new Date(),
-            shipmentId,
-            reExportBoeNumber: shipment.reExportBoeNumber,
-            salesArrangement: 'consignment',
-            /*
-              The line decides, falling back to the shipment. Receiving is the
-              last point where the distinction is still recorded anywhere — a
-              stock row that arrives without it is indistinguishable from
-              goods we bought to sell.
-            */
-            notForSale: shipmentItem.notForSale ?? shipment.notForSale,
-            expiryDate: receivedItem.expiryDate,
-            isPerishable: !!receivedItem.expiryDate,
-            category: getCategoryFromHsCode(hsCode),
-            notes: stockNotes || undefined,
-            photos: receivedItem.photos ?? [],
-          })
-          .returning();
-        stock = newStock;
+          .from(wmsStockMovements)
+          .where(like(wmsStockMovements.idempotencyKey, `${idempotencyKey}:%`));
+
+        if (earlier.length > 0) {
+          for (const movement of earlier) {
+            created.push({
+              stockId: movement.stockId ?? '',
+              locationId: movement.toLocationId ?? '',
+              cases: movement.quantityCases,
+              caseLabels: ((movement.scannedBarcodes as string[] | null) ?? []).map(
+                (barcode) => ({ id: barcode, barcode }),
+              ),
+            });
+          }
+          return { createdStock: created, isRetry: true };
+        }
       }
 
-      // Create case labels inside a transaction with advisory lock to prevent duplicate barcodes
-      const caseLabels = await db.transaction(async (tx) => {
-        const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
+      for (const [index, assignment] of receivedItem.locationAssignments.entries()) {
+        const itemLocationId = assignment.locationId;
+        const assignmentCases = assignment.cases;
 
-        const barcodePrefix = `CASE-${lwin18}-`;
-        const existingLabels = await tx
-          .select({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode })
-          .from(wmsCaseLabels)
-          .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
+        // The row for this wine, bay and owner, held the same way. This
+        // shipment's own row first, so its BOE and lot stay together.
+        const [existingStock] = await tx
+          .select()
+          .from(wmsStock)
+          .where(
+            and(
+              eq(wmsStock.lwin18, lwin18),
+              eq(wmsStock.locationId, itemLocationId),
+              eq(wmsStock.ownerId, receivedOwnerId),
+              eq(wmsStock.notForSale, notForSale),
+            ),
+          )
+          .orderBy(sql`(${wmsStock.shipmentId} IS NOT DISTINCT FROM ${shipmentId}) DESC`)
+          .limit(1)
+          .for('update');
 
-        const labels: Array<{ id: string; barcode: string }> = [];
+        let stock: typeof wmsStock.$inferSelect | undefined;
 
-        if (existingLabels.length >= assignmentCases) {
-          labels.push(...existingLabels.slice(0, assignmentCases));
+        if (existingStock) {
+          const [updatedStock] = await tx
+            .update(wmsStock)
+            .set({
+              quantityCases: sql`${wmsStock.quantityCases} + ${assignmentCases}`,
+              availableCases: sql`${wmsStock.availableCases} + ${assignmentCases}`,
+              // This row may already hold stock from another shipment, so its BOE
+              // is only unambiguous while it has none — never overwrite one
+              reExportBoeNumber:
+                existingStock.reExportBoeNumber ?? shipment.reExportBoeNumber,
+              updatedAt: new Date(),
+            })
+            .where(eq(wmsStock.id, existingStock.id))
+            .returning();
+          stock = updatedStock;
         } else {
-          let maxSeq = 0;
-          for (const label of existingLabels) {
-            const match = label.barcode.match(/(\d+)$/);
-            if (match) {
-              const seq = parseInt(match[1], 10);
-              if (seq > maxSeq) maxSeq = seq;
-            }
-          }
-
-          labels.push(...existingLabels);
-
-          const labelsNeeded = assignmentCases - existingLabels.length;
-          let created = 0;
-          while (created < labelsNeeded) {
-            maxSeq++;
-            const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
-
-            const inserted = await tx
-              .insert(wmsCaseLabels)
-              .values({
-                barcode,
-                lwin18,
-                productName,
-                lotNumber,
-                shipmentId,
-                currentLocationId: itemLocationId,
-                isActive: true,
-              })
-              .onConflictDoNothing({ target: wmsCaseLabels.barcode })
-              .returning();
-
-            if (inserted.length > 0) {
-              labels.push({ id: inserted[0].id, barcode: inserted[0].barcode });
-              created++;
-            }
-          }
+          const [newStock] = await tx
+            .insert(wmsStock)
+            .values({
+              locationId: itemLocationId,
+              ownerId: receivedOwnerId,
+              ownerName: shipmentItem.overrideOwnerName ?? partner.businessName,
+              lwin18,
+              supplierSku,
+              productName,
+              producer,
+              vintage,
+              bottleSize: `${actualBottleSizeMl / 10}cl`,
+              caseConfig: actualBottlesPerCase,
+              quantityCases: assignmentCases,
+              reservedCases: 0,
+              availableCases: assignmentCases,
+              lotNumber,
+              receivedAt: new Date(),
+              shipmentId,
+              reExportBoeNumber: shipment.reExportBoeNumber,
+              salesArrangement: 'consignment',
+              /*
+                The line decides, falling back to the shipment. Receiving is the
+                last point where the distinction is still recorded anywhere — a
+                stock row that arrives without it is indistinguishable from
+                goods we bought to sell.
+              */
+              notForSale,
+              expiryDate: receivedItem.expiryDate,
+              isPerishable: !!receivedItem.expiryDate,
+              category: getCategoryFromHsCode(hsCode),
+              notes: stockNotes || undefined,
+              photos: receivedItem.photos ?? [],
+            })
+            .returning();
+          stock = newStock;
         }
 
-        return labels;
-      });
+        if (!stock) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Could not book the stock in. Nothing was saved — try again.',
+          });
+        }
 
-      // Create movement record (skip only for exact retries)
-      if (!isRetry) {
-        const movementNumber = await generateMovementNumber();
+        const caseLabels = await claimCaseLabels(tx, {
+          lwin18,
+          productName,
+          lotNumber,
+          shipmentId,
+          locationId: itemLocationId,
+          count: assignmentCases,
+        });
+
+        const movementNumber = await generateMovementNumber(tx);
         const palletTag = assignment.isPalletized ? ' (pallet)' : '';
         const baseNote = notes
           ? `${notes}${palletTag}`
@@ -317,9 +316,8 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
         const splitSuffix = isSplit
           ? ` [${assignmentCases} of ${totalReceivedCases} cases]`
           : '';
-        const movementNote = `${baseNote}${splitSuffix}`;
 
-        await db.insert(wmsStockMovements).values({
+        await tx.insert(wmsStockMovements).values({
           movementNumber,
           movementType: 'receive',
           lwin18,
@@ -329,35 +327,59 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
           toLocationId: itemLocationId,
           /* Whose wine arrived, so a member's statement can list it */
           toOwnerId: receivedOwnerId,
+          stockId: stock.id,
           lotNumber,
           shipmentId,
           scannedBarcodes: caseLabels.map((l) => l.barcode),
-          notes: movementNote,
+          notes: `${baseNote}${splitSuffix}`,
+          idempotencyKey: idempotencyKey ? `${idempotencyKey}:${index}` : null,
           performedBy: ctx.user.id,
           performedAt: new Date(),
         });
+
+        created.push({
+          stockId: stock.id,
+          locationId: itemLocationId,
+          cases: assignmentCases,
+          caseLabels,
+        });
       }
 
-      createdStock.push({
-        stockId: stock.id,
-        locationId: itemLocationId,
-        cases: assignmentCases,
-        caseLabels,
-      });
+      // 7. Update shipment status to 'partially_received' if not already
+      if (
+        shipment.status !== 'partially_received' &&
+        shipment.status !== 'delivered'
+      ) {
+        await tx
+          .update(logisticsShipments)
+          .set({
+            status: 'partially_received',
+            updatedAt: new Date(),
+          })
+          .where(eq(logisticsShipments.id, shipmentId));
+      }
+
+      return { createdStock: created, isRetry: false };
+    });
+
+    const casesReceived = createdStock.reduce((sum, s) => sum + s.cases, 0);
+
+    // A retry booked nothing new: no Zoho call, no second arrival notice
+    if (isRetry) {
+      return {
+        success: true,
+        lwin18,
+        productName,
+        totalCases: casesReceived,
+        stock: createdStock,
+        alreadyReceived: true,
+      };
     }
 
-    // 7. Update shipment status to 'partially_received' if not already
     if (
       shipment.status !== 'partially_received' &&
       shipment.status !== 'delivered'
     ) {
-      await db
-        .update(logisticsShipments)
-        .set({
-          status: 'partially_received',
-          updatedAt: new Date(),
-        })
-        .where(eq(logisticsShipments.id, shipmentId));
       await advanceShipmentIntakes(shipmentId);
     }
 
@@ -381,8 +403,6 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       });
     }
 
-    const casesReceived = createdStock.reduce((sum, s) => sum + s.cases, 0);
-
     /*
       Tell the owner their wine has landed.
 
@@ -397,6 +417,8 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       cases: casesReceived,
       bottles: casesReceived * actualBottlesPerCase,
       shipmentNumber: shipment.shipmentNumber,
+      stockId: createdStock[0]?.stockId ?? null,
+      lwin18,
     });
 
     return {

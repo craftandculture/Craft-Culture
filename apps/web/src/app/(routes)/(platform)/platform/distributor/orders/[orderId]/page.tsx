@@ -65,22 +65,6 @@ const formatPrice = (amount: number, currency: Currency) => {
 };
 
 /**
- * Calculate the client-facing price for a line item by prorating the order total
- *
- * Line items store supplier/partner prices, but the order total includes all markup
- * (C&C margin, duty, VAT, transfer costs). This function prorates the final total
- * back to each line item based on their proportion of the supplier cost.
- */
-const calculateClientPrice = (
-  itemSupplierTotal: number,
-  totalSupplierCost: number,
-  orderTotal: number,
-): number => {
-  if (totalSupplierCost === 0) return 0;
-  return (itemSupplierTotal / totalSupplierCost) * orderTotal;
-};
-
-/**
  * Distributor order detail page
  *
  * Shows full order details with action buttons for status updates.
@@ -169,6 +153,20 @@ const DistributorOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to unlock order');
+    },
+  });
+
+  // The partner says the client has paid: the distributor confirms it
+  const { mutate: verifyClientPayment, isPending: isVerifyingPayment } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.distributorPaymentVerification.mutate({ orderId }),
+    onSuccess: () => {
+      toast.success('Client payment verified');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to verify payment');
     },
   });
 
@@ -475,6 +473,18 @@ const DistributorOrderDetailPage = () => {
                 <span className="hidden sm:inline">Send to</span> Finance
               </ButtonContent>
             </Button>
+
+            {order.status === 'awaiting_payment_verification' && (
+              <Button
+                colorRole="brand"
+                onClick={() => verifyClientPayment()}
+                disabled={isVerifyingPayment}
+              >
+                <ButtonContent iconLeft={IconCheck} isLoading={isVerifyingPayment}>
+                  Verify Client Payment
+                </ButtonContent>
+              </Button>
+            )}
 
             {/* Next Action Button */}
             {nextAction && (
@@ -911,18 +921,19 @@ const DistributorOrderDetailPage = () => {
 
             {order.items && order.items.length > 0 ? (
               (() => {
-                // Calculate total supplier cost to prorate client prices
-                const totalSupplierCost = order.items.reduce((sum, item) => sum + item.totalUsd, 0);
+                // Each line's share of the client price, worked out on the server
                 const orderTotal = order.totalUsd ?? 0;
+                // A subscription box is priced as a whole, not wine by wine
+                const isBox = order.items.some((item) => item.inBox);
 
                 return (
                   <>
                     {/* Mobile: Card layout */}
                     <div className="flex flex-col divide-y divide-border-muted md:hidden">
                       {order.items.map((item) => {
-                        const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
-                        const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-                        const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                        const clientTotal = item.clientTotalUsd;
+                        const clientPricePerCase = item.clientPricePerCaseUsd;
+                        const distributorCostPerCase = item.distributorCostPerCaseUsd;
                         const line = describePcoLine(item);
                         return (
                           <div key={item.id} className="py-3">
@@ -936,14 +947,18 @@ const DistributorOrderDetailPage = () => {
                                 </Typography>
                               </div>
                               <Typography variant="bodySm" className="flex-shrink-0 font-semibold">
-                                {formatPrice(getAmount(clientTotal), currency)}
+                                {item.inBox ? 'In box' : formatPrice(getAmount(clientTotal), currency)}
                               </Typography>
                             </div>
                             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
                               <span className="font-medium text-text-primary">{line.qty}</span>
                               <span>{line.pack}</span>
-                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
-                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                              {!item.inBox && (
+                                <>
+                                  <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
+                                  <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -964,9 +979,9 @@ const DistributorOrderDetailPage = () => {
                         </thead>
                         <tbody className="divide-y divide-border-muted/60">
                           {order.items.map((item) => {
-                            const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
-                            const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-                            const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                            const clientTotal = item.clientTotalUsd;
+                            const clientPricePerCase = item.clientPricePerCaseUsd;
+                            const distributorCostPerCase = item.distributorCostPerCaseUsd;
                             const line = describePcoLine(item);
                             return (
                               <tr key={item.id} className="align-top hover:bg-surface-muted/20">
@@ -986,23 +1001,33 @@ const DistributorOrderDetailPage = () => {
                                     {line.isSingle ? line.pack : `${line.pack} · ${line.bottles} btl`}
                                   </Typography>
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" colorRole="muted">
-                                    {formatPrice(getAmount(distributorCostPerCase), currency)}
-                                    <span className="text-xs"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm">
-                                    {formatPrice(getAmount(clientPricePerCase), currency)}
-                                    <span className="text-xs text-text-muted"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" className="font-semibold">
-                                    {formatPrice(getAmount(clientTotal), currency)}
-                                  </Typography>
-                                </td>
+                                {item.inBox ? (
+                                  <td className="whitespace-nowrap px-4 py-3.5 text-right" colSpan={3}>
+                                    <Typography variant="bodySm" colorRole="muted">
+                                      In box
+                                    </Typography>
+                                  </td>
+                                ) : (
+                                  <>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" colorRole="muted">
+                                        {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                        <span className="text-xs"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm">
+                                        {formatPrice(getAmount(clientPricePerCase), currency)}
+                                        <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" className="font-semibold">
+                                        {formatPrice(getAmount(clientTotal), currency)}
+                                      </Typography>
+                                    </td>
+                                  </>
+                                )}
                               </tr>
                             );
                           })}
@@ -1011,7 +1036,7 @@ const DistributorOrderDetailPage = () => {
                           <tr>
                             <td className="px-4 py-3.5">
                               <Typography variant="bodySm" className="font-semibold">
-                                Total
+                                {isBox ? 'Box price' : 'Total'}
                               </Typography>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3.5" colSpan={3}>

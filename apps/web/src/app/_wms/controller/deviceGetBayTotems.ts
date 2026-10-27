@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { deviceProcedure, validateDeviceToken } from '@/lib/trpc/procedures';
+import { deviceProcedure } from '@/lib/trpc/procedures';
 
 import type { BayTotemData } from '../utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '../utils/generateBayTotemZpl';
@@ -20,14 +20,12 @@ import { generateBatchBayTotemsZpl } from '../utils/generateBayTotemZpl';
 const deviceGetBayTotems = deviceProcedure
   .input(
     z.object({
-      deviceToken: z.string(),
+      /** Ignored: the token now travels in a header or cookie (kept so older pages still parse) */
+      deviceToken: z.string().optional(),
       aisle: z.string().optional(),
     }),
   )
   .query(async ({ input }) => {
-    // Validate device token
-    validateDeviceToken(input.deviceToken);
-
     // Only get rack locations (not receiving/shipping)
     const conditions = [
       eq(wmsLocations.isActive, true),

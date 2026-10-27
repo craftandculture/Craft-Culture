@@ -155,9 +155,8 @@ const PartnerSupplierOrdersPage = () => {
                             <SupplierOrderStatusBadge status={order.status} />
                           </div>
 
-                          {/* Customer */}
                           <Typography variant="bodyMd" className="font-semibold line-clamp-1 mb-1">
-                            {order.customerCompany || 'Customer Order'}
+                            Craft &amp; Culture order
                           </Typography>
 
                           {/* Meta row */}

@@ -8,6 +8,9 @@ import { privateClientOrderDocuments } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import { isDocumentDeletable } from '../utils/documentAccess';
+import resolveOrderParty from '../utils/resolveOrderParty';
+
 const deleteDocumentSchema = z.object({
   documentId: z.string().uuid(),
 });
@@ -46,14 +49,27 @@ const documentsDelete = approvedProcedure.input(deleteDocumentSchema).mutation(a
     });
   }
 
-  // Check access - must be admin or the person who uploaded
-  const isAdmin = user.role === 'admin';
+  /*
+    C&C staff can remove any document. Anyone else only one they added
+    themselves, while they still act for that side of the order with more
+    than view-only access, and only until the order has moved on because of
+    it (an invoice C&C approved against, a payment proof already accepted).
+  */
+  const { party, canWrite } = await resolveOrderParty(user, order);
+  const isAdmin = party === 'staff';
   const isUploader = document.uploadedBy === user.id;
 
-  if (!isAdmin && !isUploader) {
+  if (!isAdmin && (!isUploader || !party || !canWrite)) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Only the uploader or an admin can delete this document',
+    });
+  }
+
+  if (!isAdmin && !isDocumentDeletable(document.documentType, order.status)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'The order has moved on since this document was added, so it can no longer be removed. Ask Craft & Culture if it needs replacing.',
     });
   }
 

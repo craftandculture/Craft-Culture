@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
 import HowToPayPanel from '@/app/_cellar/components/HowToPayPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
@@ -19,7 +21,6 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -51,7 +52,7 @@ const STATES: Record<
     label: 'Reserved for you',
     tone: 'waiting',
     detail:
-      'Pay by bank transfer using the details above, then let us know you have paid.',
+      'Pay by bank transfer using How to pay below, then let us know you have paid.',
   },
   payment_claimed: {
     label: 'Checking your payment',
@@ -73,12 +74,13 @@ const STATES: Record<
   cancelled: { label: 'Cancelled', tone: 'gone', detail: '' },
 };
 
+/* Emerald once the wine is in the cellar; everything still waiting in slate */
 const TONES = {
   waiting:
-    'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
+    'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/20 dark:text-slate-200 dark:ring-slate-700',
   claimed:
-    'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900',
-  done: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/20 dark:text-slate-200 dark:ring-slate-700',
+    'bg-slate-100 text-slate-800 ring-1 ring-inset ring-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:ring-slate-600',
+  done: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
   gone: 'bg-surface-muted text-text-muted',
 };
 
@@ -110,7 +112,7 @@ const PurchasesPage = () => {
       return next;
     });
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     ...api.consignment.member.getPurchases.queryOptions(),
   });
 
@@ -151,45 +153,30 @@ const PurchasesPage = () => {
 
   return (
     <div className="w-full pb-8">
-      <div className="mb-5">
-        <Typography variant="headingMd" className="block">
-          Purchases
-        </Typography>
-        <Typography
-          variant="bodySm"
-          colorRole="muted"
-          className="mt-1 block max-w-2xl"
-        >
-          Wine you have bought from us. It is stored duty-free in our bonded
-          warehouse and added to your cellar once your payment is confirmed.
-        </Typography>
-      </div>
+      <CellarPageHeader
+        title="Purchases"
+        description="Wine you have bought through Craft & Culture. It is held in bond and added to your cellar once your payment is confirmed."
+      />
 
-      {isLoading && (
-        <Typography variant="bodySm" colorRole="muted" className="block py-6">
-          Loading&hellip;
-        </Typography>
-      )}
+      {isLoading && <CellarState kind="loading" />}
 
-      {!isLoading && purchases.length === 0 && (
-        <div className="border-border-muted rounded-xl border bg-gradient-to-b from-slate-50/70 to-transparent px-6 py-12 text-center dark:from-slate-500/10">
-          <span className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-500/20">
-            <Icon icon={IconShoppingBag} size="md" />
-          </span>
-          <p className="text-text-primary text-base font-semibold">
-            No purchases yet
-          </p>
-          <p className="text-text-muted mx-auto mt-1 max-w-sm text-sm leading-6">
-            Wines you reserve from The Cellar List will appear here, with how to
-            pay for them.
-          </p>
-          <Link
-            href="/platform/cellar/available"
-            className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
-          >
-            Browse The Cellar List
-          </Link>
-        </div>
+      {isError && <CellarState kind="error" />}
+
+      {!isLoading && !isError && purchases.length === 0 && (
+        <CellarState
+          kind="empty"
+          icon={IconShoppingBag}
+          title="No purchases yet"
+          message="Wines you reserve from the C&C Cellar List will appear here, with how to pay for them."
+          action={
+            <Link
+              href="/platform/cellar/available"
+              className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
+            >
+              Browse the C&C Cellar List
+            </Link>
+          }
+        />
       )}
 
       {[
@@ -258,7 +245,7 @@ const PurchasesPage = () => {
                         >
                           <div className="min-w-0 flex-1">
                             <p
-                              className="text-text-primary text-[15px] font-semibold leading-snug sm:text-base"
+                              className="text-text-primary text-lg font-semibold leading-snug sm:text-xl"
                               title={item.productName}
                             >
                               {displayWineName(item.productName)}
@@ -417,8 +404,8 @@ const PurchasesPage = () => {
                             */}
                             {purchase.status === 'payment_claimed' ? (
                               <p className="text-text-muted text-right text-xs">
-                                Need to change this order? Please contact us and
-                                we will sort it out with you.
+                                To change this order, please contact the cellar
+                                team.
                               </p>
                             ) : (
                             <div className="flex flex-wrap items-center justify-end gap-2">

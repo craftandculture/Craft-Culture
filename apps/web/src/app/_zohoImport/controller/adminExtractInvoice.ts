@@ -12,6 +12,7 @@ import logger from '@/utils/logger';
 
 import extractInvoiceSchema from '../schemas/extractInvoiceSchema';
 import type { ZohoItem } from '../schemas/zohoItemSchema';
+import buildZohoSku from '../utils/buildZohoSku';
 import determineHsCode from '../utils/determineHsCode';
 
 /**
@@ -97,23 +98,6 @@ const matchLwin = async (productName: string, _vintage: string | null) => {
       return null;
     }
   }
-};
-
-/**
- * Generate LWIN-18 format SKU
- */
-const generateSku = (
-  lwin7: string | null,
-  vintage: string | null,
-  caseConfig: number,
-  bottleSizeMl: number,
-): string => {
-  const lwinPart = lwin7?.padStart(7, '0') ?? '0000000';
-  const vintagePart = vintage ?? '1000'; // 1000 = NV indicator
-  const caseConfigPart = String(caseConfig).padStart(2, '0');
-  const bottleSizePart = String(bottleSizeMl).padStart(5, '0');
-
-  return `${lwinPart}${vintagePart}${caseConfigPart}${bottleSizePart}`;
 };
 
 /**
@@ -332,8 +316,9 @@ ${spreadsheetContent}`,
         lwinMatch?.subType ?? null,
       );
 
-      // Generate SKU
-      const sku = generateSku(lwinMatch?.lwin ?? null, vintage, caseConfig, bottleSize);
+      // A weak match is not used: its LWIN would become a wrong Zoho SKU
+      const lwin7 = hasMatch ? (lwinMatch?.lwin ?? null) : null;
+      const sku = buildZohoSku({ lwin7, vintage, caseConfig, bottleSize }) ?? '';
 
       items.push({
         id: crypto.randomUUID(),
@@ -343,7 +328,7 @@ ${spreadsheetContent}`,
         bottleSize,
         caseConfig,
         quantity: lineItem.quantity,
-        lwin7: lwinMatch?.lwin ?? null,
+        lwin7,
         lwinDisplayName: lwinMatch?.displayName ?? null,
         matchConfidence: lwinMatch?.similarity ?? 0,
         country: lwinMatch?.country ?? null,
@@ -388,7 +373,7 @@ ${spreadsheetContent}`,
 
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to extract invoice: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Failed to read the invoice. Try again, or check the file is a clear PDF, image or spreadsheet.',
     });
   }
 });

@@ -132,7 +132,8 @@ const calculateLandedCost = (
 
     if (item.targetSellingPrice && item.targetSellingPrice > 0) {
       marginPerBottle = item.targetSellingPrice - landedCostPerBottle;
-      marginPercent = (marginPerBottle / landedCostPerBottle) * 100;
+      // No cost on the line yet means no meaningful margin %, not Infinity
+      marginPercent = landedCostPerBottle > 0 ? (marginPerBottle / landedCostPerBottle) * 100 : null;
     }
 
     return {

@@ -30,7 +30,8 @@ const usersStopImpersonate = protectedProcedure.mutation(async () => {
     const [currentSession] = await db
       .select()
       .from(sessions)
-      .where(eq(sessions.token, sessionToken))
+      /* The cookie carries `token.signature`; the table stores the token. */
+      .where(eq(sessions.token, sessionToken.split('.')[0] ?? ''))
       .limit(1);
 
     if (currentSession?.impersonatedBy) {

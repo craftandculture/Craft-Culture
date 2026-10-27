@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
+import csvCell from '../../utils/csvCell';
 import ukMoveTotal, { LCB_RECHARGE_MARKUP } from '../../utils/ukMoveTotal';
 import ConfirmAction from '../ConfirmAction';
 
@@ -45,11 +46,8 @@ const filterOf = (move: Move): Exclude<Filter, 'all'> => {
   }
 };
 
-/** A CSV cell, quoted when it needs to be */
-const cell = (value: string | number | null | undefined) => {
-  const text = value === null || value === undefined ? '' : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
+/** A CSV cell, quoted when it needs to be and never read as a formula */
+const cell = (value: string | number | null | undefined) => csvCell(value);
 
 /**
  * Lines for LCB's Vision export order, one per LCB line

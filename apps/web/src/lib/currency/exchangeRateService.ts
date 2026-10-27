@@ -68,6 +68,9 @@ export interface MultiDayRateResult {
   endDate: string;
 }
 
+/** How far back to look for the latest published rate (covers long holidays) */
+const LOOKBACK_DAYS = 10;
+
 class ExchangeRateService {
   // ECB supported currencies (EUR is the base currency)
   private readonly ECB_SUPPORTED_CURRENCIES: SupportedCurrency[] = [
@@ -266,41 +269,31 @@ class ExchangeRateService {
       return 1.0;
     }
 
-    // Fetch rate directly without caching
-    const startDate = new Date(date);
-    const endDate = new Date(date);
-
-    const multiDayResult = await this.fetchECBRates(
-      from,
-      to,
-      startDate,
-      endDate,
-    );
-
-    // Get the rate for the specific date or the closest available
+    /*
+      ECB publishes working days only, so asking for a single weekend or
+      holiday date returned nothing and threw. Look back over the previous
+      ten days and use the most recent rate on or before the date.
+    */
     const targetDateStr = date.toISOString().split('T')[0] as string;
+    const startDate = new Date(date);
+    startDate.setUTCDate(startDate.getUTCDate() - LOOKBACK_DAYS);
 
-    const exactMatch = multiDayResult.rates.find(
-      (r) => r.date === targetDateStr,
-    );
+    const multiDayResult = await this.fetchECBRates(from, to, startDate, date);
 
-    if (exactMatch) {
-      return exactMatch.rate;
+    const usable = multiDayResult.rates
+      .filter((r) => r.date <= targetDateStr && Number.isFinite(r.rate) && r.rate > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const latest = usable.at(-1);
+
+    // Never 0: a zero rate turns every converted price into zero
+    if (!latest) {
+      throw new Error(
+        `No ${from}/${to} exchange rate available in the ${LOOKBACK_DAYS} days to ${targetDateStr}`,
+      );
     }
 
-    // Find closest previous date
-    const sortedRates = multiDayResult.rates.sort((a, b) =>
-      a.date.localeCompare(b.date),
-    );
-
-    const previousRates = sortedRates.filter((r) => r.date <= targetDateStr);
-
-    if (previousRates.length > 0) {
-      return previousRates[previousRates.length - 1]?.rate ?? 0;
-    }
-
-    // If no previous date found, use the earliest available date
-    return sortedRates[0]?.rate ?? 0;
+    return latest.rate;
   }
 
   async convertAmount(

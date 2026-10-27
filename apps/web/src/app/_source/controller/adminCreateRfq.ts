@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 
 import createRfqSchema from '../schemas/createRfqSchema';
 import generateRfqNumber from '../utils/generateRfqNumber';
+import insertWithNumberRetry from '../utils/insertWithNumberRetry';
 
 /**
  * Create a new SOURCE RFQ
@@ -22,9 +23,8 @@ const adminCreateRfq = adminProcedure
   .input(createRfqSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     try {
-      const rfqNumber = await generateRfqNumber();
-
-      const [rfq] = await db
+      const [rfq] = await insertWithNumberRetry(generateRfqNumber, (rfqNumber) =>
+        db
         .insert(sourceRfqs)
         .values({
           rfqNumber,
@@ -41,7 +41,8 @@ const adminCreateRfq = adminProcedure
           createdBy: user.id,
           status: 'draft',
         })
-        .returning();
+        .returning(),
+      );
 
       if (!rfq) {
         throw new TRPCError({

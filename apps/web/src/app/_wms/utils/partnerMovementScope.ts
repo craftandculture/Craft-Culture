@@ -54,9 +54,23 @@ const partnerMovementScope = async (partnerId: string) => {
 
   if (exclusive.length > 0) {
     clauses.push(
+      /*
+        Unstamped history only from when this partner came to hold the wine.
+        A wine that changed hands is "only theirs" today, but its receipts,
+        picks and moves before the transfer were the previous owner's —
+        shown here, they told a partner what another client had done.
+      */
       sql`(${wmsStockMovements.lwin18} IN ${exclusive}
            AND ${wmsStockMovements.fromOwnerId} IS NULL
-           AND ${wmsStockMovements.toOwnerId} IS NULL)`,
+           AND ${wmsStockMovements.toOwnerId} IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM wms_stock_movements handover
+              WHERE handover.movement_type = 'ownership_transfer'
+                AND handover.lwin18 = ${wmsStockMovements.lwin18}
+                AND handover.to_owner_id = ${partnerId}
+                AND handover.from_owner_id IS DISTINCT FROM ${partnerId}
+                AND handover.performed_at > ${wmsStockMovements.performedAt}
+           ))`,
     );
   }
 

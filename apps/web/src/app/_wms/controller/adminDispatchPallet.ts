@@ -112,8 +112,8 @@ const adminDispatchPallet = wmsOperatorProcedure
       quantityCases: pallet.totalCases,
       quantityBottles: 0,
       fromLocationId: pallet.locationId,
-      ownerId: pallet.ownerId,
-      ownerName: pallet.ownerName,
+      // Whose pallet: the ledger has no owner_id/owner_name columns
+      fromOwnerId: pallet.ownerId,
       performedBy: ctx.user.id,
       notes: `Pallet ${pallet.palletCode} dispatched with ${pallet.totalCases} cases${notes ? `: ${notes}` : ''}`,
       scannedBarcodes,

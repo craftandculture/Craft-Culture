@@ -1,12 +1,26 @@
 'use client';
 
-import { IconDownload, IconPrinter } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { format, subMonths } from 'date-fns';
+import {
+  IconCoin,
+  IconDownload,
+  IconPackageImport,
+  IconPrinter,
+  IconTag,
+  IconTruckDelivery,
+} from '@tabler/icons-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
+import StatementGroups from '@/app/_cellar/components/StatementGroups';
+import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
 import StatementSection from '@/app/_cellar/components/StatementSection';
 import bottleName from '@/app/_cellar/utils/bottleName';
+import csvCell from '@/app/_cellar/utils/csvCell';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (value: number) =>
@@ -30,20 +44,96 @@ const KIND_NOTE = {
   added: 'Transferred to your cellar',
 } as const;
 
-/** The last twelve months, most recent complete month first */
-const monthOptions = () =>
-  Array.from({ length: 12 }, (_, index) => {
-    const date = subMonths(new Date(), index);
-
-    return { value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') };
-  });
-
-/** A CSV cell, quoted when it needs to be */
-const cell = (value: string | number) => {
-  const text = String(value);
-
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+/**
+ * The months a statement can be read for, newest first
+ *
+ * From the month before the cellar first held wine up to this month. Months
+ * before the account was open only ever showed empty statements.
+ */
+const monthOptions = (activeSince: Date | string | null | undefined) => {
+  const now = startOfMonth(new Date());
+  const first = activeSince
+    ? subMonths(startOfMonth(new Date(activeSince)), 1)
+    : subMonths(now, 1);
+  const options: { value: string; label: string }[] = [];
+  for (let date = now; date >= first; date = subMonths(date, 1)) {
+    options.push({ value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') });
+    if (options.length > 60) break;
+  }
+  // Never empty, even for a cellar opened this month
+  if (options.length === 0) {
+    options.push({ value: format(now, 'yyyy-MM'), label: format(now, 'MMMM yyyy') });
+  }
+  return options;
 };
+
+/** Holdings shown before "Show all" */
+const HOLDINGS_SHOWN = 12;
+
+interface LeftRow {
+  id: string;
+  at: Date | string;
+  name: string;
+  detail: string;
+  bottles: number;
+  groupKey: string;
+  groupLabel: string;
+  status: string | null;
+  outcome: string;
+  amountUsd: number | null;
+}
+
+/** Rows that left the cellar, one group per order or reason, oldest first */
+const hasMoney = (outcome: string) => outcome === 'sale' || outcome === 'reimbursed';
+
+const groupsOf = (rows: LeftRow[]): StatementGroup[] => {
+  const groups = new Map<string, StatementGroup>();
+  const totals = new Map<string, { sum: number; open: boolean; money: boolean }>();
+  for (const row of rows) {
+    const group = groups.get(row.groupKey) ?? {
+      key: row.groupKey,
+      label: row.groupLabel,
+      status: row.status,
+      date: row.at,
+      wines: [],
+    };
+    group.wines.push({
+      key: row.id,
+      name: row.name,
+      detail: row.detail,
+      bottles: row.bottles,
+      // Money only where it means something: sales, samples, reimbursements
+      amount: hasMoney(row.outcome)
+        ? row.amountUsd != null
+          ? money(row.amountUsd)
+          : 'Price being agreed'
+        : null,
+    });
+    groups.set(row.groupKey, group);
+    totals.set(row.groupKey, {
+      sum: (totals.get(row.groupKey)?.sum ?? 0) + (row.amountUsd ?? 0),
+      open: (totals.get(row.groupKey)?.open ?? false) || (hasMoney(row.outcome) && row.amountUsd == null),
+      money: hasMoney(row.outcome),
+    });
+  }
+
+  return [...groups.values()].map((group) => {
+    const total = totals.get(group.key);
+    return {
+      ...group,
+      amount: total?.money
+        ? total.open
+          ? total.sum > 0
+            ? `${money(total.sum)} so far`
+            : 'Price being agreed'
+          : money(total.sum)
+        : null,
+    };
+  });
+};
+
+/** A CSV cell, quoted when it needs to be and never read as a formula */
+const cell = (value: string | number) => csvCell(value);
 
 /**
  * A member's monthly statement
@@ -52,20 +142,23 @@ const cell = (value: string | number) => {
  * the wine held. Printable on a single A4 column and downloadable as CSV, so a
  * collector can keep it with their own records.
  *
- * Defaults to the last complete month, because that is the one with a
- * finished story. No fees or charges appear: those are for the invoice, not
- * the cellar.
+ * Opens on this month, and offers only the months the cellar has been open
+ * (and the one before). No fees or charges appear: those are for the
+ * invoice, not the cellar.
  */
 const StatementPage = () => {
   const api = useTRPC();
-  const options = useMemo(() => monthOptions(), []);
-  const [month, setMonth] = useState(
-    options[1]?.value ?? format(new Date(), 'yyyy-MM'),
-  );
+  // This month: what a member opening the statement wants to see is now
+  const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     ...api.cellar.member.getStatement.queryOptions({ month }),
+    // Keep the page (and the month list) while the next month loads
+    placeholderData: keepPreviousData,
   });
+
+  const options = useMemo(() => monthOptions(data?.activeSince), [data?.activeSince]);
 
   const monthLabel =
     options.find((option) => option.value === month)?.label ?? month;
@@ -74,9 +167,17 @@ const StatementPage = () => {
     ? {
         added: data.added.reduce((sum, row) => sum + row.bottles, 0),
         delivered: data.deliveries.reduce((sum, row) => sum + row.bottles, 0),
-        sold: data.sold.reduce((sum, row) => sum + row.bottles, 0),
+        onItsWay: data.left
+          .filter((row) => row.outcome === 'delivery')
+          .reduce((sum, row) => sum + row.bottles, 0),
+        sold:
+          data.sold.reduce((sum, row) => sum + row.bottles, 0) +
+          data.left
+            .filter((row) => row.outcome === 'sale')
+            .reduce((sum, row) => sum + row.bottles, 0),
         uae: data.holdings.reduce((sum, row) => sum + row.bottles, 0),
         uk: data.ukHoldings.reduce((sum, row) => sum + row.totalBottles, 0),
+        value: data.holdings.reduce((sum, row) => sum + (row.valueUsd ?? 0), 0),
       }
     : null;
 
@@ -103,6 +204,13 @@ const StatementPage = () => {
           '',
         ]),
       ),
+      ...data.left.map((row) => [
+        row.groupLabel,
+        format(new Date(row.at), 'yyyy-MM-dd'),
+        [row.name, row.detail].filter(Boolean).join(' '),
+        row.bottles,
+        row.amountUsd != null ? row.amountUsd.toFixed(2) : '',
+      ]),
       ...data.sold.map((row) => [
         'Sold',
         format(new Date(row.at), 'yyyy-MM-dd'),
@@ -150,7 +258,7 @@ const StatementPage = () => {
       */}
       <style>
         {`@media print {
-          header, nav, footer, .statement-controls { display: none !important; }
+          header:not(.statement-header), nav, footer, .statement-controls { display: none !important; }
           body { background: #fff !important; }
           .statement { max-width: 180mm; margin: 0 auto; font-size: 11px; padding: 0; }
           .statement tr, .statement dl { break-inside: avoid; }
@@ -170,27 +278,20 @@ const StatementPage = () => {
         </p>
       </div>
 
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.18em]">
-            C&amp;C Private Cellar · Statement
-          </p>
-          <h1 className="text-text-primary mt-1 text-xl font-semibold">
-            {monthLabel}
-          </h1>
-          {data && (
-            <p className="text-text-muted mt-0.5 text-sm">
-              {data.memberName} · issued{' '}
-              {format(new Date(data.generatedAt), 'd MMMM yyyy')}
-            </p>
-          )}
-        </div>
-        <div className="statement-controls flex flex-wrap items-center gap-2">
+      <CellarPageHeader
+        className="statement-header mb-4"
+                title={data?.memberName ?? 'Your statements'}
+        description={`${monthLabel}${
+          data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''
+        }`}
+        actions={
+        <div className="statement-controls grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <select
+            id="statement-month"
             value={month}
             onChange={(event) => setMonth(event.target.value)}
             aria-label="Statement month"
-            className="border-border-muted bg-surface-primary text-text-primary h-10 rounded-lg border px-3 text-sm"
+            className="border-border-muted bg-surface-primary text-text-primary col-span-2 h-10 rounded-lg border px-3 text-sm sm:col-span-1"
           >
             {options.map((option) => (
               <option key={option.value} value={option.value}>
@@ -200,9 +301,18 @@ const StatementPage = () => {
           </select>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => {
+              // Every order and every wine on paper, not only what was opened on screen
+              flushSync(() => setShowAllHoldings(true));
+              document
+                .querySelectorAll<HTMLDetailsElement>('.statement-group')
+                .forEach((group) => {
+                  group.open = true;
+                });
+              window.print();
+            }}
             disabled={!data}
-            className="border-border-muted text-text-primary inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50"
+            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold shadow-sm disabled:opacity-50"
           >
             <IconPrinter size={16} />
             Print
@@ -211,38 +321,122 @@ const StatementPage = () => {
             type="button"
             onClick={downloadCsv}
             disabled={!data}
-            className="bg-text-primary text-surface-primary inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
+            className="bg-text-primary text-background-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
           >
             <IconDownload size={16} />
-            Download CSV
+            CSV
           </button>
         </div>
-      </div>
+        }
+      />
 
-      {isLoading && <p className="text-text-muted py-6 text-sm">Loading&hellip;</p>}
+      {isLoading && <CellarState kind="loading" rows={4} />}
+
+      {isError && !data && <CellarState kind="error" />}
 
       {data && totals && (
         <>
-          <dl className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          {/* The cellar home's tiles: the same look wherever a member reads numbers */}
+          <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
             {[
-              { label: 'Added', value: bottles(totals.added) },
-              { label: 'Delivered to you', value: bottles(totals.delivered) },
-              { label: 'Sold', value: money(data.soldUsd) },
-              { label: 'Paid to you', value: money(data.paidUsd) },
+              {
+                label: 'Added',
+                value: totals.added.toLocaleString(),
+                detail: totals.added === 1 ? 'bottle' : 'bottles',
+                icon: IconPackageImport,
+                tone: 'blue' as const,
+              },
+              {
+                label: 'Delivered to you',
+                value: totals.delivered.toLocaleString(),
+                detail: totals.onItsWay ? `${totals.onItsWay} on the way` : totals.delivered === 1 ? 'bottle' : 'bottles',
+                icon: IconTruckDelivery,
+                tone: 'violet' as const,
+              },
+              {
+                label: 'Sold',
+                value: money(data.soldUsd + data.soldLeftUsd),
+                detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
+                icon: IconTag,
+                tone: 'amber' as const,
+              },
+              {
+                label: 'Owed to you',
+                value: money(Math.max(0, data.owedUsd)),
+                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'paid monthly',
+                icon: IconCoin,
+                tone: 'emerald' as const,
+              },
             ].map((tile) => (
-              <div
+              <CellarStatTile
                 key={tile.label}
-                className="rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50/60 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-slate-700 dark:from-slate-500/10"
-              >
-                <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  {tile.label}
-                </dt>
-                <dd className="text-text-primary m-0 mt-1 text-lg font-semibold tabular-nums">
-                  {tile.value}
-                </dd>
-              </div>
+                label={tile.label}
+                value={tile.value}
+                detail={tile.detail}
+                icon={tile.icon}
+                tone={tile.tone}
+              />
             ))}
-          </dl>
+          </div>
+
+          <StatementGroups
+            title="Deliveries"
+            empty="No deliveries this month."
+            groups={[
+              ...groupsOf(data.left.filter((row) => row.outcome === 'delivery')),
+              ...data.deliveries.map((delivery) => ({
+                key: delivery.id,
+                label: 'Delivered to you',
+                status: 'Delivered',
+                date: delivery.deliveredAt,
+                wines: delivery.wines.map((wine, index) => ({
+                  key: `${delivery.id}-${index}`,
+                  name: wine.name,
+                  detail: wine.detail,
+                  bottles: wine.bottles,
+                })),
+              })),
+            ]}
+          />
+
+          <StatementGroups
+            title="Sold"
+            empty="Nothing sold this month."
+            groups={[
+              ...groupsOf(data.left.filter((row) => row.outcome === 'sale')),
+              ...(data.sold.length
+                ? [
+                    {
+                      key: 'pool',
+                      label: 'Sold through Craft & Culture',
+                      date: data.sold[0]?.at ?? null,
+                      amount: money(data.soldUsd),
+                      wines: data.sold.map((row) => ({
+                        key: row.id,
+                        name: row.productName,
+                        bottles: row.bottles,
+                        amount: money(row.amountUsd),
+                      })),
+                    },
+                  ]
+                : []),
+            ]}
+            footer={
+              data.paidUsd > 0
+                ? `Paid to you this month: ${money(data.paidUsd)}`
+                : undefined
+            }
+          />
+
+          {data.left.some((row) => !['delivery', 'sale'].includes(row.outcome)) && (
+            <StatementGroups
+              title="Other changes"
+              empty=""
+              groups={groupsOf(
+                data.left.filter((row) => !['delivery', 'sale'].includes(row.outcome)),
+              )}
+            />
+          )}
 
           <StatementSection
             title="Added to your cellar"
@@ -262,41 +456,10 @@ const StatementPage = () => {
             }))}
           />
 
-          <StatementSection
-            title="Delivered to you"
-            empty="No deliveries this month."
-            rows={data.deliveries.flatMap((delivery) =>
-              delivery.wines.map((wine, index) => ({
-                key: `${delivery.id}-${index}`,
-                date: delivery.deliveredAt,
-                name: wine.name,
-                detail: wine.detail,
-                value: String(wine.bottles),
-              })),
-            )}
-          />
-
-          <StatementSection
-            title="Sold on your behalf"
-            empty="Nothing sold this month."
-            rows={data.sold.map((row) => ({
-              key: row.id,
-              date: row.at,
-              name: row.productName,
-              note: bottles(row.bottles),
-              value: money(row.amountUsd),
-            }))}
-            valueLabel="Amount"
-            footer={
-              data.paidUsd > 0
-                ? `Paid to you this month: ${money(data.paidUsd)}`
-                : undefined
-            }
-          />
-
           <section className="mb-6">
             <h2 className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">
               Your cellar today · {bottles(totals.uae + totals.uk)}
+              {totals.value > 0 ? ` · ${money(totals.value)}` : ''}
             </h2>
             <p className="text-text-muted mb-2 text-xs">
               As held on {format(new Date(data.generatedAt), 'd MMMM yyyy')}
@@ -305,17 +468,18 @@ const StatementPage = () => {
                 : ''}
               .
             </p>
-            <div className="border-border-muted overflow-hidden rounded-xl border">
+            <div className="border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm">
               <table className="w-full text-sm">
                 <thead className="bg-fill-muted/60 border-border-muted border-b">
                   <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
                     <th className="px-3 py-2 text-left">Wine</th>
-                    <th className="px-3 py-2 text-left">Where</th>
+                    <th className="hidden px-3 py-2 text-left sm:table-cell">Location</th>
                     <th className="px-3 py-2 text-right">Bottles</th>
+                    <th className="px-3 py-2 text-right">Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-border-muted divide-y">
-                  {data.holdings.map((row) => (
+                  {data.holdings.slice(0, showAllHoldings ? undefined : HOLDINGS_SHOWN).map((row) => (
                     <tr key={`${row.lwin18}-${row.caseConfig}`}>
                       <td className="px-3 py-2">
                         <span className="text-text-primary block font-medium">
@@ -325,13 +489,20 @@ const StatementPage = () => {
                           {[row.producer, row.vintage ?? 'NV', bottleName(row.bottleSize)]
                             .filter(Boolean)
                             .join(' · ')}
+                          <span className="sm:hidden"> · UAE</span>
                         </span>
                       </td>
-                      <td className="text-text-muted px-3 py-2 text-xs">UAE</td>
+                      <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">UAE</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.bottles}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.valueUsd != null ? money(row.valueUsd) : '—'}
+                        {row.valueBasis === 'your price' && (
+                          <span className="text-text-muted block text-[10px]">your price</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
-                  {data.ukHoldings.map((row, index) => (
+                  {(showAllHoldings || data.holdings.length < HOLDINGS_SHOWN ? data.ukHoldings : []).map((row, index) => (
                     <tr key={`uk-${index}`}>
                       <td className="px-3 py-2">
                         <span className="text-text-primary block font-medium">
@@ -339,15 +510,17 @@ const StatementPage = () => {
                         </span>
                         <span className="text-text-muted block text-xs">
                           {row.vintage ?? 'NV'}
+                          <span className="sm:hidden"> · United Kingdom</span>
                         </span>
                       </td>
-                      <td className="text-text-muted px-3 py-2 text-xs">United Kingdom</td>
+                      <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">United Kingdom</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.totalBottles}</td>
+                      <td className="text-text-muted px-3 py-2 text-right">—</td>
                     </tr>
                   ))}
                   {data.holdings.length === 0 && data.ukHoldings.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="text-text-muted px-3 py-4 text-center text-sm">
+                      <td colSpan={4} className="text-text-muted px-3 py-4 text-center text-sm">
                         No wine held today.
                       </td>
                     </tr>
@@ -355,13 +528,26 @@ const StatementPage = () => {
                 </tbody>
               </table>
             </div>
+            {!showAllHoldings &&
+              data.holdings.length + data.ukHoldings.length > HOLDINGS_SHOWN && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllHoldings(true)}
+                  className="text-text-primary mt-2 text-sm font-semibold underline underline-offset-2"
+                >
+                  Show all {data.holdings.length + data.ukHoldings.length} wines
+                </button>
+              )}
           </section>
 
           <p className="text-text-muted text-xs leading-5">
             Wine in the UAE is held in bond, duty suspended, under Craft &amp;
-            Culture&rsquo;s licence on your behalf. Sale amounts are your asking
-            price for the bottles sold. If anything here differs from your own
-            records, please contact the cellar team.
+            Culture&rsquo;s licence on your behalf. Sales are valued at your price
+            for each wine. Bottles taken as samples, or damaged in our care, are
+            valued at their original cost to you, including shipping. Wine you hold is valued at your
+            price where you have set one, and otherwise at its cost. Payments are
+            made monthly for sales the buyer has paid for. If anything here
+            differs from your own records, please contact the cellar team.
           </p>
         </>
       )}

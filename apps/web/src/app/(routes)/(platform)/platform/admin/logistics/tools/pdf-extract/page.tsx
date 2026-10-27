@@ -149,7 +149,8 @@ const PdfExtractPage = () => {
     isLoading: isLoadingShipments,
     error: shipmentsError,
   } = useQuery({
-    ...api.logistics.admin.getMany.queryOptions({ limit: 50 }),
+    // The most the shipment list returns in one go; newest first
+    ...api.logistics.admin.getMany.queryOptions({ limit: 100 }),
     enabled: showImportModal,
   });
 
@@ -196,7 +197,13 @@ const PdfExtractPage = () => {
       'image/jpeg': ['.jpg', '.jpeg'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    // The file travels inside the request as base64 (a third larger), and Vercel
+    // refuses request bodies over 4.5MB before our code runs, so 3MB is the most
+    // that gets through
+    maxSize: 3 * 1024 * 1024,
+    onDropRejected: () => {
+      toast.error('That file is over 3MB. Save a smaller PDF (fewer pages or lower image quality) and try again.');
+    },
   });
 
   const handleExtract = async () => {
@@ -442,7 +449,7 @@ const PdfExtractPage = () => {
                       {isDragActive ? 'Drop the file here' : 'Drag & drop a document here'}
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
-                      or click to select • PDF, PNG, JPG up to 10MB
+                      or click to select • PDF, PNG, JPG up to 3MB
                     </Typography>
                   </div>
                 )}

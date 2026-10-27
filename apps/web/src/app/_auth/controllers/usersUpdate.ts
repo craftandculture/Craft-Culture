@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
@@ -20,12 +21,29 @@ const usersUpdate = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const { acceptTerms, ...rest } = input;
 
+    /*
+      The account type is chosen once, at onboarding. Afterwards it decides
+      what the account can see, so a login still awaiting approval (or any
+      other) cannot switch itself to a different kind — only an admin can.
+    */
+    if (
+      ctx.user.onboardingCompletedAt &&
+      rest.customerType !== undefined &&
+      rest.customerType !== ctx.user.customerType
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'Your account type has already been set. Please contact us if it needs to change.',
+      });
+    }
+
     // Update the user record
     const [updatedUser] = await db
       .update(users)
       .set({
         ...rest,
-        onboardingCompletedAt: new Date(),
+        onboardingCompletedAt: ctx.user.onboardingCompletedAt ?? new Date(),
         ...(acceptTerms && { termsAcceptedAt: new Date() }),
       })
       .where(eq(users.id, ctx.user.id))

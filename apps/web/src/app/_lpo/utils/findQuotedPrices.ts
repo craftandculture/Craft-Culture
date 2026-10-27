@@ -4,6 +4,8 @@ import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
 import db from '@/database/client';
 import { salesQuotes } from '@/database/schema';
 
+import squashCompanyName from './squashCompanyName';
+
 export interface QuotedPrice {
   /** What we offered, per bottle, in the order's currency */
   aed: number;
@@ -14,8 +16,6 @@ export interface QuotedPrice {
 /** The dirham is pegged, so quote-to-order comparison is arithmetic */
 const AED_PER_USD = 1 / (PEGGED.AED ?? 0.2723);
 
-/** Names match on their letters, so "C D General Trading L.L.C. - S.P.C" meets "CD General" */
-const squash = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /**
  * What we quoted this client, per wine
@@ -36,7 +36,7 @@ const findQuotedPrices = async (client: string | null) => {
 
   if (!client) return quoted;
 
-  const wanted = squash(client);
+  const wanted = squashCompanyName(client);
 
   if (!wanted) return quoted;
 
@@ -56,16 +56,15 @@ const findQuotedPrices = async (client: string | null) => {
     /*
       Either name may be the one the LPO uses, and neither is written the same
       way twice — "C D General Trading L.L.C. - S.P.C" against "CD General
-      Trading". Compared on letters alone, and only when one contains the
-      other, so two different clients cannot collide.
+      Trading". Compared on letters with registered suffixes stripped, and
+      only when the results are identical: a contains-match let a short name
+      ("CD") pick up another client's prices.
     */
     const names = [row.client, row.clientCompany]
       .filter((name): name is string => Boolean(name))
-      .map(squash);
+      .map(squashCompanyName);
 
-    const isThisClient = names.some(
-      (name) => name.includes(wanted) || wanted.includes(name),
-    );
+    const isThisClient = names.some((name) => name === wanted);
 
     if (!isThisClient) continue;
 

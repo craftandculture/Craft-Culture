@@ -201,7 +201,7 @@ const runScout = async () => {
     const competitorCtx = competitors
       .map(
         (c) =>
-          `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : `${c.sellingPriceUsd} USD`}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
+          `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : c.sellingPriceUsd ? `${(Number(c.sellingPriceUsd) * 3.6725).toFixed(0)} AED (${c.sellingPriceUsd} USD)` : 'price unknown'}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
       )
       .join('\n');
 

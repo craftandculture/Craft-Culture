@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import loops from '@/lib/loops/client';
@@ -24,13 +25,17 @@ interface NewUser {
 const notifyAdminsOfNewUser = async (user: NewUser) => {
   try {
     // Query all admin users
-    const adminUsers = await db
-      .select({
-        email: users.email,
-        name: users.name,
-      })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // C&C staff admins only: a new signup's details are not for partners
+    const adminUsers = (
+      await db
+        .select({
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter((admin) => isTeamMember(admin));
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found to notify of new user signup');

@@ -34,6 +34,12 @@ const receiveSingleItemSchema = z.object({
   shipmentId: z.string().uuid(),
   lotNumber: z.string().min(1),
   notes: z.string().optional(),
+  /*
+    Same key on a resend of the same line (a retry after a dropped
+    connection), so the server books it in once. The receive screen sends
+    the shipment and line it is receiving.
+  */
+  idempotencyKey: z.string().min(1).max(200).optional(),
   // Enriched context for NUC local server (optional — cloud path looks these up from DB)
   shipmentNumber: z.string().optional(),
   shipmentType: z.string().optional(),

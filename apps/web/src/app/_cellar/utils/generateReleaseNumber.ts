@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { cellarReleaseRequests } from '@/database/schema';
 
@@ -9,23 +10,11 @@ import { cellarReleaseRequests } from '@/database/schema';
  * @example
  *   await generateReleaseNumber(); // 'REL-2026-0007'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped reference
  */
-const generateReleaseNumber = async () => {
-  const prefix = `REL-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ requestNumber: cellarReleaseRequests.requestNumber })
-    .from(cellarReleaseRequests)
-    .where(like(cellarReleaseRequests.requestNumber, `${prefix}%`))
-    .orderBy(desc(cellarReleaseRequests.requestNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.requestNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateReleaseNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, cellarReleaseRequests, cellarReleaseRequests.requestNumber, 'REL', offset);
 
 export default generateReleaseNumber;

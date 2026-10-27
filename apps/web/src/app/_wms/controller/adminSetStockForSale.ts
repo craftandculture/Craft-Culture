@@ -10,7 +10,7 @@ import {
   saleMandates,
   wmsStock,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Put a received stock line on sale, or hold it for its owner
@@ -31,7 +31,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
  *     forSale: true,
  *   });
  */
-const adminSetStockForSale = wmsOperatorProcedure
+const adminSetStockForSale = adminProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

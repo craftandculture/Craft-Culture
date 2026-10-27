@@ -10,7 +10,7 @@ export const metadata = {
  */
 const ClientsPage = () => {
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <Typography variant="headingLg">Clients</Typography>
         <Typography variant="bodySm" colorRole="muted">

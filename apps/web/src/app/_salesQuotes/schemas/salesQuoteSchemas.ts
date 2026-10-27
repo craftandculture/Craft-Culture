@@ -52,6 +52,10 @@ export const salesQuoteOptionsSchema = z.object({
     .optional(),
   /** sales-scenario GP fractions offered as a client-side toggle, e.g. [0.2, 0.25] */
   gpScenarios: z.array(z.number().gt(0).lt(1)).max(4).optional(),
+  /** overrides the default "30 days from date of invoice" payment line */
+  paymentTerms: z.string().optional(),
+  /** extra free-text terms appended to the generated ones */
+  extraTerms: z.array(z.string()).optional(),
 });
 
 /**

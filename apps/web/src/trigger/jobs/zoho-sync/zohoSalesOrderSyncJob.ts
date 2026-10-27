@@ -6,12 +6,13 @@
  */
 
 import { logger, schedules } from '@trigger.dev/sdk';
-import { and, eq, isNull } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import canonicalSku from '@/app/_wms/utils/canonicalSku';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
+import linkSalesOrdersToPcos from '@/app/_zohoSalesOrders/data/linkSalesOrdersToPcos';
 import releaseClosedOrderHolds from '@/app/_zohoSalesOrders/data/releaseClosedOrderHolds';
 import {
   zohoInvoices,
@@ -24,6 +25,11 @@ import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrder
 import triggerDb from '@/trigger/triggerDb';
 
 export const zohoSalesOrderSyncJob = schedules.task({
+  // Scheduled every few minutes: the next run is the retry. Without these the
+  // project defaults (5 attempts, 5 hours) let failing runs pile up and spend
+  // the Trigger.dev budget (25 Oct 2026).
+  retry: { maxAttempts: 1 },
+  maxDuration: 5 * 60,
   id: 'zoho-sales-order-sync',
   cron: {
     pattern: '*/2 * * * *', // Every 2 minutes
@@ -70,14 +76,73 @@ export const zohoSalesOrderSyncJob = schedules.task({
         `Fetched ${salesOrders.length} sales orders from Zoho (${openOrders.length} open, ${invoicedOrders.length} invoiced)`,
       );
 
+      /*
+        Read the local orders and their invoices once for the whole listing,
+        instead of three queries per order every two minutes.
+      */
+      const existingByZohoId = new Map<
+        string,
+        { id: string; status: string | null; invoiceNumber: string | null }
+      >();
+      const invoiceBySoNumber = new Map<string, string>();
+      const LOOKUP_CHUNK = 500;
+
+      for (let i = 0; i < salesOrders.length; i += LOOKUP_CHUNK) {
+        const chunk = salesOrders.slice(i, i + LOOKUP_CHUNK);
+        const [rows, invoices] = await Promise.all([
+          triggerDb
+            .select({
+              id: zohoSalesOrders.id,
+              status: zohoSalesOrders.status,
+              invoiceNumber: zohoSalesOrders.invoiceNumber,
+              zohoSalesOrderId: zohoSalesOrders.zohoSalesOrderId,
+            })
+            .from(zohoSalesOrders)
+            .where(
+              inArray(
+                zohoSalesOrders.zohoSalesOrderId,
+                chunk.map((order) => order.salesorder_id),
+              ),
+            ),
+          triggerDb
+            .select({
+              referenceNumber: zohoInvoices.referenceNumber,
+              invoiceNumber: zohoInvoices.invoiceNumber,
+            })
+            .from(zohoInvoices)
+            .where(
+              inArray(
+                zohoInvoices.referenceNumber,
+                chunk.map((order) => order.salesorder_number),
+              ),
+            ),
+        ]);
+
+        for (const row of rows) {
+          existingByZohoId.set(row.zohoSalesOrderId, {
+            id: row.id,
+            status: row.status,
+            invoiceNumber: row.invoiceNumber,
+          });
+        }
+        for (const invoice of invoices) {
+          if (
+            invoice.referenceNumber &&
+            invoice.invoiceNumber &&
+            !invoiceBySoNumber.has(invoice.referenceNumber)
+          ) {
+            invoiceBySoNumber.set(invoice.referenceNumber, invoice.invoiceNumber);
+          }
+        }
+      }
+
       for (const zohoOrder of salesOrders) {
         try {
           // Check if we already have this order
-          const [existing] = await triggerDb
-            .select({ id: zohoSalesOrders.id, status: zohoSalesOrders.status })
-            .from(zohoSalesOrders)
-            .where(eq(zohoSalesOrders.zohoSalesOrderId, zohoOrder.salesorder_id))
-            .limit(1);
+          const existingRow = existingByZohoId.get(zohoOrder.salesorder_id);
+          const existing = existingRow
+            ? { id: existingRow.id, status: existingRow.status }
+            : undefined;
 
           if (existing) {
             // Both sync paths funnel through one helper so they can never drift.
@@ -109,30 +174,12 @@ export const zohoSalesOrderSyncJob = schedules.task({
             }
 
             // Backfill invoice_number if missing
-            const [needsInvoice] = await triggerDb
-              .select({ id: zohoSalesOrders.id })
-              .from(zohoSalesOrders)
-              .where(
-                and(
-                  eq(zohoSalesOrders.id, existing.id),
-                  isNull(zohoSalesOrders.invoiceNumber),
-                ),
-              )
-              .limit(1);
-
-            if (needsInvoice) {
-              const [invoice] = await triggerDb
-                .select({ invoiceNumber: zohoInvoices.invoiceNumber })
-                .from(zohoInvoices)
-                .where(eq(zohoInvoices.referenceNumber, zohoOrder.salesorder_number))
-                .limit(1);
-
-              if (invoice?.invoiceNumber) {
-                await triggerDb
-                  .update(zohoSalesOrders)
-                  .set({ invoiceNumber: invoice.invoiceNumber })
-                  .where(eq(zohoSalesOrders.id, existing.id));
-              }
+            const invoiceNumber = invoiceBySoNumber.get(zohoOrder.salesorder_number);
+            if (!existingRow?.invoiceNumber && invoiceNumber) {
+              await triggerDb
+                .update(zohoSalesOrders)
+                .set({ invoiceNumber })
+                .where(eq(zohoSalesOrders.id, existing.id));
             }
 
             continue;
@@ -270,6 +317,16 @@ export const zohoSalesOrderSyncJob = schedules.task({
       if (drafts.active) logger.info('Draft holds refreshed', drafts);
     } catch (error) {
       logger.error('Failed to refresh draft holds', { error });
+    }
+
+    /* Which PCO each order fulfils, including ones raised by hand in Zoho */
+    try {
+      const links = await linkSalesOrdersToPcos({ db: triggerDb });
+      if (links.byPco || links.byReference || links.backToPco) {
+        logger.info('Sales orders linked to their PCOs', links);
+      }
+    } catch (error) {
+      logger.error('Failed to link sales orders to PCOs', { error });
     }
 
     logger.info('Zoho sales order sync completed', results);

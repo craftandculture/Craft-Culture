@@ -13,7 +13,7 @@ import parseCustomerPoExcel from '../utils/parseCustomerPoExcel';
 
 const parseDocumentSchema = z.object({
   customerPoId: z.string().uuid(),
-  fileContent: z.string().describe('Base64 encoded Excel/CSV/PDF content'),
+  fileContent: z.string().max(14_000_000, 'File is too large (10 MB limit)').describe('Base64 encoded Excel/CSV/PDF content'),
   fileName: z.string().optional(),
   autoSave: z.boolean().default(true).describe('Automatically save parsed items to the PO'),
 });

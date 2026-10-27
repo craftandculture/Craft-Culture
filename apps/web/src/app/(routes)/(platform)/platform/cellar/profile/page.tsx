@@ -2,18 +2,18 @@
 
 import {
   IconCheck,
-  IconChevronLeft,
   IconFileText,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import CellarAccessPanel from '@/app/_cellar/components/CellarAccessPanel';
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
 import DeliveryAddressBook from '@/app/_cellar/components/DeliveryAddressBook';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -25,11 +25,11 @@ import useTRPC from '@/lib/trpc/browser';
 const ID_DOCUMENTS = [
   {
     type: 'emirates_id_front',
-    label: 'Emirates ID — front',
+    label: 'Emirates ID (front)',
   },
   {
     type: 'emirates_id_back',
-    label: 'Emirates ID — back',
+    label: 'Emirates ID (back)',
   },
 ] as const;
 
@@ -48,8 +48,10 @@ const CellarProfilePage = () => {
   const queryClient = useQueryClient();
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploading, setUploading] = useState<string | null>(null);
+  /* Removing an identity document asks once before it goes */
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
-  const { data: profile, isLoading, refetch } = useQuery({
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     ...api.cellar.member.getProfile.queryOptions(),
   });
 
@@ -89,7 +91,7 @@ const CellarProfilePage = () => {
   const { mutate: save, isPending: isSaving } = useMutation(
     api.cellar.member.saveProfile.mutationOptions({
       onSuccess: () => {
-        toast.success('Saved');
+        toast.success('Your details have been saved.');
         setIsDirty(false);
         void refetch();
         /* The main address in the saved list follows what was just saved */
@@ -104,7 +106,7 @@ const CellarProfilePage = () => {
   const { mutate: upload } = useMutation(
     api.cellar.member.uploadIdentityDocument.mutationOptions({
       onSuccess: () => {
-        toast.success('Uploaded');
+        toast.success('Document uploaded.');
         setUploading(null);
         void refetch();
       },
@@ -118,7 +120,8 @@ const CellarProfilePage = () => {
   const { mutate: remove } = useMutation(
     api.cellar.member.deleteIdentityDocument.mutationOptions({
       onSuccess: () => {
-        toast.success('Removed');
+        toast.success('Document removed.');
+        setConfirmRemove(null);
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -174,52 +177,41 @@ const CellarProfilePage = () => {
   })();
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 py-6 sm:px-6 sm:py-8">
-      <Link
-        href="/platform/cellar"
-        className="text-text-muted hover:text-text-primary mb-4 inline-flex items-center gap-1 text-xs font-medium transition-colors"
-      >
-        <Icon icon={IconChevronLeft} size="sm" />
-        Your cellar
-      </Link>
+    <div className="w-full pb-8">
+      <CellarPageHeader
+        title={
+          isDelegate
+            ? profile?.name
+              ? `${profile.name}’s private cellar`
+              : 'Shared private cellar'
+            : 'Your details'
+        }
+        description={
+          profile?.reference ? (
+            <>
+              Your cellar reference:{' '}
+              <span className="text-text-primary font-mono font-semibold">
+                {profile.reference}
+              </span>
+              . Quote it to anyone sending wine to us.
+            </>
+          ) : undefined
+        }
+        className="mb-0"
+      />
 
-      <Typography
-        variant="bodyXs"
-        className="text-text-brand mb-1 block font-semibold uppercase tracking-wider"
-      >
-        C&amp;C Private Cellar
-      </Typography>
-      <Typography variant="headingMd">
-        {isDelegate
-          ? profile?.name
-            ? `${profile.name}’s private cellar`
-            : 'Shared private cellar'
-          : 'Your details'}
-      </Typography>
-      {profile?.reference && (
-        <Typography variant="bodySm" colorRole="muted" className="mt-0.5 block">
-          Your cellar reference:{' '}
-          <span className="text-text-primary font-mono font-semibold">
-            {profile.reference}
-          </span>
-          . Quote it to anyone sending wine to us.
-        </Typography>
-      )}
+      {isLoading && <CellarState kind="loading" className="mt-6" />}
 
-      {isLoading && (
-        <Typography variant="bodySm" colorRole="muted" className="mt-6 block">
-          Loading...
-        </Typography>
-      )}
+      {isError && <CellarState kind="error" className="mt-6" />}
 
       {/*
         Someone the cellar is shared with sees where wine goes and their own
         access, and nothing of the holder's identity or contact details to
         edit — the server refuses those changes to anyone but the holder.
       */}
-      {!isLoading && isDelegate && (
+      {!isLoading && !isError && isDelegate && (
         <div className="mt-6 flex flex-col gap-5">
-          <section className="border-border-muted rounded-xl border px-4 py-4">
+          <section className="border-border-muted bg-surface-primary rounded-xl border px-4 py-4 shadow-sm">
             <Typography variant="bodySm" className="font-semibold">
               Delivery
             </Typography>
@@ -234,9 +226,9 @@ const CellarProfilePage = () => {
         </div>
       )}
 
-      {!isLoading && !isDelegate && (
+      {!isLoading && !isError && !isDelegate && (
         <div className="mt-6 flex flex-col gap-5">
-          <section className="border-border-muted rounded-xl border px-4 py-4">
+          <section className="border-border-muted bg-surface-primary rounded-xl border px-4 py-4 shadow-sm">
             <Typography variant="bodySm" className="font-semibold">
               Delivery
             </Typography>
@@ -302,7 +294,7 @@ const CellarProfilePage = () => {
             />
           </section>
 
-          <section className="border-border-muted rounded-xl border px-4 py-4">
+          <section className="border-border-muted bg-surface-primary rounded-xl border px-4 py-4 shadow-sm">
             <Typography variant="bodySm" className="font-semibold">
               Identification
             </Typography>
@@ -312,8 +304,8 @@ const CellarProfilePage = () => {
             </Typography>
 
             {expiryWarning && (
-              <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2">
-                <Typography variant="bodyXs" className="text-amber-800">
+              <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-500/10">
+                <Typography variant="bodyXs" className="text-amber-800 dark:text-amber-300">
                   {expiryWarning}
                 </Typography>
               </div>
@@ -334,11 +326,10 @@ const CellarProfilePage = () => {
                 <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
                   Expires
                 </span>
-                <input
+                <Input
                   type="date"
                   value={form.eidExpiry}
                   onChange={(event) => update('eidExpiry', event.target.value)}
-                  className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-lg border px-2.5 text-sm focus:outline-none"
                 />
               </label>
             </div>
@@ -358,7 +349,7 @@ const CellarProfilePage = () => {
                         icon={existing ? IconCheck : IconFileText}
                         size="sm"
                         className={
-                          existing ? 'text-text-brand' : 'text-text-muted'
+                          existing ? 'text-emerald-600' : 'text-text-muted'
                         }
                       />
                       <div className="min-w-0">
@@ -381,23 +372,42 @@ const CellarProfilePage = () => {
                     </div>
 
                     <div className="flex flex-shrink-0 items-center gap-1.5">
-                      {existing && (
+                      {existing && confirmRemove === document.type && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-text-muted text-xs">Remove?</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              remove({ documentType: document.type })
+                            }
+                            className="h-9 rounded-lg px-2.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemove(null)}
+                            className="text-text-muted hover:text-text-primary h-9 rounded-lg px-2.5 text-xs font-semibold"
+                          >
+                            No
+                          </button>
+                        </span>
+                      )}
+                      {existing && confirmRemove !== document.type && (
                         <>
                           <a
                             href={`/api/cellar/identity?type=${document.type}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-text-brand text-xs font-semibold hover:underline"
+                                            className="text-text-primary inline-flex h-9 items-center px-1 text-xs font-semibold underline underline-offset-2"
                           >
                             View
                           </a>
                           <button
                             type="button"
                             aria-label={`Remove ${document.label}`}
-                            className="text-text-muted hover:text-text-primary p-1 transition-colors"
-                            onClick={() =>
-                              remove({ documentType: document.type })
-                            }
+                            className="text-text-muted hover:text-text-primary hover:bg-fill-muted inline-flex size-9 items-center justify-center rounded-lg transition-colors"
+                            onClick={() => setConfirmRemove(document.type)}
                           >
                             <Icon icon={IconTrash} size="sm" />
                           </button>
@@ -443,8 +453,10 @@ const CellarProfilePage = () => {
             </Typography>
           </section>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <Button
+              size="lg"
+              className="justify-center border-transparent bg-text-primary text-surface-primary hover:bg-text-primary/90 active:bg-text-primary"
               isDisabled={isSaving || !isDirty}
               onClick={() =>
                 save({

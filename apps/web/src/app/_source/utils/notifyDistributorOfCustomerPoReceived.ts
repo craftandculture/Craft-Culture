@@ -82,10 +82,10 @@ const notifyDistributorOfCustomerPoReceived = async ({
         },
       });
 
-      logger.dev(`Sent customer PO received notification to: ${customerPo.customerEmail}`);
+      logger.dev(`Sent customer PO received notification`);
     } catch (error) {
       logger.error(
-        `Failed to send customer PO received email to ${customerPo.customerEmail}:`,
+        `Failed to send customer PO received email:`,
         error
       );
     }

@@ -3,30 +3,18 @@
 import {
   IconBottle,
   IconBuilding,
-  IconCheck,
-  IconEdit,
   IconMail,
   IconMapPin,
   IconPhone,
   IconPlus,
   IconReceipt,
   IconSearch,
-  IconTrash,
-  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 
-import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
-import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
-import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
-import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
-import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
-import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
-import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
-import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
-import AlertDialogTrigger from '@/app/_ui/components/AlertDialog/AlertDialogTrigger';
+import PartnerRowActions from '@/app/_partners/components/PartnerRowActions';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -184,16 +172,17 @@ const CollectorsPage = () => {
   const handleSavePartner = () => {
     if (!editingPartner) return;
 
+    // Sent as typed: a field emptied in the form is cleared, not ignored
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
-      businessAddress: editingPartner.businessAddress || undefined,
+      businessAddress: editingPartner.businessAddress,
       deliveryAddress: editingPartner.deliveryAddress,
       deliveryInstructions: editingPartner.deliveryInstructions,
-      businessPhone: editingPartner.businessPhone || undefined,
-      businessEmail: editingPartner.businessEmail || undefined,
-      taxId: editingPartner.taxId || undefined,
-      logoUrl: editingPartner.logoUrl || undefined,
+      businessPhone: editingPartner.businessPhone,
+      businessEmail: editingPartner.businessEmail,
+      taxId: editingPartner.taxId,
+      logoUrl: editingPartner.logoUrl,
     });
   };
 
@@ -470,70 +459,15 @@ const CollectorsPage = () => {
                     </div>
 
                     {/* Actions Section */}
-                    <div className="flex-shrink-0 flex gap-2">
-                      {partner.status === 'active' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="danger"
-                          onClick={() => updatePartner({ partnerId: partner.id, status: 'inactive' })}
-                          isDisabled={isUpdating}
-                          title="Deactivate partner"
-                        >
-                          <ButtonContent iconLeft={IconX}>Deactivate</ButtonContent>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="brand"
-                          onClick={() => updatePartner({ partnerId: partner.id, status: 'active' })}
-                          isDisabled={isUpdating}
-                          title="Activate partner"
-                        >
-                          <ButtonContent iconLeft={IconCheck}>Activate</ButtonContent>
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditPartner(partner)}
-                      >
-                        <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            colorRole="danger"
-                            isDisabled={isDeletingPartner}
-                            title="Delete Partner"
-                          >
-                            <ButtonContent iconLeft={IconTrash} />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Partner</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to permanently delete{' '}
-                              <strong>{partner.businessName}</strong>? This will remove all
-                              associated user memberships.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deletePartner({ partnerId: partner.id })}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete Partner
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                    <PartnerRowActions
+                      name={partner.businessName}
+                      status={partner.status}
+                      noun="collector"
+                      isBusy={isUpdating || isDeletingPartner}
+                      onEdit={() => handleEditPartner(partner)}
+                      onSetStatus={(status) => updatePartner({ partnerId: partner.id, status })}
+                      onDelete={() => deletePartner({ partnerId: partner.id })}
+                    />
                   </div>
                 </CardContent>
               </Card>

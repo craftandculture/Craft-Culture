@@ -7,6 +7,9 @@
       "env": [
         "CI",
         "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "NEXT_PUBLIC_SENTRY_DSN",
         "NEXT_RUNTIME",
         "NODE_ENV",
         "DB_URL",
@@ -33,6 +36,9 @@
         "CELLAR_BILLING_MODE",
         "GOOGLE_GENERATIVE_AI_API_KEY",
         "ZEBRA_PRINTER_IP",
+        "WINELABS_USER_ID",
+        "WINELABS_BASE_URL",
+        "WINELABS_MONTHLY_CREDIT_CAP",
         "NEXT_PUBLIC_ZEBRA_PRINTER_IP",
         "TRIGGER_SECRET_KEY"
       ]

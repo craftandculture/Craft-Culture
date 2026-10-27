@@ -362,10 +362,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">C&C</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.ccMarginPercent}
                 onChange={(e) => updateBespokePricing('ccMarginPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -373,10 +373,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Duty</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.importDutyPercent}
                 onChange={(e) => updateBespokePricing('importDutyPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -384,10 +384,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Transfer</label>
               <Input
                 type="number"
-                step="0.01"
+                step="any"
                 value={bespokePricing.transferCostPercent}
                 onChange={(e) => updateBespokePricing('transferCostPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -395,10 +395,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Dist.</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.distributorMarginPercent}
                 onChange={(e) => updateBespokePricing('distributorMarginPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -406,10 +406,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">VAT</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.vatPercent}
                 onChange={(e) => updateBespokePricing('vatPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>

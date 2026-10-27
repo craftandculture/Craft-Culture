@@ -83,10 +83,24 @@ const adminImportUkStock = staffAdminProcedure
         .onConflictDoNothing();
     });
 
-    const codeByRotation = new Map<string, string>();
+    /*
+      A reference is free text a merchant typed, so it is trusted only when it
+      is unambiguous: a rotation whose lines name two different members is
+      left for the team to place by hand rather than given to whichever line
+      came first.
+    */
+    const codesByRotation = new Map<string, Set<string>>();
     for (const holding of holdings) {
       const code = findClientCode(holding.reference);
-      if (code && !codeByRotation.has(holding.rotation)) codeByRotation.set(holding.rotation, code);
+      if (!code) continue;
+      const codes = codesByRotation.get(holding.rotation) ?? new Set<string>();
+      codes.add(code);
+      codesByRotation.set(holding.rotation, codes);
+    }
+
+    const codeByRotation = new Map<string, string>();
+    for (const [rotation, codes] of codesByRotation) {
+      if (codes.size === 1) codeByRotation.set(rotation, [...codes][0]!);
     }
 
     let autoAssigned = 0;

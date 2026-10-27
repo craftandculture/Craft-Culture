@@ -12,6 +12,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getOpenQuoteRequestSteps from '../data/getOpenQuoteRequestSteps';
+import { SHIPMENT_STAGE_GROUPS } from '../schemas/getShipmentsSchema';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /**
@@ -90,6 +91,13 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
           WHERE ${logisticsShipmentItems.shipmentId} = ${logisticsShipments.id}
         ), ${logisticsShipments.totalBottles}, 0)`,
         createdAt: logisticsShipments.createdAt,
+        // Still a quote: a draft job opened by a freight request that is not
+        // yet accepted. Accepting completes the request, which makes it a shipment.
+        isQuote: sql<boolean>`(${logisticsShipments.status} = 'draft' AND EXISTS (
+          SELECT 1 FROM ${logisticsQuoteRequests}
+          WHERE ${logisticsQuoteRequests.shipmentId} = ${logisticsShipments.id}
+            AND ${logisticsQuoteRequests.status} IN ('pending', 'in_progress', 'quoted')
+        ))`,
         jobNumber: logisticsJobs.jobNumber,
         partyName: partyNameSql,
         partyLogoUrl: partyLogoSql,
@@ -199,16 +207,19 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     statusCounts[row.status] = row.count;
   }
 
-  // Active shipments (not delivered or cancelled)
-  const activeCount =
-    (statusCounts['draft'] || 0) +
-    (statusCounts['booked'] || 0) +
-    (statusCounts['picked_up'] || 0) +
-    (statusCounts['in_transit'] || 0) +
-    (statusCounts['arrived_port'] || 0) +
-    (statusCounts['customs_clearance'] || 0) +
-    (statusCounts['cleared'] || 0) +
-    (statusCounts['at_warehouse'] || 0);
+  /*
+    Counted with the same status groups the Shipments list filters by. This
+    screen used to add statuses up by hand: "In transit" counted only
+    in_transit, so with eight shipments booked or picked up the dashboard read
+    0 while the Shipments tab read 8 on the way, for the same shipments.
+  */
+  const countOf = (group: keyof typeof SHIPMENT_STAGE_GROUPS) =>
+    (SHIPMENT_STAGE_GROUPS[group] as readonly string[]).reduce(
+      (sum, status) => sum + (statusCounts[status] || 0),
+      0,
+    );
+
+  const activeCount = countOf('active');
 
   // Document compliance rate
   const complianceRate =
@@ -220,6 +231,9 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     shipments: {
       active: activeCount,
       inTransit: statusCounts['in_transit'] || 0,
+      onTheWay: countOf('on_the_way'),
+      portCustoms: countOf('port_customs'),
+      warehouse: countOf('warehouse'),
       arrivedPort: statusCounts['arrived_port'] || 0,
       customsClearance: statusCounts['customs_clearance'] || 0,
       atWarehouse: statusCounts['at_warehouse'] || 0,

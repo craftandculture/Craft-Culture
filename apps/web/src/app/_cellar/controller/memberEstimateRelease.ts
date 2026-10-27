@@ -68,7 +68,9 @@ const memberEstimateRelease = stockOwnerProcedure
     const lwins = [...new Set(owned.map((row) => row.lwin18))];
 
     /* Same valuation the team's quote uses, so the estimate and quote agree */
-    const costByLwin = await getMemberValuePerBottle(ctx.partner.id, lwins);
+    const costByLwin = await getMemberValuePerBottle(ctx.partner.id, lwins, {
+      sharedFallback: true,
+    });
 
     const quote = await computeReleaseQuote(
       ctx.partner.id,

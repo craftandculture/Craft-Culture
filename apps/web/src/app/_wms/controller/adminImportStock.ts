@@ -11,7 +11,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLotNumber from '../utils/generateLotNumber';
@@ -53,7 +53,7 @@ const importStockSchema = z.object({
  *     ],
  *   });
  */
-const adminImportStock = wmsOperatorProcedure
+const adminImportStock = adminProcedure
   .input(importStockSchema)
   .mutation(async ({ input, ctx }) => {
     const { ownerId, locationId, items, notes } = input;
@@ -126,12 +126,6 @@ const adminImportStock = wmsOperatorProcedure
     const lotNumber = generateLotNumber(1);
     const importedAt = new Date();
 
-    // Pre-generate the base movement number before the transaction
-    // so each item gets a unique sequential number
-    const baseMovementNumber = await generateMovementNumber();
-    const basePrefix = baseMovementNumber.slice(0, baseMovementNumber.lastIndexOf('-') + 1);
-    const baseSequence = parseInt(baseMovementNumber.slice(baseMovementNumber.lastIndexOf('-') + 1), 10);
-
     // Wrap all stock writes in a transaction to prevent partial imports
     const { results, totalCases, totalLabels } = await db.transaction(async (tx) => {
       const txResults: Array<{
@@ -143,7 +137,6 @@ const adminImportStock = wmsOperatorProcedure
 
       let txTotalCases = 0;
       let txTotalLabels = 0;
-      let movementOffset = 0;
 
       for (const item of items) {
         // Skip bottles for now - only import cases
@@ -264,8 +257,9 @@ const adminImportStock = wmsOperatorProcedure
         }
 
         // Create movement record
-        const movementNumber = `${basePrefix}${(baseSequence + movementOffset).toString().padStart(4, '0')}`;
-        movementOffset++;
+        // From the number sequence: base + offset collided with any movement
+        // written elsewhere while the import ran
+        const movementNumber = await generateMovementNumber(tx);
         await tx.insert(wmsStockMovements).values({
           movementNumber,
           movementType: 'receive',

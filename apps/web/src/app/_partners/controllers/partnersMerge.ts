@@ -34,6 +34,9 @@ import partnerReferenceColumns, {
  * where its rows went, so anything holding a stale id still resolves and the
  * history of the merge is legible.
  */
+/** What the person merging must type before anything moves */
+export const MERGE_CONFIRM_TEXT = 'MERGE';
+
 const partnersMerge = adminProcedure
   .input(
     z.object({
@@ -43,10 +46,23 @@ const partnersMerge = adminProcedure
       duplicateId: z.string().uuid(),
       /** Report what would move without moving it */
       dryRun: z.boolean().default(true),
+      /**
+       * Required for a real merge: the word MERGE, typed by the person
+       * pressing the button. A merge moves stock, memberships and payment
+       * records between businesses and cannot be undone from the app.
+       */
+      confirmText: z.string().optional(),
     }),
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const { survivorId, duplicateId, dryRun } = input;
+
+    if (!dryRun && input.confirmText?.trim() !== MERGE_CONFIRM_TEXT) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Type ${MERGE_CONFIRM_TEXT} to confirm the merge.`,
+      });
+    }
 
     if (survivorId === duplicateId) {
       throw new TRPCError({
@@ -56,7 +72,11 @@ const partnersMerge = adminProcedure
     }
 
     const found = await db
-      .select({ id: partners.id, businessName: partners.businessName })
+      .select({
+        id: partners.id,
+        businessName: partners.businessName,
+        type: partners.type,
+      })
       .from(partners)
       .where(sql`${partners.id} IN (${survivorId}, ${duplicateId})`);
 
@@ -67,6 +87,18 @@ const partnersMerge = adminProcedure
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'One of those partner records does not exist',
+      });
+    }
+
+    /*
+      Only one kind of business into the same kind. Folding a private cellar
+      into a trade partner (or the reverse) would hand one party another's
+      stock, memberships and payment details — never a duplicate to tidy up.
+    */
+    if (survivor.type !== duplicate.type) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `These records are different kinds of account (${survivor.type} and ${duplicate.type}) and cannot be merged.`,
       });
     }
 
@@ -246,14 +278,19 @@ const partnersMerge = adminProcedure
         .set({
           status: 'inactive',
           businessName: `${duplicate.businessName} (merged into ${survivor.businessName})`,
-          notes: sql`COALESCE(${partners.notes} || E'\n', '') || ${`Merged into ${survivor.businessName} (${survivorId})`}`,
+          notes: sql`COALESCE(${partners.notes} || E'\n', '') || ${`Merged into ${survivor.businessName} (${survivorId}) by ${ctx.user.email} on ${new Date().toISOString().slice(0, 10)}`}`,
         })
         .where(eq(partners.id, duplicateId));
     });
 
     logger.info('[PartnersMerge] Merged partner records', {
+      mergedBy: ctx.user.id,
+      mergedByEmail: ctx.user.email,
       survivorId,
+      survivorName: survivor.businessName,
       duplicateId,
+      duplicateName: duplicate.businessName,
+      tables: counts.map((c) => `${c.table}.${c.column}:${c.rows}`),
       tablesTouched: counts.length,
       rowsMoved: counts.reduce((sum, c) => sum + c.rows, 0),
     });

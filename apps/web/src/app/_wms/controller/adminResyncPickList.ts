@@ -9,7 +9,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -143,16 +143,42 @@ const adminResyncPickList = wmsOperatorProcedure
     }
 
     const result = await db.transaction(async (tx) => {
-      // Drop all unpicked lines — they are rebuilt from the live order below.
+      // Serialise with picks on this list while it is rebuilt
+      await tx
+        .select({ id: wmsPickLists.id })
+        .from(wmsPickLists)
+        .where(eq(wmsPickLists.id, pickListId))
+        .for('update');
+
+      /*
+        Drop exactly the lines read as untouched — they are rebuilt from the
+        live order below. The old delete took every line not marked picked,
+        including one partly picked (counted as preserved above, then deleted),
+        so its bottles were lost from the list while they had left the shelf.
+        If a line was picked since it was read, stop rather than guess.
+      */
       if (unpickedItems.length > 0) {
-        await tx
+        const deleted = await tx
           .delete(wmsPickListItems)
           .where(
             and(
               eq(wmsPickListItems.pickListId, pickListId),
-              eq(wmsPickListItems.isPicked, false),
+              inArray(
+                wmsPickListItems.id,
+                unpickedItems.map((item) => item.id),
+              ),
+              sql`${wmsPickListItems.isPicked} IS NOT TRUE`,
+              sql`COALESCE(${wmsPickListItems.pickedQuantity}, 0) = 0`,
             ),
-          );
+          )
+          .returning({ id: wmsPickListItems.id });
+
+        if (deleted.length !== unpickedItems.length) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'A line on this list was picked while it was re-syncing. Try the re-sync again.',
+          });
+        }
       }
 
       let added = 0;

@@ -1,8 +1,10 @@
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import type db from '@/database/client';
 import {
   consignmentSettlementItems,
   consignmentSettlements,
 } from '@/database/schema';
+
 
 import generateSettlementNumber from './generateSettlementNumber';
 
@@ -67,39 +69,43 @@ const writePartnerSettlement = async ({
 
   const commission = Math.round((line.lineTotalUsd - owed) * 100) / 100;
 
-  const settlementNumber = await generateSettlementNumber(tx);
-
-  const [settlement] = await tx
-    .insert(consignmentSettlements)
-    .values({
-      settlementNumber,
-      orderId: purchase.id,
-      orderNumber: purchase.purchaseNumber,
-      ownerId,
-      ownerName,
-      saleAmount: line.lineTotalUsd,
-      commissionPercent:
-        known && line.lineTotalUsd > 0
-          ? Math.round((commission / line.lineTotalUsd) * 10000) / 100
-          : 0,
-      commissionAmount: known ? commission : 0,
-      owedToOwner: owed,
-      currency: 'USD',
-      /*
-        The member's money is in, so a known debt is ready for the next payout.
-        An unknown one waits: a run would otherwise pay it at nothing.
-      */
-      status: known ? 'payment_received' : 'pending',
-      invoicePaidAt: known ? new Date() : null,
-      source: 'in_app',
-      notes: known
-        ? `Cellar purchase ${purchase.purchaseNumber} · owed at landed cost $${(landedPerBottle as number).toFixed(2)} a bottle`
-        : `Cellar purchase ${purchase.purchaseNumber} · ${COST_TO_CONFIRM}`,
-    })
-    .returning({
-      id: consignmentSettlements.id,
-      settlementNumber: consignmentSettlements.settlementNumber,
-    });
+  // Numbered inside the transaction, and retried on a clash
+  const settlement = await withNumberRetry((attempt) =>
+    tx.transaction(async (savepoint) => {
+      const [row] = await savepoint
+        .insert(consignmentSettlements)
+        .values({
+          settlementNumber: await generateSettlementNumber(savepoint, attempt),
+          orderId: purchase.id,
+          orderNumber: purchase.purchaseNumber,
+          ownerId,
+          ownerName,
+          saleAmount: line.lineTotalUsd,
+          commissionPercent:
+            known && line.lineTotalUsd > 0
+              ? Math.round((commission / line.lineTotalUsd) * 10000) / 100
+              : 0,
+          commissionAmount: known ? commission : 0,
+          owedToOwner: owed,
+          currency: 'USD',
+          /*
+            The member's money is in, so a known debt is ready for the next payout.
+            An unknown one waits: a run would otherwise pay it at nothing.
+          */
+          status: known ? 'payment_received' : 'pending',
+          invoicePaidAt: known ? new Date() : null,
+          source: 'in_app',
+          notes: known
+            ? `Cellar purchase ${purchase.purchaseNumber} · owed at landed cost $${(landedPerBottle as number).toFixed(2)} a bottle`
+            : `Cellar purchase ${purchase.purchaseNumber} · ${COST_TO_CONFIRM}`,
+        })
+        .returning({
+          id: consignmentSettlements.id,
+          settlementNumber: consignmentSettlements.settlementNumber,
+        });
+      return row;
+    }),
+  );
 
   if (!settlement) throw new Error('Could not write the settlement');
 

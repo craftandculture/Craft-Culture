@@ -381,7 +381,7 @@ const ShipmentDetailPage = () => {
   );
 
   const { data: partners } = useQuery({
-    ...api.partners.getMany.queryOptions({ limit: 100 }),
+    ...api.partners.getMany.queryOptions({ limit: 1000 }),
   });
 
   const { data: partnersList } = useQuery({
@@ -638,10 +638,14 @@ const ShipmentDetailPage = () => {
   const { mutate: generateDeliveryNote, isPending: isGeneratingDN } = useMutation(
     api.logistics.admin.generateInboundDeliveryNote.mutationOptions({
       onSuccess: (r) => {
+        // Browsers block a window opened after a server call, so the PDF opens from the toast
         toast.success(
           `${r.deliveryNoteNumber} created — ${r.totalCases} cases, ${r.totalBottles} bottles`,
+          {
+            duration: 15000,
+            action: { label: 'Open PDF', onClick: () => window.open(r.fileUrl, '_blank', 'noopener') },
+          },
         );
-        window.open(r.fileUrl, '_blank');
         setIsSignOpen(false);
         setSignature(null);
         setSignedBy('');
@@ -663,7 +667,12 @@ const ShipmentDetailPage = () => {
         );
         if (r.unresolvedCurrencies.length) {
           toast.warning(
-            `Couldn't auto-convert ${r.unresolvedCurrencies.join(', ')} — check those amounts.`,
+            `No rate for ${r.unresolvedCurrencies.join(', ')}, so those invoices were not added. Enter their charges by hand.`,
+          );
+        }
+        if (r.skippedPartnerDocuments.length) {
+          toast.warning(
+            `Not read because a partner uploaded them: ${r.skippedPartnerDocuments.join(', ')}. Check them and add the charges by hand.`,
           );
         }
         void refetch();
@@ -1652,13 +1661,29 @@ const ShipmentDetailPage = () => {
 
             if (!near) return null;
 
+            /*
+              The vintage and pack go into the code's own digits, so they are
+              never invented: a line with no vintage (unless it is a
+              non-vintage wine, written 1000) or no bottles-per-case is left
+              for someone to map by hand rather than given 0000 or a pack equal
+              to the line's whole bottle count.
+            */
+            const vintage =
+              item.vintage != null
+                ? String(item.vintage).padStart(4, '0')
+                : isNonVintage(item.lwin, item.productName)
+                  ? '1000'
+                  : null;
+
+            if (!vintage || !item.bottlesPerCase) return null;
+
             return {
               from: near.from,
               exact: Boolean(exact),
               lwin18: [
                 near.lwin7,
-                String(item.vintage ?? 0).padStart(4, '0'),
-                String(item.bottlesPerCase ?? item.totalBottles ?? 1).padStart(2, '0'),
+                vintage,
+                String(item.bottlesPerCase).padStart(2, '0'),
                 String(item.bottleSizeMl ?? 750).padStart(5, '0'),
               ].join('-'),
             };

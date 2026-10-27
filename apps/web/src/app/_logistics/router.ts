@@ -26,7 +26,6 @@ import adminDeleteGroupDocument from './controller/adminDeleteGroupDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminDeleteShipmentCostLine from './controller/adminDeleteShipmentCostLine';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
-import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
 import adminExtractQuote from './controller/adminExtractQuote';
@@ -55,6 +54,7 @@ import adminGetReportMetrics from './controller/adminGetReportMetrics';
 import adminGetRouteOptions from './controller/adminGetRouteOptions';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
+import adminGetUaeArrivalRateCard from './controller/adminGetUaeArrivalRateCard';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminImportForwarders from './controller/adminImportForwarders';
 import adminMarkRequestRecipients from './controller/adminMarkRequestRecipients';
@@ -71,6 +71,7 @@ import adminSetClientPrice from './controller/adminSetClientPrice';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetRequestRecipients from './controller/adminSetRequestRecipients';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
+import adminSetUaeArrivalRateCard from './controller/adminSetUaeArrivalRateCard';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
@@ -175,7 +176,6 @@ const adminRouter = createTRPCRouter({
 
   // Exports
   exportLandedCostExcel: adminExportLandedCostExcel,
-  exportCompliancePdf: adminExportCompliancePdf,
 
   // Tools
   extractDocument: adminExtractDocument,
@@ -195,6 +195,9 @@ const adminRouter = createTRPCRouter({
     compare: adminCompareQuotes,
     extract: adminExtractQuote,
     uploadAttachment: adminUploadQuoteAttachment,
+    // The UAE customs and handling charges added to every quote into the UAE
+    arrivalRateCard: adminGetUaeArrivalRateCard,
+    setArrivalRateCard: adminSetUaeArrivalRateCard,
   }),
 
   // Forwarders on file, built from the quotes they send

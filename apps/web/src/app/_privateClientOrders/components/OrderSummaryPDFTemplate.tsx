@@ -234,6 +234,8 @@ interface OrderLineItem {
   distributorCostPerCaseUsd: number;
   pricePerCaseUsd: number;
   totalUsd: number;
+  /** Priced as part of a subscription box, so no price of its own */
+  inBox?: boolean;
 }
 
 interface OrderData {
@@ -347,26 +349,37 @@ const OrderSummaryPDFTemplate = ({ distributorName, orders }: OrderSummaryPDFTem
                       </Text>
                     </View>
                     <Text style={styles.colQuantity}>{item.quantity}</Text>
-                    <Text style={styles.colDistCost}>
-                      {formatAed(item.distributorCostPerCaseUsd, order.usdToAedRate)}
-                      {'\n'}
-                      <Text style={styles.priceUsd}>{formatUsd(item.distributorCostPerCaseUsd)}</Text>
-                    </Text>
-                    <Text style={styles.colDistTotal}>
-                      {formatAed(distTotal, order.usdToAedRate)}
-                      {'\n'}
-                      <Text style={styles.priceUsd}>{formatUsd(distTotal)}</Text>
-                    </Text>
-                    <Text style={styles.colClientPrice}>
-                      {formatAed(item.pricePerCaseUsd, order.usdToAedRate)}
-                      {'\n'}
-                      <Text style={styles.priceUsd}>{formatUsd(item.pricePerCaseUsd)}</Text>
-                    </Text>
-                    <Text style={styles.colClientTotal}>
-                      {formatAed(item.totalUsd, order.usdToAedRate)}
-                      {'\n'}
-                      <Text style={styles.priceUsd}>{formatUsd(item.totalUsd)}</Text>
-                    </Text>
+                    {item.inBox ? (
+                      <>
+                        <Text style={styles.colDistCost}>In box</Text>
+                        <Text style={styles.colDistTotal}>In box</Text>
+                        <Text style={styles.colClientPrice}>In box</Text>
+                        <Text style={styles.colClientTotal}>In box</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.colDistCost}>
+                          {formatAed(item.distributorCostPerCaseUsd, order.usdToAedRate)}
+                          {'\n'}
+                          <Text style={styles.priceUsd}>{formatUsd(item.distributorCostPerCaseUsd)}</Text>
+                        </Text>
+                        <Text style={styles.colDistTotal}>
+                          {formatAed(distTotal, order.usdToAedRate)}
+                          {'\n'}
+                          <Text style={styles.priceUsd}>{formatUsd(distTotal)}</Text>
+                        </Text>
+                        <Text style={styles.colClientPrice}>
+                          {formatAed(item.pricePerCaseUsd, order.usdToAedRate)}
+                          {'\n'}
+                          <Text style={styles.priceUsd}>{formatUsd(item.pricePerCaseUsd)}</Text>
+                        </Text>
+                        <Text style={styles.colClientTotal}>
+                          {formatAed(item.totalUsd, order.usdToAedRate)}
+                          {'\n'}
+                          <Text style={styles.priceUsd}>{formatUsd(item.totalUsd)}</Text>
+                        </Text>
+                      </>
+                    )}
                   </View>
                 );
               })}

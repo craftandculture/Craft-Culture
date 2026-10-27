@@ -206,17 +206,21 @@ const authServerClient = betterAuth({
   },
   hooks: {
     /*
-      Impersonation is for C&C staff only.
+      The admin plugin's endpoints are for C&C staff only.
 
-      The admin plugin lets any admin-role user impersonate, and some partners
-      hold admin logins. The admin screens call the impersonate endpoint from
-      the browser (the cookie it sets does not survive a tRPC round trip), so
-      the staff rule is enforced here, where every caller — browser or
-      usersAdminImpersonate — has to pass. The audit entry is written by the
-      session create hook below for the same reason.
+      The plugin lets any admin-role user call /admin/* directly: impersonate,
+      but also update-user (change anyone's email, including their own to a
+      C&C address that then passes every staff check), set-role, list-users
+      and remove-user. The admin screens call impersonate from the browser
+      (the cookie it sets does not survive a tRPC round trip), so the staff
+      rule is enforced here, where every caller — browser or tRPC — has to
+      pass. The audit entry is written by the session create hook below.
     */
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path !== '/admin/impersonate-user') return;
+      if (!ctx.path.startsWith('/admin/')) return;
+
+      /* Runs as the impersonated user, who is usually not staff. */
+      if (ctx.path === '/admin/stop-impersonating') return;
 
       const current = await getSessionFromCtx<{ role: string; email: string }>(
         ctx,
@@ -224,7 +228,7 @@ const authServerClient = betterAuth({
 
       if (!isTeamMember(current?.user)) {
         throw new APIError('FORBIDDEN', {
-          message: 'Only C&C staff can impersonate users',
+          message: 'Only C&C staff can use the admin actions',
         });
       }
     }),

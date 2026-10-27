@@ -2,11 +2,12 @@
  * Generate a LWIN-18 code from product details
  * Format: LWIN11-VINTAGE-CASECONFIG-BOTTLESIZE
  *
- * If LWIN11 is not available, generates a hash from product name and producer
+ * If LWIN11 is not available, generates a hash from product name and producer,
+ * in the 8xxxxxx range so it can never be mistaken for a real LWIN
  *
  * @example
  *   generateLwin18({ productName: 'Château Margaux', vintage: 2015, bottlesPerCase: 6, bottleSizeMl: 750 });
- *   // returns '1010279-2015-06-00750' (if LWIN available) or 'XXXXXXX-2015-06-00750'
+ *   // returns '1010279-2015-06-00750' (if LWIN available) or '8XXXXXX-2015-06-00750'
  *
  * @param params - Product details
  * @returns The generated LWIN-18 code
@@ -29,7 +30,13 @@ const generateLwin18 = (params: {
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
-  const lwin11 = Math.abs(hash).toString().slice(0, 7).padStart(7, '0');
+  /*
+    Kept out of the real LWIN range. A bare 7-digit hash could land on a real
+    wine's LWIN (or on one of our registered internal 9000001+ codes) and the
+    stock would merge with, and price as, that other wine. Generated codes
+    start with 8, which neither uses.
+  */
+  const lwin11 = `8${(Math.abs(hash) % 1_000_000).toString().padStart(6, '0')}`;
 
   // Vintage (4 digits) - use 0000 for NV (non-vintage)
   const vintageStr = vintage ? vintage.toString() : '0000';

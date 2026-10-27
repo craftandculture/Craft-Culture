@@ -304,7 +304,7 @@ const PriceCell = ({
           <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
         </button>
         {sub && value != null && value > 0 && (
-          <div className="text-[11px] font-medium tabular-nums text-text-muted">
+          <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
             {sub}
           </div>
         )}
@@ -964,13 +964,79 @@ const HeaderInfo = ({ text }: { text: string }) => (
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 
+const VENUE_NAMES: Record<string, string> = {
+  bordeaux_index: 'Bordeaux Index',
+  bbx: 'BBX',
+  wine_collector: 'Wine Collector',
+  cult_wines: 'Cult Wines',
+  cultx: 'CultX',
+};
+
+/**
+ * London in-bond market for a 75cl bottle, beside our In Bond price
+ *
+ * The lowest ask is what a trade buyer could buy it for in London today, so it
+ * leads; the last trade stands in when nothing is offered. The percentage is
+ * how far our price sits above or below it. A check, never a price we set.
+ */
+const LondonCell = ({
+  market,
+  ours,
+}: {
+  market?: {
+    bidUsd: number | null;
+    askUsd: number | null;
+    lastUsd: number | null;
+    lastTradedAt: Date | string | null;
+    venues: string[];
+    checkedAt: Date | string;
+  };
+  ours: number | null;
+}) => {
+  const ccy = useContext(CurrencyContext);
+  const lead = market?.askUsd ?? market?.lastUsd ?? null;
+  if (!market || lead == null) {
+    return (
+      <td className="px-3 py-2.5 text-right">
+        <span className="text-text-muted/40">—</span>
+      </td>
+    );
+  }
+
+  const gap = ours != null && ours > 0 ? Math.round(((ours - lead) / lead) * 100) : null;
+  const traded = market.lastTradedAt
+    ? new Date(market.lastTradedAt).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    : null;
+  const title = [
+    market.askUsd != null ? `Lowest ask ${money(market.askUsd, ccy)}` : 'No asks',
+    market.bidUsd != null ? `best bid ${money(market.bidUsd, ccy)}` : 'no bids',
+    market.lastUsd != null ? `last trade ${money(market.lastUsd, ccy)}${traded ? ` (${traded})` : ''}` : 'no trades',
+    `on ${market.venues.map((venue) => VENUE_NAMES[venue] ?? venue).join(', ')}`,
+    `checked ${new Date(market.checkedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+  ].join(', ');
+
+  return (
+    <td className="px-3 py-2.5 text-right tabular-nums" title={title}>
+      <span className="text-text-secondary">
+        {market.askUsd == null ? 'last ' : ''}
+        {money(lead, ccy, 0)}
+      </span>
+      {gap != null && (
+        <span className="pm-gap mt-0.5 block text-xs text-text-muted">
+          {gap > 0 ? `ours +${gap}%` : gap < 0 ? `ours ${gap}%` : 'level'}
+        </span>
+      )}
+    </td>
+  );
+};
+
 const SkeletonRow = () => (
   <tr>
     <td className="px-3 py-3">
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 11 }).map((_, i) => (
+    {Array.from({ length: 12 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -1012,6 +1078,23 @@ const PricingManagerPage = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState<number>(50);
+  // Compact: one line a wine, so 30 or more fit on a screen. Remembered per browser.
+  const [compact, setCompact] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('pm-density') === 'comfortable') setCompact(false);
+    } catch {
+      // Storage blocked: stay compact
+    }
+  }, []);
+  const changeDensity = (next: boolean) => {
+    setCompact(next);
+    try {
+      localStorage.setItem('pm-density', next ? 'compact' : 'comfortable');
+    } catch {
+      // Storage blocked: the choice lasts this visit
+    }
+  };
 
   // Flat logistics still fed to the bulk "Apply Margin" tool (which prices
   // import + flat logistics for manual-import SKUs). Landed on the table itself
@@ -1399,6 +1482,13 @@ const PricingManagerPage = () => {
     ...products,
   ].map((p) => p.lwin18);
 
+  // Ticked lines that are still on screen. A tick survives a search or filter
+  // change, and bulk actions used to apply to lines the user could no longer
+  // see; they now apply to these only.
+  const visibleLwinSet = new Set(visibleLwins);
+  const selectedVisible = [...selected].filter((lwin18) => visibleLwinSet.has(lwin18));
+  const hiddenSelectedCount = selected.size - selectedVisible.length;
+
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -1414,6 +1504,20 @@ const PricingManagerPage = () => {
   });
 
   const ownerPriceMap = ownerPricingData?.priceMap ?? {};
+
+  // London in-bond market from the Wine Labs snapshot; reading it spends no credits
+  const visibleKey = visibleLwins.join(',');
+  const londonLwins = useMemo(
+    () => (visibleKey ? [...new Set(visibleKey.split(','))].slice(0, 1000) : []),
+    [visibleKey],
+  );
+  const { data: londonData } = useQuery({
+    ...api.wms.admin.stock.pricing.getLondonInBond.queryOptions({ lwin18s: londonLwins }),
+    enabled: londonLwins.length > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const londonPrices = londonData?.prices ?? {};
 
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -2322,11 +2426,33 @@ const PricingManagerPage = () => {
             </>
           )}
         </span>
-        {totalPages > 1 && (
-          <span>
-            Page {page + 1} of {totalPages}
+        <span className="flex items-center gap-3">
+          <span className="flex items-center gap-0.5 rounded-lg border border-border-muted p-0.5">
+            {[
+              { value: true, label: 'Compact' },
+              { value: false, label: 'Comfortable' },
+            ].map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => changeDensity(option.value)}
+                aria-pressed={compact === option.value}
+                className={`rounded-md px-2.5 py-0.5 font-medium transition-colors ${
+                  compact === option.value
+                    ? 'bg-text-primary text-surface-primary'
+                    : 'hover:bg-surface-muted hover:text-text-primary'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </span>
-        )}
+          {totalPages > 1 && (
+            <span>
+              Page {page + 1} of {totalPages}
+            </span>
+          )}
+        </span>
       </div>
 
       {/* Bulk actions — appears once anything is ticked. One margin and one
@@ -2334,7 +2460,12 @@ const PricingManagerPage = () => {
       {selected.size > 0 && (
         <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 shadow-sm">
           <span className="text-sm font-semibold text-brand-800">
-            {selected.size} selected
+            {selectedVisible.length} selected
+            {hiddenSelectedCount > 0 && (
+              <span className="ml-1 font-normal text-text-muted">
+                ({hiddenSelectedCount} hidden by the current filter, not included)
+              </span>
+            )}
           </span>
 
           <div className="flex items-center gap-1.5">
@@ -2363,18 +2494,21 @@ const PricingManagerPage = () => {
             <button
               type="button"
               disabled={
-                (bulkB2b === '' && bulkPc === '') || setLineMarginsMut.isPending
+                (bulkB2b === '' && bulkPc === '') ||
+                setLineMarginsMut.isPending ||
+                selectedVisible.length === 0
               }
               onClick={() => {
+                const count = selectedVisible.length;
                 setLineMarginsMut.mutate(
                   {
-                    lwin18s: [...selected],
+                    lwin18s: selectedVisible,
                     ...(bulkB2b !== '' ? { b2bMarginPct: Number(bulkB2b) } : {}),
                     ...(bulkPc !== '' ? { pcMarginPct: Number(bulkPc) } : {}),
                   },
                   {
                     onSuccess: () =>
-                      toast.success(`Margin set on ${selected.size} wines`),
+                      toast.success(`Margin set on ${count} wines`),
                   },
                 );
               }}
@@ -2456,7 +2590,23 @@ const PricingManagerPage = () => {
       <Card className="shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/*
+              Compact rows: a wine on one line, case figures dropped (the
+              bottle price is what gets compared down a column), the name cut
+              with the full name on hover. Plain CSS so every cell follows
+              without each one knowing about the setting.
+            */}
+            <style>{`
+              .pm-compact > tbody > tr > td { padding-top: 3px; padding-bottom: 3px; font-size: 13px; line-height: 20px; }
+              .pm-compact .pm-sub, .pm-compact .pm-meta { display: none; }
+              .pm-compact .pm-product { min-width: 340px; }
+              .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 420px; }
+              .pm-compact .pm-namerow > * { flex-shrink: 0; white-space: nowrap; }
+              .pm-compact .pm-namerow > button { flex-shrink: 1; min-width: 0; }
+              .pm-compact .pm-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+              .pm-compact .pm-gap { display: inline; margin-left: 6px; }
+            `}</style>
+            <table className={`w-full text-sm ${compact ? 'pm-compact' : ''}`}>
               <thead className="sticky top-0 z-10 hidden bg-surface-muted md:table-header-group shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
@@ -2474,8 +2624,9 @@ const PricingManagerPage = () => {
                     Cost
                   </th>
                   <th
-                    title="In-bond (B2B) selling price tier for trade"
+                    title="In-bond (B2B) selling price tier for trade, beside the London in-bond market"
                     className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600"
+                    colSpan={2}
                   >
                     In&nbsp;Bond · B2B
                   </th>
@@ -2499,7 +2650,10 @@ const PricingManagerPage = () => {
                     <input
                       type="checkbox"
                       title="Select every line shown"
-                      checked={selected.size > 0 && selected.size >= visibleLwins.length}
+                      checked={
+                        visibleLwins.length > 0 &&
+                        selectedVisible.length >= visibleLwinSet.size
+                      }
                       onChange={(e) =>
                         setSelected(
                           e.target.checked ? new Set(visibleLwins) : new Set(),
@@ -2592,6 +2746,12 @@ const PricingManagerPage = () => {
                       <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − margin). The margin comes from the tiers (by landed cost), an owner's own rate, or a per-wine override." />
                     </span>
                   </th>
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                    <span className="flex items-center justify-end gap-1">
+                      London
+                      <HeaderInfo text="London in-bond market for a 75cl bottle, from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London. Refreshed from the Wine Labs page." />
+                    </span>
+                  </th>
                   <th
                     className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
@@ -2676,7 +2836,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={13} className="py-20 text-center text-text-muted">
+                    <td colSpan={14} className="py-20 text-center text-text-muted">
                       {/*
                         An owner holding nothing but wine in transit reads as an
                         owner holding nothing, unless the screen says which of
@@ -3007,11 +3167,11 @@ const PricingManagerPage = () => {
 
                         {/* Product — pinned; see the header for why */}
                         <td
-                          className={`sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
+                          className={`pm-product sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
                             ownerCue?.style.border ?? 'border-l-transparent'
                           }`}
                         >
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="pm-namerow flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() =>
@@ -3019,15 +3179,15 @@ const PricingManagerPage = () => {
                                   cur === product.lwin18 ? null : product.lwin18,
                                 )
                               }
-                              title="Show last sold price"
-                              className="flex items-center gap-1 text-left"
+                              title={`${product.productName}: show last sold price`}
+                              className="flex min-w-0 items-center gap-1 text-left"
                             >
                               <IconChevronRight
                                 className={`h-3.5 w-3.5 shrink-0 transition-transform ${
                                   isExpanded ? 'rotate-90 text-text-secondary' : 'text-text-muted/60'
                                 }`}
                               />
-                              <span className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
+                              <span className="pm-name text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
                                 {product.productName}
                               </span>
                             </button>
@@ -3161,10 +3321,10 @@ const PricingManagerPage = () => {
                           })()}
                           </div>
                           {product.producer && (
-                            <p className="text-xs text-text-muted">{product.producer}</p>
+                            <p className="pm-meta text-xs text-text-muted">{product.producer}</p>
                           )}
                           {isInbound && (
-                            <p className="text-[10px] text-amber-600">
+                            <p className="pm-meta text-[10px] text-amber-600">
                               {eta
                                 ? `ETA ${new Date(eta).toLocaleDateString('en-GB')}`
                                 : 'In transit'}
@@ -3186,7 +3346,7 @@ const PricingManagerPage = () => {
                           <div className="font-medium tabular-nums text-text-primary">
                             {product.totalCases}
                           </div>
-                          <div className="text-[10px] tabular-nums text-text-muted/70">
+                          <div className="pm-sub text-[10px] tabular-nums text-text-muted/70">
                             {caseConfig}×{product.bottleSize ?? '75cl'}
                           </div>
                         </td>
@@ -3250,7 +3410,7 @@ const PricingManagerPage = () => {
                             {landed != null ? money(landed, currency) : '—'}
                           </div>
                           {landed != null && (
-                            <div className="text-[11px] font-medium text-text-muted">
+                            <div className="pm-sub text-[11px] font-medium text-text-muted">
                               {casePrice(landed, caseConfig, currency)}
                             </div>
                           )}
@@ -3273,6 +3433,7 @@ const PricingManagerPage = () => {
                           hintFor={inBondHint}
                           onSave={saveInBond}
                         />
+                        <LondonCell market={londonPrices[product.lwin18]} ours={inBondPrice} />
 
                         {/* PC Price (editable) — Private Client group */}
                         <PriceCell
@@ -3349,7 +3510,7 @@ const PricingManagerPage = () => {
                                   /btl
                                 </span>
                               </div>
-                              <div className="text-[11px] font-medium tabular-nums text-text-muted">
+                              <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
                                 $
                                 {Math.round(
                                   displayMarginPerBottle * caseConfig,
@@ -3364,7 +3525,7 @@ const PricingManagerPage = () => {
                       </tr>
                       {isExpanded && (
                         <tr className="hidden bg-surface-muted/40 md:table-row">
-                          <td colSpan={13} className="border-l-4 border-l-transparent px-3 py-3">
+                          <td colSpan={14} className="border-l-4 border-l-transparent px-3 py-3">
                             {/*
                               What the line is worth if it all sells at the
                               current price. Per bottle and per case answer "is
@@ -3457,7 +3618,7 @@ const PricingManagerPage = () => {
                       )}
                       {/* The phone's version of this row: the figures that matter, a tap for the rest */}
                       <tr className="md:hidden">
-                        <td colSpan={13} className="border-b border-border-muted p-0">
+                        <td colSpan={14} className="border-b border-border-muted p-0">
                           <button
                             type="button"
                             onClick={() => setExpandedLwin((cur) => (cur === product.lwin18 ? null : product.lwin18))}

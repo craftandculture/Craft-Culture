@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { deviceProcedure, validateDeviceToken } from '@/lib/trpc/procedures';
+import { deviceProcedure } from '@/lib/trpc/procedures';
 
 import type { LocationLabelData } from '../utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZpl';
@@ -17,15 +17,13 @@ import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZp
 const deviceGetLocationLabels = deviceProcedure
   .input(
     z.object({
-      deviceToken: z.string(),
+      /** Ignored: the token now travels in a header or cookie (kept so older pages still parse) */
+      deviceToken: z.string().optional(),
       locationIds: z.array(z.string().uuid()).optional(),
       locationType: z.enum(['rack', 'floor', 'receiving', 'shipping']).optional(),
     }),
   )
   .query(async ({ input }) => {
-    // Validate device token
-    validateDeviceToken(input.deviceToken);
-
     const conditions = [eq(wmsLocations.isActive, true)];
 
     if (input.locationIds?.length) {

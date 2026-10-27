@@ -184,42 +184,48 @@ const sessionCalculate = adminProcedure
     // Calculate prices
     const calculatedProducts = calculatePrices(rawProducts, variables);
 
-    // Delete existing items
-    await db.delete(pricingItems).where(eq(pricingItems.sessionId, id));
+    const rows = calculatedProducts.map((product) => ({
+      sessionId: id,
+      productName: product.productName,
+      vintage: product.vintage,
+      region: product.region,
+      producer: product.producer,
+      bottleSize: product.bottleSize,
+      caseConfig: product.caseConfig,
+      lwin: product.lwin,
+      ukInBondPrice: product.ukInBondPrice,
+      inputCurrency: product.inputCurrency,
+      inBondCaseUsd: product.inBondCaseUsd,
+      inBondBottleUsd: product.inBondBottleUsd,
+      inBondCaseAed: product.inBondCaseAed,
+      inBondBottleAed: product.inBondBottleAed,
+      deliveredCaseUsd: product.deliveredCaseUsd,
+      deliveredBottleUsd: product.deliveredBottleUsd,
+      deliveredCaseAed: product.deliveredCaseAed,
+      deliveredBottleAed: product.deliveredBottleAed,
+    }));
 
-    // Insert new items
-    await db.insert(pricingItems).values(
-      calculatedProducts.map((product) => ({
-        sessionId: id,
-        productName: product.productName,
-        vintage: product.vintage,
-        region: product.region,
-        producer: product.producer,
-        bottleSize: product.bottleSize,
-        caseConfig: product.caseConfig,
-        lwin: product.lwin,
-        ukInBondPrice: product.ukInBondPrice,
-        inputCurrency: product.inputCurrency,
-        inBondCaseUsd: product.inBondCaseUsd,
-        inBondBottleUsd: product.inBondBottleUsd,
-        inBondCaseAed: product.inBondCaseAed,
-        inBondBottleAed: product.inBondBottleAed,
-        deliveredCaseUsd: product.deliveredCaseUsd,
-        deliveredBottleUsd: product.deliveredBottleUsd,
-        deliveredCaseAed: product.deliveredCaseAed,
-        deliveredBottleAed: product.deliveredBottleAed,
-      })),
-    );
+    // Replace the items in one transaction, inserting in batches: a single
+    // insert of thousands of rows exceeds Postgres's parameter limit, and
+    // without the transaction a failed insert left the session empty.
+    const INSERT_BATCH_SIZE = 500;
 
-    // Update session status and item count
-    await db
-      .update(pricingSessions)
-      .set({
-        status: 'calculated',
-        itemCount: calculatedProducts.length,
-        updatedAt: new Date(),
-      })
-      .where(eq(pricingSessions.id, id));
+    await db.transaction(async (tx) => {
+      await tx.delete(pricingItems).where(eq(pricingItems.sessionId, id));
+
+      for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
+        await tx.insert(pricingItems).values(rows.slice(i, i + INSERT_BATCH_SIZE));
+      }
+
+      await tx
+        .update(pricingSessions)
+        .set({
+          status: 'calculated',
+          itemCount: calculatedProducts.length,
+          updatedAt: new Date(),
+        })
+        .where(eq(pricingSessions.id, id));
+    });
 
     return {
       success: true,

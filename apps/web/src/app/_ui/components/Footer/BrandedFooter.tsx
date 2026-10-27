@@ -8,6 +8,8 @@ import parseChangelog from '@/utils/parseChangelog';
 export interface BrandedFooterProps {
   customerType: 'b2b' | 'b2c' | 'private_clients';
   partnerType?: 'wine_partner' | 'distributor' | 'private_collector' | null;
+  /** C&C team member; only staff see the internal development log */
+  isTeamMember?: boolean;
 }
 
 /**
@@ -15,7 +17,11 @@ export interface BrandedFooterProps {
  *
  * @param props - The footer props including customerType
  */
-const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
+const BrandedFooter = ({
+  customerType,
+  partnerType,
+  isTeamMember = false,
+}: BrandedFooterProps) => {
   const currentYear = new Date().getFullYear();
   const versions = parseChangelog();
   const latestVersion = versions[0]?.version ?? '1.0.0';
@@ -131,7 +137,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                   Email the cellar team
                 </a>
               )}
-              {access.kind !== 'collector' && (
+              {isTeamMember && (
                 <Link
                   href="/platform/development-log"
                   className="text-text-muted hover:text-text-primary text-xs transition-colors"
@@ -169,12 +175,18 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                 `© ${currentYear} Craft & Culture. All rights reserved.`
               )}
             </p>
-            <Link
-              href="/platform/development-log"
-              className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
-            >
-              v{latestVersion}
-            </Link>
+            {isTeamMember ? (
+              <Link
+                href="/platform/development-log"
+                className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
+              >
+                v{latestVersion}
+              </Link>
+            ) : (
+              <span className="text-text-muted text-xs font-light">
+                v{latestVersion}
+              </span>
+            )}
           </div>
         </div>
       </div>

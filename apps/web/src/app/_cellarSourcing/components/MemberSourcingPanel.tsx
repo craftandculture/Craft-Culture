@@ -287,7 +287,11 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
                           }
                           confirmLabel="Confirm allocation"
                           onConfirm={() =>
-                            respondAllocation({ interestId: interest.id, response: 'confirm' })
+                            respondAllocation({
+                              interestId: interest.id,
+                              response: 'confirm',
+                              pricePerBottleUsd: allocation.pricePerBottleUsd,
+                            })
                           }
                         >
                           <button
@@ -415,7 +419,12 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
                             </p>
                           }
                           confirmLabel="Accept"
-                          onConfirm={() => respondOffer({ requestId: request.id, response: 'accept' })}
+                          onConfirm={() => respondOffer({
+                            requestId: request.id,
+                            response: 'accept',
+                            pricePerBottleUsd: offer.pricePerBottleUsd,
+                            cases: offer.cases,
+                          })}
                         >
                           <button
                             type="button"

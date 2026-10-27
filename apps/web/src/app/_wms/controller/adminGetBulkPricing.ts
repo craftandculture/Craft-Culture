@@ -2,7 +2,7 @@ import { and, desc, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipmentItems, wmsProductPricing } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getBulkPricingSchema } from '../schemas/pricingSchema';
 import lwinPakKey from '../utils/lwinPakKey';
@@ -29,7 +29,7 @@ import pakKeyOf from '../utils/pakKeyOf';
  * @param lwin18s - Array of product LWIN18 identifiers
  * @returns Map of lwin18 → import price data
  */
-const adminGetBulkPricing = wmsOperatorProcedure
+const adminGetBulkPricing = adminProcedure
   .input(getBulkPricingSchema)
   .query(async ({ input }) => {
     const { lwin18s } = input;

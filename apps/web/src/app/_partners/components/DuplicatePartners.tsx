@@ -152,6 +152,14 @@ const DuplicatePartners = () => {
                           record.status,
                         ].join(' · ')}
                       </span>
+                      {record.stillReferencedBy && (
+                        <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-400">
+                          Still referenced by{' '}
+                          {record.stillReferencedBy
+                            .map((ref) => `${ref.table} (${ref.rows})`)
+                            .join(', ')}
+                        </span>
+                      )}
                     </span>
                   </label>
                 ))}
@@ -175,13 +183,29 @@ const DuplicatePartners = () => {
                         size="sm"
                         variant={shown ? 'default' : 'outline'}
                         isDisabled={isPending}
-                        onClick={() =>
+                        onClick={() => {
+                          if (!shown) {
+                            merge({
+                              survivorId,
+                              duplicateId: duplicate.id,
+                              dryRun: true,
+                            });
+                            return;
+                          }
+
+                          // A real merge cannot be undone from the app
+                          const typed = window.prompt(
+                            `Merge "${duplicate.businessName}" into "${shown.survivor}"? This cannot be undone. Type MERGE to confirm.`,
+                          );
+                          if (typed?.trim() !== 'MERGE') return;
+
                           merge({
                             survivorId,
                             duplicateId: duplicate.id,
-                            dryRun: !shown,
-                          })
-                        }
+                            dryRun: false,
+                            confirmText: typed.trim(),
+                          });
+                        }}
                       >
                         <ButtonContent
                           iconLeft={isPending ? IconLoader2 : IconArrowRight}

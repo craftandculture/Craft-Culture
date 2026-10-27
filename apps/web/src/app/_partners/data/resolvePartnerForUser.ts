@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import type { Partner } from '@/database/schema';
@@ -37,6 +37,18 @@ const resolvePartnerForUser = async (
   types: LinkablePartnerType[],
   legacyPartnerId?: string | null,
 ): Promise<Partner | null> => {
+  /*
+    Deterministic, and active first. A user can hold more than one link — a
+    membership on a record that has since been merged and retired, say — and
+    `LIMIT 1` with no ORDER BY let Postgres pick either, so the same login
+    could resolve to a different partner from one request to the next. Each
+    path is ordered (active before inactive, then oldest link first), and an
+    active partner on any path wins over an inactive one on a stronger path.
+    An inactive partner is still returned when it is the only link, so callers
+    can say "your account is not active" rather than "you are not linked".
+  */
+  const activeFirst = sql`CASE WHEN ${partners.status} = 'active' THEN 0 ELSE 1 END`;
+
   // PRIMARY: an admin-granted membership
   const [membership] = await db
     .select({ partner: partners })
@@ -45,33 +57,39 @@ const resolvePartnerForUser = async (
     .where(
       and(eq(partnerMembers.userId, userId), inArray(partners.type, types)),
     )
+    .orderBy(activeFirst, asc(partnerMembers.createdAt), asc(partners.id))
     .limit(1);
 
-  if (membership?.partner) return membership.partner;
+  if (membership?.partner.status === 'active') return membership.partner;
 
   // FALLBACK 1: the user owns the partner record
   const [owned] = await db
     .select()
     .from(partners)
     .where(and(eq(partners.userId, userId), inArray(partners.type, types)))
+    .orderBy(activeFirst, asc(partners.createdAt), asc(partners.id))
     .limit(1);
 
-  if (owned) return owned;
+  if (owned?.status === 'active') return owned;
 
   // FALLBACK 2: the deprecated column on the user
-  if (legacyPartnerId) {
-    const [legacy] = await db
-      .select()
-      .from(partners)
-      .where(
-        and(eq(partners.id, legacyPartnerId), inArray(partners.type, types)),
-      )
-      .limit(1);
+  const [legacy] = legacyPartnerId
+    ? await db
+        .select()
+        .from(partners)
+        .where(
+          and(eq(partners.id, legacyPartnerId), inArray(partners.type, types)),
+        )
+        .limit(1)
+    : [];
 
-    if (legacy) return legacy;
-  }
+  const candidates = [membership?.partner, owned, legacy].filter(
+    (p): p is Partner => !!p,
+  );
 
-  return null;
+  return (
+    candidates.find((p) => p.status === 'active') ?? candidates[0] ?? null
+  );
 };
 
 export default resolvePartnerForUser;

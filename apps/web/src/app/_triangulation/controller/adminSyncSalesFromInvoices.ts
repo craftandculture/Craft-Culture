@@ -142,11 +142,18 @@ const adminSyncSalesFromInvoices = adminProcedure
         AND COALESCE(s.lwin18, s.w_code) IS NOT NULL
     `;
 
-    const ownerByCode = new Map(
-      ownerRows.map((row) => [row.normalizedCode, row.ownerName]),
-    );
+    // Every owner a code is registered to. One is an answer; two is a
+    // question, and a Map of code → owner silently kept whichever came last.
+    const ownerByCode = new Map<string, Set<string>>();
+    for (const row of ownerRows) {
+      const owners = ownerByCode.get(row.normalizedCode) ?? new Set<string>();
+      owners.add(row.ownerName);
+      ownerByCode.set(row.normalizedCode, owners);
+    }
     /** Lines the registry attributed that the document could not */
     let attributedByRegistry = 0;
+    /** Lines whose wine has two registered owners and no stated one */
+    let ambiguousOwnerLines = 0;
 
     const rows: Record<string, unknown>[] = [];
     const invoiceNumbers: string[] = [];
@@ -179,42 +186,13 @@ const adminSyncSalesFromInvoices = adminProcedure
      */
     let withSubject = 0;
 
-    // Both feeds describe the same sales, so the order-based one goes with
-    // this one's own previous run. Leaving it would double Sold to City
-    // Drinks — and halve what C&C appears to hold — while looking like the
-    // fix had worked.
-    await client`
-      DELETE FROM tri_imports
-      WHERE kind = 'cc_sales_to_cd'
-        AND source_ref IN ('zoho-invoices', 'zoho-sales')
-      AND programme_id = ${programmeId}
-    `;
-
-    const [created] = await client<{ id: string }[]>`
-      INSERT INTO tri_imports (
-        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
-        as_of_date, notes, uploaded_by, committed_at
-      )
-      VALUES (
-        ${programmeId},
-        NULL, 'cc_sales_to_cd', 'committed',
-        ${`Zoho invoices — ${customerMatch}`}, 'zoho-invoices', 'zoho',
-        ${asOfDate},
-        ${'Read from the invoices themselves, so sales with no sales order behind them are included.'},
-        ${ctx.user.id}, NOW()
-      )
-      RETURNING id
-    `;
-
-    const importId = created?.id;
-
-    if (!importId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create the Zoho invoice feed',
-      });
-    }
-
+    /*
+      Every invoice is read from Zoho BEFORE anything is replaced. The old
+      order deleted the previous feed first and then made one Zoho call per
+      invoice; a timeout part-way left the client with no sales at all. The
+      swap itself (old feed out, new one in, lines mapped) is one transaction
+      at the end.
+    */
     for (const header of headers) {
       const invoice = await getInvoice(header.invoiceId);
 
@@ -353,10 +331,28 @@ const adminSyncSalesFromInvoices = adminProcedure
           Lines belonging elsewhere are counted and left for their own client
           rather than absorbed into this one.
         */
-        const fromRegistry = normalized ? ownerByCode.get(normalized) : null;
+        const registryOwners = normalized ? ownerByCode.get(normalized) : undefined;
+        const fromRegistry =
+          registryOwners && registryOwners.size === 1
+            ? [...registryOwners][0]
+            : null;
         const owner = lineTagged ?? lineOwner ?? fromRegistry ?? null;
 
         if (!lineTagged && !lineOwner && fromRegistry) attributedByRegistry += 1;
+
+        /*
+          A wine registered to two owners cannot be attributed from the
+          registry: picking either is a guess that pays the wrong client. The
+          document named nobody, so the line is flagged for a person rather
+          than handed to whoever takes the unattributed.
+        */
+        if (!owner && registryOwners && registryOwners.size > 1) {
+          const label = `owner unclear (${[...registryOwners].sort().join(' / ')})`;
+
+          otherOwners.set(label, (otherOwners.get(label) ?? 0) + 1);
+          ambiguousOwnerLines += 1;
+          continue;
+        }
 
         const belongsHere = owner ? owner === ownerClaimed : takesUnattributed;
 
@@ -394,7 +390,6 @@ const adminSyncSalesFromInvoices = adminProcedure
           isBottles || !stated || stated < 1 || stated > 24 ? 1 : stated;
 
         rows.push({
-          import_id: importId,
           raw_code: normalized ? code : null,
           normalized_code: normalized || null,
           raw_description: description,
@@ -414,10 +409,47 @@ const adminSyncSalesFromInvoices = adminProcedure
       }
     }
 
-    if (rows.length > 0) {
-      await insertRows(
-        'tri_import_lines',
-        [
+    const { importId, mapped } = await client.begin(async (sql) => {
+      // Both feeds describe the same sales, so the order-based one goes with
+      // this one's own previous run. Leaving it would double Sold to City
+      // Drinks — and halve what C&C appears to hold — while looking like the
+      // fix had worked.
+      await sql`
+        DELETE FROM tri_imports
+        WHERE kind = 'cc_sales_to_cd'
+          AND source_ref IN ('zoho-invoices', 'zoho-sales')
+          AND programme_id = ${programmeId}
+      `;
+
+      const [created] = await sql<{ id: string }[]>`
+        INSERT INTO tri_imports (
+          programme_id, period_id, kind, status, file_name, source_ref, alias_source,
+          as_of_date, notes, uploaded_by, committed_at
+        )
+        VALUES (
+          ${programmeId},
+          NULL, 'cc_sales_to_cd', 'committed',
+          ${`Zoho invoices — ${customerMatch}`}, 'zoho-invoices', 'zoho',
+          ${asOfDate},
+          ${'Read from the invoices themselves, so sales with no sales order behind them are included.'},
+          ${ctx.user.id}, NOW()
+        )
+        RETURNING id
+      `;
+
+      const newImportId = created?.id;
+
+      if (!newImportId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create the Zoho invoice feed',
+        });
+      }
+
+      if (rows.length > 0) {
+        await insertRows(
+          'tri_import_lines',
+          [
           'import_id',
           'raw_code',
           'normalized_code',
@@ -432,12 +464,17 @@ const adminSyncSalesFromInvoices = adminProcedure
           'doc_date',
           'stated_owner_name',
           'status',
-        ],
-        rows,
-      );
-    }
+          ],
+          rows.map((row) => ({ ...row, import_id: newImportId })),
+          { sql },
+        );
+      }
 
-    const mapped = await mapImportLines(importId, 'zoho');
+      return {
+        importId: newImportId,
+        mapped: await mapImportLines(newImportId, 'zoho', sql),
+      };
+    });
 
     return {
       importId,
@@ -467,6 +504,8 @@ const adminSyncSalesFromInvoices = adminProcedure
       invoicesRead: headers.length,
       /** Lines the registry attributed because the document named nobody */
       attributedByRegistry,
+      /** Lines left out because their wine has two owners and none was stated */
+      ambiguousOwnerLines,
       /** Owner headings found inside invoices, which is how a MIX splits */
       headings: [...headingsSeen].slice(0, 25),
       /** Consignment lines belonging to other clients, by owner */

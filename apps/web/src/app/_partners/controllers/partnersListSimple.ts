@@ -8,7 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 /**
  * Get a simple list of all active partners for dropdowns
  *
- * Returns only id and name for each partner, suitable for select/dropdown components.
+ * Returns id, name, type and logo for each partner, suitable for select/dropdown components.
  * Only returns active partners (excludes inactive and suspended).
  * Optionally filter by partner type.
  */
@@ -40,6 +40,7 @@ const partnersListSimple = adminProcedure
         id: partners.id,
         name: partners.businessName,
         type: partners.type,
+        logoUrl: partners.logoUrl,
       })
       .from(partners)
       .where(and(...conditions))

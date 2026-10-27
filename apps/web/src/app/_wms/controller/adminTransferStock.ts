@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -31,210 +31,253 @@ const adminTransferStock = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { stockId, quantityCases, toLocationId, notes } = input;
 
-    // 1. Get the source stock record
-    const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
+    /*
+      One transaction, with the source row locked. A double tap or two scanners
+      moving the same row used to read the same quantity, both write an
+      absolute "new" figure, and create the cases at the destination twice.
+    */
+    const outcome = await db.transaction(async (tx) => {
+      // 1. Get the source stock record
+      const [sourceStock] = await tx
+        .select()
+        .from(wmsStock)
+        .where(eq(wmsStock.id, stockId))
+        .for('update');
 
-    if (!sourceStock) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Stock record not found',
-      });
-    }
+      if (!sourceStock) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Stock record not found',
+        });
+      }
 
-    // 2. Validate quantity
-    if (quantityCases > sourceStock.availableCases) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Only ${sourceStock.availableCases} cases available to transfer (${sourceStock.reservedCases} reserved)`,
-      });
-    }
+      // 2. Validate quantity
+      if (quantityCases > sourceStock.availableCases) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Only ${sourceStock.availableCases} cases available to transfer (${sourceStock.reservedCases} reserved)`,
+        });
+      }
 
-    // 3. Get source location
-    const [fromLocation] = await db
-      .select()
-      .from(wmsLocations)
-      .where(eq(wmsLocations.id, sourceStock.locationId));
+      // 3. Get source location
+      const [fromLocation] = await tx
+        .select()
+        .from(wmsLocations)
+        .where(eq(wmsLocations.id, sourceStock.locationId));
 
-    if (!fromLocation) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Source location not found',
-      });
-    }
+      if (!fromLocation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Source location not found',
+        });
+      }
 
-    // 4. Validate destination location
-    const [toLocation] = await db
-      .select()
-      .from(wmsLocations)
-      .where(eq(wmsLocations.id, toLocationId));
+      // 4. Validate destination location
+      const [toLocation] = await tx
+        .select()
+        .from(wmsLocations)
+        .where(eq(wmsLocations.id, toLocationId));
 
-    if (!toLocation) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Destination location not found',
-      });
-    }
+      if (!toLocation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Destination location not found',
+        });
+      }
 
-    if (!toLocation.isActive) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Destination location is not active',
-      });
-    }
+      if (!toLocation.isActive) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Destination location is not active',
+        });
+      }
 
-    // 5. Check if transferring to same location
-    if (sourceStock.locationId === toLocationId) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Stock is already at this location',
-      });
-    }
+      // 5. Check if transferring to same location
+      if (sourceStock.locationId === toLocationId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Stock is already at this location',
+        });
+      }
 
-    // 6. Update source stock (decrease quantity)
-    const newSourceQuantity = sourceStock.quantityCases - quantityCases;
-    const newSourceAvailable = sourceStock.availableCases - quantityCases;
+      // 6. Update source stock (decrease quantity)
+      const newSourceQuantity = sourceStock.quantityCases - quantityCases;
 
-    await db
-      .update(wmsStock)
-      .set({
-        quantityCases: newSourceQuantity,
-        availableCases: newSourceAvailable,
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsStock.id, stockId));
-
-    // 7. Check if destination already has this stock (same LWIN, lot, owner)
-    const [existingDestStock] = await db
-      .select()
-      .from(wmsStock)
-      .where(
-        and(
-          eq(wmsStock.locationId, toLocationId),
-          eq(wmsStock.lwin18, sourceStock.lwin18),
-          eq(wmsStock.ownerId, sourceStock.ownerId),
-          sourceStock.lotNumber === null
-            ? isNull(wmsStock.lotNumber)
-            : eq(wmsStock.lotNumber, sourceStock.lotNumber),
-        ),
-      );
-
-    let destStockId: string;
-
-    if (existingDestStock) {
-      // Update existing stock record
-      await db
+      const decremented = await tx
         .update(wmsStock)
         .set({
-          quantityCases: existingDestStock.quantityCases + quantityCases,
-          availableCases: existingDestStock.availableCases + quantityCases,
+          quantityCases: sql`${wmsStock.quantityCases} - ${quantityCases}`,
+          availableCases: sql`${wmsStock.availableCases} - ${quantityCases}`,
           updatedAt: new Date(),
         })
-        .where(eq(wmsStock.id, existingDestStock.id));
-      destStockId = existingDestStock.id;
-    } else {
-      // Create new stock record at destination
-      const [newStock] = await db
-        .insert(wmsStock)
-        .values({
-          locationId: toLocationId,
-          ownerId: sourceStock.ownerId,
-          ownerName: sourceStock.ownerName,
-          lwin18: sourceStock.lwin18,
-          productName: sourceStock.productName,
-          producer: sourceStock.producer,
-          vintage: sourceStock.vintage,
-          bottleSize: sourceStock.bottleSize,
-          caseConfig: sourceStock.caseConfig,
-          quantityCases,
-          reservedCases: 0,
-          availableCases: quantityCases,
-          lotNumber: sourceStock.lotNumber,
-          receivedAt: sourceStock.receivedAt,
-          shipmentId: sourceStock.shipmentId,
-          salesArrangement: sourceStock.salesArrangement,
-          // Moving wine to another bay does not make it ours to sell.
-          notForSale: sourceStock.notForSale,
-          consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
-          category: sourceStock.category,
-          expiryDate: sourceStock.expiryDate,
-          isPerishable: sourceStock.isPerishable,
-        })
-        .returning();
+        .where(and(eq(wmsStock.id, stockId), sql`${wmsStock.availableCases} >= ${quantityCases}`))
+        .returning({ id: wmsStock.id });
 
+      if (decremented.length === 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This stock changed while the move was being made. Refresh and try again.',
+        });
+      }
+
+      // 7. Check if destination already has this stock (same LWIN, lot, owner)
+      const [existingDestStock] = await tx
+        .select()
+        .from(wmsStock)
+        .where(
+          and(
+            eq(wmsStock.locationId, toLocationId),
+            eq(wmsStock.lwin18, sourceStock.lwin18),
+            eq(wmsStock.ownerId, sourceStock.ownerId),
+            // Held wine never merges into a listed row, nor the other way
+            eq(wmsStock.notForSale, sourceStock.notForSale),
+            sourceStock.lotNumber === null
+              ? isNull(wmsStock.lotNumber)
+              : eq(wmsStock.lotNumber, sourceStock.lotNumber),
+          ),
+        )
+        .for('update');
+
+      let destStockId: string;
+
+      if (existingDestStock) {
+        // Update existing stock record
+        await tx
+          .update(wmsStock)
+          .set({
+            quantityCases: sql`${wmsStock.quantityCases} + ${quantityCases}`,
+            availableCases: sql`${wmsStock.availableCases} + ${quantityCases}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsStock.id, existingDestStock.id));
+        destStockId = existingDestStock.id;
+      } else {
+        // Create new stock record at destination
+        const [newStock] = await tx
+          .insert(wmsStock)
+          .values({
+            locationId: toLocationId,
+            ownerId: sourceStock.ownerId,
+            ownerName: sourceStock.ownerName,
+            lwin18: sourceStock.lwin18,
+            supplierSku: sourceStock.supplierSku,
+            productName: sourceStock.productName,
+            producer: sourceStock.producer,
+            vintage: sourceStock.vintage,
+            bottleSize: sourceStock.bottleSize,
+            caseConfig: sourceStock.caseConfig,
+            quantityCases,
+            reservedCases: 0,
+            availableCases: quantityCases,
+            lotNumber: sourceStock.lotNumber,
+            receivedAt: sourceStock.receivedAt,
+            shipmentId: sourceStock.shipmentId,
+            // The customs trail travels with the cases
+            reExportBoeNumber: sourceStock.reExportBoeNumber,
+            salesArrangement: sourceStock.salesArrangement,
+            // Moving wine to another bay does not make it ours to sell.
+            notForSale: sourceStock.notForSale,
+            consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
+            category: sourceStock.category,
+            expiryDate: sourceStock.expiryDate,
+            isPerishable: sourceStock.isPerishable,
+          })
+          .returning();
+
+        if (!newStock) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create the stock row at the destination" });
       destStockId = newStock.id;
-    }
+      }
 
-    // 8. Update case labels for this product/lot to the new location
-    // This updates up to quantityCases labels
-    const casesToUpdate = await db
-      .select()
-      .from(wmsCaseLabels)
-      .where(
-        and(
-          eq(wmsCaseLabels.currentLocationId, sourceStock.locationId),
-          eq(wmsCaseLabels.lwin18, sourceStock.lwin18),
-          sourceStock.lotNumber === null
-            ? isNull(wmsCaseLabels.lotNumber)
-            : eq(wmsCaseLabels.lotNumber, sourceStock.lotNumber),
-          eq(wmsCaseLabels.isActive, true),
-        ),
-      )
-      .limit(quantityCases);
+      // 8. Update case labels for this product/lot to the new location
+      // This updates up to quantityCases labels
+      const casesToUpdate = await tx
+        .select()
+        .from(wmsCaseLabels)
+        .where(
+          and(
+            eq(wmsCaseLabels.currentLocationId, sourceStock.locationId),
+            eq(wmsCaseLabels.lwin18, sourceStock.lwin18),
+            sourceStock.lotNumber === null
+              ? isNull(wmsCaseLabels.lotNumber)
+              : eq(wmsCaseLabels.lotNumber, sourceStock.lotNumber),
+            eq(wmsCaseLabels.isActive, true),
+          ),
+        )
+        .limit(quantityCases);
 
-    const updatedBarcodes: string[] = [];
-    for (const caseLabel of casesToUpdate) {
-      await db
-        .update(wmsCaseLabels)
-        .set({
-          currentLocationId: toLocationId,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsCaseLabels.id, caseLabel.id));
-      updatedBarcodes.push(caseLabel.barcode);
-    }
+      const updatedBarcodes: string[] = [];
+      for (const caseLabel of casesToUpdate) {
+        await tx
+          .update(wmsCaseLabels)
+          .set({
+            currentLocationId: toLocationId,
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsCaseLabels.id, caseLabel.id));
+        updatedBarcodes.push(caseLabel.barcode);
+      }
 
-    // 9. Update pending pick list items that reference the old location
-    const pendingPickItems = await db
-      .select({ id: wmsPickListItems.id })
-      .from(wmsPickListItems)
-      .innerJoin(wmsPickLists, eq(wmsPickLists.id, wmsPickListItems.pickListId))
-      .where(
-        and(
-          eq(wmsPickListItems.lwin18, sourceStock.lwin18),
-          eq(wmsPickListItems.suggestedLocationId, sourceStock.locationId),
-          eq(wmsPickListItems.isPicked, false),
-          inArray(wmsPickLists.status, ['pending', 'in_progress']),
-        ),
-      );
+      // 9. Update pending pick list items that reference the old location
+      const pendingPickItems = await tx
+        .select({ id: wmsPickListItems.id })
+        .from(wmsPickListItems)
+        .innerJoin(wmsPickLists, eq(wmsPickLists.id, wmsPickListItems.pickListId))
+        .where(
+          and(
+            eq(wmsPickListItems.lwin18, sourceStock.lwin18),
+            eq(wmsPickListItems.suggestedLocationId, sourceStock.locationId),
+            /*
+              Only lines pointing at THIS row, and only once the row is empty.
+              A line with no stock row (or another owner's) was matched by wine
+              alone, and re-pointing it here hands it this owner's cases.
+            */
+            eq(wmsPickListItems.suggestedStockId, stockId),
+            eq(wmsPickListItems.isPicked, false),
+            inArray(wmsPickLists.status, ['pending', 'in_progress']),
+          ),
+        );
 
-    for (const item of pendingPickItems) {
-      await db
-        .update(wmsPickListItems)
-        .set({
-          suggestedLocationId: toLocationId,
-          suggestedStockId: destStockId,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsPickListItems.id, item.id));
-    }
+      for (const item of newSourceQuantity > 0 ? [] : pendingPickItems) {
+        await tx
+          .update(wmsPickListItems)
+          .set({
+            suggestedLocationId: toLocationId,
+            suggestedStockId: destStockId,
+            updatedAt: new Date(),
+          })
+          .where(eq(wmsPickListItems.id, item.id));
+      }
 
-    // 10. Create movement record
-    const movementNumber = await generateMovementNumber();
-    await db.insert(wmsStockMovements).values({
-      movementNumber,
-      movementType: 'transfer',
-      lwin18: sourceStock.lwin18,
-      productName: sourceStock.productName,
-      quantityCases,
-      fromLocationId: sourceStock.locationId,
-      toLocationId,
-      lotNumber: sourceStock.lotNumber,
-      shipmentId: sourceStock.shipmentId,
-      scannedBarcodes: updatedBarcodes,
-      notes: notes ?? `Transfer from ${fromLocation.locationCode} to ${toLocation.locationCode}`,
-      performedBy: ctx.user.id,
-      performedAt: new Date(),
+      // 10. Create movement record
+      const movementNumber = await generateMovementNumber(tx);
+      await tx.insert(wmsStockMovements).values({
+        movementNumber,
+        movementType: 'transfer',
+        lwin18: sourceStock.lwin18,
+        productName: sourceStock.productName,
+        quantityCases,
+        fromLocationId: sourceStock.locationId,
+        toLocationId,
+        lotNumber: sourceStock.lotNumber,
+        shipmentId: sourceStock.shipmentId,
+        scannedBarcodes: updatedBarcodes,
+        notes: notes ?? `Transfer from ${fromLocation.locationCode} to ${toLocation.locationCode}`,
+        performedBy: ctx.user.id,
+        performedAt: new Date(),
+      });
+
+      return {
+        fromLocation,
+        toLocation,
+        sourceStock,
+        newSourceQuantity,
+        destStockId,
+        movementNumber,
+      };
     });
+
+    const { fromLocation, toLocation, sourceStock, newSourceQuantity, destStockId, movementNumber } =
+      outcome;
 
     return {
       success: true,

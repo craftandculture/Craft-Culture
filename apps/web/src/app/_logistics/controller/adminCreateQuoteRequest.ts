@@ -5,7 +5,7 @@ import {
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
 } from '@/database/schema';
-import { approvedProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import findOrCreateForwarder from '../data/findOrCreateForwarder';
@@ -26,7 +26,7 @@ import normaliseCountry from '../utils/normaliseCountry';
  * No quotes without a job: a request started from a shipment is quoted for that
  * shipment; any other opens its own job, a draft SHP shipment, as it is saved.
  */
-const adminCreateQuoteRequest = approvedProcedure
+const adminCreateQuoteRequest = adminProcedure
   .input(createQuoteRequestSchema)
   .mutation(async ({ input, ctx }) => {
     try {
@@ -98,7 +98,7 @@ const adminCreateQuoteRequest = approvedProcedure
 
       const added = await Promise.all(
         (input.newForwarders ?? []).map((f) =>
-          findOrCreateForwarder({ name: f.name, email: f.email || null }),
+          findOrCreateForwarder({ name: f.name, email: f.email || null, addedBy: ctx.user.id }),
         ),
       );
       const forwarderIds = [
@@ -141,7 +141,10 @@ const adminCreateQuoteRequest = approvedProcedure
 
       return { ...request, shipmentId: job.id, job, emailResult };
     } catch (error) {
-      logger.error('Failed to create quote request', { error, input });
+      logger.error('Failed to create quote request', {
+        error: error instanceof Error ? error.message : String(error),
+        requestedBy: ctx.user.id,
+      });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to create quote request',

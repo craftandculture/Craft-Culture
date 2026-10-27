@@ -2,17 +2,18 @@
 
 import {
   IconBottle,
-  IconBuildingWarehouse,
   IconChevronDown,
   IconCoin,
   IconDownload,
   IconFileText,
+  IconGlassFull,
   IconHistory,
   IconInfoCircle,
   IconReceipt,
   IconRefresh,
   IconSearch,
   IconShip,
+  IconTruck,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,24 +24,28 @@ import { toast } from 'sonner';
 
 import CellarLocationStrip from '@/app/_cellar/components/CellarLocationStrip';
 import type { CellarLocation } from '@/app/_cellar/components/CellarLocationStrip';
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
+import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import CurrencyToggle from '@/app/_cellar/components/CurrencyToggle';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
 import DeliveryOptionsForm, {
   EMPTY_DELIVERY_CHOICE,
 } from '@/app/_cellar/components/DeliveryOptionsForm';
 import type { DeliveryChoice } from '@/app/_cellar/components/DeliveryOptionsForm';
 import QuantityStepper from '@/app/_cellar/components/QuantityStepper';
+import SellWinesDialog from '@/app/_cellar/components/SellWinesDialog';
+import type { SellableWine } from '@/app/_cellar/components/SellWinesDialog';
 import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
+import useCellarCurrency from '@/app/_cellar/hooks/useCellarCurrency';
+import csvCell from '@/app/_cellar/utils/csvCell';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
+import WhatsNewBanner from '@/app/_productUpdates/components/WhatsNewBanner';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
-import Dialog from '@/app/_ui/components/Dialog/Dialog';
-import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
-import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
-import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
-import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Sheet from '@/app/_ui/components/Sheet/Sheet';
@@ -140,8 +145,11 @@ type QuickFilter = 'all' | 'largeFormat' | 'magnumPlus' | 'reserved';
 
 type CellarSortKey = 'wine' | 'producer' | 'vintage' | 'size' | 'bottles' | 'value';
 
-const bottlesOf = (wine: { totalCases: number; caseConfig: number | null }) =>
-  wine.totalCases * (wine.caseConfig ?? 1);
+const bottlesOf = (wine: {
+  totalCases: number;
+  caseConfig: number | null;
+  openBottles?: number | null;
+}) => wine.totalCases * (wine.caseConfig ?? 1) + (wine.openBottles ?? 0);
 
 const sizeMl = (size: string | null) => {
   if (!size) return 750;
@@ -157,25 +165,6 @@ const sizeMl = (size: string | null) => {
 const DARK_ACTION =
   'border-transparent bg-text-primary text-surface-primary fill-surface-primary hover:border-transparent hover:bg-text-primary hover:opacity-90 active:bg-text-primary';
 
-type Currency = 'USD' | 'AED';
-
-/*
-  The dirham is pegged to the dollar at 3.6725, so this is a conversion rather
-  than a rate that has to be fetched and can go stale. Everything on this page
-  is held in dollars; the toggle only changes how it is read.
-*/
-const AED_PER_USD = 3.6725;
-
-const formatMoney = (
-  value: number,
-  currency: Currency,
-  precise = false,
-) =>
-  (currency === 'AED' ? value * AED_PER_USD : value).toLocaleString('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: precise ? 2 : 0,
-  });
 
 /**
  * A collector's cellar
@@ -203,7 +192,7 @@ const CellarPage = () => {
   });
   const [openWine, setOpenWine] = useState<string | null>(null);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
 
@@ -214,16 +203,11 @@ const CellarPage = () => {
   const [moveNote, setMoveNote] = useState('');
 
   /*
-    A collector is billed and thinks in dirhams; a trade owner prices in
-    dollars. The toggle wins once pressed.
+    USD is the base everything is held in. The toggle (USD, EUR, GBP, AED)
+    changes how figures read, and what an asking price is typed in.
   */
-  const [currencyChoice, setCurrency] = useState<Currency | null>(null);
-  const currency: Currency =
-    currencyChoice ??
-    (data?.partner.type === 'private_collector' ? 'AED' : 'USD');
-
-  const money = (value: number, precise = false) =>
-    formatMoney(value, currency, precise);
+  const fx = useCellarCurrency();
+  const { currency, money } = fx;
 
   /*
     Every quantity control routes through here, so the cap on what is held is
@@ -249,9 +233,16 @@ const CellarPage = () => {
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   /* The wine being offered for sale, and the terms while they are being set. */
-  const [sellingWine, setSellingWine] = useState<CellarWine | null>(null);
-  const [sellLines, setSellLines] = useState<Map<string, number>>(new Map());
-  const [sellAsk, setSellAsk] = useState('');
+  /* Wines ticked to sell together, and the ones the sell dialog is open for */
+  const [sellPicked, setSellPicked] = useState<Set<string>>(new Set());
+  const [sellingKeys, setSellingKeys] = useState<string[]>([]);
+  const toggleSellPick = (lwin18: string) =>
+    setSellPicked((current) => {
+      const next = new Set(current);
+      if (next.has(lwin18)) next.delete(lwin18);
+      else next.add(lwin18);
+      return next;
+    });
   /* Which submitted request is open, and the edits made to it so far. */
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
   const [editLines, setEditLines] = useState<Map<string, number>>(new Map());
@@ -351,23 +342,6 @@ const CellarPage = () => {
         void refetchReleases();
       },
       onError: (error) => toast.error(error.message),
-    }),
-  );
-
-  const { mutate: offerForSale, isPending: isOffering } = useMutation(
-    api.consignment.member.offerForSale.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(
-          `${result.mandateNumber} sent — we will come back to you once it is listed.`,
-        );
-        setSellingWine(null);
-        setSellLines(new Map());
-        setSellAsk('');
-        void refetch();
-      },
-      onError: (error) => {
-        if (!catchActivation(error, 'offer_for_sale')) toast.error(error.message);
-      },
     }),
   );
 
@@ -556,7 +530,7 @@ const CellarPage = () => {
   const hasUk = (ukData?.holdings.length ?? 0) > 0;
 
   const isUaeEmpty =
-    !isLoading && wines.length === 0 && inbound.length === 0;
+    !isLoading && !isError && wines.length === 0 && inbound.length === 0;
   const isEmptyCellar = isUaeEmpty && !hasUk;
   /*
     One collection, filtered by where it is held. The strip only appears when
@@ -727,6 +701,33 @@ const CellarPage = () => {
       });
   }, [placedWines, search, quickFilter, sort]);
 
+  /* Wine in the UAE bond, held by the member rather than a guest, can be offered */
+  const canSell = (wine: CellarWine) =>
+    !isViewer && wine.locations.length > 0 && location !== 'uk';
+
+  /* What the sell dialog needs, bottles free on each parcel as the server counts them */
+  const sellingWines = useMemo<SellableWine[]>(
+    () =>
+      sellingKeys.flatMap((key) => {
+        const wine = wines.find((candidate) => candidate.lwin18 === key);
+        if (!wine) return [];
+        const pack = wine.caseConfig ?? 1;
+        return [
+          {
+            lwin18: wine.lwin18,
+            productName: wine.productName,
+            vintage: wine.vintage,
+            bottleSize: wine.bottleSize,
+            parcels: wine.locations.map((parcel) => ({
+              stockId: parcel.stockId,
+              availableBottles: Math.max(0, parcel.availableCases * pack - parcel.claimedBottles),
+            })),
+          },
+        ];
+      }),
+    [sellingKeys, wines],
+  );
+
   const totals = useMemo(() => {
     const priced = wines.filter((wine) => (wine.costPerBottle ?? 0) > 0);
 
@@ -818,7 +819,7 @@ const CellarPage = () => {
 
     const csv = csvRows
       .map((row) =>
-        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','),
+        row.map((cell) => csvCell(cell, { alwaysQuote: true })).join(','),
       )
       .join('\n');
 
@@ -904,100 +905,82 @@ const CellarPage = () => {
       .join(' · ');
   };
 
+  /* Morning until noon, afternoon until six, evening after */
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <div className="w-full pb-8">
-      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          {/*
-            The same programme the member joined, named the same way. A portal
-            that calls itself something else reads as a different product from
-            the one they were sold.
-          */}
-          <Typography
-            variant="bodyXs"
-            className="text-text-muted mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em]"
-          >
-            C&amp;C Private Cellar
-          </Typography>
-          {/*
-            No page title. The tab above already says "Your cellar", and
-            repeating it cost a whole line of heading before a member saw a
-            single bottle. The member's name earns its place; the word for the
-            screen they are already on does not.
-          */}
-          <Typography variant="headingMd" className="block">
-            {data?.partner?.name ?? '\u00A0'}
-          </Typography>
-          {/*
-            Says where this member's wine actually is. A member whose wine is
-            all at our UK bond was told it was stored in the UAE warehouse.
-          */}
-          <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-            {isUaeEmpty && hasUk
-              ? 'Held in bond for you at London City Bond, Burton. Duty and VAT stay suspended while your wine is in bond.'
-              : hasUk
-                ? 'Held in bond for you in the UAE and at London City Bond in the UK. Duty and VAT are only paid when wine is delivered to you.'
-                : 'Stored duty-free in the C&C bonded warehouse. Duty and VAT are only paid when wine is delivered to you in the UAE.'}
-          </Typography>
-        </div>
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            isDisabled={isRefetching}
-          >
-            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-          </Button>
-          {/*
-            The dirham is pegged, so this converts rather than quotes a rate.
-            A member who thinks in dirhams should not have to do the sum to
-            know whether a release is worth asking for.
-          */}
-          <div className="border-border-muted flex overflow-hidden rounded-lg border">
-            {(['USD', 'AED'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setCurrency(option)}
-                aria-pressed={currency === option}
-                className={`min-h-9 px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  currency === option
-                    ? 'bg-text-primary text-surface-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
+      {/*
+        The same programme the member joined, named the same way, then a
+        greeting by name. Where the wine is held follows on its own line.
+      */}
+      <CellarPageHeader
+        title="Your private cellar"
+        description={
+          <>
+            <span className="text-text-primary block" suppressHydrationWarning>
+              {data?.partner?.name
+                ? `${greeting}, ${data.partner.name}`
+                : '\u00A0'}
+            </span>
+            {/*
+              Says where this member's wine actually is. A member whose wine is
+              all at our UK bond was told it was stored in the UAE warehouse.
+            */}
+            <span className="mt-0.5 block text-xs leading-5 sm:text-sm">
+              {isUaeEmpty && hasUk
+                ? 'Held in bond for you at London City Bond in the UK. Duty and VAT stay suspended while your wine is in bond.'
+                : hasUk
+                  ? 'Held in bond for you in the UAE and at London City Bond in the UK. Duty and VAT are only paid when wine is delivered to you.'
+                  : 'Stored duty-free in the C&C bonded warehouse. Duty and VAT are only paid when wine is delivered to you in the UAE.'}
+            </span>
+          </>
+        }
+        actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                isDisabled={isRefetching}
               >
-                {option}
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            isDisabled={!wines.length}
-          >
-            <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-          </Button>
-          {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
-          <Link
-            href="/platform/cellar/statement"
-            className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
-          >
-            <IconFileText size={14} />
-            Statements
-          </Link>
-          {!isViewer && (
-            <Link
-              href="/platform/cellar/invoices"
-              className="border-border-muted text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
-            >
-              <IconReceipt size={14} />
-              Invoices
-            </Link>
-          )}
-        </div>
-      </header>
+                <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+              </Button>
+              <CurrencyToggle
+                value={currency}
+                options={fx.available}
+                onChange={fx.setCurrency}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                isDisabled={!wines.length}
+              >
+                <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
+              </Button>
+              {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
+              <Link
+                href="/platform/cellar/statement"
+                className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
+              >
+                <IconFileText size={14} />
+                Statements
+              </Link>
+              {!isViewer && (
+                <Link
+                  href="/platform/cellar/invoices"
+                  className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
+                >
+                  <IconReceipt size={14} />
+                  Invoices
+                </Link>
+              )}
+            </div>
+        }
+      />
 
       {/*
         Only what needs finishing sits above the wine. Transfers, bringing
@@ -1005,6 +988,7 @@ const CellarPage = () => {
         reason they are here — except for a new member with nothing stored
         yet, for whom they are the whole story.
       */}
+      {isError && <CellarState kind="error" className="mb-4" />}
       {isViewer && <ViewOnlyNotice />}
       {/*
         Payment is due on receipt, so an unpaid invoice is the one figure
@@ -1062,7 +1046,7 @@ const CellarPage = () => {
             {
               key: 'uk',
               country: 'United Kingdom',
-              place: 'London City Bond, Burton',
+              place: 'London City Bond',
               bottles: (ukData?.holdings ?? []).reduce((sum, holding) => sum + holding.totalBottles, 0),
               wines: new Set((ukData?.holdings ?? []).map((holding) => `${holding.lwin18}|${holding.name}`)).size,
               valueUsd: (ukData?.holdings ?? []).reduce(
@@ -1086,83 +1070,70 @@ const CellarPage = () => {
       >
         {[
           {
-            icon: IconBottle,
             value: collection.bottles.toLocaleString(),
             label: 'Bottles',
             detail: `${collection.cases.toLocaleString()} cases`,
-            alert: false,
+            icon: IconBottle,
+            tone: 'blue' as const,
           },
           {
-            icon: IconBuildingWarehouse,
             value: collection.wines.toLocaleString(),
             label: 'Wines',
             detail: `${collection.producers} producers`,
-            alert: false,
+            icon: IconGlassFull,
+            tone: 'indigo' as const,
           },
           {
-            icon: IconCoin,
             value: money(collection.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
+            icon: IconCoin,
+            tone: 'emerald' as const,
             note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
-            alert: false,
           },
           {
-            icon: IconShip,
             value: totals.inboundBottles.toLocaleString(),
             label: 'In transit',
-            detail: `${inbound.length} ${inbound.length === 1 ? 'line' : 'lines'}`,
-            alert: inbound.length > 0,
+            detail: `${inbound.length} ${inbound.length === 1 ? 'wine' : 'wines'} on the way`,
+            icon: IconTruck,
+            tone: 'violet' as const,
           },
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
           .filter((card) => card.label !== 'In transit' || inbound.length > 0)
           .filter((card) => card.label !== 'Indicative value' || collection.indicative > 0)
           .map((card) => (
-          <div
+          <CellarStatTile
             key={card.label}
-            className={`rounded-xl border px-3 py-2 text-center ${
-              card.alert
-                ? 'border-amber-200 bg-amber-50/50'
-                : 'border-border-muted bg-background-primary'
-            }`}
-          >
-            <div
-              className={`mx-auto mb-0.5 flex h-5 w-5 items-center justify-center rounded-md ${
-                card.alert
-                  ? 'bg-amber-100 text-amber-600'
-                  : 'bg-emerald-50 text-emerald-600'
-              }`}
-            >
-              <card.icon size={12} />
-            </div>
-            <div className="text-lg font-bold leading-tight tabular-nums">
-              {card.value}
-            </div>
-            <div className="text-text-muted inline-flex items-center gap-1 text-[11px]">
-              {card.label}
-              {'note' in card && card.note && (
-                <Tooltip>
-                  <TooltipTrigger aria-label={`About ${card.label.toLowerCase()}`}>
-                    <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-[240px] text-left lg:max-w-[240px]">
-                    <Typography variant="bodyXs">{card.note}</Typography>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <div className="text-text-muted text-[10px]">{card.detail}</div>
-          </div>
+            value={card.value}
+            detail={card.detail}
+            icon={card.icon}
+            tone={card.tone}
+            label={
+              <span className="inline-flex items-center gap-1">
+                {card.label}
+                {'note' in card && card.note && (
+                  <Tooltip>
+                    <TooltipTrigger aria-label={`About ${card.label.toLowerCase()}`}>
+                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[240px] text-left lg:max-w-[240px]">
+                      <Typography variant="bodyXs">{card.note}</Typography>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </span>
+            }
+          />
         ))}
       </div>
       )}
 
 
       {inbound.length > 0 && (
-        <section className="border-border-muted mb-5 rounded-xl border">
+        <section className="border-border-muted bg-surface-primary mb-5 rounded-xl border shadow-sm">
           <div className="border-border-muted flex items-center gap-2 border-b px-3 py-2.5">
-            <Icon icon={IconShip} size="sm" className="text-amber-500" />
+            <Icon icon={IconShip} size="sm" className="text-text-muted" />
             <Typography variant="labelSm" className="font-semibold">
               On its way
             </Typography>
@@ -1181,7 +1152,8 @@ const CellarPage = () => {
                   colorRole="muted"
                   className="flex-shrink-0 tabular-nums"
                 >
-                  {line.totalBottles ?? 0} btl
+                  {line.totalBottles ?? 0}{' '}
+                  {(line.totalBottles ?? 0) === 1 ? 'bottle' : 'bottles'}
                   {line.eta
                     ? ` · due ${format(new Date(line.eta), 'MMM yyyy')}`
                     : ''}
@@ -1686,7 +1658,9 @@ const CellarPage = () => {
         </section>
       )}
 
-      <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" />
+      <WhatsNewBanner />
+
+      <DeliveriesPanel requests={releaseData?.requests ?? []} section="live" collapsible />
 
       {isEmptyCellar ? (
         /*
@@ -1694,25 +1668,20 @@ const CellarPage = () => {
           an empty table said so four times; one card says it once and points
           somewhere useful.
         */
-        <div className="border-border-muted rounded-xl border bg-gradient-to-b from-slate-50/70 to-transparent px-6 py-12 text-center dark:from-slate-500/10">
-          <span className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-500/20">
-            <IconBottle size={20} />
-          </span>
-          <p className="text-text-primary text-base font-semibold">
-            Your cellar is empty for now
-          </p>
-          <p className="text-text-muted mx-auto mt-1 max-w-md text-sm leading-6">
-            Your wines will appear here as soon as they arrive in our warehouse. In the
-            meantime, you can browse what we hold today, or tell us about wine
-            you would like to bring in.
-          </p>
-          <Link
-            href="/platform/cellar/available"
-            className="bg-text-primary text-surface-primary mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
-          >
-            Browse The Cellar List
-          </Link>
-        </div>
+        <CellarState
+          kind="empty"
+          icon={IconBottle}
+          title="Your cellar is empty for now"
+          message="Your wines will appear here as soon as they arrive in our warehouse. In the meantime, you can browse what we hold today, or tell us about wine you would like to bring in."
+          action={
+            <Link
+              href="/platform/cellar/available"
+              className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
+            >
+              Browse the C&C Cellar List
+            </Link>
+          }
+        />
       ) : (
         <>
       {/*
@@ -1828,11 +1797,7 @@ const CellarPage = () => {
         isUkOnly={location === 'uk'}
         bottlesInBasket={basketBottlesOf}
         addToDelivery={addToWine}
-        onSell={(wine) => {
-          setSellingWine(wine);
-          setSellLines(new Map());
-          setSellAsk('');
-        }}
+        onSell={(wine) => setSellingKeys([wine.lwin18])}
       />
 
       <div className="border-border-muted hidden overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto md:block">
@@ -1855,7 +1820,7 @@ const CellarPage = () => {
               <th className={`${th} hidden text-right lg:table-cell`}>
                 <Tooltip>
                   <TooltipTrigger className="inline-flex items-center gap-1">
-                    {currency === 'AED' ? 'AED' : '$'} / btl
+                    {currency} / btl
                     <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
                   </TooltipTrigger>
                   <TooltipContent
@@ -1880,7 +1845,7 @@ const CellarPage = () => {
               <th className={`${th} text-right sm:w-[168px] sm:min-w-[168px]`}>
                 {rows.some((wine) => wine.locations.length > 0) && location !== 'uk' ? 'Deliver' : 'Move'}
               </th>
-              <th className={`${th} text-right sm:w-[76px] sm:min-w-[76px]`}>
+              <th className={`${th} text-right sm:w-[96px] sm:min-w-[96px]`}>
                 {rows.some((wine) => wine.locations.length > 0) && location !== 'uk' ? 'Sell' : ''}
               </th>
             </tr>
@@ -2163,18 +2128,23 @@ const CellarPage = () => {
                       className={`${td} text-right`}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {!isViewer && wine.locations.length > 0 && location !== 'uk' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSellingWine(wine);
-                          setSellLines(new Map());
-                          setSellAsk('');
-                        }}
-                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-emerald-700 opacity-100 transition-all hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10 sm:opacity-60 sm:group-hover:opacity-100"
-                      >
-                        Sell
-                      </button>
+                      {canSell(wine) && (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <input
+                            type="checkbox"
+                            aria-label={`Choose ${displayName(wine.productName)} to sell`}
+                            checked={sellPicked.has(wine.lwin18)}
+                            onChange={() => toggleSellPick(wine.lwin18)}
+                            className="accent-text-primary size-4 cursor-pointer"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSellingKeys([wine.lwin18])}
+                            className="text-text-secondary hover:bg-surface-muted hover:text-text-primary whitespace-nowrap rounded px-2 py-1 text-xs font-semibold transition-colors"
+                          >
+                            Sell
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -2449,7 +2419,7 @@ const CellarPage = () => {
                               className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
                             >
                               <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-slate-400 align-middle" />
-                              Held in the United Kingdom · London City Bond, Burton
+                              Held in the United Kingdom · London City Bond
                             </Typography>
                             <div className="border-border-muted bg-background-primary inline-block max-w-full overflow-x-auto rounded-lg border align-top">
                               <table className="w-auto text-xs">
@@ -2616,6 +2586,29 @@ const CellarPage = () => {
       {!isEmptyCellar && (
         <div className="mt-8">
           <CellarOverviewPanel section="details" readOnly={isViewer} holdsWine />
+        </div>
+      )}
+
+      {/* Several wines ticked to sell: one dialog for all of them */}
+      {sellPicked.size > 0 && (
+        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 hidden items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-xl md:flex">
+          <p className="text-text-primary text-sm">
+            <span className="font-semibold tabular-nums">{sellPicked.size}</span>{' '}
+            {sellPicked.size === 1 ? 'wine' : 'wines'} chosen to sell
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSellPicked(new Set())}>
+              <ButtonContent>Clear</ButtonContent>
+            </Button>
+            <Button
+              colorRole="primary"
+              size="sm"
+              className={DARK_ACTION}
+              onClick={() => setSellingKeys([...sellPicked])}
+            >
+              <ButtonContent>Set prices and offer</ButtonContent>
+            </Button>
+          </div>
         </div>
       )}
 
@@ -3112,213 +3105,22 @@ const CellarPage = () => {
         </Link>
       </section>
 
-      {/*
-        Selling is a dialog rather than an expanding row. It is one decision
-        about one wine, it carries a warning the member has to read, and it
-        should not be something they scroll past while looking at something
-        else.
-      */}
-      <Dialog
-        open={Boolean(sellingWine)}
-        onOpenChange={(open) => {
-          if (!open) setSellingWine(null);
+      <SellWinesDialog
+        wines={sellingWines}
+        onClose={() => setSellingKeys([])}
+        onOffered={() => {
+          setSellPicked(new Set());
+          void refetch();
         }}
-      >
-        <DialogContent className="max-w-lg">
-          {sellingWine && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sell this wine</DialogTitle>
-                <DialogDescription>
-                  {displayName(sellingWine.productName)}
-                  {sellingWine.vintage ? ` · ${sellingWine.vintage}` : ''}
-                  {sellingWine.bottleSize
-                    ? ` · ${sellingWine.caseConfig && sellingWine.caseConfig > 1 ? `${sellingWine.caseConfig}×` : ''}${sellingWine.bottleSize}`
-                    : ''}
-                </DialogDescription>
-              </DialogHeader>
-
-              {(() => {
-                const pack = sellingWine.caseConfig ?? 1;
-
-                const chosen = [...sellLines.values()].reduce(
-                  (sum, count) => sum + count,
-                  0,
-                );
-
-                const ask = Math.max(0, Number(sellAsk) || 0);
-                /*
-                  The ask is what the member receives. The shelf price is the
-                  ask with commission added on top, not taken out of it — the
-                  second reading makes a member feel short-changed by a number
-                  they chose themselves.
-                */
-                const listed = ask > 0 ? ask / (1 - 2.5 / 100) : 0;
-                const listedPc = ask > 0 ? ask / (1 - 30 / 100) : 0;
-
-                return (
-                  <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto px-4 py-4">
-                    <div className="border-border-muted overflow-hidden rounded-lg border">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-text-muted border-border-muted border-b text-[10px] uppercase tracking-wider">
-                            <th className="px-3 py-1.5 text-left">Lot</th>
-                            <th className="px-3 py-1.5 text-right">Available</th>
-                            <th className="px-3 py-1.5 text-right">Offering</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-border-muted/60 divide-y">
-                          {sellingWine.locations.map((parcel) => {
-                            /* Less anything already on an open offer or delivery, as the server counts it */
-                            const available = Math.max(
-                              0,
-                              parcel.availableCases * pack -
-                                parcel.claimedBottles,
-                            );
-                            const offering = sellLines.get(parcel.stockId) ?? 0;
-
-                            return (
-                              <tr key={parcel.stockId}>
-                                <td className="px-3 py-2">
-                                  <span className="text-text-muted font-mono text-xs">
-                                    {parcel.lotNumber ?? 'no lot'}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-right tabular-nums">
-                                  {available}
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={available}
-                                    value={offering || ''}
-                                    placeholder="0"
-                                    onChange={(event) => {
-                                      const wanted = Math.max(
-                                        0,
-                                        Math.min(
-                                          available,
-                                          Number(event.target.value) || 0,
-                                        ),
-                                      );
-
-                                      setSellLines((current) => {
-                                        const next = new Map(current);
-                                        if (wanted > 0)
-                                          next.set(parcel.stockId, wanted);
-                                        else next.delete(parcel.stockId);
-                                        return next;
-                                      });
-                                    }}
-                                    className="border-border-muted bg-background-primary h-8 w-20 rounded-md border px-2 text-right text-sm tabular-nums"
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <label className="block">
-                      <span className="text-text-muted mb-1 block text-[11px] font-semibold uppercase tracking-wider">
-                        Your price per bottle
-                      </span>
-                      <Input
-                        value={sellAsk}
-                        onChange={(event) => setSellAsk(event.target.value)}
-                        placeholder="0.00"
-                      />
-                    </label>
-
-                    {ask > 0 && chosen > 0 && (
-                      <dl className="border-border-muted flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-sm">
-                        <div className="flex justify-between">
-                          <dt className="font-semibold">You receive</dt>
-                          <dd className="font-semibold tabular-nums">
-                            {money(ask * chosen)}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-text-muted text-xs">
-                            Listed to trade
-                          </dt>
-                          <dd className="text-text-muted text-xs tabular-nums">
-                            {money(listed)} a bottle
-                          </dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-text-muted text-xs">
-                            Listed to private clients
-                          </dt>
-                          <dd className="text-text-muted text-xs tabular-nums">
-                            {money(listedPc)} a bottle
-                          </dd>
-                        </div>
-                      </dl>
-                    )}
-
-                    {/*
-                      The member's point of no return is this button, not the
-                      placement — which they neither see coming nor control. It
-                      has to be said here, before they press it.
-                    */}
-                    <div className="rounded-lg bg-amber-50 px-3 py-2.5">
-                      <Typography
-                        variant="bodyXs"
-                        className="block leading-relaxed text-amber-900"
-                      >
-                        <strong>This cannot always be taken back.</strong> You
-                        may withdraw while the wine is still with us. If we
-                        place it with a distributor to sell it (our decision,
-                        not yours), it leaves our warehouse and can no longer
-                        be withdrawn.{' '}
-                        <a
-                          href="/legal/private-cellar-terms"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-semibold underline"
-                        >
-                          Private Cellar terms
-                        </a>
-                      </Typography>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        colorRole="primary"
-                        className={DARK_ACTION}
-                        isDisabled={isOffering || chosen === 0 || ask <= 0}
-                        onClick={() =>
-                          offerForSale({
-                            lines: [...sellLines.entries()].map(
-                              ([stockId, bottles]) => ({ stockId, bottles }),
-                            ),
-                            askPerBottleUsd: ask,
-                          })
-                        }
-                      >
-                        <ButtonContent>
-                          {chosen > 0
-                            ? `Offer ${chosen} ${chosen === 1 ? 'bottle' : 'bottles'} to C&C`
-                            : 'Offer to C&C'}
-                        </ButtonContent>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setSellingWine(null)}
-                      >
-                        <ButtonContent>Cancel</ButtonContent>
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        onNotActivated={() =>
+          catchActivation({ message: 'NOT_ACTIVATED' }, 'offer_for_sale')
+        }
+        currency={currency}
+        currencies={fx.available}
+        onCurrencyChange={fx.setCurrency}
+        rate={fx.rate}
+        rates={fx.rates}
+      />
     </div>
   );
 };

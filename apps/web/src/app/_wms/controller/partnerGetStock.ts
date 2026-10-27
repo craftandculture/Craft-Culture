@@ -20,6 +20,7 @@ import {
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import partnerMovementDetail from '../utils/partnerMovementDetail';
 import partnerMovementScope from '../utils/partnerMovementScope';
 
 /**
@@ -47,11 +48,18 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
       availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
       reservedCases: sql<number>`SUM(${wmsStock.reservedCases})::int`,
+      // Loose bottles from an opened case are part of the holding too
+      openBottles: sql<number>`COALESCE(SUM(${wmsStock.openBottles}), 0)::int`,
       locationCount: sql<number>`COUNT(DISTINCT ${wmsStock.locationId})::int`,
       salesArrangement: wmsStock.salesArrangement,
     })
     .from(wmsStock)
-    .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
+    .where(
+      and(
+        eq(wmsStock.ownerId, partner.id),
+        or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
+      ),
+    )
     .groupBy(
       wmsStock.lwin18,
       wmsStock.productName,
@@ -78,7 +86,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     what is nearly gone.
   */
   const totalBottles = products.reduce(
-    (sum, p) => sum + p.totalCases * (p.caseConfig ?? 1),
+    (sum, p) => sum + p.totalCases * (p.caseConfig ?? 1) + p.openBottles,
     0,
   );
 
@@ -210,7 +218,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       quantityCases: wmsStockMovements.quantityCases,
       fromOwnerId: wmsStockMovements.fromOwnerId,
       toOwnerId: wmsStockMovements.toOwnerId,
-      notes: wmsStockMovements.notes,
+      reasonCode: wmsStockMovements.reasonCode,
       performedAt: wmsStockMovements.performedAt,
     })
     .from(wmsStockMovements)
@@ -221,7 +229,14 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       ),
     )
     .orderBy(desc(wmsStockMovements.performedAt))
-    .limit(50);
+    .limit(50)
+    /*
+      Staff notes name distributors and who bottles went to; a client sees a
+      safe description in its place (partnerMovementDetail), never the notes.
+    */
+    .then((rows) =>
+      rows.map(({ reasonCode, ...row }) => ({ ...row, notes: partnerMovementDetail(row.movementType, reasonCode) })),
+    );
 
   /*
     What the wine cost when it was imported — the figure on the import
@@ -245,6 +260,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
   const costByLwin = await getMemberValuePerBottle(
     partner.id,
     products.map((product) => product.lwin18),
+    { ownOnly: partner.type !== 'private_collector' },
   );
 
   /*
@@ -372,7 +388,12 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
           products.reduce((sum, product) => {
             const cost = costByLwin.get(lwinPakKeyOf(product.lwin18));
             if (!cost) return sum;
-            return sum + cost * product.totalCases * (product.caseConfig ?? 1);
+            return (
+              sum +
+              cost *
+                (product.totalCases * (product.caseConfig ?? 1) +
+                  product.openBottles)
+            );
           }, 0) * 100,
         ) / 100,
       productsWithoutCost: products.filter(

@@ -158,8 +158,6 @@ const PartnerSupplierOrderDetailPage = () => {
                 <SupplierOrderStatusBadge status={order.status} />
               </div>
               <Typography variant="bodyMd" colorRole="muted">
-                {order.customerPo?.customerCompany || order.customerPo?.customerName}
-                {' • '}
                 {order.items.length} items • {formatCurrency(order.totalAmountUsd)}
               </Typography>
             </div>

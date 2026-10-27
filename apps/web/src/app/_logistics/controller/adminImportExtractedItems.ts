@@ -179,8 +179,9 @@ const adminImportExtractedItems = adminProcedure
       }
     }
 
-    // Create shipment items from extracted data
-    const createdItems = [];
+    // Create shipment items from extracted data, inserted in one statement so
+    // an import either adds every line or none
+    const newRows: (typeof logisticsShipmentItems.$inferInsert)[] = [];
     let sortOrder = maxSortOrder;
 
     for (const item of items) {
@@ -328,47 +329,43 @@ const adminImportExtractedItems = adminProcedure
 
       sortOrder += 1;
 
-      const [newItem] = await db
-        .insert(logisticsShipmentItems)
-        .values({
-          shipmentId,
-          productName,
-          // Only a complete LWIN is kept. The extractor takes whatever sits
-          // in the column it was told to read, and on an invoice with no
-          // product code that was an account number written to every line —
-          // nine different wines all showing as matched to 121084.
-          lwin: toValidLwin(item.lwin),
-          supplierSku: item.supplierSku,
-          producer: item.producer,
-          vintage: item.vintage,
-          region: item.region,
-          cases: Math.max(0, Math.round(cases)),
-          bottlesPerCase,
-          bottleSizeMl,
-          totalBottles: Math.round(totalBottles),
-          // The invoice carries national subheadings — 2204214290 and its
-          // like. We declare on the codes in the HS menu, so a line lands on
-          // one of those rather than bringing a fresh subheading in with every
-          // import.
-          hsCode: toMenuHsCode(item.hsCode),
-          countryOfOrigin: item.countryOfOrigin,
-          grossWeightKg: item.weight,
-          sourceCurrency,
-          sourceUnitPrice,
-          sourceTotal,
-          // Left unpriced until a rate is set, rather than quietly labelling
-          // euros as dollars.
-          declaredValueUsd: sourceCurrency === 'USD' ? sourceTotal : null,
-          productCostPerBottle:
-            sourceCurrency === 'USD' ? sourceUnitPrice : null,
-          sortOrder,
-        })
-        .returning();
-
-      if (newItem) {
-        createdItems.push(newItem);
-      }
+      newRows.push({
+        shipmentId,
+        productName,
+        // Only a complete LWIN is kept. The extractor takes whatever sits
+        // in the column it was told to read, and on an invoice with no
+        // product code that was an account number written to every line —
+        // nine different wines all showing as matched to 121084.
+        lwin: toValidLwin(item.lwin),
+        supplierSku: item.supplierSku,
+        producer: item.producer,
+        vintage: item.vintage,
+        region: item.region,
+        cases: Math.max(0, Math.round(cases)),
+        bottlesPerCase,
+        bottleSizeMl,
+        totalBottles: Math.round(totalBottles),
+        // The invoice carries national subheadings — 2204214290 and its
+        // like. We declare on the codes in the HS menu, so a line lands on
+        // one of those rather than bringing a fresh subheading in with every
+        // import.
+        hsCode: toMenuHsCode(item.hsCode),
+        countryOfOrigin: item.countryOfOrigin,
+        grossWeightKg: item.weight,
+        sourceCurrency,
+        sourceUnitPrice,
+        sourceTotal,
+        // Left unpriced until a rate is set, rather than quietly labelling
+        // euros as dollars.
+        declaredValueUsd: sourceCurrency === 'USD' ? sourceTotal : null,
+        productCostPerBottle:
+          sourceCurrency === 'USD' ? sourceUnitPrice : null,
+        sortOrder,
+      });
     }
+
+    const createdItems =
+      newRows.length > 0 ? await db.insert(logisticsShipmentItems).values(newRows).returning() : [];
 
     /*
       Priced immediately, at today's rate, rather than left blank.

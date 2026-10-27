@@ -98,22 +98,35 @@ const adminRecordManualInvoice = adminProcedure
     const pendingIds = new Set(existing.map((e) => e.itemId));
 
     await db.transaction(async (tx) => {
+      /*
+        Two people recording an invoice for the same lines at once both passed
+        the "already invoiced" check above. Inside the transaction the rows are
+        created if missing and then claimed only while not yet invoiced; if any
+        line was invoiced meanwhile, nothing is recorded.
+      */
       const newlyDelivered = items.filter((i) => !pendingIds.has(i.id));
       if (newlyDelivered.length > 0) {
-        await tx.insert(pcoItemInvoicing).values(
-          newlyDelivered.map((item) => ({
-            itemId: item.id,
-            orderId: input.orderId,
-            deliveredBy: user.id,
-          })),
-        );
-        await tx
-          .update(privateClientOrderItems)
-          .set({ stockStatus: 'delivered', updatedAt: now })
-          .where(inArray(privateClientOrderItems.id, newlyDelivered.map((i) => i.id)));
+        const inserted = await tx
+          .insert(pcoItemInvoicing)
+          .values(
+            newlyDelivered.map((item) => ({
+              itemId: item.id,
+              orderId: input.orderId,
+              deliveredBy: user.id,
+            })),
+          )
+          .onConflictDoNothing({ target: pcoItemInvoicing.itemId })
+          .returning({ itemId: pcoItemInvoicing.itemId });
+
+        if (inserted.length > 0) {
+          await tx
+            .update(privateClientOrderItems)
+            .set({ stockStatus: 'delivered', updatedAt: now })
+            .where(inArray(privateClientOrderItems.id, inserted.map((i) => i.itemId)));
+        }
       }
 
-      await tx
+      const claimed = await tx
         .update(pcoItemInvoicing)
         .set({
           status: 'invoiced',
@@ -123,7 +136,20 @@ const adminRecordManualInvoice = adminProcedure
           invoicedBy: user.id,
           updatedAt: now,
         })
-        .where(inArray(pcoItemInvoicing.itemId, input.itemIds));
+        .where(
+          and(
+            inArray(pcoItemInvoicing.itemId, input.itemIds),
+            ne(pcoItemInvoicing.status, 'invoiced'),
+          ),
+        )
+        .returning({ itemId: pcoItemInvoicing.itemId });
+
+      if (claimed.length !== new Set(input.itemIds).size) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Some of these lines were invoiced a moment ago by someone else. Refresh and check before recording again.',
+        });
+      }
 
       await tx.insert(privateClientOrderActivityLogs).values({
         orderId: input.orderId,

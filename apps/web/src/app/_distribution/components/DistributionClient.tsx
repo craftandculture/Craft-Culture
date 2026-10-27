@@ -179,6 +179,16 @@ const DistributionClient = () => {
     }),
   );
 
+  const linkOwner = useMutation(
+    api.distribution.admin.setOwnerPartner.mutationOptions({
+      onSuccess: async () => {
+        toast.success('Owner linked to its account');
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const setOwner = useMutation(
     api.distribution.admin.setWineOwner.mutationOptions({
       onSuccess: async () => {
@@ -404,6 +414,41 @@ const DistributionClient = () => {
               </button>
             ))}
           </div>
+
+          {/*
+            An owner not yet linked to its partner account: its consignment
+            sales cannot reach that account's portal or statement.
+          */}
+          {(setup.data?.owners ?? []).some((owner) => !owner.partnerId) ? (
+            <div className="border-border-primary flex flex-col gap-2 border-t pt-2">
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p>Link each owner to its account, so its sales reach its portal and statement.</p>
+              </Typography>
+              {(setup.data?.owners ?? [])
+                .filter((owner) => !owner.partnerId)
+                .map((owner) => (
+                  <label key={owner.id} className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="min-w-28 font-medium">{owner.name}</span>
+                    <select
+                      defaultValue=""
+                      disabled={linkOwner.isPending}
+                      onChange={(event) =>
+                        event.target.value &&
+                        linkOwner.mutate({ ownerId: owner.id, partnerId: event.target.value })
+                      }
+                      className="border-border-primary bg-background-primary rounded-md border px-2 py-1 text-xs"
+                    >
+                      <option value="">Choose its account…</option>
+                      {(setup.data?.partnerOptions ?? []).map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+            </div>
+          ) : null}
 
           {(summary?.unmatched ?? 0) > 0 ? (
             <div className="border-border-primary flex flex-wrap gap-x-6 gap-y-1 border-t pt-2">

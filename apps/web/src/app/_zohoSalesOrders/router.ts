@@ -11,10 +11,12 @@ import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListF
 import adminDismissDeletedSalesOrder from './controller/adminDismissDeletedSalesOrder';
 import { adminListDraftHolds, adminRefreshDraftHold, adminReleaseDraftHold } from './controller/adminDraftHolds';
 import adminGetCustomerInvoiceTotals from './controller/adminGetCustomerInvoiceTotals';
+import adminGetOrderChain from './controller/adminGetOrderChain';
 import adminGetOutstandingOrders from './controller/adminGetOutstandingOrders';
 import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
 import adminHoldDraft from './controller/adminHoldDraft';
+import adminLinkSalesOrderToPco from './controller/adminLinkSalesOrderToPco';
 import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminReleaseToPick from './controller/adminReleaseToPick';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
@@ -44,6 +46,9 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   // What a customer has been invoiced, by their Zoho record and by currency
   customerInvoiceTotals: adminGetCustomerInvoiceTotals,
   whereIs: adminWhereIsOrder,
+  // Release → PCO → SO → invoice → pick → dispatch, through stored links
+  getChain: adminGetOrderChain,
+  linkToPco: adminLinkSalesOrderToPco,
 });
 
 export default zohoSalesOrdersRouter;

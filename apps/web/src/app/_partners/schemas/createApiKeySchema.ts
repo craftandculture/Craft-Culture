@@ -22,11 +22,23 @@ export const PARTNER_FEED_PERMISSION = 'feed:partner';
  */
 export const UNRESTRICTED_FEED_PERMISSION = 'feed:unrestricted';
 
+/**
+ * The only permissions a key minted from the Partners screen may carry.
+ *
+ * Anything else — `feed:unrestricted` included, or a typo that some future
+ * check might read as meaningful — is rejected at the door. An unrestricted
+ * key is issued outside the app, deliberately, never through this endpoint.
+ */
+export const GRANTABLE_PERMISSIONS = [
+  'read:inventory',
+  PARTNER_FEED_PERMISSION,
+] as const;
+
 const createApiKeySchema = z.object({
   partnerId: z.string().uuid(),
   name: z.string().min(1, 'API key name is required'),
   permissions: z
-    .array(z.string())
+    .array(z.enum(GRANTABLE_PERMISSIONS))
     .default(['read:inventory', PARTNER_FEED_PERMISSION]),
   expiresAt: z.date().optional(),
 });

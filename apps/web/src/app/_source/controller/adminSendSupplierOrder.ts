@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -77,16 +77,6 @@ const adminSendSupplierOrder = adminProcedure
         });
       }
 
-      // Get customer PO details
-      const [customerPo] = await db
-        .select({
-          ccPoNumber: sourceCustomerPos.ccPoNumber,
-          customerCompany: sourceCustomerPos.customerCompany,
-        })
-        .from(sourceCustomerPos)
-        .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId))
-        .limit(1);
-
       // Get order items
       const orderItems = await db
         .select()
@@ -98,8 +88,6 @@ const adminSendSupplierOrder = adminProcedure
       const excelData = {
         orderNumber: supplierOrder.orderNumber,
         partnerName: partner.businessName,
-        customerPoNumber: customerPo?.ccPoNumber,
-        customerCompany: customerPo?.customerCompany,
         createdAt: new Date(),
         items: orderItems.map((item) => ({
           productName: item.productName,
@@ -119,8 +107,9 @@ const adminSendSupplierOrder = adminProcedure
 
       const { base64, filename } = exportSupplierOrderToBase64(excelData);
 
-      // Update order status to sent
-      await db
+      // Update order status to sent. Conditional on still being a draft so a
+      // double click cannot send (and email) the same order twice.
+      const sent = await db
         .update(sourceSupplierOrders)
         .set({
           status: 'sent',
@@ -128,27 +117,38 @@ const adminSendSupplierOrder = adminProcedure
           excelFileUrl: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`,
           updatedAt: new Date(),
         })
-        .where(eq(sourceSupplierOrders.id, supplierOrderId));
+        .where(
+          and(
+            eq(sourceSupplierOrders.id, supplierOrderId),
+            eq(sourceSupplierOrders.status, 'draft'),
+          ),
+        )
+        .returning({ id: sourceSupplierOrders.id });
 
-      // Send notification to partner (in-app notification + email)
-      void notifyPartnerOfSupplierOrder({
-        supplierOrderId: supplierOrder.id,
-        partnerId: partner.id,
-      });
-
-      // Log email status (email is sent via notification utility above)
-      if (sendEmail && partner.businessEmail) {
-        logger.info('Email notification sent to partner:', {
-          email: partner.businessEmail,
-          orderNumber: supplierOrder.orderNumber,
+      if (sent.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Order has already been sent',
         });
       }
 
-      // Update customer PO status if all orders are sent
+      // In-app notification always; email only when requested
+      void notifyPartnerOfSupplierOrder({
+        supplierOrderId: supplierOrder.id,
+        partnerId: partner.id,
+        sendEmail,
+      });
+
+      // Update customer PO status if all of THIS customer PO's orders are sent
       const [stillDraft] = await db
         .select({ id: sourceSupplierOrders.id })
         .from(sourceSupplierOrders)
-        .where(eq(sourceSupplierOrders.status, 'draft'))
+        .where(
+          and(
+            eq(sourceSupplierOrders.customerPoId, supplierOrder.customerPoId),
+            eq(sourceSupplierOrders.status, 'draft'),
+          ),
+        )
         .limit(1);
 
       if (!stillDraft) {

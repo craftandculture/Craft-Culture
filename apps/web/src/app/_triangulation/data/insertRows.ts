@@ -1,5 +1,7 @@
 import { client } from '@/database/client';
 
+import type { SqlClient } from './sqlClient';
+
 export interface InsertRowsOptions {
   /** Columns to serialise as JSON before binding, e.g. jsonb payloads */
   jsonbColumns?: string[];
@@ -7,6 +9,8 @@ export interface InsertRowsOptions {
   onConflict?: string;
   /** Columns to return, e.g. `id` */
   returning?: string;
+  /** Run inside this transaction instead of on the shared client */
+  sql?: SqlClient;
 }
 
 /** Postgres refuses a statement with more than 65535 bind parameters */
@@ -75,7 +79,7 @@ const insertRows = async <T extends Record<string, unknown>>(
       .filter(Boolean)
       .join(' ');
 
-    const result = await client.unsafe(statement, parameters);
+    const result = await (options?.sql ?? client).unsafe(statement, parameters);
 
     if (options?.returning) {
       returned.push(...(result as unknown as T[]));

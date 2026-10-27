@@ -6,7 +6,7 @@
  * Optionally filter by distributor name.
  */
 
-import { and, desc, eq, inArray, isNull, like, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -72,6 +72,15 @@ const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
         id: zohoSalesOrders.id,
         salesOrderNumber: zohoSalesOrders.salesOrderNumber,
         customerName: zohoSalesOrders.customerName,
+        // The partner's logo: matched on the Zoho contact, else on the business name
+        customerLogoUrl: sql<string | null>`(
+          SELECT p.logo_url FROM partners p
+          WHERE p.logo_url IS NOT NULL
+            AND (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}
+              OR lower(p.business_name) = lower(${zohoSalesOrders.customerName}))
+          ORDER BY (p.zoho_contact_id = ${zohoSalesOrders.zohoCustomerId}) DESC NULLS LAST
+          LIMIT 1
+        )`,
         total: zohoSalesOrders.total,
         orderDate: zohoSalesOrders.orderDate,
         status: zohoSalesOrders.status,

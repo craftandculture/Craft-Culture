@@ -1,10 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import computeQuoteCommissions from '../utils/computeQuoteCommissions';
 
 const commissionsMarkPaidSchema = z.object({
   quoteId: z.string().uuid(),
@@ -91,19 +93,20 @@ const commissionsMarkPaid = adminProcedure
         commissionPayoutReference: payoutReference,
         commissionPayoutNotes: notes,
       })
-      .where(eq(quotes.id, quoteId))
+      // Only while still unpaid, so a double press cannot pay it twice
+      .where(and(eq(quotes.id, quoteId), isNull(quotes.commissionPaidOutAt)))
       .returning();
 
     if (!updatedQuote) {
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to mark commission as paid',
+        code: 'CONFLICT',
+        message: 'Commission has already been paid out for this quote',
       });
     }
 
-    // Get commission amount for return
-    const quoteDataJson = updatedQuote.quoteData as { totalCommissionUsd?: number } | null;
-    const commissionAmount = quoteDataJson?.totalCommissionUsd ?? 0;
+    // Commission worked out on the server, not the figure the quote was saved with
+    const commissionAmount =
+      (await computeQuoteCommissions([updatedQuote])).get(updatedQuote.id)?.commissionUsd ?? 0;
 
     return {
       success: true,

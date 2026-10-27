@@ -3,8 +3,10 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { partnerMembers, privateClientOrderDocuments, users } from '@/database/schema';
+import { privateClientOrderDocuments, users } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+
+import resolveOrderParty from '../utils/resolveOrderParty';
 
 const getDocumentsSchema = z.object({
   orderId: z.string().uuid(),
@@ -31,27 +33,12 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
     });
   }
 
-  // Check access - must be admin, the partner who created it, or assigned distributor
-  const isAdmin = user.role === 'admin';
+  // C&C staff, the partner who placed it, or its distributor
+  const { party } = await resolveOrderParty(user, order);
+  const isAdmin = party === 'staff';
+  const isPartner = party === 'partner';
 
-  // Get user's partner ID from either their user record or partnerMembers table
-  let userPartnerId: string | null = user.partnerId ?? null;
-
-  if (!userPartnerId) {
-    // Check partnerMembers table as fallback
-    const [userPartnerMembership] = await db
-      .select({ partnerId: partnerMembers.partnerId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.userId, user.id))
-      .limit(1);
-
-    userPartnerId = userPartnerMembership?.partnerId ?? null;
-  }
-
-  const isPartner = userPartnerId && order.partnerId === userPartnerId;
-  const isDistributor = userPartnerId && order.distributorId === userPartnerId;
-
-  if (!isAdmin && !isPartner && !isDistributor) {
+  if (!party) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'You do not have access to this order',

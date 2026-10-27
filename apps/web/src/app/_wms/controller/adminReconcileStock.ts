@@ -73,7 +73,9 @@ const adminReconcileStock = wmsOperatorProcedure.query(async () => {
       )`,
     );
 
-  // Find potential duplicates (same lwin18 + location + shipment)
+  // Find potential duplicates: one owner's parcel split into two rows (same
+  // owner, wine, bay, shipment, held the same way). Two owners' rows of the
+  // same wine are not duplicates.
   const duplicates = await db.execute(sql`
     SELECT
       lwin18,
@@ -83,7 +85,7 @@ const adminReconcileStock = wmsOperatorProcedure.query(async () => {
       SUM(quantity_cases) as total_cases,
       ARRAY_AGG(id::text) as stock_ids
     FROM wms_stock
-    GROUP BY lwin18, location_id, shipment_id
+    GROUP BY owner_id, lwin18, location_id, shipment_id, not_for_sale
     HAVING COUNT(*) > 1
   `);
 
