@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  cellarReleaseRequests,
   privateClientOrderActivityLogs,
   privateClientOrderDocuments,
   privateClientOrderItems,
@@ -54,6 +55,12 @@ const adminDelete = adminProcedure.input(deleteOrderSchema).mutation(async ({ in
 
   // 3. Delete line items
   await db.delete(privateClientOrderItems).where(eq(privateClientOrderItems.orderId, orderId));
+
+  // A release keeps no pointer to a deleted order, so the release page offers to link the new one
+  await db
+    .update(cellarReleaseRequests)
+    .set({ privateClientOrderId: null })
+    .where(eq(cellarReleaseRequests.privateClientOrderId, orderId));
 
   // 4. Delete the order itself
   await db.delete(privateClientOrders).where(eq(privateClientOrders.id, orderId));

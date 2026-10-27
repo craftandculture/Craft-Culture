@@ -139,6 +139,8 @@ const CellarReleasesPage = () => {
   );
   /* The Zoho order already raised for a release agreed outside the Index. */
   const [salesOrderNumber, setSalesOrderNumber] = useState('');
+  /* The order now carrying a confirmed release whose own order was deleted. */
+  const [linkOrderNumber, setLinkOrderNumber] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.cellar.admin.getReleases.queryOptions({ status }),
@@ -215,6 +217,17 @@ const CellarReleasesPage = () => {
         );
         setSalesOrderNumber('');
         setOpenId(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: linkOrder, isPending: isLinking } = useMutation(
+    api.cellar.admin.linkReleaseOrder.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`Linked to ${result.orderNumber}`);
+        setLinkOrderNumber('');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -672,14 +685,14 @@ const CellarReleasesPage = () => {
                         ? format(new Date(request.confirmedAt), 'd MMMM yyyy')
                         : '—'}{' '}
                       · total ${request.totalCostUsd?.toLocaleString() ?? 0}
-                      {request.privateClientOrderId && (
+                      {request.privateClientOrderId && request.orderNumber && (
                         <>
                           {' · '}
                           <Link
                             href={`/platform/admin/private-orders/${request.privateClientOrderId}`}
                             className="text-text-primary font-mono font-semibold underline underline-offset-2"
                           >
-                            {request.orderNumber ?? 'Open order'}
+                            {request.orderNumber}
                           </Link>
                           {request.zohoSalesOrderNumber
                             ? ` · ${request.zohoSalesOrderNumber}`
@@ -688,6 +701,52 @@ const CellarReleasesPage = () => {
                       )}
                     </Typography>
                   ) : null}
+                  {request.status === 'confirmed' && !request.orderNumber && (
+                    <div className="border-border-muted bg-fill-muted/40 mt-3 rounded-lg border p-3">
+                      <Typography variant="bodySm" className="mb-1 font-medium">
+                        Its order is missing
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                        The order raised for this release was deleted, so the
+                        warehouse cannot pick the member&apos;s bottles for
+                        it. Enter the order now carrying this delivery to link
+                        it. Its prices are not changed.
+                      </Typography>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          value={linkOrderNumber}
+                          onChange={(event) => setLinkOrderNumber(event.target.value)}
+                          placeholder="PCO-2026-00104"
+                          className="max-w-[200px]"
+                        />
+                        <ConfirmAction
+                          title={`Link ${request.requestNumber} to ${linkOrderNumber.trim().toUpperCase() || 'this order'}?`}
+                          description={
+                            <p>
+                              The order is marked as the member&apos;s own
+                              delivery, so their held bottles can be picked for
+                              it.
+                            </p>
+                          }
+                          confirmLabel="Link order"
+                          onConfirm={() =>
+                            linkOrder({
+                              requestId: request.id,
+                              orderNumber: linkOrderNumber.trim(),
+                            })
+                          }
+                        >
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            isDisabled={isLinking || !linkOrderNumber.trim()}
+                          >
+                            <ButtonContent iconLeft={IconCheck}>Link order</ButtonContent>
+                          </Button>
+                        </ConfirmAction>
+                      </div>
+                    </div>
+                  )}
                   {request.status === 'confirmed' && (
                     <div className="mt-2">
                       <OrderChain releaseId={request.id} />
