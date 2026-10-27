@@ -304,7 +304,7 @@ const PriceCell = ({
           <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
         </button>
         {sub && value != null && value > 0 && (
-          <div className="text-[11px] font-medium tabular-nums text-text-muted">
+          <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
             {sub}
           </div>
         )}
@@ -1022,7 +1022,7 @@ const LondonCell = ({
         {money(lead, ccy, 0)}
       </span>
       {gap != null && (
-        <span className="mt-0.5 block text-xs text-text-muted">
+        <span className="pm-gap mt-0.5 block text-xs text-text-muted">
           {gap > 0 ? `ours +${gap}%` : gap < 0 ? `ours ${gap}%` : 'level'}
         </span>
       )}
@@ -1078,6 +1078,23 @@ const PricingManagerPage = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState<number>(50);
+  // Compact: one line a wine, so 30 or more fit on a screen. Remembered per browser.
+  const [compact, setCompact] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('pm-density') === 'comfortable') setCompact(false);
+    } catch {
+      // Storage blocked: stay compact
+    }
+  }, []);
+  const changeDensity = (next: boolean) => {
+    setCompact(next);
+    try {
+      localStorage.setItem('pm-density', next ? 'compact' : 'comfortable');
+    } catch {
+      // Storage blocked: the choice lasts this visit
+    }
+  };
 
   // Flat logistics still fed to the bulk "Apply Margin" tool (which prices
   // import + flat logistics for manual-import SKUs). Landed on the table itself
@@ -2409,11 +2426,33 @@ const PricingManagerPage = () => {
             </>
           )}
         </span>
-        {totalPages > 1 && (
-          <span>
-            Page {page + 1} of {totalPages}
+        <span className="flex items-center gap-3">
+          <span className="flex items-center gap-0.5 rounded-lg border border-border-muted p-0.5">
+            {[
+              { value: true, label: 'Compact' },
+              { value: false, label: 'Comfortable' },
+            ].map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => changeDensity(option.value)}
+                aria-pressed={compact === option.value}
+                className={`rounded-md px-2.5 py-0.5 font-medium transition-colors ${
+                  compact === option.value
+                    ? 'bg-text-primary text-surface-primary'
+                    : 'hover:bg-surface-muted hover:text-text-primary'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </span>
-        )}
+          {totalPages > 1 && (
+            <span>
+              Page {page + 1} of {totalPages}
+            </span>
+          )}
+        </span>
       </div>
 
       {/* Bulk actions — appears once anything is ticked. One margin and one
@@ -2551,7 +2590,23 @@ const PricingManagerPage = () => {
       <Card className="shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/*
+              Compact rows: a wine on one line, case figures dropped (the
+              bottle price is what gets compared down a column), the name cut
+              with the full name on hover. Plain CSS so every cell follows
+              without each one knowing about the setting.
+            */}
+            <style>{`
+              .pm-compact > tbody > tr > td { padding-top: 5px; padding-bottom: 5px; }
+              .pm-compact .pm-sub, .pm-compact .pm-meta { display: none; }
+              .pm-compact .pm-product { min-width: 340px; }
+              .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 420px; }
+              .pm-compact .pm-namerow > * { flex-shrink: 0; white-space: nowrap; }
+              .pm-compact .pm-namerow > button { flex-shrink: 1; min-width: 0; }
+              .pm-compact .pm-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+              .pm-compact .pm-gap { display: inline; margin-left: 6px; }
+            `}</style>
+            <table className={`w-full text-sm ${compact ? 'pm-compact' : ''}`}>
               <thead className="sticky top-0 z-10 hidden bg-surface-muted md:table-header-group shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
@@ -3112,11 +3167,11 @@ const PricingManagerPage = () => {
 
                         {/* Product — pinned; see the header for why */}
                         <td
-                          className={`sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
+                          className={`pm-product sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
                             ownerCue?.style.border ?? 'border-l-transparent'
                           }`}
                         >
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="pm-namerow flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() =>
@@ -3124,15 +3179,15 @@ const PricingManagerPage = () => {
                                   cur === product.lwin18 ? null : product.lwin18,
                                 )
                               }
-                              title="Show last sold price"
-                              className="flex items-center gap-1 text-left"
+                              title={`${product.productName}: show last sold price`}
+                              className="flex min-w-0 items-center gap-1 text-left"
                             >
                               <IconChevronRight
                                 className={`h-3.5 w-3.5 shrink-0 transition-transform ${
                                   isExpanded ? 'rotate-90 text-text-secondary' : 'text-text-muted/60'
                                 }`}
                               />
-                              <span className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
+                              <span className="pm-name text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
                                 {product.productName}
                               </span>
                             </button>
@@ -3266,10 +3321,10 @@ const PricingManagerPage = () => {
                           })()}
                           </div>
                           {product.producer && (
-                            <p className="text-xs text-text-muted">{product.producer}</p>
+                            <p className="pm-meta text-xs text-text-muted">{product.producer}</p>
                           )}
                           {isInbound && (
-                            <p className="text-[10px] text-amber-600">
+                            <p className="pm-meta text-[10px] text-amber-600">
                               {eta
                                 ? `ETA ${new Date(eta).toLocaleDateString('en-GB')}`
                                 : 'In transit'}
@@ -3291,7 +3346,7 @@ const PricingManagerPage = () => {
                           <div className="font-medium tabular-nums text-text-primary">
                             {product.totalCases}
                           </div>
-                          <div className="text-[10px] tabular-nums text-text-muted/70">
+                          <div className="pm-sub text-[10px] tabular-nums text-text-muted/70">
                             {caseConfig}×{product.bottleSize ?? '75cl'}
                           </div>
                         </td>
@@ -3355,7 +3410,7 @@ const PricingManagerPage = () => {
                             {landed != null ? money(landed, currency) : '—'}
                           </div>
                           {landed != null && (
-                            <div className="text-[11px] font-medium text-text-muted">
+                            <div className="pm-sub text-[11px] font-medium text-text-muted">
                               {casePrice(landed, caseConfig, currency)}
                             </div>
                           )}
@@ -3455,7 +3510,7 @@ const PricingManagerPage = () => {
                                   /btl
                                 </span>
                               </div>
-                              <div className="text-[11px] font-medium tabular-nums text-text-muted">
+                              <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
                                 $
                                 {Math.round(
                                   displayMarginPerBottle * caseConfig,
