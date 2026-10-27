@@ -146,7 +146,15 @@ const adminCompareQuotes = adminProcedure
     // Build category comparison
     const categoryComparison: Record<
       string,
-      Array<{ quoteId: string; forwarder: string; amount: number | null }>
+      Array<{
+        quoteId: string;
+        forwarder: string;
+        /** In the quote's own currency */
+        amount: number | null;
+        currency: string;
+        /** The same amount in USD at the quote's rate, for ranking across currencies */
+        amountUsd: number | null;
+      }>
     > = {};
 
     for (const category of allCategories) {
@@ -159,10 +167,15 @@ const adminCompareQuotes = adminProcedure
             ? categoryItems.reduce((sum, item) => sum + item.total, 0)
             : null;
 
+        const rate = quote.currency.toUpperCase() === 'USD' ? 1 : quote.fxToUsd;
+
         return {
           quoteId: quote.id,
           forwarder: quote.forwarderName,
           amount: totalForCategory,
+          currency: quote.currency,
+          amountUsd:
+            totalForCategory != null && rate ? Math.round(totalForCategory * rate * 100) / 100 : null,
         };
       });
     }

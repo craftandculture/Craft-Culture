@@ -138,6 +138,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         email: users.email,
       },
       jobNumber: logisticsJobs.jobNumber,
+      jobKind: logisticsJobs.kind,
       partyName: partyNameSql,
       partyLogoUrl: partyLogoSql,
     })
@@ -162,6 +163,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     partner: row.partner,
     createdByUser: row.createdByUser,
     jobNumber: row.jobNumber,
+    jobKind: row.jobKind,
     partyName: row.partyName,
     partyLogoUrl: row.partyLogoUrl,
   }));

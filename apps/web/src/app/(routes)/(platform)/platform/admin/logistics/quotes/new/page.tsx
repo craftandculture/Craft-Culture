@@ -210,10 +210,10 @@ const NewQuotePage = () => {
     },
   });
 
-  const totalPrice = lineItems.reduce(
-    (sum, item) => sum + (item.total || 0),
-    0,
-  );
+  // Only the lines that are saved count: a line with no description is dropped on save
+  const totalPrice = lineItems
+    .filter((item) => item.description && item.total > 0)
+    .reduce((sum, item) => sum + (item.total || 0), 0);
 
   const addLineItem = () => {
     setLineItems([
