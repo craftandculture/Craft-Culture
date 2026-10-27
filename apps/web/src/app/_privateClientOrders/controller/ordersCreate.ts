@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
+import { orderDetailsFromClient } from '@/app/_privateClientContacts/utils/clientIdentity';
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
 import { privateClientContacts, privateClientOrders } from '@/database/schema';
@@ -9,25 +10,11 @@ import logger from '@/utils/logger';
 
 
 import createOrderSchema from '../schemas/createOrderSchema';
-import generateOrderNumber from '../utils/generateOrderNumber';
+import nextPcoOrderNumber, { isUniqueViolation } from '../utils/nextPcoOrderNumber';
 import partnerOrderView from '../utils/partnerOrderView';
 
 /** Maximum retries for order number generation in case of race conditions */
 const MAX_ORDER_NUMBER_RETRIES = 3;
-
-/**
- * Parse sequence number from order number string
- * Expected format: PCO-YYYY-NNNNN (e.g., PCO-2026-00001)
- */
-const parseOrderSequence = (orderNumber: string): number => {
-  const parts = orderNumber.split('-');
-  if (parts.length !== 3 || parts[0] !== 'PCO') {
-    logger.warn('Invalid order number format encountered', { orderNumber });
-    return 0;
-  }
-  const sequence = parseInt(parts[2], 10);
-  return isNaN(sequence) ? 0 : sequence;
-};
 
 /**
  * Create a new private client order
@@ -52,12 +39,18 @@ const ordersCreate = winePartnerProcedure
       does not quietly multiply records for a regular.
     */
     let clientId = input.clientId ?? null;
+    let clientDetails = {
+      clientName: input.clientName,
+      clientEmail: input.clientEmail || null,
+      clientPhone: input.clientPhone || null,
+      clientAddress: input.clientAddress || null,
+    };
 
     // A saved client must be one of this partner's own; another partner's
     // client id is treated as not found rather than linked to this order.
     if (clientId) {
       const [ownClient] = await db
-        .select({ id: privateClientContacts.id })
+        .select()
         .from(privateClientContacts)
         .where(
           and(
@@ -73,6 +66,14 @@ const ordersCreate = winePartnerProcedure
           message: 'Client not found',
         });
       }
+
+      // The saved client decides who the order is for, not what was typed
+      // beside it (a verified client's name with someone else's number)
+      clientDetails = orderDetailsFromClient(ownClient, {
+        email: input.clientEmail,
+        phone: input.clientPhone,
+        address: input.clientAddress,
+      });
     }
 
     if (!clientId && input.clientName?.trim()) {
@@ -85,63 +86,43 @@ const ordersCreate = winePartnerProcedure
       clientId = resolved?.clientId ?? null;
     }
 
-    // Get the next sequence number for this year
-    const year = new Date().getFullYear();
-    const yearStart = `PCO-${year}-`;
-
-    const [lastOrder] = await db
-      .select({ orderNumber: privateClientOrders.orderNumber })
-      .from(privateClientOrders)
-      .where(sql`${privateClientOrders.orderNumber} LIKE ${yearStart + '%'}`)
-      .orderBy(sql`${privateClientOrders.orderNumber} DESC`)
-      .limit(1);
-
-    let nextSequence = 1;
-    if (lastOrder?.orderNumber) {
-      nextSequence = parseOrderSequence(lastOrder.orderNumber) + 1;
-    }
-
-    // Try to create the order, retry on duplicate key error (race condition)
-    let retries = 0;
-    while (retries < MAX_ORDER_NUMBER_RETRIES) {
-      const orderNumber = generateOrderNumber(nextSequence);
-
+    /*
+      The number is taken under a lock inside the insert's transaction, so two
+      orders created together cannot both read the same last number. A retry
+      covers an order numbered elsewhere without the lock in between.
+    */
+    for (let attempt = 1; attempt <= MAX_ORDER_NUMBER_RETRIES; attempt += 1) {
       try {
-        const [order] = await db
-          .insert(privateClientOrders)
-          .values({
-            orderNumber,
-            partnerId,
-            clientId,
-            clientName: input.clientName,
-            clientEmail: input.clientEmail || null,
-            clientPhone: input.clientPhone || null,
-            clientAddress: input.clientAddress || null,
-            deliveryNotes: input.deliveryNotes || null,
-            partnerNotes: input.partnerNotes || null,
-            status: 'draft',
-          })
-          .returning();
+        const order = await db.transaction(async (tx) => {
+          const { orderNumber } = await nextPcoOrderNumber(tx);
+
+          const [inserted] = await tx
+            .insert(privateClientOrders)
+            .values({
+              orderNumber,
+              partnerId,
+              clientId,
+              ...clientDetails,
+              deliveryNotes: input.deliveryNotes || null,
+              partnerNotes: input.partnerNotes || null,
+              status: 'draft',
+            })
+            .returning();
+
+          return inserted;
+        });
 
         return order ? partnerOrderView(order) : order;
       } catch (error) {
-        // Check if it's a duplicate key error (race condition)
-        const isDuplicateError =
-          error instanceof Error &&
-          (error.message.includes('duplicate key') || error.message.includes('unique constraint'));
-
-        if (isDuplicateError && retries < MAX_ORDER_NUMBER_RETRIES - 1) {
-          logger.warn('Order number collision detected, retrying with incremented sequence', {
-            orderNumber,
-            retries,
-          });
-          nextSequence++;
-          retries++;
+        if (isUniqueViolation(error) && attempt < MAX_ORDER_NUMBER_RETRIES) {
+          logger.warn('Order number collision detected, retrying', { attempt });
           continue;
         }
 
-        // Re-throw if not a duplicate error or max retries reached
-        logger.error('Failed to create order', { error, retries });
+        logger.error('Failed to create order', {
+          error: error instanceof Error ? error.message : String(error),
+          attempt,
+        });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create order. Please try again.',
