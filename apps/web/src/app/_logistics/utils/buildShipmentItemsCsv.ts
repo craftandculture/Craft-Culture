@@ -1,3 +1,5 @@
+import neutraliseCsvFormula from '@/utils/neutraliseCsvFormula';
+
 export interface ShipmentItemsCsvRow {
   productName: string;
   vintage?: number | null;
@@ -11,7 +13,8 @@ export interface ShipmentItemsCsvRow {
 }
 
 const cell = (value: string | number | null | undefined) => {
-  const text = value == null ? '' : String(value);
+  // A product name starting with = + - @ would run as a formula in Excel
+  const text = neutraliseCsvFormula(value == null ? '' : String(value));
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 

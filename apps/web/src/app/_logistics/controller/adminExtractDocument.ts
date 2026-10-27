@@ -422,7 +422,6 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         logger.info('[LogisticsDocumentExtraction] PDF text extracted:', {
           pages: pdfData.numpages,
           textLength: pdfText.length,
-          textPreview: pdfText.substring(0, 500),
         });
       } catch (parseError) {
         logger.warn('[LogisticsDocumentExtraction] pdf-parse failed, will try direct PDF processing:', {
@@ -510,7 +509,7 @@ ${pdfText}
 
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to extract document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Failed to read the document. Try again, or enter the details by hand.',
     });
   }
 });

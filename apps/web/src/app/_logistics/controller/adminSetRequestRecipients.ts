@@ -28,7 +28,7 @@ const adminSetRequestRecipients = adminProcedure
         .optional(),
     }),
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const [request] = await db
       .select({ id: logisticsQuoteRequests.id })
       .from(logisticsQuoteRequests)
@@ -45,6 +45,7 @@ const adminSetRequestRecipients = adminProcedure
       const added = await findOrCreateForwarder({
         name: input.newForwarder.name,
         email: input.newForwarder.email || null,
+        addedBy: ctx.user.id,
       });
       ids.add(added.id);
     }

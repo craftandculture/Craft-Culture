@@ -663,7 +663,12 @@ const ShipmentDetailPage = () => {
         );
         if (r.unresolvedCurrencies.length) {
           toast.warning(
-            `Couldn't auto-convert ${r.unresolvedCurrencies.join(', ')} — check those amounts.`,
+            `No rate for ${r.unresolvedCurrencies.join(', ')}, so those invoices were not added. Enter their charges by hand.`,
+          );
+        }
+        if (r.skippedPartnerDocuments.length) {
+          toast.warning(
+            `Not read because a partner uploaded them: ${r.skippedPartnerDocuments.join(', ')}. Check them and add the charges by hand.`,
           );
         }
         void refetch();

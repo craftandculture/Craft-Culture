@@ -80,6 +80,7 @@ const adminCreateQuote = adminProcedure
           name: quoteData.forwarderName,
           email: quoteData.forwarderEmail,
           contactName: quoteData.forwarderContact,
+          addedBy: ctx.user.id,
         }));
 
       const fx = await resolveFxToUsd(quoteData.currency);
