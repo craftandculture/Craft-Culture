@@ -1,3 +1,19 @@
+## [2.0.588](https://github.com/craftandculture/Craft-Culture/compare/v2.0.587...v2.0.588) (2026-10-27)
+
+### Bug Fixes
+
+* a verified client can no longer be reused with someone else's details to skip distributor verification ([b8f78a3](https://github.com/craftandculture/Craft-Culture/commit/b8f78a3bd383f4a001a9bea78d16e3a75ff68492))
+* commission is worked out from the quote's lines, not the figure saved with the quote ([2974182](https://github.com/craftandculture/Craft-Culture/commit/2974182d6016defcc577d31a0551f2cb43e7436f))
+* distributors no longer receive the wine partner's prices or contact details, and can verify a client payment the partner has confirmed ([175c3e1](https://github.com/craftandculture/Craft-Culture/commit/175c3e13cb00f0ce232d5391ea78ba8a356ee2c4))
+* member cellar values use only the member's own figures, and member help no longer quotes fees ([32c6f3e](https://github.com/craftandculture/Craft-Culture/commit/32c6f3eece27cdf80d999d53eff2967b7802e5ae))
+* morning view uses Dubai dates, and the CultX sync stops writing test prices ([f8f8272](https://github.com/craftandculture/Craft-Culture/commit/f8f82728aa714f914f5b58ac2146daba894aaa29))
+* only the cellar holder can change a Private Cellar application, and sourcing is for members only ([23e783a](https://github.com/craftandculture/Craft-Culture/commit/23e783a4457f0316c169a52609b2b4ddb7d99292))
+* partner merges need typed confirmation, API keys are always restricted, and user admin is safer ([2b600f6](https://github.com/craftandculture/Craft-Culture/commit/2b600f66c29df672b60010c242034c6703c46153))
+* pressing release to pick twice no longer creates two pick lists for the same sales order ([2e54dfe](https://github.com/craftandculture/Craft-Culture/commit/2e54dfe476ef9f80da9bfef7960cb28fd7b06413))
+* Private Cellar and consignment saves no longer clash when two happen at once ([3fb825b](https://github.com/craftandculture/Craft-Culture/commit/3fb825b9a7d0d73a3095193ba77cdf4aa54d0e72))
+* private order status changes are confirmed before they apply, and bespoke rates set at approval now update the order's totals ([8dcf67e](https://github.com/craftandculture/Craft-Culture/commit/8dcf67e9217d8208daf21d12fc7776561c21a7b9))
+* security updates for dependencies, and CI checks run with read-only access ([dfddfb1](https://github.com/craftandculture/Craft-Culture/commit/dfddfb1e29042059bb57a8c47835e8a0f30477cd))
+
 ## [2.0.587](https://github.com/craftandculture/Craft-Culture/compare/v2.0.586...v2.0.587) (2026-10-27)
 
 ### Bug Fixes
