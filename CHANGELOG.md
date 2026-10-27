@@ -1,3 +1,16 @@
+## [2.0.585](https://github.com/craftandculture/Craft-Culture/compare/v2.0.584...v2.0.585) (2026-10-27)
+
+### Bug Fixes
+
+* Export invoices cannot be overwritten by a second editor, and issuing leaves no stray PDFs ([92f3298](https://github.com/craftandculture/Craft-Culture/commit/92f3298ae6bb0c79936757d3b10e9bf749b3f846))
+* Freight requests, forwarder contacts and invoice reading are locked down to C&C staff ([960a71f](https://github.com/craftandculture/Craft-Culture/commit/960a71f9f862d0f290b328f5897f74411be5bae5))
+* Group landed costs are no longer overwritten, and three logistics background jobs run again ([3cba5b9](https://github.com/craftandculture/Craft-Culture/commit/3cba5b9f99078721485f08adc9b9a43528985a14))
+* internal pages, settings and team task files are limited to the C&C team ([0be6102](https://github.com/craftandculture/Craft-Culture/commit/0be610238f15a9a40fb4423249f6fc4fbe703a4d))
+* partner API keys see the restricted feed unless marked unrestricted ([cf0588f](https://github.com/craftandculture/Craft-Culture/commit/cf0588fd234304c0880c9c8af2ef272d2c966f1a))
+* suppliers no longer see our customers, sell prices or internal notes on SOURCE requests and orders ([aec9e85](https://github.com/craftandculture/Craft-Culture/commit/aec9e856ac65dafd1b944347c52ff4c27bf0ead3))
+* warehouse device sign-in keeps its token out of page addresses ([826c588](https://github.com/craftandculture/Craft-Culture/commit/826c588cdb595b7228a3309bc976dc9dd2fd47e4))
+* Zoho Import makes proper dashed LWIN SKUs and only uses HS codes on the C&C list ([d1e0041](https://github.com/craftandculture/Craft-Culture/commit/d1e004126fc63dfb54d85eacc9f310cc7cb6224c))
+
 ## [2.0.584](https://github.com/craftandculture/Craft-Culture/compare/v2.0.583...v2.0.584) (2026-10-27)
 
 ### Bug Fixes
