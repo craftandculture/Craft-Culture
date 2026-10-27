@@ -1399,6 +1399,13 @@ const PricingManagerPage = () => {
     ...products,
   ].map((p) => p.lwin18);
 
+  // Ticked lines that are still on screen. A tick survives a search or filter
+  // change, and bulk actions used to apply to lines the user could no longer
+  // see; they now apply to these only.
+  const visibleLwinSet = new Set(visibleLwins);
+  const selectedVisible = [...selected].filter((lwin18) => visibleLwinSet.has(lwin18));
+  const hiddenSelectedCount = selected.size - selectedVisible.length;
+
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -2334,7 +2341,12 @@ const PricingManagerPage = () => {
       {selected.size > 0 && (
         <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 shadow-sm">
           <span className="text-sm font-semibold text-brand-800">
-            {selected.size} selected
+            {selectedVisible.length} selected
+            {hiddenSelectedCount > 0 && (
+              <span className="ml-1 font-normal text-text-muted">
+                ({hiddenSelectedCount} hidden by the current filter, not included)
+              </span>
+            )}
           </span>
 
           <div className="flex items-center gap-1.5">
@@ -2363,18 +2375,21 @@ const PricingManagerPage = () => {
             <button
               type="button"
               disabled={
-                (bulkB2b === '' && bulkPc === '') || setLineMarginsMut.isPending
+                (bulkB2b === '' && bulkPc === '') ||
+                setLineMarginsMut.isPending ||
+                selectedVisible.length === 0
               }
               onClick={() => {
+                const count = selectedVisible.length;
                 setLineMarginsMut.mutate(
                   {
-                    lwin18s: [...selected],
+                    lwin18s: selectedVisible,
                     ...(bulkB2b !== '' ? { b2bMarginPct: Number(bulkB2b) } : {}),
                     ...(bulkPc !== '' ? { pcMarginPct: Number(bulkPc) } : {}),
                   },
                   {
                     onSuccess: () =>
-                      toast.success(`Margin set on ${selected.size} wines`),
+                      toast.success(`Margin set on ${count} wines`),
                   },
                 );
               }}
@@ -2499,7 +2514,10 @@ const PricingManagerPage = () => {
                     <input
                       type="checkbox"
                       title="Select every line shown"
-                      checked={selected.size > 0 && selected.size >= visibleLwins.length}
+                      checked={
+                        visibleLwins.length > 0 &&
+                        selectedVisible.length >= visibleLwinSet.size
+                      }
                       onChange={(e) =>
                         setSelected(
                           e.target.checked ? new Set(visibleLwins) : new Set(),

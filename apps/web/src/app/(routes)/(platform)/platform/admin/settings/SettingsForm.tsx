@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -35,21 +36,14 @@ const SettingsForm = () => {
     api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
   );
 
-  // Local state for form inputs
-  const [leadTimeMin, setLeadTimeMin] = useState<number>(
-    leadTimeMinData ? Number(leadTimeMinData) : 14,
-  );
-  const [leadTimeMax, setLeadTimeMax] = useState<number>(
-    leadTimeMaxData ? Number(leadTimeMaxData) : 21,
-  );
+  // What the user has typed; undefined means "show the saved value". Seeding
+  // state from the query during render reset every keystroke back to the
+  // saved value, so the fields could not be edited.
+  const [leadTimeMinInput, setLeadTimeMin] = useState<number | undefined>();
+  const [leadTimeMaxInput, setLeadTimeMax] = useState<number | undefined>();
 
-  // Update state when data loads
-  if (leadTimeMinData && leadTimeMin !== Number(leadTimeMinData)) {
-    setLeadTimeMin(Number(leadTimeMinData));
-  }
-  if (leadTimeMaxData && leadTimeMax !== Number(leadTimeMaxData)) {
-    setLeadTimeMax(Number(leadTimeMaxData));
-  }
+  const leadTimeMin = leadTimeMinInput ?? (leadTimeMinData ? Number(leadTimeMinData) : 14);
+  const leadTimeMax = leadTimeMaxInput ?? (leadTimeMaxData ? Number(leadTimeMaxData) : 21);
 
   // Mutations for updating settings
   const { mutateAsync: updateLeadTimeMinAsync, isPending: isUpdatingMin } =
@@ -58,7 +52,18 @@ const SettingsForm = () => {
     useMutation(api.admin.settings.update.mutationOptions());
 
   const handleSave = async () => {
-    await Promise.all([
+    if (
+      !Number.isFinite(leadTimeMin) ||
+      !Number.isFinite(leadTimeMax) ||
+      leadTimeMin < 0 ||
+      leadTimeMax < leadTimeMin
+    ) {
+      toast.error('Enter a minimum and a maximum, with the maximum not below the minimum');
+      return;
+    }
+
+    try {
+      await Promise.all([
       updateLeadTimeMinAsync({
         key: 'leadTimeMin',
         value: String(leadTimeMin),
@@ -68,9 +73,18 @@ const SettingsForm = () => {
         value: String(leadTimeMax),
       }),
     ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save lead time');
+      return;
+    }
 
-    // Invalidate all queries to refetch updated settings
-    void queryClient.invalidateQueries();
+    // Refetch the saved settings, then show them rather than the typed values
+    await queryClient.invalidateQueries({
+      queryKey: api.admin.settings.get.queryKey(),
+    });
+    setLeadTimeMin(undefined);
+    setLeadTimeMax(undefined);
+    toast.success('Lead time saved');
   };
 
   const isSaving = isUpdatingMin || isUpdatingMax;

@@ -2185,21 +2185,28 @@ const StockExplorerPage = () => {
   const trpcClient = useTRPCClient();
   const [editingLwin18, setEditingLwin18] = useState<string | null>(null);
 
+  const { mutate: updateProductName } = useMutation({
+    ...api.wms.admin.stock.updateProductName.mutationOptions(),
+    onSuccess: () => {
+      setEditingLwin18(null);
+      toast.success('Product name updated');
+      void queryClient.refetchQueries({ type: 'active' });
+    },
+    onError: (err, variables) => {
+      // Reopen the editor so the typed name is not lost
+      setEditingLwin18(variables.lwin18);
+      toast.error(`Product name not updated: ${err.message}`);
+    },
+  });
+
   const handleEditName = useCallback(
     (lwin18: string, productName: string, producer: string | null) => {
       setEditingLwin18(`saving:${lwin18}`);
-      // Fire mutation — don't await anything, httpBatchStreamLink hangs promises
-      trpcClient.wms.admin.stock.updateProductName
-        .mutate({ lwin18, productName, producer })
-        .catch(() => {});
-      // After 1.5s: close editor, refetch data, show toast
-      setTimeout(() => {
-        setEditingLwin18(null);
-        toast.success('Product name updated');
-        void queryClient.refetchQueries({ type: 'active' });
-      }, 1500);
+      // Success is only reported once the server confirms it; the toast used
+      // to fire on a timer whether or not the rename worked
+      updateProductName({ lwin18, productName, producer });
     },
-    [api, queryClient, trpcClient],
+    [updateProductName],
   );
 
   // Search & filters
