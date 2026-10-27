@@ -64,6 +64,8 @@ import TakeOutOfStockPanel from '@/app/_wms/components/TakeOutOfStockPanel';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
+import exportInboundToExcel from '@/app/_wms/utils/exportInboundToExcel';
+import type { InboundExportProduct } from '@/app/_wms/utils/exportInboundToExcel';
 import exportStockToExcel from '@/app/_wms/utils/exportStockToExcel';
 import type { StockExportProduct } from '@/app/_wms/utils/exportStockToExcel';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
@@ -2532,13 +2534,38 @@ const StockExplorerPage = () => {
     if (isExporting) return;
     setIsExporting(true);
     try {
+      // Inbound: wine on shipments not yet received, from its own query
+      if (isInboundView) {
+        const inbound: InboundExportProduct[] = [];
+        for (let offset = 0; offset < 20000; offset += 200) {
+          const res = await trpcClient.wms.admin.stock.getInbound.query({
+            search: debouncedSearch || undefined,
+            sortBy: inboundSortBy,
+            sortOrder,
+            limit: 200,
+            offset,
+          });
+          inbound.push(...(res.products as InboundExportProduct[]));
+          if (!res.pagination.hasMore) break;
+        }
+
+        if (!inbound.length) {
+          toast.info('No inbound stock matches the current search');
+          return;
+        }
+
+        exportInboundToExcel(inbound);
+        toast.success(`Exported ${inbound.length} inbound products to Excel`);
+        return;
+      }
+
       const baseInput = {
         search: debouncedSearch || undefined,
         ownerId: ownerId || undefined,
         category: category || undefined,
         includeZeroQty: showZeroQty || undefined,
         quickFilter:
-          quickFilter !== 'all' && quickFilter !== 'inbound'
+          quickFilter !== 'all'
             ? quickFilter
             : undefined,
         vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
@@ -2590,6 +2617,8 @@ const StockExplorerPage = () => {
     }
   }, [
     isExporting,
+    isInboundView,
+    inboundSortBy,
     debouncedSearch,
     ownerId,
     category,
@@ -2781,12 +2810,13 @@ const StockExplorerPage = () => {
               onClick={handleExport}
               disabled={
                 isExporting ||
-                isInboundView ||
-                (!products.length && !showZeroQty)
+                (isInboundView
+                  ? !inboundProducts.length
+                  : !products.length && !showZeroQty)
               }
               title={
                 isInboundView
-                  ? 'Switch off Inbound to export stock'
+                  ? 'Export all inbound rows to Excel'
                   : 'Export all filtered rows to Excel'
               }
             >
