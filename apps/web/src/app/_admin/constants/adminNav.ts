@@ -46,7 +46,8 @@ export interface AdminNavSection {
  * pages behind the desktop one.
  *
  * Retired from the menu in October 2026, unused all year: My Quotes,
- * Commissions and Freight Bills. The pages still open from a direct link.
+ * Commissions, Freight Bills and Quote Approvals (the original Quote Tool's
+ * review queue). The pages still open from a direct link.
  */
 const adminNav: AdminNavSection[] = [
   { key: 'home', label: 'Home', href: '/platform/admin/home', icon: IconHome2, inTopNav: true, forOperators: false, links: [] },
@@ -66,7 +67,6 @@ const adminNav: AdminNavSection[] = [
       { label: 'Order Check', href: '/platform/admin/order-check' },
       { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
       { label: 'Source', href: '/platform/admin/source' },
-      { label: 'Approvals', href: '/platform/admin/quote-approvals' },
     ],
   },
   {
