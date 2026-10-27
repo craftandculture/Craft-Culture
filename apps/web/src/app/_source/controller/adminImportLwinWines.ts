@@ -8,7 +8,10 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 const importLwinSchema = z.object({
-  fileContent: z.string().describe('Base64 encoded Excel/CSV file'),
+  fileContent: z
+    .string()
+    .max(14_000_000, 'File is too large (10 MB limit)')
+    .describe('Base64 encoded Excel/CSV file'),
   fileName: z.string(),
 });
 
@@ -318,6 +321,7 @@ const adminImportLwinWines = adminProcedure
     let imported = 0;
     const updated = 0;
     let errors = 0;
+    let firstError: string | null = null;
 
     for (let i = 0; i < wines.length; i += batchSize) {
       const batch = wines.slice(i, i + batchSize);
@@ -383,15 +387,18 @@ const adminImportLwinWines = adminProcedure
 
         imported += result.length;
       } catch (error) {
-        logger.dev(`Error importing batch ${i / batchSize + 1}`, { error });
+        logger.error(`LWIN import: batch ${i / batchSize + 1} failed`, { error });
         errors += batch.length;
+        firstError ??= error instanceof Error ? error.message : String(error);
       }
     }
 
-    logger.dev(`Import complete: ${imported} wines imported, ${errors} errors`);
+    logger.dev(`LWIN import complete: ${imported} wines imported, ${errors} failed`);
 
     return {
-      success: true,
+      // Only a clean run counts as success; failed rows are reported back
+      success: errors === 0,
+      firstError,
       imported,
       updated,
       errors,

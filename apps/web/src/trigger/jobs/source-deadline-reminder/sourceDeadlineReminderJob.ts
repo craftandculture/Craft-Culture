@@ -1,5 +1,5 @@
 import { logger, schedules } from '@trigger.dev/sdk';
-import { and, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lt } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import {
@@ -119,10 +119,9 @@ const sendDeadlineReminder = async ({
       },
     });
 
-    logger.info(`Sent deadline reminder to ${notificationEmail} for RFQ ${rfqNumber}`);
+    logger.info(`Sent deadline reminder for RFQ ${rfqNumber}`);
   } catch (error) {
     logger.error('Failed to send deadline reminder email', {
-      email: notificationEmail,
       rfqId,
       error,
     });
@@ -138,6 +137,9 @@ const sendDeadlineReminder = async ({
  * Sends reminders when:
  * - RFQ deadline is within the next 24-48 hours
  * - Partner status is 'pending' or 'viewed' (not yet submitted/declined)
+ * - The partner has not already had this RFQ's reminder: each partner gets
+ *   one reminder per RFQ (recorded in deadline_reminder_sent_at), even
+ *   though the job runs hourly across a 24-hour window
  */
 export const sourceDeadlineReminderJob = schedules.task({
   id: 'source-deadline-reminder',
@@ -195,6 +197,7 @@ export const sourceDeadlineReminderJob = schedules.task({
           and(
             eq(sourceRfqPartners.rfqId, rfq.id),
             inArray(sourceRfqPartners.status, ['pending', 'viewed', 'in_progress']),
+            isNull(sourceRfqPartners.deadlineReminderSentAt),
           ),
         );
 
@@ -208,6 +211,22 @@ export const sourceDeadlineReminderJob = schedules.task({
       );
 
       for (const partner of pendingPartners) {
+        // Claim the reminder first so overlapping runs cannot send it twice
+        const claimed = await triggerDb
+          .update(sourceRfqPartners)
+          .set({ deadlineReminderSentAt: new Date() })
+          .where(
+            and(
+              eq(sourceRfqPartners.id, partner.rfqPartnerId),
+              isNull(sourceRfqPartners.deadlineReminderSentAt),
+            ),
+          )
+          .returning({ id: sourceRfqPartners.id });
+
+        if (claimed.length === 0) {
+          continue;
+        }
+
         try {
           await sendDeadlineReminder({
             rfqId: rfq.id,

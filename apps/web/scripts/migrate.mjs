@@ -3846,6 +3846,23 @@ const runMigrations = async () => {
     console.log('✅ What\'s New ready');
 
     /*
+      SOURCE reminders (27 Oct 2026). The RFQ deadline reminder ran hourly
+      across a 24-hour window, so a supplier got about 24 copies; it now sends
+      once per RFQ per supplier. Supplier order reminders ran every 6 hours
+      forever; they are now capped and spaced a day apart.
+    */
+    await client.unsafe(
+      `ALTER TABLE "source_rfq_partners" ADD COLUMN IF NOT EXISTS "deadline_reminder_sent_at" timestamp`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "source_supplier_orders" ADD COLUMN IF NOT EXISTS "reminder_count" integer DEFAULT 0 NOT NULL`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "source_supplier_orders" ADD COLUMN IF NOT EXISTS "last_reminder_at" timestamp`,
+    );
+    console.log('✅ SOURCE reminder tracking ready');
+
+    /*
       Private Cellar member emails (26 Oct 2026). Every member email is queued
       here first and sent by the member-emails cron in the switch's mode (off,
       shadow or live), so nothing reaches a member until Kevin turns it on.

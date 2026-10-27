@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { sourceRfqPartners, sourceRfqs, users } from '@/database/schema';
+import { sourceRfqPartners, sourceRfqs } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import getManyRfqsSchema from '../schemas/getManyRfqsSchema';
@@ -50,16 +50,22 @@ const partnerGetManyRfqs = winePartnerProcedure
     // Get RFQs with partner assignment info
     const rfqsList = await db
       .select({
-        rfq: sourceRfqs,
-        partnerAssignment: sourceRfqPartners,
-        createdByUser: {
-          id: users.id,
-          name: users.name,
+        // Explicit allowlist: suppliers must never see the C&C customer,
+        // the raw request or any C&C pricing.
+        rfq: {
+          id: sourceRfqs.id,
+          rfqNumber: sourceRfqs.rfqNumber,
+          name: sourceRfqs.name,
+          status: sourceRfqs.status,
+          responseDeadline: sourceRfqs.responseDeadline,
+          itemCount: sourceRfqs.itemCount,
+          sentAt: sourceRfqs.sentAt,
+          createdAt: sourceRfqs.createdAt,
         },
+        partnerAssignment: sourceRfqPartners,
       })
       .from(sourceRfqPartners)
       .innerJoin(sourceRfqs, eq(sourceRfqPartners.rfqId, sourceRfqs.id))
-      .leftJoin(users, eq(sourceRfqs.createdBy, users.id))
       .where(whereClause)
       .orderBy(desc(sourceRfqs.createdAt))
       .limit(limit)
@@ -68,7 +74,6 @@ const partnerGetManyRfqs = winePartnerProcedure
     // Flatten response
     const rfqsWithAssignment = rfqsList.map((row) => ({
       ...row.rfq,
-      createdByUser: row.createdByUser,
       partnerStatus: row.partnerAssignment.status,
       viewedAt: row.partnerAssignment.viewedAt,
       submittedAt: row.partnerAssignment.submittedAt,

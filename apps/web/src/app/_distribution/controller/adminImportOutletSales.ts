@@ -49,7 +49,7 @@ const adminImportOutletSales = adminProcedure
     z.object({
       outletId: z.string().uuid(),
       year: z.number().int().min(2000).max(2100),
-      file: z.string().min(1),
+      file: z.string().min(1).max(14_000_000, 'File is too large (10 MB limit)'),
       fileName: z.string().max(300).optional(),
     }),
   )

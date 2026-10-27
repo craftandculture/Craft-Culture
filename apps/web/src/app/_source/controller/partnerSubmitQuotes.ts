@@ -138,6 +138,28 @@ const partnerSubmitQuotes = winePartnerProcedure
 
     // Use transaction to ensure atomicity of all database operations
     await db.transaction(async (tx) => {
+      // Lock this partner's quotes, then refuse once C&C has selected any of
+      // them: a resubmission would delete the selected quote (wiping the
+      // selection) or reprice a line after it was picked.
+      const existingQuotes = await tx
+        .select({ id: sourceRfqQuotes.id, isSelected: sourceRfqQuotes.isSelected })
+        .from(sourceRfqQuotes)
+        .where(
+          and(
+            eq(sourceRfqQuotes.rfqId, rfqId),
+            eq(sourceRfqQuotes.partnerId, partnerId),
+          ),
+        )
+        .for('update');
+
+      if (existingQuotes.some((q) => q.isSelected)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Craft & Culture has already selected one of your quotes on this RFQ, so it can no longer be changed. Please contact the team if your price or availability has changed.',
+        });
+      }
+
       // Delete any existing quotes from this partner for this RFQ
       await tx
         .delete(sourceRfqQuotes)
@@ -169,12 +191,17 @@ const partnerSubmitQuotes = winePartnerProcedure
           .update(sourceRfqs)
           .set({
             responseCount: sql`${sourceRfqs.responseCount} + 1`,
-            status: 'collecting',
           })
           .where(eq(sourceRfqs.id, rfqId));
+
+        // Only move forward from 'sent'; never pull a later stage back
+        await tx
+          .update(sourceRfqs)
+          .set({ status: 'collecting' })
+          .where(and(eq(sourceRfqs.id, rfqId), eq(sourceRfqs.status, 'sent')));
       }
 
-      // Update item statuses to quoted
+      // Update item statuses to quoted (never downgrade a selected item)
       await tx
         .update(sourceRfqItems)
         .set({ status: 'quoted' })
@@ -182,6 +209,7 @@ const partnerSubmitQuotes = winePartnerProcedure
           and(
             eq(sourceRfqItems.rfqId, rfqId),
             inArray(sourceRfqItems.id, uniqueItemIds),
+            inArray(sourceRfqItems.status, ['pending', 'no_response']),
           ),
         );
     });

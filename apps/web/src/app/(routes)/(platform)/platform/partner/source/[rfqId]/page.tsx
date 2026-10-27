@@ -10,7 +10,6 @@ import {
   IconCopy,
   IconEdit,
   IconFilter,
-  IconInfoCircle,
   IconPlus,
   IconSend,
   IconTrash,
@@ -940,9 +939,6 @@ const PartnerRfqDetailPage = () => {
                           <span className="flex-shrink-0 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
                             {itemQuotes.length} quotes
                           </span>
-                        )}
-                        {item.adminNotes && (
-                          <IconInfoCircle className="h-4 w-4 text-amber-500 flex-shrink-0" title={item.adminNotes} />
                         )}
                       </div>
 

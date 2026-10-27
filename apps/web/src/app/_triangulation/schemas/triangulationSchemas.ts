@@ -245,7 +245,7 @@ export const seedSkusFromWmsSchema = z.object({
 
 export const extractPackingListSchema = z.object({
   /** Base64-encoded document, without a data: prefix */
-  file: z.string().min(1),
+  file: z.string().min(1).max(14_000_000, 'File is too large (10 MB limit)'),
   mediaType: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
   fileName: z.string().max(300).optional(),
 });

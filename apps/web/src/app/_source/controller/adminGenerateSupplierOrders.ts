@@ -16,6 +16,7 @@ import logger from '@/utils/logger';
 import generateSupplierOrdersSchema from '../schemas/generateSupplierOrdersSchema';
 import formatLwin18 from '../utils/formatLwin18';
 import generateSupplierOrderNumber from '../utils/generateSupplierOrderNumber';
+import insertWithNumberRetry from '../utils/insertWithNumberRetry';
 import notifyDistributorOfOrdersGenerated from '../utils/notifyDistributorOfOrdersGenerated';
 
 /**
@@ -132,34 +133,9 @@ const adminGenerateSupplierOrders = adminProcedure
         const partner = partnerMap.get(partnerId);
         if (!partner) continue;
 
-        const orderNumber = await generateSupplierOrderNumber();
-
-        // Calculate totals
-        let totalAmountUsd = 0;
-        partnerItems.forEach(({ item, quote }) => {
-          const qty = item.quantity || 1;
-          const price = quote.costPricePerCaseUsd || 0;
-          totalAmountUsd += price * qty;
-        });
-
-        // Create supplier order
-        const [supplierOrder] = await db
-          .insert(sourceSupplierOrders)
-          .values({
-            customerPoId,
-            partnerId,
-            orderNumber,
-            status: 'draft',
-            itemCount: partnerItems.length,
-            totalAmountUsd: Math.round(totalAmountUsd * 100) / 100,
-            createdBy: user.id,
-          })
-          .returning();
-
-        if (!supplierOrder) continue;
-
-        // Create supplier order items
-        const orderItemsData = partnerItems.map(({ item, quote }, idx) => {
+        // Work out each line once. A line ordered by the bottle is priced
+        // per bottle (quote price is per case); cases are rounded up.
+        const lines = partnerItems.map(({ item, quote }) => {
           const qty = item.quantity || 1;
           const costPerCase = quote.costPricePerCaseUsd || 0;
           const caseConfigNum =
@@ -168,7 +144,61 @@ const adminGenerateSupplierOrders = adminProcedure
             6;
           const costPerBottle =
             caseConfigNum > 0 ? costPerCase / caseConfigNum : 0;
-          const quantityBottles = qty * caseConfigNum;
+          const isBottles = item.quantityUnit === 'bottles';
+          const quantityBottles = isBottles ? qty : qty * caseConfigNum;
+          const quantityCases = isBottles
+            ? Math.ceil(qty / caseConfigNum)
+            : qty;
+          const lineTotal = isBottles
+            ? costPerBottle * qty
+            : costPerCase * qty;
+          return {
+            item,
+            quote,
+            costPerCase,
+            caseConfigNum,
+            costPerBottle,
+            quantityBottles,
+            quantityCases,
+            lineTotal,
+          };
+        });
+
+        const totalAmountUsd = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+
+        // Create supplier order (retry with a fresh number on a clash)
+        const [supplierOrder] = await insertWithNumberRetry(
+          generateSupplierOrderNumber,
+          (orderNumber) =>
+            db
+              .insert(sourceSupplierOrders)
+              .values({
+                customerPoId,
+                partnerId,
+                orderNumber,
+                status: 'draft',
+                itemCount: partnerItems.length,
+                totalAmountUsd: Math.round(totalAmountUsd * 100) / 100,
+                createdBy: user.id,
+              })
+              .returning(),
+        );
+
+        if (!supplierOrder) continue;
+        const { orderNumber } = supplierOrder;
+
+        // Create supplier order items
+        const orderItemsData = lines.map((line, idx) => {
+          const {
+            item,
+            quote,
+            costPerCase,
+            caseConfigNum,
+            costPerBottle,
+            quantityBottles,
+            quantityCases,
+            lineTotal,
+          } = line;
 
           // Generate LWIN18
           const lwin18 = formatLwin18({
@@ -188,11 +218,11 @@ const adminGenerateSupplierOrders = adminProcedure
             lwin7: item.lwin,
             lwin18,
             caseConfig: caseConfigNum,
-            quantityCases: qty,
+            quantityCases,
             quantityBottles,
             costPerBottleUsd: Math.round(costPerBottle * 100) / 100,
             costPerCaseUsd: costPerCase,
-            lineTotalUsd: Math.round(costPerCase * qty * 100) / 100,
+            lineTotalUsd: Math.round(lineTotal * 100) / 100,
             confirmationStatus: 'pending' as const,
             sortOrder: idx + 1,
           };

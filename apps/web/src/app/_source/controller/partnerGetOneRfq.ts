@@ -32,7 +32,18 @@ const partnerGetOneRfq = winePartnerProcedure
     const [assignment] = await db
       .select({
         assignment: sourceRfqPartners,
-        rfq: sourceRfqs,
+        // Explicit allowlist: suppliers must never see the C&C customer
+        // (distributor*), the customer's raw request, or C&C pricing.
+        rfq: {
+          id: sourceRfqs.id,
+          rfqNumber: sourceRfqs.rfqNumber,
+          name: sourceRfqs.name,
+          status: sourceRfqs.status,
+          responseDeadline: sourceRfqs.responseDeadline,
+          itemCount: sourceRfqs.itemCount,
+          sentAt: sourceRfqs.sentAt,
+          createdAt: sourceRfqs.createdAt,
+        },
       })
       .from(sourceRfqPartners)
       .innerJoin(sourceRfqs, eq(sourceRfqPartners.rfqId, sourceRfqs.id))
@@ -73,8 +84,24 @@ const partnerGetOneRfq = winePartnerProcedure
     }
 
     // Get all items
+    // Explicit allowlist: no original customer text, C&C sell prices,
+    // selection state or internal notes.
     const items = await db
-      .select()
+      .select({
+        id: sourceRfqItems.id,
+        rfqId: sourceRfqItems.rfqId,
+        productName: sourceRfqItems.productName,
+        producer: sourceRfqItems.producer,
+        vintage: sourceRfqItems.vintage,
+        region: sourceRfqItems.region,
+        country: sourceRfqItems.country,
+        bottleSize: sourceRfqItems.bottleSize,
+        caseConfig: sourceRfqItems.caseConfig,
+        lwin: sourceRfqItems.lwin,
+        quantity: sourceRfqItems.quantity,
+        quantityUnit: sourceRfqItems.quantityUnit,
+        sortOrder: sourceRfqItems.sortOrder,
+      })
       .from(sourceRfqItems)
       .where(eq(sourceRfqItems.rfqId, rfqId))
       .orderBy(asc(sourceRfqItems.sortOrder));

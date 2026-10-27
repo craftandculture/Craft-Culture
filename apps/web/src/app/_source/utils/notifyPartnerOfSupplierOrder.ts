@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { partners, sourceCustomerPos, sourceSupplierOrders, users } from '@/database/schema';
+import { partners, sourceSupplierOrders, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
@@ -10,6 +10,8 @@ import logger from '@/utils/logger';
 interface NotifyPartnerOfSupplierOrderParams {
   supplierOrderId: string;
   partnerId: string;
+  /** Send the email as well as the in-app notification (default true) */
+  sendEmail?: boolean;
 }
 
 /**
@@ -22,6 +24,7 @@ interface NotifyPartnerOfSupplierOrderParams {
 const notifyPartnerOfSupplierOrder = async ({
   supplierOrderId,
   partnerId,
+  sendEmail = true,
 }: NotifyPartnerOfSupplierOrderParams) => {
   try {
     // Get supplier order details
@@ -40,16 +43,8 @@ const notifyPartnerOfSupplierOrder = async ({
       return;
     }
 
-    // Get customer PO details for context
-    const [customerPo] = await db
-      .select({
-        ccPoNumber: sourceCustomerPos.ccPoNumber,
-        customerCompany: sourceCustomerPos.customerCompany,
-        customerName: sourceCustomerPos.customerName,
-      })
-      .from(sourceCustomerPos)
-      .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId));
-
+    // The C&C end customer (name, company, PO) is never shared with the
+    // supplier: C&C is their customer.
     // Get partner details with linked user
     const [partner] = await db
       .select({
@@ -107,8 +102,6 @@ const notifyPartnerOfSupplierOrder = async ({
         actionUrl: orderUrl,
         metadata: {
           orderNumber: supplierOrder.orderNumber,
-          customerPoNumber: customerPo?.ccPoNumber,
-          customerCompany: customerPo?.customerCompany || customerPo?.customerName,
           totalAmountUsd: supplierOrder.totalAmountUsd,
           itemCount: supplierOrder.itemCount,
         },
@@ -118,6 +111,10 @@ const notifyPartnerOfSupplierOrder = async ({
     // Determine email recipient
     const recipientEmail = userEmail || partner.businessEmail;
     const recipientName = userName || partner.businessName;
+
+    if (!sendEmail) {
+      return;
+    }
 
     if (!recipientEmail) {
       logger.error('No email recipient found for partner notification', { partnerId });
@@ -132,17 +129,22 @@ const notifyPartnerOfSupplierOrder = async ({
         dataVariables: {
           partnerName: recipientName,
           orderNumber: supplierOrder.orderNumber,
-          customerPoNumber: customerPo?.ccPoNumber ?? 'N/A',
-          customerName: customerPo?.customerCompany || customerPo?.customerName || 'N/A',
+          // Template variables kept for compatibility; never the end customer
+          customerPoNumber: supplierOrder.orderNumber,
+          customerName: 'Craft & Culture',
           itemCount: String(supplierOrder.itemCount ?? 0),
           totalAmount: totalFormatted,
           orderUrl,
         },
       });
 
-      logger.dev(`Sent supplier order notification to: ${recipientEmail}`);
+      logger.dev('Sent supplier order notification', { partnerId, supplierOrderId });
     } catch (error) {
-      logger.error(`Failed to send supplier order email notification to ${recipientEmail}:`, error);
+      logger.error('Failed to send supplier order email notification', {
+        partnerId,
+        supplierOrderId,
+        error,
+      });
     }
   } catch (error) {
     logger.error('Failed to notify partner of supplier order:', error);

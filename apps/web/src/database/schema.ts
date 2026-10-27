@@ -1977,6 +1977,9 @@ export const sourceRfqPartners = pgTable(
     // Count of quotes submitted
     quoteCount: integer('quote_count').notNull().default(0),
 
+    // Set when the one deadline reminder for this RFQ has been sent
+    deadlineReminderSentAt: timestamp('deadline_reminder_sent_at', { mode: 'date' }),
+
     ...timestamps,
   },
   (table) => [
@@ -2783,6 +2786,10 @@ export const sourceSupplierOrders = pgTable(
     viewedAt: timestamp('viewed_at', { mode: 'date' }),
     confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
     confirmedBy: uuid('confirmed_by'), // Partner user (no FK as might be external)
+
+    // Confirmation reminders (capped by the reminder job)
+    reminderCount: integer('reminder_count').notNull().default(0),
+    lastReminderAt: timestamp('last_reminder_at', { mode: 'date' }),
 
     // Shipping
     shippedAt: timestamp('shipped_at', { mode: 'date' }),

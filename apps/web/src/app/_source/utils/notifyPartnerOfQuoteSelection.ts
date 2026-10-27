@@ -130,9 +130,9 @@ const notifyPartnerOfQuoteSelection = async ({
         },
       });
 
-      logger.dev(`Sent quote selection notification to: ${recipientEmail}`);
+      logger.dev(`Sent quote selection notification`);
     } catch (error) {
-      logger.error(`Failed to send quote selection email to ${recipientEmail}:`, error);
+      logger.error(`Failed to send quote selection email:`, error);
     }
   } catch (error) {
     logger.error('Failed to notify partner of quote selection:', error);
