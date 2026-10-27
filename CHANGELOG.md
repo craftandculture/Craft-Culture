@@ -1,3 +1,9 @@
+## [2.0.612](https://github.com/craftandculture/Craft-Culture/compare/v2.0.611...v2.0.612) (2026-10-27)
+
+### Features
+
+* **dev-log:** one entry per day instead of one row per release ([89ee993](https://github.com/craftandculture/Craft-Culture/commit/89ee993ae49587d0dfacd00e74c014fddd8c603a))
+
 ## [2.0.611](https://github.com/craftandculture/Craft-Culture/compare/v2.0.610...v2.0.611) (2026-10-27)
 
 ### Bug Fixes
