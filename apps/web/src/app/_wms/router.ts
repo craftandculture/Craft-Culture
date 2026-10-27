@@ -12,7 +12,6 @@ import adminBackfillStockDetails from './controller/adminBackfillStockDetails';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
 import adminChangeTakeOutReason from './controller/adminChangeTakeOutReason';
-import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCorrectPackConfig from './controller/adminCorrectPackConfig';
@@ -23,7 +22,6 @@ import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePallet from './controller/adminCreatePallet';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
-import adminDeduplicateStock from './controller/adminDeduplicateStock';
 import adminDeleteBay from './controller/adminDeleteBay';
 import adminDeletePickList from './controller/adminDeletePickList';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
@@ -219,7 +217,6 @@ const stockRouter = createTRPCRouter({
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
   lookalikes: adminGetStockLookalikes,
-  deduplicate: adminDeduplicateStock,
   getAll: adminGetAllStockRecords,
   reconcile: adminReconcileStock,
   deleteRecord: adminDeleteStockRecord,
@@ -236,7 +233,6 @@ const stockRouter = createTRPCRouter({
   correctPackConfig: adminCorrectPackConfig,
   findPackMismatches: adminFindPackMismatches,
   syncToZoho: adminSyncStockToZoho,
-  clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,
   updateProductName: adminUpdateProductName,
   pricing: stockPricingRouter,

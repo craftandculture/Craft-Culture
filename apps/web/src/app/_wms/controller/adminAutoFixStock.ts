@@ -1,10 +1,11 @@
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock, wmsStockMovements } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
+import mergeDuplicateStockRows from '../utils/mergeDuplicateStockRows';
 import planLedgerReconcile from '../utils/planLedgerReconcile';
 
 /**
@@ -22,7 +23,7 @@ import planLedgerReconcile from '../utils/planLedgerReconcile';
  * @example
  *   await trpcClient.wms.admin.stock.autoFix.mutate();
  */
-const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
+const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
   const fixes: Array<{
     type:       | 'recorded_orphan'
       | 'merged_duplicate'
@@ -168,77 +169,29 @@ const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
     });
   }
 
-  // 2. Find and merge duplicate stock records (same lwin18 + location + shipment)
-  // Note: This shouldn't happen with the unique constraint, but handle legacy data
-  const duplicateGroups = await db.execute(sql`
-    SELECT
-      lwin18,
-      location_id,
-      shipment_id,
-      COUNT(*) as record_count,
-      SUM(quantity_cases) as total_cases,
-      ARRAY_AGG(id::text ORDER BY created_at) as stock_ids
-    FROM wms_stock
-    GROUP BY lwin18, location_id, shipment_id
-    HAVING COUNT(*) > 1
-  `);
+  // 2. Merge duplicate rows of one parcel (same owner, wine, bay, shipment,
+  //    held the same way). Cases are added together, never deleted.
+  const { merged, skipped } = await mergeDuplicateStockRows();
 
-  const duplicateRows = Array.isArray(duplicateGroups)
-    ? duplicateGroups
-    : duplicateGroups.rows ?? [];
-
-  for (const group of duplicateRows) {
-    const stockIds = group.stock_ids as string[];
-    const totalCases = Number(group.total_cases);
-    const keepId = stockIds[0]; // Keep the oldest record
-    const deleteIds = stockIds.slice(1); // Delete the rest
-
-    // Get details of the record we're keeping
-    const [keepRecord] = await db
-      .select()
-      .from(wmsStock)
-      .where(eq(wmsStock.id, keepId));
-
-    if (!keepRecord) continue;
-
-    // Sum the cases from records we're deleting
-    let deletedCases = 0;
-    for (const deleteId of deleteIds) {
-      const [deleteRecord] = await db
-        .select()
-        .from(wmsStock)
-        .where(eq(wmsStock.id, deleteId));
-
-      if (deleteRecord) {
-        deletedCases += deleteRecord.quantityCases;
-
-        // Create adjustment movement for deleted duplicate
-        const movementNumber = await generateMovementNumber();
-        await db.insert(wmsStockMovements).values({
-          movementNumber,
-          movementType: 'adjust',
-          lwin18: deleteRecord.lwin18,
-          productName: deleteRecord.productName,
-          quantityCases: -deleteRecord.quantityCases,
-          fromLocationId: deleteRecord.locationId,
-          notes: `AUTO-FIX: Merged duplicate into ${keepId}`,
-          reasonCode: 'stock_correction',
-          performedBy: ctx.user.id,
-          performedAt: new Date(),
-        });
-
-        // Delete the duplicate
-        await db.delete(wmsStock).where(eq(wmsStock.id, deleteId));
-      }
-    }
-
+  for (const group of merged) {
     fixes.push({
       type: 'merged_duplicate',
-      lwin18: keepRecord.lwin18,
-      productName: keepRecord.productName,
-      casesBefore: totalCases,
-      casesAfter: keepRecord.quantityCases,
-      detail: `Merged ${deleteIds.length} duplicate records (deleted ${deletedCases} duplicate cases)`,
+      lwin18: group.lwin18,
+      productName: group.productName,
+      casesBefore: group.casesBefore,
+      casesAfter: group.casesAfter,
+      detail: `Merged ${group.mergedIds.length + 1} rows of ${group.ownerName}'s stock into one (${group.casesAfter} cases, none removed)`,
+    });
+  }
+
+  for (const lwin18 of skipped) {
+    fixes.push({
+      type: 'needs_count',
+      lwin18,
+      productName: '',
+      casesBefore: 0,
+      casesAfter: 0,
+      detail: 'Duplicate stock rows could not be merged automatically — review this wine',
     });
   }
 

@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { lwinWines, wmsLocations } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 const SPIRIT_CATEGORIES = [
   'whisky',
@@ -69,7 +69,7 @@ interface ValidationResult {
   errors: string[];
 }
 
-const adminValidateImportItems = wmsOperatorProcedure
+const adminValidateImportItems = adminProcedure
   .input(validateImportSchema)
   .mutation(async ({ input }) => {
     const { items } = input;

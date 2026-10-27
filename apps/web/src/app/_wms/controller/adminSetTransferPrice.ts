@@ -1,4 +1,4 @@
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setTransferPriceSchema } from '../schemas/pricingManagerSchema';
 import writeProductPricing from '../utils/writeProductPricing';
@@ -16,7 +16,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  * @param lwin18 - The product LWIN18 identifier
  * @param transferPricePerBottle - Per-bottle transfer fee in USD, or null to clear
  */
-const adminSetTransferPrice = wmsOperatorProcedure
+const adminSetTransferPrice = adminProcedure
   .input(setTransferPriceSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, transferPricePerBottle } = input;

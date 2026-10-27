@@ -1,198 +1,97 @@
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsStock } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
- * Rebuild stock records from movement history
- * This is a recovery tool for when stock records are accidentally deleted
- * It recreates stock based on receive movements minus picks/adjustments
+ * Compare stock in each bay with what the movement ledger says should be there.
+ *
+ * Read only. This used to "rebuild" stock rows from the ledger, and in doing so
+ * ignored repacks and counts, gave wine with no shipment to whichever partner
+ * the database listed first, and created every row as for sale — so a
+ * member's held wine could come back listed under somebody else. It now only
+ * reports the gaps; a gap is corrected by counting the bay and adjusting the
+ * row, which records who did it and why.
+ *
+ * Pallet movements are not included (they move cases already on a stock row).
  *
  * @example
- *   await trpcClient.wms.admin.stock.rebuildFromMovements.mutate();
+ *   await trpcClient.wms.admin.stock.rebuildFromMovements.mutate({});
  */
-const adminRebuildStockFromMovements = wmsOperatorProcedure.mutation(async () => {
-  // Calculate net stock per product/location/shipment from all movements
-  // This is the source of truth
-  // Note: Transfers need special handling - each transfer creates TWO effects:
-  //   -quantity at from_location_id, +quantity at to_location_id
-  // We use UNION ALL to treat each transfer as two separate rows
-  const netStockFromMovements = await db.execute(sql`
+const adminRebuildStockFromMovements = adminProcedure.mutation(async () => {
+  const result = await db.execute(sql`
     WITH movement_effects AS (
-      -- Receives: add stock at to_location
-      SELECT lwin18, product_name, to_location_id as location_id, shipment_id, quantity_cases as effect
-      FROM wms_stock_movements
-      WHERE movement_type = 'receive' AND to_location_id IS NOT NULL
-
+      SELECT lwin18, product_name, to_location_id AS location_id, quantity_cases AS effect
+        FROM wms_stock_movements
+       WHERE movement_type IN ('receive', 'transfer', 'repack_in') AND to_location_id IS NOT NULL
       UNION ALL
-
-      -- Picks: remove stock from from_location
-      SELECT lwin18, product_name, from_location_id as location_id, shipment_id, -quantity_cases as effect
-      FROM wms_stock_movements
-      WHERE movement_type = 'pick' AND from_location_id IS NOT NULL
-
+      SELECT lwin18, product_name, from_location_id AS location_id, -quantity_cases AS effect
+        FROM wms_stock_movements
+       WHERE movement_type IN ('pick', 'transfer', 'repack_out') AND from_location_id IS NOT NULL
       UNION ALL
-
-      -- Transfers: add stock at to_location
-      SELECT lwin18, product_name, to_location_id as location_id, shipment_id, quantity_cases as effect
-      FROM wms_stock_movements
-      WHERE movement_type = 'transfer' AND to_location_id IS NOT NULL
-
-      UNION ALL
-
-      -- Transfers: remove stock from from_location
-      SELECT lwin18, product_name, from_location_id as location_id, shipment_id, -quantity_cases as effect
-      FROM wms_stock_movements
-      WHERE movement_type = 'transfer' AND from_location_id IS NOT NULL
-
-      UNION ALL
-
-      -- Adjustments (excluding stock corrections): add/subtract at from_location
-      SELECT lwin18, product_name, COALESCE(to_location_id, from_location_id) as location_id, shipment_id, quantity_cases as effect
-      FROM wms_stock_movements
-      WHERE movement_type = 'adjust' AND reason_code != 'stock_correction'
+      SELECT lwin18, product_name, COALESCE(to_location_id, from_location_id) AS location_id, quantity_cases AS effect
+        FROM wms_stock_movements
+       WHERE movement_type IN ('adjust', 'count')
+         AND reason_code IS DISTINCT FROM 'stock_correction'
+    ),
+    ledger AS (
+      SELECT lwin18, location_id, MAX(product_name) AS product_name, SUM(effect)::int AS ledger_cases
+        FROM movement_effects
+       WHERE location_id IS NOT NULL
+       GROUP BY lwin18, location_id
+    ),
+    shelf AS (
+      SELECT lwin18, location_id, MAX(product_name) AS product_name, SUM(quantity_cases)::int AS stock_cases
+        FROM wms_stock
+       GROUP BY lwin18, location_id
     )
-    SELECT
-      lwin18,
-      product_name,
-      location_id,
-      shipment_id,
-      SUM(effect) as net_cases
-    FROM movement_effects
-    WHERE location_id IS NOT NULL
-    GROUP BY lwin18, product_name, location_id, shipment_id
-    HAVING SUM(effect) > 0
+    SELECT COALESCE(l.lwin18, s.lwin18) AS lwin18,
+           COALESCE(s.product_name, l.product_name, '') AS product_name,
+           loc.location_code,
+           COALESCE(l.ledger_cases, 0) AS ledger_cases,
+           COALESCE(s.stock_cases, 0) AS stock_cases
+      FROM ledger l
+      FULL OUTER JOIN shelf s ON s.lwin18 = l.lwin18 AND s.location_id = l.location_id
+      LEFT JOIN wms_locations loc ON loc.id = COALESCE(l.location_id, s.location_id)
+     WHERE COALESCE(l.ledger_cases, 0) > COALESCE(s.stock_cases, 0)
+     ORDER BY (COALESCE(l.ledger_cases, 0) - COALESCE(s.stock_cases, 0)) DESC
+     LIMIT 500
   `);
 
-  const stockToCreate = Array.isArray(netStockFromMovements)
-    ? netStockFromMovements
-    : netStockFromMovements.rows ?? [];
+  const rows = (
+    Array.isArray(result)
+      ? result
+      : ((result as { rows?: unknown[] }).rows ?? [])
+  ) as Array<{
+    lwin18: string;
+    product_name: string;
+    location_code: string | null;
+    ledger_cases: number | string;
+    stock_cases: number | string;
+  }>;
 
-  if (stockToCreate.length === 0) {
-    return {
-      success: true,
-      message: 'No stock to rebuild - movements show zero net stock',
-      created: 0,
-      updated: 0,
-    };
-  }
-
-  // Get owner info from receive movements (first receive movement for each shipment)
-  const ownersByShipment = await db.execute(sql`
-    SELECT DISTINCT ON (shipment_id)
-      shipment_id,
-      (
-        SELECT s.partner_id FROM logistics_shipments s WHERE s.id = m.shipment_id
-      ) as owner_id,
-      (
-        SELECT p.business_name FROM partners p
-        JOIN logistics_shipments s ON s.partner_id = p.id
-        WHERE s.id = m.shipment_id
-      ) as owner_name
-    FROM wms_stock_movements m
-    WHERE m.movement_type = 'receive' AND m.shipment_id IS NOT NULL
-  `);
-
-  const ownerMap = new Map<string, { ownerId: string; ownerName: string }>();
-  const ownerRows = Array.isArray(ownersByShipment)
-    ? ownersByShipment
-    : ownersByShipment.rows ?? [];
-  for (const row of ownerRows) {
-    if (row.shipment_id && row.owner_id) {
-      ownerMap.set(row.shipment_id as string, {
-        ownerId: row.owner_id as string,
-        ownerName: (row.owner_name as string) ?? 'Unknown',
-      });
-    }
-  }
-
-  // Get a default owner (first partner) for stock without shipment
-  const [defaultPartner] = await db.execute(sql`
-    SELECT id, business_name FROM partners LIMIT 1
-  `);
-  const defaultOwner = defaultPartner
-    ? { ownerId: defaultPartner.id as string, ownerName: defaultPartner.business_name as string }
-    : null;
-
-  let created = 0;
-  let updated = 0;
-  const errors: string[] = [];
-
-  for (const row of stockToCreate) {
-    const lwin18 = row.lwin18 as string;
-    const productName = row.product_name as string;
-    const locationId = row.location_id as string;
-    const shipmentId = row.shipment_id as string | null;
-    const netCases = Number(row.net_cases);
-
-    if (!locationId) {
-      errors.push(`No location for ${productName} - skipped`);
-      continue;
-    }
-
-    // Get owner
-    const owner = shipmentId
-      ? ownerMap.get(shipmentId) ?? defaultOwner
-      : defaultOwner;
-
-    if (!owner) {
-      errors.push(`No owner found for ${productName} - skipped`);
-      continue;
-    }
-
-    // Check if stock record already exists
-    const [existingStock] = await db
-      .select()
-      .from(wmsStock)
-      .where(
-        sql`${wmsStock.lwin18} = ${lwin18}
-            AND ${wmsStock.locationId} = ${locationId}
-            AND (${wmsStock.shipmentId} = ${shipmentId} OR (${wmsStock.shipmentId} IS NULL AND ${shipmentId} IS NULL))`,
-      );
-
-    if (existingStock) {
-      // Update existing
-      if (existingStock.quantityCases !== netCases) {
-        await db
-          .update(wmsStock)
-          .set({
-            quantityCases: netCases,
-            availableCases: netCases - existingStock.reservedCases,
-            updatedAt: new Date(),
-          })
-          .where(eq(wmsStock.id, existingStock.id));
-        updated++;
-      }
-    } else {
-      // Create new stock record
-      await db.insert(wmsStock).values({
-        locationId,
-        ownerId: owner.ownerId,
-        ownerName: owner.ownerName,
-        lwin18,
-        productName,
-        quantityCases: netCases,
-        reservedCases: 0,
-        availableCases: netCases,
-        shipmentId,
-        receivedAt: new Date(),
-        category: 'Wine',
-        salesArrangement: 'consignment',
-      });
-      created++;
-    }
-  }
-
-  // Log the recovery
-  console.log('[WMS] Stock rebuild completed:', { created, updated, errors });
+  const gaps = rows.map((row) => ({
+    lwin18: String(row.lwin18),
+    productName: String(row.product_name ?? ''),
+    locationCode: row.location_code ?? '—',
+    ledgerCases: Number(row.ledger_cases),
+    stockCases: Number(row.stock_cases),
+  }));
 
   return {
     success: true,
-    message: `Rebuilt stock from movements: ${created} created, ${updated} updated`,
-    created,
-    updated,
-    errors: errors.length > 0 ? errors : undefined,
+    dryRun: true as const,
+    message:
+      gaps.length === 0
+        ? 'No bay holds less than the ledger says. Nothing to count.'
+        : `${gaps.length} bay${gaps.length === 1 ? '' : 's'} hold less than the ledger says. Nothing was changed — count each one and adjust the stock row.`,
+    created: 0,
+    updated: 0,
+    errors: gaps.map(
+      (gap) =>
+        `${gap.productName || gap.lwin18} at ${gap.locationCode}: ledger ${gap.ledgerCases}, in stock ${gap.stockCases}`,
+    ),
+    gaps,
   };
 });
 
