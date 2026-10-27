@@ -3092,7 +3092,30 @@ const PricingManagerPage = () => {
                     // The two prices a phone can change too; one definition for both layouts.
                     // In bond: the margin the typed price implies is what gets stored.
                     const saveInBond = (price: number) => {
-                      if (landed == null || landed <= 0) return;
+                      /*
+                        Spirits and RTD have one price, driven by their own
+                        bespoke margin. Saving the wine B2B margin here changed
+                        nothing they read, so the typed price never stuck.
+                        With no cost, or a price at or under cost, there is no
+                        margin to store, so the price itself is kept.
+                      */
+                      if (isSpiritOrRtd) {
+                        const rounded = Math.round(price * 100) / 100;
+                        const pct =
+                          landed != null && landed > 0 && rounded > landed
+                            ? Math.min(99.9, Math.max(0.1, Number((((rounded - landed) / rounded) * 100).toFixed(2))))
+                            : null;
+                        setSellMarginMut.mutate({
+                          lwin18: product.lwin18,
+                          sellMarginPct: pct,
+                          sellingPricePerBottle: rounded,
+                        });
+                        return;
+                      }
+                      if (landed == null || landed <= 0) {
+                        toast.error('This wine has no landed cost yet, so an In Bond price cannot be set. Add the cost first.');
+                        return;
+                      }
                       const pct = ((price - landed) / price) * 100;
                       setLineMarginsMut.mutate({
                         lwin18s: [product.lwin18],
@@ -3106,6 +3129,11 @@ const PricingManagerPage = () => {
                           : `${(((price - landed) / price) * 100).toFixed(1)}% margin on landed`
                         : null;
                     const savePc = (v: number) => {
+                      // Spirits and RTD: the PC price is the same single price
+                      if (isSpiritOrRtd && !ownerId) {
+                        saveInBond(v);
+                        return;
+                      }
                       if (ownerId) {
                         setOwnerPricingMut.mutate({
                           lwin18: product.lwin18,
