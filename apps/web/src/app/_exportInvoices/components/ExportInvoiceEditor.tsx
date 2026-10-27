@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 import ExportChangeRequest from './ExportChangeRequest';
 import ExportChecksPanel from './ExportChecksPanel';
@@ -107,7 +108,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const revising = editable && Boolean(data.number);
   const errors = data.checks.filter((c) => c.level === 'error');
   const warnings = data.checks.filter((c) => c.level === 'warning');
-  const pdfHref = data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`;
+  const pdfHref = fileHref(data.pdfUrl) ?? `/api/admin/export-invoices/${id}/pdf`;
   const blockedBy = errors.length
     ? `${errors.length} error${errors.length > 1 ? 's' : ''} to fix in Checks: ${errors[0]?.message ?? ''}`
     : warnings.length && !acknowledged
@@ -180,7 +181,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               {v.pdfUrl && (
                 <>
                   {' · '}
-                  <a className="underline" href={v.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
+                  <a className="underline" href={fileHref(v.pdfUrl)} target="_blank" rel="noreferrer">PDF</a>
                 </>
               )}
             </p>

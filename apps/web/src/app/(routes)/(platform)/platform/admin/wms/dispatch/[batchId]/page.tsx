@@ -29,6 +29,7 @@ import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateDispatchLabelZpl from '@/app/_wms/utils/generateDispatchLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 /**
  * WMS Dispatch Batch Detail
@@ -478,7 +479,7 @@ const WMSDispatchBatchDetailPage = () => {
                     </div>
                     {dn.pdfUrl && (
                       <a
-                        href={dn.pdfUrl}
+                        href={fileHref(dn.pdfUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-brand-600 hover:underline"

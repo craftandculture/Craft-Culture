@@ -32,6 +32,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsDocument } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 import DeclaredComparison from './DeclaredComparison';
 
@@ -258,7 +259,7 @@ const LogisticsDocumentUpload = ({
 
       try {
         // Fetch the document file and convert to base64
-        const response = await fetch(doc.fileUrl);
+        const response = await fetch(fileHref(doc.fileUrl));
         const blob = await response.blob();
 
         const base64Promise = new Promise<string>((resolve, reject) => {
@@ -513,7 +514,7 @@ const LogisticsDocumentUpload = ({
 
         // Upload directly to Vercel Blob (bypasses serverless 4.5MB body limit)
         const blob = await upload(file.name, file, {
-          access: 'public',
+          access: 'private',
           handleUploadUrl: '/api/upload/blob',
         });
 
@@ -709,7 +710,7 @@ const LogisticsDocumentUpload = ({
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" asChild>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={fileHref(doc.fileUrl)} target="_blank" rel="noopener noreferrer">
                       <Icon icon={IconFile} size="sm" />
                     </a>
                   </Button>

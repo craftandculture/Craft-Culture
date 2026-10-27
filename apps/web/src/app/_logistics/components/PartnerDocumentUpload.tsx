@@ -24,6 +24,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsDocument } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type DocumentType =
   | 'bill_of_lading'
@@ -272,7 +273,7 @@ const PartnerDocumentUpload = ({
 
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm" asChild>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={fileHref(doc.fileUrl)} target="_blank" rel="noopener noreferrer">
                       <Icon icon={IconFile} size="sm" />
                     </a>
                   </Button>

@@ -34,6 +34,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 const CATEGORIES = [
   'freight',
@@ -452,7 +453,7 @@ const ShipmentGroupDetailPage = () => {
     // refused before our code runs
     setInvoiceUploading(true);
     void upload(`logistics/groups/${groupId}/${f.name}`, f, {
-      access: 'public',
+      access: 'private',
       handleUploadUrl: '/api/upload/blob',
     })
       .then((blob) =>
@@ -492,7 +493,7 @@ const ShipmentGroupDetailPage = () => {
     // Straight to Blob, so a scanned GAC invoice over ~3MB is not refused
     setDocUploading(true);
     void upload(`logistics/groups/${groupId}/${f.name}`, f, {
-      access: 'public',
+      access: 'private',
       handleUploadUrl: '/api/upload/blob',
     })
       .then((blob) =>
@@ -933,7 +934,7 @@ const ShipmentGroupDetailPage = () => {
                     className="flex items-center justify-between gap-3 py-1.5"
                   >
                     <a
-                      href={d.fileUrl}
+                      href={fileHref(d.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-text-brand min-w-0 truncate text-sm hover:underline"

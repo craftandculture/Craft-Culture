@@ -35,6 +35,8 @@ export const POST = async (request: Request) => {
     const jsonResponse = await handleUpload({
       body,
       request,
+      // Every staff upload goes to the private store; links open via /api/files
+      token: process.env.BLOB_PRIVATE_READ_WRITE_TOKEN,
       onBeforeGenerateToken: async (pathname) => {
         const user = await getCurrentUser();
         if (!user) {

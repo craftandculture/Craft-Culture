@@ -1,5 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { del, put } from '@vercel/blob';
 import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -12,6 +11,7 @@ import {
   logisticsJobs,
   logisticsShipmentActivityLogs,
 } from '@/database/schema';
+import { deleteStoredFile, putPrivateFile } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -58,7 +58,7 @@ const adminIssue = adminProcedure
 
     /** Remove a PDF whose save did not go through, so no stray file is left behind */
     const discard = async (url: string) => {
-      await del(url).catch((error: unknown) => {
+      await deleteStoredFile(url).catch((error: unknown) => {
         logger.error('Could not remove an unsaved export invoice PDF', {
           exportInvoiceId: row.id,
           error: error instanceof Error ? error.message : String(error),
@@ -74,11 +74,7 @@ const adminIssue = adminProcedure
       const issued = { ...document, header: { ...document.header, number } };
       const pdf = await renderExportInvoicePDF(issued);
       const version = row.version + 1;
-      const blob = await put(`export-invoices/${number}/v${version}.pdf`, pdf, {
-        access: 'public',
-        contentType: 'application/pdf',
-        addRandomSuffix: true,
-      });
+      const blob = await putPrivateFile(`export-invoices/${number}/v${version}.pdf`, pdf, 'application/pdf');
       try {
         await db.transaction(async (tx) => {
           const saved = await tx

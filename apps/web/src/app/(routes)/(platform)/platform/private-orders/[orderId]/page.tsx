@@ -48,6 +48,7 @@ import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
 import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type Currency = 'USD' | 'AED';
 
@@ -977,13 +978,13 @@ const PrivateOrderDetailPage = () => {
 
                       {order.deliveryPhoto && (
                         <a
-                          href={order.deliveryPhoto}
+                          href={fileHref(order.deliveryPhoto)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="group relative overflow-hidden rounded-lg border border-border-muted"
                         >
                           <Image
-                            src={order.deliveryPhoto}
+                            src={fileHref(order.deliveryPhoto)}
                             alt="Proof of delivery"
                             width={120}
                             height={80}

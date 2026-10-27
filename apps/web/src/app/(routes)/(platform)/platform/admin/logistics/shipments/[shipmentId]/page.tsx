@@ -68,6 +68,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import type { LogisticsShipment } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 import formatPrice from '@/utils/formatPrice';
 
 const HS_CODES = [
@@ -643,7 +644,7 @@ const ShipmentDetailPage = () => {
           `${r.deliveryNoteNumber} created — ${r.totalCases} cases, ${r.totalBottles} bottles`,
           {
             duration: 15000,
-            action: { label: 'Open PDF', onClick: () => window.open(r.fileUrl, '_blank', 'noopener') },
+            action: { label: 'Open PDF', onClick: () => window.open(fileHref(r.fileUrl), '_blank', 'noopener') },
           },
         );
         setIsSignOpen(false);
@@ -3206,7 +3207,7 @@ const ShipmentDetailPage = () => {
                     {shipment.groupDocuments.map((d) => (
                       <div key={d.id} className="flex items-center justify-between gap-3 py-1.5">
                         <a
-                          href={d.fileUrl}
+                          href={fileHref(d.fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="min-w-0 truncate text-sm text-text-brand hover:underline"
@@ -3281,7 +3282,7 @@ const ShipmentDetailPage = () => {
                       {bills.map((d) => (
                         <div key={d.id} className="flex items-center justify-between gap-3 py-2">
                           <a
-                            href={d.fileUrl}
+                            href={fileHref(d.fileUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="min-w-0 truncate text-sm text-text-primary hover:underline"

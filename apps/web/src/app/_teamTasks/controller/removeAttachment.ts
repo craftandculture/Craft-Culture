@@ -1,9 +1,9 @@
-import { del } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { teamTaskAttachments } from '@/database/schema';
+import { deleteStoredFile } from '@/lib/blob/privateFiles';
 import { teamProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -40,7 +40,7 @@ const removeAttachment = teamProcedure
         fileUrl: row.fileUrl,
       });
     } else if (process.env.BLOB_READ_WRITE_TOKEN) {
-      await del(row.fileUrl).catch((error: unknown) =>
+      await deleteStoredFile(row.fileUrl).catch((error: unknown) =>
         logger.error('Could not delete a task attachment from Blob', { error, fileUrl: row.fileUrl }),
       );
     }

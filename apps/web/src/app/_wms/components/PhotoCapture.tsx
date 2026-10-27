@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import fileHref from '@/utils/fileHref';
 
 /**
  * Compress an image file using canvas to reduce size for upload.
@@ -157,7 +158,7 @@ const PhotoCapture = ({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={url}
+                src={fileHref(url)}
                 alt={`Photo ${index + 1}`}
                 className="h-full w-full object-cover"
               />

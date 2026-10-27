@@ -71,6 +71,7 @@ import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
@@ -1712,7 +1713,7 @@ const ProductRow = ({
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={lightboxPhotos[lightboxIndex]}
+                src={fileHref(lightboxPhotos[lightboxIndex])}
                 alt={`Receiving photo ${lightboxIndex + 1}`}
                 className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
               />

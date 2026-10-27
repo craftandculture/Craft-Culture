@@ -27,7 +27,7 @@ const useExportUpload = (shipmentId: string) => {
     setUploading(true);
     try {
       const blob = await upload(`logistics/exports/${shipmentId}/${file.name}`, file, {
-        access: 'public',
+        access: 'private',
         handleUploadUrl: '/api/upload/blob',
       });
       await addDocument.mutateAsync({

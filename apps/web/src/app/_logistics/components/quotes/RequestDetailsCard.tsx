@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
+import fileHref from '@/utils/fileHref';
 
 import { card, input, label, pillClass, primaryButton, secondaryButton, sectionHeading } from '../exports/exportUi';
 
@@ -330,7 +331,7 @@ const RequestDetailsCard = ({ request, editing, onEditingChange }: RequestDetail
           {r.attachments.map((a) => (
             <a
               key={a.id}
-              href={a.fileUrl}
+              href={fileHref(a.fileUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-text-primary underline"

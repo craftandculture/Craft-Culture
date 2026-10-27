@@ -40,6 +40,7 @@ import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { logisticsQuoteStatus, logisticsTransportMode } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type QuoteStatus = (typeof logisticsQuoteStatus.enumValues)[number];
 type TransportMode = (typeof logisticsTransportMode.enumValues)[number];
@@ -601,7 +602,7 @@ const QuoteDetailPage = () => {
                   {quote.attachments.map((a) => (
                     <a
                       key={a.id}
-                      href={a.fileUrl}
+                      href={fileHref(a.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 block text-sm text-text-primary underline"

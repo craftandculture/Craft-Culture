@@ -1,5 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -10,6 +9,7 @@ import {
   logisticsShipments,
   partners,
 } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import renderInboundDeliveryNotePDF from '../utils/renderInboundDeliveryNotePDF';
@@ -161,11 +161,7 @@ const adminGenerateInboundDeliveryNote = adminProcedure
     });
 
     const fileName = `${deliveryNoteNumber}.pdf`;
-    const blob = await put(`logistics/delivery-notes/${fileName}`, pdfBuffer, {
-      access: 'public',
-      contentType: 'application/pdf',
-      addRandomSuffix: true,
-    });
+    const blob = await putPrivateFile(`logistics/delivery-notes/${fileName}`, pdfBuffer, 'application/pdf');
 
     const [document] = await db
       .insert(logisticsDocuments)

@@ -65,6 +65,7 @@ import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import OrderChain from '@/app/_zohoSalesOrders/components/OrderChain';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type Currency = 'USD' | 'AED';
 
@@ -956,7 +957,7 @@ const AdminPrivateOrderDetailPage = () => {
                       className="group relative overflow-hidden rounded-lg border border-border-muted"
                     >
                       <Image
-                        src={order.deliveryPhoto}
+                        src={fileHref(order.deliveryPhoto)}
                         alt="Proof of delivery"
                         width={120}
                         height={80}
@@ -1887,7 +1888,7 @@ const AdminPrivateOrderDetailPage = () => {
               <IconX size={24} />
             </button>
             <Image
-              src={order.deliveryPhoto}
+              src={fileHref(order.deliveryPhoto)}
               alt="Proof of delivery"
               width={1200}
               height={800}
@@ -2077,7 +2078,7 @@ const AdminPrivateOrderDetailPage = () => {
                         className="group relative overflow-hidden rounded-lg border border-border-muted"
                       >
                         <Image
-                          src={order.deliveryPhoto}
+                          src={fileHref(order.deliveryPhoto)}
                           alt="Proof of delivery"
                           width={120}
                           height={80}

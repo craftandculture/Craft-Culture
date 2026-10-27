@@ -13,6 +13,7 @@ import {
   logisticsShipmentCostLines,
   users,
 } from '@/database/schema';
+import { readStoredFileBuffer } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -133,9 +134,8 @@ const adminExtractShipmentInvoice = adminProcedure
         logger.error('Refusing to fetch logistics document from an unrecognised host');
         return null;
       }
-      const fileRes = await fetch(fileUrl);
-      if (!fileRes.ok) return null;
-      const buffer = Buffer.from(await fileRes.arrayBuffer());
+      const buffer = await readStoredFileBuffer(fileUrl);
+      if (!buffer) return null;
       const instruction = 'Extract every logistics charge and the currency.';
       if ((mimeType ?? '').startsWith('image/')) {
         const result = await generateObject({

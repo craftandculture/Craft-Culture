@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 
+import { readStoredFileBuffer } from '@/lib/blob/privateFiles';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
 /**
@@ -22,13 +23,13 @@ const readUploadedFile = async (input: { file?: string | null; blobUrl?: string 
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unrecognised file location' });
     }
 
-    const response = await fetch(input.blobUrl);
+    const buffer = await readStoredFileBuffer(input.blobUrl);
 
-    if (!response.ok) {
+    if (!buffer) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not read the uploaded file' });
     }
 
-    return Buffer.from(await response.arrayBuffer());
+    return buffer;
   }
 
   const base64Data = input.file?.includes(',') ? input.file.split(',')[1] : input.file;
