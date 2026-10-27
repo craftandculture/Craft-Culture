@@ -1,3 +1,9 @@
+## [2.0.603](https://github.com/craftandculture/Craft-Culture/compare/v2.0.602...v2.0.603) (2026-10-27)
+
+### Features
+
+* the Pricing Manager sets the blanket In Bond % and PC % in their own column headers ([25f5be7](https://github.com/craftandculture/Craft-Culture/commit/25f5be7a2c57ba9c2284605bf6b0135bc545015d))
+
 ## [2.0.602](https://github.com/craftandculture/Craft-Culture/compare/v2.0.601...v2.0.602) (2026-10-27)
 
 ### Bug Fixes
