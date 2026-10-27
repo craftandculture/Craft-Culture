@@ -1,3 +1,14 @@
+## [2.0.592](https://github.com/craftandculture/Craft-Culture/compare/v2.0.591...v2.0.592) (2026-10-27)
+
+### Features
+
+* the Pricing Manager shows a wine on one line by default, so 30 or more fit on a screen ([644f8c8](https://github.com/craftandculture/Craft-Culture/commit/644f8c82eb6e5790020b5c2727afab336950a9d0))
+* Zoho orders, invoices and payments, cellar hold expiry, the City Drinks stock pull and document expiry alerts run on Vercel's schedule, and the intelligence agents run weekly ([1f47205](https://github.com/craftandculture/Craft-Culture/commit/1f47205ce5fbef6376defb742375aa5e0982803c))
+
+### Bug Fixes
+
+* an export invoice declaration no longer starts with a stray space when it only names the countries of origin ([d79a6b9](https://github.com/craftandculture/Craft-Culture/commit/d79a6b9368c36af8218c0d2cfae74cefb8df2cbd))
+
 ## [2.0.591](https://github.com/craftandculture/Craft-Culture/compare/v2.0.590...v2.0.591) (2026-10-27)
 
 ### Bug Fixes
