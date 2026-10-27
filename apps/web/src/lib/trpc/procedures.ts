@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
 
 import { TRPCError } from '@trpc/server';
+import { cookies, headers } from 'next/headers';
 
 import { STOCK_OWNER_PARTNER_TYPES } from '@/app/_auth/constants/accessProfiles';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
+import { WMS_DEVICE_COOKIE, WMS_DEVICE_HEADER } from '@/lib/wms/deviceTokenCookie';
 import serverConfig from '@/server.config';
 
 import { t } from './trpc';
@@ -543,8 +545,8 @@ export const supplierProcedure = approvedProcedure.use(
  * For warehouse devices (TC27, Enterprise Browser) that authenticate via
  * a pre-shared device token instead of user sessions.
  *
- * The device token is passed as an input parameter and validated against
- * the WMS_DEVICE_TOKEN environment variable.
+ * The device token is sent as a header or cookie and validated against the
+ * WMS_DEVICE_TOKEN environment variable.
  */
 /**
  * Validates a device token against the expected WMS device token.
@@ -578,7 +580,19 @@ export const validateDeviceToken = (deviceToken: string | undefined) => {
 };
 
 /**
- * Device procedure - uses publicProcedure as base.
- * Token validation must be done in the query handler using validateDeviceToken().
+ * Device procedure
+ *
+ * Fails closed: every call must present the device token, either in the
+ * `x-device-token` header or the httpOnly cookie middleware sets when a
+ * device opens its WMS link. Tokens in the request input are not accepted.
  */
-export const deviceProcedure = publicProcedure;
+export const deviceProcedure = publicProcedure.use(async ({ next }) => {
+  const [headerList, cookieStore] = await Promise.all([headers(), cookies()]);
+  const presented =
+    headerList.get(WMS_DEVICE_HEADER) ??
+    cookieStore.get(WMS_DEVICE_COOKIE)?.value;
+
+  validateDeviceToken(presented ?? undefined);
+
+  return next();
+});
