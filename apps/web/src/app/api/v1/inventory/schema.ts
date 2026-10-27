@@ -1,10 +1,18 @@
 import z from 'zod';
 
+/**
+ * `?inStock=false` must read as false. z.coerce.boolean turns any non-empty
+ * string, "false" included, into true.
+ */
+const queryBoolean = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((value) => value === 'true' || value === '1');
+
 export const inventoryQuerySchema = z.object({
-  cursor: z.coerce.number().optional().default(0),
-  limit: z.coerce.number().min(1).max(100).optional().default(50),
+  cursor: z.coerce.number().int().min(0).optional().default(0),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
   source: z.enum(['local_inventory', 'cultx']).optional(),
-  inStock: z.coerce.boolean().optional(),
+  inStock: queryBoolean.optional(),
 });
 
 export type InventoryQuery = z.infer<typeof inventoryQuerySchema>;

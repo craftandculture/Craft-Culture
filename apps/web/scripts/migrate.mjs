@@ -3863,6 +3863,66 @@ const runMigrations = async () => {
     console.log('✅ SOURCE reminder tracking ready');
 
     /*
+      Platform audit fixes (27 Oct 2026).
+
+      1. API rate limit counter: one row per key per minute, bumped with an
+         atomic upsert so concurrent requests cannot all pass the limit.
+      2. Indexes on hot foreign keys that had none (sign-in lookups, offers by
+         product, WMS joins). Not needed for the code to run, so a failure is
+         logged and the deploy continues.
+      3. API keys: the partner feed is now the default for any key without
+         feed:unrestricted. C&C's own keys (the consumer portals) made before
+         either flag existed are marked unrestricted so the portals keep their
+         Private Client prices; other partners' old keys become restricted.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "partner_api_rate_limits" (
+        "api_key_id" uuid NOT NULL,
+        "window_start" timestamp NOT NULL,
+        "request_count" integer DEFAULT 0 NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "partner_api_rate_limits" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "partner_api_rate_limits_key_window_idx" ON "partner_api_rate_limits" ("api_key_id", "window_start")`,
+    );
+
+    const fkIndexes = [
+      ['sessions_user_id_idx', 'sessions', 'user_id'],
+      ['accounts_user_id_idx', 'accounts', 'user_id'],
+      ['passkeys_user_id_idx', 'passkeys', 'user_id'],
+      ['product_offers_product_id_idx', 'product_offers', 'product_id'],
+      ['wms_pick_list_items_suggested_stock_id_idx', 'wms_pick_list_items', 'suggested_stock_id'],
+      ['wms_pick_list_items_suggested_location_id_idx', 'wms_pick_list_items', 'suggested_location_id'],
+      ['wms_stock_movements_from_location_id_idx', 'wms_stock_movements', 'from_location_id'],
+      ['wms_stock_movements_to_location_id_idx', 'wms_stock_movements', 'to_location_id'],
+      ['wms_stock_reservations_owner_id_idx', 'wms_stock_reservations', 'owner_id'],
+      ['zoho_sales_orders_pick_list_id_idx', 'zoho_sales_orders', 'pick_list_id'],
+    ];
+    for (const [indexName, table, column] of fkIndexes) {
+      try {
+        await client.unsafe(
+          `CREATE INDEX IF NOT EXISTS "${indexName}" ON "${table}" ("${column}")`,
+        );
+      } catch (error) {
+        console.error(`⚠️  Index ${indexName} not created (deploy continues)`, error);
+      }
+    }
+
+    await dataFix('C&C portal API keys marked unrestricted before partner feed became the default', () =>
+      client.unsafe(`
+        UPDATE "partner_api_keys" k
+        SET "permissions" = k."permissions" || '["feed:unrestricted"]'::jsonb
+        FROM "partners" p
+        WHERE p."id" = k."partner_id"
+          AND p."business_name" ~* 'craft.*culture'
+          AND NOT (k."permissions" ? 'feed:partner')
+          AND NOT (k."permissions" ? 'feed:unrestricted')
+      `),
+    );
+    console.log('✅ Platform audit fixes ready');
+
+    /*
       Private Cellar member emails (26 Oct 2026). Every member email is queued
       here first and sent by the member-emails cron in the switch's mode (off,
       shadow or live), so nothing reaches a member until Kevin turns it on.

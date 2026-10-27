@@ -180,7 +180,7 @@ export const sessions = pgTable('sessions', {
   /** If set, this session is an impersonation - the admin who started it */
   impersonatedBy: uuid('impersonated_by').references(() => users.id),
   ...timestamps,
-});
+}, (table) => [index('sessions_user_id_idx').on(table.userId)]);
 // Note: No RLS on sessions - managed by Better Auth
 
 export type Session = typeof sessions.$inferSelect;
@@ -206,7 +206,7 @@ export const accounts = pgTable('accounts', {
   idToken: text('id_token'),
   password: text('password'),
   ...timestamps,
-});
+}, (table) => [index('accounts_user_id_idx').on(table.userId)]);
 // Note: No RLS on accounts - managed by Better Auth
 
 export const verifications = pgTable('verifications', {
@@ -235,7 +235,7 @@ export const passkeys = pgTable('passkeys', {
   transports: text('transports').notNull(),
   aaguid: text('aaguid'),
   ...timestamps,
-});
+}, (table) => [index('passkeys_user_id_idx').on(table.userId)]);
 // Note: No RLS on passkeys - managed by Better Auth
 
 export const products = pgTable(
@@ -290,7 +290,7 @@ export const productOffers = pgTable('product_offers', {
   unitSize: text('unit_size').notNull(),
   availableQuantity: integer('available_quantity').notNull(),
   ...timestamps,
-}).enableRLS();
+}, (table) => [index('product_offers_product_id_idx').on(table.productId)]).enableRLS();
 
 export const adminActivityLogs = pgTable(
   'admin_activity_logs',
@@ -757,6 +757,25 @@ export const partnerApiRequestLogs = pgTable(
     index('partner_api_request_logs_rate_limit_idx').on(
       table.apiKeyId,
       table.createdAt,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * Requests per API key per one-minute window, counted with one atomic
+ * upsert so concurrent requests cannot all slip under the limit
+ */
+export const partnerApiRateLimits = pgTable(
+  'partner_api_rate_limits',
+  {
+    apiKeyId: uuid('api_key_id').notNull(),
+    windowStart: timestamp('window_start').notNull(),
+    requestCount: integer('request_count').notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex('partner_api_rate_limits_key_window_idx').on(
+      table.apiKeyId,
+      table.windowStart,
     ),
   ],
 ).enableRLS();
@@ -4782,6 +4801,8 @@ export const wmsStockMovements = pgTable(
     index('wms_stock_movements_movement_type_idx').on(table.movementType),
     index('wms_stock_movements_lwin18_idx').on(table.lwin18),
     index('wms_stock_movements_performed_at_idx').on(table.performedAt),
+    index('wms_stock_movements_from_location_id_idx').on(table.fromLocationId),
+    index('wms_stock_movements_to_location_id_idx').on(table.toLocationId),
   ],
 );
 
@@ -4825,6 +4846,7 @@ export const wmsStockReservations = pgTable(
     index('wms_stock_reservations_order_item_id_idx').on(table.orderItemId),
     index('wms_stock_reservations_status_idx').on(table.status),
     index('wms_stock_reservations_order_type_idx').on(table.orderType),
+    index('wms_stock_reservations_owner_id_idx').on(table.ownerId),
   ],
 );
 
@@ -5068,7 +5090,11 @@ export const wmsPickListItems = pgTable(
     notes: text('notes'),
     ...timestamps,
   },
-  (table) => [index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId)],
+  (table) => [
+    index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId),
+    index('wms_pick_list_items_suggested_stock_id_idx').on(table.suggestedStockId),
+    index('wms_pick_list_items_suggested_location_id_idx').on(table.suggestedLocationId),
+  ],
 );
 
 export type WmsPickListItem = typeof wmsPickListItems.$inferSelect;
@@ -6168,6 +6194,7 @@ export const zohoSalesOrders = pgTable(
     index('zoho_sales_orders_status_idx').on(table.status),
     index('zoho_sales_orders_customer_idx').on(table.zohoCustomerId),
     index('zoho_sales_orders_dispatch_batch_idx').on(table.dispatchBatchId),
+    index('zoho_sales_orders_pick_list_id_idx').on(table.pickListId),
   ],
 );
 
