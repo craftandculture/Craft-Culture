@@ -8,6 +8,7 @@ import db from '@/database/client';
 import { cellarUkMoves } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
+import { UK_MOVE_TASK_LINK } from '../data/cancelUkMoveInvoiceTask';
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
 import ukMoveTotal from '../utils/ukMoveTotal';
 
@@ -85,7 +86,7 @@ const memberAcceptUkMove = stockOwnerProcedure
         '.',
       ].join(''),
       memberName: ctx.partner.businessName,
-      linkUrl: '/platform/admin/cellar-members?tab=uk-moves',
+      linkUrl: UK_MOVE_TASK_LINK,
       openedNote: `Opened when ${ctx.partner.businessName} accepted ${move.moveNumber}`,
     });
 

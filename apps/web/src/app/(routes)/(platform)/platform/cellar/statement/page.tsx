@@ -20,6 +20,7 @@ import StatementGroups from '@/app/_cellar/components/StatementGroups';
 import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
 import StatementSection from '@/app/_cellar/components/StatementSection';
 import bottleName from '@/app/_cellar/utils/bottleName';
+import csvCell from '@/app/_cellar/utils/csvCell';
 import useTRPC from '@/lib/trpc/browser';
 
 const money = (value: number) =>
@@ -131,12 +132,8 @@ const groupsOf = (rows: LeftRow[]): StatementGroup[] => {
   });
 };
 
-/** A CSV cell, quoted when it needs to be */
-const cell = (value: string | number) => {
-  const text = String(value);
-
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
+/** A CSV cell, quoted when it needs to be and never read as a formula */
+const cell = (value: string | number) => csvCell(value);
 
 /**
  * A member's monthly statement

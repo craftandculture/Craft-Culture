@@ -59,6 +59,14 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 /* The rate card's figures for the list as it now stands. */
+/** A typed amount: 0 when blank, undefined when it is not a valid figure */
+const moneyOf = (text: string | number | null | undefined) => {
+  const trimmed = String(text ?? '').trim();
+  if (trimmed === '') return 0;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
+};
+
 const formFromRequest = (request: Release) => ({
   clearance: request.suggested?.priced
     ? String(request.suggested.clearanceTotalUsd)
@@ -1113,27 +1121,50 @@ const CellarReleasesPage = () => {
                             </p>
                           }
                           confirmLabel="Send quote"
-                          onConfirm={() =>
+                          onConfirm={() => {
+                            /*
+                              A figure that is not a number is refused, not
+                              sent as $0. A typo in the delivery cost used to
+                              quote the member nothing for delivery.
+                            */
+                            const figures = {
+                              clearance: moneyOf(form.clearance),
+                              delivery: moneyOf(form.delivery),
+                              service: moneyOf(form.service),
+                              repack: moneyOf(form.repack),
+                              extra: moneyOf(form.extra),
+                              goods: moneyOf(form.goods),
+                            };
+                            const bad = Object.entries(figures).find(
+                              ([, value]) => value === undefined,
+                            );
+                            if (bad) {
+                              toast.error(
+                                `The ${bad[0]} figure is not a valid amount. Enter a number, or leave it blank for none.`,
+                              );
+                              return;
+                            }
+
                             decide({
                               requestId: request.id,
                               outcome: 'quote',
-                              clearanceCostUsd: Number(form.clearance) || 0,
-                              deliveryCostUsd: Number(form.delivery) || 0,
-                              serviceFeeUsd: Number(form.service) || 0,
-                              repackCostUsd: Number(form.repack) || 0,
+                              clearanceCostUsd: figures.clearance!,
+                              deliveryCostUsd: figures.delivery!,
+                              serviceFeeUsd: figures.service!,
+                              repackCostUsd: figures.repack!,
                               repackCases:
-                                Number(form.repack) > 0
+                                figures.repack! > 0
                                   ? (request.suggested?.repackOffer.cases ?? 0)
                                   : 0,
-                              additionalChargeUsd: Number(form.extra) || 0,
+                              additionalChargeUsd: figures.extra!,
                               additionalChargeLabel:
                                 form.extraLabel || undefined,
-                              goodsValueUsd: Number(form.goods) || 0,
+                              goodsValueUsd: figures.goods!,
                               clearanceRateVersion:
                                 form.rateVersion || undefined,
                               adminNotes: form.notes || undefined,
-                            })
-                          }
+                            });
+                          }}
                         >
                           {/*
                             Not while the wines are being edited. The figures
@@ -1170,21 +1201,32 @@ const CellarReleasesPage = () => {
                           outright and is the rarest of the three answers, but
                           it was the loudest thing on the card.
                         */}
-                        <button
-                          type="button"
-                          disabled={isPending}
-                          onClick={() =>
+                        <ConfirmAction
+                          title={`Cancel ${request.requestNumber}?`}
+                          description={
+                            <p>
+                              The request is closed and the member is told it
+                              has been cancelled. This cannot be undone.
+                            </p>
+                          }
+                          confirmLabel="Cancel request"
+                          onConfirm={() =>
                             decide({
                               requestId: request.id,
                               outcome: 'cancel',
                               adminNotes: form.notes || undefined,
                             })
                           }
-                          className="text-text-muted ml-auto inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors hover:text-red-700 disabled:opacity-40"
                         >
-                          <Icon icon={IconX} size="xs" />
-                          Cancel request
-                        </button>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            className="text-text-muted ml-auto inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors hover:text-red-700 disabled:opacity-40"
+                          >
+                            <Icon icon={IconX} size="xs" />
+                            Cancel request
+                          </button>
+                        </ConfirmAction>
                       </div>
                     </>
                   )}

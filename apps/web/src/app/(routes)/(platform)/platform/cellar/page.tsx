@@ -40,6 +40,7 @@ import type { SellableWine } from '@/app/_cellar/components/SellWinesDialog';
 import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useCellarCurrency from '@/app/_cellar/hooks/useCellarCurrency';
+import csvCell from '@/app/_cellar/utils/csvCell';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import WhatsNewBanner from '@/app/_productUpdates/components/WhatsNewBanner';
@@ -144,8 +145,11 @@ type QuickFilter = 'all' | 'largeFormat' | 'magnumPlus' | 'reserved';
 
 type CellarSortKey = 'wine' | 'producer' | 'vintage' | 'size' | 'bottles' | 'value';
 
-const bottlesOf = (wine: { totalCases: number; caseConfig: number | null }) =>
-  wine.totalCases * (wine.caseConfig ?? 1);
+const bottlesOf = (wine: {
+  totalCases: number;
+  caseConfig: number | null;
+  openBottles?: number | null;
+}) => wine.totalCases * (wine.caseConfig ?? 1) + (wine.openBottles ?? 0);
 
 const sizeMl = (size: string | null) => {
   if (!size) return 750;
@@ -815,7 +819,7 @@ const CellarPage = () => {
 
     const csv = csvRows
       .map((row) =>
-        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','),
+        row.map((cell) => csvCell(cell, { alwaysQuote: true })).join(','),
       )
       .join('\n');
 

@@ -11,7 +11,6 @@ import {
 } from '@tabler/icons-react';
 import Link from 'next/link';
 
-import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import CellarHelpNavigation from './CellarHelpNavigation';
@@ -214,10 +213,9 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              Commission is {COMMISSION_RATES.collector}% on a sale to another
-              private collector and {COMMISSION_RATES.trade}% on trade and
-              restaurant orders. Nothing else is deducted, and nothing is
-              charged if the wine does not sell.
+              Our commission is set out in your membership terms. Nothing is
+              deducted from the figure you ask for, and nothing is charged if
+              the wine does not sell.
             </Typography>
 
             <ol className="space-y-3">
@@ -335,9 +333,9 @@ const CellarHelp = () => {
               colorRole="muted"
               className="leading-relaxed"
             >
-              A condition report is AED 100 per case. We inspect every bottle
-              for fill level, label, capsule and closure, and report with
-              photographs and written notes.
+              A condition report can be arranged on request. We inspect every
+              bottle for fill level, label, capsule and closure, and report
+              with photographs and written notes.
             </Typography>
           </HelpSection>
 

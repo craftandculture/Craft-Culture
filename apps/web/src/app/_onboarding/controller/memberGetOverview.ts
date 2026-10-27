@@ -63,7 +63,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       .where(and(eq(cellarIntakes.partnerId, partnerId), ne(cellarIntakes.stage, 'closed'))),
     db.select().from(cellarMemberships).where(eq(cellarMemberships.partnerId, partnerId)).limit(1),
     getMembershipTerms(partnerId),
-    ensureClientCode(partnerId),
+    ensureClientCode(partnerId, { issue: ctx.cellarRole !== 'viewer' }),
   ]);
 
   const cases = countChargeableCases(stock);

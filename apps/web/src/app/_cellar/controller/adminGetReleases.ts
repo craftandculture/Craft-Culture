@@ -129,6 +129,7 @@ const adminGetReleases = staffAdminProcedure
         const costByLwin = await getMemberValuePerBottle(
           row.request.partnerId,
           [...new Set(items.map((item) => item.lwin18))],
+          { sharedFallback: true },
         );
 
         const suggested = await computeReleaseQuote(
