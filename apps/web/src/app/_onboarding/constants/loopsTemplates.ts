@@ -8,8 +8,8 @@
  * Data variables each template receives are listed beside it.
  */
 const loopsTemplates = {
-  /** name, inviterName, joinUrl, expiresOn */
-  invite: '',
+  /** preheader, name, inviterName, joinUrl, expiresOn ("Invitation to join", from cellar@) */
+  invite: 'cmvpam98z001p0j2e1y9tupl1',
   /** name, statusUrl */
   applicationReceived: '',
   /** applicantName, applicantEmail, phone, missing, wineSources, adminUrl */

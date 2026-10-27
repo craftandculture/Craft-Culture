@@ -28,7 +28,7 @@ const InviteLinkNotice = ({ name, phone, joinUrl, emailed, onClose }: InviteLink
         <p className="text-text-primary text-sm font-semibold">
           {emailed
             ? `Invitation emailed to ${name}.`
-            : `Invitation ready for ${name} — no email template yet, so send the link yourself.`}
+            : `Invitation ready for ${name}, but the email could not be sent. Please send the link yourself.`}
         </p>
         <button type="button" onClick={onClose} className="text-text-muted" aria-label="Close">
           <IconX size={16} />
