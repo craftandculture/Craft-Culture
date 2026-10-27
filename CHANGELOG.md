@@ -1,3 +1,9 @@
+## [2.0.602](https://github.com/craftandculture/Craft-Culture/compare/v2.0.601...v2.0.602) (2026-10-27)
+
+### Bug Fixes
+
+* an In Bond or PC price typed on a spirit or RTD line in the Pricing Manager now saves ([c35b123](https://github.com/craftandculture/Craft-Culture/commit/c35b123ed42e2468d895463a2a7bbcdfbb67f60c))
+
 ## [2.0.601](https://github.com/craftandculture/Craft-Culture/compare/v2.0.600...v2.0.601) (2026-10-27)
 
 ### Bug Fixes
