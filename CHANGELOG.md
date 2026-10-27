@@ -1,3 +1,9 @@
+## [2.0.594](https://github.com/craftandculture/Craft-Culture/compare/v2.0.593...v2.0.594) (2026-10-27)
+
+### Bug Fixes
+
+* compact Pricing Manager rows are a little tighter, so over 30 wines fit on a screen ([8d6baeb](https://github.com/craftandculture/Craft-Culture/commit/8d6baeb03664b5c6971c0e610e9efb088b22b133))
+
 ## [2.0.593](https://github.com/craftandculture/Craft-Culture/compare/v2.0.592...v2.0.593) (2026-10-27)
 
 ### Bug Fixes
