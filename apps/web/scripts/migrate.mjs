@@ -3586,6 +3586,30 @@ const runMigrations = async () => {
     console.log('✅ winelabs cache ready');
 
     /*
+      London in-bond market snapshot from Wine Labs (Oct 2026): best bid, best
+      ask and last trade per wine and vintage, so the Pricing Manager reads a
+      cached price instead of spending 15 credits a call.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_market" (
+        "lwin11" text PRIMARY KEY NOT NULL,
+        "lwin7" text NOT NULL,
+        "vintage" text NOT NULL,
+        "status" text NOT NULL,
+        "bid_usd" double precision,
+        "ask_usd" double precision,
+        "last_usd" double precision,
+        "last_traded_at" timestamp,
+        "bids" integer DEFAULT 0 NOT NULL,
+        "asks" integer DEFAULT 0 NOT NULL,
+        "trades" integer DEFAULT 0 NOT NULL,
+        "venues" text[] DEFAULT '{}'::text[] NOT NULL,
+        "checked_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ winelabs market ready');
+
+    /*
       One owner key (Index 3.0, Oct 2026). The distribution ledger's owners
       (cons_owners) were seeded with no partner account, so their consignment
       sales could reach no portal. Link each to the partner whose warehouse

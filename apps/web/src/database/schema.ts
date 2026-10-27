@@ -8337,6 +8337,34 @@ export const winelabsCalls = pgTable(
 );
 
 /**
+ * London in-bond market for a 75cl bottle of each wine and vintage we hold,
+ * from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not
+ * Liv-ex), in USD per bottle
+ *
+ * A snapshot, refreshed a batch at a time, so screens read it without
+ * spending credits. A London price is a check on ours, never a price we set:
+ * our UAE in-bond price carries freight to Dubai that London's does not.
+ */
+export const winelabsMarket = pgTable('winelabs_market', {
+  lwin11: text('lwin11').primaryKey(),
+  lwin7: text('lwin7').notNull(),
+  vintage: text('vintage').notNull(),
+  /** priced | unlisted | checking */
+  status: text('status').notNull(),
+  bidUsd: doublePrecision('bid_usd'),
+  askUsd: doublePrecision('ask_usd'),
+  lastUsd: doublePrecision('last_usd'),
+  lastTradedAt: timestamp('last_traded_at', { mode: 'date' }),
+  bids: integer('bids').notNull().default(0),
+  asks: integer('asks').notNull().default(0),
+  trades: integer('trades').notNull().default(0),
+  venues: text('venues').array().notNull().default(sql`'{}'::text[]`),
+  checkedAt: timestamp('checked_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+export type WinelabsMarket = typeof winelabsMarket.$inferSelect;
+
+/**
  * Bottles taken out of stock by hand, and why (Index 3.0)
  *
  * One row beside each "take out of stock" movement: samples, marketing,

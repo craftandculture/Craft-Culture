@@ -964,13 +964,79 @@ const HeaderInfo = ({ text }: { text: string }) => (
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 
+const VENUE_NAMES: Record<string, string> = {
+  bordeaux_index: 'Bordeaux Index',
+  bbx: 'BBX',
+  wine_collector: 'Wine Collector',
+  cult_wines: 'Cult Wines',
+  cultx: 'CultX',
+};
+
+/**
+ * London in-bond market for a 75cl bottle, beside our In Bond price
+ *
+ * The lowest ask is what a trade buyer could buy it for in London today, so it
+ * leads; the last trade stands in when nothing is offered. The percentage is
+ * how far our price sits above or below it. A check, never a price we set.
+ */
+const LondonCell = ({
+  market,
+  ours,
+}: {
+  market?: {
+    bidUsd: number | null;
+    askUsd: number | null;
+    lastUsd: number | null;
+    lastTradedAt: Date | string | null;
+    venues: string[];
+    checkedAt: Date | string;
+  };
+  ours: number | null;
+}) => {
+  const ccy = useContext(CurrencyContext);
+  const lead = market?.askUsd ?? market?.lastUsd ?? null;
+  if (!market || lead == null) {
+    return (
+      <td className="px-3 py-2.5 text-right">
+        <span className="text-text-muted/40">—</span>
+      </td>
+    );
+  }
+
+  const gap = ours != null && ours > 0 ? Math.round(((ours - lead) / lead) * 100) : null;
+  const traded = market.lastTradedAt
+    ? new Date(market.lastTradedAt).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    : null;
+  const title = [
+    market.askUsd != null ? `Lowest ask ${money(market.askUsd, ccy)}` : 'No asks',
+    market.bidUsd != null ? `best bid ${money(market.bidUsd, ccy)}` : 'no bids',
+    market.lastUsd != null ? `last trade ${money(market.lastUsd, ccy)}${traded ? ` (${traded})` : ''}` : 'no trades',
+    `on ${market.venues.map((venue) => VENUE_NAMES[venue] ?? venue).join(', ')}`,
+    `checked ${new Date(market.checkedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+  ].join(', ');
+
+  return (
+    <td className="px-3 py-2.5 text-right tabular-nums" title={title}>
+      <span className="text-text-secondary">
+        {market.askUsd == null ? 'last ' : ''}
+        {money(lead, ccy, 0)}
+      </span>
+      {gap != null && (
+        <span className="mt-0.5 block text-xs text-text-muted">
+          {gap > 0 ? `ours +${gap}%` : gap < 0 ? `ours ${gap}%` : 'level'}
+        </span>
+      )}
+    </td>
+  );
+};
+
 const SkeletonRow = () => (
   <tr>
     <td className="px-3 py-3">
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 11 }).map((_, i) => (
+    {Array.from({ length: 12 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -1421,6 +1487,20 @@ const PricingManagerPage = () => {
   });
 
   const ownerPriceMap = ownerPricingData?.priceMap ?? {};
+
+  // London in-bond market from the Wine Labs snapshot; reading it spends no credits
+  const visibleKey = visibleLwins.join(',');
+  const londonLwins = useMemo(
+    () => (visibleKey ? [...new Set(visibleKey.split(','))].slice(0, 1000) : []),
+    [visibleKey],
+  );
+  const { data: londonData } = useQuery({
+    ...api.wms.admin.stock.pricing.getLondonInBond.queryOptions({ lwin18s: londonLwins }),
+    enabled: londonLwins.length > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const londonPrices = londonData?.prices ?? {};
 
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -2489,8 +2569,9 @@ const PricingManagerPage = () => {
                     Cost
                   </th>
                   <th
-                    title="In-bond (B2B) selling price tier for trade"
+                    title="In-bond (B2B) selling price tier for trade, beside the London in-bond market"
                     className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600"
+                    colSpan={2}
                   >
                     In&nbsp;Bond · B2B
                   </th>
@@ -2610,6 +2691,12 @@ const PricingManagerPage = () => {
                       <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − margin). The margin comes from the tiers (by landed cost), an owner's own rate, or a per-wine override." />
                     </span>
                   </th>
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                    <span className="flex items-center justify-end gap-1">
+                      London
+                      <HeaderInfo text="London in-bond market for a 75cl bottle, from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London. Refreshed from the Wine Labs page." />
+                    </span>
+                  </th>
                   <th
                     className={`border-l-2 border-violet-300 px-3 pb-2.5 pt-1 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
@@ -2694,7 +2781,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={13} className="py-20 text-center text-text-muted">
+                    <td colSpan={14} className="py-20 text-center text-text-muted">
                       {/*
                         An owner holding nothing but wine in transit reads as an
                         owner holding nothing, unless the screen says which of
@@ -3291,6 +3378,7 @@ const PricingManagerPage = () => {
                           hintFor={inBondHint}
                           onSave={saveInBond}
                         />
+                        <LondonCell market={londonPrices[product.lwin18]} ours={inBondPrice} />
 
                         {/* PC Price (editable) — Private Client group */}
                         <PriceCell
@@ -3382,7 +3470,7 @@ const PricingManagerPage = () => {
                       </tr>
                       {isExpanded && (
                         <tr className="hidden bg-surface-muted/40 md:table-row">
-                          <td colSpan={13} className="border-l-4 border-l-transparent px-3 py-3">
+                          <td colSpan={14} className="border-l-4 border-l-transparent px-3 py-3">
                             {/*
                               What the line is worth if it all sells at the
                               current price. Per bottle and per case answer "is
@@ -3475,7 +3563,7 @@ const PricingManagerPage = () => {
                       )}
                       {/* The phone's version of this row: the figures that matter, a tap for the rest */}
                       <tr className="md:hidden">
-                        <td colSpan={13} className="border-b border-border-muted p-0">
+                        <td colSpan={14} className="border-b border-border-muted p-0">
                           <button
                             type="button"
                             onClick={() => setExpandedLwin((cur) => (cur === product.lwin18 ? null : product.lwin18))}
