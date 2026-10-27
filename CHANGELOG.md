@@ -1,3 +1,16 @@
+## [2.0.589](https://github.com/craftandculture/Craft-Culture/compare/v2.0.588...v2.0.589) (2026-10-27)
+
+### Features
+
+* an order page shows one tracker, from release to delivery, with the distributor SKU on a single line beneath it ([7384156](https://github.com/craftandculture/Craft-Culture/commit/73841560a58310d9082ac7155ae9029b793a6254))
+
+### Bug Fixes
+
+* consignment statements no longer double-count or guess the owner of a shared wine ([067f9f1](https://github.com/craftandculture/Craft-Culture/commit/067f9f18504e222a89d400852523edcf1bc8db1b))
+* Labels print safely whatever a wine is called, partners only see their own stock history, and the public cold room feed sends less ([dee7220](https://github.com/craftandculture/Craft-Culture/commit/dee7220c0d0a5eec23a39694274dcbcaf67c6161))
+* Pallets can be created again, Sync Zoho previews before it changes anything, and counts no longer undo picks ([64fc698](https://github.com/craftandculture/Craft-Culture/commit/64fc698a386e908731401ea0dd626fb430e6e9bb))
+* stock triangulation keeps each client's codes, locks and feeds separate ([c4eeafa](https://github.com/craftandculture/Craft-Culture/commit/c4eeafab15c75dbdb39e2e1af6e71307df56c788))
+
 ## [2.0.588](https://github.com/craftandculture/Craft-Culture/compare/v2.0.587...v2.0.588) (2026-10-27)
 
 ### Bug Fixes
