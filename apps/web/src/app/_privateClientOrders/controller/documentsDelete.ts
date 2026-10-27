@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { del } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
+import { deleteStoredFile } from '@/lib/blob/privateFiles';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -76,7 +76,7 @@ const documentsDelete = approvedProcedure.input(deleteDocumentSchema).mutation(a
   try {
     // Delete from Vercel Blob
     if (document.fileUrl) {
-      await del(document.fileUrl);
+      await deleteStoredFile(document.fileUrl);
     }
 
     // Delete from database

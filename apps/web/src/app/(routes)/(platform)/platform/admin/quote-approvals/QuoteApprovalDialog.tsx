@@ -32,6 +32,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
+import fileHref from '@/utils/fileHref';
 import formatPrice from '@/utils/formatPrice';
 import safeHref from '@/utils/safeHref';
 
@@ -1481,7 +1482,7 @@ const QuoteApprovalDialog = ({
                       </Typography>
                       <div className="flex flex-wrap items-center gap-3">
                         <a
-                          href={safeHref(quote.poAttachmentUrl)}
+                          href={safeHref(fileHref(quote.poAttachmentUrl))}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
@@ -1493,7 +1494,7 @@ const QuoteApprovalDialog = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            const href = safeHref(quote.poAttachmentUrl);
+                            const href = safeHref(fileHref(quote.poAttachmentUrl));
                             if (!href) return;
                             const link = document.createElement('a');
                             link.href = href;
@@ -1836,7 +1837,7 @@ const QuoteApprovalDialog = ({
                         )}
                       </div>
                       <a
-                        href={safeHref(quote.paymentProofUrl)}
+                        href={safeHref(fileHref(quote.paymentProofUrl))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg bg-fill-success px-4 py-2 text-sm font-medium text-white hover:bg-fill-success/90 transition-colors"

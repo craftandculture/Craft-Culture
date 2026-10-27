@@ -5,8 +5,10 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { privateClientOrderDocuments, users } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+import fileHref from '@/utils/fileHref';
 
 import resolveOrderParty from '../utils/resolveOrderParty';
+import visibleDocumentTypes from '../utils/visibleDocumentTypes';
 
 const getDocumentsSchema = z.object({
   orderId: z.string().uuid(),
@@ -35,8 +37,6 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
 
   // C&C staff, the partner who placed it, or its distributor
   const { party } = await resolveOrderParty(user, order);
-  const isAdmin = party === 'staff';
-  const isPartner = party === 'partner';
 
   if (!party) {
     throw new TRPCError({
@@ -45,25 +45,7 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
     });
   }
 
-  // Determine which document types the user can see based on their role
-  // - Admin: all documents (full visibility)
-  // - Partner: partner_invoice (their own), distributor_invoice (to pay), payment_proof, proof_of_delivery
-  // - Distributor: distributor_invoice (their own), payment_proof, proof_of_delivery only
-  // - partner_sales_order is the partner's own SO, priced like their invoice: admin + partner only
-  // CRITICAL: Partner invoices should NEVER be visible to distributors (reveals partner costs/margins)
-  let allowedDocTypes: ('partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery' | 'partner_sales_order')[];
-
-  if (isAdmin) {
-    // Admin sees everything
-    allowedDocTypes = ['partner_invoice', 'partner_sales_order', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
-  } else if (isPartner) {
-    // Partner sees their invoice, distributor invoice (to pay), payment proofs, and proof of delivery
-    allowedDocTypes = ['partner_invoice', 'partner_sales_order', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
-  } else {
-    // Distributor - can only see their own invoice, payment proofs, and proof of delivery
-    // NEVER show partner_invoice (protects partner pricing/margins)
-    allowedDocTypes = ['distributor_invoice', 'payment_proof', 'proof_of_delivery'];
-  }
+  const allowedDocTypes = visibleDocumentTypes(party);
 
   // Get documents with uploader info, filtered by allowed document types
   const documents = await db
@@ -99,7 +81,11 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
     )
     .orderBy(desc(privateClientOrderDocuments.uploadedAt));
 
-  return documents;
+  // A private file opens through /api/files, never by its storage address
+  return documents.map((document) => ({
+    ...document,
+    fileUrl: fileHref(document.fileUrl),
+  }));
 });
 
 export default documentsGetMany;

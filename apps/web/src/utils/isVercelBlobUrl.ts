@@ -5,9 +5,16 @@
  */
 const CC_BLOB_STORE_ID = 'wejmklxaljhoatsp';
 
+/**
+ * C&C's private Vercel Blob store (`craft-culture-private`), for documents
+ * that must not be readable by link: payment proofs, purchase orders, order
+ * invoices. Its files are only served through /api/files after a login check.
+ */
+export const CC_PRIVATE_BLOB_STORE_ID = 'gasgxoqd6n5v8ara';
+
 /** Store ids this deployment writes to: the known one, plus the one in its token */
 const ownStoreIds = () => {
-  const ids = new Set([CC_BLOB_STORE_ID]);
+  const ids = new Set([CC_BLOB_STORE_ID, CC_PRIVATE_BLOB_STORE_ID]);
 
   try {
     // A read-write token is `vercel_blob_rw_<storeId>_<secret>`

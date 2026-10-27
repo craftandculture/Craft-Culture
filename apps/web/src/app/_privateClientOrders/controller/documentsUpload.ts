@@ -1,10 +1,11 @@
 import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
+
 
 import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 import logger from '@/utils/logger';
@@ -32,8 +33,8 @@ const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(a
   const { user } = ctx;
 
   // Check if Blob token is configured
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+  if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
+    logger.error('BLOB_PRIVATE_READ_WRITE_TOKEN environment variable is not set');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'File storage is not configured. Please contact support.',
@@ -114,11 +115,8 @@ const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(a
     const blobFilename = `private-orders/${orderId}/${documentType}/${timestamp}-${sanitizedFilename}`;
 
     // Upload to Vercel Blob using detected content type
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detectedType.mime,
-      addRandomSuffix: true,
-    });
+    // Private store: opened only through /api/files after a login check
+      const blob = await putPrivateFile(blobFilename, buffer, detectedType.mime);
 
     // Create database record
     const documents = await db

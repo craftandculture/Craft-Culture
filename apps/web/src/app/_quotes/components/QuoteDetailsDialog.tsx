@@ -38,6 +38,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
+import fileHref from '@/utils/fileHref';
 import formatPrice from '@/utils/formatPrice';
 import safeHref from '@/utils/safeHref';
 
@@ -1374,7 +1375,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       <div className="flex items-center gap-2 text-xs text-text-success">
                         <IconCheck className="h-3 w-3" />
                         <span className="font-medium">Proof submitted</span>
-                        <a href={safeHref(currentQuote.paymentProofUrl)} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
+                        <a href={safeHref(fileHref(currentQuote.paymentProofUrl))} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
                       </div>
                     ) : paymentProofUrl ? (
                       <div className="flex items-center gap-2 text-xs">
@@ -1453,7 +1454,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={safeHref(quote.poAttachmentUrl)}
+                            href={safeHref(fileHref(quote.poAttachmentUrl))}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-text-brand hover:underline text-sm"
@@ -1465,7 +1466,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const href = safeHref(quote.poAttachmentUrl);
+                              const href = safeHref(fileHref(quote.poAttachmentUrl));
                               if (!href) return;
                               const link = document.createElement('a');
                               link.href = href;
@@ -1530,7 +1531,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={safeHref(quote.poAttachmentUrl)}
+                            href={safeHref(fileHref(quote.poAttachmentUrl))}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-text-brand hover:underline text-sm"
@@ -1542,7 +1543,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const href = safeHref(quote.poAttachmentUrl);
+                              const href = safeHref(fileHref(quote.poAttachmentUrl));
                               if (!href) return;
                               const link = document.createElement('a');
                               link.href = href;

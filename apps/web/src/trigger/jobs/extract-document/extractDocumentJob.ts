@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { privateClientOrderDocuments } from '@/database/schema';
+import { readStoredFileBuffer } from '@/lib/blob/privateFiles';
 import triggerDb from '@/trigger/triggerDb';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
@@ -80,21 +81,20 @@ export const extractDocumentJob = task({
       if (!isVercelBlobUrl(document.fileUrl)) {
         throw new AbortTaskRunError('Refusing to fetch non-Vercel-Blob document URL');
       }
-      // Fetch document content from Vercel Blob
-      const response = await fetch(document.fileUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch document: ${response.statusText}`);
+      // Read the document from whichever store holds it (private or public)
+      const fileBuffer = await readStoredFileBuffer(document.fileUrl);
+      if (!fileBuffer) {
+        throw new Error('Failed to fetch document');
       }
 
-      const contentType = document.mimeType || response.headers.get('content-type') || '';
+      const contentType = document.mimeType || '';
 
       // Prepare content for AI based on file type
       let extractedData: ExtractedData;
 
       if (contentType.startsWith('image/')) {
         // For images, use vision capabilities
-        const imageBuffer = await response.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        const base64Image = fileBuffer.toString('base64');
         const imageDataUrl = `data:${contentType};base64,${base64Image}`;
 
         const result = await generateObject({
@@ -131,7 +131,7 @@ Be precise with numbers and amounts.`,
         extractedData = result.object;
       } else if (contentType === 'application/pdf') {
         // For PDFs, fetch as base64 and use vision
-        const pdfBuffer = await response.arrayBuffer();
+        const pdfBuffer = fileBuffer;
         const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
         const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
 
