@@ -1,3 +1,9 @@
+## [2.0.593](https://github.com/craftandculture/Craft-Culture/compare/v2.0.592...v2.0.593) (2026-10-27)
+
+### Bug Fixes
+
+* a subscription box order shows its wines as "In box" for the distributor instead of AED 0 on every line ([268c360](https://github.com/craftandculture/Craft-Culture/commit/268c360aaa21209c3b87daa5a4dc272545c627bb))
+
 ## [2.0.592](https://github.com/craftandculture/Craft-Culture/compare/v2.0.591...v2.0.592) (2026-10-27)
 
 ### Features
