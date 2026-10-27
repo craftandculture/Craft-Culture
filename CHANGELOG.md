@@ -1,3 +1,12 @@
+## [2.0.586](https://github.com/craftandculture/Craft-Culture/compare/v2.0.585...v2.0.586) (2026-10-27)
+
+### Bug Fixes
+
+* Accepting a freight quote, recalculating landed cost and importing invoice lines now save all or nothing ([646d2fb](https://github.com/craftandculture/Craft-Culture/commit/646d2fb6bbdcbf3fbe9beb9fc2075fe7bd433973))
+* Double taps and resends in the warehouse no longer pick, move, receive or dispatch the same stock twice ([38497c7](https://github.com/craftandculture/Craft-Culture/commit/38497c7454ffb865c1ea42750e797ffb902d3bb4))
+* Logistics screens no longer invent LWINs in bulk mapping and handle mixed currencies properly ([93a07c0](https://github.com/craftandculture/Craft-Culture/commit/93a07c01e47c722f22a79f991aae2c65492804e7))
+* Stock clean-up tools can no longer delete or re-own another owner's wine, and pricing and ownership changes are office-only ([d7c4369](https://github.com/craftandculture/Craft-Culture/commit/d7c436965a9d2fb05c6c91962d80c86be71d5068))
+
 ## [2.0.585](https://github.com/craftandculture/Craft-Culture/compare/v2.0.584...v2.0.585) (2026-10-27)
 
 ### Bug Fixes
