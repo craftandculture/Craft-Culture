@@ -158,7 +158,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
 
     // Send notifications to each member
     // Once the new order emails are live they replace these; in-app notices stay
-    const sendLegacyEmail = await isLegacyOrderEmailOn();
+    const sendLegacyEmail = await isLegacyOrderEmailOn('partner');
 
     for (const member of members) {
       // Create in-app notification

@@ -127,7 +127,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
 
     // Send notifications to each member
     // Once the new order emails are live they replace these; in-app notices stay
-    const sendLegacyEmail = await isLegacyOrderEmailOn();
+    const sendLegacyEmail = await isLegacyOrderEmailOn('distributor');
 
     for (const member of members) {
       // Create in-app notification

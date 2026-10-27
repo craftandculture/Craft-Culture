@@ -14,7 +14,7 @@ import getOrderEmailMode, { ORDER_EMAIL_SHADOW_INBOX } from '../data/getOrderEma
  * and checked against what actually happened on the order.
  */
 const adminGetOrderEmails = staffAdminProcedure.query(async () => {
-  const mode = await getOrderEmailMode();
+  const [partner, distributor] = await Promise.all([getOrderEmailMode('partner'), getOrderEmailMode('distributor')]);
 
   const rows = await db
     .select({
@@ -42,7 +42,7 @@ const adminGetOrderEmails = staffAdminProcedure.query(async () => {
     .from(orderEmailOutbox)
     .where(and(inArray(orderEmailOutbox.status, ['sent', 'shadowed']), gte(orderEmailOutbox.sentAt, since)));
 
-  return { mode, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows };
+  return { modes: { partner, distributor }, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows };
 });
 
 export default adminGetOrderEmails;

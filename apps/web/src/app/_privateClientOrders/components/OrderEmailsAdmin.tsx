@@ -14,12 +14,18 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import useTRPC from '@/lib/trpc/browser';
 
 type Mode = 'off' | 'shadow' | 'live';
+type Audience = 'partner' | 'distributor';
+
+const AUDIENCES: { audience: Audience; label: string; plural: string }[] = [
+  { audience: 'partner', label: 'Wine partners', plural: 'wine partners' },
+  { audience: 'distributor', label: 'Distributors', plural: 'distributors' },
+];
 
 const MODES: { mode: Mode; label: string; detail: string }[] = [
   {
     mode: 'off',
     label: 'Off',
-    detail: 'The new emails are not sent; partners and distributors keep receiving the older emails.',
+    detail: 'The new emails are not sent; the older emails still go out.',
   },
   {
     mode: 'shadow',
@@ -67,7 +73,8 @@ const when = (value: Date | string | null) =>
 const OrderEmailsAdmin = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const [confirm, setConfirm] = useState<Mode | null>(null);
+  const [confirm, setConfirm] = useState<{ audience: Audience; mode: Mode } | null>(null);
+  const confirmLabel = AUDIENCES.find((a) => a.audience === confirm?.audience)?.plural ?? '';
 
   const { data } = useQuery(api.privateClientOrders.adminGetOrderEmails.queryOptions());
 
@@ -76,10 +83,10 @@ const OrderEmailsAdmin = () => {
     onSuccess: (result) => {
       toast.success(
         result.mode === 'live'
-          ? 'Order emails are now live'
+          ? `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} are now live`
           : result.mode === 'shadow'
-            ? 'Order emails now go to Kevin'
-            : 'Order emails are off',
+            ? `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} now go to Kevin`
+            : `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} are off`,
       );
       setConfirm(null);
       void queryClient.invalidateQueries({ queryKey: api.privateClientOrders.adminGetOrderEmails.queryKey() });
@@ -100,33 +107,36 @@ const OrderEmailsAdmin = () => {
         </p>
       </header>
 
-      <div className="border-border-muted bg-surface-muted mb-5 rounded-xl border p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-text-primary text-sm">
-            <span className="font-semibold">
-              {data?.mode === 'live'
-                ? 'Live: emails go to partners and distributors.'
-                : data?.mode === 'shadow'
-                  ? `Shadow: every new email goes to ${data.shadowInbox}.`
-                  : 'Off: nothing is sent.'}
-            </span>{' '}
-            {MODES.find((m) => m.mode === data?.mode)?.detail}
-          </p>
-          <div className="flex gap-2">
-            {MODES.map((option) => (
-              <button
-                key={option.mode}
-                type="button"
-                disabled={!data || data.mode === option.mode || setMode.isPending}
-                aria-pressed={data?.mode === option.mode}
-                className={data?.mode === option.mode ? primaryButton : smallButton}
-                onClick={() => setConfirm(option.mode)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="border-border-muted bg-surface-muted divide-border-muted mb-5 divide-y rounded-xl border">
+        {AUDIENCES.map(({ audience, label }) => {
+          const mode = data?.modes[audience];
+          return (
+            <div key={audience} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-text-primary text-sm">
+                <span className="font-semibold">{label}: </span>
+                {mode === 'live'
+                  ? 'Live. The new emails reach them, and replace the older ones.'
+                  : mode === 'shadow'
+                    ? `Shadow. Each new email goes to ${data?.shadowInbox}; they still receive the older emails.`
+                    : 'Off. They receive the older emails only.'}
+              </p>
+              <div className="flex gap-2">
+                {MODES.map((option) => (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    disabled={!data || mode === option.mode || setMode.isPending}
+                    aria-pressed={mode === option.mode}
+                    className={mode === option.mode ? primaryButton : smallButton}
+                    onClick={() => setConfirm({ audience, mode: option.mode })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -180,19 +190,19 @@ const OrderEmailsAdmin = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirm === 'live'
-                ? 'Send order emails to partners and distributors?'
-                : confirm === 'shadow'
-                  ? 'Send order emails to Kevin first?'
-                  : 'Turn order emails off?'}
+              {confirm?.mode === 'live'
+                ? `Send order emails to ${confirmLabel}?`
+                : confirm?.mode === 'shadow'
+                  ? `Send order emails for ${confirmLabel} to Kevin first?`
+                  : `Turn order emails to ${confirmLabel} off?`}
             </DialogTitle>
-            <DialogDescription>{MODES.find((m) => m.mode === confirm)?.detail}</DialogDescription>
+            <DialogDescription>{MODES.find((m) => m.mode === confirm?.mode)?.detail}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <p className="text-text-muted text-sm">
-              {confirm === 'live'
-                ? 'Within five minutes partners and distributors receive the new emails, and the older emails stop.'
-                : confirm === 'shadow'
+              {confirm?.mode === 'live'
+                ? `Within five minutes ${confirmLabel} receive the new emails, and their older emails stop.`
+                : confirm?.mode === 'shadow'
                   ? `Nothing new reaches a partner. Each email goes to ${data?.shadowInbox ?? 'Kevin'} with the recipient in the subject.`
                   : 'Emails that fall due while off are set aside and are not sent later.'}
             </p>
@@ -205,9 +215,9 @@ const OrderEmailsAdmin = () => {
               type="button"
               className={primaryButton}
               disabled={setMode.isPending}
-              onClick={() => confirm && setMode.mutate({ mode: confirm })}
+              onClick={() => confirm && setMode.mutate(confirm)}
             >
-              {confirm === 'live' ? 'Go live' : confirm === 'shadow' ? 'Turn on shadow' : 'Turn off'}
+              {confirm?.mode === 'live' ? 'Go live' : confirm?.mode === 'shadow' ? 'Turn on shadow' : 'Turn off'}
             </button>
           </DialogFooter>
         </DialogContent>

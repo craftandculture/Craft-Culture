@@ -21,14 +21,16 @@ const BATCH = 100;
  *
  * Each email is written now, from the order as it stands, so its progress,
  * wines and details are current even if it waited for others to join it.
- * Off: due emails are set aside and never sent later. Shadow: each goes to
- * Kevin's inbox with "[SHADOW for <recipient>]" before the subject. Live: each
- * goes to the partner or distributor.
+ * Wine partners and distributors each have a switch. Off: their due emails
+ * are set aside and never sent later. Shadow: each goes to Kevin's inbox with
+ * "[SHADOW for <recipient>]" before the subject. Live: each goes to them.
  *
  * @returns What happened this run
  */
 const sendOrderEmails = async () => {
-  const mode = await getOrderEmailMode();
+  const [partnerMode, distributorMode] = await Promise.all([getOrderEmailMode('partner'), getOrderEmailMode('distributor')]);
+  const modeOf = (audience: string) => (audience === 'partner' ? partnerMode : distributorMode);
+  const mode = { partner: partnerMode, distributor: distributorMode };
   const now = new Date();
 
   // Claimed in one statement, skipping rows another run holds, so nothing goes twice
@@ -48,24 +50,28 @@ const sendOrderEmails = async () => {
 
   if (due.length === 0) return { mode, due: 0, sent: 0, failed: 0 };
 
-  if (mode === 'off') {
+  // An audience switched off: its emails are set aside and never sent later
+  const offIds = due.filter((row) => modeOf(row.audience) === 'off').map((row) => row.id);
+  if (offIds.length) {
     await db
       .update(orderEmailOutbox)
       .set({ status: 'suppressed', sentMode: 'off', updatedAt: now })
-      .where(inArray(orderEmailOutbox.id, due.map((row) => row.id)));
-    return { mode, due: due.length, sent: 0, failed: 0 };
+      .where(inArray(orderEmailOutbox.id, offIds));
   }
+  const toSend = due.filter((row) => modeOf(row.audience) !== 'off');
+  if (toSend.length === 0) return { mode, due: due.length, sent: 0, failed: 0 };
 
   const orders = new Map<string, Awaited<ReturnType<typeof getOrderEmailSnapshot>>>();
-  for (const orderId of new Set(due.map((row) => row.orderId))) {
+  for (const orderId of new Set(toSend.map((row) => row.orderId))) {
     orders.set(orderId, await getOrderEmailSnapshot(orderId));
   }
 
   let sent = 0;
   let failed = 0;
 
-  for (const { carrier, merged } of groupOrderEmails(due, (id) => orders.get(id)?.snapshot.status ?? null)) {
+  for (const { carrier, merged } of groupOrderEmails(toSend, (id) => orders.get(id)?.snapshot.status ?? null)) {
     const mergedIds = merged.map((row) => row.id);
+    const rowMode = modeOf((carrier ?? merged[0])?.audience ?? 'partner');
 
     const found = carrier ? orders.get(carrier.orderId) : null;
     const stored = carrier?.data as { event?: OrderEmailEvent & { at: string } } | undefined;
@@ -92,14 +98,14 @@ const sendOrderEmails = async () => {
       if (ids.length)
         await db
           .update(orderEmailOutbox)
-          .set({ status: 'merged', sentMode: mode, updatedAt: new Date() })
+          .set({ status: 'merged', sentMode: rowMode, updatedAt: new Date() })
           .where(inArray(orderEmailOutbox.id, ids));
       continue;
     }
 
-    const to = mode === 'live' ? carrier.recipientEmail : ORDER_EMAIL_SHADOW_INBOX;
+    const to = rowMode === 'live' ? carrier.recipientEmail : ORDER_EMAIL_SHADOW_INBOX;
     const data = { ...email.data };
-    if (mode === 'shadow') data.subject = `[SHADOW for ${carrier.recipientName} <${carrier.recipientEmail}>] ${data.subject}`;
+    if (rowMode === 'shadow') data.subject = `[SHADOW for ${carrier.recipientName} <${carrier.recipientEmail}>] ${data.subject}`;
 
     try {
       await loops.sendTransactionalEmail({
@@ -111,8 +117,8 @@ const sendOrderEmails = async () => {
       await db
         .update(orderEmailOutbox)
         .set({
-          status: mode === 'live' ? 'sent' : 'shadowed',
-          sentMode: mode,
+          status: rowMode === 'live' ? 'sent' : 'shadowed',
+          sentMode: rowMode,
           sentTo: to,
           sentAt: new Date(),
           data: { ...(carrier.data as Record<string, unknown>), subject: email.data.subject },
@@ -123,7 +129,7 @@ const sendOrderEmails = async () => {
       if (mergedIds.length) {
         await db
           .update(orderEmailOutbox)
-          .set({ status: 'merged', mergedInto: carrier.id, sentMode: mode, updatedAt: new Date() })
+          .set({ status: 'merged', mergedInto: carrier.id, sentMode: rowMode, updatedAt: new Date() })
           .where(inArray(orderEmailOutbox.id, mergedIds));
       }
       sent += 1;
@@ -132,7 +138,7 @@ const sendOrderEmails = async () => {
       logger.error('Order email failed', { id: carrier.id, orderId: carrier.orderId, error: message });
       await db
         .update(orderEmailOutbox)
-        .set({ status: 'failed', sentMode: mode, error: message.slice(0, 1000), updatedAt: new Date() })
+        .set({ status: 'failed', sentMode: rowMode, error: message.slice(0, 1000), updatedAt: new Date() })
         .where(inArray(orderEmailOutbox.id, [carrier.id, ...mergedIds]));
       failed += 1;
     }
