@@ -95,8 +95,6 @@ const runConcierge = async () => {
       .select({
         id: privateClientContacts.id,
         name: privateClientContacts.name,
-        email: privateClientContacts.email,
-        phone: privateClientContacts.phone,
         winePreferences: privateClientContacts.winePreferences,
         city: privateClientContacts.city,
       })
@@ -168,7 +166,7 @@ const runConcierge = async () => {
     const contactsCtx = contacts
       .map(
         (c) =>
-          `${c.name} (${c.city ?? 'Unknown city'})${c.winePreferences ? ` — Prefs: ${c.winePreferences}` : ''}${c.phone ? ` — Phone: ${c.phone}` : ''}`,
+          `${c.name} (${c.city ?? 'Unknown city'})${c.winePreferences ? ` — Prefs: ${c.winePreferences}` : ''}`,
       )
       .join('\n');
 

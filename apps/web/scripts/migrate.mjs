@@ -3962,6 +3962,17 @@ const runMigrations = async () => {
     console.log('✅ WMS receive idempotency ready');
 
     /*
+      C&C internal LWIN codes (27 Oct 2026). The last code handed out, so two
+      people adding a new wine at the same time cannot both be given the same
+      9000xxx code before either is saved anywhere. Seeded lazily by the
+      reserve endpoint from the highest code in use.
+    */
+    await client.unsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "cc_internal_lwin7_seq" MINVALUE 9000001 START 9000008`,
+    );
+    console.log('✅ Internal LWIN sequence ready');
+
+    /*
       Private Cellar member emails (26 Oct 2026). Every member email is queued
       here first and sent by the member-emails cron in the switch's mode (off,
       shadow or live), so nothing reaches a member until Kevin turns it on.
