@@ -86,6 +86,9 @@ const PAGE = 50;
 const AvailablePage = () => {
   const api = useTRPC();
   const isViewer = useIsCellarViewer();
+  // Finding a wine is a Private Cellar service; a trade partner is not offered it
+  const { data: profile } = useQuery(api.cellar.member.getProfile.queryOptions());
+  const isPrivateCollector = profile?.isPrivateCollector ?? false;
   const router = useRouter();
   const { catchActivation, activationSheet } = useActivationGate();
   const [search, setSearch] = useState('');
@@ -362,7 +365,7 @@ const AvailablePage = () => {
       <CellarPageHeader
         title="C&C Cellar List"
         description="Wines held in our bonded warehouse, available to add to your cellar. Prices are in bond; duty and VAT apply only to wine delivered to you in the UAE."
-        actions={!isViewer ? <FindWineDialog /> : undefined}
+        actions={!isViewer && isPrivateCollector ? <FindWineDialog /> : undefined}
       />
 
       {isViewer && <ViewOnlyNotice />}

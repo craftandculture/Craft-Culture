@@ -448,6 +448,28 @@ export const cellarHolderProcedure = stockOwnerProcedure.use(
 );
 
 /**
+ * Private collector procedure
+ *
+ * Member-only features of the Private Cellar — sourcing requests, allocations
+ * offered to members first, bringing wine into the cellar. Built on
+ * stockOwnerProcedure, so the cellar role rules still apply, but a trade wine
+ * partner (also a stock owner) is refused: those features carry member
+ * pricing and are not theirs to use.
+ */
+export const collectorProcedure = stockOwnerProcedure.use(
+  async ({ ctx, next }) => {
+    if (ctx.partner.type !== 'private_collector') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'This is available to Private Cellar members only.',
+      });
+    }
+
+    return await next();
+  },
+);
+
+/**
  * Supplier procedure
  *
  * Accessible to users linked to a supplier (European wine suppliers) via:
