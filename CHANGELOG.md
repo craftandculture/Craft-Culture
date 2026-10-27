@@ -1,3 +1,9 @@
+## [2.0.598](https://github.com/craftandculture/Craft-Culture/compare/v2.0.597...v2.0.598) (2026-10-27)
+
+### Bug Fixes
+
+* moving files to private storage skips stock records whose photos are not a list ([235cad3](https://github.com/craftandculture/Craft-Culture/commit/235cad348120dc69969b061a1cd66022dde332b8))
+
 ## [2.0.597](https://github.com/craftandculture/Craft-Culture/compare/v2.0.596...v2.0.597) (2026-10-27)
 
 ### Bug Fixes
