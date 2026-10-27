@@ -1,3 +1,9 @@
+## [2.0.605](https://github.com/craftandculture/Craft-Culture/compare/v2.0.604...v2.0.605) (2026-10-27)
+
+### Features
+
+* one order email for partners and distributors, with progress, wines and next step ([2e89c99](https://github.com/craftandculture/Craft-Culture/commit/2e89c99a4f06a331e72d7b4cef8cd4c6fbcbedcb))
+
 ## [2.0.604](https://github.com/craftandculture/Craft-Culture/compare/v2.0.603...v2.0.604) (2026-10-27)
 
 ### Bug Fixes
