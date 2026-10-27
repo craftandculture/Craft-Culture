@@ -1,3 +1,12 @@
+## [2.0.587](https://github.com/craftandculture/Craft-Culture/compare/v2.0.586...v2.0.587) (2026-10-27)
+
+### Bug Fixes
+
+* AI agents cannot be run twice at once, client phone numbers are no longer sent to the AI, and new C&C wine codes are reserved ([f36bc9c](https://github.com/craftandculture/Craft-Culture/commit/f36bc9c360b800473e622fe7cca0e4bda1ba47dd))
+* client LPOs cannot create part cases or a second sales order for the same PO, and expired quote links stop showing prices ([4abf9e8](https://github.com/craftandculture/Craft-Culture/commit/4abf9e829ace791ea8721922356fca0f04fe5adf))
+* pricing settings save every tab you changed, lead times can be edited, and margins must stay below 100% ([660eef8](https://github.com/craftandculture/Craft-Culture/commit/660eef831f58c124b229d2f3c62288acc3c84713))
+* quote prices and totals are now always worked out by the server, and the approval screen starts fresh for each quote ([6937a5a](https://github.com/craftandculture/Craft-Culture/commit/6937a5a40b6cf9298ff6e1e594582888d6b4a93d))
+
 ## [2.0.586](https://github.com/craftandculture/Craft-Culture/compare/v2.0.585...v2.0.586) (2026-10-27)
 
 ### Bug Fixes
