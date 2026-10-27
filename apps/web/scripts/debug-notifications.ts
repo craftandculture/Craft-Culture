@@ -2,7 +2,7 @@
 /**
  * Debug script to investigate notification associations
  *
- * Run with: cd apps/web && npx tsx scripts/debug-notifications.ts
+ * Run with: cd apps/web && npx tsx scripts/debug-notifications.ts <email>
  */
 
 import { config } from 'dotenv';
@@ -20,7 +20,12 @@ if (!DB_URL) {
 const debugNotifications = async () => {
   const sql = postgres(DB_URL!, { prepare: false });
 
-  const testEmail = 'kbradford81628@gmail.com';
+  const testEmail = process.argv[2]?.trim();
+
+  if (!testEmail) {
+    console.error('Usage: npx tsx scripts/debug-notifications.ts <email>');
+    process.exit(1);
+  }
 
   console.log(`\n=== Debugging notifications for ${testEmail} ===\n`);
 

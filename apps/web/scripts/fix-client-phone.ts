@@ -1,25 +1,37 @@
 /**
- * Quick fix script to update Theo Valich's phone number on orders
- * Run with: pnpm tsx scripts/fix-theo-phone.ts
+ * Correct a private client's phone number on their orders and contact record
+ *
+ * Run with:
+ *   pnpm tsx scripts/fix-client-phone.ts "<client name>" "<phone>"
+ *
+ * The name is matched case-insensitively and loosely (spaces become
+ * wildcards), so check the printed list of updated rows.
  */
 import { ilike } from 'drizzle-orm';
 
 import db from '../src/database/client';
 import { privateClientContacts, privateClientOrders } from '../src/database/schema';
 
-const CORRECT_PHONE = '+971 52 158 4528';
+const [clientName, correctPhone] = process.argv.slice(2);
+
+if (!clientName?.trim() || !correctPhone?.trim()) {
+  console.error('Usage: pnpm tsx scripts/fix-client-phone.ts "<client name>" "<phone>"');
+  process.exit(1);
+}
+
+const namePattern = `%${clientName.trim().split(/\s+/).join('%')}%`;
 
 const main = async () => {
-  console.log('Finding orders for Theo Valich...');
+  console.log(`Finding orders for clients matching "${clientName}"...`);
 
   // Update orders
   const updatedOrders = await db
     .update(privateClientOrders)
     .set({
-      clientPhone: CORRECT_PHONE,
+      clientPhone: correctPhone.trim(),
       updatedAt: new Date(),
     })
-    .where(ilike(privateClientOrders.clientName, '%theo%valich%'))
+    .where(ilike(privateClientOrders.clientName, namePattern))
     .returning({ id: privateClientOrders.id, clientName: privateClientOrders.clientName });
 
   console.log(`Updated ${updatedOrders.length} orders:`);
@@ -29,10 +41,10 @@ const main = async () => {
   const updatedContacts = await db
     .update(privateClientContacts)
     .set({
-      phone: CORRECT_PHONE,
+      phone: correctPhone.trim(),
       updatedAt: new Date(),
     })
-    .where(ilike(privateClientContacts.name, '%theo%valich%'))
+    .where(ilike(privateClientContacts.name, namePattern))
     .returning({ id: privateClientContacts.id, name: privateClientContacts.name });
 
   console.log(`Updated ${updatedContacts.length} contacts:`);

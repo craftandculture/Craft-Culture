@@ -48,11 +48,10 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
+    # Runs pull-request code (lint, tests, typecheck), so it gets read-only
+    # access: nothing here writes to the repo, issues or PRs, or needs OIDC.
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
+      contents: read
 
     steps:
       - name: Checkout
