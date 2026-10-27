@@ -1,3 +1,5 @@
+import escapeZpl from './escapeZpl';
+
 /**
  * Generate ZPL for a Compact Bay Totem - 2 levels per label
  *
@@ -26,17 +28,6 @@ export interface CompactTotemData {
   levels: CompactTotemLevel[];
   arrowDirection?: 'left' | 'right';
 }
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\^/g, ' ')
-    .replace(/~/g, ' ');
-};
 
 /**
  * Generate ZPL for 2-level totem
@@ -131,7 +122,7 @@ const generateCompactTotemZpl = (data: CompactTotemData) => {
 ^FX QR Code at CENTER (magnification 5 = ~105 dots)
 ^FO${rowMid - 52},${Math.floor(H / 2) + 25}
 ^BQN,2,5
-^FDMA,${level.barcode}^FS
+^FDMA,${escapeZpl(level.barcode)}^FS
 
 ^FX Location code at RIGHT edge
 ^FO${rowMid - 25},${M + 5}

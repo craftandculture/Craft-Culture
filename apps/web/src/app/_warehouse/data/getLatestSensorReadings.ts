@@ -14,13 +14,25 @@ import { warehouseSensorReadings } from '@/database/schema';
  *
  * @example
  *   const latest = await getLatestSensorReadings();
- *   // [{ sensorId: 'cold_room_front_temperature', location: 'Cold Room – Front', value: 12.9, ... }]
+ *   // [{ id, sensorType: 'temperature', location: 'Cold Room – Front', value: 12.9, unit, timestamp }]
  */
 const getLatestSensorReadings = async () => {
   const since = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
+  /*
+    Only what the footer and the cellar conditions panel show. This feeds a
+    public endpoint, so the raw row (Home Assistant metadata, entity ids) is
+    not sent.
+  */
   return db
-    .selectDistinctOn([warehouseSensorReadings.sensorId])
+    .selectDistinctOn([warehouseSensorReadings.sensorId], {
+      id: warehouseSensorReadings.id,
+      sensorType: warehouseSensorReadings.sensorType,
+      value: warehouseSensorReadings.value,
+      unit: warehouseSensorReadings.unit,
+      location: warehouseSensorReadings.location,
+      timestamp: warehouseSensorReadings.timestamp,
+    })
     .from(warehouseSensorReadings)
     .where(gte(warehouseSensorReadings.timestamp, since))
     .orderBy(
