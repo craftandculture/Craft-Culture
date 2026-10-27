@@ -41,7 +41,8 @@ const listForMe = stockOwnerProcedure.query(async ({ ctx }) => {
       .orderBy(desc(productUpdates.createdAt), desc(productUpdates.publishedAt)),
   ]);
 
-  return { enabled, seenAt: me?.seenAt ?? null, updates: rows };
+  // While What's New is switched off, members are shown nothing at all
+  return { enabled, seenAt: me?.seenAt ?? null, updates: enabled ? rows : [] };
 });
 
 export default listForMe;

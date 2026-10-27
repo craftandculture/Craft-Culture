@@ -45,7 +45,7 @@ const updateJob = teamProcedure
           partnerId: input.partnerId ?? null,
         })
         .where(eq(teamTasks.id, input.taskId));
-      await writeParts(tx, input.taskId, input.parts);
+      await writeParts(tx, input.taskId, input.parts, input.partnerId ?? null);
     });
 
     await logTaskEvent(input.taskId, ctx.user.id, `${ctx.user.name} edited the job`);

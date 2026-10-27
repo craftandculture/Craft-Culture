@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'PCO Process Flow | Craft & Culture',
   description:
-    'Complete guide to Private Client Orders (PCO) process flow - from order creation to delivery. Understand the end-to-end process for wine partners, distributors, admins, and clients.',
+    'Guide to the Private Client Order process, from order creation to delivery.',
+  robots: { index: false, follow: false },
 };
 
 const PcoFlowsLayout = ({ children }: React.PropsWithChildren) => {

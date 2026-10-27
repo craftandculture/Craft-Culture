@@ -33,7 +33,7 @@ const createJob = teamProcedure.input(jobSchema).mutation(async ({ input, ctx })
         createdBy: ctx.user.id,
       })
       .returning({ id: teamTasks.id });
-    await writeParts(tx, task!.id, input.parts);
+    await writeParts(tx, task!.id, input.parts, input.partnerId ?? null);
     return task!.id;
   });
 

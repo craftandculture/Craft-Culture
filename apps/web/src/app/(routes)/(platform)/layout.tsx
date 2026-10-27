@@ -10,6 +10,7 @@ import { resolveAccessProfile } from '@/app/_auth/constants/accessProfiles';
 import isStaff from '@/app/_distribution/utils/isStaff';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import PartnerTasksNavLink from '@/app/_teamTasks/components/PartnerTasksNavLink';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
@@ -276,7 +277,9 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             | 'distributor'
             | 'private_collector'
             | undefined
-        } />
+        }
+        isTeamMember={isTeamMember(user)}
+      />
     </div>
   );
 
