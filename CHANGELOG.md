@@ -1,3 +1,9 @@
+## [2.0.582](https://github.com/craftandculture/Craft-Culture/compare/v2.0.581...v2.0.582) (2026-10-27)
+
+### Bug Fixes
+
+* only C&C staff can use the admin and warehouse screens, and changing a user's email or role now signs them out ([680d792](https://github.com/craftandculture/Craft-Culture/commit/680d792a9dcb897ade45fcf82ff07f9689589a49))
+
 ## [2.0.581](https://github.com/craftandculture/Craft-Culture/compare/v2.0.580...v2.0.581) (2026-10-26)
 
 ### Bug Fixes
