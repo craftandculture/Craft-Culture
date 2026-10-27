@@ -61,6 +61,32 @@ const adminExportStatement = adminProcedure
 
     const summaryRows: Record<string, string | number>[] = [];
 
+    /*
+      A sheet name Excel will accept, unique in this workbook. Excel refuses
+      [ ] : * ? / \ in a name (the file will not open or the write throws),
+      allows at most 31 characters, and two owners whose names share their
+      first 31 characters, or one called "Summary", would collide.
+    */
+    const used = new Set<string>(['summary']);
+    const sheetName = (name: string) => {
+      const base =
+        name
+          .replace(/[[\]:*?\/\\]/g, ' ')
+          .replace(/^'+|'+$/g, '')
+          .replace(/\s+/g, ' ')
+          .trim() || 'Owner';
+
+      for (let n = 1; ; n++) {
+        const suffix = n === 1 ? '' : ` (${n})`;
+        const candidate = base.slice(0, 31 - suffix.length).trim() + suffix;
+
+        if (!used.has(candidate.toLowerCase())) {
+          used.add(candidate.toLowerCase());
+          return candidate;
+        }
+      }
+    };
+
     for (const owner of owners) {
       const statement = await buildOwnerStatement({
         ownerId: owner.id,
@@ -91,8 +117,7 @@ const adminExportStatement = adminProcedure
 
       const sheet = XLSX.utils.json_to_sheet(rows);
 
-      /* 31 characters is Excel's limit, and it truncates silently */
-      XLSX.utils.book_append_sheet(book, sheet, owner.name.slice(0, 31));
+      XLSX.utils.book_append_sheet(book, sheet, sheetName(owner.name));
 
       summaryRows.push({
         Partner: owner.name,

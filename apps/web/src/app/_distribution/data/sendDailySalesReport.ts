@@ -4,6 +4,7 @@ import logger from '@/utils/logger';
 
 import fetchCityDrinksStock from './fetchCityDrinksStock';
 import getDailyOutletSales from './getDailyOutletSales';
+import rememberLandedCosts from './rememberLandedCosts';
 import writeSnapshot from './writeSnapshot';
 import formatDailySalesForSlack from '../utils/formatDailySalesForSlack';
 
@@ -68,7 +69,20 @@ const sendDailySalesReport = async () => {
     });
   }
 
-  return { outlets: results };
+  /*
+    Write down each consigned wine's landed cost while the Pricing Manager
+    still has it, so owner statements can price a wine after it sells out.
+    Done on this daily run rather than when a statement is opened, and never
+    allowed to stop the report.
+  */
+  const landed = await rememberLandedCosts().catch((error: unknown) => {
+    logger.error('Daily sales: remembering landed costs failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  });
+
+  return { outlets: results, landedCostsRemembered: landed?.written ?? null };
 };
 
 export default sendDailySalesReport;
