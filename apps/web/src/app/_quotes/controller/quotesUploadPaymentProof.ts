@@ -6,15 +6,18 @@ import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import uploadPaymentProofSchema from '../schemas/uploadPaymentProofSchema';
 
-const ALLOWED_IMAGE_TYPES = [
+// The upload form offers PDF (bank transfer confirmations usually are one),
+// so the server must accept it too
+const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
+  'application/pdf',
 ];
 
 /**
- * Upload a payment proof screenshot to Vercel Blob storage
+ * Upload a payment proof (screenshot or PDF) to Vercel Blob storage
  *
  * @example
  *   await trpcClient.quotes.uploadPaymentProof.mutate({
@@ -51,10 +54,10 @@ const quotesUploadPaymentProof = approvedProcedure
 
       // Validate actual file content type
       const detectedType = await fileTypeFromBuffer(buffer);
-      if (!detectedType || !ALLOWED_IMAGE_TYPES.includes(detectedType.mime)) {
+      if (!detectedType || !ALLOWED_TYPES.includes(detectedType.mime)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP',
+          message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
         });
       }
 

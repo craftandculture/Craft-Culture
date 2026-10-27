@@ -5,7 +5,10 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import logger from '@/utils/logger';
+
+import sumQuoteTotalUsd from '../utils/sumQuoteTotalUsd';
 
 const removeLineItemSchema = z.object({
   quoteId: z.string().uuid(),
@@ -100,6 +103,7 @@ const quotesRemoveLineItem = approvedProcedure
           acceptedAlternative?: unknown;
         }>;
         adminAdjustments?: unknown;
+        fulfilledOocItems?: Array<{ lineItemTotalUsd?: number }>;
       }) || {};
 
       let updatedQuoteData = quoteData;
@@ -111,10 +115,10 @@ const quotesRemoveLineItem = approvedProcedure
         );
 
         // Recalculate total
-        newTotalUsd = updatedPricingLineItems.reduce(
-          (sum, item) => sum + item.lineItemTotalUsd,
-          0,
-        );
+        newTotalUsd = sumQuoteTotalUsd({
+          lineItems: updatedPricingLineItems,
+          fulfilledOocItems: quoteData.fulfilledOocItems,
+        });
 
         updatedQuoteData = {
           ...quoteData,
@@ -129,7 +133,7 @@ const quotesRemoveLineItem = approvedProcedure
           lineItems: updatedLineItems,
           quoteData: updatedQuoteData,
           totalUsd: newTotalUsd,
-          totalAed: newTotalUsd * 3.67, // AED exchange rate
+          totalAed: convertUsdToAed(newTotalUsd), // AED exchange rate
         })
         .where(eq(quotes.id, quoteId))
         .returning();

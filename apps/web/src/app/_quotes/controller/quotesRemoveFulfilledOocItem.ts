@@ -5,7 +5,10 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import logger from '@/utils/logger';
+
+import sumQuoteTotalUsd from '../utils/sumQuoteTotalUsd';
 
 const removeFulfilledOocItemSchema = z.object({
   quoteId: z.string().uuid(),
@@ -100,15 +103,10 @@ const quotesRemoveFulfilledOocItem = approvedProcedure
       );
 
       // Calculate new total
-      const lineItemsTotal = (quoteData.lineItems || []).reduce(
-        (sum, item) => sum + item.lineItemTotalUsd,
-        0,
-      );
-      const oocTotal = updatedFulfilledItems.reduce(
-        (sum, item) => sum + item.lineItemTotalUsd,
-        0,
-      );
-      const newTotalUsd = lineItemsTotal + oocTotal;
+      const newTotalUsd = sumQuoteTotalUsd({
+        lineItems: quoteData.lineItems,
+        fulfilledOocItems: updatedFulfilledItems,
+      });
 
       // Update quote data
       const updatedQuoteData = {
@@ -122,7 +120,7 @@ const quotesRemoveFulfilledOocItem = approvedProcedure
         .set({
           quoteData: updatedQuoteData,
           totalUsd: newTotalUsd,
-          totalAed: newTotalUsd * 3.67,
+          totalAed: convertUsdToAed(newTotalUsd),
         })
         .where(eq(quotes.id, quoteId))
         .returning();

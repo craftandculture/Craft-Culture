@@ -255,23 +255,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     // Calculate total from line items, excluding unavailable ones without accepted alternatives
     let adjustedTotalUsd = 0;
 
+    // Use the server's line totals: they already reflect an accepted
+    // alternative, and an unavailable line with no accepted alternative is 0.
+    // Pricing an offered-but-not-accepted alternative here made the shown
+    // total differ from the amount the customer is asked to pay.
     quotePricingData.lineItems.forEach((item) => {
-      const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
-      const acceptedAlt = item.acceptedAlternative;
-      // If no accepted alt but alternatives exist, use the first one
-      const effectiveAlt = acceptedAlt || (hasAlternatives ? item.adminAlternatives?.[0] : null);
-
-      // Item is truly unavailable only if marked unavailable AND has no alternatives
-      const isTrulyUnavailable = item.available === false && !hasAlternatives;
-
-      // Include items that are available OR have an alternative (accepted or first offered)
-      if (!isTrulyUnavailable) {
-        // Use alternative pricing if available
-        const itemTotal = effectiveAlt
-          ? effectiveAlt.pricePerCase * (item.originalQuantity || 1)
-          : item.lineItemTotalUsd;
-        adjustedTotalUsd += itemTotal;
-      }
+      if (item.available === false && !item.acceptedAlternative) return;
+      adjustedTotalUsd += item.lineItemTotalUsd || 0;
     });
 
     // Add fulfilled OOC items
@@ -564,46 +554,36 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
     setIsExporting(true);
     try {
-      // Build line items for PDF, filtering out unavailable items without alternatives
+      const isAedPdf = quote.currency === 'AED' && !!quote.totalAed;
+      // USD value of every line on the PDF, for the total
+      const lineTotalsUsd: number[] = [];
+
+      // Build line items for PDF, leaving out unavailable lines with no accepted alternative
       const pdfLineItems = lineItems
         .map((item) => {
           const product = productMap[item.productId];
           const pricing = pricingMap[item.productId];
 
-          // Check if item has alternatives (use first one if not explicitly accepted)
-          const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
-          const acceptedAlt = pricing?.acceptedAlternative;
-          // If no accepted alt but alternatives exist, use the first one
-          const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
+          // Only an alternative the customer accepted is priced; offered
+          // alternatives are not part of the amount due
+          const effectiveAlt = pricing?.acceptedAlternative ?? null;
 
-          // Item is truly unavailable only if marked unavailable AND has no alternatives
-          const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
-
-          // Skip items that are truly unavailable (no alternatives offered)
-          if (isTrulyUnavailable) {
+          // Unavailable with no accepted alternative: not on the invoice
+          if (pricing?.available === false && !effectiveAlt) {
             return null;
           }
 
-          // Use alternative pricing if available (accepted or first offered)
-          const displayQuantity = effectiveAlt
-            ? item.quantity // Use original quantity for alternatives
-            : (pricing?.confirmedQuantity ?? item.quantity);
+          const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
           const pricePerCase = effectiveAlt
             ? effectiveAlt.pricePerCase
             : (pricing?.basePriceUsd ?? (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0));
-          const lineTotal = effectiveAlt
-            ? effectiveAlt.pricePerCase * displayQuantity
-            : (pricing?.lineItemTotalUsd || 0);
+          const lineTotal = pricing?.lineItemTotalUsd ?? pricePerCase * displayQuantity;
+
+          lineTotalsUsd.push(lineTotal);
 
           // Convert to display currency if needed
-          const displayPricePerCase =
-            quote.currency === 'AED' && quote.totalAed
-              ? convertUsdToAed(pricePerCase)
-              : pricePerCase;
-          const displayLineTotal =
-            quote.currency === 'AED' && quote.totalAed
-              ? convertUsdToAed(lineTotal)
-              : lineTotal;
+          const displayPricePerCase = isAedPdf ? convertUsdToAed(pricePerCase) : pricePerCase;
+          const displayLineTotal = isAedPdf ? convertUsdToAed(lineTotal) : lineTotal;
 
           const bottlesPerCase = effectiveAlt
             ? effectiveAlt.bottlesPerCase
@@ -630,15 +610,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         const pricePerCase = item.pricePerCase;
         const lineTotal = item.lineItemTotalUsd;
 
+        lineTotalsUsd.push(lineTotal);
+
         // Convert to display currency if needed
-        const displayPricePerCase =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(pricePerCase)
-            : pricePerCase;
-        const displayLineTotal =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(lineTotal)
-            : lineTotal;
+        const displayPricePerCase = isAedPdf ? convertUsdToAed(pricePerCase) : pricePerCase;
+        const displayLineTotal = isAedPdf ? convertUsdToAed(lineTotal) : lineTotal;
 
         return {
           productName: item.productName,
@@ -649,10 +625,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         };
       });
 
-      // Calculate total including OOC items
-      const lineItemsTotalUsd = pdfLineItems.reduce((sum, item) => sum + item.lineTotal, 0);
-      const oocItemsTotalUsd = pdfFulfilledOocItems.reduce((sum, item) => sum + item.lineTotal, 0);
-      const calculatedTotalUsd = lineItemsTotalUsd + oocItemsTotalUsd;
+      // Total from the USD line values (the displayed values may already be
+      // in AED — summing those and converting again overstated AED ~3.67x)
+      const calculatedTotalUsd = lineTotalsUsd.reduce((sum, value) => sum + value, 0);
       const calculatedTotalAed = convertUsdToAed(calculatedTotalUsd);
 
       await exportQuoteToPDF(
@@ -822,20 +797,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
 
-                  // Check if item has alternatives (use first one if not explicitly accepted)
-                  const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
-                  const acceptedAlt = pricing?.acceptedAlternative;
-                  // If no accepted alt but alternatives exist, use the first one
-                  const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
+                  // Only an accepted alternative replaces the wine and its
+                  // price; offered alternatives are listed below the line
+                  const effectiveAlt = pricing?.acceptedAlternative ?? null;
 
-                  // Item is truly unavailable only if marked unavailable AND has no alternatives
-                  const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
+                  // Unavailable unless the customer accepted an alternative
+                  const isTrulyUnavailable = pricing?.available === false && !effectiveAlt;
 
-                  // Use alternative pricing if available
                   const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
-                  const lineItemTotal = effectiveAlt
-                    ? effectiveAlt.pricePerCase * item.quantity
-                    : (pricing?.lineItemTotalUsd || 0);
+                  const lineItemTotal = pricing?.lineItemTotalUsd || 0;
 
                   // Determine if item needs expanded view
                   const hasExpandedContent = effectiveAlt || pricing?.adminNotes;

@@ -414,8 +414,9 @@ const QuoteApprovalDialog = ({
         );
 
         if (hasInvalidAdjustments) {
-          toast.error('Please confirm quantities and prices for all available items');
-          return;
+          // Throw so the mutation fails (onError toasts); returning here
+          // used to run onSuccess and report the quote as confirmed
+          throw new Error('Please confirm quantities and prices for all available items');
         }
 
         // Validate OOC fulfillments - if included, must have valid price and quantity
@@ -426,8 +427,7 @@ const QuoteApprovalDialog = ({
         );
 
         if (hasInvalidOocItems) {
-          toast.error('Please enter valid quantity and price for all included out-of-catalogue items');
-          return;
+          throw new Error('Please enter valid quantity and price for all included out-of-catalogue items');
         }
       }
 
@@ -529,8 +529,7 @@ const QuoteApprovalDialog = ({
   const requestRevisionMutation = useMutation({
     mutationFn: async () => {
       if (!quote || !revisionReason.trim()) {
-        toast.error('Please provide a revision reason');
-        return;
+        throw new Error('Please provide a revision reason');
       }
       return trpcClient.quotes.requestRevision.mutate({
         quoteId: quote.id,
