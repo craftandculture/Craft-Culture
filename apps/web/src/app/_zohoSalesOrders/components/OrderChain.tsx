@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -13,10 +14,24 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+/** A step the chain cannot read from the paperwork, such as the client paying */
+export interface OrderChainExtraStep {
+  /** The paperwork step it follows */
+  after: 'release' | 'pco' | 'salesOrder' | 'invoice' | 'pick' | 'dispatch';
+  key: string;
+  label: string;
+  at: Date | string | null;
+  done: boolean;
+}
+
 export interface OrderChainProps {
   releaseId?: string;
   pcoId?: string;
   salesOrderId?: string;
+  /** Milestones from the order itself, placed into the strip in order */
+  extraSteps?: OrderChainExtraStep[];
+  /** A compact control shown under the strip, such as the distributor SKU */
+  footer?: ReactNode;
 }
 
 /**
@@ -27,7 +42,7 @@ export interface OrderChainProps {
  * a missing sales order offers "Link to sales order" right there, for one
  * the team raised by hand in Zoho.
  */
-const OrderChain = ({ releaseId, pcoId, salesOrderId }: OrderChainProps) => {
+const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }: OrderChainProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [soNumber, setSoNumber] = useState('');
@@ -55,6 +70,27 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId }: OrderChainProps) => {
     );
   }
 
+  /*
+    The order page used to show this strip under a second tracker of the
+    order's own statuses (created, approved, paid, delivered): two rows
+    describing one journey. The two milestones only the order knows are slotted
+    in here instead, so there is one row and each step carries its document.
+  */
+  const steps = chain.steps.flatMap((step) => [
+    step,
+    ...extraSteps
+      .filter((extra) => extra.after === step.key)
+      .map((extra) => ({
+        key: extra.key,
+        label: extra.label,
+        reference: null,
+        status: null,
+        at: extra.at,
+        href: null,
+        done: extra.done,
+      })),
+  ]);
+
   const pcoStep = chain.steps.find((step) => step.key === 'pco');
   const soStep = chain.steps.find((step) => step.key === 'salesOrder');
   // The order exists but nothing in Zoho is linked to it yet
@@ -63,7 +99,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId }: OrderChainProps) => {
   return (
     <div className="flex flex-col gap-2">
       <ol className="flex flex-wrap items-stretch gap-1.5">
-        {chain.steps.map((step, index) => (
+        {steps.map((step, index) => (
           <li key={step.key} className="flex items-center gap-1.5">
             <div
               className={`flex min-w-[7rem] flex-col rounded-lg border px-2.5 py-1.5 ${
@@ -107,7 +143,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId }: OrderChainProps) => {
                 </span>
               )}
             </div>
-            {index < chain.steps.length - 1 && (
+            {index < steps.length - 1 && (
               <span className="text-text-muted text-xs" aria-hidden>
                 →
               </span>
@@ -145,6 +181,8 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId }: OrderChainProps) => {
           </Button>
         </form>
       )}
+
+      {footer}
     </div>
   );
 };

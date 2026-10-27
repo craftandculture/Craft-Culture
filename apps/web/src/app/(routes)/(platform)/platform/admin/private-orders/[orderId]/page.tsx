@@ -42,7 +42,6 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
-import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
 import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
 import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
@@ -539,6 +538,8 @@ const AdminPrivateOrderDetailPage = () => {
   const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
   const canEditItems = order && !NON_EDITABLE_STATUSES.includes(order.status);
   const canDelete = order && ['draft', 'cancelled'].includes(order.status);
+  // A member's own wine going to them (a cellar release), not a sale to a client
+  const isMemberDelivery = !!order?.cellarRelease || order?.orderKind === 'owner_delivery';
 
   const handleDeleteOrder = () => {
     if (confirm(`Are you sure you want to permanently delete order ${order?.orderNumber}? This action cannot be undone.`)) {
@@ -713,6 +714,8 @@ const AdminPrivateOrderDetailPage = () => {
               </SelectContent>
             </Select>
 
+            {/* A member's own delivery is not something to copy to other clients */}
+            {!isMemberDelivery && (
             <CloneOrderDialog
               audience="admin"
               orderId={order.id}
@@ -723,6 +726,7 @@ const AdminPrivateOrderDetailPage = () => {
               subscriptionCaseSize={order.subscriptionCaseSize}
               subscriptionVariant={order.subscriptionVariant}
             />
+            )}
 
             <ZohoSalesOrderButton
               orderId={order.id}
@@ -752,31 +756,47 @@ const AdminPrivateOrderDetailPage = () => {
           </div>
         </div>
 
-        {/* Workflow Stepper */}
-        <WorkflowStepper order={order} />
-
-        {/* Release → PCO → Zoho order → invoice → pick → dispatch, linked */}
-        <OrderChain pcoId={order.id} />
-
-        {/* The distributor's bundle SKU (City Drinks), with its source. Shown
-            on unassigned orders too, so the SKU can be recorded whenever it
-            is known; hidden only for a distributor that doesn't use SKUs. */}
-        {(!order.distributor || order.distributor.requiresOrderSku) && (
-          <DistributorSkuCard
-            key={order.distributorSku ?? 'none'}
-            audience="admin"
-            orderId={order.id}
-            orderNumber={order.orderNumber}
-            status={order.status}
-            distributorName={order.distributor?.businessName ?? 'Distributor'}
-            sku={order.distributorSku}
-            source={order.distributorSkuSource}
-            distributorRef={order.distributorRef}
-            feedSku={order.feedBundle?.sku ?? null}
-          />
-        )}
+        {/*
+          One tracker: the paperwork chain, with the two milestones only the
+          order knows (client verified, client paid) slotted in. The status
+          stepper above it described the same journey a second time. The
+          distributor SKU is a line under it rather than a card of its own.
+        */}
+        <Card>
+          <CardContent className="p-4">
+            <OrderChain
+              pcoId={order.id}
+              extraSteps={[
+                ...(order.distributor?.requiresClientVerification
+                  ? [{ after: 'invoice' as const, key: 'verified', label: 'Client verified', at: order.clientVerifiedAt ?? null, done: !!order.clientVerifiedAt }]
+                  : []),
+                { after: 'invoice' as const, key: 'paid', label: isMemberDelivery ? 'Delivery paid' : 'Client paid', at: order.clientPaidAt ?? null, done: !!order.clientPaidAt },
+              ]}
+              footer={
+                /* Shown on unassigned orders too, so the SKU can be recorded whenever it
+                   is known; hidden only for a distributor that doesn't use SKUs. */
+                (!order.distributor || order.distributor.requiresOrderSku) ? (
+                  <DistributorSkuCard
+                    compact
+                    key={order.distributorSku ?? 'none'}
+                    audience="admin"
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    status={order.status}
+                    distributorName={order.distributor?.businessName ?? 'Distributor'}
+                    sku={order.distributorSku}
+                    source={order.distributorSkuSource}
+                    distributorRef={order.distributorRef}
+                    feedSku={order.feedBundle?.sku ?? null}
+                  />
+                ) : null
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Which subscription box this order is — what the clone tool keys on */}
+        {!isMemberDelivery && (
         <SubscriptionBoxPicker
           audience="admin"
           key={`${order.subscriptionTier}-${order.subscriptionCaseSize}-${order.subscriptionVariant}`}
@@ -786,6 +806,7 @@ const AdminPrivateOrderDetailPage = () => {
           variant={order.subscriptionVariant}
           clientTotalAed={order.totalAed}
         />
+        )}
 
         {/* Order Completion - Shown prominently for delivered/distributor_paid orders */}
         {['delivered', 'distributor_paid'].includes(order.status) && (
