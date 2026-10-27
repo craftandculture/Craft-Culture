@@ -50,7 +50,7 @@ const publicUrls = async (limit: number, skip: string[]) => {
       `SELECT "${column}" AS url FROM "${table}" WHERE "${column}" LIKE '${PUBLIC}'`,
   );
   unions.push(
-    `SELECT jsonb_array_elements_text("photos") AS url FROM "wms_stock" WHERE "photos"::text LIKE '${PUBLIC}'`,
+    `SELECT jsonb_array_elements_text("photos") AS url FROM "wms_stock" WHERE jsonb_typeof("photos") = 'array' AND "photos"::text LIKE '${PUBLIC}'`,
   );
 
   const rows = await db.execute<{ url: string }>(
@@ -75,7 +75,7 @@ const repointAll = async (oldUrl: string, newUrl: string) => {
             SELECT jsonb_agg(CASE WHEN p = ${oldUrl} THEN ${newUrl} ELSE p END)
             FROM jsonb_array_elements_text("photos") p
           )
-          WHERE "photos" ? ${oldUrl}`,
+          WHERE jsonb_typeof("photos") = 'array' AND "photos" ? ${oldUrl}`,
     );
   });
 };
