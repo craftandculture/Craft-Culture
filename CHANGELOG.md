@@ -1,3 +1,9 @@
+## [2.0.599](https://github.com/craftandculture/Craft-Culture/compare/v2.0.598...v2.0.599) (2026-10-27)
+
+### Bug Fixes
+
+* leftover files from deleted or replaced documents can be moved out of public storage too ([8320f95](https://github.com/craftandculture/Craft-Culture/commit/8320f954cf2f8532a585639ab91b2206a15cb60e))
+
 ## [2.0.598](https://github.com/craftandculture/Craft-Culture/compare/v2.0.597...v2.0.598) (2026-10-27)
 
 ### Bug Fixes
