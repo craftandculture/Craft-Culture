@@ -48,40 +48,16 @@ const adminApprovePayoutRun = staffAdminProcedure
       });
     }
 
-    const settlements = await db
-      .select({
-        id: consignmentSettlements.id,
-        ownerName: consignmentSettlements.ownerName,
-      })
-      .from(consignmentSettlements)
-      .where(
-        and(
-          eq(consignmentSettlements.payoutRunId, run.id),
-          eq(consignmentSettlements.status, 'payment_received'),
-        ),
-      );
-
-    if (settlements.length === 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'This run has nothing left to pay.',
-      });
-    }
-
     const now = new Date();
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(consignmentSettlements)
-        .set({ status: 'settled', settledAt: now, settledBy: ctx.user.id })
-        .where(
-          and(
-            eq(consignmentSettlements.payoutRunId, run.id),
-            eq(consignmentSettlements.status, 'payment_received'),
-          ),
-        );
-
-      await tx
+    /*
+      Claimed in one transaction: the run moves out of draft only if it is
+      still draft, and only the settlements this call moved to settled are
+      billed. Two clicks (or two staff) approving at once used to both pass
+      the draft check above and raise every Zoho bill twice.
+    */
+    const settlements = await db.transaction(async (tx) => {
+      const [claimed] = await tx
         .update(consignmentPayoutRuns)
         .set({
           status: 'approved',
@@ -89,7 +65,43 @@ const adminApprovePayoutRun = staffAdminProcedure
           approvedBy: ctx.user.id,
           updatedAt: now,
         })
-        .where(eq(consignmentPayoutRuns.id, run.id));
+        .where(
+          and(
+            eq(consignmentPayoutRuns.id, run.id),
+            eq(consignmentPayoutRuns.status, 'draft'),
+          ),
+        )
+        .returning({ id: consignmentPayoutRuns.id });
+
+      if (!claimed) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This run has just been approved by someone else.',
+        });
+      }
+
+      const moved = await tx
+        .update(consignmentSettlements)
+        .set({ status: 'settled', settledAt: now, settledBy: ctx.user.id })
+        .where(
+          and(
+            eq(consignmentSettlements.payoutRunId, run.id),
+            eq(consignmentSettlements.status, 'payment_received'),
+          ),
+        )
+        .returning({
+          id: consignmentSettlements.id,
+          ownerName: consignmentSettlements.ownerName,
+        });
+
+      if (moved.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This run has nothing left to pay.',
+        });
+      }
+
+      return moved;
     });
 
     for (const settlement of settlements) {

@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
 import soldToCraftAndCulture from '@/app/_partners/utils/soldToCraftAndCulture';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
@@ -14,7 +15,8 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { staffAdminProcedure } from '@/lib/trpc/procedures';
+
 
 import generateMandateNumber from '../utils/generateMandateNumber';
 
@@ -37,7 +39,7 @@ import generateMandateNumber from '../utils/generateMandateNumber';
  *     lines: [{ lwin18: '1035984-2023-06-00750', agreedBottles: 6, eurPerBottle: 40 }],
  *   });
  */
-const adminRecordAgreedPrices = adminProcedure
+const adminRecordAgreedPrices = staffAdminProcedure
   .input(
     z.object({
       ownerId: z.string().uuid(),
@@ -225,31 +227,36 @@ const adminRecordAgreedPrices = adminProcedure
       }
 
       const first = line.rows[0];
-      const mandateNumber = await generateMandateNumber();
       await db.transaction(async (tx) => {
-        const [mandate] = await tx
-          .insert(saleMandates)
-          .values({
-            mandateNumber,
-            ownerId: owner.id,
-            ownerName: owner.name,
-            lwin18: line.lwin18,
-            lwinKey: line.key,
-            productName: first?.productName ?? line.productName ?? line.lwin18,
-            producer: first?.producer ?? null,
-            vintage: first?.vintage ?? (Number(line.key.split('-')[1]) || null),
-            bottleSize: first?.bottleSize ?? null,
-            caseConfig: first?.caseConfig ?? null,
-            bottlesOffered: line.agreedBottles,
-            bottlesRemaining: line.remainingBottles,
-            askPerBottleUsd: line.askPerBottleUsd,
-            status: line.status,
-            offeredAt: new Date(),
-            ownerNotes,
-            adminNotes: `Recorded by ${ctx.user.name ?? ctx.user.email} from prices agreed away from the portal`,
-            createdBy: ctx.user.id,
-          })
-          .returning({ id: saleMandates.id });
+        // Numbered inside the transaction, and retried on a clash
+        const mandate = await withNumberRetry((attempt) =>
+          tx.transaction(async (savepoint) => {
+            const [row] = await savepoint
+              .insert(saleMandates)
+              .values({
+                mandateNumber: await generateMandateNumber(savepoint, attempt),
+                ownerId: owner.id,
+                ownerName: owner.name,
+                lwin18: line.lwin18,
+                lwinKey: line.key,
+                productName: first?.productName ?? line.productName ?? line.lwin18,
+                producer: first?.producer ?? null,
+                vintage: first?.vintage ?? (Number(line.key.split('-')[1]) || null),
+                bottleSize: first?.bottleSize ?? null,
+                caseConfig: first?.caseConfig ?? null,
+                bottlesOffered: line.agreedBottles,
+                bottlesRemaining: line.remainingBottles,
+                askPerBottleUsd: line.askPerBottleUsd,
+                status: line.status,
+                offeredAt: new Date(),
+                ownerNotes,
+                adminNotes: `Recorded by ${ctx.user.name ?? ctx.user.email} from prices agreed away from the portal`,
+                createdBy: ctx.user.id,
+              })
+              .returning({ id: saleMandates.id });
+            return row;
+          }),
+        );
         if (!mandate || line.remainingBottles === 0) return;
 
         // The bottles still to sell, against the rows that hold them

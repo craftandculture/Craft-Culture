@@ -71,12 +71,34 @@ const sendMemberEmails = async () => {
   const mode = await getMemberEmailMode();
   const now = new Date();
 
-  const due = await db
-    .select()
+  /*
+    Claimed before anything is sent. Two runs overlapping (a slow Loops call,
+    a manual trigger alongside the cron) both read the same pending rows and
+    both sent them, so a member could receive the same email twice. Rows are
+    moved to 'sending' in one statement, skipping any another run has locked,
+    and only the rows this run claimed are sent. A run that dies mid-batch
+    leaves its rows in 'sending' — visible on Member emails, and never sent
+    twice.
+  */
+  const claimable = db
+    .select({ id: memberEmailOutbox.id })
     .from(memberEmailOutbox)
     .where(and(eq(memberEmailOutbox.status, 'pending'), lte(memberEmailOutbox.sendAt, now)))
     .orderBy(asc(memberEmailOutbox.sendAt), asc(memberEmailOutbox.createdAt))
-    .limit(BATCH);
+    .limit(BATCH)
+    .for('update', { skipLocked: true });
+
+  const claimed = await db
+    .update(memberEmailOutbox)
+    .set({ status: 'sending', updatedAt: now })
+    .where(and(inArray(memberEmailOutbox.id, claimable), eq(memberEmailOutbox.status, 'pending')))
+    .returning();
+
+  // RETURNING has no order; merging and sending go oldest first
+  const due = claimed.sort(
+    (a, b) =>
+      a.sendAt.getTime() - b.sendAt.getTime() || a.createdAt.getTime() - b.createdAt.getTime(),
+  );
 
   if (due.length === 0) return { mode, due: 0, sent: 0, failed: 0 };
 

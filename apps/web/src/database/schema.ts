@@ -8487,7 +8487,9 @@ export const memberEmailOutbox = pgTable(
     isMergeable: boolean('is_mergeable').notNull().default(false),
     sendAt: timestamp('send_at', { mode: 'date' }).notNull(),
     status: text('status')
-      .$type<'pending' | 'sent' | 'shadowed' | 'suppressed' | 'merged' | 'failed'>()
+      .$type<
+        'pending' | 'sending' | 'sent' | 'shadowed' | 'suppressed' | 'merged' | 'failed'
+      >()
       .notNull()
       .default('pending'),
     mergedInto: uuid('merged_into'),

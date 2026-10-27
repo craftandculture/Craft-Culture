@@ -4,12 +4,14 @@ import { z } from 'zod';
 
 import CELLAR_CURRENCIES from '@/app/_cellar/constants/cellarCurrencies';
 import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+
 
 import generateMandateNumber from '../utils/generateMandateNumber';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
@@ -170,42 +172,49 @@ const memberOfferForSale = stockOwnerProcedure
 
     const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
 
-    const mandateNumber = await generateMandateNumber();
-
-    const mandateId = await db.transaction(async (tx) => {
-      const [mandate] = await tx
-        .insert(saleMandates)
-        .values({
-          mandateNumber,
-          ownerId: ctx.partner.id,
-          ownerName: ctx.partner.businessName,
-          lwin18: first.lwin18,
-          lwinKey: lwinPakKeyOf(first.lwin18),
-          productName: first.productName,
-          producer: first.producer,
-          vintage: first.vintage,
-          bottleSize: first.bottleSize,
-          caseConfig: first.caseConfig,
-          bottlesOffered: totalBottles,
-          bottlesRemaining: totalBottles,
-          askPerBottleUsd,
-          askCurrency: currency,
-          askPerBottleLocal: local,
-          askFxRate: fx.rate,
-          askFxAt: new Date(),
-          /*
-            Offered, not listed. C&C reviews before anything reaches a price
-            list, and the hold flag stays on until it does — so an offer that is
-            never accepted never makes the wine sellable.
-          */
-          status: 'offered',
-          offeredAt: new Date(),
-          expiresAt:
-            expiresAt && !Number.isNaN(expiresAt.getTime()) ? expiresAt : null,
-          ownerNotes: input.ownerNotes,
-          createdBy: ctx.user.id,
-        })
-        .returning({ id: saleMandates.id });
+    const { mandateId, mandateNumber } = await db.transaction(async (tx) => {
+      // Numbered inside the transaction, and retried on a clash
+      const mandate = await withNumberRetry((attempt) =>
+        tx.transaction(async (savepoint) => {
+          const [row] = await savepoint
+            .insert(saleMandates)
+            .values({
+              mandateNumber: await generateMandateNumber(savepoint, attempt),
+              ownerId: ctx.partner.id,
+              ownerName: ctx.partner.businessName,
+              lwin18: first.lwin18,
+              lwinKey: lwinPakKeyOf(first.lwin18),
+              productName: first.productName,
+              producer: first.producer,
+              vintage: first.vintage,
+              bottleSize: first.bottleSize,
+              caseConfig: first.caseConfig,
+              bottlesOffered: totalBottles,
+              bottlesRemaining: totalBottles,
+              askPerBottleUsd,
+              askCurrency: currency,
+              askPerBottleLocal: local,
+              askFxRate: fx.rate,
+              askFxAt: new Date(),
+              /*
+                Offered, not listed. C&C reviews before anything reaches a price
+                list, and the hold flag stays on until it does — so an offer that is
+                never accepted never makes the wine sellable.
+              */
+              status: 'offered',
+              offeredAt: new Date(),
+              expiresAt:
+                expiresAt && !Number.isNaN(expiresAt.getTime()) ? expiresAt : null,
+              ownerNotes: input.ownerNotes,
+              createdBy: ctx.user.id,
+            })
+            .returning({
+              id: saleMandates.id,
+              mandateNumber: saleMandates.mandateNumber,
+            });
+          return row;
+        }),
+      );
 
       if (!mandate) {
         throw new TRPCError({
@@ -237,7 +246,7 @@ const memberOfferForSale = stockOwnerProcedure
         }),
       );
 
-      return mandate.id;
+      return { mandateId: mandate.id, mandateNumber: mandate.mandateNumber };
     });
 
     await notifyMandateUpdate({
