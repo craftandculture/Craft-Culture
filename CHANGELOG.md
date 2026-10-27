@@ -1,3 +1,9 @@
+## [2.0.590](https://github.com/craftandculture/Craft-Culture/compare/v2.0.589...v2.0.590) (2026-10-27)
+
+### Features
+
+* the Pricing Manager shows the London in-bond market beside each In Bond price, from Wine Labs ([a896803](https://github.com/craftandculture/Craft-Culture/commit/a896803a52e5e678487b4f3692feb43d5459ca8d))
+
 ## [2.0.589](https://github.com/craftandculture/Craft-Culture/compare/v2.0.588...v2.0.589) (2026-10-27)
 
 ### Features
