@@ -38,8 +38,7 @@ import rankStockByPack from '../utils/rankStockByPack';
 const adminPickItem = wmsOperatorProcedure
   .input(pickItemSchema)
   .mutation(async ({ input, ctx }) => {
-    const { pickListItemId, pickedFromLocationId, pickedQuantity, pickedBottles, notes } =
-      input;
+    const { pickListItemId, pickedFromLocationId, pickedQuantity, notes } = input;
 
     // Get user ID from context (adminProcedure guarantees ctx.user exists)
     const userId = ctx.user.id;
@@ -118,6 +117,15 @@ const adminPickItem = wmsOperatorProcedure
         });
       }
 
+      /*
+        A single-bottle line (a 1×75cl SKU) is a bottle, whatever case it sits
+        in. Ihab Toma's release asked for one bottle each of wines held in 2- and
+        3-bottle cases, and a whole-case pick refused every one because the pack
+        did not match. Picking it as bottles cracks the case and shelves the rest.
+      */
+      const pickedBottles =
+        input.pickedBottles ??
+        (parseSkuPack(pickListItem.lwin18)?.pack === 1 ? pickedQuantity : null);
       const isBottlePick = pickedBottles != null;
 
       /*
