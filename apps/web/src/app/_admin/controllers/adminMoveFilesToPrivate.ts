@@ -1,4 +1,4 @@
-import { del } from '@vercel/blob';
+import { del, list } from '@vercel/blob';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -70,12 +70,14 @@ const repointAll = async (oldUrl: string, newUrl: string) => {
         sql`UPDATE ${sql.identifier(table)} SET ${sql.identifier(column)} = ${newUrl} WHERE ${sql.identifier(column)} = ${oldUrl}`,
       );
     }
+    // Photos kept in JSON: stock rows and receiving drafts in progress
     await tx.execute(
-      sql`UPDATE "wms_stock" SET "photos" = (
-            SELECT jsonb_agg(CASE WHEN p = ${oldUrl} THEN ${newUrl} ELSE p END)
-            FROM jsonb_array_elements_text("photos") p
-          )
-          WHERE jsonb_typeof("photos") = 'array' AND "photos" ? ${oldUrl}`,
+      sql`UPDATE "wms_stock" SET "photos" = replace("photos"::text, ${oldUrl}, ${newUrl})::jsonb
+          WHERE "photos"::text LIKE ${`%${oldUrl}%`}`,
+    );
+    await tx.execute(
+      sql`UPDATE "wms_receiving_drafts" SET "items" = replace("items"::text, ${oldUrl}, ${newUrl})::jsonb
+          WHERE "items"::text LIKE ${`%${oldUrl}%`}`,
     );
   });
 };
@@ -87,7 +89,7 @@ const repointAll = async (oldUrl: string, newUrl: string) => {
  * The original is deleted last, so a failure part-way never leaves a record
  * without a file.
  */
-const moveOne = async (oldUrl: string): Promise<Outcome> => {
+const moveOne = async (oldUrl: string, folder = ''): Promise<Outcome> => {
   if (!isVercelBlobUrl(oldUrl)) return 'failed';
 
   const response = await fetch(oldUrl);
@@ -98,7 +100,7 @@ const moveOne = async (oldUrl: string): Promise<Outcome> => {
   const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
   const pathname = decodeURIComponent(new URL(oldUrl).pathname.slice(1));
 
-  const { url: newUrl } = await putPrivateFile(pathname, body, contentType);
+  const { url: newUrl } = await putPrivateFile(`${folder}${pathname}`, body, contentType);
 
   try {
     await repointAll(oldUrl, newUrl);
@@ -130,11 +132,51 @@ const adminMoveFilesToPrivate = staffAdminProcedure
   .input(
     z.object({
       dryRun: z.boolean().default(true),
+      /**
+       * `referenced`: files a record points at. `leftovers`: everything else
+       * still in the public store (deleted or replaced documents, abandoned
+       * drafts), kept under `orphaned/` in the private store. Members'
+       * encrypted identity documents stay where they are.
+       */
+      mode: z.enum(['referenced', 'leftovers']).default('referenced'),
       /** Files reported missing or failed on an earlier call, not retried */
       skip: z.array(z.string()).max(1000).default([]),
     }),
   )
   .mutation(async ({ input }) => {
+    if (input.mode === 'leftovers') {
+      const urls: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await list({ cursor, limit: 1000 });
+        for (const blob of page.blobs) {
+          if (!blob.pathname.startsWith('identity/') && !input.skip.includes(blob.url)) {
+            urls.push(blob.url);
+          }
+        }
+        cursor = page.cursor;
+      } while (cursor);
+
+      if (input.dryRun) return { moved: 0, missing: [], failed: [], remaining: urls.length };
+
+      const results: { url: string; outcome: Outcome }[] = [];
+      for (const url of urls.slice(0, BATCH)) {
+        const outcome = await moveOne(url, 'orphaned/').catch((error: unknown) => {
+          logger.error('[files] leftover move failed', { url, error });
+          return 'failed' as const;
+        });
+        results.push({ url, outcome });
+      }
+
+      const moved = results.filter((r) => r.outcome === 'moved').length;
+      return {
+        moved,
+        missing: results.filter((r) => r.outcome === 'missing').map((r) => r.url),
+        failed: results.filter((r) => r.outcome === 'failed').map((r) => r.url),
+        remaining: urls.length - moved,
+      };
+    }
+
     const { batch, remaining } = await publicUrls(input.dryRun ? 0 : BATCH, input.skip);
 
     if (input.dryRun) {
