@@ -1,3 +1,9 @@
+## [2.0.609](https://github.com/craftandculture/Craft-Culture/compare/v2.0.608...v2.0.609) (2026-10-27)
+
+### Features
+
+* ops checks keep their own jobs in Team Tasks, and urgent problems post to [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) straight away ([49043d6](https://github.com/craftandculture/Craft-Culture/commit/49043d69bbe6b53782f8fdf529d72b7fa7243c26))
+
 ## [2.0.608](https://github.com/craftandculture/Craft-Culture/compare/v2.0.607...v2.0.608) (2026-10-27)
 
 ### Features
