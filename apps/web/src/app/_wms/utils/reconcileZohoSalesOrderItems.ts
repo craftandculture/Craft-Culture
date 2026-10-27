@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import canonicalSku from '@/app/_wms/utils/canonicalSku';
+import zohoLineChanged from '@/app/_wms/utils/zohoLineChanged';
 import {
   wmsStock,
   wmsStockReservations,
@@ -103,18 +104,7 @@ const reconcileZohoSalesOrderItems = async ({
       const local = existingByZohoId.get(item.line_item_id);
       if (
         local &&
-        (local.quantity !== item.quantity ||
-          local.rate !== item.rate ||
-          local.name !== item.name ||
-          local.itemTotal !== item.item_total ||
-          // SKU carries the pack config (…-06-… = 6-pack) which drives the
-          // pick's bottle count, and description mirrors it. A pack change that
-          // keeps the same total was previously invisible here — sync both.
-          // The stored SKU is compared as-is: every write canonicalises, so
-          // this only differs once, for a line stored mis-dashed before that
-          // — which is then rewritten and re-held instead of left unmatched.
-          (local.sku ?? '') !== (canonicalSku(item.sku) ?? '') ||
-          (local.description ?? '') !== (item.description ?? ''))
+        zohoLineChanged(local, item)
       ) {
         changed.push({ zoho: item, localId: local.id });
       }

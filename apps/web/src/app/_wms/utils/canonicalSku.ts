@@ -15,7 +15,7 @@ import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
  * @param sku - The SKU as Zoho returned it
  * @returns The canonical SKU, or null when given null/undefined
  */
-const canonicalSku = (sku: string | null | undefined): string | null => {
+const canonicalSku = (sku: string | null | undefined) => {
   if (sku == null) return null;
   const digits = sku.replace(/-/g, '');
   return /^\d{18}$/.test(digits) ? normalizeLwin18(digits) : sku.trim();
