@@ -1,3 +1,9 @@
+## [2.0.608](https://github.com/craftandculture/Craft-Culture/compare/v2.0.607...v2.0.608) (2026-10-27)
+
+### Features
+
+* separate order email switches for wine partners and distributors ([b41083a](https://github.com/craftandculture/Craft-Culture/commit/b41083a2111f44fe75c1accad59da1e1ba3409bb))
+
 ## [2.0.607](https://github.com/craftandculture/Craft-Culture/compare/v2.0.606...v2.0.607) (2026-10-27)
 
 ### Features
