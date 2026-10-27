@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import canonicalSku from '@/app/_wms/utils/canonicalSku';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import syncExistingSalesOrder from '@/app/_wms/utils/syncExistingSalesOrder';
 import { adoptDraftHolds, refreshAllDraftHolds } from '@/app/_zohoSalesOrders/data/draftHolds';
@@ -134,7 +135,7 @@ const syncSalesOrdersFromZoho = async ({
               salesOrderId: newOrder.id,
               zohoLineItemId: item.line_item_id,
               zohoItemId: item.item_id,
-              sku: item.sku,
+              sku: canonicalSku(item.sku),
               name: item.name,
               description: item.description,
               rate: item.rate,
