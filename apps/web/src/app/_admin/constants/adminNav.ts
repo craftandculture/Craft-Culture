@@ -44,6 +44,9 @@ export interface AdminNavSection {
  * The desktop top bar, the section tabs under it and the phone menu all read
  * this. Each used to carry its own copy, and the phone menu had drifted eight
  * pages behind the desktop one.
+ *
+ * Retired from the menu in October 2026, unused all year: My Quotes,
+ * Commissions and Freight Bills. The pages still open from a direct link.
  */
 const adminNav: AdminNavSection[] = [
   { key: 'home', label: 'Home', href: '/platform/admin/home', icon: IconHome2, inTopNav: true, forOperators: false, links: [] },
@@ -64,7 +67,6 @@ const adminNav: AdminNavSection[] = [
       { label: 'Zoho Codes', href: '/platform/admin/zoho-codes' },
       { label: 'Source', href: '/platform/admin/source' },
       { label: 'Approvals', href: '/platform/admin/quote-approvals' },
-      { label: 'My Quotes', href: '/platform/my-quotes' },
     ],
   },
   {
@@ -80,7 +82,6 @@ const adminNav: AdminNavSection[] = [
       { label: 'Exports', href: '/platform/admin/logistics/exports' },
       { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices' },
       { label: 'Freight Quotes', href: '/platform/admin/logistics/quotes', alsoMatches: ['/platform/admin/logistics/requests', '/platform/admin/logistics/forwarders'] },
-      { label: 'Freight Bills', href: '/platform/admin/logistics/invoices' },
       { label: 'Reports', href: '/platform/admin/logistics/reports' },
     ],
   },
@@ -160,7 +161,6 @@ const adminNav: AdminNavSection[] = [
       { label: 'Wine Labs', href: '/platform/admin/wine-labs', staffOnly: true },
       { label: 'Pricing Settings', href: '/platform/admin/pricing' },
       { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
-      { label: 'Commissions', href: '/platform/admin/commissions' },
     ],
   },
   {
