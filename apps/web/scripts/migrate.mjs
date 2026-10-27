@@ -3884,6 +3884,29 @@ const runMigrations = async () => {
     );
     console.log('✅ Member email outbox ready');
 
+    /*
+      Private Cellar orders are raised under C&C, not under the member.
+
+      Releases and hand-raised member orders took the member's own collector
+      record as their partner, so every order list showed the member as their
+      own partner and distributor assignment waited for the member to verify
+      themselves. New orders resolve to C&C (resolveOrderPartnerId); this moves
+      the ones already raised. Whose wine a delivery moves is read from the
+      release request, so no stock, pick or statement changes with it.
+    */
+    await dataFix('private cellar orders raised under C&C, not the member', () =>
+      client.unsafe(`
+      UPDATE "private_client_orders" o
+      SET "partner_id" = cc."id", "updated_at" = now()
+      FROM "partners" p,
+        (SELECT "id" FROM "partners"
+          WHERE lower(trim("business_name")) = 'craft & culture' AND "status" = 'active'
+          ORDER BY "created_at" LIMIT 1) cc
+      WHERE o."partner_id" = p."id"
+        AND p."type" = 'private_collector'
+    `),
+    );
+
     await client.end();
     process.exit(0);
   } catch (error) {

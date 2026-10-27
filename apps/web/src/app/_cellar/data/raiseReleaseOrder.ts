@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
+import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
 import generateOrderNumber from '@/app/_privateClientOrders/utils/generateOrderNumber';
 import db from '@/database/client';
 import {
@@ -71,6 +72,7 @@ const raiseReleaseOrder = async ({
     .limit(1);
 
   const memberName = owner?.businessName ?? 'Private Cellar member';
+  const orderPartnerId = await resolveOrderPartnerId(request.partnerId);
 
   /*
     The person at the door. For a gift that is the recipient, and the
@@ -164,7 +166,8 @@ const raiseReleaseOrder = async ({
         orderNumber: generateOrderNumber(nextSequence),
         // The member's own wine coming to them: delivered, not sold
         orderKind: 'owner_delivery',
-        partnerId: request.partnerId,
+        // Raised under C&C; whose wine it is stays on the release request
+        partnerId: orderPartnerId,
         clientName: isGift
           ? `${details?.recipientName} (gift from ${memberName})`
           : memberName,

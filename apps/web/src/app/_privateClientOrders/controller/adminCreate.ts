@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
 import { privateClientOrders } from '@/database/schema';
@@ -28,6 +29,9 @@ const adminCreate = wmsOperatorProcedure
     }),
   )
   .mutation(async ({ input }) => {
+    // A Private Cellar member's order is raised under C&C, not under the member
+    const partnerId = await resolveOrderPartnerId(input.partnerId);
+
     // Get the next sequence number for this year
     const year = new Date().getFullYear();
     const yearStart = `PCO-${year}-`;
@@ -50,10 +54,11 @@ const adminCreate = wmsOperatorProcedure
       type the details straight in too, and an order without a client record
       cannot be corrected or marked verified afterwards.
     */
-    let clientId = input.clientId ?? null;
+    // A client picked from the member's own list belongs to them, not to C&C
+    let clientId = partnerId === input.partnerId ? (input.clientId ?? null) : null;
 
     if (!clientId && input.clientName?.trim()) {
-      const resolved = await findOrCreateClientForPartner(input.partnerId, {
+      const resolved = await findOrCreateClientForPartner(partnerId, {
         name: input.clientName,
         email: input.clientEmail,
         phone: input.clientPhone,
@@ -69,7 +74,7 @@ const adminCreate = wmsOperatorProcedure
       .insert(privateClientOrders)
       .values({
         orderNumber,
-        partnerId: input.partnerId,
+        partnerId,
         clientId,
         clientName: input.clientName,
         clientEmail: input.clientEmail || null,
